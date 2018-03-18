@@ -226,7 +226,9 @@ int main(int, char**)
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
 
-        ImGui::RenderAdditionalViewports();
+        // Update and Render additional Platform Windows
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
 
         g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync

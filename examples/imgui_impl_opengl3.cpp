@@ -323,13 +323,11 @@ void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
     ImGui_ImplOpenGL3_DestroyFontsTexture();
 }
 
-// --------------------------------------------------------------------------------------------------------
-// Platform Windows
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+// Platform Interface (Optional, for multi-viewport support)
+//--------------------------------------------------------------------------------------------------------
 
-#include "imgui_internal.h"     // ImGuiViewport
-
-static void ImGui_ImplOpenGL3_RenderViewport(ImGuiViewport* viewport)
+static void ImGui_ImplOpenGL3_RenderWindow(ImGuiViewport* viewport)
 {
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
     {
@@ -337,18 +335,16 @@ static void ImGui_ImplOpenGL3_RenderViewport(ImGuiViewport* viewport)
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
     }
-    ImGui_ImplOpenGL3_RenderDrawData(&viewport->DrawData);
+    ImGui_ImplOpenGL3_RenderDrawData(viewport->DrawData);
 }
 
-void ImGui_ImplOpenGL3_InitPlatformInterface()
+static void ImGui_ImplOpenGL3_InitPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.RendererInterface.RenderViewport = ImGui_ImplOpenGL3_RenderViewport;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_RenderWindow = ImGui_ImplOpenGL3_RenderWindow;
 }
 
-void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
+static void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
 {
-    ImGui::DestroyViewportsRendererData(ImGui::GetCurrentContext());
-    ImGuiIO& io = ImGui::GetIO();
-    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+    ImGui::DestroyPlatformWindows();
 }

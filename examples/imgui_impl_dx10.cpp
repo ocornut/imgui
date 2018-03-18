@@ -11,7 +11,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiRendererInterface.
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-XX-XX: DirectX10: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX10_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
@@ -498,12 +498,9 @@ void ImGui_ImplDX10_NewFrame()
         ImGui_ImplDX10_CreateDeviceObjects();
 }
 
-
-// --------------------------------------------------------------------------------------------------------
-// Platform Windows
-// --------------------------------------------------------------------------------------------------------
-
-#include "imgui_internal.h"     // ImGuiViewport
+//--------------------------------------------------------------------------------------------------------
+// Platform Interface (Optional, for multi-viewport support)
+//--------------------------------------------------------------------------------------------------------
 
 struct ImGuiPlatformDataDx10
 {
@@ -514,7 +511,7 @@ struct ImGuiPlatformDataDx10
     ~ImGuiPlatformDataDx10()    { IM_ASSERT(SwapChain == NULL && RTView == NULL); }
 };
 
-static void ImGui_ImplDX10_CreateViewport(ImGuiViewport* viewport)
+static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataDx10* data = IM_NEW(ImGuiPlatformDataDx10)();
     viewport->RendererUserData = data;
@@ -551,7 +548,7 @@ static void ImGui_ImplDX10_CreateViewport(ImGuiViewport* viewport)
     }
 }
 
-static void ImGui_ImplDX10_DestroyViewport(ImGuiViewport* viewport)
+static void ImGui_ImplDX10_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData)
     {
@@ -566,7 +563,7 @@ static void ImGui_ImplDX10_DestroyViewport(ImGuiViewport* viewport)
     viewport->RendererUserData = NULL;
 }
 
-static void ImGui_ImplDX10_ResizeViewport(ImGuiViewport* viewport, ImVec2 size)
+static void ImGui_ImplDX10_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
     if (data->RTView)
@@ -591,7 +588,7 @@ static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport)
     g_pd3dDevice->OMSetRenderTargets(1, &data->RTView, NULL);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
         g_pd3dDevice->ClearRenderTargetView(data->RTView, (float*)&clear_color);
-    ImGui_ImplDX10_RenderDrawData(&viewport->DrawData);
+    ImGui_ImplDX10_RenderDrawData(viewport->DrawData);
 }
 
 static void ImGui_ImplDX10_SwapBuffers(ImGuiViewport* viewport)
@@ -602,18 +599,16 @@ static void ImGui_ImplDX10_SwapBuffers(ImGuiViewport* viewport)
 
 void ImGui_ImplDX10_InitPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.RendererInterface.CreateViewport = ImGui_ImplDX10_CreateViewport;
-    io.RendererInterface.DestroyViewport = ImGui_ImplDX10_DestroyViewport;
-    io.RendererInterface.ResizeViewport = ImGui_ImplDX10_ResizeViewport;
-    io.RendererInterface.RenderViewport = ImGui_ImplDX10_RenderViewport;
-    io.RendererInterface.SwapBuffers = ImGui_ImplDX10_SwapBuffers;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_CreateWindow = ImGui_ImplDX10_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplDX10_DestroyWindow;
+    platform_io.Renderer_SetWindowSize = ImGui_ImplDX10_SetWindowSize;
+    platform_io.Renderer_RenderWindow = ImGui_ImplDX10_RenderViewport;
+    platform_io.Renderer_SwapBuffers = ImGui_ImplDX10_SwapBuffers;
 }
 
 void ImGui_ImplDX10_ShutdownPlatformInterface()
 {
-    ImGui::DestroyViewportsRendererData(ImGui::GetCurrentContext());
-    ImGuiIO& io = ImGui::GetIO();
-    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+    ImGui::DestroyPlatformWindows();
 }
 

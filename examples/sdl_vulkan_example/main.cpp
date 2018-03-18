@@ -468,7 +468,11 @@ int main(int, char**)
         ImGui::Render();
         memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 		FrameRender(wd);
-		ImGui::RenderAdditionalViewports();
+        
+        // Update and Render additional Platform Windows
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
+
         FramePresent(wd);
     }
 

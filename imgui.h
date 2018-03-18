@@ -73,6 +73,8 @@ struct ImGuiSizeCallbackData;       // Structure used to constraint window size 
 struct ImGuiListClipper;            // Helper to manually clip large list of items
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiViewport;               // Viewport (generally ~1 per window to output to at the OS level. Need per-platform support to use multiple viewports)
+struct ImGuiPlatformIO;             // Multi-viewport support: interface for Platform/Renderer back-ends
+struct ImGuiPlatformData;           // Multi-viewport support: list of viewports to render
 struct ImGuiContext;                // ImGui context (opaque)
 
 #ifndef ImTextureID
@@ -103,6 +105,7 @@ typedef int ImGuiHoveredFlags;      // flags: for IsItemHovered() etc.          
 typedef int ImGuiInputTextFlags;    // flags: for InputText*()                  // enum ImGuiInputTextFlags_
 typedef int ImGuiSelectableFlags;   // flags: for Selectable()                  // enum ImGuiSelectableFlags_
 typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(),CollapsingHeader()// enum ImGuiTreeNodeFlags_
+typedef int ImGuiViewportFlags;     // flags: for ImGuiViewport                 // enum ImGuiViewportFlags_ 
 typedef int ImGuiWindowFlags;       // flags: for Begin*()                      // enum ImGuiWindowFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
@@ -150,9 +153,7 @@ namespace ImGui
     IMGUI_API ImGuiStyle&   GetStyle();
     IMGUI_API void          NewFrame();                                 // start a new ImGui frame, you can submit any command from this point until Render()/EndFrame().
     IMGUI_API void          Render();                                   // ends the ImGui frame, finalize the draw data. (Obsolete: optionally call io.RenderDrawListsFn if set. Nowadays, prefer calling your render function yourself.)
-    IMGUI_API void          RenderAdditionalViewports();
     IMGUI_API ImDrawData*   GetDrawData();                              // valid after Render() and until the next call to NewFrame(). this is what you have to render. (Obsolete: this used to be passed to your io.RenderDrawListsFn() function.)
-    IMGUI_API ImDrawData*   GetDrawDataForViewport(ImGuiID viewport_id);// ImDrawData filtered to hold only the ImDrawList covering a given viewport. valid after Render() and until the next call to NewFrame()
     IMGUI_API void          EndFrame();                                 // ends the ImGui frame. automatically called by Render(), so most likely don't need to ever call that yourself directly. If you don't need to render you may call EndFrame() but you'll have wasted CPU already. If you don't need to render, better to not create any imgui windows instead!
 
     // Demo, Debug, Information
@@ -542,6 +543,15 @@ namespace ImGui
     // Clipboard Utilities (also see the LogToClipboard() function to capture or output text data to the clipboard)
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
+
+    // (Optional) Platform interface for multi-viewport support
+    IMGUI_API ImGuiPlatformIO&   GetPlatformIO();           // Platform/Renderer functions.
+    IMGUI_API ImGuiPlatformData* GetPlatformData();         // List of viewports.
+    IMGUI_API ImGuiViewport*     GetMainViewport();         // GetPlatformData()->MainViewport
+    IMGUI_API void               UpdatePlatformWindows();   // Call in main loop. Create/Destroy/Resize platform windows so there's one for each viewport
+    IMGUI_API void               RenderPlatformWindows();   // Call in main loop. Call RenderWindow/SwapBuffers from the ImGuiPlatformIO structure. May be reimplemented by user.
+    IMGUI_API void               DestroyPlatformWindows();  // Call in back-end shutdown.
+    IMGUI_API ImGuiViewport*     FindViewportByPlatformHandle(void* platform_handle);
 
     // Memory Utilities
     // All those functions are not reliant on the current context.
@@ -958,39 +968,6 @@ enum ImGuiCond_
 #endif
 };
 
-// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableMultiViewport) is enabled
-struct ImGuiPlatformInterface
-{
-    void    (*CreateViewport)(ImGuiViewport* viewport);
-    void    (*DestroyViewport)(ImGuiViewport* viewport);
-    void    (*ShowWindow)(ImGuiViewport* viewport);
-    void    (*SetWindowPos)(ImGuiViewport* viewport, ImVec2 pos);
-    ImVec2  (*GetWindowPos)(ImGuiViewport* viewport);
-    void    (*SetWindowSize)(ImGuiViewport* viewport, ImVec2 size);
-    ImVec2  (*GetWindowSize)(ImGuiViewport* viewport);
-    void    (*SetWindowTitle)(ImGuiViewport* viewport, const char* name);
-    void    (*SetWindowAlpha)(ImGuiViewport* viewport, float alpha);
-    void    (*RenderViewport)(ImGuiViewport* viewport);
-    void    (*SwapBuffers)(ImGuiViewport* viewport);
-
-    // FIXME-VIEWPORT: Experimenting with back-end abstraction. This probably shouldn't stay as is.
-    int     (*CreateVkSurface)(ImGuiViewport* viewport, ImU64 vk_instance, const void* vk_allocator, ImU64* out_vk_surface);
-
-    // FIXME-DPI
-    float   (*GetWindowDpiScale)(ImGuiViewport* viewport);  // (Optional)
-    void    (*ChangedViewport)(ImGuiViewport* viewport);    // (Optional) Called during Begin() every time the viewport we are outputting into changes (viewport = next viewport)
-};
-
-// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableMultiViewport) is enabled
-struct ImGuiRendererInterface
-{
-    void    (*CreateViewport)(ImGuiViewport* viewport);
-    void    (*DestroyViewport)(ImGuiViewport* viewport);
-    void    (*ResizeViewport)(ImGuiViewport* viewport, ImVec2 size);
-    void    (*RenderViewport)(ImGuiViewport* viewport);     // Setup render output, clear targets, call Renderer_RenderDrawData
-    void    (*SwapBuffers)(ImGuiViewport* viewport);        // Call Present/SwapBuffers
-};
-
 // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
 // During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values, and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
 struct ImGuiStyle
@@ -1071,10 +1048,6 @@ struct ImGuiIO
     const char* (*GetClipboardTextFn)(void* user_data);
     void        (*SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
-
-    // Optional: platform interface to use multiple viewports
-    ImGuiPlatformInterface  PlatformInterface;
-    ImGuiRendererInterface  RendererInterface;
 
     // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
     // (default to use native imm32 api on Windows)
@@ -1881,6 +1854,86 @@ struct ImFont
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     typedef ImFontGlyph Glyph; // OBSOLETE 1.52+
 #endif
+};
+
+//-----------------------------------------------------------------------------
+// [BETA] Platform interface for multi-viewport support
+// - completely optional, for advanced users!
+// - this is used for back-ends aiming to support the seamless creation of multiple viewport (= multiple Platform/OS windows)
+//   dear imgui manages the viewports, and the back-end create one Platform/OS windows for each secondary viewport.
+// - if you are new to dear imgui and trying to integrate it into your engine, you should probably ignore this for now.
+//-----------------------------------------------------------------------------
+
+// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports) is enabled
+// This is designed so we can mix and match two imgui_impl_xxxx files, one for the Platform (~ Windowing), one for Renderer.
+// Custom engine back-ends will often provide both Platform and Renderer interfaces and thus may not need to use all functions.
+// Platform functions are typically called before their Renderer counterpart, apart from Destroy which are called the other way.
+struct ImGuiPlatformIO
+{
+    // Platform (e.g. Win32, GLFW, SDL2)
+    void    (*Platform_CreateWindow)(ImGuiViewport* vp);                    // Create a new platform window for the given viewport
+    void    (*Platform_DestroyWindow)(ImGuiViewport* vp);
+    void    (*Platform_ShowWindow)(ImGuiViewport* vp);                      // Newly created windows are initially hidden so we have a chance to call SetWindowPos/Size/Title on them.
+    void    (*Platform_SetWindowPos)(ImGuiViewport* vp, ImVec2 pos);
+    ImVec2  (*Platform_GetWindowPos)(ImGuiViewport* vp);
+    void    (*Platform_SetWindowSize)(ImGuiViewport* vp, ImVec2 size);
+    ImVec2  (*Platform_GetWindowSize)(ImGuiViewport* vp);
+    void    (*Platform_SetWindowTitle)(ImGuiViewport* vp, const char* title);
+    void    (*Platform_SetWindowAlpha)(ImGuiViewport* vp, float alpha);     // (Optional) Setup window transparency
+    void    (*Platform_RenderWindow)(ImGuiViewport* vp);                    // (Optional) Setup for render (platform side)
+    void    (*Platform_SwapBuffers)(ImGuiViewport* vp);                     // (Optional) Call Present/SwapBuffers (platform side)
+    float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // (Optional) DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI. (FIXME-DPI)
+    void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // (Optional) DPI handling: Called during Begin() every time the viewport we are outputting into changes, so back-end has a chance to swap fonts to adjust style.
+    int     (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface); // (Optional) For Renderer to call into Platform code
+
+    // Renderer (e.g. DirectX, OpenGL3, Vulkan)
+    void    (*Renderer_CreateWindow)(ImGuiViewport* vp);                    // Create swap chains, frame buffers etc.
+    void    (*Renderer_DestroyWindow)(ImGuiViewport* vp);
+    void    (*Renderer_SetWindowSize)(ImGuiViewport* vp, ImVec2 size);      // Resize swap chain, frame buffers etc.
+    void    (*Renderer_RenderWindow)(ImGuiViewport* vp);                    // (Optional) Clear targets, Render viewport->DrawData
+    void    (*Renderer_SwapBuffers)(ImGuiViewport* vp);                     // (Optional) Call Present/SwapBuffers (renderer side)
+};
+
+// List of viewports to render as platform window (updated by ImGui::UpdatePlatformWindows)
+struct ImGuiPlatformData
+{
+    // Viewports[0] is guaranteed to be _always_ the same as MainViewport. Following it are the secondary viewports.
+    // The main viewport is included in the list because it is more convenient for looping code.
+    ImGuiViewport*              MainViewport;
+    ImVector<ImGuiViewport*>    Viewports;
+
+    ImGuiPlatformData() { MainViewport = NULL; }
+};
+
+// Flags stored in ImGuiViewport::Flags, giving indications to the platform back-ends
+enum ImGuiViewportFlags_
+{
+    ImGuiViewportFlags_NoDecoration             = 1 << 0,   // Platform Window: Disable platform title bar, borders, etc.
+    ImGuiViewportFlags_NoFocusOnAppearing       = 1 << 1,   // Platform Window: Don't take focus when created.
+    ImGuiViewportFlags_NoInputs                 = 1 << 2,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
+    ImGuiViewportFlags_NoRendererClear          = 1 << 3    // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
+};
+
+// The viewports created and managed by imgui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.
+struct ImGuiViewport
+{
+    ImGuiID             ID;
+    ImGuiViewportFlags  Flags;
+    ImVec2              Pos;                    // Position of viewport in imgui virtual space (all viewports Pos.y == 0.0f, main viewport Pos.x == 0.0f)
+    ImVec2              Size;                   // Size of viewport in pixel
+    float               DpiScale;               // 1.0f = 96 DPI = No extra scale
+    ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
+
+    ImVec2              PlatformPos;            // Position in OS desktop/native space
+    void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
+    void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*, SDL_Window*)
+    bool                PlatformRequestClose;   // Platform window requested closure
+    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved using OS windowing facility)
+    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resize using OS windowing facility)
+    void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. swap chain, frame-buffers etc.)
+
+    ImGuiViewport() { ID = 0; Flags = 0; DpiScale = 0.0f; DrawData = NULL; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; RendererUserData = NULL; }
+    ~ImGuiViewport() { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
 };
 
 #if defined(__clang__)

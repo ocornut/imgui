@@ -634,11 +634,9 @@ void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
     g_pd3dCommandList = command_list;
 }
 
-// --------------------------------------------------------------------------------------------------------
-// Platform Windows
-// --------------------------------------------------------------------------------------------------------
-
-#include "imgui_internal.h"     // ImGuiViewport
+//--------------------------------------------------------------------------------------------------------
+// Platform Interface (Optional, for multi-viewport support)
+//--------------------------------------------------------------------------------------------------------
 
 struct ImGuiPlatformDataDx12
 {
@@ -648,7 +646,7 @@ struct ImGuiPlatformDataDx12
     ~ImGuiPlatformDataDx12() { IM_ASSERT(SwapChain == NULL); }
 };
 
-static void ImGui_ImplDX12_CreateViewport(ImGuiViewport* viewport)
+static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataDx12* data = IM_NEW(ImGuiPlatformDataDx12)();
     viewport->RendererUserData = data;
@@ -688,7 +686,7 @@ static void ImGui_ImplDX12_CreateViewport(ImGuiViewport* viewport)
     */
 }
 
-static void ImGui_ImplDX12_DestroyViewport(ImGuiViewport* viewport)
+static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData)
     {
@@ -706,11 +704,11 @@ static void ImGui_ImplDX12_DestroyViewport(ImGuiViewport* viewport)
     viewport->RendererUserData = NULL;
 }
 
-static void ImGui_ImplDX12_ResizeViewport(ImGuiViewport* viewport, int w, int h)
+static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
-    (void)data; (void)w; (void)h;
+    (void)data; (void)size;
     /*
     if (data->RTView)
     {
@@ -720,7 +718,7 @@ static void ImGui_ImplDX12_ResizeViewport(ImGuiViewport* viewport, int w, int h)
     if (data->SwapChain)
     {
         ID3D11Texture2D* pBackBuffer = NULL;
-        data->SwapChain->ResizeBuffers(0, w, h, DXGI_FORMAT_UNKNOWN, 0);
+        data->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
         data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
         g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
         pBackBuffer->Release();
@@ -728,7 +726,7 @@ static void ImGui_ImplDX12_ResizeViewport(ImGuiViewport* viewport, int w, int h)
     */
 }
 
-static void ImGui_ImplDX12_RenderViewport(ImGuiViewport* viewport)
+static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
@@ -739,7 +737,7 @@ static void ImGui_ImplDX12_RenderViewport(ImGuiViewport* viewport)
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
         g_pd3dDeviceContext->ClearRenderTargetView(data->RTView, (float*)&clear_color);
     */
-    ImGui_ImplDX12_RenderDrawData(&viewport->DrawData);
+    ImGui_ImplDX12_RenderDrawData(viewport->DrawData);
 }
 
 static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport)
@@ -754,18 +752,15 @@ static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport)
 
 void ImGui_ImplDX12_InitPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    io.RendererInterface.CreateViewport = ImGui_ImplDX12_CreateViewport;
-    io.RendererInterface.DestroyViewport = ImGui_ImplDX12_DestroyViewport;
-    io.RendererInterface.ResizeViewport = ImGui_ImplDX12_ResizeViewport;
-    io.RendererInterface.RenderViewport = ImGui_ImplDX12_RenderViewport;
-    io.RendererInterface.SwapBuffers = ImGui_ImplDX12_SwapBuffers;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_CreateWindow = ImGui_ImplDX12_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplDX12_DestroyWindow;
+    platform_io.Renderer_SetWindowSize = ImGui_ImplDX12_SetWindowSize;
+    platform_io.Renderer_RenderWindow = ImGui_ImplDX12_RenderWindow;
+    platform_io.Renderer_SwapBuffers = ImGui_ImplDX12_SwapBuffers;
 }
 
 void ImGui_ImplDX12_ShutdownPlatformInterface()
 {
-    ImGui::DestroyViewportsRendererData(ImGui::GetCurrentContext());
-    ImGuiIO& io = ImGui::GetIO();
-    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+    ImGui::DestroyPlatformWindows();
 }
-

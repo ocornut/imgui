@@ -12,7 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformInterface
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-XX-XX: Misc: ImGui_ImplSDL2_Init() now takes a SDL_GLContext parameter. 
 //  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
@@ -27,7 +27,6 @@
 
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
-#include "imgui_internal.h" // FIXME-PLATFORM
 
 // SDL
 #include <SDL.h>
@@ -271,9 +270,9 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
     ImGui::NewFrame();
 }
 
-// --------------------------------------------------------------------------------------------------------
-// Platform Windows
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+// Platform Interface (Optional, for multi-viewport support)
+//--------------------------------------------------------------------------------------------------------
 
 struct ImGuiPlatformDataSDL2
 {
@@ -285,7 +284,7 @@ struct ImGuiPlatformDataSDL2
     ~ImGuiPlatformDataSDL2() { IM_ASSERT(Window == NULL && GLContext == NULL); }
 };
 
-static void ImGui_ImplSDL2_CreateViewport(ImGuiViewport* viewport)
+static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataSDL2* data = IM_NEW(ImGuiPlatformDataSDL2)();
     viewport->PlatformUserData = data;
@@ -319,7 +318,7 @@ static void ImGui_ImplSDL2_CreateViewport(ImGuiViewport* viewport)
     viewport->PlatformHandle = (void*)data->Window;
 }
 
-static void ImGui_ImplSDL2_DestroyViewport(ImGuiViewport* viewport)
+static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiPlatformDataSDL2* data = (ImGuiPlatformDataSDL2*)viewport->PlatformUserData)
     {
@@ -401,7 +400,7 @@ static void ImGui_ImplSDL2_SetWindowTitle(ImGuiViewport* viewport, const char* t
     SDL_SetWindowTitle(data->Window, title);
 }
 
-static void ImGui_ImplSDL2_RenderViewport(ImGuiViewport* viewport)
+static void ImGui_ImplSDL2_RenderWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataSDL2* data = (ImGuiPlatformDataSDL2*)viewport->PlatformUserData;
     if (data->GLContext)
@@ -434,21 +433,22 @@ static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context)
 {
     // Register platform interface (will be coupled with a renderer interface)
-    ImGuiIO& io = ImGui::GetIO();
-    io.PlatformInterface.CreateViewport = ImGui_ImplSDL2_CreateViewport;
-    io.PlatformInterface.DestroyViewport = ImGui_ImplSDL2_DestroyViewport;
-    io.PlatformInterface.ShowWindow = ImGui_ImplSDL2_ShowWindow;
-    io.PlatformInterface.SetWindowPos = ImGui_ImplSDL2_SetWindowPos;
-    io.PlatformInterface.GetWindowPos = ImGui_ImplSDL2_GetWindowPos;
-    io.PlatformInterface.SetWindowSize = ImGui_ImplSDL2_SetWindowSize;
-    io.PlatformInterface.GetWindowSize = ImGui_ImplSDL2_GetWindowSize;
-    io.PlatformInterface.SetWindowTitle = ImGui_ImplSDL2_SetWindowTitle;
-    io.PlatformInterface.RenderViewport = ImGui_ImplSDL2_RenderViewport;
-    io.PlatformInterface.SwapBuffers = ImGui_ImplSDL2_SwapBuffers;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_CreateWindow = ImGui_ImplSDL2_CreateWindow;
+    platform_io.Platform_DestroyWindow = ImGui_ImplSDL2_DestroyWindow;
+    platform_io.Platform_ShowWindow = ImGui_ImplSDL2_ShowWindow;
+    platform_io.Platform_SetWindowPos = ImGui_ImplSDL2_SetWindowPos;
+    platform_io.Platform_GetWindowPos = ImGui_ImplSDL2_GetWindowPos;
+    platform_io.Platform_SetWindowSize = ImGui_ImplSDL2_SetWindowSize;
+    platform_io.Platform_GetWindowSize = ImGui_ImplSDL2_GetWindowSize;
+    platform_io.Platform_SetWindowTitle = ImGui_ImplSDL2_SetWindowTitle;
+    platform_io.Platform_RenderWindow = ImGui_ImplSDL2_RenderWindow;
+    platform_io.Platform_SwapBuffers = ImGui_ImplSDL2_SwapBuffers;
 #if SDL_HAS_VULKAN
-    io.PlatformInterface.CreateVkSurface = ImGui_ImplSDL2_CreateVkSurface;
+    platform_io.Platform_CreateVkSurface = ImGui_ImplSDL2_CreateVkSurface;
 #endif
 
+    ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= SDL_HAS_WINDOW_OPACITY ? ImGuiConfigFlags_PlatformHasWindowAlpha : 0;
 
     // Register main window handle
@@ -463,6 +463,4 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
 
 static void ImGui_ImplSDL2_ShutdownPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    memset(&io.PlatformInterface, 0, sizeof(io.PlatformInterface));
 }

@@ -12,7 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformInterface
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-XX-XX: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -25,14 +25,13 @@
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
-#include "imgui_internal.h" // FIXME-PLATFORM
 
 // GLFW
 #include <GLFW/glfw3.h>
 #ifdef _WIN32
 #undef APIENTRY
 #define GLFW_EXPOSE_NATIVE_WIN32
-#include <GLFW/glfw3native.h> // for glfwGetWin32Window
+#include <GLFW/glfw3native.h>   // for glfwGetWin32Window
 #endif
 #ifdef GLFW_HOVERED
 #define GLFW_HAS_GLFW_HOVERED   1
@@ -209,10 +208,10 @@ static void ImGui_ImplGlfw_UpdateMouse()
         g_MouseJustPressed[i] = false;
     }
 
-    const ImVector<ImGuiViewport*>& viewports = ImGui::GetViewports();
-    for (int n = 0; n < viewports.Size; n++)
+    ImGuiPlatformData* platform_data = ImGui::GetPlatformData();
+    for (int n = 0; n < platform_data->Viewports.Size; n++)
     {
-        ImGuiViewport* viewport = viewports[n];
+        ImGuiViewport* viewport = platform_data->Viewports[n];
         GLFWwindow* window = (GLFWwindow*)viewport->PlatformHandle;
         IM_ASSERT(window != NULL);
         if (glfwGetWindowAttrib(window, GLFW_FOCUSED))
@@ -330,7 +329,7 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
         viewport->PlatformRequestResize = true;
 }
 
-static void ImGui_ImplGlfw_CreateViewport(ImGuiViewport* viewport)
+static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataGlfw* data = IM_NEW(ImGuiPlatformDataGlfw)();
     viewport->PlatformUserData = data;
@@ -349,7 +348,7 @@ static void ImGui_ImplGlfw_CreateViewport(ImGuiViewport* viewport)
     glfwSetWindowSizeCallback(data->Window, ImGui_ImplGlfw_WindowSizeCallback);
 }
 
-static void ImGui_ImplGlfw_DestroyViewport(ImGuiViewport* viewport)
+static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiPlatformDataGlfw* data = (ImGuiPlatformDataGlfw*)viewport->PlatformUserData)
     {
@@ -449,7 +448,7 @@ static void ImGui_ImplGlfw_SetWindowTitle(ImGuiViewport* viewport, const char* t
     glfwSetWindowTitle(data->Window, title);
 }
 
-static void ImGui_ImplGlfw_RenderViewport(ImGuiViewport* viewport)
+static void ImGui_ImplGlfw_RenderWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataGlfw* data = (ImGuiPlatformDataGlfw*)viewport->PlatformUserData;
     if (g_ClientApi == GlfwClientApi_OpenGL)
@@ -491,19 +490,19 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 static void ImGui_ImplGlfw_InitPlatformInterface()
 {
     // Register platform interface (will be coupled with a renderer interface)
-    ImGuiIO& io = ImGui::GetIO();
-    io.PlatformInterface.CreateViewport = ImGui_ImplGlfw_CreateViewport;
-    io.PlatformInterface.DestroyViewport = ImGui_ImplGlfw_DestroyViewport;
-    io.PlatformInterface.ShowWindow = ImGui_ImplGlfw_ShowWindow;
-    io.PlatformInterface.SetWindowPos = ImGui_ImplGlfw_SetWindowPos;
-    io.PlatformInterface.GetWindowPos = ImGui_ImplGlfw_GetWindowPos;
-    io.PlatformInterface.SetWindowSize = ImGui_ImplGlfw_SetWindowSize;
-    io.PlatformInterface.GetWindowSize = ImGui_ImplGlfw_GetWindowSize;
-    io.PlatformInterface.SetWindowTitle = ImGui_ImplGlfw_SetWindowTitle;
-    io.PlatformInterface.RenderViewport = ImGui_ImplGlfw_RenderViewport;
-    io.PlatformInterface.SwapBuffers = ImGui_ImplGlfw_SwapBuffers;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_CreateWindow = ImGui_ImplGlfw_CreateWindow;
+    platform_io.Platform_DestroyWindow = ImGui_ImplGlfw_DestroyWindow;
+    platform_io.Platform_ShowWindow = ImGui_ImplGlfw_ShowWindow;
+    platform_io.Platform_SetWindowPos = ImGui_ImplGlfw_SetWindowPos;
+    platform_io.Platform_GetWindowPos = ImGui_ImplGlfw_GetWindowPos;
+    platform_io.Platform_SetWindowSize = ImGui_ImplGlfw_SetWindowSize;
+    platform_io.Platform_GetWindowSize = ImGui_ImplGlfw_GetWindowSize;
+    platform_io.Platform_SetWindowTitle = ImGui_ImplGlfw_SetWindowTitle;
+    platform_io.Platform_RenderWindow = ImGui_ImplGlfw_RenderWindow;
+    platform_io.Platform_SwapBuffers = ImGui_ImplGlfw_SwapBuffers;
 #if GLFW_HAS_VULKAN
-    io.PlatformInterface.CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
+    platform_io.Platform_CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
 #endif
 
     // Register main window handle
@@ -516,8 +515,4 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 
 static void ImGui_ImplGlfw_ShutdownPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = NULL;
-    memset(&io.PlatformInterface, 0, sizeof(io.PlatformInterface));
 }

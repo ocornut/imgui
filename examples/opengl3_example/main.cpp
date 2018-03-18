@@ -115,16 +115,18 @@ int main(int, char**)
         }
 
         // Rendering
+        ImGui::Render();
         int display_w, display_h;
         glfwMakeContextCurrent(window);
         glfwGetFramebufferSize(window, &display_w, &display_h);
         glViewport(0, 0, display_w, display_h);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui::Render();
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     	
-		ImGui::RenderAdditionalViewports();
+        // Update and Render additional Platform Windows
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows();
 
         glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);

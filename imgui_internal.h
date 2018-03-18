@@ -40,7 +40,6 @@ struct ImGuiMenuColumns;
 struct ImGuiDrawContext;
 struct ImGuiTextEditState;
 struct ImGuiPopupRef;
-struct ImGuiViewport;
 struct ImGuiWindow;
 struct ImGuiWindowSettings;
 
@@ -52,7 +51,6 @@ typedef int ImGuiNavHighlightFlags; // flags: for RenderNavHighlight()          
 typedef int ImGuiNavDirSourceFlags; // flags: for GetNavInputAmount2d()         // enum ImGuiNavDirSourceFlags_
 typedef int ImGuiSeparatorFlags;    // flags: for Separator() - internal        // enum ImGuiSeparatorFlags_
 typedef int ImGuiSliderFlags;       // flags: for SliderBehavior()              // enum ImGuiSliderFlags_
-typedef int ImGuiViewportFlags;     // flags: for Viewport()                    // enum ImGuiViewportFlags_ 
 
 //-------------------------------------------------------------------------
 // STB libraries
@@ -506,45 +504,26 @@ struct ImDrawDataBuilder
     IMGUI_API void FlattenIntoSingleLayer();
 };
 
-enum ImGuiViewportFlags_
+enum ImGuiViewportFlagsPrivate_
 {
-    ImGuiViewportFlags_MainViewport         = 1 << 0,
-    ImGuiViewportFlags_HostOtherWindows     = 1 << 1,
-    ImGuiViewportFlags_NoRendererClear      = 1 << 2,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
-    ImGuiViewportFlags_NoDecoration         = 1 << 3,   // Platform Window: Disable platform title bar, borders, etc.
-    ImGuiViewportFlags_NoFocusOnAppearing   = 1 << 4,   // Platform Window: Don't take focus when created.
-    ImGuiViewportFlags_NoInputs             = 1 << 5    // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
+    ImGuiViewportFlags_CanHostOtherWindows  = 1 << 10,  // Normal viewports are associated to a single window. The main viewport can host multiple windows.
 };
 
-struct ImGuiViewport
+// ImGuiViewport Private/Internals fields (cardinal sin: we are using inheritance!)
+struct ImGuiViewportP : public ImGuiViewport
 {
-    ImGuiID             ID;
     int                 Idx;
-    ImGuiViewportFlags  Flags;
-    int                 LastFrameActive;        
-    int                 LastFrameAsRefViewport; // Last frame number this viewport was io.MouseViewportRef
+    int                 LastFrameActive;          // Last frame number this viewport was activated by a window
+    int                 LastFrameAsRefViewport;   // Last frame number this viewport was io.MouseViewportRef
     ImGuiID             LastNameHash;
     ImGuiWindow*        Window;
-    ImVec2              Pos;                    // Position in imgui virtual space (Pos.y == 0.0)
-    ImVec2              Size;
-    float               DpiScale;
-    ImDrawData          DrawData;
+    ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
-
-    // [Optional] OS/Platform Layer data. This is to allow the creation/manipulate of multiple OS/Platform windows. Not all back-ends will allow this.
-    ImVec2              PlatformPos;   // Position in OS desktop/native space
-    void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
-    void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*)
-    bool                PlatformRequestClose;   // Platform window requested closure
-    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved using OS windowing facility)
-    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resize using OS windowing facility)
-    void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. framebuffer)
     ImVec2              RendererLastSize;
 
-    ImGuiViewport(ImGuiID id, int idx)  { ID = id; Idx = idx; Flags = 0; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; DpiScale = 0.0f; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; RendererUserData = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
-    ~ImGuiViewport()                    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
-    ImRect  GetRect() const             { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
-    float   GetNextX() const            { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
+    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; DrawData = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
+    float   GetNextX() const { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
 };
 
 struct ImGuiNavMoveResult
@@ -608,6 +587,7 @@ struct ImGuiContext
     bool                    Initialized;
     bool                    FontAtlasOwnedByContext;            // Io.Fonts-> is owned by the ImGuiContext and will be destructed along with it.
     ImGuiIO                 IO;
+    ImGuiPlatformIO         PlatformIO;
     ImGuiStyle              Style;
     ImFont*                 Font;                               // (Shortcut) == FontStack.empty() ? IO.Font : FontStack.back()
     float                   FontSize;                           // (Shortcut) == FontBaseSize * g.CurrentWindow->FontWindowScale == window->FontSize(). Text height for current window.
@@ -617,6 +597,7 @@ struct ImGuiContext
     float                   Time;
     int                     FrameCount;
     int                     FrameCountEnded;
+    int                     FrameCountPlatformEnded;
     int                     FrameCountRendered;
     ImVector<ImGuiWindow*>  Windows;
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
@@ -651,11 +632,12 @@ struct ImGuiContext
     ImGuiCond               NextTreeNodeOpenCond;
 
     // Viewports
-    ImVector<ImGuiViewport*>Viewports;
-    ImGuiViewport*          CurrentViewport;
-    ImGuiViewport*          MouseViewport;
-    ImGuiViewport*          MouseLastViewport;
-    ImGuiViewport*          MouseLastHoveredViewport;
+    ImVector<ImGuiViewportP*> Viewports;
+    ImGuiPlatformData       PlatformData;                       // This is essentially the public facing version of the Viewports vector (it is updated in UpdatePlatformWindows and exclude the viewports about to be destroyed)
+    ImGuiViewportP*         CurrentViewport;
+    ImGuiViewportP*         MouseViewport;
+    ImGuiViewportP*         MouseLastViewport;
+    ImGuiViewportP*         MouseLastHoveredViewport;
 
     // Navigation data (for gamepad/keyboard)
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
@@ -756,10 +738,11 @@ struct ImGuiContext
         FontSize = FontBaseSize = 0.0f;
         FontAtlasOwnedByContext = shared_font_atlas ? false : true;
         IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
+        memset(&PlatformIO, 0, sizeof(PlatformIO));
 
         Time = 0.0f;
         FrameCount = 0;
-        FrameCountEnded = FrameCountRendered = -1;
+        FrameCountEnded = FrameCountPlatformEnded = FrameCountRendered = -1;
         WindowsActiveCount = 0;
         CurrentWindow = NULL;
         HoveredWindow = NULL;
@@ -950,7 +933,7 @@ struct IMGUI_API ImGuiWindow
     char*                   Name;
     ImGuiID                 ID;                                 // == ImHash(Name)
     ImGuiWindowFlags        Flags, FlagsPreviousFrame;          // See enum ImGuiWindowFlags_
-    ImGuiViewport*          Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
+    ImGuiViewportP*         Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
     ImGuiID                 ViewportId;                         // Inactive windows preserve their last viewport id (since the viewport may disappear with the window inactivity)
     ImVec2                  ViewportPlatformPos;
     ImVec2                  PosFloat;
@@ -1082,17 +1065,12 @@ namespace ImGui
     IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
     // Viewports
-    IMGUI_API ImGuiViewport*        Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size);
-    inline ImVector<ImGuiViewport*>&GetViewports() { return GImGui->Viewports; }
-    inline ImGuiViewport*           GetMainViewport() { return GImGui->Viewports[0]; }
-    IMGUI_API ImGuiViewport*        FindViewportByID(ImGuiID id);
-    IMGUI_API ImGuiViewport*        FindViewportByPlatformHandle(void* platform_handle);
+    IMGUI_API ImGuiViewportP*       FindViewportByID(ImGuiID id);
     IMGUI_API void                  SetNextWindowViewport(ImGuiID id);
-    IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewport* viewport, float scale);
+    IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void                  ShowViewportThumbnails();
-    IMGUI_API void                  DestroyViewportsPlaformData(ImGuiContext* context);
-    IMGUI_API void                  DestroyViewportsRendererData(ImGuiContext* context);
 
+    // Settings
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);

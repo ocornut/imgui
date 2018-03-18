@@ -7,10 +7,8 @@
 #include <windows.h>
 #include <tchar.h>
 
-#include "imgui_internal.h" // FIXME-PLATFORM
-
 // CHANGELOG
-//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformInterface
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 //  2018-02-06: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse (when using navigation and ImGuiConfigFlags_NavMoveMouse is set).
@@ -363,7 +361,7 @@ struct ImGuiPlatformDataWin32
     ~ImGuiPlatformDataWin32() { IM_ASSERT(Hwnd == NULL); }
 };
 
-static void ImGui_ImplWin32_CreateViewport(ImGuiViewport* viewport)
+static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataWin32* data = IM_NEW(ImGuiPlatformDataWin32)();
     viewport->PlatformUserData = data;
@@ -393,7 +391,7 @@ static void ImGui_ImplWin32_CreateViewport(ImGuiViewport* viewport)
     viewport->PlatformHandle = data->Hwnd;
 }
 
-static void ImGui_ImplWin32_DestroyViewport(ImGuiViewport* viewport)
+static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiPlatformDataWin32* data = (ImGuiPlatformDataWin32*)viewport->PlatformUserData)
     {
@@ -523,16 +521,16 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     ::RegisterClassEx(&wcex);
 
     // Register platform interface (will be coupled with a renderer interface)
-    ImGuiIO& io = ImGui::GetIO();
-    io.PlatformInterface.CreateViewport = ImGui_ImplWin32_CreateViewport;
-    io.PlatformInterface.DestroyViewport = ImGui_ImplWin32_DestroyViewport;
-    io.PlatformInterface.ShowWindow = ImGui_ImplWin32_ShowWindow;
-    io.PlatformInterface.SetWindowPos = ImGui_ImplWin32_SetWindowPos;
-    io.PlatformInterface.GetWindowPos = ImGui_ImplWin32_GetWindowPos;
-    io.PlatformInterface.SetWindowSize = ImGui_ImplWin32_SetWindowSize;
-    io.PlatformInterface.GetWindowSize = ImGui_ImplWin32_GetWindowSize;
-    io.PlatformInterface.SetWindowTitle = ImGui_ImplWin32_SetWindowTitle;
-    io.PlatformInterface.GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Platform_CreateWindow = ImGui_ImplWin32_CreateWindow;
+    platform_io.Platform_DestroyWindow = ImGui_ImplWin32_DestroyWindow;
+    platform_io.Platform_ShowWindow = ImGui_ImplWin32_ShowWindow;
+    platform_io.Platform_SetWindowPos = ImGui_ImplWin32_SetWindowPos;
+    platform_io.Platform_GetWindowPos = ImGui_ImplWin32_GetWindowPos;
+    platform_io.Platform_SetWindowSize = ImGui_ImplWin32_SetWindowSize;
+    platform_io.Platform_GetWindowSize = ImGui_ImplWin32_GetWindowSize;
+    platform_io.Platform_SetWindowTitle = ImGui_ImplWin32_SetWindowTitle;
+    platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;
 
     // Register main window handle
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -544,8 +542,5 @@ static void ImGui_ImplWin32_InitPlatformInterface()
 
 static void ImGui_ImplWin32_ShutdownPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    memset(&io.PlatformInterface, 0, sizeof(io.PlatformInterface));
-
     ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(NULL));
 }

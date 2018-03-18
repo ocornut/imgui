@@ -23,6 +23,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_vulkan.h"
+#include <stdio.h>
 
 // Vulkan data
 static const VkAllocationCallbacks* g_Allocator = NULL;
@@ -714,10 +715,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     ImGui_ImplVulkan_CreateDeviceObjects();
     io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
     if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
-    {
-        IM_ASSERT(io.PlatformInterface.CreateVkSurface != NULL);
         ImGui_ImplVulkan_InitPlatformInterface();
-    }
 
     return true;
 }
@@ -734,7 +732,6 @@ void ImGui_ImplVulkan_NewFrame()
 
 //-------------------------------------------------------------------------
 // Miscellaneous Vulkan Helpers
-// (Those are currently not strictly needed by the binding, but will be once if we support multi-viewports)
 //-------------------------------------------------------------------------
 
 #include <stdlib.h> // malloc
@@ -1049,10 +1046,9 @@ void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, I
 }
 
 //--------------------------------------------------------------------------------------------------------
-// Platform Windows (OPTIONAL/EXPERIMENTAL)
+// Platform Interface (Optional, for multi-viewport support)
+// FIXME-PLATFORM: Vulkan support unfinished
 //--------------------------------------------------------------------------------------------------------
-
-#include "imgui_internal.h"     // ImGuiViewport
 
 struct ImGuiPlatformDataVulkan
 {
@@ -1062,15 +1058,15 @@ struct ImGuiPlatformDataVulkan
     ~ImGuiPlatformDataVulkan() { }
 };
 
-static void ImGui_ImplVulkan_CreateViewport(ImGuiViewport* viewport)
+static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataVulkan* data = IM_NEW(ImGuiPlatformDataVulkan)();
     viewport->RendererUserData = data;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
 
     // Create surface
-    ImGuiIO& io = ImGui::GetIO();
-    VkResult err = (VkResult)io.PlatformInterface.CreateVkSurface(viewport, (ImU64)g_Instance, (const void*)g_Allocator, (ImU64*)&wd->Surface);
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    VkResult err = (VkResult)platform_io.Platform_CreateVkSurface(viewport, (ImU64)g_Instance, (const void*)g_Allocator, (ImU64*)&wd->Surface);
     check_vk_result(err);
 
     // Check for WSI support
@@ -1097,7 +1093,7 @@ static void ImGui_ImplVulkan_CreateViewport(ImGuiViewport* viewport)
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, (int)viewport->Size.x, (int)viewport->Size.y);
 }
 
-static void ImGui_ImplVulkan_DestroyViewport(ImGuiViewport* viewport)
+static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData)
     {
@@ -1107,7 +1103,7 @@ static void ImGui_ImplVulkan_DestroyViewport(ImGuiViewport* viewport)
     viewport->RendererUserData = NULL;
 }
 
-static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, ImVec2 size)
+static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
     if (data == NULL) // This is NULL for the main viewport (which is left to the user/app to handle)
@@ -1116,7 +1112,7 @@ static void ImGui_ImplVulkan_ResizeViewport(ImGuiViewport* viewport, ImVec2 size
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &data->WindowData, g_Allocator, (int)size.x, (int)size.y);
 }
 
-static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)
+static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport)
 {
     ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
@@ -1160,7 +1156,7 @@ static void ImGui_ImplVulkan_RenderViewport(ImGuiViewport* viewport)
         }
     }
 
-    ImGui_ImplVulkan_RenderDrawData(wd->Frames[wd->FrameIndex].CommandBuffer, &viewport->DrawData);
+    ImGui_ImplVulkan_RenderDrawData(wd->Frames[wd->FrameIndex].CommandBuffer, viewport->DrawData);
 
     {
         ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
@@ -1210,18 +1206,17 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport)
 
 void ImGui_ImplVulkan_InitPlatformInterface()
 {
-    ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.PlatformInterface.CreateVkSurface != NULL);
-    io.RendererInterface.CreateViewport = ImGui_ImplVulkan_CreateViewport;
-    io.RendererInterface.DestroyViewport = ImGui_ImplVulkan_DestroyViewport;
-    io.RendererInterface.ResizeViewport = ImGui_ImplVulkan_ResizeViewport;
-    io.RendererInterface.RenderViewport = ImGui_ImplVulkan_RenderViewport;
-    io.RendererInterface.SwapBuffers = ImGui_ImplVulkan_SwapBuffers;
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnableViewports)
+        IM_ASSERT(platform_io.Platform_CreateVkSurface != NULL && "Platform needs to setup the CreateVkSurface handler.");
+    platform_io.Renderer_CreateWindow = ImGui_ImplVulkan_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplVulkan_DestroyWindow;
+    platform_io.Renderer_SetWindowSize = ImGui_ImplVulkan_SetWindowSize;
+    platform_io.Renderer_RenderWindow = ImGui_ImplVulkan_RenderWindow;
+    platform_io.Renderer_SwapBuffers = ImGui_ImplVulkan_SwapBuffers;
 }
 
 void ImGui_ImplVulkan_ShutdownPlatformInterface()
 {
-    ImGui::DestroyViewportsRendererData(ImGui::GetCurrentContext());
-    ImGuiIO& io = ImGui::GetIO();
-    memset(&io.RendererInterface, 0, sizeof(io.RendererInterface));
+    ImGui::DestroyPlatformWindows();
 }
