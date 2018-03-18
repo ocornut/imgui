@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-03-03: Vulkan: Various refactor, created a couple of ImGui_ImplVulkanH_XXX helper that the example can use and that viewport support will use.
 //  2018-03-01: Vulkan: Renamed ImGui_ImplVulkan_Init_Info to ImGui_ImplVulkan_InitInfo and fields to match more closely Vulkan terminology.
 //  2018-02-18: Vulkan: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
@@ -1050,17 +1051,17 @@ void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, I
 // FIXME-PLATFORM: Vulkan support unfinished
 //--------------------------------------------------------------------------------------------------------
 
-struct ImGuiPlatformDataVulkan
+struct ImGuiViewportDataVulkan
 {
     ImGui_ImplVulkan_WindowData WindowData;
 
-    ImGuiPlatformDataVulkan() { }
-    ~ImGuiPlatformDataVulkan() { }
+    ImGuiViewportDataVulkan() { }
+    ~ImGuiViewportDataVulkan() { }
 };
 
 static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataVulkan* data = IM_NEW(ImGuiPlatformDataVulkan)();
+    ImGuiViewportDataVulkan* data = IM_NEW(ImGuiViewportDataVulkan)();
     viewport->RendererUserData = data;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
 
@@ -1095,7 +1096,7 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 {
-    if (ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData)
+    if (ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData)
     {
         ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, &data->WindowData, g_Allocator);
         IM_DELETE(data);
@@ -1105,7 +1106,7 @@ static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
-    ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
+    ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData;
     if (data == NULL) // This is NULL for the main viewport (which is left to the user/app to handle)
         return;
     data->WindowData.ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
@@ -1114,7 +1115,7 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
+    ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
     VkResult err;
 
@@ -1185,7 +1186,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataVulkan* data = (ImGuiPlatformDataVulkan*)viewport->RendererUserData;
+    ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
 
     VkResult err;

@@ -638,17 +638,17 @@ void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
 // Platform Interface (Optional, for multi-viewport support)
 //--------------------------------------------------------------------------------------------------------
 
-struct ImGuiPlatformDataDx12
+struct ImGuiViewportDataDx12
 {
     IDXGISwapChain3*            SwapChain;
 
-    ImGuiPlatformDataDx12() { SwapChain = NULL; }
-    ~ImGuiPlatformDataDx12() { IM_ASSERT(SwapChain == NULL); }
+    ImGuiViewportDataDx12() { SwapChain = NULL; }
+    ~ImGuiViewportDataDx12() { IM_ASSERT(SwapChain == NULL); }
 };
 
 static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataDx12* data = IM_NEW(ImGuiPlatformDataDx12)();
+    ImGuiViewportDataDx12* data = IM_NEW(ImGuiViewportDataDx12)();
     viewport->RendererUserData = data;
     IM_ASSERT(0);
 
@@ -688,7 +688,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
 {
-    if (ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData)
+    if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData)
     {
         IM_ASSERT(0);
         /*
@@ -706,7 +706,7 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
-    ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
+    ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
     (void)data; (void)size;
     /*
@@ -728,7 +728,7 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
+    ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
     (void)data;
     /*
@@ -742,7 +742,7 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataDx12* data = (ImGuiPlatformDataDx12*)viewport->RendererUserData;
+    ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
     (void)data;
     /*

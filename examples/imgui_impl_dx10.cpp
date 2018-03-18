@@ -502,18 +502,18 @@ void ImGui_ImplDX10_NewFrame()
 // Platform Interface (Optional, for multi-viewport support)
 //--------------------------------------------------------------------------------------------------------
 
-struct ImGuiPlatformDataDx10
+struct ImGuiViewportDataDx10
 {
     IDXGISwapChain*             SwapChain;
     ID3D10RenderTargetView*     RTView;
 
-    ImGuiPlatformDataDx10()     { SwapChain = NULL; RTView = NULL; }
-    ~ImGuiPlatformDataDx10()    { IM_ASSERT(SwapChain == NULL && RTView == NULL); }
+    ImGuiViewportDataDx10()     { SwapChain = NULL; RTView = NULL; }
+    ~ImGuiViewportDataDx10()    { IM_ASSERT(SwapChain == NULL && RTView == NULL); }
 };
 
 static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataDx10* data = IM_NEW(ImGuiPlatformDataDx10)();
+    ImGuiViewportDataDx10* data = IM_NEW(ImGuiViewportDataDx10)();
     viewport->RendererUserData = data;
 
     // FIXME-PLATFORM
@@ -550,7 +550,7 @@ static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX10_DestroyWindow(ImGuiViewport* viewport)
 {
-    if (ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData)
+    if (ImGuiViewportDataDx10* data = (ImGuiViewportDataDx10*)viewport->RendererUserData)
     {
         if (data->SwapChain)
             data->SwapChain->Release();
@@ -565,7 +565,7 @@ static void ImGui_ImplDX10_DestroyWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX10_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
-    ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
+    ImGuiViewportDataDx10* data = (ImGuiViewportDataDx10*)viewport->RendererUserData;
     if (data->RTView)
     {
         data->RTView->Release();
@@ -583,7 +583,7 @@ static void ImGui_ImplDX10_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 
 static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
+    ImGuiViewportDataDx10* data = (ImGuiViewportDataDx10*)viewport->RendererUserData;
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
     g_pd3dDevice->OMSetRenderTargets(1, &data->RTView, NULL);
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
@@ -593,7 +593,7 @@ static void ImGui_ImplDX10_RenderViewport(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX10_SwapBuffers(ImGuiViewport* viewport)
 {
-    ImGuiPlatformDataDx10* data = (ImGuiPlatformDataDx10*)viewport->RendererUserData;
+    ImGuiViewportDataDx10* data = (ImGuiViewportDataDx10*)viewport->RendererUserData;
     data->SwapChain->Present(0, 0); // Present without vsync
 }
 
