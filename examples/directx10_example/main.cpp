@@ -208,9 +208,9 @@ int main(int, char**)
         ImGui::Render();
         ImGui_ImplDX10_RenderDrawData(ImGui::GetDrawData());
 
-        // Update and Render additional Platform Windows
+        // Update and Render additional Platform Windows (when ImGuiConfigFlags_EnableViewports is enabled)
         ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows();
+        ImGui::RenderPlatformWindows(NULL, NULL);
 
         g_pSwapChain->Present(1, 0); // Present with vsync
         //g_pSwapChain->Present(0, 0); // Present without vsync

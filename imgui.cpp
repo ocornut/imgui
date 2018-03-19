@@ -3559,7 +3559,7 @@ void ImGui::UpdatePlatformWindows()
 
 // This is a default/basic function for performing the rendering/swap of multiple platform windows.
 // Custom renderers may prefer to not call this function at all, and instead iterate the platform data and handle rendering/sync themselves.
-// The Render/Swap functions stored in ImGuiPlatformInterface are merely here to allow for this helper to exist, but you can do it yourself:
+// The Render/Swap functions stored in ImGuiPlatformIO are merely here to allow for this helper to exist, but you can do it yourself:
 //
 //    ImGuiPlatformData* data = ImGui::GetPlatformData();
 //    for (int i = 1; i < data->Viewports.Size; i++)
@@ -3568,7 +3568,7 @@ void ImGui::UpdatePlatformWindows()
 //        MySwapBufferFunction(data->Viewports[i], my_args);
 //
 // Note how we intentionally skip the main viewport (index 0) which is generally rendered as part of our main application.
-void ImGui::RenderPlatformWindows()
+void ImGui::RenderPlatformWindows(void* platform_render_arg, void* renderer_render_arg)
 {
     if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
@@ -3578,18 +3578,14 @@ void ImGui::RenderPlatformWindows()
     for (int i = 1; i < data->Viewports.Size; i++)
     {
         ImGuiViewport* viewport = data->Viewports[i];
-        if (platform_io.Platform_RenderWindow) 
-            platform_io.Platform_RenderWindow(viewport);
-        if (platform_io.Renderer_RenderWindow) 
-            platform_io.Renderer_RenderWindow(viewport);
+        if (platform_io.Platform_RenderWindow) platform_io.Platform_RenderWindow(viewport, platform_render_arg);
+        if (platform_io.Renderer_RenderWindow) platform_io.Renderer_RenderWindow(viewport, renderer_render_arg);
     }
     for (int i = 1; i < data->Viewports.Size; i++)
     {
         ImGuiViewport* viewport = data->Viewports[i];
-        if (platform_io.Platform_SwapBuffers)
-            platform_io.Platform_SwapBuffers(viewport);
-        if (platform_io.Renderer_SwapBuffers)
-            platform_io.Renderer_SwapBuffers(viewport);
+        if (platform_io.Platform_SwapBuffers) platform_io.Platform_SwapBuffers(viewport, platform_render_arg);
+        if (platform_io.Renderer_SwapBuffers) platform_io.Renderer_SwapBuffers(viewport, renderer_render_arg);
     }
 }
 

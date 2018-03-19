@@ -726,7 +726,7 @@ static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     */
 }
 
-static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport)
+static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);
@@ -740,7 +740,7 @@ static void ImGui_ImplDX12_RenderWindow(ImGuiViewport* viewport)
     ImGui_ImplDX12_RenderDrawData(viewport->DrawData);
 }
 
-static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport)
+static void ImGui_ImplDX12_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
     IM_ASSERT(0);

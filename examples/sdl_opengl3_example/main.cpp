@@ -132,9 +132,9 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
-        // Update and Render additional Platform Windows
+        // Update and Render additional Platform Windows (when ImGuiConfigFlags_EnableViewports is enabled)
         ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows();
+        ImGui::RenderPlatformWindows(NULL, NULL);
 
         SDL_GL_MakeCurrent(window, gl_context);
         SDL_GL_SwapWindow(window);

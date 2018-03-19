@@ -479,9 +479,9 @@ int main(int, char**)
         memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 		FrameRender(wd);
 
-        // Update and Render additional Platform Windows
+        // Update and Render additional Platform Windows (when ImGuiConfigFlags_EnableViewports is enabled)
         ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows();
+        ImGui::RenderPlatformWindows(NULL, NULL);
 
         FramePresent(wd);
     }

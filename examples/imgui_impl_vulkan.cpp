@@ -3,6 +3,7 @@
 
 // Missing features:
 //  [ ] User texture binding. Changes of ImTextureID aren't supported by this binding! See https://github.com/ocornut/imgui/pull/914
+//  [ ] Multi-viewport rendering (when ImGuiConfigFlags_EnableViewports is enabled). WORK-IN-PROGRESS.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 5 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXX_CreateFontsTexture(), ImGui_ImplXXXX_NewFrame(), ImGui_ImplXXXX_Render() and ImGui_ImplXXXX_Shutdown().
@@ -1113,7 +1114,7 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &data->WindowData, g_Allocator, (int)size.x, (int)size.y);
 }
 
-static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport)
+static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
@@ -1184,7 +1185,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport)
     }
 }
 
-static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport)
+static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkan_WindowData* wd = &data->WindowData;
