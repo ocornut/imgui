@@ -11,7 +11,7 @@
 #include <GLFW/glfw3.h>
 
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
-#define IMGUI_UNLIMITED_FRAME_RATE
+//#define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
@@ -195,6 +195,7 @@ static void resize_vulkan(int w, int h)
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
     VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
+    (void)flags; (void)object; (void)pUserData; (void)pLayerPrefix; (void)messageCode; (void)location;
     printf("[vulkan] ObjectType: %i\nMessage: %s\n\n", objectType, pMessage );
     return VK_FALSE;
 }
@@ -359,7 +360,7 @@ static void setup_vulkan(GLFWwindow* window)
     {
         // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
-        g_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        g_PresentMode = VK_PRESENT_MODE_MAILBOX_KHR; //VK_PRESENT_MODE_IMMEDIATE_KHR;
 #else
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
@@ -376,7 +377,7 @@ static void setup_vulkan(GLFWwindow* window)
                 break;
             }
         }
-        if( !presentModeAvailable )
+        if (!presentModeAvailable)
             g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // always available
     }
 
