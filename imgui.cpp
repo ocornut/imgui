@@ -3483,10 +3483,6 @@ void ImGui::UpdatePlatformWindows()
     IM_ASSERT(g.FrameCountEnded == g.FrameCount && "Forgot to call Render() or EndFrame() before UpdatePlatformWindows()?");
     IM_ASSERT(g.FrameCountPlatformEnded < g.FrameCount);
     g.FrameCountPlatformEnded = g.FrameCount;
-
-    g.PlatformData.MainViewport = g.Viewports[0];
-    g.PlatformData.Viewports.resize(0);
-    g.PlatformData.Viewports.push_back(g.Viewports[0]);
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
 
@@ -3507,9 +3503,6 @@ void ImGui::UpdatePlatformWindows()
             }
             continue;
         }
-
-        g.PlatformData.Viewports.push_back(viewport);
-        IM_ASSERT(viewport->Window != NULL);
 
         bool is_new_window = (viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL && viewport->RendererUserData == NULL);
         if (is_new_window && viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL)
@@ -4415,6 +4408,19 @@ void ImGui::EndFrame()
                 ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal);
             }
         }
+    }
+
+    // Update user-side viewport list
+    g.PlatformData.MainViewport = g.Viewports[0];
+    g.PlatformData.Viewports.resize(0);
+    for (int i = 0; i < g.Viewports.Size; i++)
+    {
+        ImGuiViewportP* viewport = g.Viewports[i];
+        if (viewport->LastFrameActive < g.FrameCount)
+            continue;
+        if (i > 0)
+            IM_ASSERT(viewport->Window != NULL);
+        g.PlatformData.Viewports.push_back(viewport);
     }
 
     // Sort the window list so that all child windows are after their parent
