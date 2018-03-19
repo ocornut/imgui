@@ -9887,11 +9887,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     const bool user_clicked = hovered && io.MouseClicked[0];
     const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
+    const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
 
     bool clear_active_id = false;
 
-    bool select_all = (g.ActiveId != id) && (((flags & ImGuiInputTextFlags_AutoSelectAll) != 0) || (g.NavInputId == id)) && (!is_multiline);
-    if (focus_requested || user_clicked || user_scrolled || g.NavInputId == id)
+    bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0 || user_nav_input_start) && (!is_multiline);
+    if (focus_requested || user_clicked || user_scrolled || user_nav_input_start)
     {
         if (g.ActiveId != id)
         {
@@ -9999,18 +10000,15 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (io.InputCharacters[0])
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
-            // We ignore CTRL inputs, but need to allow CTRL+ALT as some keyboards (e.g. German) use AltGR - which is Alt+Ctrl - to input certain characters.
-            if (!(io.KeyCtrl && !io.KeyAlt) && is_editable)
-            {
+            // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
+            if (!(io.KeyCtrl && !io.KeyAlt) && is_editable && !user_nav_input_start)
                 for (int n = 0; n < IM_ARRAYSIZE(io.InputCharacters) && io.InputCharacters[n]; n++)
-                    if (unsigned int c = (unsigned int)io.InputCharacters[n])
-                    {
-                        // Insert character if they pass filtering
-                        if (!InputTextFilterCharacter(&c, flags, callback, user_data))
-                            continue;
+                {
+                    // Insert character if they pass filtering
+                    unsigned int c = (unsigned int)io.InputCharacters[n];
+                    if (InputTextFilterCharacter(&c, flags, callback, user_data))
                         edit_state.OnKeyPressed((int)c);
-                    }
-            }
+                }
 
             // Consume characters
             memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
