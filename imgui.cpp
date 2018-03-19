@@ -14054,11 +14054,16 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 ImGuiViewportP* viewport = g.Viewports[i];
                 ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
-                if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, DrawLists: %d, Size: (%.0f,%.0f)", i, viewport->ID, viewport->DrawDataBuilder.GetDrawListCount(), viewport->Size.x, viewport->Size.y))
+                if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Size: (%.0f,%.0f)", i, viewport->ID, viewport->Size.x, viewport->Size.y))
                 {
-                    ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
-                    ImGui::BulletText("PlatformPos: (%.0f,%.0f); DpiScale: %.0f%%", viewport->PlatformPos.x, viewport->PlatformPos.y, viewport->DpiScale * 100.0f);
-                    ImGui::BulletText("Flags: 0x%04X", viewport->Flags);
+                    ImGuiWindowFlags flags = viewport->Flags;
+                    ImGui::BulletText("Pos: (%.0f,%.0f), PlatformPos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y, viewport->PlatformPos.x, viewport->PlatformPos.y);
+                    if (i > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset")) viewport->PlatformPos = ImVec2(0, 0); }
+                    ImGui::BulletText("DpiScale: %.0f%%", viewport->DpiScale * 100.0f);
+                    ImGui::BulletText("Flags: 0x%04X =%s%s%s%s", viewport->Flags,
+                        (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
+                        (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs" : "",
+                        (flags & ImGuiViewportFlags_NoRendererClear)     ? " NoRendererClear"     : "");
                     for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
                         for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
                             Funcs::NodeDrawList(NULL, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");
