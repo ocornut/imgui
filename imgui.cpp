@@ -12066,7 +12066,7 @@ void ImGui::Separator()
         return;
     ImGuiContext& g = *GImGui;
 
-    ImGuiWindowFlags flags = 0;
+    ImGuiSeparatorFlags flags = 0;
     if ((flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)) == 0)
         flags |= (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     IM_ASSERT(ImIsPowerOfTwo((int)(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical))));   // Check that only 1 option is selected
