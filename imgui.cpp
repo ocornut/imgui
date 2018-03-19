@@ -2122,7 +2122,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFla
             }
 
     // Filter by viewport
-    if (window->Viewport != g.MouseViewport)
+    if (window->Viewport != g.MousePosViewport)
         return false;
 
     return true;
@@ -3250,21 +3250,21 @@ static void ImGui::UpdateMovingWindowDropViewport(ImGuiWindow* window)
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
 
-    ImRect mouse_viewport_rect = g.MouseViewport->GetRect();
-    ImVec2 window_pos_in_mouse_viewport = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(window->Pos, window->Viewport), g.MouseViewport);
+    ImRect mouse_viewport_rect = g.MousePosViewport->GetRect();
+    ImVec2 window_pos_in_mouse_viewport = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(window->Pos, window->Viewport), g.MousePosViewport);
     ImRect window_rect_in_mouse_viewport = ImRect(window_pos_in_mouse_viewport, window_pos_in_mouse_viewport + window->Size);
-    if ((g.MouseViewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) &&  mouse_viewport_rect.Contains(window_rect_in_mouse_viewport))
+    if ((g.MousePosViewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) &&  mouse_viewport_rect.Contains(window_rect_in_mouse_viewport))
     {
         // Drop on an existing viewport
         ImGuiViewportP* old_viewport = window->Viewport;
-        SetWindowViewportTranslateToPreservePlatformPos(window, window->Viewport, g.MouseViewport);
+        SetWindowViewportTranslateToPreservePlatformPos(window, window->Viewport, g.MousePosViewport);
 
         // Our current scheme allow any window to land on a viewport, so when that viewport merges, move other windows as well
         // FIXME-OPT
         if (window->Flags & ImGuiWindowFlags_FullViewport)
             for (int n = 0; n < g.Windows.Size; n++)
                 if (g.Windows[n]->Viewport == old_viewport)
-                    SetWindowViewportTranslateToPreservePlatformPos(g.Windows[n], old_viewport, g.MouseViewport);
+                    SetWindowViewportTranslateToPreservePlatformPos(g.Windows[n], old_viewport, g.MousePosViewport);
     }
     else
     {
@@ -3363,8 +3363,8 @@ static void ImGui::UpdateViewports()
 
             // Destroy
             if (viewport == viewport_ref)               viewport_ref = NULL;
-            if (viewport == g.MouseViewport)            g.MouseViewport = NULL;
-            if (viewport == g.MouseLastHoveredViewport) g.MouseLastHoveredViewport = NULL;
+            if (viewport == g.MousePosViewport)         g.MousePosViewport = NULL;
+            if (viewport == g.MouseHoveredPrevViewport) g.MouseHoveredPrevViewport = NULL;
             IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
             IM_ASSERT(g.PlatformData.Viewports.contains(viewport) == false);
             IM_DELETE(viewport);
@@ -3419,7 +3419,7 @@ static void ImGui::UpdateViewports()
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
     {
-        g.MouseViewport = g.MouseLastViewport = main_viewport;
+        g.MousePosViewport = g.MousePosPrevViewport = main_viewport;
         return;
     }
 
@@ -3442,7 +3442,7 @@ static void ImGui::UpdateViewports()
         viewport_hovered = FindViewportHoveredFromPlatformWindowStack(mouse_platform_pos);
     }
     if (viewport_hovered != NULL)
-        g.MouseLastHoveredViewport = viewport_hovered;
+        g.MouseHoveredPrevViewport = viewport_hovered;
 
     // If reference viewport just has been deleted, use a position relative to the main viewport
     if (viewport_ref == NULL)
@@ -3451,9 +3451,9 @@ static void ImGui::UpdateViewports()
         g.IO.MousePos = ConvertPlatformPosToViewportPos(mouse_platform_pos, viewport_ref);
     }
 
-    g.MouseLastViewport = g.MouseViewport;
-    g.MouseViewport = viewport_ref;
-    g.MouseViewport->LastFrameAsRefViewport = g.FrameCount;
+    g.MousePosPrevViewport = g.MousePosViewport;
+    g.MousePosViewport = viewport_ref;
+    g.MousePosViewport->LastFrameAsRefViewport = g.FrameCount;
 
     // When dragging something, always refer to the last hovered viewport (so when we are between viewport, our dragged preview will tend to show in the last viewport)
     const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive || (g.MovingWindow != NULL);
@@ -3461,15 +3461,15 @@ static void ImGui::UpdateViewports()
     if (is_mouse_dragging_with_an_expected_destination || is_mouse_all_released)
     {
         if (is_mouse_dragging_with_an_expected_destination)
-            viewport_hovered = g.MouseLastHoveredViewport;
-        if (viewport_hovered != NULL && viewport_hovered != g.MouseViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
+            viewport_hovered = g.MouseHoveredPrevViewport;
+        if (viewport_hovered != NULL && viewport_hovered != g.MousePosViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
         {
-            g.IO.MousePos = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(g.IO.MousePos, g.MouseViewport), viewport_hovered);
-            g.MouseViewport = viewport_hovered;
+            g.IO.MousePos = ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(g.IO.MousePos, g.MousePosViewport), viewport_hovered);
+            g.MousePosViewport = viewport_hovered;
         }
     }
 
-    IM_ASSERT(g.MouseViewport != NULL);
+    IM_ASSERT(g.MousePosViewport != NULL);
 }
 
 ImGuiPlatformData* ImGui::GetPlatformData()
@@ -3698,7 +3698,7 @@ void ImGui::NewFrame()
 
     // Update mouse input state
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
-    if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev) && g.MouseViewport == g.MouseLastViewport)
+    if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev) && g.MousePosViewport == g.MousePosPrevViewport)
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
     else
         g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
@@ -3763,7 +3763,7 @@ void ImGui::NewFrame()
     // - We also support the moved window toggling the NoInputs flag after moving has started in order to be able to detect windows below it, which is useful for e.g. docking mechanisms.
     g.HoveredWindow = (g.MovingWindow && !(g.MovingWindow->Flags & ImGuiWindowFlags_NoInputs)) ? g.MovingWindow : FindHoveredWindow();
     g.HoveredRootWindow = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
-    IM_ASSERT(g.HoveredWindow == NULL || g.HoveredWindow == g.MovingWindow || g.HoveredWindow->Viewport == g.MouseViewport);
+    IM_ASSERT(g.HoveredWindow == NULL || g.HoveredWindow == g.MovingWindow || g.HoveredWindow->Viewport == g.MousePosViewport);
 
     ImGuiWindow* modal_window = GetFrontMostModalRootWindow();
     if (modal_window != NULL)
@@ -4033,7 +4033,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    g.CurrentViewport = g.MouseViewport = g.MouseLastViewport = g.MouseLastHoveredViewport = NULL;
+    g.CurrentViewport = g.MousePosViewport = g.MousePosPrevViewport = g.MouseHoveredPrevViewport = NULL;
     for (int i = 0; i < g.Viewports.Size; i++)
         IM_DELETE(g.Viewports[i]);
     g.Viewports.clear();
@@ -4476,7 +4476,7 @@ void ImGui::Render()
         const ImVec2 pos = g.IO.MousePos - offset;
         const ImTextureID tex_id = g.IO.Fonts->TexID;
         const float sc = g.Style.MouseCursorScale;
-        g.OverlayDrawList.PushClipRect(g.MouseViewport->Pos, g.MouseViewport->Pos + g.MouseViewport->Size);
+        g.OverlayDrawList.PushClipRect(g.MousePosViewport->Pos, g.MousePosViewport->Pos + g.MousePosViewport->Size);
         g.OverlayDrawList.PushTextureID(tex_id);
         g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(1,0)*sc, pos+ImVec2(1,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
         g.OverlayDrawList.AddImage(tex_id, pos + ImVec2(2,0)*sc, pos+ImVec2(2,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
@@ -4981,7 +4981,7 @@ static ImGuiWindow* FindHoveredWindow()
         if (window->Flags & ImGuiWindowFlags_NoInputs)
             continue;
         IM_ASSERT(window->Viewport);
-        if (window->Viewport != g.MouseViewport)
+        if (window->Viewport != g.MousePosViewport)
             continue;
 
         // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
@@ -5009,7 +5009,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
     if (!rect_for_touch.Contains(g.IO.MousePos))
         return false;
-    if (!g.MouseViewport->GetRect().Overlaps(rect_clipped))
+    if (!g.MousePosViewport->GetRect().Overlaps(rect_clipped))
         return false;
     return true;
 }
@@ -6017,7 +6017,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
         if (!window_is_mouse_tooltip && !current_viewport->GetRect().Contains(window->Rect()))
         {
             // Create an undecorated, temporary OS/platform window
-            ImVec2 platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MouseViewport);
+            ImVec2 platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MousePosViewport);
             ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
             ImGuiViewportP* viewport = Viewport(window, window->ID, viewport_flags, platform_pos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport;
@@ -6033,7 +6033,7 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
             // This is so we don't require of the multi-viewport windowing back-end to preserve mouse buttons after a window closure, making it easier to implement them.
             bool preserve_temporary_viewport = g.MovingWindow && g.MovingWindow->RootWindow == window && (window->Viewport->Flags & ImGuiWindowFlags_FullViewport);
             if (!preserve_temporary_viewport)
-                window->Viewport = g.MouseViewport;
+                window->Viewport = g.MousePosViewport;
         }
     }
     else if (g.NavWindow != NULL && g.NavWindow != window && (flags & ImGuiWindowFlags_Tooltip))

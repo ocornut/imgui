@@ -635,9 +635,9 @@ struct ImGuiContext
     ImVector<ImGuiViewportP*> Viewports;
     ImGuiPlatformData       PlatformData;                       // This is essentially the public facing version of the Viewports vector (it is updated in UpdatePlatformWindows and exclude the viewports about to be destroyed)
     ImGuiViewportP*         CurrentViewport;
-    ImGuiViewportP*         MouseViewport;
-    ImGuiViewportP*         MouseLastViewport;
-    ImGuiViewportP*         MouseLastHoveredViewport;
+    ImGuiViewportP*         MousePosViewport;
+    ImGuiViewportP*         MousePosPrevViewport;
+    ImGuiViewportP*         MouseHoveredPrevViewport;
 
     // Navigation data (for gamepad/keyboard)
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
@@ -766,8 +766,8 @@ struct ImGuiContext
         NextTreeNodeOpenCond = 0;
 
         CurrentViewport = NULL;
-        MouseViewport = NULL;
-        MouseLastViewport = MouseLastHoveredViewport = NULL;
+        MousePosViewport = NULL;
+        MousePosPrevViewport = MouseHoveredPrevViewport = NULL;
 
         NavWindow = NULL;
         NavId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
