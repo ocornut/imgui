@@ -347,7 +347,7 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_EnableViewports;
-    io.ConfigFlags |= ImGuiConfigFlags_PlatformNoTaskBar;
+    io.ConfigFlags |= ImGuiConfigFlags_NoTaskBarForViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     // Setup GLFW binding

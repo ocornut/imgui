@@ -95,6 +95,7 @@ typedef int ImGuiStyleVar;          // enum: a variable identifier for styling  
 typedef int ImDrawCornerFlags;      // flags: for ImDrawList::AddRect*() etc.   // enum ImDrawCornerFlags_
 typedef int ImDrawListFlags;        // flags: for ImDrawList                    // enum ImDrawListFlags_
 typedef int ImFontAtlasFlags;       // flags: for ImFontAtlas                   // enum ImFontAtlasFlags_
+typedef int ImGuiBackendFlags;      // flags: for io.BackendFlags               // enum ImGuiBackendFlags_
 typedef int ImGuiColorEditFlags;    // flags: for ColorEdit*(), ColorPicker*()  // enum ImGuiColorEditFlags_
 typedef int ImGuiColumnsFlags;      // flags: for *Columns*()                   // enum ImGuiColumnsFlags_
 typedef int ImGuiConfigFlags;       // flags: for io.ConfigFlags                // enum ImGuiConfigFlags_
@@ -751,7 +752,7 @@ enum ImGuiKey_
 
 // [BETA] Gamepad/Keyboard directional navigation
 // Keyboard: Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
-// Gamepad:  Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+// Gamepad:  Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Back-end: set ImGuiBackendFlags_HasGamepad and fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
 // Read instructions in imgui.cpp for more details. Download PNG/PSD at goo.gl/9LgVZW.
 enum ImGuiNavInput_
 {
@@ -784,31 +785,37 @@ enum ImGuiNavInput_
     ImGuiNavInput_InternalStart_ = ImGuiNavInput_KeyMenu_
 };
 
-// Configuration flags stored in io.ConfigFlags
+// Configuration flags stored in io.ConfigFlags. Set by user/application.
 enum ImGuiConfigFlags_
 {
-    // Navigation
-    ImGuiConfigFlags_NavEnableKeyboard                  = 1 << 0,   // Keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeyDown[].
-    ImGuiConfigFlags_NavEnableGamepad                   = 1 << 1,   // Gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[].
-    ImGuiConfigFlags_NavMoveMouse                       = 1 << 2,   // Request navigation to allow moving the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantMoveMouse=true. If enabled you MUST honor io.WantMoveMouse requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
-    ImGuiConfigFlags_NavNoCaptureKeyboard               = 1 << 3,   // Do not set the io.WantCaptureKeyboard flag with io.NavActive is set. 
+    ImGuiConfigFlags_NavEnableKeyboard        = 1 << 0,  // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeyDown[].
+    ImGuiConfigFlags_NavEnableGamepad         = 1 << 1,  // Master gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[]. Back-end also needs to set ImGuiBackendFlags_HasGamepad.
+    ImGuiConfigFlags_NavEnableSetMousePos     = 1 << 2,  // Request navigation to allow moving the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantSetMousePos=true. If enabled you MUST honor io.WantSetMousePos requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+    ImGuiConfigFlags_NavNoCaptureKeyboard     = 1 << 3,  // Do not set the io.WantCaptureKeyboard flag with io.NavActive is set. 
+    ImGuiConfigFlags_NoSetMouseCursor         = 1 << 4,  // Request back-end to not alter mouse cursor configuration.
 
     // [BETA] Viewports
-    ImGuiConfigFlags_EnableViewports                    = 1 << 4,   // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
-    ImGuiConfigFlags_EnableDpiScaleViewports            = 1 << 5,
-    ImGuiConfigFlags_EnableDpiScaleFonts                = 1 << 6,
+    ImGuiConfigFlags_EnableViewports          = 1 << 5,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
+    ImGuiConfigFlags_EnableDpiScaleViewports  = 1 << 6,
+    ImGuiConfigFlags_EnableDpiScaleFonts      = 1 << 7,
+    ImGuiConfigFlags_NoTaskBarForViewports    = 1 << 8,
 
-    ImGuiConfigFlags_PlatformNoTaskBar                  = 1 << 10,
-    ImGuiConfigFlags_PlatformHasViewports               = 1 << 11,  // Back-end Platform supports multiple viewports
-    ImGuiConfigFlags_PlatformHasMouseHoveredViewport    = 1 << 12,  // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines. Don't see this without studying how the examples/ back-end handle it.
-    ImGuiConfigFlags_PlatformHasWantMoveMouseSupport    = 1 << 13,  // Back-end Platform supports io.WantMoveMouse request by updating the OS mouse cursor position (currently only used by ImGuiConfigFlags_NavMoveMouse feature, will be useful for widgets teleporting/wrapping the cursor)
-    ImGuiConfigFlags_PlatformHasWindowAlpha             = 1 << 14,  // Back-end Platform supports transparent windows
-    ImGuiConfigFlags_RendererHasViewports               = 1 << 15,  // Back-end Renderer supports multiple viewports
-    
-    // Platform Info (free of use, for user/application convenience)
-    ImGuiConfigFlags_IsSRGB                             = 1 << 20,  // Back-end is SRGB-aware (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
-    ImGuiConfigFlags_IsTouchScreen                      = 1 << 21,  // Back-end is using a touch screen instead of a mouse (Storage flag to allow your back-end to communicate to shared widgets. Not used by core ImGui)
-    ImGuiConfigFlags_IsOnScreenKeyboard                 = 1 << 22   // Back-end uses an on-screen keyboard when io.WantTextInput is set.
+    // User storage (to allow your back-end/engine to communicate to code that may be shared between multiple projects. Those flags are not used by core ImGui)
+    ImGuiConfigFlags_IsSRGB                   = 1 << 20, // Application is SRGB-aware.
+    ImGuiConfigFlags_IsTouchScreen            = 1 << 21  // Application is using a touch screen instead of a mouse.
+};
+
+// Back-end capabilities flags stored in io.BackendFlags. Set by imgui_impl_xxx or custom back-end.
+enum ImGuiBackendFlags_
+{
+    ImGuiBackendFlags_HasGamepad              = 1 << 0,  // Back-end supports and has a connected gamepad.
+    ImGuiBackendFlags_HasMouseCursors         = 1 << 1,  // Back-end supports reading GetMouseCursor() to change the OS cursor shape.
+    ImGuiBackendFlags_HasSetMousePos          = 1 << 2,  // Back-end supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
+
+    // [BETA] Viewports
+    ImGuiBackendFlags_PlatformHasViewports    = 1 << 10, // Back-end Platform supports multiple viewports.
+    ImGuiBackendFlags_RendererHasViewports    = 1 << 11, // Back-end Renderer supports multiple viewports.
+    ImGuiBackendFlags_HasMouseHoveredViewport = 1 << 12  // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines! Don't set this without studying how the examples/ back-end handle it!
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -1015,9 +1022,10 @@ struct ImGuiIO
     // Settings (fill once)                 // Default value:
     //------------------------------------------------------------------
 
+    ImGuiConfigFlags   ConfigFlags;         // = 0                  // See ImGuiConfigFlags_ enum. Set by user/application. Gamepad/keyboard navigation options, etc.
+    ImGuiBackendFlags  BackendFlags;        // = 0                  // Set ImGuiBackendFlags_ enum. Set by imgui_impl_xxx files or custom back-end.
     ImVec2        DisplaySize;              // <unset>              // Main display size. Used e.g. to clamp windows positions. This is the default viewport. Use BeginViewport() for other viewports.
     float         DeltaTime;                // = 1.0f/60.0f         // Time elapsed since last frame, in seconds.
-    ImGuiConfigFlags ConfigFlags;           // = 0                  // See ImGuiConfigFlags_ enum. Back-end options, Gamepad/keyboard navigation options, etc.
     float         IniSavingRate;            // = 5.0f               // Maximum time between saving positions/sizes to .ini file, in seconds.
     const char*   IniFilename;              // = "imgui.ini"        // Path to .ini file. NULL to disable .ini saving.
     const char*   LogFilename;              // = "imgui_log.txt"    // Path to .log file (default parameter to ImGui::LogToFile when no file is specified).
@@ -1091,7 +1099,7 @@ struct ImGuiIO
     bool        WantCaptureMouse;           // When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application. This is set by ImGui when it wants to use your mouse (e.g. unclicked mouse is hovering a window, or a widget is active). 
     bool        WantCaptureKeyboard;        // When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application. This is set by ImGui when it wants to use your keyboard inputs.
     bool        WantTextInput;              // Mobile/console: when io.WantTextInput is true, you may display an on-screen keyboard. This is set by ImGui when it wants textual keyboard input to happen (e.g. when a InputText widget is active).
-    bool        WantMoveMouse;              // MousePos has been altered, back-end should reposition mouse on next frame. Set only when ImGuiConfigFlags_NavMoveMouse flag is enabled.
+    bool        WantSetMousePos;            // MousePos has been altered, back-end should reposition mouse on next frame. Set only when ImGuiConfigFlags_NavEnableSetMousePos flag is enabled.
     bool        NavActive;                  // Directional navigation is currently allowed (will handle ImGuiKey_NavXXX events) = a window is focused and it doesn't use the ImGuiWindowFlags_NoNavInputs flag.
     bool        NavVisible;                 // Directional navigation is visible and allowed (will handle ImGuiKey_NavXXX events).
     float       Framerate;                  // Application framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames

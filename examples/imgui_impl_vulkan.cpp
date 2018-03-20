@@ -713,9 +713,11 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     g_Allocator = info->Allocator;
     g_CheckVkResultFn = info->CheckVkResultFn;
 
-    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplVulkan_CreateDeviceObjects();
-    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+
+    // Setup back-end capabilities flags
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
     if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplVulkan_InitPlatformInterface();
 

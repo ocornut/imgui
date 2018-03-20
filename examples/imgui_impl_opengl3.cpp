@@ -50,8 +50,9 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     strcpy(g_GlslVersion, glsl_version);
     strcat(g_GlslVersion, "\n");
 
+    // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
-    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
     if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplOpenGL3_InitPlatformInterface();
     return true;

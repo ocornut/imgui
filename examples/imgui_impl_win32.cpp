@@ -9,9 +9,10 @@
 
 // CHANGELOG
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors and ImGuiBackendFlags_HasSetMousePos flags + honor ImGuiConfigFlags_NoSetMouseCursor flag.
 //  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
-//  2018-02-06: Inputs: Honoring the io.WantMoveMouse by repositioning the mouse (when using navigation and ImGuiConfigFlags_NavMoveMouse is set).
+//  2018-02-06: Inputs: Honoring the io.WantSetMousePos by repositioning the mouse (when using navigation and ImGuiConfigFlags_NavMoveMouse is set).
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
 //  2018-01-08: Inputs: Added mapping for ImGuiKey_Insert.
@@ -38,10 +39,22 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     if (!::QueryPerformanceCounter((LARGE_INTEGER *)&g_Time))
         return false;
 
-    g_hWnd = (HWND)hwnd;
-
+    // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyMap[ImGuiKey_Tab] = VK_TAB;                       // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
+
+    // Our mouse update function expect PlatformHandle to be filled for the main viewport
+    g_hWnd = (HWND)hwnd;
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->PlatformHandle = (void*)g_hWnd;
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
+        ImGui_ImplWin32_InitPlatformInterface();
+
+    // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array that we will update during the application lifetime.
+    io.KeyMap[ImGuiKey_Tab] = VK_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = VK_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = VK_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = VK_UP;
@@ -65,14 +78,6 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
 
     io.ImeWindowHandle = g_hWnd;    
 
-    // Our mouse update function expect PlatformHandle to be filled for the main viewport
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = (void*)g_hWnd;
-
-    io.ConfigFlags |= ImGuiConfigFlags_PlatformHasViewports;
-    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
-        ImGui_ImplWin32_InitPlatformInterface();
-
     return true;
 }
 
@@ -82,9 +87,12 @@ void    ImGui_ImplWin32_Shutdown()
     g_hWnd = (HWND)0;
 }
 
-static void ImGui_ImplWin32_UpdateMouseCursor()
+static bool ImGui_ImplWin32_UpdateMouseCursor()
 {
     ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_NoSetMouseCursor)
+        return false;
+
     ImGuiMouseCursor imgui_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
     if (imgui_cursor == ImGuiMouseCursor_None)
     {
@@ -107,6 +115,7 @@ static void ImGui_ImplWin32_UpdateMouseCursor()
         }
         ::SetCursor(::LoadCursor(NULL, win32_cursor));
     }
+    return true;
 }
 
 // This code supports multiple OS Windows mapped into different ImGui viewports, 
@@ -129,7 +138,6 @@ static void ImGui_ImplWin32_UpdateMousePos()
         return;
 
     // Our back-end can tell which window is under the mouse cursor (not every back-end can), so pass that info to imgui
-    io.ConfigFlags |= ImGuiConfigFlags_PlatformHasMouseHoveredViewport;
     HWND hovered_hwnd = ::WindowFromPoint(pos);
     if (hovered_hwnd)
         if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
@@ -170,8 +178,8 @@ void    ImGui_ImplWin32_NewFrame()
     // io.MouseDown : filled by WM_*BUTTON* events
     // io.MouseWheel : filled by WM_MOUSEWHEEL events
 
-    // Set OS mouse position if requested last frame by io.WantMoveMouse flag (used when io.NavMovesTrue is enabled by user and using directional navigation)
-    if (io.WantMoveMouse)
+    // Set OS mouse position if requested (only used when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+    if (io.WantSetMousePos)
     {
         POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
         ::ClientToScreen(g_hWnd, &pos);
@@ -259,11 +267,8 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
             io.AddInputCharacter((unsigned short)wParam);
         return 0;
     case WM_SETCURSOR:
-        if (LOWORD(lParam) == HTCLIENT)
-        {
-            ImGui_ImplWin32_UpdateMouseCursor();
+        if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())
             return 1;
-        }
         return 0;
     }
     return 0;
@@ -368,7 +373,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 
     ImGuiIO& io = ImGui::GetIO();
     bool no_decoration = (viewport->Flags & ImGuiViewportFlags_NoDecoration) != 0;
-    bool no_task_bar = (io.ConfigFlags & ImGuiConfigFlags_PlatformNoTaskBar) != 0;
+    bool no_task_bar = (io.ConfigFlags & ImGuiConfigFlags_NoTaskBarForViewports) != 0;
     if (no_decoration)
     {
         data->DwStyle = WS_POPUP;

@@ -477,10 +477,12 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) != S_OK)
         return false;
 
-    ImGuiIO& io = ImGui::GetIO();
     g_pd3dDevice = device;
     g_pFactory = pFactory;
-    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+
+    // Setup back-end capabilities flags
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
     if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplDX10_InitPlatformInterface();
     return true;

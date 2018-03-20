@@ -484,11 +484,13 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) != S_OK)
         return false;
 
-    ImGuiIO& io = ImGui::GetIO();
     g_pd3dDevice = device;
     g_pd3dDeviceContext = device_context;
     g_pFactory = pFactory;
-    io.ConfigFlags |= ImGuiConfigFlags_RendererHasViewports;
+
+    // Setup back-end capabilities flags
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
     if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
         ImGui_ImplDX11_InitPlatformInterface();
     return true;

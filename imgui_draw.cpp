@@ -61,9 +61,12 @@
 // STB libraries implementation
 //-------------------------------------------------------------------------
 
-//#define IMGUI_STB_NAMESPACE     ImGuiStb
-//#define IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+// Compile time options:
+//#define IMGUI_STB_NAMESPACE           ImGuiStb
+//#define IMGUI_STB_TRUETYPE_FILENAME   "my_folder/stb_truetype.h"
+//#define IMGUI_STB_RECT_PACK_FILENAME  "my_folder/stb_rect_pack.h"
 //#define IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+//#define IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 
 #ifdef IMGUI_STB_NAMESPACE
 namespace IMGUI_STB_NAMESPACE
@@ -87,23 +90,31 @@ namespace IMGUI_STB_NAMESPACE
 #pragma GCC diagnostic ignored "-Wtype-limits"              // warning: comparison is always true due to limited range of data type [-Wtype-limits]
 #endif
 
-#define STBRP_ASSERT(x)    IM_ASSERT(x)
 #ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 #define STBRP_STATIC
+#define STBRP_ASSERT(x)    IM_ASSERT(x)
 #define STB_RECT_PACK_IMPLEMENTATION
 #endif
+#ifdef IMGUI_STB_RECT_PACK_FILENAME
+#include IMGUI_STB_RECT_PACK_FILENAME
+#else
 #include "stb_rect_pack.h"
+#endif
 
+#ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
 #define STBTT_free(x,u)    ((void)(u), ImGui::MemFree(x))
 #define STBTT_assert(x)    IM_ASSERT(x)
-#ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #else
 #define STBTT_DEF extern
 #endif
+#ifdef IMGUI_STB_TRUETYPE_FILENAME
+#include IMGUI_STB_TRUETYPE_FILENAME
+#else
 #include "stb_truetype.h"
+#endif
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
