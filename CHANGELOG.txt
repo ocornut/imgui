@@ -91,6 +91,8 @@ Other Changes:
 - Context: Removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions() and shared by all contexts. (#1565, #586, #992, #1007, #1558)
 - Context: You may pass a ImFontAtlas to CreateContext() to specify a font atlas to share. Shared font atlas are not owned by the context and not destroyed along with it.
 - Context: Added IMGUI_DISABLE_DEFAULT_ALLOCATORS to disable linking with malloc/free. (#1565, #586, #992, #1007, #1558)
+- IO: Added io.ConfigFlags for user application to store settings for imgui and for the back-end (currently: _NavEnableKeyboard, _NavEnableGamepad, _NavEnableSetMousePos, _NoSetMouseCursor).
+- IO: Added io.BackendFlags for back-end to store its capabilities (currently: _HasGamepad, _HasMouseCursors, _HasSetMousePos). This will be used more in the next version.
 - IO: Added ImGuiKey_Insert, ImGuiKey_Space keys. Setup in all example bindings. (#1541)
 - IO: Added Horizontal Mouse Wheel support for horizontal scrolling. (#1463) [@tseeker]
 - IO: Added IsAnyMouseDown() helper which is helpful for bindings to handle mouse capturing.
@@ -159,6 +161,7 @@ Other Changes:
 - Examples: Files in examples/ now include their own changelog so it is easier to occasionally update your bindings if needed.
 - Examples: Using Dark theme by default. (#707). Tweaked demo code.
 - Examples: Added support for horizontal mouse wheel for API that allows it. (#1463) [@tseeker]
+- Examples: All examples now setup the io.BackendFlags to signify they can honor mouse cursors, gamepad, etc.
 - Examples: DirectX12: Added DirectX 12 example. (#301) [@jdm3]
 - Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version from 330 to 150. (#1466, #1504)
 - Examples: OpenGL3+GLFW,SDL: Added a way to override the GLSL version string in the Init function. (#1466, #1504).

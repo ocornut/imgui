@@ -1849,6 +1849,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
         ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
         ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
+        ImGui::CheckboxFlags("io.ConfigFlags: NoSetMouseCursor", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoSetMouseCursor);
         ImGui::SameLine(); ShowHelpMarker("Request ImGui to move your move cursor when using gamepad/keyboard navigation. NewFrame() will change io.MousePos and set the io.WantSetMousePos flag, your backend will need to apply the new mouse position.");
 
         if (ImGui::TreeNode("Keyboard, Mouse & Navigation State"))
