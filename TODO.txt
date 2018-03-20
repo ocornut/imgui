@@ -237,12 +237,12 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: fix AddRemapChar() to work before font has been built.
  - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
- - nav: integrate navigation branch into master. (#787)
+ - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
  - nav: allow input system to be be more tolerant of io.DeltaTime=0.0f
- - nav: Left within a tree node block as a fallback.
- - nav: Esc on a flattened child
+ - nav: ESC on a flattened child
+ - nav: Left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
+ - nav: menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
  - nav: menus: allow pressing Menu to leave a sub-menu.
- - nav: integrate/design keyboard controls. 
  - nav: simulate right-click or context activation? (SHIFT+F10)
  - nav: tabs should go through most/all widgets (in submission order?).
  - nav: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
