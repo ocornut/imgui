@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] User texture binding. Use 'GLUint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Multi-viewport rendering (when ImGuiConfigFlags_EnableViewports is enabled).
 
 // **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
 // **Prefer using the code in imgui_impl_opengl3.cpp**
@@ -14,6 +15,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-XX-XX: OpenGL: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplGlfwGL2_RenderDrawData() in the .h file so you can call it yourself.
 //  2017-09-01: OpenGL: Save and restore current polygon mode.
@@ -39,14 +41,24 @@
 // OpenGL Data
 static GLuint       g_FontTexture = 0;
 
+// Forward Declarations
+static void ImGui_ImplOpenGL2_InitPlatformInterface();
+static void ImGui_ImplOpenGL2_ShutdownPlatformInterface();
+
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
+    // Setup back-end capabilities flags
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
+    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
+        ImGui_ImplOpenGL2_InitPlatformInterface();
     return true;
 }
 
 void    ImGui_ImplOpenGL2_Shutdown()
 {
+    ImGui_ImplOpenGL2_ShutdownPlatformInterface();
     ImGui_ImplOpenGL2_DestroyDeviceObjects();
 }
 
@@ -196,4 +208,30 @@ bool    ImGui_ImplOpenGL2_CreateDeviceObjects()
 void    ImGui_ImplOpenGL2_DestroyDeviceObjects()
 {
     ImGui_ImplOpenGL2_DestroyFontsTexture();
+}
+
+//--------------------------------------------------------------------------------------------------------
+// Platform Interface (Optional, for multi-viewport support)
+//--------------------------------------------------------------------------------------------------------
+
+static void ImGui_ImplOpenGL2_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
+    {
+        ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+        glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
+        glClear(GL_COLOR_BUFFER_BIT);
+    }
+    ImGui_ImplOpenGL2_RenderDrawData(viewport->DrawData);
+}
+
+static void ImGui_ImplOpenGL2_InitPlatformInterface()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_RenderWindow = ImGui_ImplOpenGL2_RenderWindow;
+}
+
+static void ImGui_ImplOpenGL2_ShutdownPlatformInterface()
+{
+    ImGui::DestroyPlatformWindows();
 }

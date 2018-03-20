@@ -30,6 +30,8 @@ int main(int, char**)
     // Setup ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
+    io.ConfigFlags |= ImGuiConfigFlags_EnableViewports;
+    io.ConfigFlags |= ImGuiConfigFlags_NoTaskBarForViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL2_Init();
@@ -114,6 +116,12 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound, but prefer using the GL3+ code.
         ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+
+        // Update and Render additional Platform Windows (when ImGuiConfigFlags_EnableViewports is enabled)
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindows(NULL, NULL);
+
+        glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);
     }
 

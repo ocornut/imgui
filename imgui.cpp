@@ -14066,7 +14066,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::BulletText("Pos: (%.0f,%.0f), PlatformPos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y, viewport->PlatformPos.x, viewport->PlatformPos.y);
                     if (i > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset")) viewport->PlatformPos = ImVec2(0, 0); }
                     ImGui::BulletText("DpiScale: %.0f%%", viewport->DpiScale * 100.0f);
-                    ImGui::BulletText("Flags: 0x%04X =%s%s%s%s", viewport->Flags,
+                    ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s", viewport->Flags,
                         (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
                         (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs" : "",
                         (flags & ImGuiViewportFlags_NoRendererClear)     ? " NoRendererClear"     : "");
