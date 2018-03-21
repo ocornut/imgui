@@ -738,14 +738,14 @@ static void             UpdateMovingWindowDropViewport(ImGuiWindow* window);
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
-// Viewport
+// Viewports
 const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using a constant instead of e.g. ImHash("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
 static inline ImRect    GetViewportRect(ImGuiWindow* window) { return window->Viewport->GetRect(); }
 static inline ImVec2    ConvertViewportPosToPlatformPos(const ImVec2& imgui_pos, ImGuiViewport* viewport)    { return imgui_pos - viewport->Pos + viewport->PlatformPos; }
 static inline ImVec2    ConvertPlatformPosToViewportPos(const ImVec2& platform_pos, ImGuiViewport* viewport) { return platform_pos - viewport->PlatformPos + viewport->Pos; }
 static ImGuiViewportP*  Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size);
 static void             UpdateViewports();
-static void             UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set_by_api);
+static void             UpdateSelectWindowViewport(ImGuiWindow* window);
 static void             SetCurrentViewport(ImGuiViewportP* viewport);
 static void             SetWindowViewportTranslateToPreservePlatformPos(ImGuiWindow* window, ImGuiViewportP* old_viewport, ImGuiViewportP* new_viewport);
 static void             ResizeViewportTranslateWindows(int viewport_idx_min, int viewport_idx_max, float pos_x_delta, int idx_delta, ImGuiViewport* viewport_to_erase);
@@ -5989,11 +5989,10 @@ static void ImGui::SetWindowViewportTranslateToPreservePlatformPos(ImGuiWindow* 
 }
 
 // FIXME-VIEWPORT: This is all super messy and ought to be clarified or rewritten.
-static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set_by_api)
+static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindowFlags flags = window->Flags;
-    (void)window_pos_set_by_api;
 
     // Restore main viewport if multi-viewport is not supported by the back-end
     ImGuiViewportP* main_viewport = g.Viewports[0];
@@ -6013,29 +6012,24 @@ static void ImGui::UpdateWindowViewport(ImGuiWindow* window, bool window_pos_set
     {
         // Code explicitly request a viewport
         window->Viewport = FindViewportByID(g.NextWindowData.ViewportId);
-        window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved.
+        window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved yet.
     }
     else if (flags & ImGuiWindowFlags_ChildWindow)
     {
-        IM_ASSERT(window->ParentWindow);
         window->Viewport = window->ParentWindow->Viewport;
     }
     else if (window_follow_mouse_viewport && IsMousePosValid())
     {
-        // Calculate mouse position in OS/platform coordinates
         ImGuiViewportP* current_viewport = window->Viewport;
         if (!window_is_mouse_tooltip && !current_viewport->GetRect().Contains(window->Rect()))
         {
-            // Create an undecorated, temporary OS/platform window
+            // Calculate mouse position in OS/platform coordinates, create a Viewport at this position.
             ImVec2 platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MousePosViewport);
             ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
             ImGuiViewportP* viewport = Viewport(window, window->ID, viewport_flags, platform_pos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport;
             window->Viewport = viewport;
             created_viewport = true;
-
-            // Preserve relative mouse position so docking title bar test stays valid mid-frame (since it isn't latched)
-            g.IO.MousePos = g.IO.MousePosPrev = window->Viewport->Pos + g.ActiveIdClickOffset;
         }
         else
         {
@@ -6393,7 +6387,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // VIEWPORT
         // We need to do this before using any style/font sizes, as viewport with a different DPI will affect those sizes.
 
-        UpdateWindowViewport(window, window_pos_set_by_api);
+        UpdateSelectWindowViewport(window);
         SetCurrentViewport(window->Viewport);
         window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_EnableDpiScaleFonts) ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
