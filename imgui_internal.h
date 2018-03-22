@@ -249,7 +249,6 @@ enum ImGuiDataType
     ImGuiDataType_Int,
     ImGuiDataType_Float,
     ImGuiDataType_Double,
-    ImGuiDataType_Float2,
     ImGuiDataType_COUNT
 };
 
