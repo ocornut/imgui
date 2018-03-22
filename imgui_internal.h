@@ -517,11 +517,13 @@ struct ImGuiViewportP : public ImGuiViewport
     int                 LastFrameAsRefViewport;   // Last frame number this viewport was io.MouseViewportRef
     ImGuiID             LastNameHash;
     ImGuiWindow*        Window;
+    ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
     ImVec2              RendererLastSize;
 
-    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; DrawData = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ImGuiViewportP(ImDrawListSharedData* draw_list_shared_data) { Idx = 1; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; OverlayDrawList = IM_NEW(ImDrawList)(draw_list_shared_data); OverlayDrawList->_OwnerName = "##Overlay"; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ~ImGuiViewportP()        { IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
 };
@@ -634,7 +636,7 @@ struct ImGuiContext
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;
     ImGuiPlatformData       PlatformData;                       // This is essentially the public facing version of the Viewports vector (it is updated in UpdatePlatformWindows and exclude the viewports about to be destroyed)
-    ImGuiViewportP*         CurrentViewport;
+    ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
     ImGuiViewportP*         MousePosViewport;
     ImGuiViewportP*         MousePosPrevViewport;
     ImGuiViewportP*         MouseHoveredPrevViewport;
@@ -676,7 +678,6 @@ struct ImGuiContext
 
     // Render
     float                   ModalWindowDarkeningRatio;
-    ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
     ImGuiMouseCursor        MouseCursor;
 
     // Drag and Drop
@@ -731,7 +732,7 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // temporary text buffer
 
-    ImGuiContext(ImFontAtlas* shared_font_atlas) : OverlayDrawList(NULL)
+    ImGuiContext(ImFontAtlas* shared_font_atlas)
     {
         Initialized = false;
         Font = NULL;
@@ -794,8 +795,6 @@ struct ImGuiContext
         NavMoveDir = NavMoveDirLast = ImGuiDir_None;
 
         ModalWindowDarkeningRatio = 0.0f;
-        OverlayDrawList._Data = &DrawListSharedData;
-        OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
 
         DragDropActive = false;
@@ -1097,6 +1096,7 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
 
     IMGUI_API void          SetCurrentFont(ImFont* font);
+    IMGUI_API ImDrawList*   GetOverlayDrawList(ImGuiWindow* window);
 
     IMGUI_API void          OpenPopupEx(ImGuiID id);
     IMGUI_API void          ClosePopup(ImGuiID id);
