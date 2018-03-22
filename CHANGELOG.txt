@@ -126,6 +126,8 @@ Other Changes:
 - Drag and Drop: Increased payload type string to 32 characters instead of 8. (#143)
 - Drag and Drop: TreeNode as drop target displays rectangle over full frame. (#1597, #143)
 - DragFloat: Fix/workaround for backends which do not preserve a valid mouse position when dragged out of bounds. (#1559)
+- InputFloat: Allow inputing value using scientific notation e.g. "1e+10".
+- InputDouble: Added InputDouble() function. We use a format string instead of a decimal_precision parameter to also for "%e" and variants. (#1011)
 - Slider, Combo: Use ImGuiCol_FrameBgHovered color when hovered. (#1456) [@stfx]
 - Combo: BeginCombo(): Added ImGuiComboFlags_NoArrowButton to disable the arrow button and only display the wide value preview box.
 - Combo: BeginCombo(): Added ImGuiComboFlags_NoPreview to disable the preview and only display a square arrow button. 
