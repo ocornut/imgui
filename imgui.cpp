@@ -8,7 +8,12 @@
 // Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/1269
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // This library is free but I need your support to sustain development and maintenance.
-// If you work for a company, please consider financial support, see Readme. For individuals: https://www.patreon.com/imgui
+// If you work for a company, please consider financial support, see README. For individuals: https://www.patreon.com/imgui
+
+// It is recommended that you don't modify imgui.cpp! It will become difficult for you to update the library.
+// Note that 'ImGui::' is a namespace and so you can add functions into it from your own source files without modifying imgui.h or imgui.cpp.
+// You may include imgui_internal.h to access internal data structures, but it doesn't come with any guarantee of forward compatibility.
+// Discussing your changes on the GitHub Issue Tracker may lead you to a better solution or official support for them.
 
 /*
 
