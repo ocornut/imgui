@@ -794,51 +794,56 @@ enum ImGuiBackendFlags_
     ImGuiBackendFlags_HasSetMousePos        = 1 << 2    // Back-end can honor io.WantSetMousePos and reposition the mouse (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
 };
 
+#define IM_COLOR_VAR_LIST \
+    IM_COLOR(Text) \
+    IM_COLOR(TextDisabled) \
+    IM_COLOR(WindowBg)               /* Background of normal windows */ \
+    IM_COLOR(ChildBg)                /* Background of child windows */ \
+    IM_COLOR(PopupBg)                /* Background of popups, menus, tooltips windows */ \
+    IM_COLOR(Border) \
+    IM_COLOR(BorderShadow) \
+    IM_COLOR(FrameBg)                /* Background of checkbox, radio button, plot, slider, text input */ \
+    IM_COLOR(FrameBgHovered) \
+    IM_COLOR(FrameBgActive) \
+    IM_COLOR(TitleBg) \
+    IM_COLOR(TitleBgActive) \
+    IM_COLOR(TitleBgCollapsed) \
+    IM_COLOR(MenuBarBg) \
+    IM_COLOR(ScrollbarBg) \
+    IM_COLOR(ScrollbarGrab) \
+    IM_COLOR(ScrollbarGrabHovered) \
+    IM_COLOR(ScrollbarGrabActive) \
+    IM_COLOR(CheckMark) \
+    IM_COLOR(SliderGrab) \
+    IM_COLOR(SliderGrabActive) \
+    IM_COLOR(Button) \
+    IM_COLOR(ButtonHovered) \
+    IM_COLOR(ButtonActive) \
+    IM_COLOR(Header) \
+    IM_COLOR(HeaderHovered) \
+    IM_COLOR(HeaderActive) \
+    IM_COLOR(Separator) \
+    IM_COLOR(SeparatorHovered) \
+    IM_COLOR(SeparatorActive) \
+    IM_COLOR(ResizeGrip) \
+    IM_COLOR(ResizeGripHovered) \
+    IM_COLOR(ResizeGripActive) \
+    IM_COLOR(PlotLines) \
+    IM_COLOR(PlotLinesHovered) \
+    IM_COLOR(PlotHistogram) \
+    IM_COLOR(PlotHistogramHovered) \
+    IM_COLOR(TextSelectedBg) \
+    IM_COLOR(ModalWindowDarkening)   /* darken/colorize entire screen behind a modal window, when one is active */ \
+    IM_COLOR(DragDropTarget) \
+    IM_COLOR(NavHighlight)           /* gamepad/keyboard: current highlighted item */ \
+    IM_COLOR(NavWindowingHighlight)   /* gamepad/keyboard: when holding NavMenu to focus/move/resize windows */
+
 // Enumeration for PushStyleColor() / PopStyleColor()
 enum ImGuiCol_
 {
-    ImGuiCol_Text,
-    ImGuiCol_TextDisabled,
-    ImGuiCol_WindowBg,              // Background of normal windows
-    ImGuiCol_ChildBg,               // Background of child windows
-    ImGuiCol_PopupBg,               // Background of popups, menus, tooltips windows
-    ImGuiCol_Border,
-    ImGuiCol_BorderShadow,
-    ImGuiCol_FrameBg,               // Background of checkbox, radio button, plot, slider, text input
-    ImGuiCol_FrameBgHovered,
-    ImGuiCol_FrameBgActive,
-    ImGuiCol_TitleBg,
-    ImGuiCol_TitleBgActive,
-    ImGuiCol_TitleBgCollapsed,
-    ImGuiCol_MenuBarBg,
-    ImGuiCol_ScrollbarBg,
-    ImGuiCol_ScrollbarGrab,
-    ImGuiCol_ScrollbarGrabHovered,
-    ImGuiCol_ScrollbarGrabActive,
-    ImGuiCol_CheckMark,
-    ImGuiCol_SliderGrab,
-    ImGuiCol_SliderGrabActive,
-    ImGuiCol_Button,
-    ImGuiCol_ButtonHovered,
-    ImGuiCol_ButtonActive,
-    ImGuiCol_Header,
-    ImGuiCol_HeaderHovered,
-    ImGuiCol_HeaderActive,
-    ImGuiCol_Separator,
-    ImGuiCol_SeparatorHovered,
-    ImGuiCol_SeparatorActive,
-    ImGuiCol_ResizeGrip,
-    ImGuiCol_ResizeGripHovered,
-    ImGuiCol_ResizeGripActive,
-    ImGuiCol_PlotLines,
-    ImGuiCol_PlotLinesHovered,
-    ImGuiCol_PlotHistogram,
-    ImGuiCol_PlotHistogramHovered,
-    ImGuiCol_TextSelectedBg,
-    ImGuiCol_ModalWindowDarkening,  // darken/colorize entire screen behind a modal window, when one is active
-    ImGuiCol_DragDropTarget,
-    ImGuiCol_NavHighlight,          // gamepad/keyboard: current highlighted item 
-    ImGuiCol_NavWindowingHighlight, // gamepad/keyboard: when holding NavMenu to focus/move/resize windows
+#define IM_COLOR(name) ImGuiCol_ ## name,
+    IM_COLOR_VAR_LIST
+#undef IM_COLOR
     ImGuiCol_COUNT
 
     // Obsolete names (will be removed)
