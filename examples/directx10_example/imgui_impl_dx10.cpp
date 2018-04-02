@@ -275,7 +275,7 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
     return true;
 }
 
-// MingW (which is stuck in the past) doesn't have this Vista-era define..
+// Allow compilation with old Windows SDK. MinGW doesn't have default _WIN32_WINNT/WINVER versions.
 #ifndef WM_MOUSEHWHEEL
 #define WM_MOUSEHWHEEL 0x020E
 #endif
