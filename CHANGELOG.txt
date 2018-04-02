@@ -60,6 +60,7 @@ Breaking Changes:
  - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
  - Obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
  - Obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
+ - Renamed io.WantMoveMouse to io.WantSetMousePos for consistency and ease of understanding (was added in 1.52, _not_ used by core, and honored by some binding ahead of merging the Nav branch).
  - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered style colors as the closing cross uses regular button colors now.
  - Renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
  - Removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it it's easy to replicate on your side.
@@ -67,6 +68,7 @@ Breaking Changes:
 Other Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.60)
 
+- Doc: Added a Changelog file in the repository to ease comparing versions (it goes back to dear imgui 1.48), until now it was only on GitHub.
 - Navigation: merged in the gamepad/keyboard navigation (about one million changes!). (#787, #323)
   The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
  - To use Keyboard Navigation:
@@ -74,7 +76,8 @@ Other Changes:
     - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag will be set.
       For more advanced uses, you may want to read from io.NavActive or io.NavVisible. Read imgui.cpp for more details.
  - To use Gamepad Navigation:
-    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. Fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable. 
+	- Backend: Set io.BackendFlags |= ImGuiBackendFlags_HasGamepad + fill the io.NavInputs[] fields before calling NewFrame(). Note that io.NavInputs[] is cleared by EndFrame().
     - See https://github.com/ocornut/imgui/issues/1599 for recommended gamepad mapping.
     - See 'enum ImGuiNavInput_' in imgui.h for a description of inputs. Read imgui.cpp for more details.
 - Navigation: SetItemDefaultFocus() sets the navigation position in addition to scrolling. (#787)
@@ -88,6 +91,8 @@ Other Changes:
 - Context: Removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions() and shared by all contexts. (#1565, #586, #992, #1007, #1558)
 - Context: You may pass a ImFontAtlas to CreateContext() to specify a font atlas to share. Shared font atlas are not owned by the context and not destroyed along with it.
 - Context: Added IMGUI_DISABLE_DEFAULT_ALLOCATORS to disable linking with malloc/free. (#1565, #586, #992, #1007, #1558)
+- IO: Added io.ConfigFlags for user application to store settings for imgui and for the back-end (currently: _NavEnableKeyboard, _NavEnableGamepad, _NavEnableSetMousePos, _NoSetMouseCursor).
+- IO: Added io.BackendFlags for back-end to store its capabilities (currently: _HasGamepad, _HasMouseCursors, _HasSetMousePos). This will be used more in the next version.
 - IO: Added ImGuiKey_Insert, ImGuiKey_Space keys. Setup in all example bindings. (#1541)
 - IO: Added Horizontal Mouse Wheel support for horizontal scrolling. (#1463) [@tseeker]
 - IO: Added IsAnyMouseDown() helper which is helpful for bindings to handle mouse capturing.
@@ -99,6 +104,7 @@ Other Changes:
 - ArrowButton: Added ArrowButton() given a cardinal direction (e.g. ImGuiDir_Left).
 - InputText: Added alternative clipboard shortcuts: Shift+Delete (cut), Ctrl+Insert (copy), Shift+Insert (paste). (#1541)
 - InputText: Fixed losing Cursor X position when clicking outside on an item that's submitted after the InputText(). It was only noticeable when restoring focus programmatically. (#1418, #1554)
+- InputText: Added ImGuiInputTextFlags_CharsScientific flag to also allow 'e'/'E' for input of values using scientific notation. Automatically used by InputFloat.
 - Style: Enable window border by default. (#707)
 - Style: Exposed ImGuiStyleVar_WindowTitleAlign, ImGuiStyleVar_ScrollbarSize, ImGuiStyleVar_ScrollbarRounding, ImGuiStyleVar_GrabRounding + added an assert to reduce accidental breakage. (#1181)
 - Style: Added style.MouseCursorScale help when using the software mouse cursor facility. (#939).
@@ -120,6 +126,8 @@ Other Changes:
 - Drag and Drop: Increased payload type string to 32 characters instead of 8. (#143)
 - Drag and Drop: TreeNode as drop target displays rectangle over full frame. (#1597, #143)
 - DragFloat: Fix/workaround for backends which do not preserve a valid mouse position when dragged out of bounds. (#1559)
+- InputFloat: Allow inputing value using scientific notation e.g. "1e+10".
+- InputDouble: Added InputDouble() function. We use a format string instead of a decimal_precision parameter to also for "%e" and variants. (#1011)
 - Slider, Combo: Use ImGuiCol_FrameBgHovered color when hovered. (#1456) [@stfx]
 - Combo: BeginCombo(): Added ImGuiComboFlags_NoArrowButton to disable the arrow button and only display the wide value preview box.
 - Combo: BeginCombo(): Added ImGuiComboFlags_NoPreview to disable the preview and only display a square arrow button. 
@@ -136,13 +144,15 @@ Other Changes:
 - ImFontAtlas: Added ImFontAtlasFlags_NoPowerOfTwoHeight flag to disable padding font height to nearest power of two. (#1613)
 - ImFontAtlas: Added ImFontAtlasFlags_NoMouseCursors flag to disable baking software mouse cursors, mostly to save texture memory on very low end hardware. (#1613)
 - ImDrawList: Fixed AddRect() with antialiasing disabled (lower-right corner pixel was often missing, rounding looks a little better.) (#1646)
+- ImDrawList: Added CloneOutput() helper to facilitate the cloning of ImDrawData or ImDrawList for multi-threaded rendering.
 - Misc: Functions passed to libc qsort are explicitely marked cdecl to support compiling with vectorcall as the default calling convention. (#1230, #1611) [@RandyGaul]
-- Misc: ImVec2: added [] operator. This is becoming desirable for some types of code, better added sooner than later.
-- Misc: Exposed IM_OFFSETOF() helper in imgui.h.
+- Misc: ImVec2: added [] operator. This is becoming desirable for some code working of either axes independently. Better adding it sooner than later.
 - Misc: NewFrame(): Added an assert to detect incorrect filling of the io.KeyMap[] array earlier. (#1555)
+- Misc: Added IM_OFFSETOF() helper in imgui.h (previously was in imgui_internal.h)
 - Misc: Added obsolete redirection function GetItemsLineHeightWithSpacing() (which redirects to GetFrameHeightWithSpacing()), as intended and stated in docs of 1.53.
-- Misc: Added misc/natvis/imgui.natvis for visual studio debugger users to easily visualizer imgui internal types. Added to examples projects.
+- Misc: Added misc/natvis/imgui.natvis for visual studio debugger users to easily visualize imgui internal types. Added to examples projects.
 - Misc: Added IMGUI_USER_CONFIG to define a custom configuration filename. (#255, #1573, #1144, #41)
+- Misc: Added IMGUI_STB_TRUETYPE_FILENAME and IMGUI_STB_RECT_PACK_FILENAME compile time directives to use another version of the stb_ files.
 - Misc: Updated stb_rect_pack from 0.10 to 0.11 (minor changes).
 - Misc: Added ImGuiConfigFlags_IsSRGB and ImGuiConfigFlags_IsTouchScreen user flags (for io.ConfigFlags). 
   (Those flags are not used by ImGui itself, they only exists to make it easy for the engine/back-end to pass information to the application in a standard manner.)
@@ -154,6 +164,7 @@ Other Changes:
 - Examples: Files in examples/ now include their own changelog so it is easier to occasionally update your bindings if needed.
 - Examples: Using Dark theme by default. (#707). Tweaked demo code.
 - Examples: Added support for horizontal mouse wheel for API that allows it. (#1463) [@tseeker]
+- Examples: All examples now setup the io.BackendFlags to signify they can honor mouse cursors, gamepad, etc.
 - Examples: DirectX12: Added DirectX 12 example. (#301) [@jdm3]
 - Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version from 330 to 150. (#1466, #1504)
 - Examples: OpenGL3+GLFW,SDL: Added a way to override the GLSL version string in the Init function. (#1466, #1504).
@@ -165,6 +176,7 @@ Other Changes:
 - Examples: Win32 (DirectX9,10,11,12: Support for windows using the CS_DBLCLKS class flag by handling the double-click messages (WM_LBUTTONDBLCLK etc.). (#1538, #754) [@ndandoulakis]
 - Examples: Win32 (DirectX9,10,11,12): Made the Win32 proc handlers not assert if there is no active context yet, to be more flexible with creation order. (#1565)
 - Examples: GLFW: Added support for mouse cursor shapes (the diagonal resize cursors are unfortunately not supported by GLFW at the moment. (#1495)
+- Examples: GLFW: Don't attempt to change the mouse cursor input mode if it is set to GLFW_CURSOR_DISABLED by the application. (#1202) [@PhilCK]
 - Examples: SDL: Added support for mouse cursor shapes. (#1626) [@olls]
 - Examples: SDL: Using SDL_CaptureMouse() to retrieve coordinates outside of client area when dragging (SDL 2.0.4+ only, otherwise using SDL_WINDOW_INPUT_FOCUS instead of previously SDL_WINDOW_MOUSE_FOCUS). (#1559)
 - Examples: SDL: Enabled vsync by default so people don't come at us with demoes running at 2000 FPS burning a cpu core.
