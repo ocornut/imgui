@@ -30,7 +30,7 @@
  - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
    - How can I tell whether to dispatch mouse/keyboard to imgui or to my application?
    - How can I display an image? What is ImTextureID, how does it works?
-   - How can I have multiple widgets with the same label? Can I have widget without a label? (Yes). A primer on labels and the ID stack.
+   - How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.
    - How can I load a different font than the default?
    - How can I easily use icons in my application?
    - How can I load multiple fonts?
@@ -433,63 +433,66 @@
     It could be an identifier to your OpenGL texture (cast GLuint to void*), a pointer to your custom engine material (cast MyMaterial* to void*), etc.
     At the end of the chain, your renderer takes this void* to cast it back into whatever it needs to select a current texture to render.
     Refer to examples applications, where each renderer (in a imgui_impl_xxxx.cpp file) is treating ImTextureID as a different thing.
-    (c++ tip: OpenGL uses integers to identify textures. You can safely store an integer into a void*, just cast it to void*, don't take it's address!)
+    (C++ tip: OpenGL uses integers to identify textures. You can safely store an integer into a void*, just cast it to void*, don't take it's address!)
     To display a custom image/texture within an ImGui window, you may use ImGui::Image(), ImGui::ImageButton(), ImDrawList::AddImage() functions.
     Dear ImGui will generate the geometry and draw calls using the ImTextureID that you passed and which your renderer can use.
     You may call ImGui::ShowMetricsWindow() to explore active draw lists and visualize/understand how the draw data is generated.
     It is your responsibility to get textures uploaded to your GPU.
 
- Q: Can I have multiple widgets with the same label? Can I have widget without a label?
- A: Yes. A primer on labels and the ID stack...
+ Q: How can I have multiple widgets with the same label or without a label? 
+ A: A primer on labels and the ID Stack...
 
    - Elements that are typically not clickable, such as Text() items don't need an ID.
 
    - Interactive widgets require state to be carried over multiple frames (most typically Dear ImGui often needs to remember what is 
-     the "active" widget). to do so they need a unique ID. unique ID are typically derived from a string label, an integer index or a pointer.
+     the "active" widget). To do so they need a unique ID. Unique ID are typically derived from a string label, an integer index or a pointer.
 
-       Button("OK");          // Label = "OK",     ID = hash of "OK"
-       Button("Cancel");      // Label = "Cancel", ID = hash of "Cancel"
+       Button("OK");          // Label = "OK",     ID = top of id stack + hash of "OK"
+       Button("Cancel");      // Label = "Cancel", ID = top of id stack + hash of "Cancel"
 
-   - ID are uniquely scoped within windows, tree nodes, etc. so no conflict can happen if you have two buttons called "OK"
-     in two different windows or in two different locations of a tree.
+   - ID are uniquely scoped within windows, tree nodes, etc. which all push to the ID stack. So having two buttons labeled "OK"
+     in two different windows or in two different locations of a tree is fine.
 
    - If you have a same ID twice in the same location, you'll have a conflict:
 
        Button("OK");
-       Button("OK");          // ID collision! Both buttons will be treated as the same.
+       Button("OK");          // ID collision! Interacting with either button will trigger the first one.
 
      Fear not! this is easy to solve and there are many ways to solve it!
 
-   - When passing a label you can optionally specify extra unique ID information within string itself.
+   - Solving ID conflict in a simple/local context:
+     When passing a label you can optionally specify extra unique ID information within string itself.
      Use "##" to pass a complement to the ID that won't be visible to the end-user.
      This helps solving the simple collision cases when you know which items are going to be created.
 
-       Button("Play");        // Label = "Play",   ID = hash of "Play"
-       Button("Play##foo1");  // Label = "Play",   ID = hash of "Play##foo1" (different from above)
-       Button("Play##foo2");  // Label = "Play",   ID = hash of "Play##foo2" (different from above)
+       Button("Play");        // Label = "Play",   ID = top of id stack + hash of "Play"
+       Button("Play##foo1");  // Label = "Play",   ID = top of id stack + hash of "Play##foo1" (different from above)
+       Button("Play##foo2");  // Label = "Play",   ID = top of id stack + hash of "Play##foo2" (different from above)
 
    - If you want to completely hide the label, but still need an ID:
 
-       Checkbox("##On", &b);  // Label = "",       ID = hash of "##On" (no label!)
+       Checkbox("##On", &b);  // Label = "",       ID = top of id stack + hash of "##On" (no label!)
 
    - Occasionally/rarely you might want change a label while preserving a constant ID. This allows you to animate labels.
      For example you may want to include varying information in a window title bar, but windows are uniquely identified by their ID..
      Use "###" to pass a label that isn't part of ID:
 
-       Button("Hello###ID";   // Label = "Hello",  ID = hash of "ID"
-       Button("World###ID";   // Label = "World",  ID = hash of "ID" (same as above)
+       Button("Hello###ID";   // Label = "Hello",  ID = top of id stack + hash of "ID"
+       Button("World###ID";   // Label = "World",  ID = top of id stack + hash of "ID" (same as above)
 
        sprintf(buf, "My game (%f FPS)###MyGame", fps);
        Begin(buf);            // Variable label,   ID = hash of "MyGame"
 
-   - Use PushID() / PopID() to create scopes and avoid ID conflicts within the same Window.
+   - Solving ID conflict in a more general manner:
+     Use PushID() / PopID() to create scopes and manipulate the ID stack, as to avoid ID conflicts within the same Window.
      This is the most convenient way of distinguishing ID if you are iterating and creating many UI elements.
-     You can push a pointer, a string or an integer value. Remember that ID are formed from the concatenation of _everything_ in the ID stack!
+     You can push a pointer, a string or an integer value into the ID stack. 
+     Remember that ID are formed from the concatenation of _everything_ in the ID stack!
 
        for (int i = 0; i < 100; i++)
        {
          PushID(i);
-         Button("Click");   // Label = "Click",  ID = hash of integer + "label" (unique)
+         Button("Click");   // Label = "Click",  ID = top of id stack + hash of integer + hash of "Click"
          PopID();
        }
 
@@ -497,7 +500,7 @@
        {
          MyObject* obj = Objects[i];
          PushID(obj);
-         Button("Click");   // Label = "Click",  ID = hash of pointer + "label" (unique)
+         Button("Click");   // Label = "Click",  ID = top of id stack + hash of pointer + hash of "Click"
          PopID();
        }
 
@@ -505,35 +508,35 @@
        {
          MyObject* obj = Objects[i];
          PushID(obj->Name);
-         Button("Click");   // Label = "Click",  ID = hash of string + "label" (unique)
+         Button("Click");   // Label = "Click",  ID = top of id stack + hash of string + hash of "Click"
          PopID();
        }
 
    - More example showing that you can stack multiple prefixes into the ID stack:
 
-       Button("Click");     // Label = "Click",  ID = hash of "Click"
+       Button("Click");     // Label = "Click",  ID = top of id stack + hash of "Click"
        PushID("node");
-       Button("Click");     // Label = "Click",  ID = hash of "node" + "Click"
+       Button("Click");     // Label = "Click",  ID = top of id stack + hash of "node" + hash of "Click"
          PushID(my_ptr);
-           Button("Click"); // Label = "Click",  ID = hash of "node" + ptr + "Click"
+           Button("Click"); // Label = "Click",  ID = top of id stack + hash of "node" + hash of ptr + hash of "Click"
          PopID();
        PopID();
 
    - Tree nodes implicitly creates a scope for you by calling PushID().
 
-       Button("Click");     // Label = "Click",  ID = hash of "Click"
+       Button("Click");     // Label = "Click",  ID = top of id stack + hash of "Click"
        if (TreeNode("node"))
        {
-         Button("Click");   // Label = "Click",  ID = hash of "node" + "Click"
+         Button("Click");   // Label = "Click",  ID = top of id stack + hash of "node" + hash of "Click"
          TreePop();
        }
 
    - When working with trees, ID are used to preserve the open/close state of each tree node.
      Depending on your use cases you may want to use strings, indices or pointers as ID.
-      e.g. when displaying a single object that may change over time (dynamic 1-1 relationship), using a static string as ID will preserve your
+      e.g. when following a single pointer that may change over time, using a static string as ID will preserve your
        node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the node open/closed state differently. 
-       experiment and see what makes more sense!
+       experiment and see what makes more sense in your situation!
 
  Q: How can I load a different font than the default? (default is an embedded version of ProggyClean.ttf, rendered at size 13)
  A: Use the font atlas to load the TTF/OTF file you want:
