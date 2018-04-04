@@ -5597,7 +5597,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Find or create
     ImGuiWindow* window = FindWindowByName(name);
-    if (!window)
+    const bool window_just_created = (window == NULL);
+    if (window_just_created)
     {
         ImVec2 size_on_first_use = (g.NextWindowData.SizeCond != 0) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
@@ -5759,7 +5760,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         if (window->HiddenFrames > 0)
             window->HiddenFrames--;
-        if ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0 && window_just_activated_by_user)
+        if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
             window->HiddenFrames = 1;
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
@@ -5771,6 +5772,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->SizeContents = ImVec2(0.f, 0.f);
             }
         }
+
+        // Hide new windows for one frame until they calculate their size
+        if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
+            window->HiddenFrames = 1;
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);

@@ -257,6 +257,7 @@ Other Changes:
 - Window: Fixed a one frame glitch. When an appearing window claimed the focus themselves, the title bar wouldn't use the focused color for one frame.
 - Window: Added ImGuiWindowFlags_ResizeFromAnySide flag to resize from any borders or from the lower-left corner of a window. This requires your backend to honor GetMouseCursor() requests for full usability. (#822)
 - Window: Sizing fixes when useing SetNextWindowSize() on individual axises.
+- Window: Hide new window for one frame until they calculate their size. Also fixes SetNextWindowPos() given a non-zero pivot. (#1694)
 - Window: Made mouse wheel scrolling accomodate better to windows that are smaller than the scroll step.
 - Window: SetNextWindowContentSize() adjust for the size of decorations (title bar/menu bar), but _not_ for borders are we consistently make borders not affect layout. 
   If you need a non-child window of an exact size with border enabled but zero window padding, you'll need to accodomate for the border size yourself.
