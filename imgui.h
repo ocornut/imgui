@@ -1079,7 +1079,7 @@ struct ImGuiIO
     float       MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text. 
     float       MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all back-ends.
     ImGuiID     MousePosViewport;               // (Optional) When using multiple viewports: viewport from which io.MousePos is based from (when dragging this is generally the captured/focused viewport, even though we can drag outside of it and then it's not hovered anymore). (0 == default viewport)
-    ImGuiID     MouseHoveredViewport;           // (Optional) When using multiple viewports: viewport the OS mouse cursor is hovering. (0 == default viewport)
+    ImGuiID     MouseHoveredViewport;           // (Optional) When using multiple viewports: viewport the OS mouse cursor is hovering. (0 == default viewport) _IGNORING_ viewports with the ImGuiBackendFlags_HasMouseHoveredViewport flag, and _REGARDLESS_ of whether another viewport is focused. Set io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport if you can provide this information.
     bool        MouseDrawCursor;                // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor).
     bool        KeyCtrl;                        // Keyboard modifier pressed: Control
     bool        KeyShift;                       // Keyboard modifier pressed: Shift

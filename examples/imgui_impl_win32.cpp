@@ -503,7 +503,10 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
             viewport->PlatformRequestResize = true;
             break;
         case WM_NCHITTEST:
-            // Let mouse pass-through the window, this is used while e.g. dragging a window, we creates a temporary overlay but want the cursor to aim behind our overlay.
+            // Let mouse pass-through the window. This will allow the back-end to set io.MouseHoveredViewport properly (which is OPTIONAL).
+            // The ImGuiViewportFlags_NoInputs flag is set while dragging a viewport, as want to detect the window behind the one we are dragging.
+            // If you cannot easily access those viewport flags from your windowing/event code: you may manually synchronize its state e.g. in
+            // your main loop after calling UpdatePlatformWindows(). Iterate all viewports/platform windows and pass the flag to your windowing system.
             if (viewport->Flags & ImGuiViewportFlags_NoInputs)
                 return HTTRANSPARENT;
             break;
