@@ -13982,11 +13982,17 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 {
     ImGuiContext& g = *GImGui;
+
+    if (g.MovingWindow != NULL)
+        g.ActiveIdClickOffset = ImFloor(g.ActiveIdClickOffset * scale);
+    /*
     if (g.IO.MousePosViewport == viewport->ID)
     {
-        //g.IO.MousePos = g.IO.MousePosPrev = ImFloor((g.IO.MousePos - viewport->Pos) * scale) + viewport->Pos;
-        //g.IO.MouseDelta = ImVec2(0,0);
+        g.IO.MousePos = g.IO.MousePosPrev = ImFloor((g.IO.MousePos - viewport->Pos) * scale) + viewport->Pos;
+        g.IO.MouseDelta = ImVec2(0,0);
     }
+    */
+
     if (viewport->Window)
     {
         ScaleWindow(viewport->Window, scale);
