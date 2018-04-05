@@ -3578,6 +3578,11 @@ void ImGui::UpdatePlatformWindows()
             ImGui::MemFree(title_displayed);
         }
 
+        // Update alpha
+        if (viewport->LastAlpha != viewport->Alpha && g.PlatformIO.Platform_SetWindowAlpha)
+            g.PlatformIO.Platform_SetWindowAlpha(viewport, viewport->Alpha);
+        viewport->LastAlpha = viewport->Alpha;
+
         // Show window. On startup ensure platform window don't get focus.
         if (is_new_window)
         {

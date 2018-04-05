@@ -517,13 +517,15 @@ struct ImGuiViewportP : public ImGuiViewport
     int                 LastFrameActive;          // Last frame number this viewport was activated by a window
     int                 LastFrameAsRefViewport;   // Last frame number this viewport was io.MouseViewportRef
     ImGuiID             LastNameHash;
+    float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
+    float               LastAlpha;
     ImGuiWindow*        Window;
     ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
     ImVec2              RendererLastSize;
 
-    ImGuiViewportP(ImDrawListSharedData* draw_list_shared_data) { Idx = 1; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Window = NULL; OverlayDrawList = IM_NEW(ImDrawList)(draw_list_shared_data); OverlayDrawList->_OwnerName = "##Overlay"; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ImGuiViewportP(ImDrawListSharedData* draw_list_shared_data) { Idx = 1; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; Window = NULL; OverlayDrawList = IM_NEW(ImDrawList)(draw_list_shared_data); OverlayDrawList->_OwnerName = "##Overlay"; RendererLastSize = ImVec2(-1.0f,-1.0f); }
     ~ImGuiViewportP()        { IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }

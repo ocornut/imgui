@@ -39,6 +39,7 @@
 #else
 #define GLFW_HAS_GLFW_HOVERED   0
 #endif
+#define GLFW_HAS_WINDOW_ALPHA   (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+
 #define GLFW_HAS_VULKAN         (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+
 
 // Data
@@ -235,8 +236,8 @@ static void ImGui_ImplGlfw_UpdateMouse()
         }
 
 #if GLFW_HAS_GLFW_HOVERED
-        io.ConfigFlags |= ImGuiConfigFlags_PlatformHasMouseHoveredViewport;
-        if (glfwGetWindowAttrib(data->Window, GLFW_HOVERED) && !(viewport->Flags & ImGuiViewportFlags_NoInputs))
+        io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
+        if (glfwGetWindowAttrib(window, GLFW_HOVERED) && !(viewport->Flags & ImGuiViewportFlags_NoInputs))
             io.MouseHoveredViewport = viewport->ID;
 #endif
     }
@@ -469,6 +470,14 @@ static void ImGui_ImplGlfw_SetWindowTitle(ImGuiViewport* viewport, const char* t
     glfwSetWindowTitle(data->Window, title);
 }
 
+#if GLFW_HAS_WINDOW_ALPHA
+static void ImGui_ImplGlfw_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
+{
+    ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
+    glfwSetWindowOpacity(data->Window, alpha);
+}
+#endif
+
 static void ImGui_ImplGlfw_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
@@ -522,6 +531,9 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     platform_io.Platform_SetWindowTitle = ImGui_ImplGlfw_SetWindowTitle;
     platform_io.Platform_RenderWindow = ImGui_ImplGlfw_RenderWindow;
     platform_io.Platform_SwapBuffers = ImGui_ImplGlfw_SwapBuffers;
+#if GLFW_HAS_WINDOW_ALPHA
+    platform_io.Platform_SetWindowAlpha = ImGui_ImplGlfw_SetWindowAlpha;
+#endif
 #if GLFW_HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
 #endif
