@@ -3602,7 +3602,7 @@ void ImGui::UpdatePlatformWindows()
 //        MySwapBufferFunction(data->Viewports[i], my_args);
 //
 // Note how we intentionally skip the main viewport (index 0) which is generally rendered as part of our main application.
-void ImGui::RenderPlatformWindows(void* platform_render_arg, void* renderer_render_arg)
+void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
 {
     if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;

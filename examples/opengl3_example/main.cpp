@@ -124,9 +124,12 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
     	
-        // Update and Render additional Platform Windows (when ImGuiConfigFlags_EnableViewports is enabled)
-        ImGui::UpdatePlatformWindows();
-        ImGui::RenderPlatformWindows(NULL, NULL);
+        // Update and Render additional Platform Windows
+        if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+        }
 
         glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);

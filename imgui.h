@@ -551,7 +551,7 @@ namespace ImGui
     IMGUI_API ImGuiPlatformData* GetPlatformData();                 // List of viewports. Viewport 0 is always the main viewport, followed by the secondary viewports.
     IMGUI_API ImGuiViewport*     GetMainViewport();                 // GetPlatformData()->MainViewport
     IMGUI_API void               UpdatePlatformWindows();           // Call in main loop. Create/Destroy/Resize platform windows so there's one for each viewport
-    IMGUI_API void               RenderPlatformWindows(void* platform_render_arg, void* renderer_render_arg); // Call in main loop. Call RenderWindow/SwapBuffers from the ImGuiPlatformIO structure. May be reimplemented by user.
+    IMGUI_API void               RenderPlatformWindowsDefault(void* platform_render_arg = NULL, void* renderer_render_arg = NULL); // Call in main loop. Call RenderWindow/SwapBuffers from the ImGuiPlatformIO structure. May be reimplemented by user.
     IMGUI_API void               DestroyPlatformWindows();          // (Optional) Call in back-end shutdown if you need to close Platform Windows before imgui shutdown.
     IMGUI_API ImGuiViewport*     FindViewportByPlatformHandle(void* platform_handle);
 
@@ -1878,8 +1878,8 @@ struct ImFont
 // This is designed so we can mix and match two imgui_impl_xxxx files, one for the Platform (~ Windowing), one for Renderer.
 // Custom engine back-ends will often provide both Platform and Renderer interfaces and thus may not need to use all functions.
 // Platform functions are typically called before their Renderer counterpart, apart from Destroy which are called the other way.
-// RenderPlatformWindows() basically iterate secondary viewports and call Platform+Renderer's RenderWindow then Platform+Renderer's SwapBuffers,
-// You may skip using RenderPlatformWindows() and call your functions yourself if you need specific behavior for your multi-window rendering.
+// RenderPlatformWindowsDefault() basically iterate secondary viewports and call Platform+Renderer's RenderWindow then Platform+Renderer's SwapBuffers,
+// You may skip using RenderPlatformWindowsDefault() and call your draw/swap functions yourself if you need specific behavior for your multi-window rendering.
 struct ImGuiPlatformIO
 {
     // Platform (e.g. Win32, GLFW, SDL2)
