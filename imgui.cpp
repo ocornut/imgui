@@ -3373,6 +3373,11 @@ void ImGui::NewFrame()
 
     // Update mouse input state
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NoMouse)
+    {
+        g.IO.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+        memset(g.IO.MouseDown, 0, sizeof(g.IO.MouseDown));
+    }
     if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev))
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
     else
