@@ -12705,11 +12705,15 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 {
     ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(columns_count >= 1);
-    if (window->DC.ColumnsSet != NULL && window->DC.ColumnsSet->Count != columns_count)
-        EndColumns();
-    
+
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
     //flags |= ImGuiColumnsFlags_NoPreserveWidths; // NB: Legacy behavior
+    if (window->DC.ColumnsSet != NULL && window->DC.ColumnsSet->Count == columns_count && window->DC.ColumnsSet->Flags == flags)
+        return;
+
+    if (window->DC.ColumnsSet != NULL)
+        EndColumns();
+    
     if (columns_count != 1)
         BeginColumns(id, columns_count, flags);
 }
