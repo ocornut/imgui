@@ -3294,11 +3294,6 @@ static void ImGui::NewFrameUpdateMovingWindow()
 static void ImGui::NewFrameUpdateMouseInputs()
 {
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_NoMouse)
-    {
-        g.IO.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-        memset(g.IO.MouseDown, 0, sizeof(g.IO.MouseDown));
-    }
 
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
     if (ImGui::IsMousePosValid(&g.IO.MousePos) && ImGui::IsMousePosValid(&g.IO.MousePosPrev))
@@ -3361,6 +3356,10 @@ void ImGui::NewFrameUpdateHoveredWindowAndCaptureFlags()
     if (modal_window)
         if (g.HoveredRootWindow && !IsWindowChildOf(g.HoveredRootWindow, modal_window))
             g.HoveredRootWindow = g.HoveredWindow = NULL;
+
+    // Disabled mouse?
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NoMouse)
+        g.HoveredWindow = g.HoveredRootWindow = NULL;
 
     // We track click ownership. When clicked outside of a window the click is owned by the application and won't report hovering nor request capture even while dragging over our windows afterward.
     int mouse_earliest_button_down = -1;
