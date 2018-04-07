@@ -1,4 +1,4 @@
-// dear imgui, v1.60 WIP
+// dear imgui, v1.60
 // (drawing and font code)
 
 // Contains implementation for

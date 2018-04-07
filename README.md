@@ -96,7 +96,7 @@ Demo Binaries
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20180207.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180207.zip) (Windows binaries, Dear ImGui 1.60 WIP built 2018/01/07, 5 executables)
+- [imgui-demo-binaries-20180407.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180407.zip) (Windows binaries, Dear ImGui 1.60 built 2018/04/07, 5 executables)
 
 The demo applications are unfortunately not yet DPI aware so expect some blurryness on a 4K screen. For DPI awareness you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
