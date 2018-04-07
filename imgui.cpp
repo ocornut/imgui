@@ -3504,7 +3504,7 @@ void ImGui::NewFrame()
     NewFrameUpdateMovingWindow();
     NewFrameUpdateHoveredWindowAndCaptureFlags();
     
-    if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
+    if (GetFrontMostModalRootWindow() != NULL)
         g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
     else
         g.ModalWindowDarkeningRatio = 0.0f;
