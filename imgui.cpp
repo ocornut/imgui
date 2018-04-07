@@ -1381,8 +1381,8 @@ ImU32 ImGui::GetColorU32(ImU32 col)
     float style_alpha = GImGui->Style.Alpha;
     if (style_alpha >= 1.0f)
         return col;
-    int a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (int)(a * style_alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
+    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+    a = (ImU32)(a * style_alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
@@ -1473,7 +1473,7 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
     }
 
     int file_size = (int)file_size_signed;
-    void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
+    void* file_data = ImGui::MemAlloc((size_t)(file_size + padding_bytes));
     if (file_data == NULL)
     {
         fclose(f);
@@ -1486,7 +1486,7 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
         return NULL;
     }
     if (padding_bytes > 0)
-        memset((void *)(((char*)file_data) + file_size), 0, padding_bytes);
+        memset((void *)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
 
     fclose(f);
     if (out_file_size)
@@ -1773,7 +1773,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     }
 
     Buf.resize(needed_sz);
-    ImFormatStringV(&Buf[write_off - 1], len + 1, fmt, args_copy);
+    ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
 }
 
 void ImGuiTextBuffer::appendf(const char* fmt, ...)
@@ -8502,7 +8502,7 @@ static size_t GDataTypeSize[ImGuiDataType_COUNT] =
 // NB: This is _not_ a full expression evaluator. We should probably add one though..
 static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
 {
-    while (ImCharIsSpace(*buf))
+    while (ImCharIsSpace((unsigned int)*buf))
         buf++;
 
     // We don't support '-' op because it would conflict with inputing negative value.
@@ -8511,7 +8511,7 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     if (op == '+' || op == '*' || op == '/')
     {
         buf++;
-        while (ImCharIsSpace(*buf))
+        while (ImCharIsSpace((unsigned int)*buf))
             buf++;
     }
     else
@@ -11748,7 +11748,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             value_changed = true;
             char* p = buf;
-            while (*p == '#' || ImCharIsSpace(*p))
+            while (*p == '#' || ImCharIsSpace((unsigned int)*p))
                 p++;
             i[0] = i[1] = i[2] = i[3] = 0;
             if (alpha)

@@ -2435,7 +2435,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsSpace(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsSpace((unsigned int)c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 continue;
             }
@@ -2560,7 +2560,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsSpace(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsSpace((unsigned int)c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 continue;
             }
