@@ -192,6 +192,7 @@ int main(int, char**)
 
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (pD3D) pD3D->Release();
+    DestroyWindow(hwnd);
     UnregisterClass(_T("ImGui Example"), wc.hInstance);
 
     return 0;

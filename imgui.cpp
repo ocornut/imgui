@@ -1,4 +1,4 @@
-// dear imgui, v1.60 WIP
+// dear imgui, v1.61 WIP
 // (main code and documentation)
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
@@ -83,7 +83,7 @@
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
  - General Keyboard controls: enable with ImGuiConfigFlags_NavEnableKeyboard.
- - General Gamepad controls: enable with ImGuiConfigFlags_NavEnableGamepad. See suggested mappings in imgui.h ImGuiNavInput_ + download PNG/PSD at goo.gl/9LgVZW.
+ - General Gamepad controls: enable with ImGuiConfigFlags_NavEnableGamepad. See suggested mappings in imgui.h ImGuiNavInput_ + download PNG/PSD at http://goo.gl/9LgVZW
 
 
  PROGRAMMER GUIDE
@@ -223,15 +223,6 @@
 
  - The gamepad/keyboard navigation is in Beta. Ask questions and report issues at https://github.com/ocornut/imgui/issues/787
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
- - Keyboard:
-    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. 
-      NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
-    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag
-      will be set. For more advanced uses, you may want to read from:
-       - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
-       - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
-       - or query focus information with e.g. IsWindowFocused(), IsItemFocused() etc. functions.
-      Please reach out if you think the game vs navigation input sharing could be improved.
  - Gamepad:
     - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable.
     - Backend: Set io.BackendFlags |= ImGuiBackendFlags_HasGamepad + fill the io.NavInputs[] fields before calling NewFrame(). 
@@ -241,7 +232,16 @@
     - We uses a simple >0.0f test for activation testing, and won't attempt to test for a dead-zone.
       Your code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, etc.).
     - You can download PNG/PSD files depicting the gamepad controls for common controllers at: goo.gl/9LgVZW.
-    - If you need to share inputs between your game and the imgui parts, the easiest approach is to go all-or-nothing, with a buttons combo to toggle the target.
+    - If you need to share inputs between your game and the imgui parts, the easiest approach is to go all-or-nothing, with a buttons combo 
+      to toggle the target. Please reach out if you think the game vs navigation input sharing could be improved.
+ - Keyboard:
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. 
+      NewFrame() will automatically fill io.NavInputs[] based on your io.KeyDown[] + io.KeyMap[] arrays.
+    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag
+      will be set. For more advanced uses, you may want to read from:
+       - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
+       - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
+       - or query focus information with e.g. IsWindowFocused(ImGuiFocusedFlags_AnyWindow), IsItemFocused() etc. functions.
       Please reach out if you think the game vs navigation input sharing could be improved.
  - Mouse:
     - PS4 users: Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
@@ -1391,8 +1391,8 @@ ImU32 ImGui::GetColorU32(ImU32 col)
     float style_alpha = GImGui->Style.Alpha;
     if (style_alpha >= 1.0f)
         return col;
-    int a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (int)(a * style_alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
+    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+    a = (ImU32)(a * style_alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
 
@@ -1483,7 +1483,7 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
     }
 
     int file_size = (int)file_size_signed;
-    void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
+    void* file_data = ImGui::MemAlloc((size_t)(file_size + padding_bytes));
     if (file_data == NULL)
     {
         fclose(f);
@@ -1496,7 +1496,7 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
         return NULL;
     }
     if (padding_bytes > 0)
-        memset((void *)(((char*)file_data) + file_size), 0, padding_bytes);
+        memset((void *)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
 
     fclose(f);
     if (out_file_size)
@@ -1783,7 +1783,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     }
 
     Buf.resize(needed_sz);
-    ImFormatStringV(&Buf[write_off - 1], len + 1, fmt, args_copy);
+    ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
 }
 
 void ImGuiTextBuffer::appendf(const char* fmt, ...)
@@ -3881,7 +3881,7 @@ void ImGui::NewFrame()
     NewFrameUpdateMovingWindow();
     NewFrameUpdateHoveredWindowAndCaptureFlags();
     
-    if (ImGuiWindow* modal_window = GetFrontMostModalRootWindow())
+    if (GetFrontMostModalRootWindow() != NULL)
         g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
     else
         g.ModalWindowDarkeningRatio = 0.0f;
@@ -8560,32 +8560,6 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     return pressed;
 }
 
-// [Internal]
-bool ImGui::ArrowButton(ImGuiID id, ImGuiDir dir, ImVec2 padding, ImGuiButtonFlags flags)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    if (window->SkipItems)
-        return false;
-
-    const ImGuiStyle& style = g.Style;
-
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(g.FontSize + padding.x * 2.0f, g.FontSize + padding.y * 2.0f));
-    ItemSize(bb, style.FramePadding.y);
-    if (!ItemAdd(bb, id))
-        return false;
-
-    bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
-
-    const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
-    RenderNavHighlight(bb, id);
-    RenderFrame(bb.Min, bb.Max, col, true, style.FrameRounding);
-    RenderArrow(bb.Min + padding, dir, 1.0f);
-
-    return pressed;
-}
-
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9259,7 +9233,7 @@ static size_t GDataTypeSize[ImGuiDataType_COUNT] =
 // NB: This is _not_ a full expression evaluator. We should probably add one though..
 static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
 {
-    while (ImCharIsSpace(*buf))
+    while (ImCharIsSpace((unsigned int)*buf))
         buf++;
 
     // We don't support '-' op because it would conflict with inputing negative value.
@@ -9268,7 +9242,7 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     if (op == '+' || op == '*' || op == '/')
     {
         buf++;
-        while (ImCharIsSpace(*buf))
+        while (ImCharIsSpace((unsigned int)*buf))
             buf++;
     }
     else
@@ -12505,7 +12479,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         {
             value_changed = true;
             char* p = buf;
-            while (*p == '#' || ImCharIsSpace(*p))
+            while (*p == '#' || ImCharIsSpace((unsigned int)*p))
                 p++;
             i[0] = i[1] = i[2] = i[3] = 0;
             if (alpha)
