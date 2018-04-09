@@ -756,6 +756,8 @@ int main(int, char**)
     ImGui_ImplGlfwVulkan_Shutdown();
     ImGui::DestroyContext();
     cleanup_vulkan();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;

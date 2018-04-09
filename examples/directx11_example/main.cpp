@@ -211,6 +211,7 @@ int main(int, char**)
     ImGui::DestroyContext();
 
     CleanupDeviceD3D();
+    DestroyWindow(hwnd);
     UnregisterClass(_T("ImGui Example"), wc.hInstance);
 
     return 0;

@@ -117,6 +117,8 @@ int main(int, char**)
     // Cleanup
     ImGui_ImplGlfwGL2_Shutdown();
     ImGui::DestroyContext();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;
