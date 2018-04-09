@@ -690,6 +690,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
 {
+    // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
     if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData)
     {
         IM_ASSERT(0);

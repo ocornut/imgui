@@ -1108,6 +1108,7 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
 {
+    // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
     if (ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData)
     {
         ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, &data->WindowData, g_Allocator);

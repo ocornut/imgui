@@ -549,10 +549,10 @@ namespace ImGui
     // (Optional) Platform interface for multi-viewport support
     IMGUI_API ImGuiPlatformIO&   GetPlatformIO();                   // Platform/Renderer function, for back-end to setup.
     IMGUI_API ImGuiPlatformData* GetPlatformData();                 // List of viewports. Viewport 0 is always the main viewport, followed by the secondary viewports.
-    IMGUI_API ImGuiViewport*     GetMainViewport();                 // GetPlatformData()->MainViewport
-    IMGUI_API void               UpdatePlatformWindows();           // Call in main loop. Create/Destroy/Resize platform windows so there's one for each viewport
-    IMGUI_API void               RenderPlatformWindowsDefault(void* platform_render_arg = NULL, void* renderer_render_arg = NULL); // Call in main loop. Call RenderWindow/SwapBuffers from the ImGuiPlatformIO structure. May be reimplemented by user.
-    IMGUI_API void               DestroyPlatformWindows();          // (Optional) Call in back-end shutdown if you need to close Platform Windows before imgui shutdown.
+    IMGUI_API ImGuiViewport*     GetMainViewport();                 // == GetPlatformData()->MainViewport == GetPlatformData()->Viewports[0]
+    IMGUI_API void               UpdatePlatformWindows();           // Call in main loop. Will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
+    IMGUI_API void               RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // Call in main loop. Will call RenderWindow/SwapBuffers platform functions for each secondary viewport. May be reimplemented by user for custom rendering needs.
+    IMGUI_API void               DestroyPlatformWindows();          // (Optional) Call DestroyWindow platform functions for all viewports. Call from back-end Shutdown() if you need to close platform windows before imgui shutdown. Otherwise will be called by DestroyContext().
     IMGUI_API ImGuiViewport*     FindViewportByPlatformHandle(void* platform_handle);
 
     // Memory Utilities

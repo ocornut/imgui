@@ -762,7 +762,7 @@ static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& si
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
 // Viewports
-const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using a constant instead of e.g. ImHash("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
+const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbitrary constant instead of e.g. ImHash("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
 static inline ImRect    GetViewportRect(ImGuiWindow* window) { return window->Viewport->GetRect(); }
 static inline ImVec2    ConvertViewportPosToPlatformPos(const ImVec2& imgui_pos, ImGuiViewport* viewport)    { return imgui_pos - viewport->Pos + viewport->PlatformPos; }
 static inline ImVec2    ConvertPlatformPosToViewportPos(const ImVec2& platform_pos, ImGuiViewport* viewport) { return platform_pos - viewport->PlatformPos + viewport->Pos; }
@@ -3530,7 +3530,8 @@ void ImGui::UpdatePlatformWindows()
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
 
-    // Create/resize/destroy platform windows and update the list that the user can process
+    // Create/resize/destroy platform windows to match each active viewport. Update the user-facing list.
+    // Skip the main viewport (index 0), which is always fully handled by the application!
     for (int i = 1; i < g.Viewports.Size; i++)
     {
         ImGuiViewportP* viewport = g.Viewports[i];
@@ -3609,12 +3610,12 @@ void ImGui::UpdatePlatformWindows()
 //    for (int i = 1; i < data->Viewports.Size; i++)
 //        MySwapBufferFunction(data->Viewports[i], my_args);
 //
-// Note how we intentionally skip the main viewport (index 0) which is generally rendered as part of our main application.
 void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
 {
     if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnableViewports))
         return;
 
+    // Skip the main viewport (index 0), which is always fully handled by the application!
     ImGuiPlatformData* data = ImGui::GetPlatformData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     for (int i = 1; i < data->Viewports.Size; i++)
@@ -3779,7 +3780,7 @@ void ImGui::NewFrame()
             IM_ASSERT(g.FrameCount == 0 || g.FrameCountPlatformEnded == g.FrameCount && "Forgot to call UpdatePlatformWindows() at the end of the previous frame?");
             IM_ASSERT(g.PlatformIO.Platform_CreateWindow != NULL  && "Platform init didn't install handlers?");
             IM_ASSERT(g.PlatformIO.Platform_DestroyWindow != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.Viewports[0]->PlatformUserData != NULL    && "Platform init didn't setup main viewport.");
+            IM_ASSERT((g.Viewports[0]->PlatformUserData != NULL || g.Viewports[0]->PlatformHandle != NULL) && "Platform init didn't setup main viewport.");
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
             IM_ASSERT(g.IO.RenderDrawListsFn == NULL);  // Call ImGui::Render() then pass ImGui::GetDrawData() yourself to your render function!
 #endif
@@ -4059,6 +4060,9 @@ void ImGui::Initialize(ImGuiContext* context)
 
 void ImGui::DestroyPlatformWindows()
 {
+    // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data it may hold on it.
+    // It is expected that the back-end stored a flag to remember that it doesn't own the window created for the main viewport, 
+    // and won't destroy the underlying platform/renderer data.
     ImGuiContext& g = *GImGui;
     if (g.PlatformIO.Renderer_DestroyWindow)
         for (int i = 0; i < g.Viewports.Size; i++)

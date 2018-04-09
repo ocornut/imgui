@@ -364,10 +364,11 @@ float ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2, int y2)
 struct ImGuiViewportDataWin32
 {
     HWND    Hwnd;
+    bool    HwndOwned;
     DWORD   DwStyle;
     DWORD   DwExStyle;
 
-    ImGuiViewportDataWin32() { Hwnd = NULL; DwStyle = DwExStyle = 0; }
+    ImGuiViewportDataWin32() { Hwnd = NULL; HwndOwned = false;  DwStyle = DwExStyle = 0; }
     ~ImGuiViewportDataWin32() { IM_ASSERT(Hwnd == NULL); }
 };
 
@@ -393,10 +394,11 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     // Create window
     RECT rect = { (LONG)viewport->PlatformPos.x, (LONG)viewport->PlatformPos.y, (LONG)(viewport->PlatformPos.x + viewport->Size.x), (LONG)(viewport->PlatformPos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle);
-    data->Hwnd = ::CreateWindowExA(
-        data->DwExStyle, "ImGui Platform", "No Title Yet", data->DwStyle,       // Style, class name, window name
-        rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
-        g_hWnd, NULL, ::GetModuleHandle(NULL), NULL);                           // Parent window, Menu, Instance, Param
+    data->Hwnd = ::CreateWindowEx(
+        data->DwExStyle, _T("ImGui Platform"), _T("No Title Yet"), data->DwStyle,   // Style, class name, window name
+        rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,        // Window area
+        g_hWnd, NULL, ::GetModuleHandle(NULL), NULL);                               // Parent window, Menu, Instance, Param
+    data->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = data->Hwnd;
 }
@@ -411,7 +413,7 @@ static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
             ::ReleaseCapture();
             ::SetCapture(g_hWnd);
         }
-        if (data->Hwnd)
+        if (data->Hwnd && data->HwndOwned)
             ::DestroyWindow(data->Hwnd);
         data->Hwnd = NULL;
         IM_DELETE(data);
@@ -564,12 +566,13 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_SetWindowAlpha = ImGui_ImplWin32_SetWindowAlpha;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;
 
-    // Register main window handle
+    // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataWin32* data = IM_NEW(ImGuiViewportDataWin32)();
     data->Hwnd = g_hWnd;
+    data->HwndOwned = false;
     main_viewport->PlatformUserData = data;
-    main_viewport->PlatformHandle = (void*)data->Hwnd;
+    main_viewport->PlatformHandle = (void*)g_hWnd;
 }
 
 static void ImGui_ImplWin32_ShutdownPlatformInterface()

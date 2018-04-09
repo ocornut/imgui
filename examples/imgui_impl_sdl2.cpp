@@ -285,9 +285,10 @@ struct ImGuiViewportDataSDL2
 {
     SDL_Window*     Window;
     Uint32          WindowID;
+    bool            WindowOwned;
     SDL_GLContext   GLContext;
 
-    ImGuiViewportDataSDL2() { Window = NULL; WindowID = 0; GLContext = NULL; }
+    ImGuiViewportDataSDL2() { Window = NULL; WindowID = 0; WindowOwned = false; GLContext = NULL; }
     ~ImGuiViewportDataSDL2() { IM_ASSERT(Window == NULL && GLContext == NULL); }
 };
 
@@ -316,8 +317,8 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= SDL_WINDOW_HIDDEN;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
-    data->Window = SDL_CreateWindow("No Title Yet", 
-        (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    data->WindowOwned = true; 
     if (use_opengl)
         data->GLContext = SDL_GL_CreateContext(data->Window);
     if (use_opengl && backup_context)
@@ -329,11 +330,11 @@ static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData)
     {
-        if (data->GLContext)
+        if (data->GLContext && data->WindowOwned)
             SDL_GL_DeleteContext(data->GLContext);
-        data->GLContext = NULL;
-        if (data->Window)
+        if (data->Window && data->WindowOwned)
             SDL_DestroyWindow(data->Window);
+        data->GLContext = NULL;
         data->Window = NULL;
         IM_DELETE(data);
     }
@@ -455,11 +456,12 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
     platform_io.Platform_CreateVkSurface = ImGui_ImplSDL2_CreateVkSurface;
 #endif
 
-    // Register main window handle
+    // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataSDL2* data = IM_NEW(ImGuiViewportDataSDL2)();
     data->Window = window;
     data->WindowID = SDL_GetWindowID(window);
+    data->WindowOwned = false;
     data->GLContext = sdl_gl_context;
     main_viewport->PlatformUserData = data;
     main_viewport->PlatformHandle = data->Window;

@@ -371,12 +371,14 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
 {
     if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
     {
+        if (data->WindowOwned)
+        {
 #if GLFW_HAS_GLFW_HOVERED
-        HWND hwnd = glfwGetWin32Window(data->Window);
-        ::RemovePropA(hwnd, "IMGUI_VIEWPORT");
-    #endif
-        if (data->Window && data->WindowOwned)
+            HWND hwnd = glfwGetWin32Window(data->Window);
+            ::RemovePropA(hwnd, "IMGUI_VIEWPORT");
+#endif
             glfwDestroyWindow(data->Window);
+        }
         data->Window = NULL;
         IM_DELETE(data);
     }
@@ -539,12 +541,13 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     platform_io.Platform_CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
 #endif
 
-    // Register main window handle
+    // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataGlfw* data = IM_NEW(ImGuiViewportDataGlfw)();
     data->Window = g_Window;
     data->WindowOwned = false;
     main_viewport->PlatformUserData = data;
+    main_viewport->PlatformHandle = (void*)g_Window;
 }
 
 static void ImGui_ImplGlfw_ShutdownPlatformInterface()
