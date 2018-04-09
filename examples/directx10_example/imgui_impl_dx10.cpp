@@ -10,6 +10,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-04-09: Misc: Fixed erroneous call to io.Fonts->ClearInputData() + ClearTexData() that was left in DX10 example but removed in 1.47 (Nov 2015) on other back-ends.
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors and ImGuiBackendFlags_HasSetMousePos flags + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplDX10_RenderDrawData() in the .h file so you can call it yourself.
@@ -412,10 +413,6 @@ static void ImGui_ImplDX10_CreateFontsTexture()
         desc.MaxLOD = 0.f;
         g_pd3dDevice->CreateSamplerState(&desc, &g_pFontSampler);
     }
-
-    // Cleanup (don't clear the input data if you want to append new fonts later)
-    io.Fonts->ClearInputData();
-    io.Fonts->ClearTexData();
 }
 
 bool    ImGui_ImplDX10_CreateDeviceObjects()
