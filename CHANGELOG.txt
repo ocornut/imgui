@@ -37,6 +37,18 @@ HOW TO UPDATE?
 
 -----------------------------------------------------------------------
 
+VERSION 1.61 WIP
+
+Breaking Changes:
+(IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
+- ...
+
+Other Changes:
+(IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
+- ...
+
+-----------------------------------------------------------------------
+
 VERSION 1.60 (Released 2018-04-07)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.60
 
@@ -171,6 +183,7 @@ Other Changes:
 - Examples: Using Dark theme by default. (#707). Tweaked demo code.
 - Examples: Added support for horizontal mouse wheel for API that allows it. (#1463) [@tseeker]
 - Examples: All examples now setup the io.BackendFlags to signify they can honor mouse cursors, gamepad, etc.
+- Examples: DirectX10: Fixed erroneous call to io.Fonts->ClearInputData() + ClearTexData() that was left in DX10 example but removed in 1.47 (Nov 2015) in every other back-ends. (#1733)
 - Examples: DirectX12: Added DirectX 12 example. (#301) [@jdm3]
 - Examples: OpenGL3+GLFW,SDL: Changed GLSL shader version from 330 to 150. (#1466, #1504)
 - Examples: OpenGL3+GLFW,SDL: Added a way to override the GLSL version string in the Init function. (#1466, #1504).
