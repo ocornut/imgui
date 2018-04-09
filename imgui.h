@@ -798,14 +798,14 @@ enum ImGuiConfigFlags_
     ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Instruct back-end to not alter mouse cursor shape and visibility.
 
     // [BETA] Viewports
-    ImGuiConfigFlags_EnableViewports        = 1 << 5,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
-    ImGuiConfigFlags_EnableDpiScaleViewports= 1 << 6,
-    ImGuiConfigFlags_EnableDpiScaleFonts    = 1 << 7,
-    ImGuiConfigFlags_NoTaskBarForViewports  = 1 << 8,
+    ImGuiConfigFlags_EnableViewports        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
+    ImGuiConfigFlags_EnableDpiScaleViewports= 1 << 11,
+    ImGuiConfigFlags_EnableDpiScaleFonts    = 1 << 12,
+    ImGuiConfigFlags_NoTaskBarForViewports  = 1 << 13,
 
     // User storage (to allow your back-end/engine to communicate to code that may be shared between multiple projects. Those flags are not used by core ImGui)
-    ImGuiConfigFlags_IsSRGB                 = 1 << 20, // Application is SRGB-aware.
-    ImGuiConfigFlags_IsTouchScreen          = 1 << 21  // Application is using a touch screen instead of a mouse.
+    ImGuiConfigFlags_IsSRGB                 = 1 << 20,  // Application is SRGB-aware.
+    ImGuiConfigFlags_IsTouchScreen          = 1 << 21   // Application is using a touch screen instead of a mouse.
 };
 
 // Back-end capabilities flags stored in io.BackendFlags. Set by imgui_impl_xxx or custom back-end.
