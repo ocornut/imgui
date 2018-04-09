@@ -41,7 +41,7 @@ VERSION 1.61 WIP
 
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
-- ...
+ - Misc: IM_DELETE() helper function added in 1.60 doesn't clear the input _pointer_ reference, more consistent with expectation and allows passing r-value.
 
 Other Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
@@ -168,6 +168,7 @@ Other Changes:
 - Misc: ImVec2: added [] operator. This is becoming desirable for some code working of either axes independently. Better adding it sooner than later.
 - Misc: NewFrame(): Added an assert to detect incorrect filling of the io.KeyMap[] array earlier. (#1555)
 - Misc: Added IM_OFFSETOF() helper in imgui.h (previously was in imgui_internal.h)
+- Misc: Added IM_NEW(), IM_DELETE() helpers in imgui.h (previously were in imgui_internal.h)
 - Misc: Added obsolete redirection function GetItemsLineHeightWithSpacing() (which redirects to GetFrameHeightWithSpacing()), as intended and stated in docs of 1.53.
 - Misc: Added misc/natvis/imgui.natvis for visual studio debugger users to easily visualize imgui internal types. Added to examples projects.
 - Misc: Added IMGUI_USER_CONFIG to define a custom configuration filename. (#255, #1573, #1144, #41)

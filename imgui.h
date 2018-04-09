@@ -1212,7 +1212,7 @@ inline void* operator new(size_t, ImNewDummy, void* ptr) { return ptr; }
 inline void  operator delete(void*, ImNewDummy, void*)   {} // This is only required so we can use the symetrical new()
 #define IM_PLACEMENT_NEW(_PTR)              new(ImNewDummy(), _PTR)
 #define IM_NEW(_TYPE)                       new(ImNewDummy(), ImGui::MemAlloc(sizeof(_TYPE))) _TYPE
-template<typename T> void IM_DELETE(T*& p)  { if (p) { p->~T(); ImGui::MemFree(p); p = NULL; } }
+template<typename T> void IM_DELETE(T* p)   { if (p) { p->~T(); ImGui::MemFree(p); } }
 
 // Helper: Execute a block of code at maximum once a frame. Convenient if you want to quickly create an UI within deep-nested code that runs multiple times every frame.
 // Usage: static ImGuiOnceUponAFrame oaf; if (oaf) ImGui::Text("This will be called only once per frame");

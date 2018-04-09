@@ -262,6 +262,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/04/09 (1.61) - IM_DELETE() helper function added in 1.60 doesn't clear the input _pointer_ reference, more consistent with expectation and allows passing r-value.
  - 2018/03/20 (1.60) - Renamed io.WantMoveMouse to io.WantSetMousePos for consistency and ease of understanding (was added in 1.52, _not_ used by core and only honored by some binding ahead of merging the Nav branch).
  - 2018/03/12 (1.60) - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered as the closing cross uses regular button colors now.
  - 2018/03/08 (1.60) - Changed ImFont::DisplayOffset.y to default to 0 instead of +1. Fixed rounding of Ascent/Descent to match TrueType renderer. If you were adding or subtracting to ImFont::DisplayOffset check if your fonts are correctly aligned vertically.
@@ -3670,6 +3671,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
     if (g.IO.Fonts && g.FontAtlasOwnedByContext)
         IM_DELETE(g.IO.Fonts);
+    g.IO.Fonts = NULL;
 
     // Cleanup of other data are conditional on actually having initialize ImGui.
     if (!g.Initialized)
@@ -3690,8 +3692,6 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.HoveredRootWindow = NULL;
     g.ActiveIdWindow = NULL;
     g.MovingWindow = NULL;
-    for (int i = 0; i < g.SettingsWindows.Size; i++)
-        IM_DELETE(g.SettingsWindows[i].Name);
     g.ColorModifiers.clear();
     g.StyleModifiers.clear();
     g.FontStack.clear();
@@ -3704,6 +3704,8 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.InputTextState.InitialText.clear();
     g.InputTextState.TempTextBuffer.clear();
 
+    for (int i = 0; i < g.SettingsWindows.Size; i++)
+        IM_DELETE(g.SettingsWindows[i].Name);
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
 
@@ -3714,6 +3716,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     }
     if (g.LogClipboard)
         IM_DELETE(g.LogClipboard);
+    g.LogClipboard = NULL;
 
     g.Initialized = false;
 }
