@@ -638,7 +638,6 @@ struct ImGuiContext
 
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;
-    ImGuiPlatformData       PlatformData;                       // This is essentially the public facing version of the Viewports vector (it is updated in UpdatePlatformWindows and exclude the viewports about to be destroyed)
     ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
     ImGuiViewportP*         MousePosViewport;
     ImGuiViewportP*         MousePosPrevViewport;
@@ -742,7 +741,6 @@ struct ImGuiContext
         FontSize = FontBaseSize = 0.0f;
         FontAtlasOwnedByContext = shared_font_atlas ? false : true;
         IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
-        memset(&PlatformIO, 0, sizeof(PlatformIO));
 
         Time = 0.0f;
         FrameCount = 0;

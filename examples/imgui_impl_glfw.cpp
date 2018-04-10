@@ -220,10 +220,10 @@ static void ImGui_ImplGlfw_UpdateMouse()
         g_MouseJustPressed[i] = false;
     }
 
-    ImGuiPlatformData* platform_data = ImGui::GetPlatformData();
-    for (int n = 0; n < platform_data->Viewports.Size; n++)
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int n = 0; n < platform_io.Viewports.Size; n++)
     {
-        ImGuiViewport* viewport = platform_data->Viewports[n];
+        ImGuiViewport* viewport = platform_io.Viewports[n];
         GLFWwindow* window = (GLFWwindow*)viewport->PlatformHandle;
         IM_ASSERT(window != NULL);
         if (glfwGetWindowAttrib(window, GLFW_FOCUSED))
@@ -522,17 +522,17 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 // FIXME-PLATFORM: Update when changed (using glfwSetMonitorCallback?)
 static void ImGui_ImplGlfw_UpdateMonitors()
 {
-    ImGuiPlatformData* platform_data = ImGui::GetPlatformData();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-    platform_data->Monitors.resize(monitors_count);
+    platform_io.Monitors.resize(monitors_count);
     for (int n = 0; n < monitors_count; n++)
     {
         int x, y;
         glfwGetMonitorPos(glfw_monitors[n], &x, &y);
         const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
-        platform_data->Monitors[n].Pos = ImVec2((float)x, (float)y);
-        platform_data->Monitors[n].Size = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+        platform_io.Monitors[n].Pos = ImVec2((float)x, (float)y);
+        platform_io.Monitors[n].Size = ImVec2((float)vid_mode->width, (float)vid_mode->height);
     }
 }
 

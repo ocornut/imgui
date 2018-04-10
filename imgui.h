@@ -73,8 +73,7 @@ struct ImGuiSizeCallbackData;       // Structure used to constraint window size 
 struct ImGuiListClipper;            // Helper to manually clip large list of items
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiViewport;               // Viewport (generally ~1 per window to output to at the OS level. Need per-platform support to use multiple viewports)
-struct ImGuiPlatformIO;             // Multi-viewport support: interface for Platform/Renderer back-ends
-struct ImGuiPlatformData;           // Multi-viewport support: list of viewports to render + list of monitors provided by back-end.
+struct ImGuiPlatformIO;             // Multi-viewport support: interface for Platform/Renderer back-ends + viewports to render
 struct ImGuiContext;                // ImGui context (opaque)
 
 #ifndef ImTextureID
@@ -546,14 +545,13 @@ namespace ImGui
     IMGUI_API const char*   GetClipboardText();
     IMGUI_API void          SetClipboardText(const char* text);
 
-    // (Optional) Platform interface for multi-viewport support
-    IMGUI_API ImGuiPlatformIO&   GetPlatformIO();                   // Platform/Renderer function, for back-end to setup.
-    IMGUI_API ImGuiPlatformData* GetPlatformData();                 // List of viewports. Viewport 0 is always the main viewport, followed by the secondary viewports.
-    IMGUI_API ImGuiViewport*     GetMainViewport();                 // == GetPlatformData()->MainViewport == GetPlatformData()->Viewports[0]
-    IMGUI_API void               UpdatePlatformWindows();           // Call in main loop. Will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
-    IMGUI_API void               RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // Call in main loop. Will call RenderWindow/SwapBuffers platform functions for each secondary viewport. May be reimplemented by user for custom rendering needs.
-    IMGUI_API void               DestroyPlatformWindows();          // (Optional) Call DestroyWindow platform functions for all viewports. Call from back-end Shutdown() if you need to close platform windows before imgui shutdown. Otherwise will be called by DestroyContext().
-    IMGUI_API ImGuiViewport*     FindViewportByPlatformHandle(void* platform_handle);
+    // (Optional) Platform/OS interface for multi-viewport support
+    IMGUI_API ImGuiPlatformIO&  GetPlatformIO();                                                // platform/renderer functions, for back-end to setup + viewports list.
+    IMGUI_API ImGuiViewport*    GetMainViewport();                                              // shortcut to == GetPlatformIO().MainViewport == GetPlatformIO().Viewports[0]
+    IMGUI_API void              UpdatePlatformWindows();                                        // call in main loop. will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
+    IMGUI_API void              RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport. may be reimplemented by user for custom rendering needs.
+    IMGUI_API void              DestroyPlatformWindows();                                       // call DestroyWindow platform functions for all viewports. call from back-end Shutdown() if you need to close platform windows before imgui shutdown. otherwise will be called by DestroyContext().
+    IMGUI_API ImGuiViewport*    FindViewportByPlatformHandle(void* platform_handle);            // this is a helper for back-ends. the type platform_handle is decided by the back-end (e.g. HWND, MyWindow*, GLFWwindow* etc.)
 
     // Memory Utilities
     // All those functions are not reliant on the current context.
@@ -1875,6 +1873,14 @@ struct ImFont
 // - if you are new to dear imgui and trying to integrate it into your engine, you should probably ignore this for now.
 //-----------------------------------------------------------------------------
 
+// (Optional) Represent the bounds of each connected monitor/display
+// Dear ImGui only uses this to clamp the position of popups and tooltips so they don't straddle multiple monitors
+struct ImGuiPlatformMonitor
+{
+    ImVec2  Pos;
+    ImVec2  Size;
+};
+
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled
 // This is designed so we can mix and match two imgui_impl_xxxx files, one for the Platform (~window handling), one for Renderer.
 // Custom engine back-ends will often provide both Platform and Renderer interfaces and thus may not need to use all functions.
@@ -1883,10 +1889,14 @@ struct ImFont
 // You may skip using RenderPlatformWindowsDefault() and call your draw/swap functions yourself if you need specific behavior for your multi-window rendering.
 struct ImGuiPlatformIO
 {
-    // Platform (e.g. Win32, GLFW, SDL2)
+    //------------------------------------------------------------------
+    // Input - Back-end interface/functions + Monitor List
+    //------------------------------------------------------------------
+
+    // Platform functions (e.g. Win32, GLFW, SDL2)
     void    (*Platform_CreateWindow)(ImGuiViewport* vp);                    // Create a new platform window for the given viewport
     void    (*Platform_DestroyWindow)(ImGuiViewport* vp);
-    void    (*Platform_ShowWindow)(ImGuiViewport* vp);                      // Newly created windows are initially hidden so we have a chance to call SetWindowPos/Size/Title on them.
+    void    (*Platform_ShowWindow)(ImGuiViewport* vp);                      // Newly created windows are initially hidden so SetWindowPos/Size/Title can be called on them first
     void    (*Platform_SetWindowPos)(ImGuiViewport* vp, ImVec2 pos);
     ImVec2  (*Platform_GetWindowPos)(ImGuiViewport* vp);
     void    (*Platform_SetWindowSize)(ImGuiViewport* vp, ImVec2 size);
@@ -1899,32 +1909,25 @@ struct ImGuiPlatformIO
     void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // (Optional) DPI handling: Called during Begin() every time the viewport we are outputting into changes, so back-end has a chance to swap fonts to adjust style.
     int     (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface); // (Optional) For Renderer to call into Platform code
 
-    // Renderer (e.g. DirectX, OpenGL3, Vulkan)
+    // Renderer functions (e.g. DirectX, OpenGL3, Vulkan)
     void    (*Renderer_CreateWindow)(ImGuiViewport* vp);                    // Create swap chains, frame buffers etc.
     void    (*Renderer_DestroyWindow)(ImGuiViewport* vp);
     void    (*Renderer_SetWindowSize)(ImGuiViewport* vp, ImVec2 size);      // Resize swap chain, frame buffers etc.
     void    (*Renderer_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Clear targets, Render viewport->DrawData
     void    (*Renderer_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (renderer side)
-};
 
-struct ImGuiPlatformMonitor
-{
-    ImVec2  Pos;
-    ImVec2  Size;
-};
-
-// List of viewports to render as platform window, updated by ImGui::UpdatePlatformWindows()
-// FIXME: Merge into ImGuiPlatformIO
-struct ImGuiPlatformData
-{
-    // Viewports (written by: imgui, used by: app/back-end to turn into displayable platform windows)
-    ImGuiViewport*                  MainViewport;           // Guaranteed to be == Viewports[0]
-    ImVector<ImGuiViewport*>        Viewports;              // Main viewports, followed by all secondary viewports. 
-
-    // Monitors (written by: app/back-end, used by: imgui to clamp popups/tooltips within same monitor and not have them straddle monitors)
+    // List of monitors (updated by: app/back-end, used by: imgui to clamp popups/tooltips within same monitor and not have them straddle monitors)
     ImVector<ImGuiPlatformMonitor>  Monitors;
 
-    ImGuiPlatformData() { MainViewport = NULL; }
+    //------------------------------------------------------------------
+    // Output - List of viewports to render into platform windows
+    //------------------------------------------------------------------
+
+    // List of viewports (updated by ImGui::UpdatePlatformWindows() along when calling the Platform/Renderer functions)
+    ImGuiViewport*                  MainViewport;                           // Guaranteed to be == Viewports[0]
+    ImVector<ImGuiViewport*>        Viewports;                              // Main viewports, followed by all secondary viewports. 
+
+    ImGuiPlatformIO()               { memset(this, 0, sizeof(*this)); }     // Zero clear
 };
 
 // Flags stored in ImGuiViewport::Flags, giving indications to the platform back-ends

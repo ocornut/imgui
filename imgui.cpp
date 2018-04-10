@@ -3386,7 +3386,7 @@ static ImGuiViewportP* FindViewportHoveredFromPlatformWindowStack(const ImVec2 m
 static void ImGui::UpdateViewports()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.PlatformData.Viewports.Size <= g.Viewports.Size);
+    IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
     // Mouse handling: latch the expected mouse OS position (if any) before processing viewport erasure
     ImGuiViewportP* viewport_ref = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
@@ -3410,7 +3410,7 @@ static void ImGui::UpdateViewports()
             if (viewport == g.MousePosViewport)         g.MousePosViewport = NULL;
             if (viewport == g.MouseHoveredPrevViewport) g.MouseHoveredPrevViewport = NULL;
             IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
-            IM_ASSERT(g.PlatformData.Viewports.contains(viewport) == false);
+            IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
             IM_DELETE(viewport);
             n--;
             continue;
@@ -3516,11 +3516,6 @@ static void ImGui::UpdateViewports()
     IM_ASSERT(g.MousePosViewport != NULL);
 }
 
-ImGuiPlatformData* ImGui::GetPlatformData()
-{
-    return &GImGui->PlatformData;
-}
-
 void ImGui::UpdatePlatformWindows()
 {
     ImGuiContext& g = *GImGui;
@@ -3611,11 +3606,11 @@ void ImGui::UpdatePlatformWindows()
 // Custom renderers may prefer to not call this function at all, and instead iterate the platform data and handle rendering/sync themselves.
 // The Render/Swap functions stored in ImGuiPlatformIO are merely here to allow for this helper to exist, but you can do it yourself:
 //
-//    ImGuiPlatformData* data = ImGui::GetPlatformData();
-//    for (int i = 1; i < data->Viewports.Size; i++)
-//        MyRenderFunction(data->Viewports[i], my_args);
-//    for (int i = 1; i < data->Viewports.Size; i++)
-//        MySwapBufferFunction(data->Viewports[i], my_args);
+//    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+//    for (int i = 1; i < platform_io.Viewports.Size; i++)
+//        MyRenderFunction(platform_io.Viewports[i], my_args);
+//    for (int i = 1; i < platform_io.Viewports.Size; i++)
+//        MySwapBufferFunction(platform_io.Viewports[i], my_args);
 //
 void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
 {
@@ -3623,17 +3618,16 @@ void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* render
         return;
 
     // Skip the main viewport (index 0), which is always fully handled by the application!
-    ImGuiPlatformData* data = ImGui::GetPlatformData();
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    for (int i = 1; i < data->Viewports.Size; i++)
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
     {
-        ImGuiViewport* viewport = data->Viewports[i];
+        ImGuiViewport* viewport = platform_io.Viewports[i];
         if (platform_io.Platform_RenderWindow) platform_io.Platform_RenderWindow(viewport, platform_render_arg);
         if (platform_io.Renderer_RenderWindow) platform_io.Renderer_RenderWindow(viewport, renderer_render_arg);
     }
-    for (int i = 1; i < data->Viewports.Size; i++)
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
     {
-        ImGuiViewport* viewport = data->Viewports[i];
+        ImGuiViewport* viewport = platform_io.Viewports[i];
         if (platform_io.Platform_SwapBuffers) platform_io.Platform_SwapBuffers(viewport, platform_render_arg);
         if (platform_io.Renderer_SwapBuffers) platform_io.Renderer_SwapBuffers(viewport, renderer_render_arg);
     }
@@ -4497,8 +4491,8 @@ void ImGui::EndFrame()
     }
 
     // Update user-side viewport list
-    g.PlatformData.MainViewport = g.Viewports[0];
-    g.PlatformData.Viewports.resize(0);
+    g.PlatformIO.MainViewport = g.Viewports[0];
+    g.PlatformIO.Viewports.resize(0);
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewportP* viewport = g.Viewports[i];
@@ -4506,7 +4500,7 @@ void ImGui::EndFrame()
             continue;
         if (i > 0)
             IM_ASSERT(viewport->Window != NULL);
-        g.PlatformData.Viewports.push_back(viewport);
+        g.PlatformIO.Viewports.push_back(viewport);
     }
 
     // Sort the window list so that all child windows are after their parent
@@ -14182,12 +14176,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
             ImGui::ShowViewportThumbnails();
             ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
-            if (g.PlatformData.Monitors.Size > 0 && ImGui::TreeNode("Monitors", "Monitors (%d)", g.PlatformData.Monitors.Size))
+            if (g.PlatformIO.Monitors.Size > 0 && ImGui::TreeNode("Monitors", "Monitors (%d)", g.PlatformIO.Monitors.Size))
             {
                 ImGui::TextWrapped("(When viewports are enabled, imgui optionally uses monitor data to position popup/tooltips so they don't straddle monitors.)");
-                for (int i = 0; i < g.PlatformData.Monitors.Size; i++)
+                for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
                 {
-                    const ImGuiPlatformMonitor& mon = g.PlatformData.Monitors[i];
+                    const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
                     ImGui::BulletText("Monitor #%d: Min (%.0f,%.0f) Max (%.0f,%.0f) Size (%.0f,%.0f)", i, mon.Pos.x, mon.Pos.y, mon.Pos.x + mon.Size.x, mon.Pos.y + mon.Size.y, mon.Size.x, mon.Size.y);
                 }
                 ImGui::TreePop();

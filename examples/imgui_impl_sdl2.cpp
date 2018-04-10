@@ -440,15 +440,15 @@ static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 // FIXME-PLATFORM: Update when changed?
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
-    ImGuiPlatformData* platform_data = ImGui::GetPlatformData();
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     int display_count = SDL_GetNumVideoDisplays();
-    platform_data->Monitors.resize(display_count);
+    platform_io.Monitors.resize(display_count);
     for (int n = 0; n < display_count; n++)
     {
         SDL_Rect r;
         SDL_GetDisplayBounds(n, &r);
-        platform_data->Monitors[n].Pos = ImVec2((float)r.x, (float)r.y);
-        platform_data->Monitors[n].Size = ImVec2((float)r.w, (float)r.h);
+        platform_io.Monitors[n].Pos = ImVec2((float)r.x, (float)r.y);
+        platform_io.Monitors[n].Size = ImVec2((float)r.w, (float)r.h);
     }
 }
 
