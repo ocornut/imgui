@@ -519,6 +519,23 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // GLFW_HAS_VULKAN
 
+// FIXME-PLATFORM: Update when changed (using glfwSetMonitorCallback?)
+static void ImGui_ImplGlfw_UpdateMonitors()
+{
+    ImGuiPlatformData* platform_data = ImGui::GetPlatformData();
+    int monitors_count = 0;
+    GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
+    platform_data->Monitors.resize(monitors_count);
+    for (int n = 0; n < monitors_count; n++)
+    {
+        int x, y;
+        glfwGetMonitorPos(glfw_monitors[n], &x, &y);
+        const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
+        platform_data->Monitors[n].Pos = ImVec2((float)x, (float)y);
+        platform_data->Monitors[n].Size = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+    }
+}
+
 static void ImGui_ImplGlfw_InitPlatformInterface()
 {
     // Register platform interface (will be coupled with a renderer interface)
@@ -539,6 +556,8 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 #if GLFW_HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
 #endif
+
+    ImGui_ImplGlfw_UpdateMonitors();
 
     // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

@@ -14182,6 +14182,16 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Indent(ImGui::GetTreeNodeToLabelSpacing());
             ImGui::ShowViewportThumbnails();
             ImGui::Unindent(ImGui::GetTreeNodeToLabelSpacing());
+            if (g.PlatformData.Monitors.Size > 0 && ImGui::TreeNode("Monitors", "Monitors (%d)", g.PlatformData.Monitors.Size))
+            {
+                ImGui::TextWrapped("(When viewports are enabled, imgui optionally uses monitor data to position popup/tooltips so they don't straddle monitors.)");
+                for (int i = 0; i < g.PlatformData.Monitors.Size; i++)
+                {
+                    const ImGuiPlatformMonitor& mon = g.PlatformData.Monitors[i];
+                    ImGui::BulletText("Monitor #%d: Min (%.0f,%.0f) Max (%.0f,%.0f) Size (%.0f,%.0f)", i, mon.Pos.x, mon.Pos.y, mon.Pos.x + mon.Size.x, mon.Pos.y + mon.Size.y, mon.Size.x, mon.Size.y);
+                }
+                ImGui::TreePop();
+            }
             for (int i = 0; i < g.Viewports.Size; i++)
             {
                 ImGuiViewportP* viewport = g.Viewports[i];

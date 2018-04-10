@@ -535,6 +535,22 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
+static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR, HDC, LPRECT rect, LPARAM)
+{
+    ImGuiPlatformMonitor imgui_monitor;
+    imgui_monitor.Pos = ImVec2((float)rect->left, (float)rect->top);
+    imgui_monitor.Size = ImVec2((float)(rect->right - rect->left), (float)(rect->bottom - rect->top));
+    ImGui::GetPlatformData()->Monitors.push_back(imgui_monitor);
+    return TRUE;
+}
+
+// FIXME-PLATFORM: Update list when changed (WM_DISPLAYCHANGE?)
+static void ImGui_ImplWin32_UpdateMonitors()
+{
+    ImGui::GetPlatformData()->Monitors.resize(0);
+    ::EnumDisplayMonitors(NULL, NULL, ImGui_ImplWin32_UpdateMonitors_EnumFunc, NULL);
+}
+
 static void ImGui_ImplWin32_InitPlatformInterface()
 {
     WNDCLASSEX wcex;
@@ -551,6 +567,8 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     wcex.lpszClassName = _T("ImGui Platform");
     wcex.hIconSm = NULL;
     ::RegisterClassEx(&wcex);
+
+    ImGui_ImplWin32_UpdateMonitors();
 
     // Register platform interface (will be coupled with a renderer interface)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();

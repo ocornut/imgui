@@ -437,6 +437,21 @@ static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // SDL_HAS_VULKAN
 
+// FIXME-PLATFORM: Update when changed?
+static void ImGui_ImplSDL2_UpdateMonitors()
+{
+    ImGuiPlatformData* platform_data = ImGui::GetPlatformData();
+    int display_count = SDL_GetNumVideoDisplays();
+    platform_data->Monitors.resize(display_count);
+    for (int n = 0; n < display_count; n++)
+    {
+        SDL_Rect r;
+        SDL_GetDisplayBounds(n, &r);
+        platform_data->Monitors[n].Pos = ImVec2((float)r.x, (float)r.y);
+        platform_data->Monitors[n].Size = ImVec2((float)r.w, (float)r.h);
+    }
+}
+
 static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context)
 {
     // Register platform interface (will be coupled with a renderer interface)
@@ -454,6 +469,8 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
 #if SDL_HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplSDL2_CreateVkSurface;
 #endif
+
+    ImGui_ImplSDL2_UpdateMonitors();
 
     // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

@@ -74,7 +74,7 @@ struct ImGuiListClipper;            // Helper to manually clip large list of ite
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiViewport;               // Viewport (generally ~1 per window to output to at the OS level. Need per-platform support to use multiple viewports)
 struct ImGuiPlatformIO;             // Multi-viewport support: interface for Platform/Renderer back-ends
-struct ImGuiPlatformData;           // Multi-viewport support: list of viewports to render
+struct ImGuiPlatformData;           // Multi-viewport support: list of viewports to render + list of monitors provided by back-end.
 struct ImGuiContext;                // ImGui context (opaque)
 
 #ifndef ImTextureID
@@ -1907,13 +1907,22 @@ struct ImGuiPlatformIO
     void    (*Renderer_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (renderer side)
 };
 
-// List of viewports to render as platform window (updated by ImGui::UpdatePlatformWindows)
+struct ImGuiPlatformMonitor
+{
+    ImVec2  Pos;
+    ImVec2  Size;
+};
+
+// List of viewports to render as platform window, updated by ImGui::UpdatePlatformWindows()
+// FIXME: Merge into ImGuiPlatformIO
 struct ImGuiPlatformData
 {
-    // Viewports[0] is guaranteed to be _always_ the same as MainViewport. Following it are the secondary viewports.
-    // The main viewport is included in the list because it is more convenient for looping code.
-    ImGuiViewport*              MainViewport;
-    ImVector<ImGuiViewport*>    Viewports;
+    // Viewports (written by: imgui, used by: app/back-end to turn into displayable platform windows)
+    ImGuiViewport*                  MainViewport;           // Guaranteed to be == Viewports[0]
+    ImVector<ImGuiViewport*>        Viewports;              // Main viewports, followed by all secondary viewports. 
+
+    // Monitors (written by: app/back-end, used by: imgui to clamp popups/tooltips within same monitor and not have them straddle monitors)
+    ImVector<ImGuiPlatformMonitor>  Monitors;
 
     ImGuiPlatformData() { MainViewport = NULL; }
 };
