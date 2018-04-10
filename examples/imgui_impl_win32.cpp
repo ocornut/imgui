@@ -377,18 +377,17 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataWin32* data = IM_NEW(ImGuiViewportDataWin32)();
     viewport->PlatformUserData = data;
 
-    ImGuiIO& io = ImGui::GetIO();
     bool no_decoration = (viewport->Flags & ImGuiViewportFlags_NoDecoration) != 0;
-    bool no_task_bar = (io.ConfigFlags & ImGuiConfigFlags_NoTaskBarForViewports) != 0;
+    bool no_task_bar_icon = (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) != 0;
     if (no_decoration)
     {
         data->DwStyle = WS_POPUP;
-        data->DwExStyle = no_task_bar ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
+        data->DwExStyle = no_task_bar_icon ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
     }
     else
     {
         data->DwStyle = WS_OVERLAPPEDWINDOW;
-        data->DwExStyle = no_task_bar ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
+        data->DwExStyle = no_task_bar_icon ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
     }
 
     // Create window

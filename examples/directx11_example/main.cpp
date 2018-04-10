@@ -136,7 +136,7 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_EnableViewports;
     io.ConfigFlags |= ImGuiConfigFlags_EnableDpiScaleFonts;
     io.ConfigFlags |= ImGuiConfigFlags_EnableDpiScaleViewports;
-    io.ConfigFlags |= ImGuiConfigFlags_NoTaskBarForViewports;
+    io.ConfigFlags |= ImGuiConfigFlags_NoTaskBarIconsForViewports;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     ImGui_ImplWin32_Init(hwnd);

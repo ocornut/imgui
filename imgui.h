@@ -798,10 +798,10 @@ enum ImGuiConfigFlags_
     ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Instruct back-end to not alter mouse cursor shape and visibility.
 
     // [BETA] Viewports
-    ImGuiConfigFlags_EnableViewports        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
-    ImGuiConfigFlags_EnableDpiScaleViewports= 1 << 11,
-    ImGuiConfigFlags_EnableDpiScaleFonts    = 1 << 12,
-    ImGuiConfigFlags_NoTaskBarForViewports  = 1 << 13,
+    ImGuiConfigFlags_EnableViewports            = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
+    ImGuiConfigFlags_EnableDpiScaleViewports    = 1 << 11,
+    ImGuiConfigFlags_EnableDpiScaleFonts        = 1 << 12,
+    ImGuiConfigFlags_NoTaskBarIconsForViewports = 1 << 13,
 
     // User storage (to allow your back-end/engine to communicate to code that may be shared between multiple projects. Those flags are not used by core ImGui)
     ImGuiConfigFlags_IsSRGB                 = 1 << 20,  // Application is SRGB-aware.
@@ -1924,7 +1924,8 @@ enum ImGuiViewportFlags_
     ImGuiViewportFlags_NoDecoration             = 1 << 0,   // Platform Window: Disable platform title bar, borders, etc.
     ImGuiViewportFlags_NoFocusOnAppearing       = 1 << 1,   // Platform Window: Don't take focus when created.
     ImGuiViewportFlags_NoInputs                 = 1 << 2,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
-    ImGuiViewportFlags_NoRendererClear          = 1 << 3    // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
+    ImGuiViewportFlags_NoTaskBarIcon            = 1 << 3,   // Platform Window: Disable platform task bar icon (for popups, menus, or all windows if ImGuiConfigFlags_NoTaskBarIconsForViewports if set)
+    ImGuiViewportFlags_NoRendererClear          = 1 << 4    // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
 };
 
 // The viewports created and managed by imgui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.

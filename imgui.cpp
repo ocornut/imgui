@@ -3549,6 +3549,13 @@ void ImGui::UpdatePlatformWindows()
             continue;
         }
 
+        // Update ImGuiViewportFlags_NoTaskBarIcon flag
+        if (viewport->Window != NULL)
+        {
+            bool no_task_bar_icon = (g.IO.ConfigFlags & ImGuiConfigFlags_NoTaskBarIconsForViewports) != 0 || (viewport->Window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
+            viewport->Flags = no_task_bar_icon ? (viewport->Flags | ImGuiViewportFlags_NoTaskBarIcon) : (viewport->Flags & ~ImGuiViewportFlags_NoTaskBarIcon);
+        }
+
         bool is_new_window = (viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL && viewport->RendererUserData == NULL);
         if (is_new_window && viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL)
             g.PlatformIO.Platform_CreateWindow(viewport);
