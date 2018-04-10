@@ -3312,7 +3312,7 @@ static void ImGui::NewFrameUpdateMovingWindowDropViewport(ImGuiWindow* window)
     }
     else
     {
-        // Create new viewport
+        // Create/persist new viewport
         ImVec2 platform_pos = ConvertViewportPosToPlatformPos(window->Pos, window->Viewport);
         ImGuiViewportP* viewport = Viewport(window, window->ID, 0, platform_pos, window->Size);
         SetWindowViewportTranslateToPreservePlatformPos(window, window->Viewport, viewport);
@@ -6089,9 +6089,31 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
 
     const bool window_is_mouse_tooltip = (flags & ImGuiWindowFlags_Tooltip) && g.NavDisableHighlight && !g.NavDisableMouseHover;
-    const bool window_follow_mouse_viewport = (window_is_mouse_tooltip || (g.MovingWindow && g.MovingWindow->RootWindow == window));
+    const bool window_follow_mouse_viewport = window_is_mouse_tooltip || (g.MovingWindow && g.MovingWindow->RootWindow == window);
 
     bool created_viewport = false;
+
+    // Appearing popups reset their viewport so they can inherit again
+    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames > 0);
+    if ((flags & ImGuiWindowFlags_Popup) && window_just_appearing_after_hidden_for_resize)
+        window->Viewport = NULL;
+
+    // By default inherit from parent window
+    if (window->Viewport == NULL && window->ParentWindow)
+        window->Viewport = window->ParentWindow->Viewport;
+
+    // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPlatformPos' from .ini file
+    if (window->Viewport == NULL && window->ViewportId != 0)
+    {
+        window->Viewport = FindViewportByID(window->ViewportId);
+        if (window->Viewport == NULL && window->ViewportPlatformPos.x != FLT_MAX && window->ViewportPlatformPos.y != FLT_MAX)
+        {
+            ImGuiViewportP* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportPlatformPos, window->Size);
+            window->Flags |= ImGuiWindowFlags_FullViewport;
+            window->Viewport = viewport;
+            created_viewport = true;
+        }
+    }
 
     if (g.NextWindowData.ViewportCond)
     {
@@ -6106,7 +6128,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     else if (window_follow_mouse_viewport && IsMousePosValid())
     {
         ImGuiViewportP* current_viewport = window->Viewport;
-        if (!window_is_mouse_tooltip && !current_viewport->GetRect().Contains(window->Rect()))
+        if (!window_is_mouse_tooltip && (current_viewport == NULL || !current_viewport->GetRect().Contains(window->Rect())))
         {
             // Calculate mouse position in OS/platform coordinates, create a Viewport at this position.
             ImVec2 platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MousePosViewport);
@@ -6120,43 +6142,14 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         {
             // When dragging a window back into another, only change viewport on mouse release (in UpdateMovingWindow()).
             // This is so we don't require of the multi-viewport windowing back-end to preserve mouse buttons after a window closure, making it easier to implement them.
-            bool preserve_temporary_viewport = g.MovingWindow && g.MovingWindow->RootWindow == window && (window->Viewport->Flags & ImGuiWindowFlags_FullViewport);
-            if (!preserve_temporary_viewport)
+            bool preserve_viewport = g.MovingWindow && g.MovingWindow->RootWindow == window && (window->Viewport->Flags & ImGuiWindowFlags_FullViewport);
+            if (!preserve_viewport)
                 window->Viewport = g.MousePosViewport;
         }
     }
     else if (g.NavWindow != NULL && g.NavWindow != window && (flags & ImGuiWindowFlags_Tooltip))
     {
         window->Viewport = g.NavWindow->Viewport;
-    }
-
-    // Appearing popups reset their viewport so they can inherit again
-    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames == 1);
-    if ((flags & ImGuiWindowFlags_Popup) && window_just_appearing_after_hidden_for_resize)
-        window->Viewport = NULL;
-
-    // By default inherit from parent window
-    if (window->Viewport == NULL && window->ParentWindow)
-        window->Viewport = window->ParentWindow->Viewport;
-
-    // Restore a viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPlatformPos'
-    if (window->Viewport == NULL && window->ViewportId != 0)
-    {
-        window->Viewport = FindViewportByID(window->ViewportId);
-        if (window->Viewport == NULL)
-        {
-            if (window->ViewportPlatformPos.x != FLT_MAX && window->ViewportPlatformPos.y != FLT_MAX)
-            {
-                ImGuiViewportP* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportPlatformPos, window->Size);
-                window->Flags |= ImGuiWindowFlags_FullViewport;
-                window->Viewport = viewport;
-                created_viewport = true;
-            }
-            else
-            {
-                window->ViewportId = 0;
-            }
-        }
     }
 
     // Fallback to default viewport
@@ -14151,7 +14144,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::BulletText("NavRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRectRel[0].Min.x, window->NavRectRel[0].Min.y, window->NavRectRel[0].Max.x, window->NavRectRel[0].Max.y);
                 else
                     ImGui::BulletText("NavRectRel[0]: <None>");
-                ImGui::BulletText("Viewport: %d, ViewportId: 0x%08X", window->Viewport ? window->Viewport->Idx : -1, window->ViewportId);
+                ImGui::BulletText("Viewport: %d, ViewportId: 0x%08X, ViewportPlatformPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportId, window->ViewportPlatformPos.x, window->ViewportPlatformPos.y);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 if (window->ColumnsStorage.Size > 0 && ImGui::TreeNode("Columns", "Columns sets (%d)", window->ColumnsStorage.Size))
