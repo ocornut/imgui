@@ -4,7 +4,7 @@
 
 // Implemented features:
 //  [X] User texture binding. Use 'GLUint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Multi-viewport rendering (when ImGuiConfigFlags_EnableViewports is enabled).
+//  [X] Multi-viewport rendering (when ImGuiConfigFlags_ViewportsEnable is enabled).
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
@@ -53,7 +53,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
-    if (io.ConfigFlags & ImGuiConfigFlags_EnableViewports)
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplOpenGL3_InitPlatformInterface();
     return true;
 }

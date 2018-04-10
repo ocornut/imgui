@@ -3,7 +3,7 @@
 // (Info: SDL2 is a cross-platform general purpose library for handling windows, inputs, graphics context creation, etc.)
 
 // Implemented features:
-//  [X] Multi-viewport windows (when ImGuiConfigFlags_EnableViewports is enabled).
+//  [X] Multi-viewport windows (when ImGuiConfigFlags_ViewportsEnable is enabled).
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -178,7 +178,7 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
 
     // We need SDL_CaptureMouse(), SDL_GetGlobalMouseState() from SDL 2.0.4+ to support multiple viewports.
     // We left the call to ImGui_ImplSDL2_InitPlatformInterface() outside of #ifdef to avoid unused-function warnings.
-    if ((io.ConfigFlags & ImGuiConfigFlags_EnableViewports) && (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports))
+    if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports))
         ImGui_ImplSDL2_InitPlatformInterface(window, sdl_gl_context);
 
     return true;

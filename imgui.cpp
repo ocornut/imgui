@@ -3291,7 +3291,7 @@ static void ImGui::NewFrameUpdateMovingWindowDropViewport(ImGuiWindow* window)
     // On release we either drop window over an existing viewport or create a new one
     // (We convert position from one viewport space to another, which is unnecessary at the moment but allows us to have viewport overlapping in term of imgui position)
     ImGuiContext& g = *GImGui;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         return;
 
     ImRect mouse_viewport_rect = g.MousePosViewport->GetRect();
@@ -3441,7 +3441,7 @@ static void ImGui::UpdateViewports()
         if (viewport->DpiScale != 0.0f && new_dpi_scale != viewport->DpiScale)
         {
             float scale_factor = new_dpi_scale / viewport->DpiScale;
-            if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableDpiScaleViewports)
+            if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
                 ScaleWindowsInViewport(viewport, scale_factor);
             //if (viewport == GetMainViewport())
             //    g.PlatformInterface.SetWindowSize(viewport, viewport->Size * scale_factor);
@@ -3457,11 +3457,11 @@ static void ImGui::UpdateViewports()
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         main_viewport_platform_pos = g.PlatformIO.Platform_GetWindowPos(main_viewport);
     Viewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_CanHostOtherWindows, main_viewport_platform_pos, g.IO.DisplaySize);
 
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
         g.MousePosViewport = g.MousePosPrevViewport = main_viewport;
         return;
@@ -3527,7 +3527,7 @@ void ImGui::UpdatePlatformWindows()
     IM_ASSERT(g.FrameCountEnded == g.FrameCount && "Forgot to call Render() or EndFrame() before UpdatePlatformWindows()?");
     IM_ASSERT(g.FrameCountPlatformEnded < g.FrameCount);
     g.FrameCountPlatformEnded = g.FrameCount;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         return;
 
     // Create/resize/destroy platform windows to match each active viewport. Update the user-facing list.
@@ -3552,7 +3552,7 @@ void ImGui::UpdatePlatformWindows()
         // Update ImGuiViewportFlags_NoTaskBarIcon flag
         if (viewport->Window != NULL)
         {
-            bool no_task_bar_icon = (g.IO.ConfigFlags & ImGuiConfigFlags_NoTaskBarIconsForViewports) != 0 || (viewport->Window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
+            bool no_task_bar_icon = (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoTaskBarIcons) != 0 || (viewport->Window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
             viewport->Flags = no_task_bar_icon ? (viewport->Flags | ImGuiViewportFlags_NoTaskBarIcon) : (viewport->Flags & ~ImGuiViewportFlags_NoTaskBarIcon);
         }
 
@@ -3619,7 +3619,7 @@ void ImGui::UpdatePlatformWindows()
 //
 void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
 {
-    if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnableViewports))
+    if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         return;
 
     // Skip the main viewport (index 0), which is always fully handled by the application!
@@ -3780,7 +3780,7 @@ void ImGui::NewFrame()
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
     // Perform simple checks for multi-viewport and platform windows support
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         if ((g.IO.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasViewports))
         {
@@ -3795,7 +3795,7 @@ void ImGui::NewFrame()
         else
         {
             // Disable feature, our back-ends do not support it
-            g.IO.ConfigFlags &= ~ImGuiConfigFlags_EnableViewports;
+            g.IO.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
         }
     }
 
@@ -6088,7 +6088,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
 
     // Restore main viewport if multi-viewport is not supported by the back-end
     ImGuiViewportP* main_viewport = g.Viewports[0];
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_EnableViewports))
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
         window->Viewport = main_viewport;
         window->ViewportId = main_viewport->ID;
@@ -6475,7 +6475,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         UpdateSelectWindowViewport(window);
         SetCurrentViewport(window->Viewport);
-        window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_EnableDpiScaleFonts) ? window->Viewport->DpiScale : 1.0f;
+        window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
         flags = window->Flags;
 
