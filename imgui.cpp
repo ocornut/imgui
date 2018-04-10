@@ -3498,7 +3498,14 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
     g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx] = g.IO.DeltaTime;
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
-    g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
+    if ((g.FramerateSecPerFrameAccum != 0) && (IM_ARRAYSIZE(g.FramerateSecPerFrame) != 0))
+    {
+        g.IO.Framerate = 1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame));
+    }
+    else
+    {
+        g.IO.Framerate = FLT_MAX;
+    }
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
     NewFrameUpdateMovingWindow();
