@@ -1918,6 +1918,7 @@ bool ImGuiListClipper::Step()
 //-----------------------------------------------------------------------------
 
 ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
+    : DrawListInst(&context->DrawListSharedData)
 {
     Name = ImStrdup(name);
     ID = ImHash(name, 0);
@@ -1959,7 +1960,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
 
-    DrawList = IM_NEW(ImDrawList)(&context->DrawListSharedData);
+    DrawList = &DrawListInst;
     DrawList->_OwnerName = Name;
     ParentWindow = NULL;
     RootWindow = NULL;
@@ -1978,7 +1979,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
 
 ImGuiWindow::~ImGuiWindow()
 {
-    IM_DELETE(DrawList);
+    IM_ASSERT(DrawList == &DrawListInst);
     IM_DELETE(Name);
     for (int i = 0; i != ColumnsStorage.Size; i++)
         ColumnsStorage[i].~ImGuiColumnsSet();

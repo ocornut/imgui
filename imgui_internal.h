@@ -943,7 +943,8 @@ struct IMGUI_API ImGuiWindow
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumnsSet> ColumnsStorage;
     float                   FontWindowScale;                    // Scale multiplier per-window
-    ImDrawList*             DrawList;
+    ImDrawList*             DrawList;                           // == &DrawListInst (for backward compatibility reason with code using imgui_internal.h we keep this a pointer)
+    ImDrawList              DrawListInst;
     ImGuiWindow*            ParentWindow;                       // If we are a child _or_ popup window, this is pointing to our parent. Otherwise NULL.
     ImGuiWindow*            RootWindow;                         // Point to ourself or first ancestor that is not a child window.
     ImGuiWindow*            RootWindowForTitleBarHighlight;     // Point to ourself or first ancestor which will display TitleBgActive color when this window is active.
