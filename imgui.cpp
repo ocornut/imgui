@@ -2717,17 +2717,32 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
-ImDrawList* ImGui::GetOverlayDrawList(ImGuiWindow* window)
+ImDrawList* ImGui::GetOverlayDrawList(ImGuiViewportP* viewport)
 {
-    IM_ASSERT(window && window->Viewport);
-    return window->Viewport->OverlayDrawList;
+    // Create the draw list on demand, because it is not frequently used for all viewports
+    ImGuiContext& g = *GImGui;
+    if (viewport->OverlayDrawList == NULL)
+    {
+        viewport->OverlayDrawList = IM_NEW(ImDrawList)(&g.DrawListSharedData);
+        viewport->OverlayDrawList->_OwnerName = "##Overlay";
+    }
+
+    // Our ImDrawList system requires that there is always a command
+    if (viewport->LastFrameOverlayDrawList != g.FrameCount)
+    {
+        viewport->OverlayDrawList->Clear();
+        viewport->OverlayDrawList->PushTextureID(g.IO.Fonts->TexID);
+        viewport->OverlayDrawList->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
+        viewport->OverlayDrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
+        viewport->LastFrameOverlayDrawList = g.FrameCount;
+    }
+    return viewport->OverlayDrawList;
 }
 
 ImDrawList* ImGui::GetOverlayDrawList()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    IM_ASSERT(window && window->Viewport);
-    return window->Viewport->OverlayDrawList;
+    return GetOverlayDrawList(window->Viewport);
 }
 
 ImDrawListSharedData* ImGui::GetDrawListSharedData()
@@ -3633,15 +3648,6 @@ void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* render
     }
 }
 
-static void SetupOverlayDrawList(ImDrawList* draw_list, ImGuiViewport* viewport)
-{
-    ImGuiContext& g = *GImGui;
-    draw_list->Clear();
-    draw_list->PushTextureID(g.IO.Fonts->TexID);
-    draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
-    draw_list->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
-}
-
 static void NewFrameUpdateMouseInputs()
 {
     ImGuiContext& g = *GImGui;
@@ -3832,7 +3838,6 @@ void ImGui::NewFrame()
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->DrawData = NULL;
         viewport->DrawDataP.Clear();
-        SetupOverlayDrawList(viewport->OverlayDrawList, viewport);
     }
 
     // Clear reference to active widget if the widget isn't alive anymore
@@ -4051,7 +4056,7 @@ void ImGui::Initialize(ImGuiContext* context)
     g.SettingsHandlers.push_front(ini_handler);
 
     // Create default viewport
-    ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)(&g.DrawListSharedData);
+    ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     viewport->Idx = 0;
     g.Viewports.push_back(viewport);
@@ -4563,7 +4568,7 @@ void ImGui::Render()
             ImVec2 pos = (g.MousePosViewport == viewport) ? main_pos : ConvertPlatformPosToViewportPos(ConvertViewportPosToPlatformPos(main_pos, g.MousePosViewport), viewport);
             if (viewport->GetRect().Overlaps(ImRect(pos, pos + ImVec2(2,2)*sc + size * sc)))
             {
-                ImDrawList* draw_list = viewport->OverlayDrawList;
+                ImDrawList* draw_list = GetOverlayDrawList(viewport);
                 draw_list->PushTextureID(tex_id);
                 draw_list->AddImage(tex_id, pos+ImVec2(1,0)*sc, pos+ImVec2(1,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
                 draw_list->AddImage(tex_id, pos+ImVec2(2,0)*sc, pos+ImVec2(2,0)*sc + size*sc, uv[2], uv[3], IM_COL32(0,0,0,48));        // Shadow
@@ -4580,7 +4585,8 @@ void ImGui::Render()
     {
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->DrawDataBuilder.FlattenIntoSingleLayer();
-        AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], viewport->OverlayDrawList);
+        if (viewport->OverlayDrawList != NULL)
+            AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], GetOverlayDrawList(viewport));
         SetupViewportDrawData(viewport, &viewport->DrawDataBuilder.Layers[0]);
         g.IO.MetricsRenderVertices += viewport->DrawData->TotalVtxCount;
         g.IO.MetricsRenderIndices += viewport->DrawData->TotalIdxCount;
@@ -4683,7 +4689,7 @@ ImGuiViewportP* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFl
     else
     {
         // New viewport
-        viewport = IM_NEW(ImGuiViewportP)(&g.DrawListSharedData);
+        viewport = IM_NEW(ImGuiViewportP)();
         viewport->ID = id;
         viewport->Idx = g.Viewports.Size;
         viewport->Pos = ImVec2(g.Viewports.back()->GetNextX(), 0.0f);
@@ -4691,11 +4697,9 @@ ImGuiViewportP* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFl
         g.Viewports.push_back(viewport);
         
         // We normally setup for all viewports in NewFrame() but here need to handle the mid-frame creation of a new viewport.
-        // 1. We need to extend the fullscreen clip rect so the OverlayDrawList clip is correct for that the first frame
-        // 2. Our ImDrawList system requires that there is always a command, SetupOverlayDrawList() effectively does that by setting up texture and clip rect
+        // We need to extend the fullscreen clip rect so the OverlayDrawList clip is correct for that the first frame
         g.DrawListSharedData.ClipRectFullscreen.z = ImMax(g.DrawListSharedData.ClipRectFullscreen.z, viewport->Pos.x + viewport->Size.x);
         g.DrawListSharedData.ClipRectFullscreen.w = ImMax(g.DrawListSharedData.ClipRectFullscreen.w, viewport->Pos.y + viewport->Size.y);
-        SetupOverlayDrawList(viewport->OverlayDrawList, viewport);
     }
 
     IM_ASSERT(viewport->Pos.y == 0.0f);
@@ -6699,12 +6703,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Draw modal window background (darkens what is behind them, all viewports)
         if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostModalRootWindow() && window->HiddenFrames <= 0)
-        {
-            window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
             for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
-                if (g.Viewports[viewport_n] != window->Viewport)
-                    g.Viewports[viewport_n]->OverlayDrawList->AddRectFilled(g.Viewports[viewport_n]->Pos, g.Viewports[viewport_n]->Pos + g.Viewports[viewport_n]->Size, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
-        }
+            {
+                ImGuiViewportP* viewport = g.Viewports[viewport_n];
+                ImDrawList* draw_list = (viewport == window->Viewport) ? window->DrawList : GetOverlayDrawList(viewport);
+                draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+            }
 
         // Draw navigation selection/windowing rectangle background
         if (g.NavWindowingTarget == window)
@@ -14060,7 +14064,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     return;
                 }
 
-                ImDrawList* overlay_draw_list = viewport->OverlayDrawList; // Render additional visuals into the top-most draw list
+                ImDrawList* overlay_draw_list = GetOverlayDrawList(viewport); // Render additional visuals into the top-most draw list
                 if (window && ImGui::IsItemHovered())
                     overlay_draw_list->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
                 if (!node_open)
@@ -14245,8 +14249,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 char buf[32];
                 ImFormatString(buf, IM_ARRAYSIZE(buf), "%d", window->BeginOrderWithinContext);
                 float font_size = ImGui::GetFontSize() * 2;
-                window->Viewport->OverlayDrawList->AddRectFilled(window->PosFloat, window->PosFloat + ImVec2(font_size, font_size), IM_COL32(200, 100, 100, 255));
-                window->Viewport->OverlayDrawList->AddText(NULL, font_size, window->PosFloat, IM_COL32(255, 255, 255, 255), buf);
+                ImDrawList* overlay_draw_list = GetOverlayDrawList(window->Viewport);
+                overlay_draw_list->AddRectFilled(window->PosFloat, window->PosFloat + ImVec2(font_size, font_size), IM_COL32(200, 100, 100, 255));
+                overlay_draw_list->AddText(NULL, font_size, window->PosFloat, IM_COL32(255, 255, 255, 255), buf);
             }
         }
     }

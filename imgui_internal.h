@@ -516,6 +516,7 @@ struct ImGuiViewportP : public ImGuiViewport
     int                 Idx;
     int                 LastFrameActive;          // Last frame number this viewport was activated by a window
     int                 LastFrameAsRefViewport;   // Last frame number this viewport was io.MouseViewportRef
+    int                 LastFrameOverlayDrawList;
     ImGuiID             LastNameHash;
     float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
     float               LastAlpha;
@@ -525,8 +526,8 @@ struct ImGuiViewportP : public ImGuiViewport
     ImDrawDataBuilder   DrawDataBuilder;
     ImVec2              RendererLastSize;
 
-    ImGuiViewportP(ImDrawListSharedData* draw_list_shared_data) { Idx = 1; LastFrameActive = LastFrameAsRefViewport = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; Window = NULL; OverlayDrawList = IM_NEW(ImDrawList)(draw_list_shared_data); OverlayDrawList->_OwnerName = "##Overlay"; RendererLastSize = ImVec2(-1.0f,-1.0f); }
-    ~ImGuiViewportP()        { IM_DELETE(OverlayDrawList); }
+    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameAsRefViewport = LastFrameOverlayDrawList = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; Window = NULL; OverlayDrawList = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     float   GetNextX() const { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
 };
@@ -1099,7 +1100,8 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
 
     IMGUI_API void          SetCurrentFont(ImFont* font);
-    IMGUI_API ImDrawList*   GetOverlayDrawList(ImGuiWindow* window);
+    IMGUI_API ImDrawList*   GetOverlayDrawList(ImGuiViewportP* viewport);
+    inline ImDrawList*      GetOverlayDrawList(ImGuiWindow* window) { return GetOverlayDrawList(window->Viewport); }
 
     IMGUI_API void          OpenPopupEx(ImGuiID id);
     IMGUI_API void          ClosePopup(ImGuiID id);
