@@ -3676,7 +3676,9 @@ void ImGui::Shutdown(ImGuiContext* context)
     if (!g.Initialized)
         return;
 
-    SaveIniSettingsToDisk(g.IO.IniFilename);
+    // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
+    if (g.SettingsLoaded)
+        SaveIniSettingsToDisk(g.IO.IniFilename);
 
     // Clear everything else
     for (int i = 0; i < g.Windows.Size; i++)

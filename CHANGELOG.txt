@@ -41,11 +41,13 @@ VERSION 1.61 WIP
 
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
+
  - Misc: IM_DELETE() helper function added in 1.60 doesn't clear the input _pointer_ reference, more consistent with expectation and allows passing r-value.
 
 Other Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
-- ...
+
+- Settings: Fixed saving an empty .ini file if CreateContext/DestroyContext are called without a single call to NewFrame(). (#1741)
 
 -----------------------------------------------------------------------
 
