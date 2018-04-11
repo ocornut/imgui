@@ -389,6 +389,8 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
         data->DwStyle = WS_OVERLAPPEDWINDOW;
         data->DwExStyle = no_task_bar_icon ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
     }
+    if (viewport->Flags & imGuiViewportFlags_TopMost)
+        data->DwExStyle |= WS_EX_TOPMOST;
 
     // Create window
     RECT rect = { (LONG)viewport->PlatformPos.x, (LONG)viewport->PlatformPos.y, (LONG)(viewport->PlatformPos.x + viewport->Size.x), (LONG)(viewport->PlatformPos.y + viewport->Size.y) };

@@ -34,6 +34,7 @@
 #include <SDL_syswm.h>
 #define SDL_HAS_CAPTURE_MOUSE   SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_WINDOW_OPACITY  SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_ALWAYS_ON_TOP   SDL_VERSION_ATLEAST(2,0,5)
 #define SDL_HAS_VULKAN          SDL_VERSION_ATLEAST(2,0,6)
 #if !SDL_HAS_VULKAN
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
@@ -317,6 +318,9 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= SDL_WINDOW_HIDDEN;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
+#if SDL_HAS_ALWAYS_ON_TOP
+    sdl_flags |= (viewport->Flags & imGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
+#endif
     data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
     data->WindowOwned = true; 
     if (use_opengl)

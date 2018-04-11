@@ -434,7 +434,7 @@
      perfectly fine, as the bool toggle fairly rarely. If you have on a touch device, you might find use for an early call to NewFrameUpdateHoveredWindowAndCaptureFlags().
     Note: Text input widget releases focus on "Return KeyDown", so the subsequent "Return KeyUp" event that your application receive will typically 
      have 'io.WantCaptureKeyboard=false'. Depending on your application logic it may or not be inconvenient. You might want to track which key-downs
-     were targetted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
+     were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
 
  Q: How can I display an image? What is ImTextureID, how does it works?
  A: ImTextureID is a void* used to pass renderer-agnostic texture references around until it hits your render function.
@@ -766,7 +766,7 @@ const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbi
 static inline ImRect    GetViewportRect(ImGuiWindow* window) { return window->Viewport->GetRect(); }
 static inline ImVec2    ConvertViewportPosToPlatformPos(const ImVec2& imgui_pos, ImGuiViewport* viewport)    { return imgui_pos - viewport->Pos + viewport->PlatformPos; }
 static inline ImVec2    ConvertPlatformPosToViewportPos(const ImVec2& platform_pos, ImGuiViewport* viewport) { return platform_pos - viewport->PlatformPos + viewport->Pos; }
-static ImGuiViewportP*  Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size);
+static ImGuiViewportP*  AddViewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size);
 static void             UpdateViewports();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
 static void             SetCurrentViewport(ImGuiViewportP* viewport);
@@ -3330,7 +3330,7 @@ static void ImGui::NewFrameUpdateMovingWindowDropViewport(ImGuiWindow* window)
     {
         // Create/persist new viewport
         ImVec2 platform_pos = ConvertViewportPosToPlatformPos(window->Pos, window->Viewport);
-        ImGuiViewportP* viewport = Viewport(window, window->ID, 0, platform_pos, window->Size);
+        ImGuiViewportP* viewport = AddViewport(window, window->ID, 0, platform_pos, window->Size);
         SetWindowViewportTranslateToPreservePlatformPos(window, window->Viewport, viewport);
     }
 }
@@ -3475,7 +3475,7 @@ static void ImGui::UpdateViewports()
     ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
     if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         main_viewport_platform_pos = g.PlatformIO.Platform_GetWindowPos(main_viewport);
-    Viewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_CanHostOtherWindows, main_viewport_platform_pos, g.IO.DisplaySize);
+    AddViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, ImGuiViewportFlags_CanHostOtherWindows, main_viewport_platform_pos, g.IO.DisplaySize);
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
@@ -3560,10 +3560,16 @@ void ImGui::UpdatePlatformWindows()
             continue;
         }
 
-        // Update ImGuiViewportFlags_NoTaskBarIcon flag
+        // New windows that appears directly in a new viewport won't always have a size on their frame
+        if (viewport->Size.x <= 0 || viewport->Size.y <= 0)
+            continue;
+
+        // Update viewport flags
         if (viewport->Window != NULL)
         {
+            bool topmost = (viewport->Window->Flags & ImGuiWindowFlags_Tooltip) != 0;
             bool no_task_bar_icon = (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoTaskBarIcons) != 0 || (viewport->Window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
+            viewport->Flags = topmost ? (viewport->Flags | imGuiViewportFlags_TopMost) : (viewport->Flags & ~imGuiViewportFlags_TopMost);
             viewport->Flags = no_task_bar_icon ? (viewport->Flags | ImGuiViewportFlags_NoTaskBarIcon) : (viewport->Flags & ~ImGuiViewportFlags_NoTaskBarIcon);
         }
 
@@ -4506,7 +4512,7 @@ void ImGui::EndFrame()
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewportP* viewport = g.Viewports[i];
-        if (viewport->LastFrameActive < g.FrameCount)
+        if (viewport->LastFrameActive < g.FrameCount || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f)
             continue;
         if (i > 0)
             IM_ASSERT(viewport->Window != NULL);
@@ -4679,7 +4685,7 @@ void ImGui::SetCurrentViewport(ImGuiViewportP* viewport)
         g.PlatformIO.Platform_OnChangedViewport(g.CurrentViewport);
 }
 
-ImGuiViewportP* ImGui::Viewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size)
+ImGuiViewportP* ImGui::AddViewport(ImGuiWindow* window, ImGuiID id, ImGuiViewportFlags flags, const ImVec2& platform_pos, const ImVec2& size)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
@@ -6164,7 +6170,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         window->Viewport = FindViewportByID(window->ViewportId);
         if (window->Viewport == NULL && window->ViewportPlatformPos.x != FLT_MAX && window->ViewportPlatformPos.y != FLT_MAX)
         {
-            ImGuiViewportP* viewport = Viewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportPlatformPos, window->Size);
+            ImGuiViewportP* viewport = AddViewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->ViewportPlatformPos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport;
             window->Viewport = viewport;
             created_viewport = true;
@@ -6189,7 +6195,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
             // Calculate mouse position in OS/platform coordinates, create a Viewport at this position.
             ImVec2 platform_pos = ConvertViewportPosToPlatformPos(g.IO.MousePos - g.ActiveIdClickOffset, g.MousePosViewport);
             ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
-            ImGuiViewportP* viewport = Viewport(window, window->ID, viewport_flags, platform_pos, window->Size);
+            ImGuiViewportP* viewport = AddViewport(window, window->ID, viewport_flags, platform_pos, window->Size);
             window->Flags |= ImGuiWindowFlags_FullViewport;
             window->Viewport = viewport;
             created_viewport = true;
