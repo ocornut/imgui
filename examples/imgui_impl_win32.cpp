@@ -286,9 +286,7 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
 // So we dynamically select and load those functions to avoid dependencies. This is the scheme successfully 
 // used by GLFW (from which we borrowed some of the code here) and other applications aiming to be portable.
 //---------------------------------------------------------------------------------------------------------
-// FIXME-DPI: For now we just call SetProcessDpiAwareness(PROCESS_PER_MONITOR_AWARE) without requiring SDK 8.1 or 10.
-// We may allow/aim calling the most-recent-available version, e.g. Windows 10 Creators Update has SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
-// At this point ImGui_ImplWin32_EnableDpiAwareness() is just a helper called by main.cpp, we don't call it ourselves.
+// At this point ImGui_ImplWin32_EnableDpiAwareness() is just a helper called by main.cpp, we don't call it automatically.
 //---------------------------------------------------------------------------------------------------------
 
 static BOOL IsWindowsVersionOrGreater(WORD major, WORD minor, WORD sp)
@@ -307,11 +305,26 @@ static BOOL IsWindowsVersionOrGreater(WORD major, WORD minor, WORD sp)
 typedef enum { PROCESS_DPI_UNAWARE = 0, PROCESS_SYSTEM_DPI_AWARE = 1, PROCESS_PER_MONITOR_DPI_AWARE = 2 } PROCESS_DPI_AWARENESS;
 typedef enum { MDT_EFFECTIVE_DPI = 0, MDT_ANGULAR_DPI = 1, MDT_RAW_DPI = 2, MDT_DEFAULT = MDT_EFFECTIVE_DPI } MONITOR_DPI_TYPE;
 #endif
-typedef HRESULT(WINAPI * PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);              // Shcore.lib+dll, Windows 8.1
-typedef HRESULT(WINAPI * PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*); // Shcore.lib+dll, Windows 8.1
+#ifndef _DPI_AWARENESS_CONTEXTS_
+DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    (DPI_AWARENESS_CONTEXT)-3
+#define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (DPI_AWARENESS_CONTEXT)-4
+#endif
+typedef HRESULT(WINAPI * PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib+dll, Windows 8.1
+typedef HRESULT(WINAPI * PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);        // Shcore.lib+dll, Windows 8.1
+typedef DPI_AWARENESS_CONTEXT(WINAPI * PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT); // User32.lib+dll, Windows 10 v1607 (Creators Update)
 
 void ImGui_ImplWin32_EnableDpiAwareness()
 {
+    // if (IsWindows10OrGreater()) // FIXME-DPI: This needs a manifest to succeed. Instead we try to grab the function pointer.
+    {
+        static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
+        if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
+        {
+            SetThreadDpiAwarenessContextFn(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+            return;
+        }
+    }
     if (IsWindows8Point1OrGreater())
     {
         static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process

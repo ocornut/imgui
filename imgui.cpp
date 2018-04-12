@@ -14035,8 +14035,11 @@ void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.MovingWindow != NULL)
-        g.ActiveIdClickOffset = ImFloor(g.ActiveIdClickOffset * scale);
+    // FIXME-DPI: This is meant to have the window rescale around the mouse. It currently creates feedback loop when a window is straddling a DPI transition border.
+    // NB: since our sizes do not perfectly linearly scale, deferring the ClickOffset scale until we know the actual window scale ratio may get us slightly more precise mouse positioning.
+    //if (g.MovingWindow != NULL && g.MovingWindow->Viewport == viewport)
+    //    g.ActiveIdClickOffset = ImFloor(g.ActiveIdClickOffset * scale);
+
     /*
     if (g.IO.MousePosViewport == viewport->ID)
     {
@@ -14106,8 +14109,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     return;
                 }
 
-                ImDrawList* overlay_draw_list = GetOverlayDrawList(viewport); // Render additional visuals into the top-most draw list
-                if (window && ImGui::IsItemHovered())
+                ImDrawList* overlay_draw_list = viewport ? GetOverlayDrawList(viewport) : NULL; // Render additional visuals into the top-most draw list
+                if (window && overlay_draw_list && ImGui::IsItemHovered())
                     overlay_draw_list->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
                 if (!node_open)
                     return;
@@ -14124,7 +14127,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     }
                     ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                     bool pcmd_node_open = ImGui::TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "Draw %4d %s vtx, tex 0x%p, clip_rect (%4.0f,%4.0f)-(%4.0f,%4.0f)", pcmd->ElemCount, draw_list->IdxBuffer.Size > 0 ? "indexed" : "non-indexed", pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
-                    if (show_clip_rects && ImGui::IsItemHovered())
+                    if (show_clip_rects && overlay_draw_list && ImGui::IsItemHovered())
                     {
                         ImRect clip_rect = pcmd->ClipRect;
                         ImRect vtxs_rect;
@@ -14151,7 +14154,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                                 buf_p += ImFormatString(buf_p, (int)(buf_end - buf_p), "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                             }
                             ImGui::Selectable(buf, false);
-                            if (ImGui::IsItemHovered())
+                            if (overlay_draw_list && ImGui::IsItemHovered())
                             {
                                 ImDrawListFlags backup_flags = overlay_draw_list->Flags;
                                 overlay_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; // Disable AA on triangle outlines at is more readable for very large and thin triangles.
