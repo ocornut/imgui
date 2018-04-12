@@ -771,7 +771,7 @@ static void             UpdateViewports();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
 static void             SetCurrentViewport(ImGuiViewportP* viewport);
 static void             SetWindowViewportTranslateToPreservePlatformPos(ImGuiWindow* window, ImGuiViewportP* old_viewport, ImGuiViewportP* new_viewport);
-static void             ResizeViewportTranslateWindows(int viewport_idx_min, int viewport_idx_max, float pos_x_delta, int idx_delta, ImGuiViewport* viewport_to_erase);
+static void             TranslateOrEraseViewports(int viewport_idx_min, int viewport_idx_max, float delta_x, int delta_idx, ImGuiViewport* viewport_to_erase);
 }
 
 //-----------------------------------------------------------------------------
@@ -3418,7 +3418,7 @@ static void ImGui::UpdateViewports()
         if (n > 0 && viewport->LastFrameActive < g.FrameCount - 2)
         {
             // Translate windows like if we were resizing the viewport to be zero-width
-            ResizeViewportTranslateWindows(n + 1, g.Viewports.Size, viewport->Pos.x - viewport->GetNextX(), -1, viewport);
+            TranslateOrEraseViewports(n + 1, g.Viewports.Size, viewport->Pos.x - viewport->GetNextX(), -1, viewport);
             g.Viewports.erase(g.Viewports.Data + n);
 
             // Destroy
@@ -3437,7 +3437,7 @@ static void ImGui::UpdateViewports()
         {
             float dx = viewport->GetNextX() - g.Viewports[viewport->Idx + 1]->Pos.x;
             if (dx != 0.0f)
-                ResizeViewportTranslateWindows(viewport->Idx + 1, g.Viewports.Size, dx, 0, NULL);
+                TranslateOrEraseViewports(viewport->Idx + 1, g.Viewports.Size, dx, 0, NULL);
         }
 
         // Apply Position and Size (from Platform Window to ImGui) if requested
@@ -4648,26 +4648,27 @@ static void TranslateWindowX(ImGuiWindow* window, float dx)
     window->DC.LastItemDisplayRect.Translate(dx, 0.0f);
 }
 
-static void ImGui::ResizeViewportTranslateWindows(int viewport_idx_min, int viewport_idx_max, float pos_x_delta, int idx_delta, ImGuiViewport* viewport_to_erase)
+static void ImGui::TranslateOrEraseViewports(int viewport_idx_min, int viewport_idx_max, float delta_x, int delta_idx, ImGuiViewport* viewport_to_erase)
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(pos_x_delta != 0.0f || idx_delta != 0);
+    IM_ASSERT(delta_x != 0.0f || delta_idx != 0);
     IM_ASSERT(g.CurrentViewport == NULL); // We only resize at the beginning of the frame
     for (int n = 0; n < g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
         if (window->Viewport == viewport_to_erase)
-            window->Viewport = NULL; // Set to NULL so window->ViewportId becomes the master data
+            window->Viewport = NULL; // Set to NULL, window->ViewportId becomes the master data
         if (window->Viewport == NULL)
             continue;
         if (window->Viewport->Idx < viewport_idx_min || window->Viewport->Idx > viewport_idx_max)
             continue;
-        TranslateWindowX(window, pos_x_delta);
+        TranslateWindowX(window, delta_x);
     }
     for (int n = viewport_idx_min; n < viewport_idx_max; n++)
     {
-        g.Viewports[n]->Pos.x += pos_x_delta;
-        g.Viewports[n]->Idx += idx_delta;
+        ImGuiViewportP* viewport = g.Viewports[n];
+        viewport->Pos.x += delta_x;
+        viewport->Idx += delta_idx;
     }
 }
 
@@ -4720,6 +4721,7 @@ ImGuiViewportP* ImGui::AddViewport(ImGuiWindow* window, ImGuiID id, ImGuiViewpor
     viewport->LastFrameActive = g.FrameCount;
 
     // Request an initial DpiScale before the OS platform window creation
+    // This is so we can select an appropriate font size on the first frame of our window lifetime
     if (g.PlatformIO.Platform_GetWindowDpiScale)
         viewport->DpiScale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
     return viewport;
@@ -6664,17 +6666,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->PosFloat = FindBestWindowPosForPopup(window);
 
         // Clamp position so window stays visible within its viewport
+        // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
         ImRect viewport_rect(GetViewportRect(window));
         if (!window_pos_set_by_api && !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_FullViewport)) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-        {
-            // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             if (viewport_rect.GetWidth() > 0 && viewport_rect.GetHeight() > 0.0f)
             {
                 ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
                 window->PosFloat = ImMax(window->PosFloat + window->Size, viewport_rect.Min + padding) - window->Size;
                 window->PosFloat = ImMin(window->PosFloat, viewport_rect.Max - padding);
             }
-        }
         window->Pos = ImFloor(window->PosFloat);
 
         // Default item width. Make it proportional to window size if window manually resizes
@@ -6974,6 +6974,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     }
     else
     {
+        // Append
         SetCurrentViewport(window->Viewport);
         SetCurrentWindow(window);
     }
@@ -13981,6 +13982,7 @@ static void RenderViewportThumbnail(ImDrawList* draw_list, const ImRect& bb, con
 
     ImRect viewport_r(viewport_pos, viewport_pos + viewport_size);
     ImVec2 scale = bb.GetSize() / viewport_size;
+    window->DrawList->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_Border));
     for (int i = 0; i != g.Windows.Size; i++)
     {
         ImGuiWindow* thumb_window = g.Windows[i];
@@ -14055,7 +14057,6 @@ void ImGui::ShowViewportThumbnails()
         if (n > 0)
             ImGui::SameLine();
         ImRect bb(p + (viewport->Pos) * SCALE, p + (viewport->Pos + viewport->Size) * SCALE);
-        window->DrawList->AddRect(bb.Min, bb.Max, ImGui::GetColorU32(ImGuiCol_Border));
         RenderViewportThumbnail(window->DrawList, bb, viewport->Pos, viewport->Size);
         char buf[64];
         ImFormatString(buf, IM_ARRAYSIZE(buf), "%.0f", viewport->Pos.x);
@@ -14197,6 +14198,26 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
                 ImGui::TreePop();
             }
+
+            static void NodeViewport(ImGuiViewportP* viewport)
+            {
+                ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
+                if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->Window ? viewport->Window->Name : "N/A"))
+                {
+                    ImGuiWindowFlags flags = viewport->Flags;
+                    ImGui::BulletText("Pos: (%.0f,%.0f), PlatformPos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y, viewport->PlatformPos.x, viewport->PlatformPos.y);
+                    if (viewport->Idx > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset")) viewport->PlatformPos = ImVec2(0, 0); }
+                    ImGui::BulletText("Size: (%0.f,%.0f), DpiScale: %.0f%%", viewport->Size.x, viewport->Size.y, viewport->DpiScale * 100.0f);
+                    ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s", viewport->Flags,
+                        (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
+                        (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs"     : "",
+                        (flags & ImGuiViewportFlags_NoRendererClear)     ? " NoRendererClear"     : "");
+                    for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
+                        for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
+                            Funcs::NodeDrawList(NULL, viewport, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");
+                    ImGui::TreePop();
+                }
+            }
         };
 
         // Access private state, we are going to display the draw lists from last frame
@@ -14218,25 +14239,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::TreePop();
             }
             for (int i = 0; i < g.Viewports.Size; i++)
-            {
-                ImGuiViewportP* viewport = g.Viewports[i];
-                ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
-                if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Size: (%.0f,%.0f)", i, viewport->ID, viewport->Size.x, viewport->Size.y))
-                {
-                    ImGuiWindowFlags flags = viewport->Flags;
-                    ImGui::BulletText("Pos: (%.0f,%.0f), PlatformPos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y, viewport->PlatformPos.x, viewport->PlatformPos.y);
-                    if (i > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset")) viewport->PlatformPos = ImVec2(0, 0); }
-                    ImGui::BulletText("DpiScale: %.0f%%", viewport->DpiScale * 100.0f);
-                    ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s", viewport->Flags,
-                        (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
-                        (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs" : "",
-                        (flags & ImGuiViewportFlags_NoRendererClear)     ? " NoRendererClear"     : "");
-                    for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
-                        for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
-                            Funcs::NodeDrawList(NULL, viewport, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");
-                    ImGui::TreePop();
-                }
-            }
+                Funcs::NodeViewport(g.Viewports[i]);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Popups", "Open Popups Stack (%d)", g.OpenPopupStack.Size))
