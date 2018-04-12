@@ -3424,6 +3424,7 @@ static void ImGui::UpdateViewports()
             // Destroy
             if (viewport == viewport_ref)               viewport_ref = NULL;
             if (viewport == g.MousePosViewport)         g.MousePosViewport = NULL;
+            if (viewport == g.MousePosPrevViewport)     g.MousePosPrevViewport = NULL;
             if (viewport == g.MouseHoveredPrevViewport) g.MouseHoveredPrevViewport = NULL;
             IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
             IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
@@ -3690,6 +3691,7 @@ static void NewFrameUpdateMouseInputs()
             g.IO.MouseClickedPos[i] = g.IO.MousePos;
             g.IO.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
             g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
+            g.MouseClickedPosViewportId[i] = g.MousePosViewport->ID;
         }
         else if (g.IO.MouseDown[i])
         {
@@ -4664,11 +4666,22 @@ static void ImGui::TranslateOrEraseViewports(int viewport_idx_min, int viewport_
             continue;
         TranslateWindowX(window, delta_x);
     }
+
     for (int n = viewport_idx_min; n < viewport_idx_max; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->Pos.x += delta_x;
         viewport->Idx += delta_idx;
+
+        // Patch mouse positions immediately so mouse delta will not appears to jump around
+        ImGuiID viewport_id = viewport->ID;
+        if (viewport_id == g.IO.MousePosViewport)  // We are early in NewFrame and g.MousePosViewport hasn't been set, patch the source.
+            g.IO.MousePos.x += delta_x;
+        if (viewport == g.MousePosPrevViewport)
+            g.IO.MousePosPrev.x += delta_x;
+        for (int mouse_n = 0; mouse_n < IM_ARRAYSIZE(g.MouseClickedPosViewportId); mouse_n++)
+            if (g.MouseClickedPosViewportId[mouse_n] == viewport_id)
+                g.IO.MouseClickedPos[mouse_n].x += delta_x;
     }
 }
 
@@ -5277,7 +5290,8 @@ ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
         lock_threshold = g.IO.MouseDragThreshold;
     if (g.IO.MouseDown[button])
         if (g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold)
-            return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
+            if (g.MousePosViewport->ID == g.MouseClickedPosViewportId[button])
+                return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
     return ImVec2(0.0f, 0.0f);
 }
 

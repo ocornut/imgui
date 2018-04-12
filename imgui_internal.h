@@ -643,6 +643,7 @@ struct ImGuiContext
     ImGuiViewportP*         MousePosViewport;
     ImGuiViewportP*         MousePosPrevViewport;
     ImGuiViewportP*         MouseHoveredPrevViewport;
+    ImGuiID                 MouseClickedPosViewportId[5];       // For rarely used fields we only compare to, store viewport ID only so we don't have to clean dangling pointers
 
     // Navigation data (for gamepad/keyboard)
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
@@ -771,6 +772,7 @@ struct ImGuiContext
         CurrentViewport = NULL;
         MousePosViewport = NULL;
         MousePosPrevViewport = MouseHoveredPrevViewport = NULL;
+        memset(MouseClickedPosViewportId, 0, sizeof(MouseClickedPosViewportId));
 
         NavWindow = NULL;
         NavId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
