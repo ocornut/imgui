@@ -5915,7 +5915,7 @@ static ImVec2 FindBestWindowPosForPopup(ImGuiWindow* window)
     ImRect r_screen = FindScreenRectForWindow(window);
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
-        // Child menus typically request _any_ position within the parent menu item, and then our FindBestPopupWindowPos() function will move the new menu outside the parent bounds.
+        // Child menus typically request _any_ position within the parent menu item, and then our FindBestWindowPosForPopup() function will move the new menu outside the parent bounds.
         // This is how we end up with child menus appearing (most-commonly) on the right of the parent menu.
         IM_ASSERT(g.CurrentWindow == window);
         ImGuiWindow* parent_menu = g.CurrentWindowStack[g.CurrentWindowStack.Size - 2];
@@ -6205,6 +6205,8 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if (window_follow_mouse_viewport && IsMousePosValid())
     {
+        // 2018-04-13: the if() below tends to succeed but for a misleading reason: when moving a window and hovering another, UpdateMovingWindow would 
+        // already have displaced the window outside of its viewport boundaries. While this is currently working it is very smelly.
         ImGuiViewportP* current_viewport = window->Viewport;
         if (!window_is_mouse_tooltip && (current_viewport == NULL || !current_viewport->GetRect().Contains(window->Rect())))
         {
@@ -6218,11 +6220,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         }
         else
         {
-            // When dragging a window back into another, only change viewport on mouse release (in UpdateMovingWindow()).
-            // This is so we don't require of the multi-viewport windowing back-end to preserve mouse buttons after a window closure, making it easier to implement them.
-            bool preserve_viewport = g.MovingWindow && g.MovingWindow->RootWindow == window && (window->Viewport->Flags & ImGuiWindowFlags_FullViewport);
-            if (!preserve_viewport)
-                window->Viewport = g.MousePosViewport;
+            window->Viewport = g.MousePosViewport;
         }
     }
     else if (g.NavWindow != NULL && g.NavWindow != window && (flags & ImGuiWindowFlags_Tooltip))
@@ -6557,12 +6555,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetCurrentWindow(window);
         flags = window->Flags;
 
-        if (p_open != NULL && window->Viewport->PlatformRequestClose && window->Viewport != GetMainViewport())
-        {
-            window->Viewport->PlatformRequestClose = false;
-            *p_open = false;
-        }
-
         // Lock window rounding, border size and padding for the frame (so that altering them doesn't cause inconsistencies)
         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
         if (window->Flags & ImGuiWindowFlags_FullViewport)
@@ -6590,14 +6582,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
         window->CollapseToggleWanted = false;
 
-        // SIZE
+        // UPDATE CONTENTS SIZE, REAPPEARING SIZE AND HIDDEN STATUS
 
         // Update contents size from last frame for auto-fitting (unless explicitly specified)
         window->SizeContents = CalcSizeContents(window);
-
-        // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         if (window->HiddenFrames > 0)
             window->HiddenFrames--;
+
+        // Hide new windows for one frame until they calculate their size
+        if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
+            window->HiddenFrames = 1;
+
+        // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
             window->HiddenFrames = 1;
@@ -6611,9 +6607,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
         }
 
-        // Hide new windows for one frame until they calculate their size
-        if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFrames = 1;
+        // SIZE
 
         // Calculate auto-fit size, handle automatic resize
         const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);
@@ -6912,6 +6906,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             NavInitWindow(window, false);
         }
 
+        // Close from platform window
+        if (p_open != NULL && window->Viewport->PlatformRequestClose && window->Viewport != GetMainViewport())
+        {
+            window->Viewport->PlatformRequestClose = false;
+            *p_open = false;
+        }
+
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
         {
@@ -7067,6 +7068,8 @@ void ImGui::End()
         g.CurrentPopupStack.pop_back();
     CheckStacksSize(window, false);
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
+    if (g.CurrentWindow)
+        SetCurrentViewport(g.CurrentWindow->Viewport);
 }
 
 // Vertical scrollbar
@@ -12049,13 +12052,13 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menuset_is_open)
         g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
 
-    // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu (using FindBestPopupWindowPos).
+    // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu (using FindBestWindowPosForPopup).
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
         // Menu inside an horizontal menu bar
         // Selectable extend their highlight by half ItemSpacing in each direction.
-        // For ChildMenu, the popup position will be overwritten by the call to FindBestPopupWindowPos() in Begin()
+        // For ChildMenu, the popup position will be overwritten by the call to FindBestWindowPosForPopup() in Begin()
         popup_pos = ImVec2(pos.x - window->WindowPadding.x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
