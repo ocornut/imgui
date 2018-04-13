@@ -35,15 +35,11 @@
 #define GLFW_EXPOSE_NATIVE_WIN32
 #include <GLFW/glfw3native.h>   // for glfwGetWin32Window
 #endif
-#ifdef GLFW_HOVERED
-#define GLFW_HAS_GLFW_HOVERED   1
-#else
-#define GLFW_HAS_GLFW_HOVERED   0
-#endif
-#define GLFW_HAS_WINDOW_ALPHA   (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+
-#define GLFW_HAS_WINDOW_TOPMOST (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+
-#define GLFW_HAS_VULKAN         (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+
-
+#define GLFW_HAS_WINDOW_TOPMOST     (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ GLFW_FLOATING
+#define GLFW_HAS_WINDOW_HOVERED     (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ GLFW_HOVERED
+#define GLFW_HAS_WINDOW_ALPHA       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwSetWindowOpacity
+#define GLFW_HAS_PER_MONITOR_DPI    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetMonitorContentScale
+#define GLFW_HAS_VULKAN             (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwCreateWindowSurface
 
 // Data
 enum GlfwClientApi
@@ -530,7 +526,7 @@ static void ImGui_ImplGlfw_UpdateMonitors()
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-    platform_io.Monitors.resize(monitors_count);
+    platform_io.Monitors.resize(monitors_count, ImGuiPlatformMonitor());
     for (int n = 0; n < monitors_count; n++)
     {
         int x, y;
@@ -538,6 +534,12 @@ static void ImGui_ImplGlfw_UpdateMonitors()
         const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
         platform_io.Monitors[n].Pos = ImVec2((float)x, (float)y);
         platform_io.Monitors[n].Size = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+#if GLFW_HAS_PER_MONITOR_DPI
+        // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
+        float x_scale, y_scale;
+        glfwGetMonitorContentScale(glfw_monitors[n], &x_scale, &y_scale);
+        platform_io.Monitors[n].DpiScale = x_scale;
+#endif
     }
 }
 

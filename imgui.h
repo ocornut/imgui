@@ -1879,6 +1879,8 @@ struct ImGuiPlatformMonitor
 {
     ImVec2  Pos;
     ImVec2  Size;
+    float   DpiScale;
+    ImGuiPlatformMonitor() { Pos = ImVec2(0,0); Size = ImVec2(0,0); DpiScale = 1.0f; }
 };
 
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled

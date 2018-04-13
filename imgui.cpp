@@ -14258,7 +14258,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
                 {
                     const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
-                    ImGui::BulletText("Monitor #%d: Min (%.0f,%.0f) Max (%.0f,%.0f) Size (%.0f,%.0f)", i, mon.Pos.x, mon.Pos.y, mon.Pos.x + mon.Size.x, mon.Pos.y + mon.Size.y, mon.Size.x, mon.Size.y);
+                    ImGui::BulletText("Monitor #%d: DPI %.0f%%, Min (%.0f,%.0f), Max (%.0f,%.0f), Size (%.0f,%.0f)", i, mon.DpiScale * 100.0f, mon.Pos.x, mon.Pos.y, mon.Pos.x + mon.Size.x, mon.Pos.y + mon.Size.y, mon.Size.x, mon.Size.y);
                 }
                 ImGui::TreePop();
             }

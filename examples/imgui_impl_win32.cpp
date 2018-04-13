@@ -550,11 +550,12 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR, HDC, LPRECT rect, LPARAM)
+static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, HDC, LPRECT rect, LPARAM)
 {
     ImGuiPlatformMonitor imgui_monitor;
     imgui_monitor.Pos = ImVec2((float)rect->left, (float)rect->top);
     imgui_monitor.Size = ImVec2((float)(rect->right - rect->left), (float)(rect->bottom - rect->top));
+    imgui_monitor.DpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
     ImGui::GetPlatformIO().Monitors.push_back(imgui_monitor);
     return TRUE;
 }
