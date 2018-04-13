@@ -3596,15 +3596,15 @@ void ImGui::UpdatePlatformWindows()
 
         // Update title bar
         const char* title_begin = viewport->Window->Name;
-        const char* title_end = ImGui::FindRenderedTextEnd(title_begin);
+        char* title_end = (char*)ImGui::FindRenderedTextEnd(title_begin);
         const ImGuiID title_hash = ImHash(title_begin, (int)(title_end - title_begin));
         if (viewport->LastNameHash != title_hash)
         {
             viewport->LastNameHash = title_hash;
-            char* title_displayed = ImStrdup(viewport->Window->Name);
-            title_displayed[title_end - title_begin] = 0;
-            g.PlatformIO.Platform_SetWindowTitle(viewport, title_displayed);
-            ImGui::MemFree(title_displayed);
+            char title_end_backup_c = *title_end;
+            *title_end = 0; // Cut existing buffer short instead of doing an alloc/free
+            g.PlatformIO.Platform_SetWindowTitle(viewport, title_begin);
+            *title_end = title_end_backup_c;
         }
 
         // Update alpha
@@ -6420,6 +6420,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         ImVec2 size_on_first_use = (g.NextWindowData.SizeCond != 0) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
         window = CreateNewWindow(name, size_on_first_use, flags);
+    }
+
+    // Update name when it changes (which can only happen with the "###" operator), but only if it is meant to be displayed to the end user, else there is no point.
+    if (!window_just_created && window->Viewport && window->Viewport->Window == window && strcmp(name, window->Name) != 0)
+    {
+        IM_DELETE(window->Name);
+        window->Name = ImStrdup(name);
     }
 
     // Automatically disable manual moving/resizing when NoInputs is set
