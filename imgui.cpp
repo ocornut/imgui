@@ -4516,12 +4516,11 @@ static ImGuiWindow* FindHoveredWindow()
 bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool clip)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
 
     // Clip
     ImRect rect_clipped(r_min, r_max);
     if (clip)
-        rect_clipped.ClipWith(window->ClipRect);
+        rect_clipped.ClipWith(g.CurrentWindow->ClipRect);
 
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
@@ -6172,12 +6171,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->DC.NavLayerCurrentMask >>= 1;
             window->DC.ItemFlags = item_flags_backup;
 
-            // Title text (FIXME: refactor text alignment facilities along with RenderText helpers)
+            // Title text (FIXME: refactor text alignment facilities along with RenderText helpers, this is too much code for what it does.)
             ImVec2 text_size = CalcTextSize(name, NULL, true);
             ImRect text_r = title_bar_rect;
-            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) == 0 ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
-            float pad_right = (p_open != NULL) ? (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x) : style.FramePadding.x;
-            if (style.WindowTitleAlign.x > 0.0f) pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
+            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
+            float pad_right = (p_open == NULL)                     ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
+            if (style.WindowTitleAlign.x > 0.0f) 
+                pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
             text_r.Min.x += pad_left;
             text_r.Max.x -= pad_right;
             ImRect clip_rect = text_r;
@@ -6200,7 +6200,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Inner rectangle
         // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
-        // Note that if our window is collapsed we will end up with a null clipping rectangle which is the correct behavior.
+        // Note that if our window is collapsed we will end up with an inverted (~null) clipping rectangle which is the correct behavior.
         window->InnerRect.Min.x = title_bar_rect.Min.x + window->WindowBorderSize;
         window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + (((flags & ImGuiWindowFlags_MenuBar) || !(flags & ImGuiWindowFlags_NoTitleBar)) ? style.FrameBorderSize : window->WindowBorderSize);
         window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x - window->WindowBorderSize;
@@ -6214,7 +6214,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->InnerClipRect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - window->WindowBorderSize)));
         window->InnerClipRect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y);
 
-        // After Begin() we fill the last item / hovered data using the title bar data. Make that a standard behavior (to allow usage of context menus on title bar only, etc.).
+        // After Begin() we fill the last item / hovered data based on title bar data. It is a standard behavior (to allow creation of context menus on title bar only, etc.).
         window->DC.LastItemId = window->MoveId;
         window->DC.LastItemStatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
         window->DC.LastItemRect = title_bar_rect;
@@ -6230,7 +6230,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     g.NextWindowData.SizeConstraintCond = 0;
 
     // Child window can be out of sight and have "negative" clip windows.
-    // Mark them as collapsed so commands are skipped earlier (we can't manually collapse because they have no title bar).
+    // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
     if (flags & ImGuiWindowFlags_ChildWindow)
     {
         IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);

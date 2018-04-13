@@ -13,12 +13,12 @@ You may use the Issue Tracker to submit bug reports, feature requests or suggest
 - If you get a assert, use a debugger to locate the line triggering it and read the comments around the assert.
 
 **Guidelines to report an issue or ask a question:**
-- Try to provide a Minimal, Complete and Verifiable Example ([MCVE](https://stackoverflow.com/help/mcve)) to demonstrate your problem. An ideal submission includes a small piece of code that anyone can paste in one of the examples/ application to understand and reproduce it. Narrowing your problem to its shortest and purest form is often the easiest way to understand it. Often while creating the MCVE you will end up solving the problem!
-- Try to attach screenshots to clarify the context. They often convey useful information that are omitted by the description. You can drag pictures/files here (prefer github attachments over 3rd party hosting).
-- If you are discussing an assert or a crash, please provide a debugger callstack. 
 - Please provide your imgui version number.
+- If you are discussing an assert or a crash, please provide a debugger callstack. 
 - Please state if you have made substantial modifications to your copy of imgui. 
 - When discussing issues related to rendering or inputs, please state which OS you are using, and if you are using a vanilla copy of one of the back end (imgui_impl_xxx files), or a modified one, or if you built your own.
+- Try to provide a Minimal, Complete and Verifiable Example ([MCVE](https://stackoverflow.com/help/mcve)) to demonstrate your problem. An ideal submission includes a small piece of code that anyone can paste in one of the examples/ application to understand and reproduce it. Narrowing your problem to its shortest and purest form is often the easiest way to understand it. Often while creating the MCVE you will end up solving the problem!
+- Try to attach screenshots to clarify the context. They often convey useful information that are omitted by the description. You can drag pictures/files here (prefer github attachments over 3rd party hosting).
 - When requesting a new feature, please describe the usage context (how you intend to use it, why you need it, etc.).
 - Due to frequent abuse of this service from a certain category of users, if your GitHub account is anonymous and was created five minutes ago please understand that your post will receive more scrutiny and less patience for incomplete questions.
 
