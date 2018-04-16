@@ -48,6 +48,7 @@ Other Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
 - Settings: Fixed saving an empty .ini file if CreateContext/DestroyContext are called without a single call to NewFrame(). (#1741)
+- Window: Fixed default proportional item width lagging by one frame on resize.
 
 -----------------------------------------------------------------------
 
