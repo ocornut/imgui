@@ -6250,17 +6250,6 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if (window->ViewportOwned && !(window->Viewport->Flags & ImGuiViewportFlags_NoDecoration))
         window->Flags |= ImGuiWindowFlags_NoTitleBar;
 
-    if (window->ViewportOwned)
-    {
-        // We currently have window fully covering a viewport and we disable WindowBg alpha, so clearing is not necessary
-        window->Viewport->Flags |= ImGuiViewportFlags_NoRendererClear;
-
-        // Position
-        SetWindowPos(window, window->Viewport->Pos, ImGuiCond_Always);
-        if (window->Viewport->PlatformRequestResize)
-            SetWindowSize(window, window->Viewport->Size, ImGuiCond_Always);
-    }
-
     window->ViewportId = window->Viewport->ID;
 }
 
@@ -6550,8 +6539,34 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
 
-        // VIEWPORT
-        // We need to do this before using any style/font sizes, as viewport with a different DPI will affect those sizes.
+        // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
+
+        // Update contents size from last frame for auto-fitting (or use explicit size)
+        window->SizeContents = CalcSizeContents(window);
+        if (window->HiddenFrames > 0)
+            window->HiddenFrames--;
+
+        // Hide new windows for one frame until they calculate their size
+        if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
+            window->HiddenFrames = 1;
+
+        // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
+        // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
+        if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
+        {
+            window->HiddenFrames = 1;
+            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
+            {
+                if (!window_size_x_set_by_api)
+                    window->Size.x = window->SizeFull.x = 0.f;
+                if (!window_size_y_set_by_api)
+                    window->Size.y = window->SizeFull.y = 0.f;
+                window->SizeContents = ImVec2(0.f, 0.f);
+            }
+        }
+
+        // SELECT VIEWPORT
+        // We need to do this before using any style/font sizes, as viewport with a different DPI may affect font sizes.
 
         UpdateSelectWindowViewport(window);
         SetCurrentViewport(window->Viewport);
@@ -6585,31 +6600,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Collapsed = false;
         }
         window->CollapseToggleWanted = false;
-
-        // UPDATE CONTENTS SIZE, REAPPEARING SIZE AND HIDDEN STATUS
-
-        // Update contents size from last frame for auto-fitting (unless explicitly specified)
-        window->SizeContents = CalcSizeContents(window);
-        if (window->HiddenFrames > 0)
-            window->HiddenFrames--;
-
-        // Hide new windows for one frame until they calculate their size
-        if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFrames = 1;
-
-        // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
-        if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
-        {
-            window->HiddenFrames = 1;
-            if (flags & ImGuiWindowFlags_AlwaysAutoResize)
-            {
-                if (!window_size_x_set_by_api)
-                    window->Size.x = window->SizeFull.x = 0.f;
-                if (!window_size_y_set_by_api)
-                    window->Size.y = window->SizeFull.y = 0.f;
-                window->SizeContents = ImVec2(0.f, 0.f);
-            }
-        }
 
         // SIZE
 
@@ -6694,6 +6684,17 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->PosFloat = ImMax(window->PosFloat + window->Size, viewport_rect.Min + padding) - window->Size;
                 window->PosFloat = ImMin(window->PosFloat, viewport_rect.Max - padding);
             }
+
+        // Position window to fit within viewport
+        // We can also tell the back-end that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
+        if (window->ViewportOwned)
+        {
+            window->Viewport->Flags |= ImGuiViewportFlags_NoRendererClear;
+            window->PosFloat = window->Viewport->Pos;
+            if (window->Viewport->PlatformRequestResize)
+                window->Size = window->SizeFull = window->Viewport->Size;
+        }
+
         window->Pos = ImFloor(window->PosFloat);
 
         // Default item width. Make it proportional to window size if window manually resizes
