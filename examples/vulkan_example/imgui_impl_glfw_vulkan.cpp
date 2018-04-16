@@ -1,12 +1,32 @@
 // ImGui GLFW binding with Vulkan + shaders
-// FIXME: Changes of ImTextureID aren't supported by this binding! Please, someone add it!
+
+// Missing features:
+//  [ ] User texture binding. Changes of ImTextureID aren't supported by this binding! See https://github.com/ocornut/imgui/pull/914
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 5 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXX_CreateFontsTexture(), ImGui_ImplXXXX_NewFrame(), ImGui_ImplXXXX_Render() and ImGui_ImplXXXX_Shutdown().
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-#include <imgui.h>
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
+//  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
+//  2018-02-20: Inputs: Renamed GLFW callbacks exposed in .h to not include Vulkan in their name.
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback, ImGui_ImplGlfwVulkan_Render() calls ImGui_ImplGlfwVulkan_RenderDrawData() itself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+//  2018-01-20: Inputs: Added Horizontal Mouse Wheel support.
+//  2018-01-18: Inputs: Added mapping for ImGuiKey_Insert.
+//  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
+//  2017-05-15: Vulkan: Fix scissor offset being negative. Fix new Vulkan validation warnings. Set required depth member for buffer image copy.
+//  2016-11-13: Vulkan: Fix validation layer warnings and errors and redeclare gl_PerVertex.
+//  2016-10-18: Vulkan: Add location decorators & change to use structs as in/out in glsl, update embedded spv (produced with glslangValidator -x). Null the released resources.
+//  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
+//  2016-08-27: Vulkan: Fix Vulkan example for use when a depth buffer is active.
+
+#include "imgui.h"
+#include "imgui_impl_glfw_vulkan.h"
 
 // GLFW
 #define GLFW_INCLUDE_NONE
@@ -19,15 +39,13 @@
 #include <GLFW/glfw3native.h>
 #endif
 
-#include "imgui_impl_glfw_vulkan.h"
-
-// GLFW Data
+// GLFW data
 static GLFWwindow*  g_Window = NULL;
 static double       g_Time = 0.0f;
-static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
+static bool         g_MouseJustPressed[3] = { false, false, false };
+static GLFWcursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 
-// Vulkan Data
+// Vulkan data
 static VkAllocationCallbacks* g_Allocator = NULL;
 static VkPhysicalDevice       g_Gpu = VK_NULL_HANDLE;
 static VkDevice               g_Device = VK_NULL_HANDLE;
@@ -37,7 +55,7 @@ static VkDescriptorPool       g_DescriptorPool = VK_NULL_HANDLE;
 static void (*g_CheckVkResult)(VkResult err) = NULL;
 
 static VkCommandBuffer        g_CommandBuffer = VK_NULL_HANDLE;
-static size_t                 g_BufferMemoryAlignment = 256;
+static VkDeviceSize           g_BufferMemoryAlignment = 256;
 static VkPipelineCreateFlags  g_PipelineCreateFlags = 0;
 static int                    g_FrameIndex = 0;
 
@@ -53,8 +71,8 @@ static VkImageView            g_FontView = VK_NULL_HANDLE;
 
 static VkDeviceMemory         g_VertexBufferMemory[IMGUI_VK_QUEUED_FRAMES] = {};
 static VkDeviceMemory         g_IndexBufferMemory[IMGUI_VK_QUEUED_FRAMES] = {};
-static size_t                 g_VertexBufferSize[IMGUI_VK_QUEUED_FRAMES] = {};
-static size_t                 g_IndexBufferSize[IMGUI_VK_QUEUED_FRAMES] = {};
+static VkDeviceSize           g_VertexBufferSize[IMGUI_VK_QUEUED_FRAMES] = {};
+static VkDeviceSize           g_IndexBufferSize[IMGUI_VK_QUEUED_FRAMES] = {};
 static VkBuffer               g_VertexBuffer[IMGUI_VK_QUEUED_FRAMES] = {};
 static VkBuffer               g_IndexBuffer[IMGUI_VK_QUEUED_FRAMES] = {};
 
@@ -152,10 +170,12 @@ static void ImGui_ImplGlfwVulkan_VkResult(VkResult err)
 }
 
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
+void ImGui_ImplGlfwVulkan_RenderDrawData(ImDrawData* draw_data)
 {
     VkResult err;
     ImGuiIO& io = ImGui::GetIO();
+    if (draw_data->TotalVtxCount == 0)
+        return;
 
     // Create the Vertex Buffer:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -165,7 +185,7 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
             vkDestroyBuffer(g_Device, g_VertexBuffer[g_FrameIndex], g_Allocator);
         if (g_VertexBufferMemory[g_FrameIndex])
             vkFreeMemory(g_Device, g_VertexBufferMemory[g_FrameIndex], g_Allocator);
-        size_t vertex_buffer_size = ((vertex_size-1) / g_BufferMemoryAlignment+1) * g_BufferMemoryAlignment;
+        VkDeviceSize vertex_buffer_size = ((vertex_size-1) / g_BufferMemoryAlignment+1) * g_BufferMemoryAlignment;
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_info.size = vertex_buffer_size;
@@ -195,7 +215,7 @@ void ImGui_ImplGlfwVulkan_RenderDrawLists(ImDrawData* draw_data)
             vkDestroyBuffer(g_Device, g_IndexBuffer[g_FrameIndex], g_Allocator);
         if (g_IndexBufferMemory[g_FrameIndex])
             vkFreeMemory(g_Device, g_IndexBufferMemory[g_FrameIndex], g_Allocator);
-        size_t index_buffer_size = ((index_size-1) / g_BufferMemoryAlignment+1) * g_BufferMemoryAlignment;
+        VkDeviceSize index_buffer_size = ((index_size-1) / g_BufferMemoryAlignment+1) * g_BufferMemoryAlignment;
         VkBufferCreateInfo buffer_info = {};
         buffer_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
         buffer_info.size = index_buffer_size;
@@ -324,18 +344,20 @@ static void ImGui_ImplGlfwVulkan_SetClipboardText(void* user_data, const char* t
     glfwSetClipboardString((GLFWwindow*)user_data, text);
 }
 
-void ImGui_ImplGlfwVulkan_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
+void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow*, int button, int action, int /*mods*/)
 {
     if (action == GLFW_PRESS && button >= 0 && button < 3)
-        g_MousePressed[button] = true;
+        g_MouseJustPressed[button] = true;
 }
 
-void ImGui_ImplGlfwVulkan_ScrollCallback(GLFWwindow*, double /*xoffset*/, double yoffset)
+void ImGui_ImplGlfw_ScrollCallback(GLFWwindow*, double xoffset, double yoffset)
 {
-    g_MouseWheel += (float)yoffset; // Use fractional mouse wheel.
+    ImGuiIO& io = ImGui::GetIO();
+    io.MouseWheelH += (float)xoffset;
+    io.MouseWheel += (float)yoffset;
 }
 
-void ImGui_ImplGlfwVulkan_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
+void ImGui_ImplGlfw_KeyCallback(GLFWwindow*, int key, int, int action, int mods)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (action == GLFW_PRESS)
@@ -350,7 +372,7 @@ void ImGui_ImplGlfwVulkan_KeyCallback(GLFWwindow*, int key, int, int action, int
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
 }
 
-void ImGui_ImplGlfwVulkan_CharCallback(GLFWwindow*, unsigned int c)
+void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
 {
     ImGuiIO& io = ImGui::GetIO();
     if (c > 0 && c < 0x10000)
@@ -728,6 +750,14 @@ void    ImGui_ImplGlfwVulkan_InvalidateDeviceObjects()
     if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
 }
 
+static void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
+{
+    glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+    glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+    glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
+    glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+}
+
 bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, ImGui_ImplGlfwVulkan_Init_Data *init_data)
 {
     g_Allocator = init_data->allocator;
@@ -740,8 +770,12 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
 
     g_Window = window;
 
+    // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                         // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;   // We can honor GetMouseCursor() values (optional)
+
+    // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
+    io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;
     io.KeyMap[ImGuiKey_LeftArrow] = GLFW_KEY_LEFT;
     io.KeyMap[ImGuiKey_RightArrow] = GLFW_KEY_RIGHT;
     io.KeyMap[ImGuiKey_UpArrow] = GLFW_KEY_UP;
@@ -750,8 +784,10 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     io.KeyMap[ImGuiKey_PageDown] = GLFW_KEY_PAGE_DOWN;
     io.KeyMap[ImGuiKey_Home] = GLFW_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = GLFW_KEY_END;
+    io.KeyMap[ImGuiKey_Insert] = GLFW_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = GLFW_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = GLFW_KEY_BACKSPACE;
+    io.KeyMap[ImGuiKey_Space] = GLFW_KEY_SPACE;
     io.KeyMap[ImGuiKey_Enter] = GLFW_KEY_ENTER;
     io.KeyMap[ImGuiKey_Escape] = GLFW_KEY_ESCAPE;
     io.KeyMap[ImGuiKey_A] = GLFW_KEY_A;
@@ -761,7 +797,6 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     io.KeyMap[ImGuiKey_Y] = GLFW_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = GLFW_KEY_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplGlfwVulkan_RenderDrawLists;       // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_ImplGlfwVulkan_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfwVulkan_GetClipboardText;
     io.ClipboardUserData = g_Window;
@@ -769,13 +804,18 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
     io.ImeWindowHandle = glfwGetWin32Window(g_Window);
 #endif
 
+    // Load cursors
+    // FIXME: GLFW doesn't expose suitable cursors for ResizeAll, ResizeNESW, ResizeNWSE. We revert to arrow cursor for those.
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = glfwCreateStandardCursor(GLFW_VRESIZE_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = glfwCreateStandardCursor(GLFW_HRESIZE_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
+
     if (install_callbacks)
-    {
-        glfwSetMouseButtonCallback(window, ImGui_ImplGlfwVulkan_MouseButtonCallback);
-        glfwSetScrollCallback(window, ImGui_ImplGlfwVulkan_ScrollCallback);
-        glfwSetKeyCallback(window, ImGui_ImplGlfwVulkan_KeyCallback);
-        glfwSetCharCallback(window, ImGui_ImplGlfwVulkan_CharCallback);
-    }
+        ImGui_ImplGlfw_InstallCallbacks(window);
 
     ImGui_ImplGlfwVulkan_CreateDeviceObjects();
 
@@ -784,8 +824,13 @@ bool    ImGui_ImplGlfwVulkan_Init(GLFWwindow* window, bool install_callbacks, Im
 
 void ImGui_ImplGlfwVulkan_Shutdown()
 {
+    // Destroy GLFW mouse cursors
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
+        glfwDestroyCursor(g_MouseCursors[cursor_n]);
+    memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
+
+    // Destroy Vulkan objects
     ImGui_ImplGlfwVulkan_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 void ImGui_ImplGlfwVulkan_NewFrame()
@@ -811,7 +856,7 @@ void ImGui_ImplGlfwVulkan_NewFrame()
     {
         double mouse_x, mouse_y;
         glfwGetCursorPos(g_Window, &mouse_x, &mouse_y);
-        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);   // Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
+        io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
     }
     else
     {
@@ -820,15 +865,24 @@ void ImGui_ImplGlfwVulkan_NewFrame()
 
     for (int i = 0; i < 3; i++)
     {
-        io.MouseDown[i] = g_MousePressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        g_MousePressed[i] = false;
+        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+        g_MouseJustPressed[i] = false;
     }
 
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
-
-    // Hide OS mouse cursor if ImGui is drawing it
-    glfwSetInputMode(g_Window, GLFW_CURSOR, io.MouseDrawCursor ? GLFW_CURSOR_HIDDEN : GLFW_CURSOR_NORMAL);
+    // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
+    if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) == 0)
+    {
+        ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
+        if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
+        {
+            glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+        }
+        else
+        {
+            glfwSetCursor(g_Window, g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
+            glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+        }
+    }
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();
@@ -838,6 +892,7 @@ void ImGui_ImplGlfwVulkan_Render(VkCommandBuffer command_buffer)
 {
     g_CommandBuffer = command_buffer;
     ImGui::Render();
+    ImGui_ImplGlfwVulkan_RenderDrawData(ImGui::GetDrawData());
     g_CommandBuffer = VK_NULL_HANDLE;
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }

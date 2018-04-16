@@ -1,5 +1,7 @@
 // ImGui Marmalade binding with IwGx
-// In this binding, ImTextureID is used to store a 'CIwTexture*' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
+
+// Implemented features:
+//  [X] User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -9,7 +11,13 @@
 // Copyright (C) 2015 by Giovanni Zito
 // This file is part of ImGui
 
-#include <imgui.h>
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_Marmalade_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
+
+#include "imgui.h"
 #include "imgui_impl_marmalade.h"
 
 #include <s3eClipboard.h>
@@ -21,7 +29,6 @@
 // Data
 static double       g_Time = 0.0f;
 static bool         g_MousePressed[3] = { false, false, false };
-static float        g_MouseWheel = 0.0f;
 static CIwTexture*  g_FontTexture = NULL;
 static char*        g_ClipboardText = NULL;
 static bool         g_osdKeyboardEnabled = false;
@@ -29,8 +36,9 @@ static bool         g_osdKeyboardEnabled = false;
 // use this setting to scale the interface - e.g. on device you could use 2 or 3 scale factor
 static ImVec2       g_RenderScale = ImVec2(1.0f,1.0f);
 
-// This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
-void ImGui_Marmalade_RenderDrawLists(ImDrawData* draw_data)
+// Render function.
+// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
+void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 {
     // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
     ImGuiIO& io = ImGui::GetIO();
@@ -128,9 +136,9 @@ int32 ImGui_Marmalade_PointerButtonEventCallback(void* SystemData, void* pUserDa
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MIDDLEMOUSE)
             g_MousePressed[2] = true;
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELUP)
-            g_MouseWheel += pEvent->m_y;
+            io.MouseWheel += pEvent->m_y;
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELDOWN)
-            g_MouseWheel += pEvent->m_y;
+            io.MouseWheel += pEvent->m_y;
     }
 
     return 0;
@@ -208,8 +216,6 @@ void    ImGui_Marmalade_InvalidateDeviceObjects()
 
 bool    ImGui_Marmalade_Init(bool install_callbacks)
 {
-    IwGxInit();
-
     ImGuiIO& io = ImGui::GetIO();
     io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = s3eKeyLeft;
@@ -220,8 +226,10 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_PageDown] = s3eKeyPageDown;
     io.KeyMap[ImGuiKey_Home] = s3eKeyHome;
     io.KeyMap[ImGuiKey_End] = s3eKeyEnd;
+    io.KeyMap[ImGuiKey_Insert] = s3eKeyInsert;
     io.KeyMap[ImGuiKey_Delete] = s3eKeyDelete;
     io.KeyMap[ImGuiKey_Backspace] = s3eKeyBackspace;
+    io.KeyMap[ImGuiKey_Space] = s3eKeySpace;
     io.KeyMap[ImGuiKey_Enter] = s3eKeyEnter;
     io.KeyMap[ImGuiKey_Escape] = s3eKeyEsc;
     io.KeyMap[ImGuiKey_A] = s3eKeyA;
@@ -231,7 +239,6 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_Y] = s3eKeyY;
     io.KeyMap[ImGuiKey_Z] = s3eKeyZ;
 
-    io.RenderDrawListsFn = ImGui_Marmalade_RenderDrawLists;      // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
     io.SetClipboardTextFn = ImGui_Marmalade_SetClipboardText;
     io.GetClipboardTextFn = ImGui_Marmalade_GetClipboardText;
 
@@ -248,8 +255,6 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
 void ImGui_Marmalade_Shutdown()
 {
     ImGui_Marmalade_InvalidateDeviceObjects();
-    ImGui::Shutdown();
-    IwGxTerminate();
 }
 
 void ImGui_Marmalade_NewFrame()
@@ -273,16 +278,13 @@ void ImGui_Marmalade_NewFrame()
     double mouse_x, mouse_y;
     mouse_x = s3ePointerGetX();
     mouse_y = s3ePointerGetY();
-    io.MousePos = ImVec2((float)mouse_x/g_scale.x, (float)mouse_y/g_scale.y);   // Mouse position in screen coordinates (set to -1,-1 if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)mouse_x/g_scale.x, (float)mouse_y/g_scale.y);   // Mouse position (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)
 
     for (int i = 0; i < 3; i++)
     {
         io.MouseDown[i] = g_MousePressed[i] || s3ePointerGetState((s3ePointerButton)i) != S3E_POINTER_STATE_UP;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
         g_MousePressed[i] = false;
     }
-
-    io.MouseWheel = g_MouseWheel;
-    g_MouseWheel = 0.0f;
 
     // TODO: Hide OS mouse cursor if ImGui is drawing it
     // s3ePointerSetInt(S3E_POINTER_HIDE_CURSOR,(io.MouseDrawCursor ? 0 : 1));

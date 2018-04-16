@@ -1,4 +1,4 @@
-// dear imgui, v1.53 WIP
+// dear imgui, v1.61 WIP
 // (drawing and font code)
 
 // Contains implementation for
@@ -15,13 +15,15 @@
 
 #include "imgui.h"
 #define IMGUI_DEFINE_MATH_OPERATORS
-#define IMGUI_DEFINE_PLACEMENT_NEW
 #include "imgui_internal.h"
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #if !defined(alloca)
 #ifdef _WIN32
 #include <malloc.h>     // alloca
+#if !defined(alloca)
+#define alloca _alloca  // for clang with MS Codegen
+#endif
 #elif defined(__GLIBC__) || defined(__sun)
 #include <alloca.h>     // alloca
 #else
@@ -32,7 +34,6 @@
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#define snprintf _snprintf
 #endif
 
 #ifdef __clang__
@@ -40,6 +41,9 @@
 #pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants ok.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference it.
 #pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
+#if __has_warning("-Wcomma")
+#pragma clang diagnostic ignored "-Wcomma"                  // warning : possible misuse of comma operator here             //
+#endif
 #if __has_warning("-Wreserved-id-macro")
 #pragma clang diagnostic ignored "-Wreserved-id-macro"      // warning : macro name is a reserved identifier                //
 #endif
@@ -50,16 +54,18 @@
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
 #pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
 #pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
-#pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'xxxx' to type 'xxxx' casts away qualifiers
 #endif
 
 //-------------------------------------------------------------------------
 // STB libraries implementation
 //-------------------------------------------------------------------------
 
-//#define IMGUI_STB_NAMESPACE     ImGuiStb
-//#define IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+// Compile time options:
+//#define IMGUI_STB_NAMESPACE           ImGuiStb
+//#define IMGUI_STB_TRUETYPE_FILENAME   "my_folder/stb_truetype.h"
+//#define IMGUI_STB_RECT_PACK_FILENAME  "my_folder/stb_rect_pack.h"
 //#define IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
+//#define IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 
 #ifdef IMGUI_STB_NAMESPACE
 namespace IMGUI_STB_NAMESPACE
@@ -75,30 +81,41 @@ namespace IMGUI_STB_NAMESPACE
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
+#pragma clang diagnostic ignored "-Wimplicit-fallthrough"
+#pragma clang diagnostic ignored "-Wcast-qual"              // warning : cast from 'const xxxx *' to 'xxx *' drops const qualifier //
 #endif
 
 #ifdef __GNUC__
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"              // warning: comparison is always true due to limited range of data type [-Wtype-limits]
+#pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'const xxxx *' to type 'xxxx *' casts away qualifiers
 #endif
 
-#define STBRP_ASSERT(x)    IM_ASSERT(x)
 #ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
 #define STBRP_STATIC
+#define STBRP_ASSERT(x)    IM_ASSERT(x)
 #define STB_RECT_PACK_IMPLEMENTATION
 #endif
+#ifdef IMGUI_STB_RECT_PACK_FILENAME
+#include IMGUI_STB_RECT_PACK_FILENAME
+#else
 #include "stb_rect_pack.h"
+#endif
 
+#ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
 #define STBTT_free(x,u)    ((void)(u), ImGui::MemFree(x))
 #define STBTT_assert(x)    IM_ASSERT(x)
-#ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #else
 #define STBTT_DEF extern
 #endif
+#ifdef IMGUI_STB_TRUETYPE_FILENAME
+#include IMGUI_STB_TRUETYPE_FILENAME
+#else
 #include "stb_truetype.h"
+#endif
 
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
@@ -121,79 +138,29 @@ using namespace IMGUI_STB_NAMESPACE;
 // Style functions
 //-----------------------------------------------------------------------------
 
-void ImGui::StyleColorsClassic(ImGuiStyle* dst)
-{
-    ImGuiStyle* style = dst ? dst : &ImGui::GetStyle();
-    ImVec4* colors = style->Colors;
-
-    colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
-    colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
-    colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
-    colors[ImGuiCol_ChildWindowBg]          = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    colors[ImGuiCol_PopupBg]                = ImVec4(0.05f, 0.05f, 0.10f, 0.90f);
-    colors[ImGuiCol_Border]                 = ImVec4(0.70f, 0.70f, 0.70f, 0.40f);
-    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
-    colors[ImGuiCol_FrameBg]                = ImVec4(0.80f, 0.80f, 0.80f, 0.30f);   // Background of checkbox, radio button, plot, slider, text input
-    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.90f, 0.80f, 0.80f, 0.40f);
-    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.90f, 0.65f, 0.65f, 0.45f);
-    colors[ImGuiCol_TitleBg]                = ImVec4(0.27f, 0.27f, 0.54f, 0.83f);
-    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.32f, 0.32f, 0.63f, 0.87f);
-    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
-    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.40f, 0.40f, 0.55f, 0.80f);
-    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
-    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.40f, 0.40f, 0.80f, 0.30f);
-    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
-    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.80f, 0.50f, 0.50f, 0.40f);
-    colors[ImGuiCol_ComboBg]                = ImVec4(0.20f, 0.20f, 0.20f, 0.99f);
-    colors[ImGuiCol_CheckMark]              = ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
-    colors[ImGuiCol_SliderGrab]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
-    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
-    colors[ImGuiCol_Button]                 = ImVec4(0.67f, 0.40f, 0.40f, 0.60f);
-    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.67f, 0.40f, 0.40f, 1.00f);
-    colors[ImGuiCol_ButtonActive]           = ImVec4(0.80f, 0.50f, 0.50f, 1.00f);
-    colors[ImGuiCol_Header]                 = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
-    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.45f, 0.45f, 0.90f, 0.80f);
-    colors[ImGuiCol_HeaderActive]           = ImVec4(0.53f, 0.53f, 0.87f, 0.80f);
-    colors[ImGuiCol_Separator]              = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
-    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.60f, 0.60f, 0.70f, 1.00f);
-    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.70f, 0.70f, 0.90f, 1.00f);
-    colors[ImGuiCol_ResizeGrip]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
-    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(1.00f, 1.00f, 1.00f, 0.60f);
-    colors[ImGuiCol_ResizeGripActive]       = ImVec4(1.00f, 1.00f, 1.00f, 0.90f);
-    colors[ImGuiCol_CloseButton]            = ImVec4(0.50f, 0.50f, 0.90f, 0.50f);
-    colors[ImGuiCol_CloseButtonHovered]     = ImVec4(0.70f, 0.70f, 0.90f, 0.60f);
-    colors[ImGuiCol_CloseButtonActive]      = ImVec4(0.70f, 0.70f, 0.70f, 1.00f);
-    colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-    colors[ImGuiCol_PlotLinesHovered]       = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
-    colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
-    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
-    colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
-}
-
 void ImGui::StyleColorsDark(ImGuiStyle* dst)
 {
     ImGuiStyle* style = dst ? dst : &ImGui::GetStyle();
     ImVec4* colors = style->Colors;
 
     colors[ImGuiCol_Text]                   = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
-    colors[ImGuiCol_TextDisabled]           = ImVec4(0.40f, 0.40f, 0.40f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     colors[ImGuiCol_WindowBg]               = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
-    colors[ImGuiCol_Border]                 = ImVec4(1.00f, 1.00f, 1.00f, 0.19f);
-    colors[ImGuiCol_ChildWindowBg]          = ImVec4(1.00f, 1.00f, 1.00f, 0.00f);
-    colors[ImGuiCol_PopupBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.94f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(1.00f, 1.00f, 1.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
     colors[ImGuiCol_FrameBg]                = ImVec4(0.16f, 0.29f, 0.48f, 0.54f);
     colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
     colors[ImGuiCol_FrameBgActive]          = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
     colors[ImGuiCol_TitleBg]                = ImVec4(0.04f, 0.04f, 0.04f, 1.00f);
-    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.18f, 0.18f, 0.18f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.16f, 0.29f, 0.48f, 1.00f);
     colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.00f, 0.00f, 0.00f, 0.51f);
     colors[ImGuiCol_MenuBarBg]              = ImVec4(0.14f, 0.14f, 0.14f, 1.00f);
     colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.02f, 0.02f, 0.02f, 0.53f);
     colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.31f, 0.31f, 0.31f, 1.00f);
     colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.41f, 0.41f, 0.41f, 1.00f);
     colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.51f, 0.51f, 0.51f, 1.00f);
-    colors[ImGuiCol_ComboBg]                = ImVec4(0.14f, 0.14f, 0.14f, 0.99f);
     colors[ImGuiCol_CheckMark]              = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
     colors[ImGuiCol_SliderGrab]             = ImVec4(0.24f, 0.52f, 0.88f, 1.00f);
     colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
@@ -203,34 +170,153 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_Header]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
     colors[ImGuiCol_HeaderHovered]          = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
     colors[ImGuiCol_HeaderActive]           = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
-    colors[ImGuiCol_Separator]              = colors[ImGuiCol_Border];//ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
-    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
-    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_Separator]              = colors[ImGuiCol_Border];
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.10f, 0.40f, 0.75f, 0.78f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.10f, 0.40f, 0.75f, 1.00f);
     colors[ImGuiCol_ResizeGrip]             = ImVec4(0.26f, 0.59f, 0.98f, 0.25f);
     colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
     colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
-    colors[ImGuiCol_CloseButton]            = ImVec4(0.41f, 0.41f, 0.41f, 0.50f);
-    colors[ImGuiCol_CloseButtonHovered]     = ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
-    colors[ImGuiCol_CloseButtonActive]      = ImVec4(0.98f, 0.39f, 0.36f, 1.00f);
     colors[ImGuiCol_PlotLines]              = ImVec4(0.61f, 0.61f, 0.61f, 1.00f);
     colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
     colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
     colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
     colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
     colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.80f, 0.80f, 0.80f, 0.35f);
+    colors[ImGuiCol_DragDropTarget]         = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+    colors[ImGuiCol_NavHighlight]           = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+}
+
+void ImGui::StyleColorsClassic(ImGuiStyle* dst)
+{
+    ImGuiStyle* style = dst ? dst : &ImGui::GetStyle();
+    ImVec4* colors = style->Colors;
+
+    colors[ImGuiCol_Text]                   = ImVec4(0.90f, 0.90f, 0.90f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(0.11f, 0.11f, 0.14f, 0.92f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.50f, 0.50f, 0.50f, 0.50f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(0.43f, 0.43f, 0.43f, 0.39f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.47f, 0.47f, 0.69f, 0.40f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.42f, 0.41f, 0.64f, 0.69f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.27f, 0.27f, 0.54f, 0.83f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.32f, 0.32f, 0.63f, 0.87f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(0.40f, 0.40f, 0.80f, 0.20f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.40f, 0.40f, 0.55f, 0.80f);
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.20f, 0.25f, 0.30f, 0.60f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.40f, 0.40f, 0.80f, 0.30f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.40f, 0.40f, 0.80f, 0.40f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.41f, 0.39f, 0.80f, 0.60f);
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.90f, 0.90f, 0.90f, 0.50f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(1.00f, 1.00f, 1.00f, 0.30f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.41f, 0.39f, 0.80f, 0.60f);
+    colors[ImGuiCol_Button]                 = ImVec4(0.35f, 0.40f, 0.61f, 0.62f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.40f, 0.48f, 0.71f, 0.79f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.46f, 0.54f, 0.80f, 1.00f);
+    colors[ImGuiCol_Header]                 = ImVec4(0.40f, 0.40f, 0.90f, 0.45f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.45f, 0.45f, 0.90f, 0.80f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.53f, 0.53f, 0.87f, 0.80f);
+    colors[ImGuiCol_Separator]              = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.60f, 0.60f, 0.70f, 1.00f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.70f, 0.70f, 0.90f, 1.00f);
+    colors[ImGuiCol_ResizeGrip]             = ImVec4(1.00f, 1.00f, 1.00f, 0.16f);
+    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.78f, 0.82f, 1.00f, 0.60f);
+    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.78f, 0.82f, 1.00f, 0.90f);
+    colors[ImGuiCol_PlotLines]              = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_PlotLinesHovered]       = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.60f, 0.00f, 1.00f);
+    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.00f, 0.00f, 1.00f, 0.35f);
+    colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    colors[ImGuiCol_DragDropTarget]         = ImVec4(1.00f, 1.00f, 0.00f, 0.90f);
+    colors[ImGuiCol_NavHighlight]           = colors[ImGuiCol_HeaderHovered];
+    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(1.00f, 1.00f, 1.00f, 0.70f);
+}
+
+// Those light colors are better suited with a thicker font than the default one + FrameBorder
+void ImGui::StyleColorsLight(ImGuiStyle* dst)
+{
+    ImGuiStyle* style = dst ? dst : &ImGui::GetStyle();
+    ImVec4* colors = style->Colors;
+
+    colors[ImGuiCol_Text]                   = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
+    //colors[ImGuiCol_TextHovered]          = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    //colors[ImGuiCol_TextActive]           = ImVec4(1.00f, 1.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_WindowBg]               = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
+    colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_PopupBg]                = ImVec4(1.00f, 1.00f, 1.00f, 0.98f);
+    colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.00f, 0.00f, 0.30f);
+    colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_FrameBg]                = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+    colors[ImGuiCol_FrameBgHovered]         = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+    colors[ImGuiCol_FrameBgActive]          = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+    colors[ImGuiCol_TitleBg]                = ImVec4(0.96f, 0.96f, 0.96f, 1.00f);
+    colors[ImGuiCol_TitleBgActive]          = ImVec4(0.82f, 0.82f, 0.82f, 1.00f);
+    colors[ImGuiCol_TitleBgCollapsed]       = ImVec4(1.00f, 1.00f, 1.00f, 0.51f);
+    colors[ImGuiCol_MenuBarBg]              = ImVec4(0.86f, 0.86f, 0.86f, 1.00f);
+    colors[ImGuiCol_ScrollbarBg]            = ImVec4(0.98f, 0.98f, 0.98f, 0.53f);
+    colors[ImGuiCol_ScrollbarGrab]          = ImVec4(0.69f, 0.69f, 0.69f, 0.80f);
+    colors[ImGuiCol_ScrollbarGrabHovered]   = ImVec4(0.49f, 0.49f, 0.49f, 0.80f);
+    colors[ImGuiCol_ScrollbarGrabActive]    = ImVec4(0.49f, 0.49f, 0.49f, 1.00f);
+    colors[ImGuiCol_CheckMark]              = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_SliderGrab]             = ImVec4(0.26f, 0.59f, 0.98f, 0.78f);
+    colors[ImGuiCol_SliderGrabActive]       = ImVec4(0.46f, 0.54f, 0.80f, 0.60f);
+    colors[ImGuiCol_Button]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.40f);
+    colors[ImGuiCol_ButtonHovered]          = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_ButtonActive]           = ImVec4(0.06f, 0.53f, 0.98f, 1.00f);
+    colors[ImGuiCol_Header]                 = ImVec4(0.26f, 0.59f, 0.98f, 0.31f);
+    colors[ImGuiCol_HeaderHovered]          = ImVec4(0.26f, 0.59f, 0.98f, 0.80f);
+    colors[ImGuiCol_HeaderActive]           = ImVec4(0.26f, 0.59f, 0.98f, 1.00f);
+    colors[ImGuiCol_Separator]              = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+    colors[ImGuiCol_SeparatorHovered]       = ImVec4(0.14f, 0.44f, 0.80f, 0.78f);
+    colors[ImGuiCol_SeparatorActive]        = ImVec4(0.14f, 0.44f, 0.80f, 1.00f);
+    colors[ImGuiCol_ResizeGrip]             = ImVec4(0.80f, 0.80f, 0.80f, 0.56f);
+    colors[ImGuiCol_ResizeGripHovered]      = ImVec4(0.26f, 0.59f, 0.98f, 0.67f);
+    colors[ImGuiCol_ResizeGripActive]       = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+    colors[ImGuiCol_PlotLines]              = ImVec4(0.39f, 0.39f, 0.39f, 1.00f);
+    colors[ImGuiCol_PlotLinesHovered]       = ImVec4(1.00f, 0.43f, 0.35f, 1.00f);
+    colors[ImGuiCol_PlotHistogram]          = ImVec4(0.90f, 0.70f, 0.00f, 1.00f);
+    colors[ImGuiCol_PlotHistogramHovered]   = ImVec4(1.00f, 0.45f, 0.00f, 1.00f);
+    colors[ImGuiCol_TextSelectedBg]         = ImVec4(0.26f, 0.59f, 0.98f, 0.35f);
+    colors[ImGuiCol_ModalWindowDarkening]   = ImVec4(0.20f, 0.20f, 0.20f, 0.35f);
+    colors[ImGuiCol_DragDropTarget]         = ImVec4(0.26f, 0.59f, 0.98f, 0.95f);
+    colors[ImGuiCol_NavHighlight]           = colors[ImGuiCol_HeaderHovered];
+    colors[ImGuiCol_NavWindowingHighlight]  = ImVec4(0.70f, 0.70f, 0.70f, 0.70f);
+}
+
+//-----------------------------------------------------------------------------
+// ImDrawListData
+//-----------------------------------------------------------------------------
+
+ImDrawListSharedData::ImDrawListSharedData()
+{
+    Font = NULL;
+    FontSize = 0.0f;
+    CurveTessellationTol = 0.0f;
+    ClipRectFullscreen = ImVec4(-8192.0f, -8192.0f, +8192.0f, +8192.0f);
+    
+    // Const data
+    for (int i = 0; i < IM_ARRAYSIZE(CircleVtx12); i++)
+    {
+        const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(CircleVtx12);
+        CircleVtx12[i] = ImVec2(cosf(a), sinf(a));
+    }
 }
 
 //-----------------------------------------------------------------------------
 // ImDrawList
 //-----------------------------------------------------------------------------
 
-static const ImVec4 GNullClipRect(-8192.0f, -8192.0f, +8192.0f, +8192.0f); // Large values that are easy to encode in a few bits+shift
-
 void ImDrawList::Clear()
 {
     CmdBuffer.resize(0);
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
+    Flags = ImDrawListFlags_AntiAliasedLines | ImDrawListFlags_AntiAliasedFill;
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
@@ -264,8 +350,18 @@ void ImDrawList::ClearFreeMemory()
     _Channels.clear();
 }
 
+ImDrawList* ImDrawList::CloneOutput() const
+{
+    ImDrawList* dst = IM_NEW(ImDrawList(NULL));
+    dst->CmdBuffer = CmdBuffer;
+    dst->IdxBuffer = IdxBuffer;
+    dst->VtxBuffer = VtxBuffer;
+    dst->Flags = Flags;
+    return dst;
+}
+
 // Using macros because C++ is a terrible language, we want guaranteed inline, no code in header, and no overhead in Debug builds
-#define GetCurrentClipRect()    (_ClipRectStack.Size ? _ClipRectStack.Data[_ClipRectStack.Size-1]  : GNullClipRect)
+#define GetCurrentClipRect()    (_ClipRectStack.Size ? _ClipRectStack.Data[_ClipRectStack.Size-1]  : _Data->ClipRectFullscreen)
 #define GetCurrentTextureId()   (_TextureIdStack.Size ? _TextureIdStack.Data[_TextureIdStack.Size-1] : NULL)
 
 void ImDrawList::AddDrawCmd()
@@ -356,8 +452,7 @@ void ImDrawList::PushClipRect(ImVec2 cr_min, ImVec2 cr_max, bool intersect_with_
 
 void ImDrawList::PushClipRectFullScreen()
 {
-    PushClipRect(ImVec2(GNullClipRect.x, GNullClipRect.y), ImVec2(GNullClipRect.z, GNullClipRect.w));
-    //PushClipRect(GetVisibleRect());   // FIXME-OPT: This would be more correct but we're not supposed to access ImGuiContext from here?
+    PushClipRect(ImVec2(_Data->ClipRectFullscreen.x, _Data->ClipRectFullscreen.y), ImVec2(_Data->ClipRectFullscreen.z, _Data->ClipRectFullscreen.w));
 }
 
 void ImDrawList::PopClipRect()
@@ -367,7 +462,7 @@ void ImDrawList::PopClipRect()
     UpdateClipRect();
 }
 
-void ImDrawList::PushTextureID(const ImTextureID& texture_id)
+void ImDrawList::PushTextureID(ImTextureID texture_id)
 {
     _TextureIdStack.push_back(texture_id);
     UpdateTextureID();
@@ -477,7 +572,7 @@ void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 // Fully unrolled with inline call to keep our debug builds decently fast.
 void ImDrawList::PrimRect(const ImVec2& a, const ImVec2& c, ImU32 col)
 {
-    ImVec2 b(c.x, a.y), d(a.x, c.y), uv(GImGui->FontTexUvWhitePixel);
+    ImVec2 b(c.x, a.y), d(a.x, c.y), uv(_Data->TexUvWhitePixel);
     ImDrawIdx idx = (ImDrawIdx)_VtxCurrentIdx;
     _IdxWritePtr[0] = idx; _IdxWritePtr[1] = (ImDrawIdx)(idx+1); _IdxWritePtr[2] = (ImDrawIdx)(idx+2);
     _IdxWritePtr[3] = idx; _IdxWritePtr[4] = (ImDrawIdx)(idx+2); _IdxWritePtr[5] = (ImDrawIdx)(idx+3);
@@ -520,21 +615,19 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 }
 
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
-void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness, bool anti_aliased)
+void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
 {
     if (points_count < 2)
         return;
 
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    anti_aliased &= GImGui->Style.AntiAliasedLines;
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
+    const ImVec2 uv = _Data->TexUvWhitePixel;
 
     int count = points_count;
     if (!closed)
         count = points_count-1;
 
     const bool thick_line = thickness > 1.0f;
-    if (anti_aliased)
+    if (Flags & ImDrawListFlags_AntiAliasedLines)
     {
         // Anti-aliased stroke
         const float AA_SIZE = 1.0f;
@@ -701,13 +794,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
 }
 
-void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col, bool anti_aliased)
+void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
-    anti_aliased &= GImGui->Style.AntiAliasedShapes;
-    //if (ImGui::GetIO().KeyCtrl) anti_aliased = false; // Debug
+    const ImVec2 uv = _Data->TexUvWhitePixel;
 
-    if (anti_aliased)
+    if (Flags & ImDrawListFlags_AntiAliasedFill)
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
@@ -786,20 +877,6 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
 void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_12, int a_max_of_12)
 {
-    static ImVec2 circle_vtx[12];
-    static bool circle_vtx_builds = false;
-    const int circle_vtx_count = IM_ARRAYSIZE(circle_vtx);
-    if (!circle_vtx_builds)
-    {
-        for (int i = 0; i < circle_vtx_count; i++)
-        {
-            const float a = ((float)i / (float)circle_vtx_count) * 2*IM_PI;
-            circle_vtx[i].x = cosf(a);
-            circle_vtx[i].y = sinf(a);
-        }
-        circle_vtx_builds = true;
-    }
-
     if (radius == 0.0f || a_min_of_12 > a_max_of_12)
     {
         _Path.push_back(centre);
@@ -808,7 +885,7 @@ void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_
     _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
     for (int a = a_min_of_12; a <= a_max_of_12; a++)
     {
-        const ImVec2& c = circle_vtx[a % circle_vtx_count];
+        const ImVec2& c = _Data->CircleVtx12[a % IM_ARRAYSIZE(_Data->CircleVtx12)];
         _Path.push_back(ImVec2(centre.x + c.x * radius, centre.y + c.y * radius));
     }
 }
@@ -860,7 +937,7 @@ void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImV
     if (num_segments == 0)
     {
         // Auto-tessellated
-        PathBezierToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, GImGui->Style.CurveTessellationTol, 0);
+        PathBezierToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, _Data->CurveTessellationTol, 0);
     }
     else
     {
@@ -880,13 +957,8 @@ void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImV
 
 void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int rounding_corners)
 {
-    const int corners_top = ImGuiCorner_TopLeft | ImGuiCorner_TopRight;
-    const int corners_bottom = ImGuiCorner_BotLeft | ImGuiCorner_BotRight;
-    const int corners_left = ImGuiCorner_TopLeft | ImGuiCorner_BotLeft;
-    const int corners_right = ImGuiCorner_TopRight | ImGuiCorner_BotRight;
-
-    rounding = ImMin(rounding, fabsf(b.x - a.x) * ( ((rounding_corners & corners_top)  == corners_top)  || ((rounding_corners & corners_bottom) == corners_bottom) ? 0.5f : 1.0f ) - 1.0f);
-    rounding = ImMin(rounding, fabsf(b.y - a.y) * ( ((rounding_corners & corners_left) == corners_left) || ((rounding_corners & corners_right)  == corners_right)  ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, fabsf(b.x - a.x) * ( ((rounding_corners & ImDrawCornerFlags_Top)  == ImDrawCornerFlags_Top)  || ((rounding_corners & ImDrawCornerFlags_Bot)   == ImDrawCornerFlags_Bot)   ? 0.5f : 1.0f ) - 1.0f);
+    rounding = ImMin(rounding, fabsf(b.y - a.y) * ( ((rounding_corners & ImDrawCornerFlags_Left) == ImDrawCornerFlags_Left) || ((rounding_corners & ImDrawCornerFlags_Right) == ImDrawCornerFlags_Right) ? 0.5f : 1.0f ) - 1.0f);
 
     if (rounding <= 0.0f || rounding_corners == 0)
     {
@@ -897,10 +969,10 @@ void ImDrawList::PathRect(const ImVec2& a, const ImVec2& b, float rounding, int 
     }
     else
     {
-        const float rounding_tl = (rounding_corners & ImGuiCorner_TopLeft) ? rounding : 0.0f;
-        const float rounding_tr = (rounding_corners & ImGuiCorner_TopRight) ? rounding : 0.0f;
-        const float rounding_br = (rounding_corners & ImGuiCorner_BotRight) ? rounding : 0.0f;
-        const float rounding_bl = (rounding_corners & ImGuiCorner_BotLeft) ? rounding : 0.0f;
+        const float rounding_tl = (rounding_corners & ImDrawCornerFlags_TopLeft) ? rounding : 0.0f;
+        const float rounding_tr = (rounding_corners & ImDrawCornerFlags_TopRight) ? rounding : 0.0f;
+        const float rounding_br = (rounding_corners & ImDrawCornerFlags_BotRight) ? rounding : 0.0f;
+        const float rounding_bl = (rounding_corners & ImDrawCornerFlags_BotLeft) ? rounding : 0.0f;
         PathArcToFast(ImVec2(a.x + rounding_tl, a.y + rounding_tl), rounding_tl, 6, 9);
         PathArcToFast(ImVec2(b.x - rounding_tr, a.y + rounding_tr), rounding_tr, 9, 12);
         PathArcToFast(ImVec2(b.x - rounding_br, b.y - rounding_br), rounding_br, 0, 3);
@@ -922,7 +994,10 @@ void ImDrawList::AddRect(const ImVec2& a, const ImVec2& b, ImU32 col, float roun
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.5f,0.5f), rounding, rounding_corners_flags);
+    if (Flags & ImDrawListFlags_AntiAliasedLines)
+        PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.50f,0.50f), rounding, rounding_corners_flags);
+    else
+        PathRect(a + ImVec2(0.5f,0.5f), b - ImVec2(0.49f,0.49f), rounding, rounding_corners_flags); // Better looking lower-right corner and rounded non-AA shapes.
     PathStroke(col, true, thickness);
 }
 
@@ -947,7 +1022,7 @@ void ImDrawList::AddRectFilledMultiColor(const ImVec2& a, const ImVec2& c, ImU32
     if (((col_upr_left | col_upr_right | col_bot_right | col_bot_left) & IM_COL32_A_MASK) == 0)
         return;
 
-    const ImVec2 uv = GImGui->FontTexUvWhitePixel;
+    const ImVec2 uv = _Data->TexUvWhitePixel;
     PrimReserve(6, 4);
     PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+1)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2));
     PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+2)); PrimWriteIdx((ImDrawIdx)(_VtxCurrentIdx+3));
@@ -1043,12 +1118,11 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if (text_begin == text_end)
         return;
 
-    // IMPORTANT: This is one of the few instance of breaking the encapsulation of ImDrawList, as we pull this from ImGui state, but it is just SO useful.
-    // Might just move Font/FontSize to ImDrawList?
+    // Pull default font/size from the shared ImDrawListSharedData instance
     if (font == NULL)
-        font = GImGui->Font;
+        font = _Data->Font;
     if (font_size == 0.0f)
-        font_size = GImGui->FontSize;
+        font_size = _Data->FontSize;
 
     IM_ASSERT(font->ContainerAtlas->TexID == _TextureIdStack.back());  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
 
@@ -1073,7 +1147,6 @@ void ImDrawList::AddImage(ImTextureID user_texture_id, const ImVec2& a, const Im
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    // FIXME-OPT: This is wasting draw calls.
     const bool push_texture_id = _TextureIdStack.empty() || user_texture_id != _TextureIdStack.back();
     if (push_texture_id)
         PushTextureID(user_texture_id);
@@ -1096,6 +1169,31 @@ void ImDrawList::AddImageQuad(ImTextureID user_texture_id, const ImVec2& a, cons
 
     PrimReserve(6, 4);
     PrimQuadUV(a, b, c, d, uv_a, uv_b, uv_c, uv_d, col);
+
+    if (push_texture_id)
+        PopTextureID();
+}
+
+void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, ImU32 col, float rounding, int rounding_corners)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    if (rounding <= 0.0f || (rounding_corners & ImDrawCornerFlags_All) == 0)
+    {
+        AddImage(user_texture_id, a, b, uv_a, uv_b, col);
+        return;
+    }
+
+    const bool push_texture_id = _TextureIdStack.empty() || user_texture_id != _TextureIdStack.back();
+    if (push_texture_id)
+        PushTextureID(user_texture_id);
+
+    int vert_start_idx = VtxBuffer.Size;
+    PathRect(a, b, rounding, rounding_corners);
+    PathFillConvex(col);
+    int vert_end_idx = VtxBuffer.Size;
+    ImGui::ShadeVertsLinearUV(VtxBuffer.Data + vert_start_idx, VtxBuffer.Data + vert_end_idx, a, b, uv_a, uv_b, true);
 
     if (push_texture_id)
         PopTextureID();
@@ -1175,6 +1273,30 @@ void ImGui::ShadeVertsLinearAlphaGradientForLeftToRightText(ImDrawVert* vert_sta
     }
 }
 
+// Distribute UV over (a, b) rectangle
+void ImGui::ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp)
+{
+    const ImVec2 size = b - a;
+    const ImVec2 uv_size = uv_b - uv_a;
+    const ImVec2 scale = ImVec2(
+        size.x != 0.0f ? (uv_size.x / size.x) : 0.0f,
+        size.y != 0.0f ? (uv_size.y / size.y) : 0.0f);
+
+    if (clamp)
+    {
+        const ImVec2 min = ImMin(uv_a, uv_b);
+        const ImVec2 max = ImMax(uv_a, uv_b);
+
+        for (ImDrawVert* vertex = vert_start; vertex < vert_end; ++vertex)
+            vertex->uv = ImClamp(uv_a + ImMul(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale), min, max);
+    }
+    else
+    {
+        for (ImDrawVert* vertex = vert_start; vertex < vert_end; ++vertex)
+            vertex->uv = uv_a + ImMul(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale);
+    }
+}
+
 //-----------------------------------------------------------------------------
 // ImFontConfig
 //-----------------------------------------------------------------------------
@@ -1239,28 +1361,30 @@ static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA
     "                                                      -    XX           XX    -           "
 };
 
-static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_Count_][3] =
+static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3] =
 {
     // Pos ........ Size ......... Offset ......
     { ImVec2(0,3),  ImVec2(12,19), ImVec2( 0, 0) }, // ImGuiMouseCursor_Arrow
     { ImVec2(13,0), ImVec2(7,16),  ImVec2( 4, 8) }, // ImGuiMouseCursor_TextInput
-    { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_Move
+    { ImVec2(31,0), ImVec2(23,23), ImVec2(11,11) }, // ImGuiMouseCursor_ResizeAll
     { ImVec2(21,0), ImVec2( 9,23), ImVec2( 5,11) }, // ImGuiMouseCursor_ResizeNS
     { ImVec2(55,18),ImVec2(23, 9), ImVec2(11, 5) }, // ImGuiMouseCursor_ResizeEW
     { ImVec2(73,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNESW
     { ImVec2(55,0), ImVec2(17,17), ImVec2( 9, 9) }, // ImGuiMouseCursor_ResizeNWSE
 };
 
-
 ImFontAtlas::ImFontAtlas()
 {
+    Flags = 0x00;
     TexID = NULL;
     TexDesiredWidth = 0;
     TexGlyphPadding = 1;
+
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
     TexWidth = TexHeight = 0;
-    TexUvWhitePixel = ImVec2(0, 0);
+    TexUvScale = ImVec2(0.0f, 0.0f);
+    TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     for (int n = 0; n < IM_ARRAYSIZE(CustomRectIds); n++)
         CustomRectIds[n] = -1;
 }
@@ -1279,7 +1403,7 @@ void    ImFontAtlas::ClearInputData()
             ConfigData[i].FontData = NULL;
         }
 
-    // When clearing this we lose access to  the font name and other information used to build the font.
+    // When clearing this we lose access to the font name and other information used to build the font.
     for (int i = 0; i < Fonts.Size; i++)
         if (Fonts[i]->ConfigData >= ConfigData.Data && Fonts[i]->ConfigData < ConfigData.Data + ConfigData.Size)
         {
@@ -1305,10 +1429,7 @@ void    ImFontAtlas::ClearTexData()
 void    ImFontAtlas::ClearFonts()
 {
     for (int i = 0; i < Fonts.Size; i++)
-    {
-        Fonts[i]->~ImFont();
-        ImGui::MemFree(Fonts[i]);
-    }
+        IM_DELETE(Fonts[i]);
     Fonts.clear();
 }
 
@@ -1341,13 +1462,16 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
     // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
     if (!TexPixelsRGBA32)
     {
-        unsigned char* pixels;
+        unsigned char* pixels = NULL;
         GetTexDataAsAlpha8(&pixels, NULL, NULL);
-        TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc((size_t)(TexWidth * TexHeight * 4));
-        const unsigned char* src = pixels;
-        unsigned int* dst = TexPixelsRGBA32;
-        for (int n = TexWidth * TexHeight; n > 0; n--)
-            *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
+        if (pixels)
+        {
+            TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc((size_t)(TexWidth * TexHeight * 4));
+            const unsigned char* src = pixels;
+            unsigned int* dst = TexPixelsRGBA32;
+            for (int n = TexWidth * TexHeight; n > 0; n--)
+                *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
+        }
     }
 
     *out_pixels = (unsigned char*)TexPixelsRGBA32;
@@ -1363,15 +1487,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     // Create new font
     if (!font_cfg->MergeMode)
-    {
-        ImFont* font = (ImFont*)ImGui::MemAlloc(sizeof(ImFont));
-        IM_PLACEMENT_NEW(font) ImFont();
-        Fonts.push_back(font);
-    }
+        Fonts.push_back(IM_NEW(ImFont));
     else
-    {
         IM_ASSERT(!Fonts.empty()); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
-    }
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();
@@ -1389,9 +1507,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     return new_font_cfg.DstFont;
 }
 
-// Default font TTF is compressed with stb_compress then base85 encoded (see extra_fonts/binary_to_compressed_c.cpp for encoder)
-static unsigned int stb_decompress_length(unsigned char *input);
-static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length);
+// Default font TTF is compressed with stb_compress then base85 encoded (see misc/fonts/binary_to_compressed_c.cpp for encoder)
+static unsigned int stb_decompress_length(const unsigned char *input);
+static unsigned int stb_decompress(unsigned char *output, const unsigned char *input, unsigned int length);
 static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(const unsigned char* src, unsigned char* dst)
@@ -1419,6 +1537,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, GetGlyphRangesDefault());
+    font->DisplayOffset.y = 1.0f;
     return font;
 }
 
@@ -1437,7 +1556,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
         // Store a short copy of filename into into the font name for convenience
         const char* p;
         for (p = filename + strlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
-        snprintf(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %.0fpx", p, size_pixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%s, %.0fpx", p, size_pixels);
     }
     return AddFontFromMemoryTTF(data, data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -1457,9 +1576,9 @@ ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float si
 
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_data, int compressed_ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
-    const unsigned int buf_decompressed_size = stb_decompress_length((unsigned char*)compressed_ttf_data);
+    const unsigned int buf_decompressed_size = stb_decompress_length((const unsigned char*)compressed_ttf_data);
     unsigned char* buf_decompressed_data = (unsigned char *)ImGui::MemAlloc(buf_decompressed_size);
-    stb_decompress(buf_decompressed_data, (unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
+    stb_decompress(buf_decompressed_data, (const unsigned char*)compressed_ttf_data, (unsigned int)compressed_ttf_size);
 
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
     IM_ASSERT(font_cfg.FontData == NULL);
@@ -1510,8 +1629,30 @@ void ImFontAtlas::CalcCustomRectUV(const CustomRect* rect, ImVec2* out_uv_min, I
 {
     IM_ASSERT(TexWidth > 0 && TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
     IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
-    *out_uv_min = ImVec2((float)rect->X / TexWidth, (float)rect->Y / TexHeight);
-    *out_uv_max = ImVec2((float)(rect->X + rect->Width) / TexWidth, (float)(rect->Y + rect->Height) / TexHeight);
+    *out_uv_min = ImVec2((float)rect->X * TexUvScale.x, (float)rect->Y * TexUvScale.y);
+    *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
+}
+
+bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
+{
+    if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_COUNT)
+        return false;
+    if (Flags & ImFontAtlasFlags_NoMouseCursors)
+        return false;
+
+    IM_ASSERT(CustomRectIds[0] != -1);
+    ImFontAtlas::CustomRect& r = CustomRects[CustomRectIds[0]];
+    IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
+    ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][0] + ImVec2((float)r.X, (float)r.Y);
+    ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][1];
+    *out_size = size;
+    *out_offset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][2];
+    out_uv_border[0] = (pos) * TexUvScale;
+    out_uv_border[1] = (pos + size) * TexUvScale;
+    pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
+    out_uv_fill[0] = (pos) * TexUvScale;
+    out_uv_fill[1] = (pos + size) * TexUvScale;
+    return true;
 }
 
 bool    ImFontAtlas::Build()
@@ -1544,7 +1685,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
     atlas->TexID = NULL;
     atlas->TexWidth = atlas->TexHeight = 0;
-    atlas->TexUvWhitePixel = ImVec2(0, 0);
+    atlas->TexUvScale = ImVec2(0.0f, 0.0f);
+    atlas->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     atlas->ClearTexData();
 
     // Count glyphs/ranges
@@ -1566,8 +1708,9 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
     // Start packing
     const int max_tex_height = 1024*32;
-    stbtt_pack_context spc;
-    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, max_tex_height, 0, atlas->TexGlyphPadding, NULL);
+    stbtt_pack_context spc = {};
+    if (!stbtt_PackBegin(&spc, NULL, atlas->TexWidth, max_tex_height, 0, atlas->TexGlyphPadding, NULL))
+        return false;
     stbtt_PackSetOversampling(&spc, 1, 1);
 
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
@@ -1590,9 +1733,10 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == atlas));
 
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)cfg.FontData, cfg.FontNo);
-        IM_ASSERT(font_offset >= 0);
+        IM_ASSERT(font_offset >= 0 && "FontData is incorrect, or FontNo cannot be found.");
         if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
         {
+            atlas->TexWidth = atlas->TexHeight = 0; // Reset output on failure
             ImGui::MemFree(tmp_array);
             return false;
         }
@@ -1651,7 +1795,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     IM_ASSERT(buf_ranges_n == total_ranges_count);
 
     // Create texture
-    atlas->TexHeight = ImUpperPowerOfTwo(atlas->TexHeight);
+    atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
+    atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
     atlas->TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(atlas->TexWidth * atlas->TexHeight);
     memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
     spc.pixels = atlas->TexPixelsAlpha8;
@@ -1686,13 +1831,15 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontConfig& cfg = atlas->ConfigData[input_i];
         ImFontTempBuildData& tmp = tmp_array[input_i];
         ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
+        if (cfg.MergeMode)
+            dst_font->BuildLookupTable();
 
         const float font_scale = stbtt_ScaleForPixelHeight(&tmp.FontInfo, cfg.SizePixels);
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
-        const float ascent = unscaled_ascent * font_scale;
-        const float descent = unscaled_descent * font_scale;
+        const float ascent = ImFloor(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
+        const float descent = ImFloor(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         const float off_x = cfg.GlyphOffset.x;
         const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
@@ -1707,7 +1854,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                     continue;
 
                 const int codepoint = range.first_unicode_codepoint_in_range + char_idx;
-                if (cfg.MergeMode && dst_font->FindGlyph((unsigned short)codepoint))
+                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
                     continue;
 
                 stbtt_aligned_quad q;
@@ -1730,8 +1877,12 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
 void ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas)
 {
-    if (atlas->CustomRectIds[0] < 0)
+    if (atlas->CustomRectIds[0] >= 0)
+        return;
+    if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
         atlas->CustomRectIds[0] = atlas->AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_ID, FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+    else
+        atlas->CustomRectIds[0] = atlas->AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_ID, 2, 2);
 }
 
 void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* font_config, float ascent, float descent)
@@ -1777,40 +1928,32 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaq
 static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->CustomRectIds[0] >= 0);
+    IM_ASSERT(atlas->TexPixelsAlpha8 != NULL);
     ImFontAtlas::CustomRect& r = atlas->CustomRects[atlas->CustomRectIds[0]];
     IM_ASSERT(r.ID == FONT_ATLAS_DEFAULT_TEX_DATA_ID);
-    IM_ASSERT(r.Width == FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF*2+1);
-    IM_ASSERT(r.Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
     IM_ASSERT(r.IsPacked());
-    IM_ASSERT(atlas->TexPixelsAlpha8 != NULL);
 
-    // Render/copy pixels
-    for (int y = 0, n = 0; y < FONT_ATLAS_DEFAULT_TEX_DATA_H; y++)
-        for (int x = 0; x < FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF; x++, n++)
-        {
-            const int offset0 = (int)(r.X + x) + (int)(r.Y + y) * atlas->TexWidth;
-            const int offset1 = offset0 + FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
-            atlas->TexPixelsAlpha8[offset0] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == '.' ? 0xFF : 0x00;
-            atlas->TexPixelsAlpha8[offset1] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == 'X' ? 0xFF : 0x00;
-        }
-    const ImVec2 tex_uv_scale(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
-    atlas->TexUvWhitePixel = ImVec2((r.X + 0.5f) * tex_uv_scale.x, (r.Y + 0.5f) * tex_uv_scale.y);
-
-    // Setup mouse cursors
-    for (int type = 0; type < ImGuiMouseCursor_Count_; type++)
+    const int w = atlas->TexWidth;
+    if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
     {
-        ImGuiMouseCursorData& cursor_data = GImGui->MouseCursorData[type];
-        ImVec2 pos = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][0] + ImVec2((float)r.X, (float)r.Y);
-        const ImVec2 size = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][1];
-        cursor_data.Type = type;
-        cursor_data.Size = size;
-        cursor_data.HotOffset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[type][2];
-        cursor_data.TexUvMin[0] = (pos) * tex_uv_scale;
-        cursor_data.TexUvMax[0] = (pos + size) * tex_uv_scale;
-        pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
-        cursor_data.TexUvMin[1] = (pos) * tex_uv_scale;
-        cursor_data.TexUvMax[1] = (pos + size) * tex_uv_scale;
+        // Render/copy pixels
+        IM_ASSERT(r.Width == FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * 2 + 1 && r.Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
+        for (int y = 0, n = 0; y < FONT_ATLAS_DEFAULT_TEX_DATA_H; y++)
+            for (int x = 0; x < FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF; x++, n++)
+            {
+                const int offset0 = (int)(r.X + x) + (int)(r.Y + y) * w;
+                const int offset1 = offset0 + FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
+                atlas->TexPixelsAlpha8[offset0] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == '.' ? 0xFF : 0x00;
+                atlas->TexPixelsAlpha8[offset1] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == 'X' ? 0xFF : 0x00;
+            }
     }
+    else
+    {
+        IM_ASSERT(r.Width == 2 && r.Height == 2);
+        const int offset = (int)(r.X) + (int)(r.Y) * w;
+        atlas->TexPixelsAlpha8[offset] = atlas->TexPixelsAlpha8[offset + 1] = atlas->TexPixelsAlpha8[offset + w] = atlas->TexPixelsAlpha8[offset + w + 1] = 0xFF;
+    }
+    atlas->TexUvWhitePixel = ImVec2((r.X + 0.5f) * atlas->TexUvScale.x, (r.Y + 0.5f) * atlas->TexUvScale.y);
 }
 
 void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
@@ -1833,7 +1976,8 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 
     // Build all fonts lookup tables
     for (int i = 0; i < atlas->Fonts.Size; i++)
-        atlas->Fonts[i]->BuildLookupTable();
+        if (atlas->Fonts[i]->DirtyLookupTables)
+            atlas->Fonts[i]->BuildLookupTable();
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -1929,7 +2073,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
         // Unpack
         int codepoint = 0x4e00;
         memcpy(full_ranges, base_ranges, sizeof(base_ranges));
-        ImWchar* dst = full_ranges + IM_ARRAYSIZE(base_ranges);;
+        ImWchar* dst = full_ranges + IM_ARRAYSIZE(base_ranges);
         for (int n = 0; n < IM_ARRAYSIZE(offsets_from_0x4E00); n++, dst += 2)
             dst[0] = dst[1] = (ImWchar)(codepoint += (offsets_from_0x4E00[n] + 1));
         dst[0] = 0;
@@ -2009,7 +2153,7 @@ ImFont::ImFont()
 {
     Scale = 1.0f;
     FallbackChar = (ImWchar)'?';
-    DisplayOffset = ImVec2(0.0f, 1.0f);
+    DisplayOffset = ImVec2(0.0f, 0.0f);
     ClearOutputData();
 }
 
@@ -2038,6 +2182,7 @@ void    ImFont::ClearOutputData()
     ConfigData = NULL;
     ContainerAtlas = NULL;
     Ascent = Descent = 0.0f;
+    DirtyLookupTables = true;
     MetricsTotalSurface = 0;
 }
 
@@ -2050,6 +2195,7 @@ void ImFont::BuildLookupTable()
     IM_ASSERT(Glyphs.Size < 0xFFFF); // -1 is reserved
     IndexAdvanceX.clear();
     IndexLookup.clear();
+    DirtyLookupTables = false;
     GrowIndex(max_codepoint + 1);
     for (int i = 0; i < Glyphs.Size; i++)
     {
@@ -2072,8 +2218,7 @@ void ImFont::BuildLookupTable()
         IndexLookup[(int)tab_glyph.Codepoint] = (unsigned short)(Glyphs.Size-1);
     }
 
-    FallbackGlyph = NULL;
-    FallbackGlyph = FindGlyph(FallbackChar);
+    FallbackGlyph = FindGlyphNoFallback(FallbackChar);
     FallbackAdvanceX = FallbackGlyph ? FallbackGlyph->AdvanceX : 0.0f;
     for (int i = 0; i < max_codepoint + 1; i++)
         if (IndexAdvanceX[i] < 0.0f)
@@ -2114,6 +2259,7 @@ void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1,
         glyph.AdvanceX = (float)(int)(glyph.AdvanceX + 0.5f);
     
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
+    DirtyLookupTables = true;
     MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + 1.99f);
 }
 
@@ -2132,15 +2278,24 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
     IndexAdvanceX[dst] = (src < index_size) ? IndexAdvanceX.Data[src] : 1.0f;
 }
 
-const ImFontGlyph* ImFont::FindGlyph(unsigned short c) const
+const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
 {
-    if (c < IndexLookup.Size)
-    {
-        const unsigned short i = IndexLookup[c];
-        if (i != (unsigned short)-1)
-            return &Glyphs.Data[i];
-    }
-    return FallbackGlyph;
+    if (c >= IndexLookup.Size)
+        return FallbackGlyph;
+    const unsigned short i = IndexLookup[c];
+    if (i == (unsigned short)-1)
+        return FallbackGlyph;
+    return &Glyphs.Data[i];
+}
+
+const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
+{
+    if (c >= IndexLookup.Size)
+        return NULL;
+    const unsigned short i = IndexLookup[c];
+    if (i == (unsigned short)-1)
+        return NULL;
+    return &Glyphs.Data[i];
 }
 
 const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const
@@ -2281,7 +2436,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsSpace(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsSpace((unsigned int)c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 continue;
             }
@@ -2406,7 +2561,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsSpace(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsSpace((unsigned int)c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
                 }
                 continue;
             }
@@ -2598,31 +2753,32 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
 // DEFAULT FONT DATA
 //-----------------------------------------------------------------------------
 // Compressed with stb_compress() then converted to a C array.
-// Use the program in extra_fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
+// Use the program in misc/fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
 // Decompression from stb.h (public domain) by Sean Barrett https://github.com/nothings/stb/blob/master/stb.h
 //-----------------------------------------------------------------------------
 
-static unsigned int stb_decompress_length(unsigned char *input)
+static unsigned int stb_decompress_length(const unsigned char *input)
 {
     return (input[8] << 24) + (input[9] << 16) + (input[10] << 8) + input[11];
 }
 
-static unsigned char *stb__barrier, *stb__barrier2, *stb__barrier3, *stb__barrier4;
+static unsigned char *stb__barrier_out_e, *stb__barrier_out_b;
+static const unsigned char *stb__barrier_in_b;
 static unsigned char *stb__dout;
-static void stb__match(unsigned char *data, unsigned int length)
+static void stb__match(const unsigned char *data, unsigned int length)
 {
     // INVERSE of memmove... write each byte before copying the next...
-    IM_ASSERT (stb__dout + length <= stb__barrier);
-    if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
-    if (data < stb__barrier4) { stb__dout = stb__barrier+1; return; }
+    IM_ASSERT(stb__dout + length <= stb__barrier_out_e);
+    if (stb__dout + length > stb__barrier_out_e) { stb__dout += length; return; }
+    if (data < stb__barrier_out_b) { stb__dout = stb__barrier_out_e+1; return; }
     while (length--) *stb__dout++ = *data++;
 }
 
-static void stb__lit(unsigned char *data, unsigned int length)
+static void stb__lit(const unsigned char *data, unsigned int length)
 {
-    IM_ASSERT (stb__dout + length <= stb__barrier);
-    if (stb__dout + length > stb__barrier) { stb__dout += length; return; }
-    if (data < stb__barrier2) { stb__dout = stb__barrier+1; return; }
+    IM_ASSERT(stb__dout + length <= stb__barrier_out_e);
+    if (stb__dout + length > stb__barrier_out_e) { stb__dout += length; return; }
+    if (data < stb__barrier_in_b) { stb__dout = stb__barrier_out_e+1; return; }
     memcpy(stb__dout, data, length);
     stb__dout += length;
 }
@@ -2631,7 +2787,7 @@ static void stb__lit(unsigned char *data, unsigned int length)
 #define stb__in3(x)   ((i[x] << 16) + stb__in2((x)+1))
 #define stb__in4(x)   ((i[x] << 24) + stb__in3((x)+1))
 
-static unsigned char *stb_decompress_token(unsigned char *i)
+static const unsigned char *stb_decompress_token(const unsigned char *i)
 {
     if (*i >= 0x20) { // use fewer if's for cases that expand small
         if (*i >= 0x80)       stb__match(stb__dout-i[1]-1, i[0] - 0x80 + 1), i += 2;
@@ -2679,21 +2835,20 @@ static unsigned int stb_adler32(unsigned int adler32, unsigned char *buffer, uns
     return (unsigned int)(s2 << 16) + (unsigned int)s1;
 }
 
-static unsigned int stb_decompress(unsigned char *output, unsigned char *i, unsigned int length)
+static unsigned int stb_decompress(unsigned char *output, const unsigned char *i, unsigned int /*length*/)
 {
     unsigned int olen;
     if (stb__in4(0) != 0x57bC0000) return 0;
     if (stb__in4(4) != 0)          return 0; // error! stream is > 4GB
     olen = stb_decompress_length(i);
-    stb__barrier2 = i;
-    stb__barrier3 = i+length;
-    stb__barrier = output + olen;
-    stb__barrier4 = output;
+    stb__barrier_in_b = i;
+    stb__barrier_out_e = output + olen;
+    stb__barrier_out_b = output;
     i += 16;
 
     stb__dout = output;
     for (;;) {
-        unsigned char *old_i = i;
+        const unsigned char *old_i = i;
         i = stb_decompress_token(i);
         if (i == old_i) {
             if (*i == 0x05 && i[1] == 0xfa) {

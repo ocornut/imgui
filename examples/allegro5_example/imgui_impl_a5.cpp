@@ -1,18 +1,24 @@
 // ImGui Allegro 5 bindings
-// In this binding, ImTextureID is used to store a 'ALLEGRO_BITMAP*' texture identifier. Read the FAQ about ImTextureID in imgui.cpp.
 
-// TODO:
-// - Clipboard is not supported.
+// Implemented features:
+//  [X] User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+// Missing features:
+//  [ ] Clipboard support via al_set_clipboard_text/al_clipboard_has_text.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
-// https://github.com/ocornut/imgui
-// by @birthggd
+// https://github.com/ocornut/imgui, Original code by @birthggd
+
+// CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplA5_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
+//  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
-#include <imgui.h>
+#include "imgui.h"
 #include "imgui_impl_a5.h"
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
@@ -28,8 +34,6 @@ static double                   g_Time = 0.0;
 static ALLEGRO_MOUSE_CURSOR*    g_MouseCursorInvisible = NULL;
 static ALLEGRO_VERTEX_DECL*     g_VertexDecl = NULL;
 
-#define OFFSETOF(TYPE, ELEMENT) ((size_t)&(((TYPE *)0)->ELEMENT))
-
 struct ImDrawVertAllegro
 {
     ImVec2 pos;
@@ -37,7 +41,9 @@ struct ImDrawVertAllegro
     ALLEGRO_COLOR col;
 };
 
-void ImGui_ImplA5_RenderDrawLists(ImDrawData* draw_data)
+// Render function.
+// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
+void ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data)
 {
     int op, src, dst;
     al_get_blender(&op, &src, &dst);
@@ -162,9 +168,9 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     // We still use a custom declaration to use 'ALLEGRO_PRIM_TEX_COORD' instead of 'ALLEGRO_PRIM_TEX_COORD_PIXEL' else we can't do a reliable conversion.
     ALLEGRO_VERTEX_ELEMENT elems[] =
     {
-        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, pos) },
-        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, OFFSETOF(ImDrawVertAllegro, uv) },
-        { ALLEGRO_PRIM_COLOR_ATTR, 0, OFFSETOF(ImDrawVertAllegro, col) },
+        { ALLEGRO_PRIM_POSITION, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, pos) },
+        { ALLEGRO_PRIM_TEX_COORD, ALLEGRO_PRIM_FLOAT_2, IM_OFFSETOF(ImDrawVertAllegro, uv) },
+        { ALLEGRO_PRIM_COLOR_ATTR, 0, IM_OFFSETOF(ImDrawVertAllegro, col) },
         { 0, 0, 0 }
     };
     g_VertexDecl = al_create_vertex_decl(elems, sizeof(ImDrawVertAllegro));
@@ -179,8 +185,10 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_PageDown] = ALLEGRO_KEY_PGDN;
     io.KeyMap[ImGuiKey_Home] = ALLEGRO_KEY_HOME;
     io.KeyMap[ImGuiKey_End] = ALLEGRO_KEY_END;
+    io.KeyMap[ImGuiKey_Insert] = ALLEGRO_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete] = ALLEGRO_KEY_DELETE;
     io.KeyMap[ImGuiKey_Backspace] = ALLEGRO_KEY_BACKSPACE;
+    io.KeyMap[ImGuiKey_Space] = ALLEGRO_KEY_SPACE;
     io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
     io.KeyMap[ImGuiKey_Escape] = ALLEGRO_KEY_ESCAPE;
     io.KeyMap[ImGuiKey_A] = ALLEGRO_KEY_A;
@@ -190,7 +198,6 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
 
-    io.RenderDrawListsFn = ImGui_ImplA5_RenderDrawLists;        // Alternatively you can set this to NULL and call ImGui::GetDrawData() after ImGui::Render() to get the same ImDrawData pointer.
 #ifdef _WIN32
     io.ImeWindowHandle = al_get_win_window_handle(g_Display);
 #endif
@@ -201,7 +208,6 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
 void ImGui_ImplA5_Shutdown()
 {
     ImGui_ImplA5_InvalidateDeviceObjects();
-    ImGui::Shutdown();
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -216,6 +222,7 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     {
     case ALLEGRO_EVENT_MOUSE_AXES:
         io.MouseWheel += ev->mouse.dz;
+        io.MouseWheelH += ev->mouse.dw;
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display)
@@ -284,7 +291,7 @@ void ImGui_ImplA5_NewFrame()
         switch (ImGui::GetMouseCursor())
         {
         case ImGuiMouseCursor_TextInput:    cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_EDIT; break;
-        case ImGuiMouseCursor_Move:         cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_MOVE; break;
+        case ImGuiMouseCursor_ResizeAll:    cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_MOVE; break;
         case ImGuiMouseCursor_ResizeNS:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_N; break;
         case ImGuiMouseCursor_ResizeEW:     cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_E; break;
         case ImGuiMouseCursor_ResizeNESW:   cursor_id = ALLEGRO_SYSTEM_MOUSE_CURSOR_RESIZE_NE; break;

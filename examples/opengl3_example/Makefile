@@ -2,20 +2,23 @@
 # Cross Platform Makefile
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
-#
-# You will need GLFW (http://www.glfw.org)
-#
-#   apt-get install libglfw-dev  # Linux
-#   brew install glfw            # Mac OS X
-#   pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw # MSYS2
+# You will need GLFW (http://www.glfw.org):
+# Linux:
+#   apt-get install libglfw-dev
+# Mac OS X:
+#   brew install glfw
+# MSYS2:
+#   pacman -S --noconfirm --needed mingw-w64-x86_64-toolchain mingw-w64-x86_64-glfw
 #
 
 #CXX = g++
+#CXX = clang++
 
 EXE = opengl3_example
-OBJS = main.o imgui_impl_glfw_gl3.o
-OBJS += ../../imgui.o ../../imgui_demo.o ../../imgui_draw.o
-OBJS += ../libs/gl3w/GL/gl3w.o
+SOURCES = main.cpp imgui_impl_glfw_gl3.cpp
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
+SOURCES += ../libs/gl3w/GL/gl3w.c
+OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 UNAME_S := $(shell uname -s)
 
@@ -50,14 +53,20 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 endif
 
 
-.cpp.o:
+%.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../../%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../libs/gl3w/GL/%.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
 
 $(EXE): $(OBJS)
-	$(CXX) -o $(EXE) $(OBJS) $(CXXFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
 
 clean:
-	rm $(EXE) $(OBJS)
+	rm -f $(EXE) $(OBJS)

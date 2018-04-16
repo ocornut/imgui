@@ -1,7 +1,8 @@
 // ImGui - standalone example application for Glfw + Vulkan, using programmable pipeline
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
-#include <imgui.h>
+#include "imgui.h"
+#include "imgui_impl_glfw_vulkan.h"
 
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
@@ -9,13 +10,11 @@
 #define GLFW_INCLUDE_VULKAN
 #include <GLFW/glfw3.h>
 
-#include "imgui_impl_glfw_vulkan.h"
-
 #define IMGUI_MAX_POSSIBLE_BACK_BUFFERS 16
-#define IMGUI_UNLIMITED_FRAME_RATE
-//#ifdef _DEBUG
-//#define IMGUI_VULKAN_DEBUG_REPORT
-//#endif
+//#define IMGUI_UNLIMITED_FRAME_RATE
+#ifdef _DEBUG
+#define IMGUI_VULKAN_DEBUG_REPORT
+#endif
 
 static VkAllocationCallbacks*   g_Allocator = NULL;
 static VkInstance               g_Instance = VK_NULL_HANDLE;
@@ -35,7 +34,9 @@ static VkPresentModeKHR         g_PresentMode;
 static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-static int                      fb_width, fb_height;
+static int                      fb_width = 0, fb_height = 0;
+static bool                     g_ResizeWanted = false;
+static int                      g_ResizeWidth = 0, g_ResizeHeight = 0;
 static uint32_t                 g_BackbufferIndices[IMGUI_VK_QUEUED_FRAMES];    // keep track of recently rendered swapchain frame indices
 static uint32_t                 g_BackBufferCount = 0;
 static VkImage                  g_BackBuffer[IMGUI_MAX_POSSIBLE_BACK_BUFFERS] = {};
@@ -59,7 +60,7 @@ static void check_vk_result(VkResult err)
         abort();
 }
 
-static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
+static void resize_vulkan(int w, int h)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = g_Swapchain;
@@ -141,12 +142,21 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
         subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
         subpass.colorAttachmentCount = 1;
         subpass.pColorAttachments = &color_attachment;
+        VkSubpassDependency dependency = {};
+        dependency.srcSubpass = VK_SUBPASS_EXTERNAL;
+        dependency.dstSubpass = 0;
+        dependency.srcStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.dstStageMask = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT;
+        dependency.srcAccessMask = 0;
+        dependency.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
         VkRenderPassCreateInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
         info.attachmentCount = 1;
         info.pAttachments = &attachment;
         info.subpassCount = 1;
         info.pSubpasses = &subpass;
+        info.dependencyCount = 1;
+        info.pDependencies = &dependency;
         err = vkCreateRenderPass(g_Device, &info, g_Allocator, &g_RenderPass);
         check_vk_result(err);
     }
@@ -194,6 +204,7 @@ static void resize_vulkan(GLFWwindow* /*window*/, int w, int h)
 static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(
     VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object, size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage, void* pUserData)
 {
+    (void)flags; (void)object; (void)pUserData; (void)pLayerPrefix; (void)messageCode; (void)location;
     printf("[vulkan] ObjectType: %i\nMessage: %s\n\n", objectType, pMessage );
     return VK_FALSE;
 }
@@ -356,9 +367,9 @@ static void setup_vulkan(GLFWwindow* window)
 
     // Get Present Mode
     {
-        // Requst a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
+        // Request a certain mode and confirm that it is available. If not use VK_PRESENT_MODE_FIFO_KHR which is mandatory
 #ifdef IMGUI_UNLIMITED_FRAME_RATE
-        g_PresentMode = VK_PRESENT_MODE_IMMEDIATE_KHR;
+        g_PresentMode = VK_PRESENT_MODE_MAILBOX_KHR; //VK_PRESENT_MODE_IMMEDIATE_KHR;
 #else
         g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;
 #endif
@@ -375,7 +386,7 @@ static void setup_vulkan(GLFWwindow* window)
                 break;
             }
         }
-        if( !presentModeAvailable )
+        if (!presentModeAvailable)
             g_PresentMode = VK_PRESENT_MODE_FIFO_KHR;   // always available
     }
 
@@ -407,8 +418,7 @@ static void setup_vulkan(GLFWwindow* window)
     {
         int w, h;
         glfwGetFramebufferSize(window, &w, &h);
-        resize_vulkan(window, w, h);
-        glfwSetFramebufferSizeCallback(window, resize_vulkan);
+        resize_vulkan(w, h);
     }
 
     // Create Command Buffers
@@ -508,7 +518,7 @@ static void cleanup_vulkan()
 static void frame_begin()
 {
     VkResult err;
-    while (true)
+    for (;;)
     {
         err = vkWaitForFences(g_Device, 1, &g_Fence[g_FrameIndex], VK_TRUE, 100);
         if (err == VK_SUCCESS) break;
@@ -569,19 +579,12 @@ static void frame_end()
 static void frame_present()
 {
     VkResult err;
-    // If IMGUI_UNLIMITED_FRAME_RATE is defined we present the latest but one frame. Otherwise we present the latest rendered frame
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-    uint32_t PresentIndex = (g_FrameIndex + IMGUI_VK_QUEUED_FRAMES - 1) % IMGUI_VK_QUEUED_FRAMES;
-#else
-    uint32_t PresentIndex = g_FrameIndex;
-#endif // IMGUI_UNLIMITED_FRAME_RATE
-
     VkSwapchainKHR swapchains[1] = {g_Swapchain};
-    uint32_t indices[1] = {g_BackbufferIndices[PresentIndex]};
+    uint32_t indices[1] = {g_BackbufferIndices[g_FrameIndex]};
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores = &g_RenderCompleteSemaphore[PresentIndex];
+    info.pWaitSemaphores = &g_RenderCompleteSemaphore[g_FrameIndex];
     info.swapchainCount = 1;
     info.pSwapchains = swapchains;
     info.pImageIndices = indices;
@@ -591,20 +594,27 @@ static void frame_present()
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
 
-static void error_callback(int error, const char* description)
+static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Error %d: %s\n", error, description);
+}
+
+static void glfw_resize_callback(GLFWwindow*, int w, int h)
+{
+    g_ResizeWanted = true;
+    g_ResizeWidth = w;
+    g_ResizeHeight = h;
 }
 
 int main(int, char**)
 {
     // Setup window
-    glfwSetErrorCallback(error_callback);
+    glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui Vulkan example", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "ImGui GLFW+Vulkan example", NULL, NULL);
 
     // Setup Vulkan
     if (!glfwVulkanSupported())
@@ -613,8 +623,11 @@ int main(int, char**)
         return 1;
     }
     setup_vulkan(window);
+    glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
 
     // Setup ImGui binding
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfwVulkan_Init_Data init_data = {};
     init_data.allocator = g_Allocator;
     init_data.gpu = g_Gpu;
@@ -623,21 +636,26 @@ int main(int, char**)
     init_data.pipeline_cache = g_PipelineCache;
     init_data.descriptor_pool = g_DescriptorPool;
     init_data.check_vk_result = check_vk_result;
+
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     ImGui_ImplGlfwVulkan_Init(window, true, &init_data);
+
+    // Setup style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple. 
     // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
     // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // - Read 'extra_fonts/README.txt' for more instructions and details.
+    // - Read 'misc/fonts/README.txt' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    //ImGuiIO& io = ImGui::GetIO();
     //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("../../extra_fonts/Roboto-Medium.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../extra_fonts/Cousine-Regular.ttf", 15.0f);
-    //io.Fonts->AddFontFromFileTTF("../../extra_fonts/DroidSans.ttf", 16.0f);
-    //io.Fonts->AddFontFromFileTTF("../../extra_fonts/ProggyTiny.ttf", 10.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
@@ -668,20 +686,10 @@ int main(int, char**)
         ImGui_ImplGlfwVulkan_InvalidateFontUploadObjects();
     }
 
-    bool show_test_window = true;
+    bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
-    // When IMGUI_UNLIMITED_FRAME_RATE is defined we render into latest image acquired from the swapchain but we display the image which was rendered before.
-    // Hence we must render once and increase the g_FrameIndex without presenting, which we do before entering the render loop.
-    // This is also the reason why frame_end() is split into frame_end() and frame_present(), the later one not being called here.
-#ifdef IMGUI_UNLIMITED_FRAME_RATE
-    ImGui_ImplGlfwVulkan_NewFrame();
-    frame_begin();
-    ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
-    frame_end();
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
-#endif // IMGUI_UNLIMITED_FRAME_RATE
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -691,40 +699,51 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
+
+        if (g_ResizeWanted)
+            resize_vulkan(g_ResizeWidth, g_ResizeHeight);
+        g_ResizeWanted = false;
+
         ImGui_ImplGlfwVulkan_NewFrame();
 
         // 1. Show a simple window.
-        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets appears in a window automatically called "Debug".
+        // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
         {
             static float f = 0.0f;
-            ImGui::Text("Hello, world!");
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
-            ImGui::ColorEdit3("clear color", (float*)&clear_color);
-            if (ImGui::Button("Test Window")) show_test_window ^= 1;
-            if (ImGui::Button("Another Window")) show_another_window ^= 1;
+            static int counter = 0;
+            ImGui::Text("Hello, world!");                           // Display some text (you can use a format string too)
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our windows open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
+
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (NB: most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
+
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
         }
 
-        // 2. Show another simple window. In most cases you will use an explicit Begin/End pair to name the window.
+        // 2. Show another simple window. In most cases you will use an explicit Begin/End pair to name your windows.
         if (show_another_window)
         {
             ImGui::Begin("Another Window", &show_another_window);
             ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
             ImGui::End();
         }
 
-        // 3. Show the ImGui test window. Most of the sample code is in ImGui::ShowTestWindow().
-        if (show_test_window)
+        // 3. Show the ImGui demo window. Most of the sample code is in ImGui::ShowDemoWindow(). Read its code to learn more about Dear ImGui!
+        if (show_demo_window)
         {
-            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
-            ImGui::ShowTestWindow(&show_test_window);
+            ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver); // Normally user code doesn't need/want to call this because positions are saved in .ini file anyway. Here we just want to make the demo initial state a bit more friendly!
+            ImGui::ShowDemoWindow(&show_demo_window);
         }
 
-        g_ClearValue.color.float32[0] = clear_color.x;
-        g_ClearValue.color.float32[1] = clear_color.y;
-        g_ClearValue.color.float32[2] = clear_color.z;
-        g_ClearValue.color.float32[3] = clear_color.w;
-
+        memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         frame_begin();
         ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
         frame_end();
@@ -735,7 +754,10 @@ int main(int, char**)
     VkResult err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplGlfwVulkan_Shutdown();
+    ImGui::DestroyContext();
     cleanup_vulkan();
+
+    glfwDestroyWindow(window);
     glfwTerminate();
 
     return 0;
