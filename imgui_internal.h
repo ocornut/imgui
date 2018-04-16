@@ -529,6 +529,7 @@ struct ImGuiViewportP : public ImGuiViewport
     ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameAsRefViewport = LastFrameOverlayDrawList = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; Window = NULL; OverlayDrawList = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
     ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
+    ImVec2  GetCenter() const{ return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
     float   GetNextX() const { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
 };
 
@@ -638,11 +639,11 @@ struct ImGuiContext
     ImGuiCond               NextTreeNodeOpenCond;
 
     // Viewports
-    ImVector<ImGuiViewportP*> Viewports;
+    ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (always 1+, and generally 1 unless multi-viewports are enabled). Each viewports hold their copy of ImDrawData. 
     ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
-    ImGuiViewportP*         MousePosViewport;
-    ImGuiViewportP*         MousePosPrevViewport;
-    ImGuiViewportP*         MouseHoveredPrevViewport;
+    ImGuiViewportP*         MouseRefViewport;
+    ImGuiViewportP*         MouseRefPrevViewport;
+    ImGuiViewportP*         MouseHoveredLastViewport;           // Last viewport that was hovered by mouse (even if we are not hovering any viewport any more)
     ImGuiID                 MouseClickedPosViewportId[5];       // For rarely used fields we only compare to, store viewport ID only so we don't have to clean dangling pointers
 
     // Navigation data (for gamepad/keyboard)
@@ -728,13 +729,13 @@ struct ImGuiContext
     int                     LogAutoExpandMaxDepth;
 
     // Misc
-    float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
+    float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
-    int                     WantCaptureMouseNextFrame;          // explicit capture via CaptureInputs() sets those flags
+    int                     WantCaptureMouseNextFrame;          // Explicit capture via CaptureKeyboardFromApp()/CaptureMouseFromApp() sets those flags
     int                     WantCaptureKeyboardNextFrame;
     int                     WantTextInputNextFrame;
-    char                    TempBuffer[1024*3+1];               // temporary text buffer
+    char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
     ImGuiContext(ImFontAtlas* shared_font_atlas)
     {
@@ -770,8 +771,8 @@ struct ImGuiContext
         NextTreeNodeOpenCond = 0;
 
         CurrentViewport = NULL;
-        MousePosViewport = NULL;
-        MousePosPrevViewport = MouseHoveredPrevViewport = NULL;
+        MouseRefViewport = NULL;
+        MouseRefPrevViewport = MouseHoveredLastViewport = NULL;
         memset(MouseClickedPosViewportId, 0, sizeof(MouseClickedPosViewportId));
 
         NavWindow = NULL;
