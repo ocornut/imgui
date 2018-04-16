@@ -727,10 +727,6 @@ static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWind
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
-static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
-static void             AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window);
-static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
-
 static ImGuiWindowSettings* AddWindowSettings(const char* name);
 
 static void             LoadIniSettingsFromDisk(const char* ini_filename);
@@ -4369,25 +4365,24 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
     out_list->push_back(draw_list);
 }
 
-static void AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window)
+static void AddWindowToDrawData(ImGuiWindow* window, int layer)
 {
-    AddDrawListToDrawData(out_list, window->DrawList);
+    AddDrawListToDrawData(&window->Viewport->DrawDataBuilder.Layers[layer], window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
-        if (child->Active && child->HiddenFrames == 0) // clipped children may have been marked not active
-            AddWindowToDrawData(out_list, child);
+        if (child->Active && child->HiddenFrames == 0) // Clipped children may have been marked not active
+            AddWindowToDrawData(child, layer);
     }
 }
 
-static void AddWindowToDrawDataSelectLayer(ImGuiWindow* window)
+// Layer is locked for the root window, however child windows may use a different viewport (e.g. extruding menu)
+static void AddRootWindowToDrawData(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.IO.MetricsActiveWindows++;
-    if (window->Flags & ImGuiWindowFlags_Tooltip)
-        AddWindowToDrawData(&window->Viewport->DrawDataBuilder.Layers[1], window);
-    else
-        AddWindowToDrawData(&window->Viewport->DrawDataBuilder.Layers[0], window);
+    int layer = (window->Flags & ImGuiWindowFlags_Tooltip) ? 1 : 0;
+    AddWindowToDrawData(window, layer);
 }
 
 void ImDrawDataBuilder::FlattenIntoSingleLayer()
@@ -4564,10 +4559,10 @@ void ImGui::Render()
     {
         ImGuiWindow* window = g.Windows[n];
         if (window->Active && window->HiddenFrames == 0 && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != window_to_render_front_most)
-            AddWindowToDrawDataSelectLayer(window);
+            AddRootWindowToDrawData(window);
     }
     if (window_to_render_front_most && window_to_render_front_most->Active && window_to_render_front_most->HiddenFrames == 0) // NavWindowingTarget is always temporarily displayed as the front-most window
-        AddWindowToDrawDataSelectLayer(window_to_render_front_most);
+        AddRootWindowToDrawData(window_to_render_front_most);
 
     // Draw software mouse cursor if requested
     ImVec2 offset, size, uv[4];
@@ -12160,6 +12155,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     if (menu_is_open)
     {
+        // Sub-menus are ChildWindow so that mouse can be hovering across them (otherwise top-most popup menu would steal focus and not allow hovering on parent menu)
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
         ImGuiWindowFlags flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ((window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu)) ? ImGuiWindowFlags_ChildMenu|ImGuiWindowFlags_ChildWindow : ImGuiWindowFlags_ChildMenu);
         menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
