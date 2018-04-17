@@ -3513,12 +3513,13 @@ static void ImGui::UpdateViewports()
     g.MouseRefViewport = viewport_ref;
     g.MouseRefViewport->LastFrameAsRefViewport = g.FrameCount;
 
-    // When dragging something, always refer to the last hovered viewport (so when we are between viewport, our dragged preview will tend to show in the last viewport)
+    // When dragging something, always refer to the last hovered viewport. 
+    // (So when we are between viewports, our dragged preview will tend to show in the last viewport even if we don't have tooltips in viewports)
+    // Also consider the case of holding on a menu item to browse child menus: even thought a mouse button is held, there's no active id because menu items only react on mouse release.
     const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive || (g.MovingWindow != NULL);
-    const bool is_mouse_all_released = !ImGui::IsAnyMouseDown();
-    if (is_mouse_dragging_with_an_expected_destination || is_mouse_all_released)
+    if (is_mouse_dragging_with_an_expected_destination || g.ActiveId == 0 || !ImGui::IsAnyMouseDown())
     {
-        if (is_mouse_dragging_with_an_expected_destination)
+        if (is_mouse_dragging_with_an_expected_destination && viewport_hovered == NULL)
             viewport_hovered = g.MouseHoveredLastViewport;
         if (viewport_hovered != NULL && viewport_hovered != g.MouseRefViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
         {
