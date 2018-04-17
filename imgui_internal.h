@@ -959,6 +959,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ScrollbarSizes;
     bool                    ScrollbarX, ScrollbarY;
     bool                    ViewportOwned;
+    bool                    ViewportTryMerge;
     bool                    Active;                             // Set to true on Begin(), unless Collapsed
     bool                    WasActive;
     bool                    WriteAccessed;                      // Set to true when any widget access the current window
