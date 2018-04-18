@@ -49,6 +49,8 @@ Other Changes:
 
 - Settings: Fixed saving an empty .ini file if CreateContext/DestroyContext are called without a single call to NewFrame(). (#1741)
 - Window: Fixed default proportional item width lagging by one frame on resize.
+- MenuBar: Made BeginMainMenuBar() honor style.DisplaySafeAreaPadding so the text can be made visible on TV settings that don't display all pixels. (#1439) [@dougbinks]
+- Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
 
 -----------------------------------------------------------------------
 

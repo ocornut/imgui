@@ -533,6 +533,7 @@ struct ImGuiNextWindowData
     ImGuiSizeCallback       SizeCallback;
     void*                   SizeCallbackUserData;
     float                   BgAlphaVal;
+    ImVec2                  MenuBarOffsetMinVal;                // This is not exposed publicly, so we don't clear it.
 
     ImGuiNextWindowData()
     {
@@ -544,6 +545,7 @@ struct ImGuiNextWindowData
         SizeCallback = NULL;
         SizeCallbackUserData = NULL;
         BgAlphaVal = FLT_MAX;
+        MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
     }
 
     void    Clear()
@@ -832,7 +834,7 @@ struct IMGUI_API ImGuiDrawContext
     int                     NavLayerActiveMask;     // Which layer have been written to (result from previous frame)
     int                     NavLayerActiveMaskNext; // Which layer have been written to (buffer for current frame)
     bool                    MenuBarAppending;       // FIXME: Remove this
-    ImVec2                  MenuBarOffset;
+    ImVec2                  MenuBarOffset;          // MenuBarOffset.x is sort of equivalent of a per-layer CursorPos.x, saved/restored as we switch to the menu bar. The only situation when MenuBarOffset.y is > 0 if when (SafeAreaPadding.y > FramePadding.y), often used on TVs.
     ImVector<ImGuiWindow*>  ChildWindows;
     ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
