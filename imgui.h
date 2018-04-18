@@ -581,7 +581,8 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_Tooltip                = 1 << 25,  // Don't use! For internal use by BeginTooltip()
     ImGuiWindowFlags_Popup                  = 1 << 26,  // Don't use! For internal use by BeginPopup()
     ImGuiWindowFlags_Modal                  = 1 << 27,  // Don't use! For internal use by BeginPopupModal()
-    ImGuiWindowFlags_ChildMenu              = 1 << 28   // Don't use! For internal use by BeginMenu()
+    ImGuiWindowFlags_ChildMenu              = 1 << 28,  // Don't use! For internal use by BeginMenu()
+    ImGuiWindowFlags_MainMenuBar            = 1 << 29   // Don't use! For internal use by BeginMainMenuBar()
 };
 
 // Flags for ImGui::InputText()

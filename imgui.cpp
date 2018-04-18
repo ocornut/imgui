@@ -6017,6 +6017,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Menu bar
             if (flags & ImGuiWindowFlags_MenuBar)
             {
+                if (flags & ImGuiWindowFlags_MainMenuBar)
+                    window->DC.MenuBarOffset.y = g.Style.DisplaySafeAreaPadding.y;
                 ImRect menu_bar_rect = window->MenuBarRect();
                 menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
                 window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_Top);
@@ -6095,7 +6097,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
         window->DC.MenuBarAppending = false;
-        window->DC.MenuBarOffsetX = ImMax(window->WindowPadding.x, style.ItemSpacing.x);
+        window->DC.MenuBarOffset = ImVec2( ImMax(window->WindowPadding.x, style.ItemSpacing.x), 0.0f );
+		if (flags & ImGuiWindowFlags_MainMenuBar)
+			window->DC.MenuBarOffset += g.Style.DisplaySafeAreaPadding;
         window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
@@ -11142,17 +11146,16 @@ bool ImGui::BeginMainMenuBar()
 {
     ImGuiContext& g = *GImGui;
     SetNextWindowPos(ImVec2(0.0f, 0.0f));
-    SetNextWindowSize(ImVec2(g.IO.DisplaySize.x, g.FontBaseSize + g.Style.FramePadding.y * 2.0f));
+    SetNextWindowSize(ImVec2(g.IO.DisplaySize.x, g.Style.DisplaySafeAreaPadding.y + g.FontBaseSize + g.Style.FramePadding.y * 2.0f));
     PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0,0));
-    if (!Begin("##MainMenuBar", NULL, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_MenuBar)
-        || !BeginMenuBar())
+	bool haveWindow = Begin("##MainMenuBar", NULL, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoScrollbar|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_MenuBar|ImGuiWindowFlags_MainMenuBar);
+    if (!haveWindow || !BeginMenuBar())
     {
         End();
         PopStyleVar(2);
         return false;
     }
-    g.CurrentWindow->DC.MenuBarOffsetX += g.Style.DisplaySafeAreaPadding.x;
     return true;
 }
 
@@ -11188,7 +11191,7 @@ bool ImGui::BeginMenuBar()
     clip_rect.ClipWith(window->WindowRectClipped);
     PushClipRect(clip_rect.Min, clip_rect.Max, false);
 
-    window->DC.CursorPos = ImVec2(bar_rect.Min.x + window->DC.MenuBarOffsetX, bar_rect.Min.y);// + g.Style.FramePadding.y);
+    window->DC.CursorPos = ImVec2(bar_rect.Min.x + window->DC.MenuBarOffset.x, bar_rect.Min.y + window->DC.MenuBarOffset.y);// + g.Style.FramePadding.y);
     window->DC.LayoutType = ImGuiLayoutType_Horizontal;
     window->DC.NavLayerCurrent++;
     window->DC.NavLayerCurrentMask <<= 1;
@@ -11228,7 +11231,7 @@ void ImGui::EndMenuBar()
     IM_ASSERT(window->DC.MenuBarAppending);
     PopClipRect();
     PopID();
-    window->DC.MenuBarOffsetX = window->DC.CursorPos.x - window->MenuBarRect().Min.x;
+    window->DC.MenuBarOffset = ImVec2( window->DC.CursorPos.x - window->MenuBarRect().Min.x, 0.0f );
     window->DC.GroupStack.back().AdvanceCursor = false;
     EndGroup();
     window->DC.LayoutType = ImGuiLayoutType_Vertical;

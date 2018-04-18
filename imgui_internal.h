@@ -832,7 +832,7 @@ struct IMGUI_API ImGuiDrawContext
     int                     NavLayerActiveMask;     // Which layer have been written to (result from previous frame)
     int                     NavLayerActiveMaskNext; // Which layer have been written to (buffer for current frame)
     bool                    MenuBarAppending;       // FIXME: Remove this
-    float                   MenuBarOffsetX;
+    ImVec2                  MenuBarOffset;
     ImVector<ImGuiWindow*>  ChildWindows;
     ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
@@ -870,7 +870,7 @@ struct IMGUI_API ImGuiDrawContext
         NavLayerCurrent = 0;
         NavLayerCurrentMask = 1 << 0;
         MenuBarAppending = false;
-        MenuBarOffsetX = 0.0f;
+        MenuBarOffset = ImVec2(0.0f, 0.0f);
         StateStorage = NULL;
         LayoutType = ParentLayoutType = ImGuiLayoutType_Vertical;
         ItemWidth = 0.0f;
@@ -978,7 +978,7 @@ public:
     float       CalcFontSize() const                    { return GImGui->FontBaseSize * FontWindowScale; }
     float       TitleBarHeight() const                  { return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f; }
     ImRect      TitleBarRect() const                    { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
-    float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
+    float       MenuBarHeight() const                   { return (Flags & ImGuiWindowFlags_MenuBar) ? DC.MenuBarOffset.y + CalcFontSize() + GImGui->Style.FramePadding.y * 2.0f : 0.0f; }
     ImRect      MenuBarRect() const                     { float y1 = Pos.y + TitleBarHeight(); return ImRect(Pos.x, y1, Pos.x + SizeFull.x, y1 + MenuBarHeight()); }
 };
 
