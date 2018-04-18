@@ -5234,11 +5234,11 @@ enum ImGuiPopupPositionPolicy
     ImGuiPopupPositionPolicy_ComboBox
 };
 
-static ImRect FindScreenRectForWindow(ImGuiWindow* window)
+static ImRect FindScreenRectForWindow(ImGuiWindow*)
 {
     ImVec2 padding = GImGui->Style.DisplaySafeAreaPadding;
     ImRect r_screen = GetViewportRect();
-    r_screen.Expand(ImVec2((window->Size.x - r_screen.GetWidth() > padding.x * 2) ? -padding.x : 0.0f, (window->Size.y - r_screen.GetHeight() > padding.y * 2) ? -padding.y : 0.0f));
+    r_screen.Expand(ImVec2((r_screen.GetWidth() > padding.x * 2) ? -padding.x : 0.0f, (r_screen.GetHeight() > padding.y * 2) ? -padding.y : 0.0f));
     return r_screen;
 }
     
@@ -5304,7 +5304,7 @@ static ImVec2 FindBestWindowPosForPopup(ImGuiWindow* window)
     ImRect r_screen = FindScreenRectForWindow(window);
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
-        // Child menus typically request _any_ position within the parent menu item, and then our FindBestPopupWindowPos() function will move the new menu outside the parent bounds.
+        // Child menus typically request _any_ position within the parent menu item, and then our FindBestWindowPosForPopup() function will move the new menu outside the parent bounds.
         // This is how we end up with child menus appearing (most-commonly) on the right of the parent menu.
         IM_ASSERT(g.CurrentWindow == window);
         ImGuiWindow* parent_menu = g.CurrentWindowStack[g.CurrentWindowStack.Size - 2];
@@ -5455,7 +5455,7 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
     else
     {
         // When the window cannot fit all contents (either because of constraints, either because screen is too small): we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
-        size_auto_fit = ImClamp(size_contents, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding));
+        size_auto_fit = ImClamp(size_contents, style.WindowMinSize, ImMax(style.WindowMinSize, g.IO.DisplaySize - g.Style.DisplaySafeAreaPadding * 2.0f));
         ImVec2 size_auto_fit_after_constraint = CalcSizeAfterConstraint(window, size_auto_fit);
         if (size_auto_fit_after_constraint.x < size_contents.x && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar))
             size_auto_fit.y += style.ScrollbarSize;
@@ -5920,7 +5920,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->PosFloat = FindBestWindowPosForPopup(window);
 
         // Clamp position so it stays visible
-        if (!(flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+        if (!(flags & ImGuiWindowFlags_ChildWindow))
         {
             if (!window_pos_set_by_api && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
@@ -11260,13 +11260,13 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menuset_is_open)
         g.NavWindow = window;  // Odd hack to allow hovering across menus of a same menu-set (otherwise we wouldn't be able to hover parent)
 
-    // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu (using FindBestPopupWindowPos).
+    // The reference position stored in popup_pos will be used by Begin() to find a suitable position for the child menu (using FindBestWindowPosForPopup).
     ImVec2 popup_pos, pos = window->DC.CursorPos;
     if (window->DC.LayoutType == ImGuiLayoutType_Horizontal)
     {
         // Menu inside an horizontal menu bar
         // Selectable extend their highlight by half ItemSpacing in each direction.
-        // For ChildMenu, the popup position will be overwritten by the call to FindBestPopupWindowPos() in Begin()
+        // For ChildMenu, the popup position will be overwritten by the call to FindBestWindowPosForPopup() in Begin()
         popup_pos = ImVec2(pos.x - window->WindowPadding.x, pos.y - style.FramePadding.y + window->MenuBarHeight());
         window->DC.CursorPos.x += (float)(int)(style.ItemSpacing.x * 0.5f);
         PushStyleVar(ImGuiStyleVar_ItemSpacing, style.ItemSpacing * 2.0f);
