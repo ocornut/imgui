@@ -172,6 +172,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - text: proper alignment options in imgui_internal.h
  - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
+ - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
 
  - tree node / optimization: avoid formatting when clipped.
@@ -188,6 +189,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - stb: add defines to disable stb implementations
 
 !- style: better default styles. (#707)
+ - style: add a highlighted text color (for headers, etc.)
  - style: border types: out-screen, in-screen, etc. (#447)
  - style/optimization: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding.
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
@@ -222,6 +224,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: better vertical centering (based e.g on height of lowercase 'x'?). currently Roboto-Medium size 16 px isn't currently centered. (#1619)
  - font: free the Alpha buffer if user only requested RGBA.
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
+ - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
@@ -262,8 +265,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: idle refresh: expose cursor blink animation timer for backend to be able to lower framerate.
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
- - misc: fix for compilation settings where stdcall isn't the default (e.g. vectorcall) (#1230)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
+ - misc: use more size_t in public api?
+ - misc: ImVector: erase_unsorted() helper
 
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
  - web/emscriptem: tweak OpenGL renderers to support OpenGL ES. (#1713, #336)

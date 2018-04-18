@@ -81,7 +81,7 @@ In this document:
   - Mind the fact that some graphics drivers have texture size limitation.
   - Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
   - Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
-  - You may reduce oversampling, e.g. config.OversampleH = 2 or 1.
+  - You may reduce oversampling, e.g. config.OversampleH = 1, this will largely reduce your textue size.
   - Reduce glyphs ranges, consider calculating them based on your source data if this is possible.
 
  Combine two fonts into one:
