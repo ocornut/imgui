@@ -23,6 +23,7 @@
 #include "imgui_impl_dx10.h"
 
 // DirectX
+#include <stdio.h>
 #include <d3d10_1.h>
 #include <d3d10.h>
 #include <d3dcompiler.h>
@@ -581,6 +582,11 @@ static void ImGui_ImplDX10_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
         ID3D10Texture2D* pBackBuffer = NULL;
         data->SwapChain->ResizeBuffers(0, (UINT)size.x, (UINT)size.y, DXGI_FORMAT_UNKNOWN, 0);
         data->SwapChain->GetBuffer(0, IID_PPV_ARGS(&pBackBuffer));
+        if (pBackBuffer == NULL)
+        {
+            fprintf(stderr, "ImGui_ImplDX10_SetWindowSize() can't created buffers.\n");
+            return;
+        }
         g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, &data->RTView);
         pBackBuffer->Release();
     }
