@@ -12,6 +12,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-04-18: Misc: Renamed file from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
+//  2018-04-18: Misc: Added support for 32-bits vertex indices to avoid conversion at runtime. Added imconfig_allegro5.h to enforce 32-bit indices when included from imgui.h.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplA5_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -19,7 +21,7 @@
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
 #include "imgui.h"
-#include "imgui_impl_a5.h"
+#include "imgui_impl_allegro5.h"
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 
@@ -67,12 +69,21 @@ void ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data)
             vertices[i] = v;
         }
 
-        // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices
-        // You can also use '#define ImDrawIdx unsigned int' in imconfig.h and request ImGui to output 32-bit indices
-        static ImVector<int> indices;
-        indices.resize(cmd_list->IdxBuffer.Size);
-        for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
-            indices[i] = (int)cmd_list->IdxBuffer.Data[i];
+        const int* indices = NULL;
+        if (sizeof(ImDrawIdx) == 2)
+        {
+            // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices.. You can '#define ImDrawIdx  int' in imconfig.h to request ImGui to output 32-bit indices.
+            // Otherwise, we convert them from 16-bit to 32-bit at runtime here, which works perfectly but is a little wasteful.
+            static ImVector<int> indices_converted;
+            indices_converted.resize(cmd_list->IdxBuffer.Size);
+            for (int i = 0; i < cmd_list->IdxBuffer.Size; ++i)
+                indices_converted[i] = (int)cmd_list->IdxBuffer.Data[i];
+            indices = indices_converted.Data;
+        }
+        else if (sizeof(ImDrawIdx) == 4)
+        {
+            indices = (const int*)cmd_list->IdxBuffer.Data;
+        }
 
         int idx_offset = 0;
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
