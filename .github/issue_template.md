@@ -9,22 +9,21 @@ SELECT "PREVIEW CHANGES" TO TURN THE URL ABOVE INTO A CLICKABLE LINK.
 
 ----
 
-- Version/Branch of Dear ImGui:
+**Version/Branch of Dear ImGui:**
 
 XXX
 
-- Back-end/Renderer/OS: _(if the question is related to inputs or rendering, otherwise delete this section)_
+**Back-end/Renderer/OS:** _(if the question is related to inputs or rendering, otherwise delete this section)_
 
 XXX
 
-- My Issue/Question: _(please provide context)_
+**My Issue/Question:** _(please provide context)_
 
-- Standalone, minimal, complete and verifiable example: _(see CONTRIBUTING.md)_
+**Standalone, minimal, complete and verifiable example:** _(see CONTRIBUTING.md)_
 ```
 ImGui::Begin("Example Bug");
 MoreCodeToExplainMyIssue();
 ImGui::End();
 ```
 
-- Screenshots/Video _(you can drag files here)_
-
+**Screenshots/Video** _(you can drag files here)_
