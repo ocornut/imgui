@@ -941,6 +941,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindowFlags        Flags, FlagsPreviousFrame;          // See enum ImGuiWindowFlags_
     ImGuiViewportP*         Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
     ImGuiID                 ViewportId;                         // Inactive windows preserve their last viewport id (since the viewport may disappear with the window inactivity)
+    int                     ViewportPlatformAllowMonitorExtend; // Reset to -1 every frame (index is guaranteed to be valid between NewFrame..EndFrame), only used in the Appearing frame of a tooltip/popup to enforce clamping to a given monitor
     ImVec2                  ViewportPlatformPos;
     ImVec2                  PosFloat;
     ImVec2                  Pos;                                // Position rounded-up to nearest pixel
@@ -961,7 +962,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ScrollbarSizes;
     bool                    ScrollbarX, ScrollbarY;
     bool                    ViewportOwned;
-    bool                    ViewportTryMerge;
+    bool                    ViewportTryMerge;                   // Request attempt to merge into a host viewport and destroy our owned viewport
+    bool                    ViewportTrySplit;                   // Request attempt to split out of a host viewport and create our owned viewport
     bool                    Active;                             // Set to true on Begin(), unless Collapsed
     bool                    WasActive;
     bool                    WriteAccessed;                      // Set to true when any widget access the current window
