@@ -10093,7 +10093,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
-            if (!((io.KeyCtrl && !io.KeyAlt) || (io.OptMacOSXBehaviors && io.KeySuper)) && is_editable && !user_nav_input_start)
+            bool ignore_inputs = (io.KeyCtrl && !io.KeyAlt) || (io.OptMacOSXBehaviors && io.KeySuper);
+            if (!ignore_inputs && is_editable && !user_nav_input_start)
                 for (int n = 0; n < IM_ARRAYSIZE(io.InputCharacters) && io.InputCharacters[n]; n++)
                 {
                     // Insert character if they pass filtering
