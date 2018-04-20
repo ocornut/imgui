@@ -405,13 +405,13 @@ struct ImGuiWindowSettings
 {
     char*       Name;
     ImGuiID     Id;
-    ImVec2      Pos;
+    ImVec2      Pos;     // NB: Settings position are stored RELATIVE to the viewport! Whereas runtime ones are absolute positions.
     ImVec2      Size;
-    ImVec2      ViewportPlatformPos;
+    ImVec2      ViewportPos;
     ImGuiID     ViewportId;
     bool        Collapsed;
 
-    ImGuiWindowSettings() { Name = NULL; Id = ViewportId = 0; Pos = Size = ImVec2(0,0); ViewportPlatformPos = ImVec2(FLT_MAX, FLT_MAX); Collapsed = false; }
+    ImGuiWindowSettings() { Name = NULL; Id = ViewportId = 0; Pos = Size = ViewportPos = ImVec2(0, 0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
@@ -518,6 +518,7 @@ struct ImGuiViewportP : public ImGuiViewport
     int                 LastFrameAsRefViewport;   // Last frame number this viewport was io.MouseViewportRef
     int                 LastFrameOverlayDrawList;
     ImGuiID             LastNameHash;
+    ImVec2              LastPos;
     float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
     float               LastAlpha;
     ImGuiWindow*        Window;
@@ -530,7 +531,6 @@ struct ImGuiViewportP : public ImGuiViewport
     ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     ImVec2  GetCenter() const{ return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
-    float   GetNextX() const { const float SPACING = 4.0f; return Pos.x + Size.x + SPACING; }
 };
 
 struct ImGuiNavMoveResult
@@ -940,9 +940,9 @@ struct IMGUI_API ImGuiWindow
     ImGuiID                 ID;                                 // == ImHash(Name)
     ImGuiWindowFlags        Flags, FlagsPreviousFrame;          // See enum ImGuiWindowFlags_
     ImGuiViewportP*         Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
-    ImGuiID                 ViewportId;                         // Inactive windows preserve their last viewport id (since the viewport may disappear with the window inactivity)
-    int                     ViewportPlatformAllowMonitorExtend; // Reset to -1 every frame (index is guaranteed to be valid between NewFrame..EndFrame), only used in the Appearing frame of a tooltip/popup to enforce clamping to a given monitor
-    ImVec2                  ViewportPlatformPos;
+    ImGuiID                 ViewportId;                         // We backup the viewport id (since the viewport may disappear or never be created if the window is inactive)
+    ImVec2                  ViewportPos;                        // We backup the viewport position (since the viewport may disappear or never be created if the window is inactive)
+    int                     ViewportAllowPlatformMonitorExtend; // Reset to -1 every frame (index is guaranteed to be valid between NewFrame..EndFrame), only used in the Appearing frame of a tooltip/popup to enforce clamping to a given monitor
     ImVec2                  PosFloat;
     ImVec2                  Pos;                                // Position rounded-up to nearest pixel
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
