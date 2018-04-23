@@ -3307,10 +3307,11 @@ static void SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 
 static bool GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 {
+    // Tooltips and menus are not automatically forced into their own viewport when the NoMerge flag is set, however the multiplication of viewports makes them more likely to protude and create their own.
     ImGuiContext& g = *GImGui;
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge))
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge) && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         //if (window->DockStatus == ImGuiDockStatus_Floating)
-            if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu)) == 0)
+            if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip)) == 0)
                 return true;
     return false;
 }
