@@ -5,8 +5,9 @@
 //-----------------------------------------------------------------------------
 // A) You may edit imconfig.h (and not overwrite it when updating imgui, or maintain a patch/branch with your modifications to imconfig.h)
 // B) or add configuration directives in your own file and compile with #define IMGUI_USER_CONFIG "myfilename.h" 
-// C) Many compile-time options have an effect on data structures. They need defined consistently _everywhere_ imgui.h is included, 
-// not only for the imgui*.cpp compilation units. Defining those options in imconfig.h will ensure they correctly get used everywhere.
+// If you do so you need to make sure that configuration settings are defined consistently _everywhere_ dear imgui is used, which include
+// the imgui*.cpp files but also _any_ of your code that uses imgui. This is because some compile-time options have an affect on data structures.
+// Defining those options in imconfig.h will ensure every compilation unit gets to see the same data structure layouts.
 //-----------------------------------------------------------------------------
 
 #pragma once
