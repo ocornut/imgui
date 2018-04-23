@@ -5568,7 +5568,8 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
 
         // Using the FlattenChilds button flag we make the resize button accessible even if we are hovering over a child window
         ImRect resize_rect(corner, corner + grip.InnerDir * grip_hover_size);
-        resize_rect.FixInverted();
+        if (resize_rect.Min.x > resize_rect.Max.x) ImSwap(resize_rect.Min.x, resize_rect.Max.x);
+        if (resize_rect.Min.y > resize_rect.Max.y) ImSwap(resize_rect.Min.y, resize_rect.Max.y);
         bool hovered, held;
         ButtonBehavior(resize_rect, window->GetID((void*)(intptr_t)resize_grip_n), &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_NoNavFocus);
         if (hovered || held)

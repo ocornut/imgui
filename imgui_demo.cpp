@@ -2476,15 +2476,20 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     static int corner = 0;
     ImVec2 window_pos = ImVec2((corner & 1) ? ImGui::GetIO().DisplaySize.x - DISTANCE : DISTANCE, (corner & 2) ? ImGui::GetIO().DisplaySize.y - DISTANCE : DISTANCE);
     ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
-    ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+    if (corner != -1)
+        ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
-    if (ImGui::Begin("Example: Fixed Overlay", p_open, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav))
+    if (ImGui::Begin("Example: Fixed Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav))
     {
-        ImGui::Text("Simple overlay\nin the corner of the screen.\n(right-click to change position)");
+        ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
         ImGui::Separator();
-        ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+        if (ImGui::IsMousePosValid())
+            ImGui::Text("Mouse Position: (%.1f,%.1f)", ImGui::GetIO().MousePos.x, ImGui::GetIO().MousePos.y);
+        else
+            ImGui::Text("Mouse Position: <invalid>");
         if (ImGui::BeginPopupContextWindow())
         {
+            if (ImGui::MenuItem("Custom", NULL, corner == -1)) corner = -1;
             if (ImGui::MenuItem("Top-left", NULL, corner == 0)) corner = 0;
             if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
             if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
