@@ -30,15 +30,16 @@
 #include "imgui_impl_sdl2.h"
 
 // SDL
-// (the multi-viewports feature requires SDL features suppoted from SDL 2.0.5+)
+// (the multi-viewports feature requires SDL features supported from SDL 2.0.5+)
 #include <SDL.h>
 #include <SDL_syswm.h>
-#define SDL_HAS_CAPTURE_MOUSE           SDL_VERSION_ATLEAST(2,0,4)
-#define SDL_HAS_WINDOW_OPACITY          SDL_VERSION_ATLEAST(2,0,5)
-#define SDL_HAS_ALWAYS_ON_TOP           SDL_VERSION_ATLEAST(2,0,5)
-#define SDL_HAS_USABLE_DISPLAY_BOUNDS   SDL_VERSION_ATLEAST(2,0,5)
-#define SDL_HAS_PER_MONITOR_DPI         SDL_VERSION_ATLEAST(2,0,4)
-#define SDL_HAS_VULKAN                  SDL_VERSION_ATLEAST(2,0,6)
+#define SDL_HAS_CAPTURE_MOUSE               SDL_VERSION_ATLEAST(2,0,4)
+#define SDL_HAS_WINDOW_OPACITY              SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_ALWAYS_ON_TOP               SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_USABLE_DISPLAY_BOUNDS       SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
+#define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
+#define SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH    SDL_VERSION_ATLEAST(2,0,5)
 #if !SDL_HAS_VULKAN
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
@@ -231,7 +232,7 @@ static void ImGui_ImplSDL2_UpdateMouse()
         io.MousePosViewport = viewport->ID;
     }
 
-    // We already retrieve global mouse position, SDL_CaptureMouse() also let the OS know our drag outside boundaries shouldn't trigger, e.g.: OS window resize cursor
+    // We already retrieve global mouse position, SDL_CaptureMouse() also let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't trigger the OS window resize cursor
     // The function is only supported from SDL 2.0.4 (released Jan 2016)
     bool any_mouse_button_down = ImGui::IsAnyMouseDown();
     SDL_CaptureMouse(any_mouse_button_down ? SDL_TRUE : SDL_FALSE);
@@ -301,11 +302,10 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataSDL2* data = IM_NEW(ImGuiViewportDataSDL2)();
     viewport->PlatformUserData = data;
 
-    // Share GL resources with main context
-    // FIXME-PLATFORM
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataSDL2* main_viewport_data = (ImGuiViewportDataSDL2*)main_viewport->PlatformUserData;
 
+    // Share GL resources with main context
     bool use_opengl = (main_viewport_data->GLContext != NULL);
     SDL_GLContext backup_context = NULL;
     if (use_opengl)
@@ -444,7 +444,7 @@ static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // SDL_HAS_VULKAN
 
-// FIXME-PLATFORM: Update when changed?
+// FIXME-PLATFORM: Update monitor list when changed?
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -488,6 +488,11 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
     platform_io.Platform_SwapBuffers = ImGui_ImplSDL2_SwapBuffers;
 #if SDL_HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplSDL2_CreateVkSurface;
+#endif
+
+    // SDL2 by default doesn't pass mouse clicks to the application when the click focused a window. This is getting in the way of our interactions and we disable that behavior.
+#if SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH
+    SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1");
 #endif
 
     ImGui_ImplSDL2_UpdateMonitors();

@@ -566,7 +566,7 @@ static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, H
     return TRUE;
 }
 
-// FIXME-PLATFORM: Update list when changed (WM_DISPLAYCHANGE?)
+// FIXME-PLATFORM: Update monitor list when changed (WM_DISPLAYCHANGE?)
 static void ImGui_ImplWin32_UpdateMonitors()
 {
     ImGui::GetPlatformIO().Monitors.resize(0);

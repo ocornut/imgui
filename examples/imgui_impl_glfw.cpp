@@ -242,17 +242,22 @@ static void ImGui_ImplGlfw_UpdateMouse()
     }
 
     // Update OS/hardware mouse cursor if imgui isn't drawing a software cursor
+    // FIXME-PLATFORM: Unfocused windows seems to fail changing the mouse cursor with GLFW 3.2, but 3.3 works here.
     if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) == 0 && glfwGetInputMode(g_Window, GLFW_CURSOR) != GLFW_CURSOR_DISABLED)
     {
         ImGuiMouseCursor cursor = ImGui::GetMouseCursor();
-        if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
+        for (int n = 0; n < platform_io.Viewports.Size; n++)
         {
-            glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
-        }
-        else
-        {
-            glfwSetCursor(g_Window, g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
-            glfwSetInputMode(g_Window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            GLFWwindow* window = (GLFWwindow*)platform_io.Viewports[n]->PlatformHandle;
+            if (io.MouseDrawCursor || cursor == ImGuiMouseCursor_None)
+            {
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_HIDDEN);
+            }
+            else
+            {
+                glfwSetCursor(window, g_MouseCursors[cursor] ? g_MouseCursors[cursor] : g_MouseCursors[ImGuiMouseCursor_Arrow]);
+                glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_NORMAL);
+            }
         }
     }
 }
@@ -520,8 +525,8 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // GLFW_HAS_VULKAN
 
-// FIXME-PLATFORM: Update when changed (using glfwSetMonitorCallback?)
-// FIXME-PLATFORM: GLFW doesn't export work area (see https://github.com/glfw/glfw/pull/989)
+// FIXME-PLATFORM: Update monitor list when changed (using glfwSetMonitorCallback?)
+// FIXME-PLATFORM: GLFW doesn't export monitor work area (see https://github.com/glfw/glfw/pull/989)
 static void ImGui_ImplGlfw_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();

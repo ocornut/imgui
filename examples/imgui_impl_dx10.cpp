@@ -521,7 +521,6 @@ static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataDx10* data = IM_NEW(ImGuiViewportDataDx10)();
     viewport->RendererUserData = data;
 
-    // FIXME-PLATFORM
     HWND hwnd = (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);
 
