@@ -6032,10 +6032,12 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
     else
     {
         // Maximum window size is determined by the viewport size or monitor size
-        const int monitor_idx = window->ViewportAllowPlatformMonitorExtend;
         ImVec2 avail_size = window->Viewport->Size;
         if (window->ViewportOwned)
-            avail_size = (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size) ? (g.PlatformIO.Monitors[monitor_idx].WorkMax - g.PlatformIO.Monitors[monitor_idx].WorkMin) : ImVec2(FLT_MAX, FLT_MAX);
+            avail_size = ImVec2(FLT_MAX, FLT_MAX);
+        const int monitor_idx = window->ViewportAllowPlatformMonitorExtend;
+        if (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size)
+            avail_size = (g.PlatformIO.Monitors[monitor_idx].WorkMax - g.PlatformIO.Monitors[monitor_idx].WorkMin);
         ImVec2 size_auto_fit = ImClamp(size_contents, style.WindowMinSize, ImMax(style.WindowMinSize, avail_size - g.Style.DisplaySafeAreaPadding * 2.0f));
 
         // When the window cannot fit all contents (either because of constraints, either because screen is too small),
