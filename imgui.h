@@ -1876,10 +1876,10 @@ struct ImFont
 // Dear ImGui only uses this to clamp the position of popups and tooltips so they don't straddle multiple monitors
 struct ImGuiPlatformMonitor
 {
-    ImVec2  Pos;
-    ImVec2  Size;
+    ImVec2  FullMin, FullMax;   // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
+    ImVec2  WorkMin, WorkMax;   // (Optional) Coordinates without task bars / side bars / menu bars. imgui uses this to avoid positioning popups/tooltips inside this region.
     float   DpiScale;
-    ImGuiPlatformMonitor() { Pos = ImVec2(0,0); Size = ImVec2(0,0); DpiScale = 1.0f; }
+    ImGuiPlatformMonitor() { FullMin = FullMax = WorkMin = WorkMax = ImVec2(0,0); DpiScale = 1.0f; }
 };
 
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled

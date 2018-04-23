@@ -521,25 +521,28 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 #endif // GLFW_HAS_VULKAN
 
 // FIXME-PLATFORM: Update when changed (using glfwSetMonitorCallback?)
+// FIXME-PLATFORM: GLFW doesn't export work area (see https://github.com/glfw/glfw/pull/989)
 static void ImGui_ImplGlfw_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     int monitors_count = 0;
     GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-    platform_io.Monitors.resize(monitors_count, ImGuiPlatformMonitor());
+    platform_io.Monitors.resize(0);
     for (int n = 0; n < monitors_count; n++)
     {
+        ImGuiPlatformMonitor monitor;
         int x, y;
         glfwGetMonitorPos(glfw_monitors[n], &x, &y);
         const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
-        platform_io.Monitors[n].Pos = ImVec2((float)x, (float)y);
-        platform_io.Monitors[n].Size = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+        monitor.FullMin = monitor.WorkMin = ImVec2((float)x, (float)y);
+        monitor.FullMax = monitor.WorkMax = ImVec2((float)(x + vid_mode->width), (float)(y + vid_mode->height));
 #if GLFW_HAS_PER_MONITOR_DPI
         // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
         float x_scale, y_scale;
         glfwGetMonitorContentScale(glfw_monitors[n], &x_scale, &y_scale);
-        platform_io.Monitors[n].DpiScale = x_scale;
+        monitor.DpiScale = x_scale;
 #endif
+        platform_io.Monitors.push_back(monitor);
     }
 }
 

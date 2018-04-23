@@ -3802,6 +3802,13 @@ void ImGui::NewFrame()
             // Disable feature, our back-ends do not support it
             g.IO.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
         }
+        for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
+        {
+            ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[monitor_n];
+            IM_ASSERT(mon.FullMin.x < mon.FullMax.x && mon.FullMin.y < mon.FullMax.y && "Monitor bounds not setup properly.");
+            IM_ASSERT(mon.WorkMin.x < mon.WorkMax.x && mon.WorkMin.y < mon.WorkMax.y && "Monitor bounds not setup properly. If you don't have work area information, just copy Min/Max into them.");
+            IM_ASSERT(mon.DpiScale != 0.0f);
+        }
     }
 
     // Load settings on first frame
@@ -5847,8 +5854,8 @@ static ImRect FindAllowedExtentRectForWindow(ImGuiWindow* window)
     {
         // Extent with be in the frame of reference of the given viewport (so Min is likely to be negative here)
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[window->ViewportAllowPlatformMonitorExtend];
-        r_screen.Min = monitor.Pos;
-        r_screen.Max = monitor.Pos + monitor.Size;
+        r_screen.Min = monitor.WorkMin;
+        r_screen.Max = monitor.WorkMax;
     }
     else
     {
@@ -6028,7 +6035,7 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
         const int monitor_idx = window->ViewportAllowPlatformMonitorExtend;
         ImVec2 avail_size = window->Viewport->Size;
         if (window->ViewportOwned)
-            avail_size = (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size) ? g.PlatformIO.Monitors[monitor_idx].Size : ImVec2(FLT_MAX, FLT_MAX);
+            avail_size = (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size) ? (g.PlatformIO.Monitors[monitor_idx].WorkMax - g.PlatformIO.Monitors[monitor_idx].WorkMin) : ImVec2(FLT_MAX, FLT_MAX);
         ImVec2 size_auto_fit = ImClamp(size_contents, style.WindowMinSize, ImMax(style.WindowMinSize, avail_size - g.Style.DisplaySafeAreaPadding * 2.0f));
 
         // When the window cannot fit all contents (either because of constraints, either because screen is too small),
@@ -6099,8 +6106,7 @@ static int FindPlatformMonitorForPos(ImVec2 platform_pos)
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
     {
         const ImGuiPlatformMonitor* monitor = &g.PlatformIO.Monitors[monitor_n];
-        ImRect monitor_rect(monitor->Pos, monitor->Pos + monitor->Size);
-        if (monitor_rect.Contains(platform_pos))
+        if (ImRect(monitor->FullMin, monitor->FullMax).Contains(platform_pos))
             return monitor_n;
     }
     return -1;
@@ -14252,7 +14258,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
                 {
                     const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
-                    ImGui::BulletText("Monitor #%d: DPI %.0f%%, Min (%.0f,%.0f), Max (%.0f,%.0f), Size (%.0f,%.0f)", i, mon.DpiScale * 100.0f, mon.Pos.x, mon.Pos.y, mon.Pos.x + mon.Size.x, mon.Pos.y + mon.Size.y, mon.Size.x, mon.Size.y);
+                    ImGui::BulletText("Monitor #%d: DPI %.0f%%\n FullMin (%.0f,%.0f), FullMax (%.0f,%.0f), FullSize (%.0f,%.0f)\n WorkMin (%.0f,%.0f), WorkMax (%.0f,%.0f), WorkSize (%.0f,%.0f)", 
+                        i, mon.DpiScale * 100.0f, 
+                        mon.FullMin.x, mon.FullMin.y, mon.FullMax.x, mon.FullMax.y, mon.FullMax.x - mon.FullMin.x, mon.FullMax.y - mon.FullMin.y,
+                        mon.WorkMin.x, mon.WorkMin.y, mon.WorkMax.x, mon.WorkMax.y, mon.WorkMax.x - mon.WorkMin.x, mon.WorkMax.y - mon.WorkMin.y);
                 }
                 ImGui::TreePop();
             }

@@ -30,13 +30,15 @@
 #include "imgui_impl_sdl2.h"
 
 // SDL
+// (the multi-viewports feature requires SDL features suppoted from SDL 2.0.5+)
 #include <SDL.h>
 #include <SDL_syswm.h>
-#define SDL_HAS_CAPTURE_MOUSE       SDL_VERSION_ATLEAST(2,0,4)
-#define SDL_HAS_WINDOW_OPACITY      SDL_VERSION_ATLEAST(2,0,5)
-#define SDL_HAS_ALWAYS_ON_TOP       SDL_VERSION_ATLEAST(2,0,5)
-#define SDL_HAS_PER_MONITOR_DPI     SDL_VERSION_ATLEAST(2,0,4)
-#define SDL_HAS_VULKAN              SDL_VERSION_ATLEAST(2,0,6)
+#define SDL_HAS_CAPTURE_MOUSE           SDL_VERSION_ATLEAST(2,0,4)
+#define SDL_HAS_WINDOW_OPACITY          SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_ALWAYS_ON_TOP           SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_USABLE_DISPLAY_BOUNDS   SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_PER_MONITOR_DPI         SDL_VERSION_ATLEAST(2,0,4)
+#define SDL_HAS_VULKAN                  SDL_VERSION_ATLEAST(2,0,6)
 #if !SDL_HAS_VULKAN
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
@@ -446,20 +448,27 @@ static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Monitors.resize(0);
     int display_count = SDL_GetNumVideoDisplays();
-    platform_io.Monitors.resize(display_count, ImGuiPlatformMonitor());
     for (int n = 0; n < display_count; n++)
     {
         // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
+        ImGuiPlatformMonitor monitor;
         SDL_Rect r;
         SDL_GetDisplayBounds(n, &r);
-        platform_io.Monitors[n].Pos = ImVec2((float)r.x, (float)r.y);
-        platform_io.Monitors[n].Size = ImVec2((float)r.w, (float)r.h);
+        monitor.FullMin = monitor.WorkMin = ImVec2((float)(r.x), (float)(r.y));
+        monitor.FullMax = monitor.WorkMax = ImVec2((float)(r.x + r.w), (float)(r.y + r.h));
+#if SDL_HAS_USABLE_DISPLAY_BOUNDS
+        SDL_GetDisplayUsableBounds(n, &r);
+        monitor.WorkMin = ImVec2((float)(r.x), (float)(r.y));
+        monitor.WorkMax = ImVec2((float)(r.x + r.w), (float)(r.y + r.h));
+#endif
 #if SDL_HAS_PER_MONITOR_DPI
         float dpi = 0.0f;
-        SDL_GetDisplayDPI(n, &dpi, NULL, NULL);
-        platform_io.Monitors[n].DpiScale = dpi / 96.0f;
+        if (SDL_GetDisplayDPI(n, &dpi, NULL, NULL))
+            monitor.DpiScale = dpi / 96.0f;
 #endif
+        platform_io.Monitors.push_back(monitor);
     }
 }
 
