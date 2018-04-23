@@ -752,7 +752,7 @@ static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
 
-static void             NewFrameUpdateMovingWindow();
+static void             UpdateMovingWindow();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
@@ -3305,6 +3305,16 @@ static void SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
     window->ViewportOwned = (viewport->Window == window);
 }
 
+static bool GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge))
+        //if (window->DockStatus == ImGuiDockStatus_Floating)
+            if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu)) == 0)
+                return true;
+    return false;
+}
+
 static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
@@ -3313,6 +3323,8 @@ static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     if (!(viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) || window->Viewport == viewport)
         return;
     if (!viewport->GetRect().Contains(window->Rect()))
+        return;
+    if (GetWindowAlwaysWantOwnViewport(window))
         return;
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
@@ -3324,7 +3336,7 @@ static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     SetWindowViewport(window, viewport);
 }
 
-static void ImGui::NewFrameUpdateMovingWindow()
+static void ImGui::UpdateMovingWindow()
 {
     ImGuiContext& g = *GImGui;
     if (g.MovingWindow && g.MovingWindow->MoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
@@ -3474,9 +3486,11 @@ static void ImGui::UpdateViewports()
             //if (viewport == GetMainViewport())
             //    g.PlatformInterface.SetWindowSize(viewport, viewport->Size * scale_factor);
 
-            // FIXME-DPI: We need to preserve our pivots
-            //if (g.MovingWindow)
-            //    g.ActiveIdClickOffset = g.ActiveIdClickOffset * scale_factor;
+            // Scale our window moving pivot so that the window will rescale roughly around the mouse position.
+            // FIXME-VIEWPORT: This currently creates a resizing feedback loop when a window is straddling a DPI transition border.
+            // (Minor: since our sizes do not perfectly linearly scale, deferring the click offset scale until we know the actual window scale ratio may get us slightly more precise mouse positioning.)
+            //if (g.MovingWindow != NULL && g.MovingWindow->Viewport == viewport)
+            //    g.ActiveIdClickOffset = ImFloor(g.ActiveIdClickOffset * scale_factor);
         }
         viewport->DpiScale = new_dpi_scale;
     }
@@ -3897,7 +3911,7 @@ void ImGui::NewFrame()
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
-    NewFrameUpdateMovingWindow();
+    UpdateMovingWindow();
     NewFrameUpdateHoveredWindowAndCaptureFlags();
     
     if (GetFrontMostPopupModal() != NULL)
@@ -6183,6 +6197,10 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
             ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs;
             window->Viewport = AddUpdateViewport(window, window->ID, viewport_flags, viewport_pos, window->Size);
         }
+    }
+    else if (!window->ViewportOwned && GetWindowAlwaysWantOwnViewport(window))
+    {
+        window->Viewport = AddUpdateViewport(window, window->ID, ImGuiViewportFlags_NoDecoration, window->Pos, window->Size);
     }
 
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
@@ -14010,20 +14028,6 @@ static void ScaleWindow(ImGuiWindow* window, float scale)
 void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 {
     ImGuiContext& g = *GImGui;
-
-    // FIXME-DPI: This is meant to have the window rescale around the mouse. It currently creates feedback loop when a window is straddling a DPI transition border.
-    // NB: since our sizes do not perfectly linearly scale, deferring the ClickOffset scale until we know the actual window scale ratio may get us slightly more precise mouse positioning.
-    //if (g.MovingWindow != NULL && g.MovingWindow->Viewport == viewport)
-    //    g.ActiveIdClickOffset = ImFloor(g.ActiveIdClickOffset * scale);
-
-    /*
-    if (g.IO.MousePosViewport == viewport->ID)
-    {
-        g.IO.MousePos = g.IO.MousePosPrev = ImFloor((g.IO.MousePos - viewport->Pos) * scale) + viewport->Pos;
-        g.IO.MouseDelta = ImVec2(0,0);
-    }
-    */
-
     if (viewport->Window)
     {
         ScaleWindow(viewport->Window, scale);
@@ -14035,7 +14039,6 @@ void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
                 ScaleWindow(g.Windows[i], scale);
     }
 }
-
 
 static void RenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb)
 {
