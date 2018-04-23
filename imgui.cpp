@@ -832,7 +832,7 @@ ImGuiStyle::ImGuiStyle()
     GrabMinSize             = 10.0f;            // Minimum width/height of a grab box for slider/scrollbar
     GrabRounding            = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
-    DisplayWindowPadding    = ImVec2(22,22);    // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
+    DisplayWindowPadding    = ImVec2(20,20);    // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
     DisplaySafeAreaPadding  = ImVec2(3,3);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     MouseCursorScale        = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
     AntiAliasedLines        = true;             // Enable anti-aliasing on lines/borders. Disable if you are really short on CPU/GPU.
@@ -3817,6 +3817,8 @@ void ImGui::NewFrame()
             // Disable feature, our back-ends do not support it
             g.IO.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
         }
+
+        // Perform simple checks on platform monitor data + compute a total bounding box for quick early outs
         for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
         {
             ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[monitor_n];
@@ -6122,11 +6124,35 @@ static int FindPlatformMonitorForPos(ImVec2 platform_pos)
     ImGuiContext& g = *GImGui;
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
     {
-        const ImGuiPlatformMonitor* monitor = &g.PlatformIO.Monitors[monitor_n];
-        if (ImRect(monitor->FullMin, monitor->FullMax).Contains(platform_pos))
+        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
+        if (ImRect(monitor.FullMin, monitor.FullMax).Contains(platform_pos))
             return monitor_n;
     }
     return -1;
+}
+
+// Search for the monitor with the largest intersection area with the given rectangle
+// We generally try to avoid searching loops but the monitor count should be very small here
+static int FindPlatformMonitorForRect(const ImRect& rect)
+{
+    ImGuiContext& g = *GImGui;
+    float surface_threshold = rect.GetWidth() * rect.GetHeight() * 0.5f;
+    int best_monitor_n = -1;
+    float best_monitor_surface = 0.001f;
+    for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size && best_monitor_surface < surface_threshold; monitor_n++)
+    {
+        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
+        if (ImRect(monitor.FullMin, monitor.FullMax).Contains(rect))
+            return monitor_n;
+        ImRect overlapping_rect = rect;
+        overlapping_rect.ClipWithFull(ImRect(monitor.FullMin, monitor.FullMax));
+        float overlapping_surface = overlapping_rect.GetWidth() * overlapping_rect.GetHeight();
+        if (overlapping_surface < best_monitor_surface)
+            continue;
+        best_monitor_surface = overlapping_surface;
+        best_monitor_n = monitor_n;
+    }
+    return best_monitor_n;
 }
 
 // FIXME-VIEWPORT: This is all super messy and ought to be clarified or rewritten.
@@ -6365,6 +6391,11 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     }
 
     window->Size = window->SizeFull;
+}
+
+static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& rect, const ImVec2& padding)
+{
+    window->PosFloat = ImMin(rect.Max - padding, ImMax(window->PosFloat + window->Size, rect.Min + padding) - window->Size);
 }
 
 // Push a new ImGui window to add widgets to.
@@ -6680,17 +6711,29 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Viewport->Flags |= ImGuiViewportFlags_NoRendererClear;
         }
 
-        // Clamp position so window stays visible within its viewport
+        // Clamp position so window stays visible within its viewport or monitor
         // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
         ImRect viewport_rect = window->Viewport->GetRect();
-        if (!window->ViewportOwned && !window_pos_set_by_api && !(flags & ImGuiWindowFlags_ChildWindow) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-            if (viewport_rect.GetWidth() > 0 && viewport_rect.GetHeight() > 0.0f)
+        if (!window_pos_set_by_api && !(flags & ImGuiWindowFlags_ChildWindow) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
+        {
+            ImVec2 clamp_padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
+            if (!window->ViewportOwned && viewport_rect.GetWidth() > 0 && viewport_rect.GetHeight() > 0.0f)
+                ClampWindowRect(window, viewport_rect, clamp_padding);
+            else if (window->ViewportOwned && g.PlatformIO.Monitors.Size > 0)
             {
-                ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
-                window->PosFloat = ImMax(window->PosFloat + window->Size, viewport_rect.Min + padding) - window->Size;
-                window->PosFloat = ImMin(window->PosFloat, viewport_rect.Max - padding);
+                int monitor_n = FindPlatformMonitorForRect(viewport_rect);
+                if (monitor_n == -1)
+                {
+                    // Fallback for "lost" window (e.g. a monitor disconnected): we move the window back over the main viewport
+                    window->PosFloat = g.Viewports[0]->Pos + style.DisplayWindowPadding;
+                    window->ViewportTryMerge = true;
+                }
+                else
+                {
+                    ClampWindowRect(window, ImRect(g.PlatformIO.Monitors[monitor_n].WorkMin, g.PlatformIO.Monitors[monitor_n].WorkMax), clamp_padding);
+                }
             }
-
+        }
         window->Pos = ImFloor(window->PosFloat);
 
         // Lock window rounding for the frame (so that altering them doesn't cause inconsistencies)
@@ -14208,6 +14251,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 else
                     ImGui::BulletText("NavRectRel[0]: <None>");
                 ImGui::BulletText("Viewport: %d, ViewportId: 0x%08X, ViewportPlatformPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);
+                ImGui::BulletText("Monitor: %d", FindPlatformMonitorForRect(window->Rect()));
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 if (window->ColumnsStorage.Size > 0 && ImGui::TreeNode("Columns", "Columns sets (%d)", window->ColumnsStorage.Size))

@@ -578,7 +578,11 @@ static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, H
     imgui_monitor.WorkMin = ImVec2((float)info.rcWork.left, (float)info.rcWork.top);
     imgui_monitor.WorkMax = ImVec2((float)info.rcWork.right, (float)info.rcWork.bottom);
     imgui_monitor.DpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
-    ImGui::GetPlatformIO().Monitors.push_back(imgui_monitor);
+    ImGuiPlatformIO& io = ImGui::GetPlatformIO();
+    if (info.dwFlags & MONITORINFOF_PRIMARY)
+        io.Monitors.push_front(imgui_monitor);
+    else
+        io.Monitors.push_back(imgui_monitor);
     return TRUE;
 }
 
