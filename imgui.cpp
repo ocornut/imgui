@@ -3357,7 +3357,11 @@ static void ImGui::UpdateMovingWindow()
         {
             UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseRefViewport);
 
-            // Clear the NoInput flag set by the Viewport system
+            // Patch the mouse viewport so that we don't hover under the moved window during the mouse released frame
+            if (!IsDragDropPayloadBeingAccepted())
+                g.MouseRefViewport = moving_window->Viewport;
+
+            // Clear the NoInput window flag set by the Viewport system
             moving_window->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs;
 
             ClearActiveID();

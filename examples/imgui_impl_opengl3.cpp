@@ -330,7 +330,9 @@ void    ImGui_ImplOpenGL3_DestroyDeviceObjects()
 }
 
 //--------------------------------------------------------------------------------------------------------
-// Platform Interface (Optional, for multi-viewport support)
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
 static void ImGui_ImplOpenGL3_RenderWindow(ImGuiViewport* viewport, void*)
