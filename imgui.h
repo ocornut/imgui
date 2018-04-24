@@ -1059,11 +1059,6 @@ struct ImGuiIO
     void        (*SetClipboardTextFn)(void* user_data, const char* text);
     void*       ClipboardUserData;
 
-    // Optional: notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME in Windows)
-    // (default to use native imm32 api on Windows)
-    void        (*ImeSetInputScreenPosFn)(int x, int y);
-    void*       ImeWindowHandle;            // (Windows) Set this to your HWND to get automatic IME cursor positioning.
-
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // [OBSOLETE] Rendering function, will be automatically called in Render(). Please call your rendering function yourself now! You can obtain the ImDrawData* by calling ImGui::GetDrawData() after Render().
     // See example applications if you are unsure of how to implement this.
@@ -1896,7 +1891,7 @@ struct ImGuiPlatformIO
     // Input - Back-end interface/functions + Monitor List
     //------------------------------------------------------------------
 
-    // Platform functions (e.g. Win32, GLFW, SDL2)
+    // (Optional) Platform functions (e.g. Win32, GLFW, SDL2)
     void    (*Platform_CreateWindow)(ImGuiViewport* vp);                    // Create a new platform window for the given viewport
     void    (*Platform_DestroyWindow)(ImGuiViewport* vp);
     void    (*Platform_ShowWindow)(ImGuiViewport* vp);                      // Newly created windows are initially hidden so SetWindowPos/Size/Title can be called on them first
@@ -1910,16 +1905,17 @@ struct ImGuiPlatformIO
     void    (*Platform_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (platform side)
     float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // (Optional) DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI. (FIXME-DPI)
     void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // (Optional) DPI handling: Called during Begin() every time the viewport we are outputting into changes, so back-end has a chance to swap fonts to adjust style.
+    void    (*Platform_SetImeInputPos)(ImGuiViewport* vp, ImVec2 pos);      // (Optional) Set IME (Input Method Editor, e.g. for Asian languages) input position, so text preview appears over the imgui input box.
     int     (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface); // (Optional) For Renderer to call into Platform code
 
-    // Renderer functions (e.g. DirectX, OpenGL3, Vulkan)
+    // (Optional) Renderer functions (e.g. DirectX, OpenGL3, Vulkan)
     void    (*Renderer_CreateWindow)(ImGuiViewport* vp);                    // Create swap chains, frame buffers etc.
     void    (*Renderer_DestroyWindow)(ImGuiViewport* vp);
     void    (*Renderer_SetWindowSize)(ImGuiViewport* vp, ImVec2 size);      // Resize swap chain, frame buffers etc.
     void    (*Renderer_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Clear targets, Render viewport->DrawData
     void    (*Renderer_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (renderer side)
 
-    // List of monitors (updated by: app/back-end, used by: imgui to clamp popups/tooltips within same monitor and not have them straddle monitors)
+    // (Optional) List of monitors (updated by: app/back-end, used by: imgui to clamp popups/tooltips within same monitor and not have them straddle monitors)
     ImVector<ImGuiPlatformMonitor>  Monitors;
 
     //------------------------------------------------------------------

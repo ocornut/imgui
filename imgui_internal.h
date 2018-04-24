@@ -715,7 +715,10 @@ struct ImGuiContext
     ImVec2                  ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     int                     TooltipOverrideCount;
     ImVector<char>          PrivateClipboard;                   // If no custom clipboard handler is defined
-    ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
+
+    // Platform support
+    ImVec2                  PlatformImePos, PlatformImeLastPos; // Cursor position request & last passed to the OS Input Method Editor
+    ImGuiViewport*          PlatformImePosViewport;
 
     // Settings
     bool                           SettingsLoaded;
@@ -822,7 +825,8 @@ struct ImGuiContext
         DragSpeedScaleFast = 10.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         TooltipOverrideCount = 0;
-        OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
+        PlatformImePos = PlatformImeLastPos = ImVec2(FLT_MAX, FLT_MAX);
+        PlatformImePosViewport = 0;
 
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;

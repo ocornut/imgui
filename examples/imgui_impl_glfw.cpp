@@ -150,9 +150,6 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
     io.ClipboardUserData = g_Window;
-#ifdef _WIN32
-    io.ImeWindowHandle = glfwGetWin32Window(g_Window);
-#endif
 
     g_MouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     g_MouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
@@ -500,7 +497,33 @@ static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport, void*)
         glfwSwapBuffers(data->Window);
 }
 
+//--------------------------------------------------------------------------------------------------------
+// IME (Input Method Editor) basic support for e.g. Asian language users
+//--------------------------------------------------------------------------------------------------------
+
+// We provide a Win32 implementation because this is such a common issue for IME users
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
+#define HAS_WIN32_IME   1
+#include <imm.h>
+#ifdef _MSC_VER
+#pragma comment(lib, "imm32")
+#endif
+static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
+{
+    COMPOSITIONFORM cf = { CFS_FORCE_POSITION, { (LONG)(pos.x - viewport->Pos.x), (LONG)(pos.y - viewport->Pos.y) }, { 0, 0, 0, 0 } };
+    if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
+        if (HWND hwnd = glfwGetWin32Window(data->Window))
+            if (HIMC himc = ImmGetContext(hwnd))
+                ImmSetCompositionWindow(himc, &cf);
+}
+#else
+#define HAS_WIN32_IME   0
+#endif
+
+//--------------------------------------------------------------------------------------------------------
 // Vulkan support (the Vulkan renderer needs to call a platform-side support function to create the surface)
+//--------------------------------------------------------------------------------------------------------
+
 // Avoid including <vulkan.h> so we can build without it
 #if GLFW_HAS_VULKAN
 #ifndef VULKAN_H_
@@ -570,6 +593,9 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 #endif
 #if GLFW_HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplGlfw_CreateVkSurface;
+#endif
+#if HAS_WIN32_IME
+    platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
 
     ImGui_ImplGlfw_UpdateMonitors();

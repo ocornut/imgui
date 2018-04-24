@@ -199,10 +199,6 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
 
-#ifdef _WIN32
-    io.ImeWindowHandle = al_get_win_window_handle(g_Display);
-#endif
-
     return true;
 }
 

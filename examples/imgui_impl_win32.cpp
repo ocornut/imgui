@@ -76,8 +76,6 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
-    io.ImeWindowHandle = g_hWnd;    
-
     return true;
 }
 
@@ -279,7 +277,7 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
     return 0;
 }
 
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 // DPI handling
 // Those in theory should be simple calls but Windows has multiple ways to handle DPI, and most of them
 // require recent Windows versions at runtime or recent Windows SDK at compile-time. Neither we want to depend on.
@@ -370,9 +368,30 @@ float ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2, int y2)
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
 
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
+// IME (Input Method Editor) basic support for e.g. Asian language users
+//--------------------------------------------------------------------------------------------------------
+
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
+#define HAS_WIN32_IME   1
+#include <imm.h>
+#ifdef _MSC_VER
+#pragma comment(lib, "imm32")
+#endif
+static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
+{
+    COMPOSITIONFORM cf = { CFS_FORCE_POSITION,{ (LONG)(pos.x - viewport->Pos.x), (LONG)(pos.y - viewport->Pos.y) },{ 0, 0, 0, 0 } };
+    if (HWND hwnd = (HWND)viewport->PlatformHandle)
+        if (HIMC himc = ImmGetContext(hwnd))
+            ImmSetCompositionWindow(himc, &cf);
+}
+#else
+#define HAS_WIN32_IME   0
+#endif
+
+//--------------------------------------------------------------------------------------------------------
 // Platform Windows
-// --------------------------------------------------------------------------------------------------------
+//--------------------------------------------------------------------------------------------------------
 
 struct ImGuiViewportDataWin32
 {
@@ -625,6 +644,9 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_SetWindowAlpha = ImGui_ImplWin32_SetWindowAlpha;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;
     platform_io.Platform_OnChangedViewport = ImGui_ImplWin32_OnChangedViewport; // FIXME-DPI
+#if HAS_WIN32_IME
+    platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
+#endif
 
     // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
