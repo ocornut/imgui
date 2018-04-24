@@ -3336,10 +3336,10 @@ static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
 static void ImGui::UpdateMovingWindow()
 {
     ImGuiContext& g = *GImGui;
-    if (g.MovingWindow && g.MovingWindow->MoveId == g.ActiveId && g.ActiveIdSource == ImGuiInputSource_Mouse)
+    if (g.MovingWindow != NULL)
     {
         // We actually want to move the root window. g.MovingWindow == window we clicked on (could be a child window). 
-        // We track it to preserve Focus and so that ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
+        // We track it to preserve Focus and so that generally ActiveIdWindow == MovingWindow and ActiveId == MovingWindow->MoveId for consistency.
         KeepAliveID(g.ActiveId);
         IM_ASSERT(g.MovingWindow && g.MovingWindow->RootWindow);
         ImGuiWindow* moving_window = g.MovingWindow->RootWindow;
@@ -3373,10 +3373,6 @@ static void ImGui::UpdateMovingWindow()
             if (!g.IO.MouseDown[0])
                 ClearActiveID();
         }
-
-        if (g.MovingWindow != NULL)
-            g.MovingWindow->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs;
-        g.MovingWindow = NULL;
     }
 }
 
