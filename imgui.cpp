@@ -1924,7 +1924,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
     Flags = 0;
-    PosFloat = Pos = ImVec2(0.0f, 0.0f);
+    Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
     SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
@@ -2900,8 +2900,8 @@ static void ImGui::NavUpdateWindowing()
         if (move_delta.x != 0.0f || move_delta.y != 0.0f)
         {
             const float NAV_MOVE_SPEED = 800.0f;
-            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
-            g.NavWindowingTarget->PosFloat += move_delta * move_speed;
+            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y)); // FIXME: Doesn't code variable framerate very well
+            g.NavWindowingTarget->Pos += move_delta * move_speed;
             g.NavDisableMouseHover = true;
             MarkIniSettingsDirty(g.NavWindowingTarget);
         }
@@ -3267,10 +3267,10 @@ static void ImGui::NewFrameUpdateMovingWindow()
         if (g.IO.MouseDown[0])
         {
             ImVec2 pos = g.IO.MousePos - g.ActiveIdClickOffset;
-            if (moving_window->PosFloat.x != pos.x || moving_window->PosFloat.y != pos.y)
+            if (moving_window->Pos.x != pos.x || moving_window->Pos.y != pos.y)
             {
                 MarkIniSettingsDirty(moving_window);
-                moving_window->PosFloat = pos;
+                moving_window->Pos = pos;
             }
             FocusWindow(g.MovingWindow);
         }
@@ -3534,7 +3534,6 @@ void ImGui::NewFrame()
 
                 const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
                 window->Pos += offset;
-                window->PosFloat += offset;
                 window->Size *= scale;
                 window->SizeFull *= scale;
             }
@@ -5314,12 +5313,12 @@ static ImVec2 FindBestWindowPosForPopup(ImGuiWindow* window)
             r_avoid = ImRect(-FLT_MAX, parent_menu->Pos.y + parent_menu->TitleBarHeight(), FLT_MAX, parent_menu->Pos.y + parent_menu->TitleBarHeight() + parent_menu->MenuBarHeight());
         else
             r_avoid = ImRect(parent_menu->Pos.x + horizontal_overlap, -FLT_MAX, parent_menu->Pos.x + parent_menu->Size.x - horizontal_overlap - parent_menu->ScrollbarSizes.x, FLT_MAX);
-        return FindBestWindowPosForPopupEx(window->PosFloat, window->Size, &window->AutoPosLastDirection, r_screen, r_avoid);
+        return FindBestWindowPosForPopupEx(window->Pos, window->Size, &window->AutoPosLastDirection, r_screen, r_avoid);
     }
     if (window->Flags & ImGuiWindowFlags_Popup)
     {
-        ImRect r_avoid(window->PosFloat.x - 1, window->PosFloat.y - 1, window->PosFloat.x + 1, window->PosFloat.y + 1);
-        return FindBestWindowPosForPopupEx(window->PosFloat, window->Size, &window->AutoPosLastDirection, r_screen, r_avoid);
+        ImRect r_avoid(window->Pos.x - 1, window->Pos.y - 1, window->Pos.x + 1, window->Pos.y + 1);
+        return FindBestWindowPosForPopupEx(window->Pos, window->Size, &window->AutoPosLastDirection, r_screen, r_avoid);
     }
     if (window->Flags & ImGuiWindowFlags_Tooltip)
     {
@@ -5364,7 +5363,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
     g.WindowsById.SetVoidPtr(window->ID, window);
 
     // Default/arbitrary window position. Use SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
-    window->Pos = window->PosFloat = ImVec2(60, 60);
+    window->Pos = ImVec2(60, 60);
 
     // User can disable loading and saving of settings. Tooltip and child windows also don't store settings.
     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
@@ -5373,11 +5372,10 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
         if (ImGuiWindowSettings* settings = ImGui::FindWindowSettings(window->ID))
         {
             SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
-            window->PosFloat = settings->Pos;
-            window->Pos = ImFloor(window->PosFloat);
+            window->Pos = ImFloor(settings->Pos);
             window->Collapsed = settings->Collapsed;
             if (ImLengthSqr(settings->Size) > 0.00001f)
-                size = settings->Size;
+                size = ImFloor(settings->Size);
         }
     }
     window->Size = window->SizeFull = window->SizeFullAtLastBegin = size;
@@ -5643,7 +5641,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     }
     if (pos_target.x != FLT_MAX)
     {
-        window->Pos = window->PosFloat = ImFloor(pos_target);
+        window->Pos = ImFloor(pos_target);
         MarkIniSettingsDirty(window);
     }
 
@@ -5898,7 +5896,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             window->AutoPosLastDirection = ImGuiDir_None;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
-                window->Pos = window->PosFloat = g.CurrentPopupStack.back().OpenPopupPos;
+                window->Pos = g.CurrentPopupStack.back().OpenPopupPos;
         }
 
         // Position child window
@@ -5907,18 +5905,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->BeginOrderWithinParent = parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
-                window->Pos = window->PosFloat = parent_window->DC.CursorPos;
+                window->Pos = parent_window->DC.CursorPos;
         }
 
         const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
         if (window_pos_with_pivot)
             SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0); // Position given a pivot (e.g. for centering)
         else if ((flags & ImGuiWindowFlags_ChildMenu) != 0)
-            window->PosFloat = FindBestWindowPosForPopup(window);
+            window->Pos = FindBestWindowPosForPopup(window);
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
-            window->PosFloat = FindBestWindowPosForPopup(window);
+            window->Pos = FindBestWindowPosForPopup(window);
         else if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api && !window_is_child_tooltip)
-            window->PosFloat = FindBestWindowPosForPopup(window);
+            window->Pos = FindBestWindowPosForPopup(window);
 
         // Clamp position so it stays visible
         if (!(flags & ImGuiWindowFlags_ChildWindow))
@@ -5926,11 +5924,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (!window_pos_set_by_api && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
                 ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
-                window->PosFloat = ImMax(window->PosFloat + window->Size, padding) - window->Size;
-                window->PosFloat = ImMin(window->PosFloat, g.IO.DisplaySize - padding);
+                window->Pos = ImMax(window->Pos + window->Size, padding) - window->Size;
+                window->Pos = ImMin(window->Pos, g.IO.DisplaySize - padding);
             }
         }
-        window->Pos = ImFloor(window->PosFloat);
+        window->Pos = ImFloor(window->Pos);
 
         // Prepare for focus requests
         window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext == INT_MAX || window->FocusIdxAllCounter == -1) ? INT_MAX : (window->FocusIdxAllRequestNext + (window->FocusIdxAllCounter+1)) % (window->FocusIdxAllCounter+1);
@@ -6899,7 +6897,6 @@ static void SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
 
     // Set
     const ImVec2 old_pos = window->Pos;
-    window->PosFloat = pos;
     window->Pos = ImFloor(pos);
     window->DC.CursorPos += (window->Pos - old_pos);    // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
     window->DC.CursorMaxPos += (window->Pos - old_pos); // And more importantly we need to adjust this so size calculation doesn't get affected.

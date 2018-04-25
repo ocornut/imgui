@@ -892,8 +892,7 @@ struct IMGUI_API ImGuiWindow
     char*                   Name;
     ImGuiID                 ID;                                 // == ImHash(Name)
     ImGuiWindowFlags        Flags;                              // See enum ImGuiWindowFlags_
-    ImVec2                  PosFloat;
-    ImVec2                  Pos;                                // Position rounded-up to nearest pixel
+    ImVec2                  Pos;                                // Position (always rounded-up to nearest pixel)
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeFullAtLastBegin;                // Copy of SizeFull at the end of Begin. This is the reference value we'll use on the next frame to decide if we need scrollbars.
