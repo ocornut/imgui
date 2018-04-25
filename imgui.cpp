@@ -1762,7 +1762,10 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 
     int len = ImFormatStringV(NULL, 0, fmt, args);         // FIXME-OPT: could do a first pass write attempt, likely successful on first pass.
     if (len <= 0)
+    {
+        va_end(args_copy);
         return;
+    }
 
     const int write_off = Buf.Size;
     const int needed_sz = write_off + len;
@@ -1774,6 +1777,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 
     Buf.resize(needed_sz);
     ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
+    va_end(args_copy);
 }
 
 void ImGuiTextBuffer::appendf(const char* fmt, ...)
