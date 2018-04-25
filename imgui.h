@@ -798,7 +798,6 @@ enum ImGuiConfigFlags_
     ImGuiConfigFlags_ViewportsEnable         = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
     ImGuiConfigFlags_ViewportsNoTaskBarIcons = 1 << 11,  // Disable task bars icons for all secondary viewports (will set ImGuiViewportFlags_NoTaskBarIcon on them)
     ImGuiConfigFlags_ViewportsNoMerge        = 1 << 12,  // All floating windows _always_ have create their own viewport and platform window.
-
     ImGuiConfigFlags_DpiEnableScaleViewports = 1 << 13,
     ImGuiConfigFlags_DpiEnableScaleFonts     = 1 << 14,
 
@@ -1953,7 +1952,7 @@ struct ImGuiViewport
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
 
     void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
-    void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. HWND, GlfwWindow*, SDL_Window*)
+    void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. suggested to use natural platform handle such as HWND, GlfwWindow*, SDL_Window*)
     bool                PlatformRequestClose;   // Platform window requested closure
     bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved using OS windowing facility)
     bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resize using OS windowing facility)
