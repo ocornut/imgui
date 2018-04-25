@@ -322,7 +322,7 @@ struct IMGUI_API ImRect
     void        Add(const ImRect& r)                { if (Min.x > r.Min.x) Min.x = r.Min.x; if (Min.y > r.Min.y) Min.y = r.Min.y; if (Max.x < r.Max.x) Max.x = r.Max.x; if (Max.y < r.Max.y) Max.y = r.Max.y; }
     void        Expand(const float amount)          { Min.x -= amount;   Min.y -= amount;   Max.x += amount;   Max.y += amount; }
     void        Expand(const ImVec2& amount)        { Min.x -= amount.x; Min.y -= amount.y; Max.x += amount.x; Max.y += amount.y; }
-    void        Translate(const ImVec2& v)          { Min.x += v.x; Min.y += v.y; Max.x += v.x; Max.y += v.y; }
+    void        Translate(const ImVec2& d)          { Min.x += d.x; Min.y += d.y; Max.x += d.x; Max.y += d.y; }
     void        ClipWith(const ImRect& r)           { Min = ImMax(Min, r.Min); Max = ImMin(Max, r.Max); }                   // Simple version, may lead to an inverted rectangle, which is fine for Contains/Overlaps test but not for display.
     void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
     void        Floor()                             { Min.x = (float)(int)Min.x; Min.y = (float)(int)Min.y; Max.x = (float)(int)Max.x; Max.y = (float)(int)Max.y; }
@@ -414,9 +414,9 @@ struct ImGuiSettingsHandler
 {
     const char* TypeName;   // Short description stored in .ini file. Disallowed characters: '[' ']'  
     ImGuiID     TypeHash;   // == ImHash(TypeName, 0, 0)
-    void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);
-    void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line);
-    void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);
+    void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);              // Read: Called when entering into a new ini entry e.g. "[Window][Name]"
+    void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line); // Read: Called for every line of text within an ini entry
+    void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'
     void*       UserData;
 
     ImGuiSettingsHandler() { memset(this, 0, sizeof(*this)); }
@@ -528,7 +528,7 @@ struct ImGuiNextWindowData
     ImVec2                  SizeVal;
     ImVec2                  ContentSizeVal;
     bool                    CollapsedVal;
-    ImRect                  SizeConstraintRect;                 // Valid if 'SetNextWindowSizeConstraint' is true
+    ImRect                  SizeConstraintRect;
     ImGuiSizeCallback       SizeCallback;
     void*                   SizeCallbackUserData;
     float                   BgAlphaVal;
@@ -671,7 +671,7 @@ struct ImGuiContext
     ImVec2                  ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     int                     TooltipOverrideCount;
     ImVector<char>          PrivateClipboard;                   // If no custom clipboard handler is defined
-    ImVec2                  OsImePosRequest, OsImePosSet;       // Cursor position request & last passed to the OS Input Method Editor
+    ImVec2                  PlatformImePos, PlatformImeLastPos; // Cursor position request & last passed to the OS Input Method Editor
 
     // Settings
     bool                           SettingsLoaded;
@@ -687,13 +687,13 @@ struct ImGuiContext
     int                     LogAutoExpandMaxDepth;
 
     // Misc
-    float                   FramerateSecPerFrame[120];          // calculate estimate of framerate for user
+    float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
     int                     FramerateSecPerFrameIdx;
     float                   FramerateSecPerFrameAccum;
-    int                     WantCaptureMouseNextFrame;          // explicit capture via CaptureInputs() sets those flags
+    int                     WantCaptureMouseNextFrame;          // Explicit capture via CaptureKeyboardFromApp()/CaptureMouseFromApp() sets those flags
     int                     WantCaptureKeyboardNextFrame;
     int                     WantTextInputNextFrame;
-    char                    TempBuffer[1024*3+1];               // temporary text buffer
+    char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
     ImGuiContext(ImFontAtlas* shared_font_atlas) : OverlayDrawList(NULL)
     {
@@ -775,7 +775,7 @@ struct ImGuiContext
         DragSpeedScaleFast = 10.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         TooltipOverrideCount = 0;
-        OsImePosRequest = OsImePosSet = ImVec2(-1.0f, -1.0f);
+        PlatformImePos = PlatformImeLastPos = ImVec2(FLT_MAX, FLT_MAX);
 
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
@@ -907,8 +907,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  Scroll;
     ImVec2                  ScrollTarget;                       // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (FLT_MAX for no change)
     ImVec2                  ScrollTargetCenterRatio;            // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
-    bool                    ScrollbarX, ScrollbarY;
     ImVec2                  ScrollbarSizes;
+    bool                    ScrollbarX, ScrollbarY;
     bool                    Active;                             // Set to true on Begin(), unless Collapsed
     bool                    WasActive;
     bool                    WriteAccessed;                      // Set to true when any widget access the current window
@@ -926,9 +926,9 @@ struct IMGUI_API ImGuiWindow
     int                     AutoFitChildAxises;
     ImGuiDir                AutoPosLastDirection;
     int                     HiddenFrames;
-    ImGuiCond               SetWindowPosAllowFlags;             // store condition flags for next SetWindowPos() call.
-    ImGuiCond               SetWindowSizeAllowFlags;            // store condition flags for next SetWindowSize() call.
-    ImGuiCond               SetWindowCollapsedAllowFlags;       // store condition flags for next SetWindowCollapsed() call.
+    ImGuiCond               SetWindowPosAllowFlags;             // store acceptable condition flags for SetNextWindowPos() use.
+    ImGuiCond               SetWindowSizeAllowFlags;            // store acceptable condition flags for SetNextWindowSize() use.
+    ImGuiCond               SetWindowCollapsedAllowFlags;       // store acceptable condition flags for SetNextWindowCollapsed() use.
     ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
@@ -942,7 +942,8 @@ struct IMGUI_API ImGuiWindow
     ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumnsSet> ColumnsStorage;
-    float                   FontWindowScale;                    // Scale multiplier per-window
+    float                   FontWindowScale;                    // User scale multiplier per-window
+
     ImDrawList*             DrawList;                           // == &DrawListInst (for backward compatibility reason with code using imgui_internal.h we keep this a pointer)
     ImDrawList              DrawListInst;
     ImGuiWindow*            ParentWindow;                       // If we are a child _or_ popup window, this is pointing to our parent. Otherwise NULL.
