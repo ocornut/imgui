@@ -58,7 +58,7 @@ Other Changes:
 - InputText: On Mac OS X, support Cmd+Shift+Z for Redo. Cmd+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
 - Demo: Fixed Overlay: Added a context menu item to enable freely moving the window. 
-- Examples: Allegro 5: Added support for 32-bit indices setup via defining ImDrawIdx, to avoid an unecessary conversion (Allegro 5 doesn't support 16-bit indices).
+- Examples: Allegro 5: Added support for 32-bit indices setup via defining ImDrawIdx, to avoid an unnecessary conversion (Allegro 5 doesn't support 16-bit indices).
 - Examples: Allegro 5: Renamed bindings from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
 
 -----------------------------------------------------------------------
@@ -68,7 +68,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.60
 
 The gamepad/keyboard navigation branch (which has been in the work since July 2016) has been merged.
 Gamepad/keyboard navigation is still marked as Beta and has to be enabled explicitly.
-Various internal refactors have also been done, as part of the navigation work and as part of the upcoing viewport/docking work.
+Various internal refactors have also been done, as part of the navigation work and as part of the upcoming viewport/docking work.
 
 Breaking Changes:
 
@@ -77,7 +77,7 @@ Breaking Changes:
  - Reorganized context handling to be more explicit: (#1599)
    - YOU NOW NEED TO CALL ImGui::CreateContext() AT THE BEGINNING OF YOUR APP, AND CALL ImGui::DestroyContext() AT THE END.
    - removed Shutdown() function, as DestroyContext() serve this purpose. If you are using an old back-end from the examples/ folder, remove the line that calls Shutdown().
-   - you may pass a ImFontAtlas* pointer to CreateContext() to share a font atlas between contexts. Otherwhise CreateContext() will create its own font atlas instance.
+   - you may pass a ImFontAtlas* pointer to CreateContext() to share a font atlas between contexts. Otherwise CreateContext() will create its own font atlas instance.
    - removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions(), and shared by all contexts.
    - removed the default global context and font atlas instance, which were confusing for users of DLL reloading and users of multiple contexts.
  - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
