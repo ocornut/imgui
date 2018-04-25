@@ -752,6 +752,7 @@ static void             NavUpdateWindowing();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
 
 static void             UpdateMovingWindow();
+static void             UpdateMouseInputs();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
@@ -1761,7 +1762,10 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 
     int len = ImFormatStringV(NULL, 0, fmt, args);         // FIXME-OPT: could do a first pass write attempt, likely successful on first pass.
     if (len <= 0)
+    {
+        va_end(args_copy);
         return;
+    }
 
     const int write_off = Buf.Size;
     const int needed_sz = write_off + len;
@@ -1773,6 +1777,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 
     Buf.resize(needed_sz);
     ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
+    va_end(args_copy);
 }
 
 void ImGuiTextBuffer::appendf(const char* fmt, ...)
@@ -3671,12 +3676,12 @@ void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* render
     }
 }
 
-static void NewFrameUpdateMouseInputs()
+static void ImGui::UpdateMouseInputs()
 {
     ImGuiContext& g = *GImGui;
 
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX component, but in reality we test for -256000.0f) we cancel out movement in MouseDelta
-    if (ImGui::IsMousePosValid(&g.IO.MousePos) && ImGui::IsMousePosValid(&g.IO.MousePosPrev) && g.MouseRefViewport == g.MouseRefPrevViewport)
+    if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev) && g.MouseRefViewport == g.MouseRefPrevViewport)
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
     else
         g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
@@ -3910,7 +3915,7 @@ void ImGui::NewFrame()
     NavUpdate();
 
     // Update mouse input state
-    NewFrameUpdateMouseInputs();
+    UpdateMouseInputs();
 
     // Calculate frame-rate for the user, as a purely luxurious feature
     g.FramerateSecPerFrameAccum += g.IO.DeltaTime - g.FramerateSecPerFrame[g.FramerateSecPerFrameIdx];
@@ -5814,7 +5819,7 @@ enum ImGuiPopupPositionPolicy
     ImGuiPopupPositionPolicy_Default,
     ImGuiPopupPositionPolicy_ComboBox
 };
-
+    
 // r_avoid = the rectangle to avoid (e.g. for tooltip it is a rectangle around the mouse cursor which we want to avoid. for popups it's a small point around the cursor.)
 // r_outer = the visible area rectangle, minus safe area padding. If our popup size won't fit because of safe area padding we ignore it.
 // (r_outer is usually equivalent to the viewport rectangle minus padding, but when multi-viewports are enabled and monitor
@@ -14056,10 +14061,6 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 
 #endif
 
-//-----------------------------------------------------------------------------
-// HELP
-//-----------------------------------------------------------------------------
-
 static void ScaleWindow(ImGuiWindow* window, float scale)
 {
     ImVec2 origin = window->Viewport->Pos;
@@ -14084,6 +14085,10 @@ void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
                 ScaleWindow(g.Windows[i], scale);
     }
 }
+
+//-----------------------------------------------------------------------------
+// HELP, METRICS
+//-----------------------------------------------------------------------------
 
 static void RenderViewportThumbnail(ImDrawList* draw_list, ImGuiViewportP* viewport, const ImRect& bb)
 {
