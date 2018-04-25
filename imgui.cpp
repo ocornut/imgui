@@ -762,6 +762,8 @@ static void             UpdateViewports();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
 static void             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
 static void             SetCurrentViewport(ImGuiViewportP* viewport);
+static int              FindPlatformMonitorForPos(const ImVec2& pos);
+static int              FindPlatformMonitorForRect(const ImRect& r);
 }
 
 //-----------------------------------------------------------------------------
@@ -2769,7 +2771,10 @@ static ImVec2 NavCalcPreferredRefPos()
 {
     ImGuiContext& g = *GImGui;
     if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
+    {
+        IM_ASSERT(ImGui::IsMousePosValid()); // This will probably trigger at some point, please share your repro!
         return ImFloor(g.IO.MousePos);
+    }
 
     // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item
     const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
@@ -3468,6 +3473,9 @@ static void ImGui::UpdateViewports()
             for (int window_n = 0; window_n < g.Windows.Size; window_n++)
                 if (g.Windows[window_n]->Viewport == viewport)
                     TranslateWindow(g.Windows[window_n], delta);
+
+        // Update monitor
+        viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
 
         // Update DPI Scale
         float new_dpi_scale;
@@ -6117,13 +6125,13 @@ static void CalcResizePosSizeFromAnyCorner(ImGuiWindow* window, const ImVec2& co
     *out_size = size_constrained;
 }
 
-static int FindPlatformMonitorForPos(ImVec2 platform_pos)
+static int ImGui::FindPlatformMonitorForPos(const ImVec2& pos)
 {
     ImGuiContext& g = *GImGui;
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
     {
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
-        if (ImRect(monitor.FullMin, monitor.FullMax).Contains(platform_pos))
+        if (ImRect(monitor.FullMin, monitor.FullMax).Contains(pos))
             return monitor_n;
     }
     return -1;
@@ -6131,7 +6139,7 @@ static int FindPlatformMonitorForPos(ImVec2 platform_pos)
 
 // Search for the monitor with the largest intersection area with the given rectangle
 // We generally try to avoid searching loops but the monitor count should be very small here
-static int FindPlatformMonitorForRect(const ImRect& rect)
+static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 {
     ImGuiContext& g = *GImGui;
     float surface_threshold = rect.GetWidth() * rect.GetHeight() * 0.5f;
@@ -6189,7 +6197,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if (window->Viewport == NULL && window->ParentWindow)
         window->Viewport = window->ParentWindow->Viewport;
 
-    // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPlatformPos' from .ini file
+    // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
     if (window->Viewport == NULL && window->ViewportId != 0)
     {
         window->Viewport = FindViewportByID(window->ViewportId);
@@ -6205,7 +6213,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ChildMenu))
     {
-        // Inherit viewport from parent window
+        // Always inherit viewport from parent window
         window->Viewport = window->ParentWindow->Viewport;
     }
     else if (flags & ImGuiWindowFlags_Tooltip)
@@ -6214,8 +6222,6 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if (g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
     {
-        // 2018-04-13: the if() below tends to succeed but for a misleading reason: when moving a window and hovering another, UpdateMovingWindow would 
-        // already have displaced the window outside of its viewport boundaries. While this is currently working it is very smelly.
         if (window->Viewport == NULL || !window->Viewport->GetRect().Contains(window->Rect()))
         {
             ImVec2 viewport_pos = g.IO.MousePos - g.ActiveIdClickOffset;
@@ -6229,13 +6235,18 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
 
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
-    bool allow_protrude_on_whole_monitor = false;
-    allow_protrude_on_whole_monitor |= (flags & ImGuiWindowFlags_Tooltip) != 0;
-    allow_protrude_on_whole_monitor |= (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) != 0;
-    if (allow_protrude_on_whole_monitor)
-        window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos(NavCalcPreferredRefPos());
+    // We need to take account of the possibility that mouse may become invalid.
+    const bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
+    if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+    {
+        ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.CurrentPopupStack.back().OpenMousePos;
+        if (window->Appearing || (flags & ImGuiWindowFlags_Tooltip))
+            window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && IsMousePosValid(&mouse_ref)) ? mouse_ref : NavCalcPreferredRefPos());
+        else
+            window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
+    }
     if (window->ViewportTrySplit && window->ViewportAllowPlatformMonitorExtend == -1)
-        window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos(window->Viewport->Pos);
+        window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
     window->ViewportTrySplit = false;
 
     // Fallback to default viewport
@@ -14223,8 +14234,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::BulletText("NavRectRel[0]: (%.1f,%.1f)(%.1f,%.1f)", window->NavRectRel[0].Min.x, window->NavRectRel[0].Min.y, window->NavRectRel[0].Max.x, window->NavRectRel[0].Max.y);
                 else
                     ImGui::BulletText("NavRectRel[0]: <None>");
-                ImGui::BulletText("Viewport: %d, ViewportId: 0x%08X, ViewportPlatformPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);
-                ImGui::BulletText("Monitor: %d", FindPlatformMonitorForRect(window->Rect()));
+                ImGui::BulletText("Viewport: %d, ViewportId: 0x%08X, ViewportPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);
+                ImGui::BulletText("ViewportMonitor: %d", window->Viewport->PlatformMonitor);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");
                 if (window->ColumnsStorage.Size > 0 && ImGui::TreeNode("Columns", "Columns sets (%d)", window->ColumnsStorage.Size))
@@ -14252,7 +14263,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->Window ? viewport->Window->Name : "N/A"))
                 {
                     ImGuiWindowFlags flags = viewport->Flags;
-                    ImGui::BulletText("Pos: (%.0f,%.0f)", viewport->Pos.x, viewport->Pos.y);
+                    ImGui::BulletText("Pos: (%.0f,%.0f), Monitor: %d", viewport->Pos.x, viewport->Pos.y, viewport->PlatformMonitor);
                     if (viewport->Idx > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset")) { viewport->Pos = ImVec2(200,200); if (viewport->Window) viewport->Window->Pos = viewport->Window->PosFloat = ImVec2(200,200); } }
                     ImGui::BulletText("Size: (%0.f,%.0f), DpiScale: %.0f%%", viewport->Size.x, viewport->Size.y, viewport->DpiScale * 100.0f);
                     ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s", viewport->Flags,
