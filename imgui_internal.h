@@ -528,7 +528,7 @@ struct ImGuiViewportP : public ImGuiViewport
     ImDrawDataBuilder   DrawDataBuilder;
     ImVec2              RendererLastSize;
 
-    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameAsRefViewport = LastFrameOverlayDrawList = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = -1; Window = NULL; OverlayDrawList = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameAsRefViewport = LastFrameOverlayDrawList = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = INT_MIN; Window = NULL; OverlayDrawList = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
     ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     ImVec2  GetCenter() const{ return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
