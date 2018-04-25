@@ -2736,10 +2736,11 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
 static ImVec2 NavCalcPreferredRefPos()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.NavWindow;
-    if (!window)
-        return g.IO.MousePos;
-    const ImRect& rect_rel = window->NavRectRel[g.NavLayer];
+    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
+        return ImFloor(g.IO.MousePos);
+
+    // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item
+    const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
     ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
     ImRect visible_rect = GetViewportRect();
     return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
@@ -3073,6 +3074,7 @@ static void ImGui::NavUpdate()
         // Set mouse position given our knowledge of the navigated item position from last frame
         if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (g.IO.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
         {
+            IM_ASSERT(!g.NavDisableHighlight && g.NavDisableMouseHover);
             g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredRefPos();
             g.IO.WantSetMousePos = true;
         }
@@ -4850,7 +4852,7 @@ void ImGui::OpenPopupEx(ImGuiID id)
     popup_ref.OpenFrameCount = g.FrameCount;
     popup_ref.OpenParentId = parent_window->IDStack.back();
     popup_ref.OpenMousePos = g.IO.MousePos;
-    popup_ref.OpenPopupPos = (!g.NavDisableHighlight && g.NavDisableMouseHover) ? NavCalcPreferredRefPos() : g.IO.MousePos;
+    popup_ref.OpenPopupPos = NavCalcPreferredRefPos();
 
     //printf("[%05d] OpenPopupEx(0x%08X)\n", g.FrameCount, id);
     if (g.OpenPopupStack.Size < current_stack_size + 1)
@@ -5323,14 +5325,14 @@ static ImVec2 FindBestWindowPosForPopup(ImGuiWindow* window)
     }
     if (window->Flags & ImGuiWindowFlags_Popup)
     {
-        ImRect r_avoid(window->Pos.x - 1, window->Pos.y - 1, window->Pos.x + 1, window->Pos.y + 1);
+        ImRect r_avoid = ImRect(window->Pos.x - 1, window->Pos.y - 1, window->Pos.x + 1, window->Pos.y + 1);
         return FindBestWindowPosForPopupEx(window->Pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid);
     }
     if (window->Flags & ImGuiWindowFlags_Tooltip)
     {
         // Position tooltip (always follows mouse)
         float sc = g.Style.MouseCursorScale;
-        ImVec2 ref_pos = (!g.NavDisableHighlight && g.NavDisableMouseHover) ? NavCalcPreferredRefPos() : g.IO.MousePos;
+        ImVec2 ref_pos = NavCalcPreferredRefPos();
         ImRect r_avoid;
         if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos))
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
