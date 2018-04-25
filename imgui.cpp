@@ -6229,7 +6229,8 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if (!window->ViewportOwned && g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
     {
-        window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs);
+        if (!window->Viewport->GetRect().Contains(window->Rect()))
+            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs);
     }
     else if (!window->ViewportOwned && GetWindowAlwaysWantOwnViewport(window))
     {
