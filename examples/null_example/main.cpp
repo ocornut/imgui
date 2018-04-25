@@ -4,6 +4,7 @@
 
 int main(int, char**)
 {
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
 

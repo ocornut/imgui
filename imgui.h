@@ -16,25 +16,25 @@
 #include "imconfig.h"
 #endif
 
-#include <float.h>          // FLT_MAX
-#include <stdarg.h>         // va_list
-#include <stddef.h>         // ptrdiff_t, NULL
-#include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
+#include <float.h>                  // FLT_MAX
+#include <stdarg.h>                 // va_list
+#include <stddef.h>                 // ptrdiff_t, NULL
+#include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.61 WIP"
+// Version
+#define IMGUI_VERSION               "1.61 WIP"
+#define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 
-// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+// Define attributes of all API symbols declarations (e.g. for DLL under Windows)
 #ifndef IMGUI_API
 #define IMGUI_API
 #endif
 
-// Define assertion handler.
+// Helpers
 #ifndef IM_ASSERT
 #include <assert.h>
-#define IM_ASSERT(_EXPR)    assert(_EXPR)
+#define IM_ASSERT(_EXPR)            assert(_EXPR)
 #endif
-
-// Helpers
 #if defined(__clang__) || defined(__GNUC__)
 #define IM_FMTARGS(FMT)             __attribute__((format(printf, FMT, FMT+1))) // Apply printf-style warnings to user functions.
 #define IM_FMTLIST(FMT)             __attribute__((format(printf, FMT, 0)))
@@ -60,7 +60,7 @@ struct ImDrawVert;                  // A single vertex (20 bytes by default, ove
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
-struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4
+struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4 (*obsolete* please avoid using)
 struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
 struct ImGuiOnceUponAFrame;         // Simple helper for running a block of code not more than once a frame, used by IMGUI_ONCE_UPON_A_FRAME macro
 struct ImGuiStorage;                // Simple custom key value storage
@@ -143,6 +143,7 @@ namespace ImGui
     IMGUI_API void          DestroyContext(ImGuiContext* ctx = NULL);   // NULL = destroy current context
     IMGUI_API ImGuiContext* GetCurrentContext();
     IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
+    IMGUI_API bool          DebugCheckVersionAndDataLayout(const char* version_str, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_drawvert);
 
     // Main
     IMGUI_API ImGuiIO&      GetIO();
