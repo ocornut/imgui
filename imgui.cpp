@@ -3578,6 +3578,8 @@ void ImGui::UpdatePlatformWindows()
         // New windows that appears directly in a new viewport won't always have a size on their frame
         if (viewport->Size.x <= 0 || viewport->Size.y <= 0)
             continue;
+        if (viewport->Window && viewport->Window->HiddenFrames > 0)
+            continue;
 
         // Update viewport flags
         if (viewport->Window != NULL)
@@ -3640,7 +3642,7 @@ void ImGui::UpdatePlatformWindows()
 }
 
 // This is a default/basic function for performing the rendering/swap of multiple platform windows.
-// Custom renderers may prefer to not call this function at all, and instead iterate the platform data and handle rendering/sync themselves.
+// Custom renderers may prefer to not call this function at all, and instead iterate the publicly exposed platform data and handle rendering/sync themselves.
 // The Render/Swap functions stored in ImGuiPlatformIO are merely here to allow for this helper to exist, but you can do it yourself:
 //
 //    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -4538,6 +4540,8 @@ void ImGui::EndFrame()
     {
         ImGuiViewportP* viewport = g.Viewports[i];
         if (viewport->LastFrameActive < g.FrameCount || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f)
+            continue;
+        if (viewport->Window && viewport->Window->HiddenFrames > 0)
             continue;
         if (i > 0)
             IM_ASSERT(viewport->Window != NULL);
