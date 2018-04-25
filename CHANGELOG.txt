@@ -42,7 +42,7 @@ VERSION 1.61 WIP
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
- - Misc: IM_DELETE() helper function added in 1.60 doesn't clear the input _pointer_ reference, more consistent with expectation and allows passing r-value.
+ - Misc: IM_DELETE() helper function added in 1.60 doesn't set the input pointer to NULL, more consistent with standard expectation and allows passing r-value.
 
 Other Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
@@ -50,8 +50,16 @@ Other Changes:
 - Settings: Fixed saving an empty .ini file if CreateContext/DestroyContext are called without a single call to NewFrame(). (#1741)
 - Window: Fixed default proportional item width lagging by one frame on resize.
 - Window: Fixed popups/tooltips/menus not honoring style.DisplaySafeAreaPadding as well as it should have (part of menus displayed outside the safe area, etc.).
+- Window: Fixed windows using the ImGuiWindowFlags_NoSavedSettings flag from not using the same default position as other windows. (#1760)
+- Window: Relaxed the internal stack size checker to allow Push/Begin/Pop/.../End patterns to be used with PushStyleColor, PushStyleVar, PushFont without causing a false positive assert. (#1767)
+- Columns: Fixed a bug introduced in 1.51 where columns would affect the contents size of their container, often creating feedback loops when ImGuiWindowFlags_AlwaysAutoResize was used. (#1760)
 - MenuBar: Made BeginMainMenuBar() honor style.DisplaySafeAreaPadding so the text can be made visible on TV settings that don't display all pixels. (#1439) [@dougbinks]
+- InputText: On Mac OS X, filter out characters when the Cmd modifier is held. (#1747) [@sivu]
+- InputText: On Mac OS X, support Cmd+Shift+Z for Redo. Cmd+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
+- Demo: Fixed Overlay: Added a context menu item to enable freely moving the window. 
+- Examples: Allegro 5: Added support for 32-bit indices setup via defining ImDrawIdx, to avoid an unnecessary conversion (Allegro 5 doesn't support 16-bit indices).
+- Examples: Allegro 5: Renamed bindings from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
 
 -----------------------------------------------------------------------
 
@@ -60,7 +68,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.60
 
 The gamepad/keyboard navigation branch (which has been in the work since July 2016) has been merged.
 Gamepad/keyboard navigation is still marked as Beta and has to be enabled explicitly.
-Various internal refactors have also been done, as part of the navigation work and as part of the upcoing viewport/docking work.
+Various internal refactors have also been done, as part of the navigation work and as part of the upcoming viewport/docking work.
 
 VIEWPORT BRANCH
 (IN PROGRESS, WILL MERGE INTO THE MAIN LISTS WHEN WE MERGE THE BRANCH)
@@ -100,7 +108,7 @@ Breaking Changes:
  - Reorganized context handling to be more explicit: (#1599)
    - YOU NOW NEED TO CALL ImGui::CreateContext() AT THE BEGINNING OF YOUR APP, AND CALL ImGui::DestroyContext() AT THE END.
    - removed Shutdown() function, as DestroyContext() serve this purpose. If you are using an old back-end from the examples/ folder, remove the line that calls Shutdown().
-   - you may pass a ImFontAtlas* pointer to CreateContext() to share a font atlas between contexts. Otherwhise CreateContext() will create its own font atlas instance.
+   - you may pass a ImFontAtlas* pointer to CreateContext() to share a font atlas between contexts. Otherwise CreateContext() will create its own font atlas instance.
    - removed allocator parameters from CreateContext(), they are now setup with SetAllocatorFunctions(), and shared by all contexts.
    - removed the default global context and font atlas instance, which were confusing for users of DLL reloading and users of multiple contexts.
  - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
