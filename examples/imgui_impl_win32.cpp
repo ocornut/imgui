@@ -502,6 +502,22 @@ static void ImGui_ImplWin32_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     ::SetWindowPos(data->Hwnd, NULL, 0, 0, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOMOVE | SWP_NOACTIVATE);
 }
 
+static void ImGui_ImplWin32_SetWindowFocus(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
+    IM_ASSERT(data->Hwnd != 0);
+    ::BringWindowToTop(data->Hwnd);
+    ::SetForegroundWindow(data->Hwnd);
+    ::SetFocus(data->Hwnd);
+}
+
+static bool ImGui_ImplWin32_GetWindowFocus(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
+    IM_ASSERT(data->Hwnd != 0);
+    return ::GetActiveWindow() == data->Hwnd;
+}
+
 static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* title)
 {
     ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
@@ -642,6 +658,8 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_GetWindowPos = ImGui_ImplWin32_GetWindowPos;
     platform_io.Platform_SetWindowSize = ImGui_ImplWin32_SetWindowSize;
     platform_io.Platform_GetWindowSize = ImGui_ImplWin32_GetWindowSize;
+    platform_io.Platform_SetWindowFocus = ImGui_ImplWin32_SetWindowFocus;
+    platform_io.Platform_GetWindowFocus = ImGui_ImplWin32_GetWindowFocus;
     platform_io.Platform_SetWindowTitle = ImGui_ImplWin32_SetWindowTitle;
     platform_io.Platform_SetWindowAlpha = ImGui_ImplWin32_SetWindowAlpha;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;

@@ -144,10 +144,9 @@ int main(int, char**)
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
 
     // Setup style
+    ImGui::GetStyle().WindowRounding = 0.0f;
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-    ImGuiStyle& style = ImGui::GetStyle();
-    style.WindowRounding = 0.0f;
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 

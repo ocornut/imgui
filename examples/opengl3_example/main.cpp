@@ -37,13 +37,15 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL3_Init();
 
     // Setup style
+    ImGui::GetStyle().WindowRounding = 0.0f;
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
