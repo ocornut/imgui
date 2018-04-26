@@ -16,25 +16,25 @@
 #include "imconfig.h"
 #endif
 
-#include <float.h>          // FLT_MAX
-#include <stdarg.h>         // va_list
-#include <stddef.h>         // ptrdiff_t, NULL
-#include <string.h>         // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
+#include <float.h>                  // FLT_MAX
+#include <stdarg.h>                 // va_list
+#include <stddef.h>                 // ptrdiff_t, NULL
+#include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
-#define IMGUI_VERSION       "1.61 WIP"
+// Version
+#define IMGUI_VERSION               "1.61 WIP"
+#define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 
-// Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+// Define attributes of all API symbols declarations (e.g. for DLL under Windows)
 #ifndef IMGUI_API
 #define IMGUI_API
 #endif
 
-// Define assertion handler.
+// Helpers
 #ifndef IM_ASSERT
 #include <assert.h>
-#define IM_ASSERT(_EXPR)    assert(_EXPR)
+#define IM_ASSERT(_EXPR)            assert(_EXPR)
 #endif
-
-// Helpers
 #if defined(__clang__) || defined(__GNUC__)
 #define IM_FMTARGS(FMT)             __attribute__((format(printf, FMT, FMT+1))) // Apply printf-style warnings to user functions.
 #define IM_FMTLIST(FMT)             __attribute__((format(printf, FMT, 0)))
@@ -60,7 +60,7 @@ struct ImDrawVert;                  // A single vertex (20 bytes by default, ove
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
-struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4
+struct ImColor;                     // Helper functions to create a color that can be converted to either u32 or float4 (*obsolete* please avoid using)
 struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
 struct ImGuiOnceUponAFrame;         // Simple helper for running a block of code not more than once a frame, used by IMGUI_ONCE_UPON_A_FRAME macro
 struct ImGuiStorage;                // Simple custom key value storage
@@ -143,6 +143,7 @@ namespace ImGui
     IMGUI_API void          DestroyContext(ImGuiContext* ctx = NULL);   // NULL = destroy current context
     IMGUI_API ImGuiContext* GetCurrentContext();
     IMGUI_API void          SetCurrentContext(ImGuiContext* ctx);
+    IMGUI_API bool          DebugCheckVersionAndDataLayout(const char* version_str, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_drawvert);
 
     // Main
     IMGUI_API ImGuiIO&      GetIO();
@@ -231,7 +232,7 @@ namespace ImGui
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);
     IMGUI_API void          PopStyleVar(int count = 1);
-    IMGUI_API const ImVec4& GetStyleColorVec4(ImGuiCol idx);                                // retrieve style color as stored in ImGuiStyle structure. use to feed back into PushStyleColor(), otherwhise use GetColorU32() to get style color with style alpha baked in.
+    IMGUI_API const ImVec4& GetStyleColorVec4(ImGuiCol idx);                                // retrieve style color as stored in ImGuiStyle structure. use to feed back into PushStyleColor(), otherwise use GetColorU32() to get style color with style alpha baked in.
     IMGUI_API ImFont*       GetFont();                                                      // get current font
     IMGUI_API float         GetFontSize();                                                  // get current font size (= height in pixels) of current font with current scale applied
     IMGUI_API ImVec2        GetFontTexUvWhitePixel();                                       // get UV coordinate for a while pixel, useful to draw custom shapes via the ImDrawList API
@@ -790,9 +791,9 @@ enum ImGuiConfigFlags_
 // Back-end capabilities flags stored in io.BackendFlags. Set by imgui_impl_xxx or custom back-end.
 enum ImGuiBackendFlags_
 {
-    ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Back-end has a connected gamepad.
-    ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Back-end can honor GetMouseCursor() values and change the OS cursor shape.
-    ImGuiBackendFlags_HasSetMousePos        = 1 << 2    // Back-end can honor io.WantSetMousePos and reposition the mouse (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
+    ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Back-end supports and has a connected gamepad.
+    ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Back-end supports reading GetMouseCursor() to change the OS cursor shape.
+    ImGuiBackendFlags_HasSetMousePos        = 1 << 2    // Back-end supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -980,7 +981,7 @@ struct ImGuiStyle
     float       GrabRounding;               // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f,0.5f) for horizontally+vertically centered.
     ImVec2      DisplayWindowPadding;       // Window positions are clamped to be visible within the display area by at least this amount. Only covers regular windows.
-    ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
+    ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edges of your screen (e.g. on a TV) increase the safe area padding. Apply to popups/tooltips as well regular windows. NB: Prefer configuring your TV sets correctly!
     float       MouseCursorScale;           // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
     bool        AntiAliasedLines;           // Enable anti-aliasing on lines/borders. Disable if you are really tight on CPU/GPU.
     bool        AntiAliasedFill;            // Enable anti-aliasing on filled shapes (rounded rectangles, circles, etc.)
@@ -1053,8 +1054,8 @@ struct ImGuiIO
 
     ImVec2      MousePos;                       // Mouse position, in pixels. Set to ImVec2(-FLT_MAX,-FLT_MAX) if mouse is unavailable (on another screen, etc.)
     bool        MouseDown[5];                   // Mouse buttons: left, right, middle + extras. ImGui itself mostly only uses left button (BeginPopupContext** are using right button). Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
-    float       MouseWheel;                     // Mouse wheel: 1 unit scrolls about 5 lines text. 
-    float       MouseWheelH;                    // Mouse wheel (Horizontal). Most users don't have a mouse with an horizontal wheel, may not be filled by all back-ends.
+    float       MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text. 
+    float       MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all back-ends.
     bool        MouseDrawCursor;                // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor).
     bool        KeyCtrl;                        // Keyboard modifier pressed: Control
     bool        KeyShift;                       // Keyboard modifier pressed: Shift
@@ -1686,7 +1687,7 @@ enum ImFontAtlasFlags_
 //  2. Call GetTexDataAsAlpha8() or GetTexDataAsRGBA32() to build and retrieve pixels data.
 //  3. Upload the pixels data into a texture within your graphics system.
 //  4. Call SetTexID(my_tex_id); and pass the pointer/identifier to your texture. This value will be passed back to you during rendering to identify the texture.
-// IMPORTANT: If you pass a 'glyph_ranges' array to AddFont*** functions, you need to make sure that your array persist up until the ImFont is build (when calling GetTextData*** or Build()). We only copy the pointer, not the data.
+// IMPORTANT: If you pass a 'glyph_ranges' array to AddFont*** functions, you need to make sure that your array persist up until the ImFont is build (when calling GetTexData*** or Build()). We only copy the pointer, not the data.
 struct ImFontAtlas
 {
     IMGUI_API ImFontAtlas();

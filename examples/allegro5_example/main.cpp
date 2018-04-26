@@ -5,7 +5,7 @@
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
 #include "imgui.h"
-#include "imgui_impl_a5.h"
+#include "imgui_impl_allegro5.h"
 
 int main(int, char**)
 {
@@ -22,7 +22,8 @@ int main(int, char**)
     al_register_event_source(queue, al_get_keyboard_event_source());
     al_register_event_source(queue, al_get_mouse_event_source());
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
