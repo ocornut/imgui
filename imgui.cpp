@@ -3594,6 +3594,7 @@ void ImGui::UpdatePlatformWindows()
                     g.PlatformIO.Renderer_DestroyWindow(viewport);
                 if (g.PlatformIO.Platform_DestroyWindow)
                     g.PlatformIO.Platform_DestroyWindow(viewport);
+                viewport->CreatedPlatformWindow = false;
                 IM_ASSERT(viewport->RendererUserData == NULL);
                 IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
             }
@@ -7915,6 +7916,15 @@ void ImGui::SetNextWindowPos(const ImVec2& pos, ImGuiCond cond, const ImVec2& pi
     g.NextWindowData.PosPivotVal = pivot;
     g.NextWindowData.PosCond = cond ? cond : ImGuiCond_Always;
 }
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+void ImGui::SetNextWindowPosCenter(ImGuiCond cond) 
+{ 
+    ImGuiViewport* viewport = ImGui::GetMainViewport(); 
+    SetNextWindowPos(viewport->Pos + viewport->Size * 0.5f, cond, ImVec2(0.5f, 0.5f)); 
+    SetNextWindowViewport(viewport->ID); 
+}
+#endif
 
 void ImGui::SetNextWindowSize(const ImVec2& size, ImGuiCond cond)
 {
@@ -14260,7 +14270,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 else
                     ImGui::BulletText("NavRectRel[0]: <None>");
                 ImGui::BulletText("Viewport: %d, ViewportId: 0x%08X, ViewportPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);
-                ImGui::BulletText("ViewportMonitor: %d", window->Viewport->PlatformMonitor);
+                ImGui::BulletText("ViewportMonitor: %d", window->Viewport ? window->Viewport->PlatformMonitor : -1);
                 if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
                 if (window->ParentWindow != NULL) NodeWindow(window->ParentWindow, "ParentWindow");
                 if (window->DC.ChildWindows.Size > 0) NodeWindows(window->DC.ChildWindows, "ChildWindows");

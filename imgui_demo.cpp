@@ -2477,11 +2477,14 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     // FIXME-VIEWPORT-ABS: Select a default viewport
     const float DISTANCE = 10.0f;
     static int corner = 0;
-    ImGuiViewport* viewport = ImGui::GetMainViewport();
-    ImVec2 window_pos = ImVec2((corner & 1) ? (viewport->Pos.x + viewport->Size.x - DISTANCE) : (viewport->Pos.x + DISTANCE), (corner & 2) ? (viewport->Pos.y + viewport->Size.y - DISTANCE) : (viewport->Pos.y + DISTANCE));
-    ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
     if (corner != -1)
+    {
+        ImGuiViewport* viewport = ImGui::GetMainViewport();
+        ImVec2 window_pos = ImVec2((corner & 1) ? (viewport->Pos.x + viewport->Size.x - DISTANCE) : (viewport->Pos.x + DISTANCE), (corner & 2) ? (viewport->Pos.y + viewport->Size.y - DISTANCE) : (viewport->Pos.y + DISTANCE));
+        ImVec2 window_pos_pivot = ImVec2((corner & 1) ? 1.0f : 0.0f, (corner & 2) ? 1.0f : 0.0f);
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
+        ImGui::SetNextWindowViewport(viewport->ID);
+    }
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
     if (ImGui::Begin("Example: Fixed Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav))
     {

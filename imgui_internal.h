@@ -1080,7 +1080,6 @@ namespace ImGui
 
     // Viewports
     IMGUI_API ImGuiViewportP*       FindViewportByID(ImGuiID id);
-    IMGUI_API void                  SetNextWindowViewport(ImGuiID id);
     IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void                  ShowViewportThumbnails();
 
