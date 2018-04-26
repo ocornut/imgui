@@ -418,8 +418,7 @@ static void ImGui_ImplSDL2_SetWindowFocus(ImGuiViewport* viewport)
 static bool ImGui_ImplSDL2_GetWindowFocus(ImGuiViewport* viewport)
 {
     ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
-    bool focus = (SDL_GetWindowFlags(data->Window) & SDL_WINDOW_INPUT_FOCUS) != 0;
-    return focus;
+    return (SDL_GetWindowFlags(data->Window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
 static void ImGui_ImplSDL2_RenderWindow(ImGuiViewport* viewport, void*)
@@ -452,7 +451,7 @@ static int ImGui_ImplSDL2_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // SDL_HAS_VULKAN
 
-// FIXME-PLATFORM: Update monitor list when changed?
+// FIXME-PLATFORM: SDL doesn't have an event to notify the application of display/monitor changes
 static void ImGui_ImplSDL2_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();

@@ -8,6 +8,7 @@
 #include <tchar.h>
 
 // CHANGELOG
+// (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors and ImGuiBackendFlags_HasSetMousePos flags + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
@@ -26,10 +27,12 @@ static HWND                 g_hWnd = 0;
 static INT64                g_Time = 0;
 static INT64                g_TicksPerSecond = 0;
 static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_Count_;
+static bool                 g_WantUpdateMonitors = true;
 
 // Forward Declarations
 static void ImGui_ImplWin32_InitPlatformInterface();
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
+static void ImGui_ImplWin32_UpdateMonitors();
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
@@ -159,6 +162,8 @@ void    ImGui_ImplWin32_NewFrame()
     RECT rect;
     ::GetClientRect(g_hWnd, &rect);
     io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
+    if (g_WantUpdateMonitors)
+        ImGui_ImplWin32_UpdateMonitors();
 
     // Setup time step
     INT64 current_time;
@@ -251,7 +256,7 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         io.MouseWheelH += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
         return 0;
     case WM_MOUSEMOVE:
-        io.MousePos.x = (signed short)(lParam);
+        io.MousePos.x = (signed short)(lParam);                 // Note: this is used for single-viewport support, but in reality the code in ImGui_ImplWin32_UpdateMousePos() overwrite this.
         io.MousePos.y = (signed short)(lParam >> 16);
         return 0;
     case WM_KEYDOWN:
@@ -272,6 +277,9 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
     case WM_SETCURSOR:
         if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())
             return 1;
+        return 0;
+    case WM_DISPLAYCHANGE:
+        g_WantUpdateMonitors = true;
         return 0;
     }
     return 0;
@@ -623,11 +631,11 @@ static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, H
     return TRUE;
 }
 
-// FIXME-PLATFORM: Update monitor list when changed (WM_DISPLAYCHANGE?)
 static void ImGui_ImplWin32_UpdateMonitors()
 {
     ImGui::GetPlatformIO().Monitors.resize(0);
     ::EnumDisplayMonitors(NULL, NULL, ImGui_ImplWin32_UpdateMonitors_EnumFunc, NULL);
+    g_WantUpdateMonitors = false;
 }
 
 static void ImGui_ImplWin32_InitPlatformInterface()

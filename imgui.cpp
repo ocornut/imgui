@@ -3580,21 +3580,6 @@ void ImGui::UpdatePlatformWindows()
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         return;
 
-    // Update our implicit z-order knowledge of platform windows, which is used when the back-end cannot provide io.MouseHoveredViewport.
-    if (g.PlatformIO.Platform_GetWindowFocus)
-    {
-        ImGuiViewportP* focused_viewport = NULL;
-        for (int i = 0; i < g.Viewports.Size && focused_viewport == NULL; i++)
-            if (g.PlatformIO.Platform_GetWindowFocus(g.Viewports[i]))
-                focused_viewport = g.Viewports[i];
-        if (focused_viewport && g.PlatformLastFocusedViewport != focused_viewport->ID)
-        {
-            if (focused_viewport->LastFrontMostStampCount != g.WindowsFrontMostStampCount)
-                focused_viewport->LastFrontMostStampCount = ++g.WindowsFrontMostStampCount;
-            g.PlatformLastFocusedViewport = focused_viewport->ID;
-        }
-    }
-
     // Create/resize/destroy platform windows to match each active viewport.
     // Skip the main viewport (index 0), which is always fully handled by the application!
     for (int i = 1; i < g.Viewports.Size; i++)
@@ -3631,13 +3616,14 @@ void ImGui::UpdatePlatformWindows()
         }
 
         // Create window
-        bool is_new_window = (viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL && viewport->RendererUserData == NULL);
-        if (is_new_window && viewport->PlatformHandle == NULL && viewport->PlatformUserData == NULL)
-            g.PlatformIO.Platform_CreateWindow(viewport);
-        if (is_new_window && viewport->RendererUserData == NULL && g.PlatformIO.Renderer_CreateWindow != NULL)
+        bool is_new_window = (viewport->CreatedPlatformWindow == false);
+        if (is_new_window)
         {
-            g.PlatformIO.Renderer_CreateWindow(viewport);
+            g.PlatformIO.Platform_CreateWindow(viewport);
+            if (g.PlatformIO.Renderer_CreateWindow != NULL)
+                g.PlatformIO.Renderer_CreateWindow(viewport);
             viewport->RendererLastSize = viewport->Size;
+            viewport->CreatedPlatformWindow = true;
         }
 
         // Apply Position and Size (from ImGui to Platform/Renderer back-ends)
@@ -3681,6 +3667,22 @@ void ImGui::UpdatePlatformWindows()
 
         // Clear request flags
         viewport->PlatformRequestClose = viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
+    }
+
+    // Update our implicit z-order knowledge of platform windows, which is used when the back-end cannot provide io.MouseHoveredViewport.
+    if (g.PlatformIO.Platform_GetWindowFocus != NULL)
+    {
+        ImGuiViewportP* focused_viewport = NULL;
+        for (int i = 0; i < g.Viewports.Size && focused_viewport == NULL; i++)
+            if (g.Viewports[i]->PlatformUserData != NULL || g.Viewports[i]->PlatformHandle != NULL || g.Viewports[i]->CreatedPlatformWindow)
+                if (g.PlatformIO.Platform_GetWindowFocus(g.Viewports[i]))
+                    focused_viewport = g.Viewports[i];
+        if (focused_viewport && g.PlatformLastFocusedViewport != focused_viewport->ID)
+        {
+            if (focused_viewport->LastFrontMostStampCount != g.WindowsFrontMostStampCount)
+                focused_viewport->LastFrontMostStampCount = ++g.WindowsFrontMostStampCount;
+            g.PlatformLastFocusedViewport = focused_viewport->ID;
+        }
     }
 }
 

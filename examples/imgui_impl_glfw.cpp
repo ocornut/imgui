@@ -53,10 +53,12 @@ static GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
 static double           g_Time = 0.0f;
 static bool             g_MouseJustPressed[5] = { false, false, false, false, false };
 static GLFWcursor*      g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
+static bool             g_WantUpdateMonitors = true;
 
 // Forward Declarations
 static void ImGui_ImplGlfw_InitPlatformInterface();
 static void ImGui_ImplGlfw_ShutdownPlatformInterface();
+static void ImGui_ImplGlfw_UpdateMonitors();
 
 static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
 {
@@ -271,6 +273,8 @@ void ImGui_ImplGlfw_NewFrame()
     glfwGetFramebufferSize(g_Window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
     io.DisplayFramebufferScale = ImVec2(w > 0 ? ((float)display_w / w) : 0, h > 0 ? ((float)display_h / h) : 0);
+    if (g_WantUpdateMonitors)
+        ImGui_ImplGlfw_UpdateMonitors();
 
     // Setup time step
     double current_time = glfwGetTime();
@@ -562,7 +566,6 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // GLFW_HAS_VULKAN
 
-// FIXME-PLATFORM: Update monitor list when changed (using glfwSetMonitorCallback?)
 // FIXME-PLATFORM: GLFW doesn't export monitor work area (see https://github.com/glfw/glfw/pull/989)
 static void ImGui_ImplGlfw_UpdateMonitors()
 {
@@ -586,6 +589,12 @@ static void ImGui_ImplGlfw_UpdateMonitors()
 #endif
         platform_io.Monitors.push_back(monitor);
     }
+    g_WantUpdateMonitors = false;
+}
+
+static void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
+{
+    g_WantUpdateMonitors = true;
 }
 
 static void ImGui_ImplGlfw_InitPlatformInterface()
@@ -614,7 +623,9 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
 
+    // Note: monitor callback are broken GLFW 3.2 and earlier (see github.com/glfw/glfw/issues/784)
     ImGui_ImplGlfw_UpdateMonitors();
+    glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
 
     // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();

@@ -262,6 +262,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
  - viewport: vulkan renderer implementation. 
  - viewport: need to clarify how to use GetMousePos() from a user point of view.
+ - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport. 
+ - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set
+ - platform: sdl: no refresh of monitor/display (SDL doesn't seem to have an event for it).
 
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)

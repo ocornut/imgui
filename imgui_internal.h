@@ -515,6 +515,7 @@ struct ImGuiViewportP : public ImGuiViewport
     int                 LastFrontMostStampCount;  // Last stamp number from when a window hosted by this viewport was made front-most (by comparing this value between two viewport we have an implicit viewport z-order
     ImGuiID             LastNameHash;
     ImVec2              LastPos;
+    bool                CreatedPlatformWindow;
     float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
     float               LastAlpha;
     int                 PlatformMonitor;
@@ -524,7 +525,7 @@ struct ImGuiViewportP : public ImGuiViewport
     ImDrawDataBuilder   DrawDataBuilder;
     ImVec2              RendererLastSize;
 
-    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = INT_MIN; Window = NULL; OverlayDrawList = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
+    ImGuiViewportP()         { Idx = 1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; CreatedPlatformWindow = false; Alpha = LastAlpha = 1.0f; PlatformMonitor = INT_MIN; Window = NULL; OverlayDrawList = NULL; RendererLastSize = ImVec2(-1.0f,-1.0f); }
     ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     ImVec2  GetCenter() const{ return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
