@@ -113,27 +113,27 @@ typedef unsigned long long ImU64;   // 64-bit unsigned integer
 
 struct ImVec2
 {
-    float x, y;
-    ImVec2() { x = y = 0.0f; }
+    float     x, y;
+    ImVec2()  { x = y = 0.0f; }
     ImVec2(float _x, float _y) { x = _x; y = _y; }
-    float  operator[] (size_t idx) const { IM_ASSERT(idx <= 1); return (&x)[idx]; }    // We very rarely use this [] operator, the assert overhead is fine.
-#ifdef IM_VEC2_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec2.
-    IM_VEC2_CLASS_EXTRA
+    float operator[] (size_t i) const { IM_ASSERT(i <= 1); return (&x)[i]; }    // We very rarely use this [] operator, the assert overhead is fine.
+#ifdef IM_VEC2_CLASS_EXTRA
+    IM_VEC2_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec2.
 #endif
 };
 
 struct ImVec4
 {
-    float x, y, z, w;
-    ImVec4() { x = y = z = w = 0.0f; }
+    float     x, y, z, w;
+    ImVec4()  { x = y = z = w = 0.0f; }
     ImVec4(float _x, float _y, float _z, float _w) { x = _x; y = _y; z = _z; w = _w; }
-#ifdef IM_VEC4_CLASS_EXTRA          // Define constructor and implicit cast operators in imconfig.h to convert back<>forth from your math types and ImVec4.
-    IM_VEC4_CLASS_EXTRA
+#ifdef IM_VEC4_CLASS_EXTRA
+    IM_VEC4_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec4.
 #endif
 };
 
 // ImGui end-user API
-// In a namespace so that user can add extra functions in a separate file (e.g. Value() helpers for your vector or common types)
+// In a namespace so that user can add extra functions in your own separate file (please don't modify imgui.cpp/.h)
 namespace ImGui
 {
     // Context creation and access 
@@ -696,7 +696,7 @@ enum ImGuiDragDropFlags_
     ImGuiDragDropFlags_AcceptPeekOnly               = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect  // For peeking ahead and inspecting the payload before delivery.
 };
 
-// Standard Drag and Drop payload types. You can define you own payload types using 12-characters long strings. Types starting with '_' are defined by Dear ImGui.
+// Standard Drag and Drop payload types. You can define you own payload types using short strings. Types starting with '_' are defined by Dear ImGui.
 #define IMGUI_PAYLOAD_TYPE_COLOR_3F     "_COL3F"    // float[3]: Standard type for colors, without alpha. User code may use this type. 
 #define IMGUI_PAYLOAD_TYPE_COLOR_4F     "_COL4F"    // float[4]: Standard type for colors. User code may use this type.
 
@@ -837,10 +837,10 @@ enum ImGuiCol_
     ImGuiCol_PlotHistogram,
     ImGuiCol_PlotHistogramHovered,
     ImGuiCol_TextSelectedBg,
-    ImGuiCol_ModalWindowDarkening,  // darken/colorize entire screen behind a modal window, when one is active
+    ImGuiCol_ModalWindowDarkening,  // Darken/colorize entire screen behind a modal window, when one is active
     ImGuiCol_DragDropTarget,
-    ImGuiCol_NavHighlight,          // gamepad/keyboard: current highlighted item 
-    ImGuiCol_NavWindowingHighlight, // gamepad/keyboard: when holding NavMenu to focus/move/resize windows
+    ImGuiCol_NavHighlight,          // Gamepad/keyboard: current highlighted item 
+    ImGuiCol_NavWindowingHighlight, // Gamepad/keyboard: when holding NavMenu to focus/move/resize windows
     ImGuiCol_COUNT
 
     // Obsolete names (will be removed)
