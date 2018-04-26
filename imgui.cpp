@@ -3392,8 +3392,8 @@ static void ImGui::UpdateMovingWindow()
 }
 
 // If the back-end doesn't set MouseLastHoveredViewport or doesn't honor ImGuiViewportFlags_NoInputs, we do a search ourselves.
-// This search won't take account of the possibility that non-imgui windows may be in-between our dragged window and our target window.
-// FIXME-VIEWPORT: Need a proper notion of focus. At least use the equivalent of LastFrameAsRefViewport on a per-window basis.
+// A) It won't take account of the possibility that non-imgui windows may be in-between our dragged window and our target window. 
+// B) It requires Platform_GetWindowFocus to be implemented by back-end.
 static ImGuiViewportP* FindViewportHoveredFromPlatformWindowStack(const ImVec2 mouse_platform_pos)
 {
     ImGuiContext& g = *GImGui;
@@ -3402,7 +3402,7 @@ static ImGuiViewportP* FindViewportHoveredFromPlatformWindowStack(const ImVec2 m
     {
         ImGuiViewportP* viewport = g.Viewports[n];
         if (!(viewport->Flags & ImGuiViewportFlags_NoInputs) && viewport->GetRect().Contains(mouse_platform_pos))
-            if (best_candidate == NULL || best_candidate->LastFrameAsRefViewport < viewport->LastFrameAsRefViewport)
+            if (best_candidate == NULL || best_candidate->LastFrontMostStampCount < viewport->LastFrontMostStampCount)
                 best_candidate = viewport;
     }
     return best_candidate;
@@ -3532,10 +3532,8 @@ static void ImGui::UpdateViewports()
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
         g.MouseRefViewport = g.MouseRefPrevViewport = main_viewport;
-        g.MouseRefViewport->LastFrameAsRefViewport = g.FrameCount;
         return;
     }
-    g.MouseRefViewport->LastFrameAsRefViewport = g.FrameCount;
 
     // Mouse handling: decide on the actual mouse viewport for this frame between the active/focused viewport and the hovered viewport.
     ImGuiViewportP* viewport_hovered = NULL;
@@ -3583,6 +3581,21 @@ void ImGui::UpdatePlatformWindows()
     g.Viewports[0]->LastPos = g.Viewports[0]->Pos;
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         return;
+
+    // Update our implicit z-order knowledge of platform windows, which is used when the back-end cannot provide io.MouseHoveredViewport.
+    if (g.PlatformIO.Platform_GetWindowFocus)
+    {
+        ImGuiViewportP* focused_viewport = NULL;
+        for (int i = 0; i < g.Viewports.Size && focused_viewport == NULL; i++)
+            if (g.PlatformIO.Platform_GetWindowFocus(g.Viewports[i]))
+                focused_viewport = g.Viewports[i];
+        if (focused_viewport && g.PlatformLastFocusedViewport != focused_viewport->ID)
+        {
+            if (focused_viewport->LastFrontMostStampCount != g.WindowsFrontMostStampCount)
+                focused_viewport->LastFrontMostStampCount = ++g.WindowsFrontMostStampCount;
+            g.PlatformLastFocusedViewport = focused_viewport->ID;
+        }
+    }
 
     // Create/resize/destroy platform windows to match each active viewport.
     // Skip the main viewport (index 0), which is always fully handled by the application!
@@ -3656,13 +3669,17 @@ void ImGui::UpdatePlatformWindows()
             g.PlatformIO.Platform_SetWindowAlpha(viewport, viewport->Alpha);
         viewport->LastAlpha = viewport->Alpha;
 
-        // Show window. On startup ensure platform window don't get focus.
+        // Show window. On startup ensure platform window don't get focus
         if (is_new_window)
         {
             if (g.FrameCount < 2)
                 viewport->Flags |= ImGuiViewportFlags_NoFocusOnAppearing;
             g.PlatformIO.Platform_ShowWindow(viewport);
         }
+
+        // Even without focus, we assume the window becomes front-most. This is used by our platform z-order heuristic when io.MouseHoveredViewport is not available.
+        if (is_new_window && viewport->LastFrontMostStampCount != g.WindowsFrontMostStampCount)
+            viewport->LastFrontMostStampCount = ++g.WindowsFrontMostStampCount;
 
         // Clear request flags
         viewport->PlatformRequestClose = viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
