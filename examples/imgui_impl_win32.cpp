@@ -117,9 +117,9 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
 }
 
 // This code supports multiple OS Windows mapped into different ImGui viewports, 
-// So it is a little more complicated than your typical binding code (which only needs to set io.MousePos in your WM_MOUSEMOVE handler)
+// So it is a little more complicated than your typical single-viewport binding code (which only needs to set io.MousePos from the WM_MOUSEMOVE handler)
 // This is what imgui needs from the back-end to support multiple windows:
-// - io.MousePos               = mouse position (e.g. io.MousePos == viewport->Pos when we are on the upper-left of our viewport)
+// - io.MousePos               = mouse position in absolute coordinate (e.g. io.MousePos == ImVec2(0,0) when it is on the upper-left of the primary monitor)
 // - io.MousePosViewport       = viewport which mouse position is based from (generally the focused/active/capturing viewport)
 // - io.MouseHoveredWindow     = viewport which mouse is hovering, **regardless of it being the active/focused window**, **regardless of another window holding mouse captured**. [Optional]
 // This function overwrite the value of io.MousePos normally updated by the WM_MOUSEMOVE handler. 

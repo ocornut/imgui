@@ -3452,7 +3452,6 @@ static void ImGui::UpdateViewports()
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
     // Update mouse reference viewport
-    g.MouseRefPrevViewport = g.MouseRefViewport;
     g.MouseRefViewport = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
 
     // Update main viewport with current platform position and size
@@ -3480,8 +3479,7 @@ static void ImGui::UpdateViewports()
 
             // Destroy
             if (viewport == g.MouseRefViewport)         g.MouseRefViewport = main_viewport;
-            if (viewport == g.MouseRefPrevViewport)     g.MouseRefPrevViewport = main_viewport;
-            if (viewport == g.MouseHoveredLastViewport) g.MouseHoveredLastViewport = NULL;
+            if (viewport == g.MouseLastHoveredViewport) g.MouseLastHoveredViewport = NULL;
             IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
             IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
             IM_DELETE(viewport);
@@ -3531,7 +3529,7 @@ static void ImGui::UpdateViewports()
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
-        g.MouseRefViewport = g.MouseRefPrevViewport = main_viewport;
+        g.MouseRefViewport = main_viewport;
         return;
     }
 
@@ -3555,7 +3553,7 @@ static void ImGui::UpdateViewports()
         viewport_hovered = FindViewportHoveredFromPlatformWindowStack(g.IO.MousePos);
     }
     if (viewport_hovered != NULL)
-        g.MouseHoveredLastViewport = viewport_hovered;
+        g.MouseLastHoveredViewport = viewport_hovered;
 
     // When dragging something, always refer to the last hovered viewport. 
     // (So when we are between viewports, our dragged preview will tend to show in the last viewport even if we don't have tooltips in viewports)
@@ -3564,7 +3562,7 @@ static void ImGui::UpdateViewports()
     if (is_mouse_dragging_with_an_expected_destination || g.ActiveId == 0 || !ImGui::IsAnyMouseDown())
     {
         if (is_mouse_dragging_with_an_expected_destination && viewport_hovered == NULL)
-            viewport_hovered = g.MouseHoveredLastViewport;
+            viewport_hovered = g.MouseLastHoveredViewport;
         if (viewport_hovered != NULL && viewport_hovered != g.MouseRefViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
             g.MouseRefViewport = viewport_hovered;
     }
@@ -3722,7 +3720,7 @@ static void ImGui::UpdateMouseInputs()
     ImGuiContext& g = *GImGui;
 
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
-    if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev) && g.MouseRefViewport == g.MouseRefPrevViewport)
+    if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev))
         g.IO.MouseDelta = g.IO.MousePos - g.IO.MousePosPrev;
     else
         g.IO.MouseDelta = ImVec2(0.0f, 0.0f);
@@ -3752,7 +3750,6 @@ static void ImGui::UpdateMouseInputs()
             g.IO.MouseClickedPos[i] = g.IO.MousePos;
             g.IO.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
             g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
-            g.MouseClickedPosViewportId[i] = g.MouseRefViewport->ID;
         }
         else if (g.IO.MouseDown[i])
         {
@@ -4198,7 +4195,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    g.CurrentViewport = g.MouseRefViewport = g.MouseRefPrevViewport = g.MouseHoveredLastViewport = NULL;
+    g.CurrentViewport = g.MouseRefViewport = g.MouseLastHoveredViewport = NULL;
     for (int i = 0; i < g.Viewports.Size; i++)
         IM_DELETE(g.Viewports[i]);
     g.Viewports.clear();
@@ -5297,8 +5294,7 @@ ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
         lock_threshold = g.IO.MouseDragThreshold;
     if (g.IO.MouseDown[button])
         if (g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold)
-            if (g.MouseRefViewport->ID == g.MouseClickedPosViewportId[button])
-                return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
+            return g.IO.MousePos - g.IO.MouseClickedPos[button];     // Assume we can only get active with left-mouse button (at the moment).
     return ImVec2(0.0f, 0.0f);
 }
 

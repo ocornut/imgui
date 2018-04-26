@@ -642,9 +642,7 @@ struct ImGuiContext
     ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (always 1+, and generally 1 unless multi-viewports are enabled). Each viewports hold their copy of ImDrawData. 
     ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
     ImGuiViewportP*         MouseRefViewport;
-    ImGuiViewportP*         MouseRefPrevViewport;
-    ImGuiViewportP*         MouseHoveredLastViewport;           // Last viewport that was hovered by mouse (even if we are not hovering any viewport any more)
-    ImGuiID                 MouseClickedPosViewportId[5];       // For rarely used fields we only compare to, store viewport ID only so we don't have to clean dangling pointers
+    ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more)
     ImGuiID                 PlatformLastFocusedViewport;        // Record of last focused platform window/viewport, when this changes we stamp the viewport as front-most
 
     // Navigation data (for gamepad/keyboard)
@@ -776,9 +774,7 @@ struct ImGuiContext
         NextTreeNodeOpenCond = 0;
 
         CurrentViewport = NULL;
-        MouseRefViewport = NULL;
-        MouseRefPrevViewport = MouseHoveredLastViewport = NULL;
-        memset(MouseClickedPosViewportId, 0, sizeof(MouseClickedPosViewportId));
+        MouseRefViewport = MouseLastHoveredViewport = NULL;
         PlatformLastFocusedViewport = 0;
 
         NavWindow = NULL;
