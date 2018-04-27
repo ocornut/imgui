@@ -9063,8 +9063,6 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     RenderNavHighlight(frame_bb, id);
     RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, style.FrameRounding);
 
-    bool value_changed = false;
-
     // Process interacting with the drag
     if (g.ActiveId == id)
     {
@@ -9073,69 +9071,70 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
         else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             ClearActiveID();
     }
-    if (g.ActiveId == id)
+    if (g.ActiveId != id)
+        return false;
+
+    bool value_changed = false;
+    if (g.ActiveIdIsJustActivated)
     {
-        if (g.ActiveIdIsJustActivated)
+        // Lock current value on click
+        g.DragCurrentValue = *v;
+        g.DragLastMouseDelta = ImVec2(0.f, 0.f);
+    }
+
+    if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
+        v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
+
+    float v_cur = g.DragCurrentValue;
+    const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
+    float adjust_delta = 0.0f;
+    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid())
+    {
+        adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
+        if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
+            adjust_delta *= g.DragSpeedScaleFast;
+        if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
+            adjust_delta *= g.DragSpeedScaleSlow;
+        g.DragLastMouseDelta.x = mouse_drag_delta.x;
+    }
+    if (g.ActiveIdSource == ImGuiInputSource_Nav)
+    {
+        adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
+        if (v_min < v_max && ((v_cur >= v_max && adjust_delta > 0.0f) || (v_cur <= v_min && adjust_delta < 0.0f))) // This is to avoid applying the saturation when already past the limits
+            adjust_delta = 0.0f;
+        v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
+    }
+    adjust_delta *= v_speed;
+
+    if (fabsf(adjust_delta) > 0.0f)
+    {
+        if (fabsf(power - 1.0f) > 0.001f)
         {
-            // Lock current value on click
-            g.DragCurrentValue = *v;
-            g.DragLastMouseDelta = ImVec2(0.f, 0.f);
+            // Logarithmic curve on both side of 0.0
+            float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
+            float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
+            float v1 = powf(v0_abs, 1.0f / power) + (adjust_delta * v0_sign);
+            float v1_abs = v1 >= 0.0f ? v1 : -v1;
+            float v1_sign = v1 >= 0.0f ? 1.0f : -1.0f;          // Crossed sign line
+            v_cur = powf(v1_abs, power) * v0_sign * v1_sign;    // Reapply sign
+        }
+        else
+        {
+            v_cur += adjust_delta;
         }
 
-        if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
-            v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
+        // Clamp
+        if (v_min < v_max)
+            v_cur = ImClamp(v_cur, v_min, v_max);
+        g.DragCurrentValue = v_cur;
+    }
 
-        float v_cur = g.DragCurrentValue;
-        const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
-        float adjust_delta = 0.0f;
-        if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid())
-        {
-            adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
-            if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-                adjust_delta *= g.DragSpeedScaleFast;
-            if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-                adjust_delta *= g.DragSpeedScaleSlow;
-            g.DragLastMouseDelta.x = mouse_drag_delta.x;
-        }
-        if (g.ActiveIdSource == ImGuiInputSource_Nav)
-        {
-            adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
-            if (v_min < v_max && ((v_cur >= v_max && adjust_delta > 0.0f) || (v_cur <= v_min && adjust_delta < 0.0f))) // This is to avoid applying the saturation when already past the limits
-                adjust_delta = 0.0f;
-            v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
-        }
-        adjust_delta *= v_speed;
-
-        if (fabsf(adjust_delta) > 0.0f)
-        {
-            if (fabsf(power - 1.0f) > 0.001f)
-            {
-                // Logarithmic curve on both side of 0.0
-                float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
-                float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
-                float v1 = powf(v0_abs, 1.0f / power) + (adjust_delta * v0_sign);
-                float v1_abs = v1 >= 0.0f ? v1 : -v1;
-                float v1_sign = v1 >= 0.0f ? 1.0f : -1.0f;          // Crossed sign line
-                v_cur = powf(v1_abs, power) * v0_sign * v1_sign;    // Reapply sign
-            }
-            else
-            {
-                v_cur += adjust_delta;
-            }
-
-            // Clamp
-            if (v_min < v_max)
-                v_cur = ImClamp(v_cur, v_min, v_max);
-            g.DragCurrentValue = v_cur;
-        }
-
-        // Round to user desired precision, then apply
-        v_cur = RoundScalar(v_cur, decimal_precision);
-        if (*v != v_cur)
-        {
-            *v = v_cur;
-            value_changed = true;
-        }
+    // Round to user desired precision, then apply
+    v_cur = RoundScalar(v_cur, decimal_precision);
+    if (*v != v_cur)
+    {
+        *v = v_cur;
+        value_changed = true;
     }
 
     return value_changed;
