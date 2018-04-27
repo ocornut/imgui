@@ -1708,14 +1708,14 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Text("ImGui");
             ImGui::Button("Apple");
             static float foo = 1.0f;
-            ImGui::InputFloat("red", &foo, 0.05f, 0, 3);
+            ImGui::InputFloat("red", &foo, 0.05f, 0, "%.3f");
             ImGui::Text("An extra line here.");
             ImGui::NextColumn();
 
                 ImGui::Text("Sailor");
             ImGui::Button("Corniflower");
             static float bar = 1.0f;
-            ImGui::InputFloat("blue", &bar, 0.05f, 0, 3);
+            ImGui::InputFloat("blue", &bar, 0.05f, 0, "%.3f");
             ImGui::NextColumn();
 
             if (ImGui::CollapsingHeader("Category A")) { ImGui::Text("Blah blah blah"); } ImGui::NextColumn();
