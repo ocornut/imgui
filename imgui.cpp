@@ -10245,8 +10245,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     {
         if (cancel_edit)
         {
-            // Restore initial value
-            if (is_editable)
+            // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
+            if (is_editable && strncmp(buf, edit_state.InitialText.Data, buf_size) != 0)
             {
                 ImStrncpy(buf, edit_state.InitialText.Data, buf_size);
                 value_changed = true;
