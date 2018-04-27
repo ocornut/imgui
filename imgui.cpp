@@ -746,8 +746,8 @@ static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInpu
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
 static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining = NULL, ImVec2* out_offset = NULL, bool stop_on_new_line = false);
 
-static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size);
-static inline void      DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size);
+static inline int       DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* display_format);
+static inline int       DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, int decimal_precision);
 static void             DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg_1, const void* arg_2);
 static bool             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format);
 
@@ -8441,39 +8441,40 @@ void ImGui::BulletText(const char* fmt, ...)
     va_end(args);
 }
 
-static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, const char* display_format, char* buf, int buf_size)
+static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* display_format)
 {
     if (data_type == ImGuiDataType_Int)
-        ImFormatString(buf, buf_size, display_format, *(int*)data_ptr);
-    else if (data_type == ImGuiDataType_Float)
-        ImFormatString(buf, buf_size, display_format, *(float*)data_ptr);
-    else if (data_type == ImGuiDataType_Double)
-        ImFormatString(buf, buf_size, display_format, *(double*)data_ptr);
+        return ImFormatString(buf, buf_size, display_format, *(const int*)data_ptr);
+    if (data_type == ImGuiDataType_Float)
+        return ImFormatString(buf, buf_size, display_format, *(const float*)data_ptr);
+    if (data_type == ImGuiDataType_Double)
+        return ImFormatString(buf, buf_size, display_format, *(const double*)data_ptr);
+    IM_ASSERT(0);
+    return 0;
 }
 
-static inline void DataTypeFormatString(ImGuiDataType data_type, void* data_ptr, int decimal_precision, char* buf, int buf_size)
+static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, int decimal_precision)
 {
-    if (data_type == ImGuiDataType_Int)
+    if (decimal_precision < 0)
     {
-        if (decimal_precision < 0)
-            ImFormatString(buf, buf_size, "%d", *(int*)data_ptr);
-        else
-            ImFormatString(buf, buf_size, "%.*d", decimal_precision, *(int*)data_ptr);
+        if (data_type == ImGuiDataType_Int)
+            return ImFormatString(buf, buf_size, "%d", *(const int*)data_ptr);
+        if (data_type == ImGuiDataType_Float)
+            return ImFormatString(buf, buf_size, "%f", *(const float*)data_ptr);     // Ideally we'd have a minimum decimal precision of 1 to visually denote that it is a float, while hiding non-significant digits?
+        if (data_type == ImGuiDataType_Double)
+            return ImFormatString(buf, buf_size, "%f", *(const double*)data_ptr);
     }
-    else if (data_type == ImGuiDataType_Float)
+    else
     {
-        if (decimal_precision < 0)
-            ImFormatString(buf, buf_size, "%f", *(float*)data_ptr);     // Ideally we'd have a minimum decimal precision of 1 to visually denote that it is a float, while hiding non-significant digits?
-        else
-            ImFormatString(buf, buf_size, "%.*f", decimal_precision, *(float*)data_ptr);
+        if (data_type == ImGuiDataType_Int)
+            return ImFormatString(buf, buf_size, "%.*d", decimal_precision, *(const int*)data_ptr);
+        if (data_type == ImGuiDataType_Float)
+            return ImFormatString(buf, buf_size, "%.*f", decimal_precision, *(const float*)data_ptr);
+        if (data_type == ImGuiDataType_Double)
+            return ImFormatString(buf, buf_size, "%.*g", decimal_precision, *(const double*)data_ptr);
     }
-    else if (data_type == ImGuiDataType_Double)
-    {
-        if (decimal_precision < 0)
-            ImFormatString(buf, buf_size, "%f", *(double*)data_ptr);
-        else
-            ImFormatString(buf, buf_size, "%.*f", decimal_precision, *(double*)data_ptr);
-    }
+    IM_ASSERT(0);
+    return 0;
 }
 
 static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg1, const void* arg2)
@@ -8481,18 +8482,18 @@ static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void*
     IM_ASSERT(op == '+' || op == '-');
     if (data_type == ImGuiDataType_Int)
     {
-        if (op == '+')      *(int*)output = *(int*)arg1 + *(const int*)arg2;
-        else if (op == '-') *(int*)output = *(int*)arg1 - *(const int*)arg2;
+        if (op == '+')      *(int*)output = *(const int*)arg1 + *(const int*)arg2;
+        else if (op == '-') *(int*)output = *(const int*)arg1 - *(const int*)arg2;
     }
     else if (data_type == ImGuiDataType_Float)
     {
-        if (op == '+')      *(float*)output = *(float*)arg1 + *(const float*)arg2;
-        else if (op == '-') *(float*)output = *(float*)arg1 - *(const float*)arg2;
+        if (op == '+')      *(float*)output = *(const float*)arg1 + *(const float*)arg2;
+        else if (op == '-') *(float*)output = *(const float*)arg1 - *(const float*)arg2;
     }
     else if (data_type == ImGuiDataType_Double)
     {
-        if (op == '+')      *(double*)output = *(double*)arg1 + *(const double*)arg2;
-        else if (op == '-') *(double*)output = *(double*)arg1 - *(const double*)arg2;
+        if (op == '+')      *(double*)output = *(const double*)arg1 + *(const double*)arg2;
+        else if (op == '-') *(double*)output = *(const double*)arg1 - *(const double*)arg2;
     }
 }
 
@@ -8593,7 +8594,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label
     FocusableItemUnregister(window);
 
     char buf[32];
-    DataTypeFormatString(data_type, data_ptr, decimal_precision, buf, IM_ARRAYSIZE(buf));
+    DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, decimal_precision);
     bool text_value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), aabb.GetSize(), ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_AutoSelectAll);
     if (g.ScalarAsInputTextId == 0)     // First frame we started displaying the InputText widget
     {
@@ -10557,7 +10558,7 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
         PushItemWidth(ImMax(1.0f, CalcItemWidth() - (button_sz.x + style.ItemInnerSpacing.x)*2));
 
     char buf[64];
-    DataTypeFormatString(data_type, data_ptr, scalar_format, buf, IM_ARRAYSIZE(buf));
+    DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, scalar_format);
 
     bool value_changed = false;
     if ((extra_flags & (ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsScientific)) == 0)
