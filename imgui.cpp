@@ -262,6 +262,7 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/04/28 (1.61) - obsoleted InputFloat() functions taking an optional "int decimal_precision" in favor of an equivalent and more flexible "const char* format", consistent with other functions. Kept redirection functions (will obsolete).
  - 2018/04/09 (1.61) - IM_DELETE() helper function added in 1.60 doesn't clear the input _pointer_ reference, more consistent with expectation and allows passing r-value.
  - 2018/03/20 (1.60) - Renamed io.WantMoveMouse to io.WantSetMousePos for consistency and ease of understanding (was added in 1.52, _not_ used by core and only honored by some binding ahead of merging the Nav branch).
  - 2018/03/12 (1.60) - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered as the closing cross uses regular button colors now.
@@ -10600,20 +10601,10 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
     return value_changed;
 }
 
-bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
+bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, const char* format, ImGuiInputTextFlags extra_flags)
 {
     extra_flags |= ImGuiInputTextFlags_CharsScientific;
-    if (decimal_precision < 0)
-    {
-        // Ideally we'd have a minimum decimal precision of 1 to visually denote that this is a float, while hiding non-significant digits? %f doesn't have a minimum of 1
-        return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), "%f", extra_flags);
-    }
-    else
-    {
-        char format[16];
-        ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
-        return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), format, extra_flags);
-    }
+    return InputScalarEx(label, ImGuiDataType_Float, (void*)v, (void*)(step>0.0f ? &step : NULL), (void*)(step_fast>0.0f ? &step_fast : NULL), format, extra_flags);
 }
 
 bool ImGui::InputDouble(const char* label, double* v, double step, double step_fast, const char* format, ImGuiInputTextFlags extra_flags)
@@ -10625,11 +10616,11 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 bool ImGui::InputInt(const char* label, int* v, int step, int step_fast, ImGuiInputTextFlags extra_flags)
 {
     // Hexadecimal input provided as a convenience but the flag name is awkward. Typically you'd use InputText() to parse your own data, if you want to handle prefixes.
-    const char* scalar_format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
-    return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0 ? &step : NULL), (void*)(step_fast>0 ? &step_fast : NULL), scalar_format, extra_flags);
+    const char* format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
+    return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0 ? &step : NULL), (void*)(step_fast>0 ? &step_fast : NULL), format, extra_flags);
 }
 
-bool ImGui::InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags)
+bool ImGui::InputFloatN(const char* label, float* v, int components, const char* format, ImGuiInputTextFlags extra_flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -10643,7 +10634,7 @@ bool ImGui::InputFloatN(const char* label, float* v, int components, int decimal
     for (int i = 0; i < components; i++)
     {
         PushID(i);
-        value_changed |= InputFloat("##v", &v[i], 0, 0, decimal_precision, extra_flags);
+        value_changed |= InputFloat("##v", &v[i], 0, 0, format, extra_flags);
         SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
@@ -10656,20 +10647,55 @@ bool ImGui::InputFloatN(const char* label, float* v, int components, int decimal
     return value_changed;
 }
 
+bool ImGui::InputFloat2(const char* label, float v[2], const char* format, ImGuiInputTextFlags extra_flags)
+{
+    return InputFloatN(label, v, 2, format, extra_flags);
+}
+
+bool ImGui::InputFloat3(const char* label, float v[3], const char* format, ImGuiInputTextFlags extra_flags)
+{
+    return InputFloatN(label, v, 3, format, extra_flags);
+}
+
+bool ImGui::InputFloat4(const char* label, float v[4], const char* format, ImGuiInputTextFlags extra_flags)
+{
+    return InputFloatN(label, v, 4, format, extra_flags);
+}
+
+// Prefer using "const char* format" directly, which is more flexible and consistent with other API.
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+bool ImGui::InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags extra_flags)
+{
+    char format[16] = "%f";
+    if (decimal_precision >= 0)
+        ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
+    return InputFloat(label, v, step, step_fast, format, extra_flags);
+}
+
 bool ImGui::InputFloat2(const char* label, float v[2], int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
-    return InputFloatN(label, v, 2, decimal_precision, extra_flags);
+    char format[16] = "%f";
+    if (decimal_precision >= 0)
+        ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
+    return InputFloatN(label, v, 2, format, extra_flags);
 }
 
 bool ImGui::InputFloat3(const char* label, float v[3], int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
-    return InputFloatN(label, v, 3, decimal_precision, extra_flags);
+    char format[16] = "%f";
+    if (decimal_precision >= 0)
+        ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
+    return InputFloatN(label, v, 3, format, extra_flags);
 }
 
 bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision, ImGuiInputTextFlags extra_flags)
 {
-    return InputFloatN(label, v, 4, decimal_precision, extra_flags);
+    char format[16] = "%f";
+    if (decimal_precision >= 0)
+        ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
+    return InputFloatN(label, v, 4, format, extra_flags);
 }
+#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 bool ImGui::InputIntN(const char* label, int* v, int components, ImGuiInputTextFlags extra_flags)
 {

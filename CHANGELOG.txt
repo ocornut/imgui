@@ -57,6 +57,8 @@ Other Changes:
 - InputText: On Mac OS X, filter out characters when the Cmd modifier is held. (#1747) [@sivu]
 - InputText: On Mac OS X, support Cmd+Shift+Z for Redo. Cmd+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
 - InputText: Fixed returning true when edition is cancelled with Esc and the current buffer matches the initial value.
+- InputFloat,InputFloat2,InputFloat3,InputFloat4: Added variations taking a more flexible and consistent optional "const char* format" parameter instead of "int decimal_precision". 
+  This allow using custom formats to display values in scientific notation, and is generally more consistent with other API. Obsoleted functions using the optional "int decimal_precision" parameter. (#648)
 - DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing in the same direction (keyboard/gamepad version already did this).
 - DragFloat, SliderFloat: Fix to allow input of scientific notation numbers when using CTRL+Click to input the value. (~#648, #1011) 
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
