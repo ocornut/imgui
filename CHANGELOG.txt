@@ -57,6 +57,7 @@ Other Changes:
 - InputText: On Mac OS X, filter out characters when the Cmd modifier is held. (#1747) [@sivu]
 - InputText: On Mac OS X, support Cmd+Shift+Z for Redo. Cmd+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
 - InputText: Fixed returning true when edition is cancelled with Esc and the current buffer matches the initial value.
+- DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing in the same direction (keyboard/gamepad version already did this).
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
 - Misc: Added IMGUI_CHECKVERSION() macro to compare version string and data structure sizes in order to catch issues with mismatching compilation unit settings. (#1695, #1769)
 - Demo: Fixed Overlay: Added a context menu item to enable freely moving the window. 

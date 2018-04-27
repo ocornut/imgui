@@ -9074,7 +9074,10 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     if (g.ActiveId != id)
         return false;
 
-    bool value_changed = false;
+    // Default tweak speed
+    if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
+        v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
+
     if (g.ActiveIdIsJustActivated)
     {
         // Lock current value on click
@@ -9082,10 +9085,6 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
         g.DragLastMouseDelta = ImVec2(0.f, 0.f);
     }
 
-    if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
-        v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
-
-    float v_cur = g.DragCurrentValue;
     const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
     float adjust_delta = 0.0f;
     if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid())
@@ -9100,11 +9099,14 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
     {
         adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
-        if (v_min < v_max && ((v_cur >= v_max && adjust_delta > 0.0f) || (v_cur <= v_min && adjust_delta < 0.0f))) // This is to avoid applying the saturation when already past the limits
-            adjust_delta = 0.0f;
         v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
     }
     adjust_delta *= v_speed;
+
+    // Avoid applying the saturation when we are _already_ past the limits and heading in the same direction, so e.g. if range is 0..255, current value is 300 and we are pushing to the right side, keep the 300
+    float v_cur = g.DragCurrentValue;
+    if (v_min < v_max && ((v_cur >= v_max && adjust_delta > 0.0f) || (v_cur <= v_min && adjust_delta < 0.0f)))
+        adjust_delta = 0.0f;
 
     if (fabsf(adjust_delta) > 0.0f)
     {
@@ -9130,6 +9132,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     }
 
     // Round to user desired precision, then apply
+    bool value_changed = false;
     v_cur = RoundScalar(v_cur, decimal_precision);
     if (*v != v_cur)
     {
