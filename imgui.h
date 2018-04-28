@@ -1374,7 +1374,7 @@ struct ImGuiSizeCallbackData
 struct ImGuiPayload
 {
     // Members
-    const void*     Data;               // Data (copied and owned by dear imgui)
+    void*           Data;               // Data (copied and owned by dear imgui)
     int             DataSize;           // Data size
 
     // [Internal]
