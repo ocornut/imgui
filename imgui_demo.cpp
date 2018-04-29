@@ -1299,10 +1299,12 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Button("LEVERAGE\nBUZZWORD", size);
             ImGui::SameLine();
 
-            ImGui::ListBoxHeader("List", size);
-            ImGui::Selectable("Selected", true);
-            ImGui::Selectable("Not Selected", false);
-            ImGui::ListBoxFooter();
+            if (ImGui::ListBoxHeader("List", size))
+            {
+                ImGui::Selectable("Selected", true);
+                ImGui::Selectable("Not Selected", false);
+                ImGui::ListBoxFooter();
+            }
 
             ImGui::TreePop();
         }
