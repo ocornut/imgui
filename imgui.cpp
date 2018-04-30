@@ -8586,6 +8586,19 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     return false;
 }
 
+const char* ImGui::ParseFormatTrimDecorationsLeading(const char* fmt)
+{
+    while (char c = fmt[0])
+    {
+        if (c == '%' && fmt[1] != '%')
+            return fmt;
+        else if (c == '%')
+            fmt++;
+        fmt++;
+    }
+    return fmt;
+}
+
 // Extract the format out of a format string with leading or trailing decorations
 //  fmt = "blah blah"  -> return fmt
 //  fmt = "%.3f"       -> return fmt
@@ -8594,25 +8607,21 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
 const char* ImGui::ParseFormatTrimDecorations(const char* fmt, char* buf, int buf_size)
 {
     // We don't use strchr() because our strings are usually very short and often start with '%'
-    const char* fmt_start = fmt;
+    const char* fmt_start = ParseFormatTrimDecorationsLeading(fmt);
+    if (fmt_start[0] != '%')
+        return fmt;
+    fmt = fmt_start;
     while (char c = *fmt++)
     {
-        if (c != '%') continue;                 // Looking for %
-        if (fmt[0] == '%') { fmt++; continue; } // Ignore "%%"
-        fmt_start = fmt - 1;
-        while ((c = *fmt++) != 0)
-        {
-            if (c >= 'A' && c <= 'Z' && (c != 'L'))  // L is a type modifier, other letters qualify as types aka end of the format
-                break;
-            if (c >= 'a' && c <= 'z' && (c != 'h' && c != 'j' && c != 'l' && c != 't' && c != 'w' && c != 'z'))  // h/j/l/t/w/z are type modifiers, other letters qualify as types aka end of the format
-                break;
-        }
-        if (fmt[0] == 0) // If we only have leading decoration, we don't need to copy the data.
-            return fmt_start;
-        ImStrncpy(buf, fmt_start, ImMin((int)(fmt + 1 - fmt_start), buf_size));
-        return buf;
+        if (c >= 'A' && c <= 'Z' && (c != 'L'))  // L is a type modifier, other letters qualify as types aka end of the format
+            break;
+        if (c >= 'a' && c <= 'z' && (c != 'h' && c != 'j' && c != 'l' && c != 't' && c != 'w' && c != 'z'))  // h/j/l/t/w/z are type modifiers, other letters qualify as types aka end of the format
+            break;
     }
-    return fmt_start;
+    if (fmt[0] == 0) // If we only have leading decoration, we don't need to copy the data.
+        return fmt_start;
+    ImStrncpy(buf, fmt_start, ImMin((int)(fmt + 1 - fmt_start), buf_size));
+    return buf;
 }
 
 // Parse display precision back from the display format string
@@ -8644,22 +8653,11 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : powf(10.0f, (float)-decimal_precision);
 }
 
-float ImGui::RoundScalar(float value, int decimal_precision)
+float ImGui::RoundScalarWithFormat(const char* format, float value)
 {
-    // Round past decimal precision
-    // So when our value is 1.99999 with a precision of 0.001 we'll end up rounding to 2.0
-    // FIXME: Investigate better rounding methods
-    if (decimal_precision < 0)
-        return value;
-    const float min_step = GetMinimumStepAtDecimalPrecision(decimal_precision);
-    bool negative = value < 0.0f;
-    value = fabsf(value);
-    float remainder = fmodf(value, min_step);
-    if (remainder <= min_step*0.5f)
-        value -= remainder;
-    else
-        value += (min_step - remainder);
-    return negative ? -value : value;
+    char buf[64];
+    ImFormatString(buf, IM_ARRAYSIZE(buf), ParseFormatTrimDecorationsLeading(format), value);
+    return (float)atof(buf);
 }
 
 static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
@@ -8687,7 +8685,7 @@ static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float
     return (v_clamped - v_min) / (v_max - v_min);
 }
 
-bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, ImGuiSliderFlags flags)
+bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -8700,11 +8698,12 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
     const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
+    const bool is_decimal = ParseFormatPrecision(format, 3) > 0;
 
     const float grab_padding = 2.0f;
     const float slider_sz = is_horizontal ? (frame_bb.GetWidth() - grab_padding * 2.0f) : (frame_bb.GetHeight() - grab_padding * 2.0f);
     float grab_sz;
-    if (decimal_precision != 0)
+    if (is_decimal)
         grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
         grab_sz = ImMin(ImMax(1.0f * (slider_sz / ((v_min < v_max ? v_max - v_min : v_min - v_max) + 1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
@@ -8759,7 +8758,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             else if (delta != 0.0f)
             {
                 clicked_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
-                if (decimal_precision == 0 && !is_non_linear)
+                if (!is_decimal && !is_non_linear)
                 {
                     if (fabsf(v_max - v_min) <= 100.0f || IsNavInputDown(ImGuiNavInput_TweakSlow))
                         delta = ((delta < 0.0f) ? -1.0f : +1.0f) / (v_max - v_min); // Gamepad/keyboard tweak speeds in integer steps
@@ -8814,7 +8813,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             }
 
             // Round past decimal precision
-            new_value = RoundScalar(new_value, decimal_precision);
+            new_value = RoundScalarWithFormat(format, new_value);
             if (*v != new_value)
             {
                 *v = new_value;
@@ -8868,7 +8867,6 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     if (!format)
         format = "%.3f";
-    int decimal_precision = ParseFormatPrecision(format, 3);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
@@ -8890,7 +8888,7 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
 
     // Actual slider behavior + render grab
     ItemSize(total_bb, style.FramePadding.y);
-    const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision);
+    const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, format, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
@@ -8924,7 +8922,6 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
 
     if (!format)
         format = "%.3f";
-    int decimal_precision = ParseFormatPrecision(format, 3);
 
     if ((hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavInputId == id)
     {
@@ -8935,7 +8932,7 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     }
 
     // Actual slider behavior + render grab
-    bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, power, decimal_precision, ImGuiSliderFlags_Vertical);
+    bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, format, power, ImGuiSliderFlags_Vertical);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
@@ -9061,7 +9058,7 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
     return SliderIntN(label, v, 4, v_min, v_max, format);
 }
 
-bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power)
+bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, const char* format, float power)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
@@ -9106,6 +9103,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     }
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
     {
+        int decimal_precision = ParseFormatPrecision(format, 3);
         adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
         v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
     }
@@ -9141,7 +9139,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
 
     // Round to user desired precision, then apply
     bool value_changed = false;
-    v_cur = RoundScalar(v_cur, decimal_precision);
+    v_cur = RoundScalarWithFormat(format, v_cur);
     if (*v != v_cur)
     {
         *v = v_cur;
@@ -9177,7 +9175,6 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
 
     if (!format)
         format = "%.3f";
-    int decimal_precision = ParseFormatPrecision(format, 3);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;
@@ -9199,7 +9196,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
 
     // Actual drag behavior
     ItemSize(total_bb, style.FramePadding.y);
-    const bool value_changed = DragBehavior(frame_bb, id, v, v_speed, v_min, v_max, decimal_precision, power);
+    const bool value_changed = DragBehavior(frame_bb, id, v, v_speed, v_min, v_max, format, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
