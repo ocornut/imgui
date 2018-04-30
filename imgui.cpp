@@ -8625,26 +8625,27 @@ const char* ImGui::ParseFormatTrimDecorations(const char* fmt, char* buf, int bu
 }
 
 // Parse display precision back from the display format string
+// FIXME: This is still used by some navigation code path to infer a minimum tweak step, but we should aim to rework widgets so it isn't needed.
 int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
 {
-    int precision = default_precision;
-    while ((fmt = strchr(fmt, '%')) != NULL)
-    {
+    fmt = ParseFormatTrimDecorationsLeading(fmt);
+    if (fmt[0] != '%')
+        return default_precision;
+    fmt++;
+    while (*fmt >= '0' && *fmt <= '9')
         fmt++;
-        if (fmt[0] == '%') { fmt++; continue; } // Ignore "%%"
-        while (*fmt >= '0' && *fmt <= '9')
-            fmt++;
-        if (*fmt == '.')
-        {
-            fmt = ImAtoi(fmt + 1, &precision);
-            if (precision < 0 || precision > 10)
-                precision = default_precision;
-        }
-        if (*fmt == 'e' || *fmt == 'E') // Maximum precision with scientific notation
-            precision = -1;
-        break;
+    int precision = INT_MAX;
+    if (*fmt == '.')
+    {
+        fmt = ImAtoi(fmt + 1, &precision);
+        if (precision < 0 || precision > 99)
+            precision = default_precision;
     }
-    return precision;
+    if (*fmt == 'e' || *fmt == 'E') // Maximum precision with scientific notation
+        precision = -1;
+    if ((*fmt == 'g' || *fmt == 'G') && precision == INT_MAX)
+        precision = -1;
+    return (precision == INT_MAX) ? default_precision : precision;
 }
 
 static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
