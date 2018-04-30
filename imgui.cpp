@@ -8443,7 +8443,7 @@ void ImGui::BulletText(const char* fmt, ...)
 
 static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* format)
 {
-    if (data_type == ImGuiDataType_Int)
+    if (data_type == ImGuiDataType_Int32 || data_type == ImGuiDataType_Uint32)
         return ImFormatString(buf, buf_size, format, *(const int*)data_ptr);
     if (data_type == ImGuiDataType_Float)
         return ImFormatString(buf, buf_size, format, *(const float*)data_ptr);
@@ -8456,10 +8456,15 @@ static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType da
 static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg1, const void* arg2)
 {
     IM_ASSERT(op == '+' || op == '-');
-    if (data_type == ImGuiDataType_Int)
+    if (data_type == ImGuiDataType_Int32)
     {
         if (op == '+')      *(int*)output = *(const int*)arg1 + *(const int*)arg2;
         else if (op == '-') *(int*)output = *(const int*)arg1 - *(const int*)arg2;
+    }
+    else if (data_type == ImGuiDataType_Uint32)
+    {
+        if (op == '+')      *(unsigned int*)output = *(const unsigned int*)arg1 + *(const unsigned int*)arg2;
+        else if (op == '-') *(unsigned int*)output = *(const unsigned int*)arg1 - *(const unsigned int*)arg2;
     }
     else if (data_type == ImGuiDataType_Float)
     {
@@ -8476,12 +8481,13 @@ static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void*
 static size_t GDataTypeSize[ImGuiDataType_COUNT] =
 {
     sizeof(int),
+    sizeof(unsigned int),
     sizeof(float),
     sizeof(double)
 };
 
 // User can input math operators (e.g. +100) to edit a numerical values.
-// NB: This is _not_ a full expression evaluator. We should probably add one though..
+// NB: This is _not_ a full expression evaluator. We should probably add one and replace this dumb mess..
 static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
 {
     while (ImCharIsSpace((unsigned int)*buf))
@@ -8508,7 +8514,9 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     IM_ASSERT(GDataTypeSize[data_type] <= sizeof(data_backup));
     memcpy(data_backup, data_ptr, GDataTypeSize[data_type]);
 
-    if (data_type == ImGuiDataType_Int)
+    int arg1i = 0;
+    float arg1f = 0.0f;
+    if (data_type == ImGuiDataType_Int32)
     {
         if (!scalar_format)
             scalar_format = "%d";
@@ -8517,18 +8525,31 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         if (op && sscanf(initial_value_buf, scalar_format, &arg0i) < 1)
             return false;
         // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
-        float arg1f = 0.0f;
-        if (op == '+')      { if (sscanf(buf, "%f", &arg1f) == 1) *v = (int)(arg0i + arg1f); }                 // Add (use "+-" to subtract)
-        else if (op == '*') { if (sscanf(buf, "%f", &arg1f) == 1) *v = (int)(arg0i * arg1f); }                 // Multiply
-        else if (op == '/') { if (sscanf(buf, "%f", &arg1f) == 1 && arg1f != 0.0f) *v = (int)(arg0i / arg1f); }// Divide
-        else                { if (sscanf(buf, scalar_format, &arg0i) == 1) *v = arg0i; }                       // Assign integer constant
+        if (op == '+')      { if (sscanf(buf, "%d", &arg1i)) *v = (int)(arg0i + arg1i); }                   // Add (use "+-" to subtract)
+        else if (op == '*') { if (sscanf(buf, "%f", &arg1f)) *v = (int)(arg0i * arg1f); }                   // Multiply
+        else if (op == '/') { if (sscanf(buf, "%f", &arg1f) && arg1f != 0.0f) *v = (int)(arg0i / arg1f); }  // Divide
+        else                { if (sscanf(buf, scalar_format, &arg0i) == 1) *v = arg0i; }                    // Assign integer constant
+    }
+    else if (data_type == ImGuiDataType_Uint32)
+    {
+        if (!scalar_format)
+            scalar_format = "%u";
+        ImU32* v = (unsigned int*)data_ptr;
+        ImU32 arg0i = *v;
+        if (op && sscanf(initial_value_buf, scalar_format, &arg0i) < 1)
+            return false;
+        // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
+        if (op == '+')      { if (sscanf(buf, "%d", &arg1i)) *v = (ImU32)(arg0i + arg1f); }                 // Add (use "+-" to subtract)
+        else if (op == '*') { if (sscanf(buf, "%f", &arg1f)) *v = (ImU32)(arg0i * arg1f); }                 // Multiply
+        else if (op == '/') { if (sscanf(buf, "%f", &arg1f) && arg1f != 0.0f) *v = (ImU32)(arg0i / arg1f); }// Divide
+        else                { if (sscanf(buf, scalar_format, &arg0i) == 1) *v = arg0i; }                    // Assign integer constant
     }
     else if (data_type == ImGuiDataType_Float)
     {
         // For floats we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in
         scalar_format = "%f";
         float* v = (float*)data_ptr;
-        float arg0f = *v, arg1f = 0.0f;
+        float arg0f = *v;
         if (op && sscanf(initial_value_buf, scalar_format, &arg0f) < 1)
             return false;
         if (sscanf(buf, scalar_format, &arg1f) < 1)
@@ -8540,9 +8561,9 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     }
     else if (data_type == ImGuiDataType_Double)
     {
-        scalar_format = "%lf";
+        scalar_format = "%lf"; // scanf differentiate float/double unlike printf which forces everything to double because of ellipsis
         double* v = (double*)data_ptr;
-        double arg0f = *v, arg1f = 0.0f;
+        double arg0f = *v;
         if (op && sscanf(initial_value_buf, scalar_format, &arg0f) < 1)
             return false;
         if (sscanf(buf, scalar_format, &arg1f) < 1)
@@ -10558,12 +10579,12 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
+    const ImVec2 button_size = ImVec2(GetFrameHeight(), GetFrameHeight());
 
     BeginGroup();
     PushID(label);
-    const ImVec2 button_sz = ImVec2(GetFrameHeight(), GetFrameHeight());
     if (step_ptr)
-        PushItemWidth(ImMax(1.0f, CalcItemWidth() - (button_sz.x + style.ItemInnerSpacing.x)*2));
+        PushItemWidth(ImMax(1.0f, CalcItemWidth() - (button_size.x + style.ItemInnerSpacing.x)*2));
 
     char buf[64];
     DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, scalar_format);
@@ -10580,13 +10601,13 @@ bool ImGui::InputScalarEx(const char* label, ImGuiDataType data_type, void* data
     {
         PopItemWidth();
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("-", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
+        if (ButtonEx("-", button_size, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
             DataTypeApplyOp(data_type, '-', data_ptr, data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
             value_changed = true;
         }
         SameLine(0, style.ItemInnerSpacing.x);
-        if (ButtonEx("+", button_sz, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
+        if (ButtonEx("+", button_size, ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups))
         {
             DataTypeApplyOp(data_type, '+', data_ptr, data_ptr, g.IO.KeyCtrl && step_fast_ptr ? step_fast_ptr : step_ptr);
             value_changed = true;
@@ -10621,7 +10642,7 @@ bool ImGui::InputInt(const char* label, int* v, int step, int step_fast, ImGuiIn
 {
     // Hexadecimal input provided as a convenience but the flag name is awkward. Typically you'd use InputText() to parse your own data, if you want to handle prefixes.
     const char* format = (extra_flags & ImGuiInputTextFlags_CharsHexadecimal) ? "%08X" : "%d";
-    return InputScalarEx(label, ImGuiDataType_Int, (void*)v, (void*)(step>0 ? &step : NULL), (void*)(step_fast>0 ? &step_fast : NULL), format, extra_flags);
+    return InputScalarEx(label, ImGuiDataType_Int32, (void*)v, (void*)(step>0 ? &step : NULL), (void*)(step_fast>0 ? &step_fast : NULL), format, extra_flags);
 }
 
 bool ImGui::InputFloatN(const char* label, float* v, int components, const char* format, ImGuiInputTextFlags extra_flags)
