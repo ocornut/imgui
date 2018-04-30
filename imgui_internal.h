@@ -1119,7 +1119,7 @@ namespace ImGui
 
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
 
-    IMGUI_API const char*   ParseFormatSkipLeadingText(const char* format);
+    IMGUI_API const char*   ParseFormatTrimDecorations(const char* format, char* buf, int buf_size);
     IMGUI_API int           ParseFormatPrecision(const char* format, int default_value);
     IMGUI_API float         RoundScalar(float value, int decimal_precision);
 

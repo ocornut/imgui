@@ -8569,33 +8569,50 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     SetHoveredID(0);
     FocusableItemUnregister(window);
 
-    char buf[32];
-    format = ParseFormatSkipLeadingText(format);
-    DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, format);
+    char fmt_buf[32];
+    char data_buf[32];
+    format = ParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
+    DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, data_ptr, format);
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
-    bool text_value_changed = InputTextEx(label, buf, IM_ARRAYSIZE(buf), bb.GetSize(), flags);
+    bool value_changed = InputTextEx(label, data_buf, IM_ARRAYSIZE(data_buf), bb.GetSize(), flags);
     if (g.ScalarAsInputTextId == 0)     // First frame we started displaying the InputText widget
     {
-        IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID (else we'd need to store them both, which is also possible)
+        IM_ASSERT(g.ActiveId == id);    // InputText ID expected to match the Slider ID
         g.ScalarAsInputTextId = g.ActiveId;
         SetHoveredID(id);
     }
-    if (text_value_changed)
-        return DataTypeApplyOpFromText(buf, GImGui->InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
+    if (value_changed)
+        return DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
     return false;
 }
 
-const char* ImGui::ParseFormatSkipLeadingText(const char* fmt)
+// Extract the format out of a format string with leading or trailing decorations
+//  fmt = "blah blah"  -> return fmt
+//  fmt = "%.3f"       -> return fmt
+//  fmt = "hello %.3f" -> return fmt + 6
+//  fmt = "%.3f hello" -> return buf written with "%.3f"
+const char* ImGui::ParseFormatTrimDecorations(const char* fmt, char* buf, int buf_size)
 {
-    if (fmt[0] == '%')
-        return fmt;
-    while (char c = fmt[0])
+    // We don't use strchr() because our strings are usually very short and often start with '%'
+    const char* fmt_start = fmt;
+    while (char c = *fmt++)
     {
-        if (c == '%' && fmt[1] != '%')
-            return fmt;
-        fmt++;
+        if (c != '%') continue;                 // Looking for %
+        if (fmt[0] == '%') { fmt++; continue; } // Ignore "%%"
+        fmt_start = fmt - 1;
+        while ((c = *fmt++) != 0)
+        {
+            if (c >= 'A' && c <= 'Z' && (c != 'L'))  // L is a type modifier, other letters qualify as types aka end of the format
+                break;
+            if (c >= 'a' && c <= 'z' && (c != 'h' && c != 'j' && c != 'l' && c != 't' && c != 'w' && c != 'z'))  // h/j/l/t/w/z are type modifiers, other letters qualify as types aka end of the format
+                break;
+        }
+        if (fmt[0] == 0) // If we only have leading decoration, we don't need to copy the data.
+            return fmt_start;
+        ImStrncpy(buf, fmt_start, ImMin((int)(fmt + 1 - fmt_start), buf_size));
+        return buf;
     }
-    return fmt;
+    return fmt_start;
 }
 
 // Parse display precision back from the display format string
