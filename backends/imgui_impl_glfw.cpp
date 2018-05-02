@@ -270,6 +270,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     bd->PrevUserCallbackWindowFocus = NULL;
+    bd->PrevUserCallbackCursorEnter = NULL;
     bd->PrevUserCallbackMousebutton = NULL;
     bd->PrevUserCallbackScroll = NULL;
     bd->PrevUserCallbackKey = NULL;

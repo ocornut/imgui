@@ -33,8 +33,9 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2021-12-16: Inputs: Fill VK_LCONTROL/VK_RCONTROL/VK_LSHIFT/VK_RSHIFT/VK_LMENU/VK_RMENU for completeness.
 //  2021-08-17: Calling io.AddFocusEvent() on WM_SETFOCUS/WM_KILLFOCUS messages.
-//  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host windo doesn't have focus.
+//  2021-08-02: Inputs: Fixed keyboard modifiers being reported when host window doesn't have focus.
 //  2021-07-29: Inputs: MousePos is correctly reported when the host platform window is hovered but not focused (using TrackMouseEvent() to receive WM_MOUSELEAVE events).
 //  2021-06-29: Reorganized backend to pull data from a single structure to facilitate usage with multiple-contexts (all g_XXXX access changed to bd->XXXX).
 //  2021-06-08: Fixed ImGui_ImplWin32_EnableDpiAwareness() and ImGui_ImplWin32_GetDpiScaleForMonitor() to handle Windows 8.1/10 features without a manifest (per-monitor DPI, and properly calls SetProcessDpiAwareness() on 8.1).
@@ -426,11 +427,23 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (wParam < 256)
             io.KeysDown[wParam] = down;
         if (wParam == VK_CONTROL)
-            io.KeyCtrl = down;
+        {
+            io.KeysDown[VK_LCONTROL] = ((::GetKeyState(VK_LCONTROL) & 0x8000) != 0);
+            io.KeysDown[VK_RCONTROL] = ((::GetKeyState(VK_RCONTROL) & 0x8000) != 0);
+            io.KeyCtrl = io.KeysDown[VK_LCONTROL] || io.KeysDown[VK_RCONTROL];
+        }
         if (wParam == VK_SHIFT)
-            io.KeyShift = down;
+        {
+            io.KeysDown[VK_LSHIFT] = ((::GetKeyState(VK_LSHIFT) & 0x8000) != 0);
+            io.KeysDown[VK_RSHIFT] = ((::GetKeyState(VK_RSHIFT) & 0x8000) != 0);
+            io.KeyShift            = io.KeysDown[VK_LSHIFT] || io.KeysDown[VK_RSHIFT];
+        }
         if (wParam == VK_MENU)
-            io.KeyAlt = down;
+        {
+            io.KeysDown[VK_LMENU] = ((::GetKeyState(VK_LMENU) & 0x8000) != 0);
+            io.KeysDown[VK_RMENU] = ((::GetKeyState(VK_RMENU) & 0x8000) != 0);
+            io.KeyAlt             = io.KeysDown[VK_LMENU] || io.KeysDown[VK_RMENU];
+        }
         return 0;
     }
     case WM_SETFOCUS:

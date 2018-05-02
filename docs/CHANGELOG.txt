@@ -110,6 +110,7 @@ Other Changes:
 - Backends: OpenGL2, Allegro5, Marmalade: Fixed mishandling of the ImDrawCmd::IdxOffset field.
   This is an old bug, but due to the way we created drawlists, it never had any visible side-effect before.
   The new code for handling Modal and CTRL+Tab dimming/whitening recently made the bug surface. (#4790)
+- Backends: Win32: Store left/right variants of Ctrl/Shift/Alt mods in KeysDown[] array. (#2625) [@thedmd]
 - Backends: DX12: Fixed DRAW_EMPTY_SCISSOR_RECTANGLE warnings. (#4775)
 - Backends: SDL_Renderer: Added support for large meshes (64k+ vertices) with 16-bit indices,
   enabling 'ImGuiBackendFlags_RendererHasVtxOffset' in the backend. (#3926) [@rokups]
