@@ -345,8 +345,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 static float f0 = 0.001f;
                 ImGui::InputFloat("input float", &f0, 0.01f, 1.0f);
 
-                static double d0 = 999999.000001;
-                ImGui::InputDouble("input double", &d0, 0.01f, 1.0f, "%.6f");
+                static double d0 = 999999.00000001;
+                ImGui::InputDouble("input double", &d0, 0.01f, 1.0f, "%.8f");
 
                 static float f1 = 1.e10f;
                 ImGui::InputFloat("input scientific", &f1, 0.0f, 0.0f, "%e");

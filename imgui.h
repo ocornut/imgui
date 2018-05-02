@@ -72,13 +72,11 @@ struct ImGuiSizeCallbackData;       // Structure used to constraint window size 
 struct ImGuiListClipper;            // Helper to manually clip large list of items
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiContext;                // ImGui context (opaque)
-
 #ifndef ImTextureID
 typedef void* ImTextureID;          // User data to identify a texture (this is whatever to you want it to be! read the FAQ about ImTextureID in imgui.cpp)
 #endif
 
 // Typedefs and Enumerations (declared as int for compatibility with old C++ and to not pollute the top of this file)
-typedef unsigned int ImU32;         // 32-bit unsigned integer (typically used to store packed colors)
 typedef unsigned int ImGuiID;       // Unique ID used by widgets (typically hashed from a stack of string)
 typedef unsigned short ImWchar;     // Character for keyboard input/display
 typedef int ImGuiCol;               // enum: a color identifier for styling     // enum ImGuiCol_
@@ -105,12 +103,19 @@ typedef int ImGuiTreeNodeFlags;     // flags: for TreeNode*(),CollapsingHeader()
 typedef int ImGuiWindowFlags;       // flags: for Begin*()                      // enum ImGuiWindowFlags_
 typedef int (*ImGuiTextEditCallback)(ImGuiTextEditCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
+
+// Scalar data types
+typedef signed int          ImS32;  // 32-bit signed integer == int
+typedef unsigned int        ImU32;  // 32-bit unsigned integer (often used to store packed colors)
 #if defined(_MSC_VER) && !defined(__clang__)
-typedef unsigned __int64 ImU64;     // 64-bit unsigned integer
+typedef signed   __int64    ImS64;  // 64-bit signed integer
+typedef unsigned __int64    ImU64;  // 64-bit unsigned integer
 #else
-typedef unsigned long long ImU64;   // 64-bit unsigned integer
+typedef signed   long long  ImS64;  // 64-bit signed integer
+typedef unsigned long long  ImU64;  // 64-bit unsigned integer
 #endif 
 
+// 2d vector
 struct ImVec2
 {
     float     x, y;
@@ -122,6 +127,7 @@ struct ImVec2
 #endif
 };
 
+// 4d vector (often used to store floating-point colors)
 struct ImVec4
 {
     float     x, y, z, w;
