@@ -8752,7 +8752,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const float slider_usable_pos_min = (is_horizontal ? frame_bb.Min.x : frame_bb.Min.y) + grab_padding + grab_sz*0.5f;
     const float slider_usable_pos_max = (is_horizontal ? frame_bb.Max.x : frame_bb.Max.y) - grab_padding - grab_sz*0.5f;
 
-    // For logarithmic sliders that cross over sign boundary we want the exponential increase to be symmetric around 0.0f
+    // For power curve sliders that cross over sign boundary we want the curve to be symmetric around 0.0f
     float linear_zero_pos = 0.0f;   // 0.0->1.0f
     if (v_min * v_max < 0.0f)
     {
@@ -8827,7 +8827,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             float new_value;
             if (is_non_linear)
             {
-                // Account for logarithmic scale on both sides of the zero
+                // Account for power curve scale on both sides of the zero
                 if (clicked_t < linear_zero_pos)
                 {
                     // Negative: rescale to the negative range before powering
@@ -8878,11 +8878,11 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     return value_changed;
 }
 
-// Use power!=1.0 for logarithmic sliders.
 // Adjust format to decorate the value with a prefix or a suffix.
 //   "%.3f"         1.234
 //   "%5.2f secs"   01.23 secs
 //   "Gold: %.0f"   Gold: 1
+// Use power != 1.0f for non-linear sliders.
 bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9159,7 +9159,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     {
         if (fabsf(power - 1.0f) > 0.001f)
         {
-            // Logarithmic curve on both side of 0.0
+            // Power curve on both side of 0.0
             float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
             float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
             float v1 = powf(v0_abs, 1.0f / power) + (adjust_delta * v0_sign);
