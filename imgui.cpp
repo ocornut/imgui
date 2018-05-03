@@ -8533,7 +8533,7 @@ static const ImGuiDataTypeInfo GDataTypeInfo[ImGuiDataType_COUNT] =
 
 // User can input math operators (e.g. +100) to edit a numerical values.
 // NB: This is _not_ a full expression evaluator. We should probably add one and replace this dumb mess..
-static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* scalar_format)
+static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
     while (ImCharIsBlankA(*buf))
         buf++;
@@ -8560,8 +8560,8 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     IM_ASSERT(GDataTypeInfo[data_type].Size <= sizeof(data_backup));
     memcpy(data_backup, data_ptr, GDataTypeInfo[data_type].Size);
 
-    if (scalar_format == NULL)
-        scalar_format = GDataTypeInfo[data_type].ScanFmt;
+    if (format == NULL)
+        format = GDataTypeInfo[data_type].ScanFmt;
 
     int arg1i = 0;
     if (data_type == ImGuiDataType_S32)
@@ -8569,29 +8569,29 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         int* v = (int*)data_ptr;
         int arg0i = *v;
         float arg1f = 0.0f;
-        if (op && sscanf(initial_value_buf, scalar_format, &arg0i) < 1)
+        if (op && sscanf(initial_value_buf, format, &arg0i) < 1)
             return false;
         // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
         if (op == '+')      { if (sscanf(buf, "%d", &arg1i)) *v = (int)(arg0i + arg1i); }                   // Add (use "+-" to subtract)
         else if (op == '*') { if (sscanf(buf, "%f", &arg1f)) *v = (int)(arg0i * arg1f); }                   // Multiply
         else if (op == '/') { if (sscanf(buf, "%f", &arg1f) && arg1f != 0.0f) *v = (int)(arg0i / arg1f); }  // Divide
-        else                { if (sscanf(buf, scalar_format, &arg1i) == 1) *v = arg1i; }                    // Assign constant
+        else                { if (sscanf(buf, format, &arg1i) == 1) *v = arg1i; }                           // Assign constant
     }
     else if (data_type == ImGuiDataType_U32 || data_type == ImGuiDataType_S64 || data_type == ImGuiDataType_U64)
     {
         // Assign constant
         // FIXME: We don't bother handling support for legacy operators since they are a little too crappy. Instead we may implement a proper expression evaluator in the future.
-        sscanf(buf, scalar_format, data_ptr);
+        sscanf(buf, format, data_ptr);
     }
     else if (data_type == ImGuiDataType_Float)
     {
         // For floats we have to ignore format with precision (e.g. "%.2f") because sscanf doesn't take them in
-        scalar_format = "%f";
+        format = "%f";
         float* v = (float*)data_ptr;
         float arg0f = *v, arg1f = 0.0f;
-        if (op && sscanf(initial_value_buf, scalar_format, &arg0f) < 1)
+        if (op && sscanf(initial_value_buf, format, &arg0f) < 1)
             return false;
-        if (sscanf(buf, scalar_format, &arg1f) < 1)
+        if (sscanf(buf, format, &arg1f) < 1)
             return false;
         if (op == '+')      { *v = arg0f + arg1f; }                    // Add (use "+-" to subtract)
         else if (op == '*') { *v = arg0f * arg1f; }                    // Multiply
@@ -8600,12 +8600,12 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     }
     else if (data_type == ImGuiDataType_Double)
     {
-        scalar_format = "%lf"; // scanf differentiate float/double unlike printf which forces everything to double because of ellipsis
+        format = "%lf"; // scanf differentiate float/double unlike printf which forces everything to double because of ellipsis
         double* v = (double*)data_ptr;
         double arg0f = *v, arg1f = 0.0;
-        if (op && sscanf(initial_value_buf, scalar_format, &arg0f) < 1)
+        if (op && sscanf(initial_value_buf, format, &arg0f) < 1)
             return false;
-        if (sscanf(buf, scalar_format, &arg1f) < 1)
+        if (sscanf(buf, format, &arg1f) < 1)
             return false;
         if (op == '+')      { *v = arg0f + arg1f; }                    // Add (use "+-" to subtract)
         else if (op == '*') { *v = arg0f * arg1f; }                    // Multiply
@@ -9406,12 +9406,7 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
 // NB: v_speed is float to allow adjusting the drag speed with more precision
 bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* format)
 {
-    if (!format)
-        format = "%.0f";
-    float v_f = (float)*v;
-    bool value_changed = DragFloat(label, &v_f, v_speed, (float)v_min, (float)v_max, format);
-    *v = (int)v_f;
-    return value_changed;
+    return DragScalar(label, ImGuiDataType_S32, v, v_speed, &v_min, &v_max, format);
 }
 
 bool ImGui::DragInt2(const char* label, int v[2], float v_speed, int v_min, int v_max, const char* format)
@@ -10647,8 +10642,8 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
     return InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
 }
 
-// NB: scalar_format here must be a simple "%xx" format string with no prefix/suffix (unlike the Drag/Slider functions "format" argument)
-bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags)
+// NB: format here must be a simple "%xx" format string with no prefix/suffix (unlike the Drag/Slider functions "format" argument)
+bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* format, ImGuiInputTextFlags extra_flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -10658,7 +10653,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
     const ImGuiStyle& style = g.Style;
 
     char buf[64];
-    DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, scalar_format);
+    DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, format);
 
     bool value_changed = false;
     if ((extra_flags & (ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsScientific)) == 0)
@@ -10673,7 +10668,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
         PushID(label);
         PushItemWidth(ImMax(1.0f, CalcItemWidth() - (button_size + style.ItemInnerSpacing.x) * 2));
         if (InputText("", buf, IM_ARRAYSIZE(buf), extra_flags)) // PushId(label) + "" gives us the expected ID from outside point of view
-            value_changed = DataTypeApplyOpFromText(buf, g.InputTextState.InitialText.Data, data_type, data_ptr, scalar_format);
+            value_changed = DataTypeApplyOpFromText(buf, g.InputTextState.InitialText.Data, data_type, data_ptr, format);
         PopItemWidth();
 
         // Step buttons
@@ -10698,7 +10693,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
     else
     {
         if (InputText(label, buf, IM_ARRAYSIZE(buf), extra_flags))
-            value_changed = DataTypeApplyOpFromText(buf, g.InputTextState.InitialText.Data, data_type, data_ptr, scalar_format);
+            value_changed = DataTypeApplyOpFromText(buf, g.InputTextState.InitialText.Data, data_type, data_ptr, format);
     }
 
     return value_changed;
@@ -10723,7 +10718,7 @@ bool ImGui::InputInt(const char* label, int* v, int step, int step_fast, ImGuiIn
     return InputScalar(label, ImGuiDataType_S32, (void*)v, (void*)(step>0 ? &step : NULL), (void*)(step_fast>0 ? &step_fast : NULL), format, extra_flags);
 }
 
-bool ImGui::InputFloatN(const char* label, float* v, int components, const char* format, ImGuiInputTextFlags extra_flags)
+bool ImGui::InputScalarN(const char* label, ImGuiDataType data_type, void* v, int components, void* step_ptr, void* step_fast_ptr, const char* format, ImGuiInputTextFlags extra_flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -10734,13 +10729,15 @@ bool ImGui::InputFloatN(const char* label, float* v, int components, const char*
     BeginGroup();
     PushID(label);
     PushMultiItemsWidths(components);
+    size_t type_size = GDataTypeInfo[data_type].Size;
     for (int i = 0; i < components; i++)
     {
         PushID(i);
-        value_changed |= InputFloat("##v", &v[i], 0, 0, format, extra_flags);
+        value_changed |= InputScalar("##v", data_type, v, step_ptr, step_fast_ptr, format, extra_flags);
         SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
+        v = (void*)((char*)v + type_size);
     }
     PopID();
 
@@ -10752,17 +10749,17 @@ bool ImGui::InputFloatN(const char* label, float* v, int components, const char*
 
 bool ImGui::InputFloat2(const char* label, float v[2], const char* format, ImGuiInputTextFlags extra_flags)
 {
-    return InputFloatN(label, v, 2, format, extra_flags);
+    return InputScalarN(label, ImGuiDataType_Float, v, 2, NULL, NULL, format, extra_flags);
 }
 
 bool ImGui::InputFloat3(const char* label, float v[3], const char* format, ImGuiInputTextFlags extra_flags)
 {
-    return InputFloatN(label, v, 3, format, extra_flags);
+    return InputScalarN(label, ImGuiDataType_Float, v, 3, NULL, NULL, format, extra_flags);
 }
 
 bool ImGui::InputFloat4(const char* label, float v[4], const char* format, ImGuiInputTextFlags extra_flags)
 {
-    return InputFloatN(label, v, 4, format, extra_flags);
+    return InputScalarN(label, ImGuiDataType_Float, v, 4, NULL, NULL, format, extra_flags);
 }
 
 // Prefer using "const char* format" directly, which is more flexible and consistent with other API.
@@ -10780,7 +10777,7 @@ bool ImGui::InputFloat2(const char* label, float v[2], int decimal_precision, Im
     char format[16] = "%f";
     if (decimal_precision >= 0)
         ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
-    return InputFloatN(label, v, 2, format, extra_flags);
+    return InputScalarN(label, ImGuiDataType_Float, v, 2, NULL, NULL, format, extra_flags);
 }
 
 bool ImGui::InputFloat3(const char* label, float v[3], int decimal_precision, ImGuiInputTextFlags extra_flags)
@@ -10788,7 +10785,7 @@ bool ImGui::InputFloat3(const char* label, float v[3], int decimal_precision, Im
     char format[16] = "%f";
     if (decimal_precision >= 0)
         ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
-    return InputFloatN(label, v, 3, format, extra_flags);
+    return InputScalarN(label, ImGuiDataType_Float, v, 3, NULL, NULL, format, extra_flags);
 }
 
 bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision, ImGuiInputTextFlags extra_flags)
@@ -10796,50 +10793,23 @@ bool ImGui::InputFloat4(const char* label, float v[4], int decimal_precision, Im
     char format[16] = "%f";
     if (decimal_precision >= 0)
         ImFormatString(format, IM_ARRAYSIZE(format), "%%.%df", decimal_precision);
-    return InputFloatN(label, v, 4, format, extra_flags);
+    return InputScalarN(label, ImGuiDataType_Float, v, 4, NULL, NULL, format, extra_flags);
 }
 #endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-bool ImGui::InputIntN(const char* label, int* v, int components, ImGuiInputTextFlags extra_flags)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
-    ImGuiContext& g = *GImGui;
-    bool value_changed = false;
-    BeginGroup();
-    PushID(label);
-    PushMultiItemsWidths(components);
-    for (int i = 0; i < components; i++)
-    {
-        PushID(i);
-        value_changed |= InputInt("##v", &v[i], 0, 0, extra_flags);
-        SameLine(0, g.Style.ItemInnerSpacing.x);
-        PopID();
-        PopItemWidth();
-    }
-    PopID();
-
-    TextUnformatted(label, FindRenderedTextEnd(label));
-    EndGroup();
-
-    return value_changed;
-}
-
 bool ImGui::InputInt2(const char* label, int v[2], ImGuiInputTextFlags extra_flags)
 {
-    return InputIntN(label, v, 2, extra_flags);
+    return InputScalarN(label, ImGuiDataType_S32, v, 2, NULL, NULL, "%d", extra_flags);
 }
 
 bool ImGui::InputInt3(const char* label, int v[3], ImGuiInputTextFlags extra_flags)
 {
-    return InputIntN(label, v, 3, extra_flags);
+    return InputScalarN(label, ImGuiDataType_S32, v, 3, NULL, NULL, "%d", extra_flags);
 }
 
 bool ImGui::InputInt4(const char* label, int v[4], ImGuiInputTextFlags extra_flags)
 {
-    return InputIntN(label, v, 4, extra_flags);
+    return InputScalarN(label, ImGuiDataType_S32, v, 4, NULL, NULL, "%d", extra_flags);
 }
 
 static float CalcMaxPopupHeightFromItemCount(int items_count)

@@ -1008,16 +1008,16 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::InputFloat2("input float2", vec4f);
             ImGui::DragFloat2("drag float2", vec4f, 0.01f, 0.0f, 1.0f);
             ImGui::SliderFloat2("slider float2", vec4f, 0.0f, 1.0f);
-            ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
             ImGui::InputInt2("input int2", vec4i);
+            ImGui::DragInt2("drag int2", vec4i, 1, 0, 255);
             ImGui::SliderInt2("slider int2", vec4i, 0, 255);
             ImGui::Spacing();
 
             ImGui::InputFloat3("input float3", vec4f);
             ImGui::DragFloat3("drag float3", vec4f, 0.01f, 0.0f, 1.0f);
             ImGui::SliderFloat3("slider float3", vec4f, 0.0f, 1.0f);
-            ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
             ImGui::InputInt3("input int3", vec4i);
+            ImGui::DragInt3("drag int3", vec4i, 1, 0, 255);
             ImGui::SliderInt3("slider int3", vec4i, 0, 255);
             ImGui::Spacing();
 
