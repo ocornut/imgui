@@ -8631,7 +8631,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
 
     char fmt_buf[32];
     char data_buf[32];
-    format = ParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
+    format = ImParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
     DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, data_ptr, format);
     ImStrTrimBlanks(data_buf);
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
@@ -8647,7 +8647,8 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     return false;
 }
 
-const char* ImGui::ParseFormatTrimDecorationsLeading(const char* fmt)
+// We don't use strchr() because our strings are usually very short and often start with '%'
+const char* ImParseFormatFindStart(const char* fmt)
 {
     while (char c = fmt[0])
     {
@@ -8660,36 +8661,44 @@ const char* ImGui::ParseFormatTrimDecorationsLeading(const char* fmt)
     return fmt;
 }
 
+const char* ImParseFormatFindEnd(const char* fmt)
+{
+    // Printf/scanf types modifiers: I/L/h/j/l/t/w/z. Other uppercase letters qualify as types aka end of the format.
+    IM_ASSERT(fmt[0] == '%');
+    const unsigned int ignored_uppercase_mask = (1 << ('I'-'A')) | (1 << ('L'-'A'));
+    const unsigned int ignored_lowercase_mask = (1 << ('h'-'a')) | (1 << ('j'-'a')) | (1 << ('l'-'a')) | (1 << ('t'-'a')) | (1 << ('w'-'a')) | (1 << ('z'-'a'));
+    for (char c; (c = *fmt) != 0; fmt++)
+    {
+        if (c >= 'A' && c <= 'Z' && ((1 << (c - 'A')) & ignored_uppercase_mask) == 0) 
+            return fmt + 1;
+        if (c >= 'a' && c <= 'z' && ((1 << (c - 'a')) & ignored_lowercase_mask) == 0)
+            return fmt + 1;
+    }
+    return fmt;
+}
+
 // Extract the format out of a format string with leading or trailing decorations
 //  fmt = "blah blah"  -> return fmt
 //  fmt = "%.3f"       -> return fmt
 //  fmt = "hello %.3f" -> return fmt + 6
 //  fmt = "%.3f hello" -> return buf written with "%.3f"
-const char* ImGui::ParseFormatTrimDecorations(const char* fmt, char* buf, int buf_size)
+const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, int buf_size)
 {
-    // We don't use strchr() because our strings are usually very short and often start with '%'
-    const char* fmt_start = ParseFormatTrimDecorationsLeading(fmt);
+    const char* fmt_start = ImParseFormatFindStart(fmt);
     if (fmt_start[0] != '%')
         return fmt;
-    fmt = fmt_start;
-    while (char c = *fmt++)
-    {
-        if (c >= 'A' && c <= 'Z' && (c != 'L'))  // L is a type modifier, other letters qualify as types aka end of the format
-            break;
-        if (c >= 'a' && c <= 'z' && (c != 'h' && c != 'j' && c != 'l' && c != 't' && c != 'w' && c != 'z'))  // h/j/l/t/w/z are type modifiers, other letters qualify as types aka end of the format
-            break;
-    }
-    if (fmt[0] == 0) // If we only have leading decoration, we don't need to copy the data.
+    const char* fmt_end = ImParseFormatFindEnd(fmt_start);
+    if (fmt_end[0] == 0) // If we only have leading decoration, we don't need to copy the data.
         return fmt_start;
-    ImStrncpy(buf, fmt_start, ImMin((int)(fmt + 1 - fmt_start), buf_size));
+    ImStrncpy(buf, fmt_start, ImMin((int)(fmt_end + 1 - fmt_start), buf_size));
     return buf;
 }
 
 // Parse display precision back from the display format string
 // FIXME: This is still used by some navigation code path to infer a minimum tweak step, but we should aim to rework widgets so it isn't needed.
-int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
+int ImParseFormatPrecision(const char* fmt, int default_precision)
 {
-    fmt = ParseFormatTrimDecorationsLeading(fmt);
+    fmt = ImParseFormatFindStart(fmt);
     if (fmt[0] != '%')
         return default_precision;
     fmt++;
@@ -8715,13 +8724,6 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     if (decimal_precision < 0)
         return FLT_MIN;
     return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : powf(10.0f, (float)-decimal_precision);
-}
-
-float ImGui::RoundScalarWithFormat(const char* format, float value)
-{
-    char buf[64];
-    ImFormatString(buf, IM_ARRAYSIZE(buf), ParseFormatTrimDecorationsLeading(format), value);
-    return (float)atof(buf);
 }
 
 static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
@@ -8762,7 +8764,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
     const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
-    const bool is_decimal = ParseFormatPrecision(format, 3) != 0;
+    const bool is_decimal = ImParseFormatPrecision(format, 3) != 0;
 
     const float grab_padding = 2.0f;
     const float slider_sz = is_horizontal ? (frame_bb.GetWidth() - grab_padding * 2.0f) : (frame_bb.GetHeight() - grab_padding * 2.0f);
@@ -8877,7 +8879,9 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             }
 
             // Round past decimal precision
-            new_value = RoundScalarWithFormat(format, new_value);
+            char buf[64];
+            ImFormatString(buf, IM_ARRAYSIZE(buf), ImParseFormatFindStart(format), new_value);
+            new_value = (float)atof(buf);
             if (*v != new_value)
             {
                 *v = new_value;
@@ -9155,7 +9159,7 @@ static bool ImGui::DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, f
     }
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
     {
-        int decimal_precision = ParseFormatPrecision(format, 3);
+        int decimal_precision = ImParseFormatPrecision(format, 3);
         adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
         v_speed = ImMax(v_speed, GetMinimumStepAtDecimalPrecision(decimal_precision));
     }
@@ -9198,7 +9202,7 @@ static bool ImGui::DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, f
 
     // Round to user desired precision based on format string
     char v_str[64];
-    ImFormatString(v_str, IM_ARRAYSIZE(v_str), ParseFormatTrimDecorationsLeading(format), v_cur);
+    ImFormatString(v_str, IM_ARRAYSIZE(v_str), ImParseFormatFindStart(format), v_cur);
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
         v_cur = (TYPE)atof(v_str);
     else

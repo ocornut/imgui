@@ -121,6 +121,10 @@ IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end
 IMGUI_API void          ImStrTrimBlanks(char* str);
 IMGUI_API int           ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IM_FMTARGS(3);
 IMGUI_API int           ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args) IM_FMTLIST(3);
+IMGUI_API const char*   ImParseFormatFindStart(const char* format);
+IMGUI_API const char*   ImParseFormatFindEnd(const char* format);
+IMGUI_API const char*   ImParseFormatTrimDecorations(const char* format, char* buf, int buf_size);
+IMGUI_API int           ImParseFormatPrecision(const char* format, int default_value);
 
 // Helpers: Math
 // We are keeping those not leaking to the user by default, in the case the user has implicit cast operators between ImVec2 and its own types (when IM_VEC2_CLASS_EXTRA is defined)
@@ -1117,11 +1121,6 @@ namespace ImGui
     IMGUI_API void          TreePushRawID(ImGuiID id);
 
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
-
-    IMGUI_API const char*   ParseFormatTrimDecorationsLeading(const char* format);
-    IMGUI_API const char*   ParseFormatTrimDecorations(const char* format, char* buf, int buf_size);
-    IMGUI_API int           ParseFormatPrecision(const char* format, int default_value);
-    IMGUI_API float         RoundScalarWithFormat(const char* format, float value);
 
     // Shade functions (write over already created vertices)
     IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);
