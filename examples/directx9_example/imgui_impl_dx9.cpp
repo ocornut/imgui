@@ -77,10 +77,10 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         return;
 
     // Backup the DX9 transform
-    D3DMATRIX bak_world, bak_view, bak_projection;
-    g_pd3dDevice->GetTransform(D3DTS_WORLD, &bak_world);
-    g_pd3dDevice->GetTransform(D3DTS_VIEW, &bak_view);
-    g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &bak_projection);
+    D3DMATRIX last_world, last_view, last_projection;
+    g_pd3dDevice->GetTransform(D3DTS_WORLD, &last_world);
+    g_pd3dDevice->GetTransform(D3DTS_VIEW, &last_view);
+    g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
 
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
@@ -187,9 +187,9 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     }
 
     // Restore the DX9 transform
-    g_pd3dDevice->SetTransform(D3DTS_WORLD, &bak_world);
-    g_pd3dDevice->SetTransform(D3DTS_VIEW, &bak_view);
-    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &bak_projection);
+    g_pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
+    g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
+    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &last_projection);
 
     // Restore the DX9 state
     d3d9_state_block->Apply();
