@@ -9142,23 +9142,15 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
         v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
 
-    if (g.ActiveIdIsJustActivated)
-    {
-        // Lock current value on click
-        g.DragCurrentValue = *v;
-        g.DragLastMouseDelta = ImVec2(0.f, 0.f);
-    }
-
-    const ImVec2 mouse_drag_delta = GetMouseDragDelta(0, 1.0f);
+    // Inputs accumulate into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
     float adjust_delta = 0.0f;
-    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid())
+    if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid() && g.IO.MouseDragMaxDistanceSqr[0] > 1.0f*1.0f)
     {
-        adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
+        adjust_delta = g.IO.MouseDelta.x;
         if (g.IO.KeyAlt)
             adjust_delta *= 1.0f/100.0f;
         if (g.IO.KeyShift)
             adjust_delta *= 10.0f;
-        g.DragLastMouseDelta.x = mouse_drag_delta.x;
     }
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
     {
@@ -9168,41 +9160,55 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     }
     adjust_delta *= v_speed;
 
-    // Avoid applying the saturation when we are _already_ past the limits and heading in the same direction, so e.g. if range is 0..255, current value is 300 and we are pushing to the right side, keep the 300
-    float v_cur = g.DragCurrentValue;
-    if (v_min < v_max && ((v_cur >= v_max && adjust_delta > 0.0f) || (v_cur <= v_min && adjust_delta < 0.0f)))
-        adjust_delta = 0.0f;
-
-    if (fabsf(adjust_delta) > 0.0f)
+    // Clear current value on activation
+    // Avoid altering values and clamping when we are _already_ past the limits and heading in the same direction, so e.g. if range is 0..255, current value is 300 and we are pushing to the right side, keep the 300.
+    bool is_just_activated = g.ActiveIdIsJustActivated;
+    bool is_already_past_limits_and_pushing_outward = (v_min < v_max) && ((*v >= v_max && adjust_delta > 0.0f) || (*v <= v_min && adjust_delta < 0.0f));
+    if (is_just_activated || is_already_past_limits_and_pushing_outward)
     {
-        if (fabsf(power - 1.0f) > 0.001f)
+        g.DragCurrentAccum = 0.0f;
+        g.DragCurrentAccumDirty = false;
+    }
+    else if (adjust_delta != 0.0f)
+    {
+        g.DragCurrentAccum += adjust_delta;
+        g.DragCurrentAccumDirty = true;
+    }
+
+    bool value_changed = false;
+    if (g.DragCurrentAccumDirty)
+    {
+        float v_cur = *v;
+        if (power != 1.0f && v_min != v_max)
         {
-            // Power curve on both side of 0.0
-            float v0_abs = v_cur >= 0.0f ? v_cur : -v_cur;
-            float v0_sign = v_cur >= 0.0f ? 1.0f : -1.0f;
-            float v1 = powf(v0_abs, 1.0f / power) + (adjust_delta * v0_sign);
-            float v1_abs = v1 >= 0.0f ? v1 : -v1;
-            float v1_sign = v1 >= 0.0f ? 1.0f : -1.0f;          // Crossed sign line
-            v_cur = powf(v1_abs, power) * v0_sign * v1_sign;    // Reapply sign
+            // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
+            IM_ASSERT(v_min != v_max); // When using a power curve the drag needs to have known bounds
+            float v_old_norm_curved = powf((v_cur - v_min) / (v_max - v_min), 1.0f / power);
+            float v_new_norm_curved = v_old_norm_curved + (g.DragCurrentAccum / (v_max - v_min));
+            v_cur = v_min + powf(ImSaturate(v_new_norm_curved), power) * (v_max - v_min);
+            v_cur = RoundScalarWithFormat(format, v_cur);
+            float v_cur_norm_curved = powf((v_cur - v_min) / (v_max - v_min), 1.0f / power);
+            g.DragCurrentAccum -= (v_cur_norm_curved - v_old_norm_curved); // Preserve remainder
         }
         else
         {
-            v_cur += adjust_delta;
+            // Offset + round to user desired precision
+            v_cur += g.DragCurrentAccum;
+            v_cur = RoundScalarWithFormat(format, v_cur);
+            g.DragCurrentAccum -= (v_cur - *v); // Preserve remainder
         }
 
         // Clamp
-        if (v_min < v_max)
+        if (*v != v_cur && v_min < v_max)
             v_cur = ImClamp(v_cur, v_min, v_max);
-        g.DragCurrentValue = v_cur;
-    }
 
-    // Round to user desired precision, then apply
-    bool value_changed = false;
-    v_cur = RoundScalarWithFormat(format, v_cur);
-    if (*v != v_cur)
-    {
-        *v = v_cur;
-        value_changed = true;
+        // Apply result
+        if (*v != v_cur)
+        {
+            *v = v_cur;
+            value_changed = true;
+        }
+        g.DragCurrentAccumDirty = false;
     }
 
     return value_changed;
@@ -9213,6 +9219,9 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
+
+    if (power != 1.0f)
+        IM_ASSERT(v_min != v_max); // When using a power curve the drag needs to have known bounds
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;

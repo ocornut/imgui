@@ -668,8 +668,8 @@ struct ImGuiContext
     ImGuiID                 ScalarAsInputTextId;                // Temporary text input when CTRL+clicking on a slider, etc.
     ImGuiColorEditFlags     ColorEditOptions;                   // Store user options for color edit widgets
     ImVec4                  ColorPickerRef;
-    float                   DragCurrentValue;                   // Currently dragged value, always float, not rounded by end-user precision settings
-    ImVec2                  DragLastMouseDelta;
+    bool                    DragCurrentAccumDirty;
+    float                   DragCurrentAccum;                   // Accumulator for dragging modification. Always high-precision, not rounded by end-user precision settings
     float                   DragSpeedDefaultRatio;              // If speed == 0.0f, uses (max-min) * DragSpeedDefaultRatio
     ImVec2                  ScrollbarClickDeltaToGrabCenter;    // Distance between mouse and center of grab box, normalized in parent space. Use storage?
     int                     TooltipOverrideCount;
@@ -771,8 +771,8 @@ struct ImGuiContext
 
         ScalarAsInputTextId = 0;
         ColorEditOptions = ImGuiColorEditFlags__OptionsDefault;
-        DragCurrentValue = 0.0f;
-        DragLastMouseDelta = ImVec2(0.0f, 0.0f);
+        DragCurrentAccumDirty = false;
+        DragCurrentAccum = 0.0f;
         DragSpeedDefaultRatio = 1.0f / 100.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         TooltipOverrideCount = 0;
