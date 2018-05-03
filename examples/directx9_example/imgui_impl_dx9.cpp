@@ -74,13 +74,13 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = NULL;
     if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
-		return;
+        return;
 
-	// Backup the DX9 transform
-	D3DMATRIX bak_world, bak_view, bak_projection;
-	g_pd3dDevice->GetTransform(D3DTS_WORLD, &bak_world);
-	g_pd3dDevice->GetTransform(D3DTS_VIEW, &bak_view);
-	g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &bak_projection);
+    // Backup the DX9 transform
+    D3DMATRIX bak_world, bak_view, bak_projection;
+    g_pd3dDevice->GetTransform(D3DTS_WORLD, &bak_world);
+    g_pd3dDevice->GetTransform(D3DTS_VIEW, &bak_view);
+    g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &bak_projection);
 
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
@@ -122,7 +122,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     vp.MaxZ = 1.0f;
     g_pd3dDevice->SetViewport(&vp);
 
-	// Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient)
+    // Setup render state: fixed-pipeline, alpha-blending, no face culling, no depth testing, shade mode (for gradient)
     g_pd3dDevice->SetPixelShader(NULL);
     g_pd3dDevice->SetVertexShader(NULL);
     g_pd3dDevice->SetRenderState(D3DRS_CULLMODE, D3DCULL_NONE);
@@ -134,7 +134,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_SRCALPHA);
     g_pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
     g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
-	g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+    g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
@@ -184,12 +184,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             idx_offset += pcmd->ElemCount;
         }
         vtx_offset += cmd_list->VtxBuffer.Size;
-	}
+    }
 
-	// Restore the DX9 transform
-	g_pd3dDevice->SetTransform(D3DTS_WORLD, &bak_world);
-	g_pd3dDevice->SetTransform(D3DTS_VIEW, &bak_view);
-	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &bak_projection);
+    // Restore the DX9 transform
+    g_pd3dDevice->SetTransform(D3DTS_WORLD, &bak_world);
+    g_pd3dDevice->SetTransform(D3DTS_VIEW, &bak_view);
+    g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &bak_projection);
 
     // Restore the DX9 state
     d3d9_state_block->Apply();
