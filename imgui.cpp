@@ -9154,10 +9154,10 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid())
     {
         adjust_delta = mouse_drag_delta.x - g.DragLastMouseDelta.x;
-        if (g.IO.KeyShift && g.DragSpeedScaleFast >= 0.0f)
-            adjust_delta *= g.DragSpeedScaleFast;
-        if (g.IO.KeyAlt && g.DragSpeedScaleSlow >= 0.0f)
-            adjust_delta *= g.DragSpeedScaleSlow;
+        if (g.IO.KeyAlt)
+            adjust_delta *= 1.0f/100.0f;
+        if (g.IO.KeyShift)
+            adjust_delta *= 10.0f;
         g.DragLastMouseDelta.x = mouse_drag_delta.x;
     }
     if (g.ActiveIdSource == ImGuiInputSource_Nav)
