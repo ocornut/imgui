@@ -262,6 +262,10 @@
  Here is a change-log of API breaking changes, if you are using one of the functions listed, expect to have to fix some code.
  Also read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2018/05/03 (1.61) - DragInt: The default compile-time format string has been changed from "%.0f" to "%d", we are not using integers internally any more. 
+                       If you used DragInt() with custom format strings, make sure you change them to use %d or an integer-compatible format.
+                       To honor backward-compatibility, the DragInt() code will currently parse and modify format strings to replace %*f with %d, giving time to users to upgrade their code.
+                       If you have IMGUI_DISABLE_OBSOLETE_FUNCTIONS enabled, the code will instead assert! You may run a reg-exp search on your codebase for e.g. "DragInt.*%f" to help you find them. 
  - 2018/04/28 (1.61) - obsoleted InputFloat() functions taking an optional "int decimal_precision" in favor of an equivalent and more flexible "const char* format", consistent with other functions. Kept redirection functions (will obsolete).
  - 2018/04/09 (1.61) - IM_DELETE() helper function added in 1.60 doesn't clear the input _pointer_ reference, more consistent with expectation and allows passing r-value.
  - 2018/03/20 (1.60) - Renamed io.WantMoveMouse to io.WantSetMousePos for consistency and ease of understanding (was added in 1.52, _not_ used by core and only honored by some binding ahead of merging the Nav branch).
@@ -8664,7 +8668,8 @@ const char* ImParseFormatFindStart(const char* fmt)
 const char* ImParseFormatFindEnd(const char* fmt)
 {
     // Printf/scanf types modifiers: I/L/h/j/l/t/w/z. Other uppercase letters qualify as types aka end of the format.
-    IM_ASSERT(fmt[0] == '%');
+    if (fmt[0] != '%')
+        return fmt;
     const unsigned int ignored_uppercase_mask = (1 << ('I'-'A')) | (1 << ('L'-'A'));
     const unsigned int ignored_lowercase_mask = (1 << ('h'-'a')) | (1 << ('j'-'a')) | (1 << ('l'-'a')) | (1 << ('t'-'a')) | (1 << ('w'-'a')) | (1 << ('z'-'a'));
     for (char c; (c = *fmt) != 0; fmt++)
@@ -9265,6 +9270,28 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_s
     return false;
 }
 
+// FIXME-LEGACY: Prior to 1.61 our DragInt() function internally used floats and because of this the compile-time default value for format was "%.0f".
+// Even though we changed the compile-time default, we expect users to have carried %f around, which would break DragInt() calls. 
+// To honor backward compatibility we are rewriting the format string, unless IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. Note that calling code has a fast-path that return "%d" if the string is "%.0f".
+static const char* PatchFormatStringFloatToInt(const char* fmt)
+{
+    const char* fmt_start = ImParseFormatFindStart(fmt);
+    const char* fmt_end = ImParseFormatFindEnd(fmt_start);
+    if (fmt_end > fmt_start && fmt_end[-1] == 'f')
+    {
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        if (fmt_start == fmt && fmt_end[0] == 0)
+            return "%d";
+        ImGuiContext& g = *GImGui;
+        ImFormatString(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), "%.*s%%d%s", (int)(fmt_start - fmt), fmt, fmt_end); // Honor leading and trailing decorations
+        return g.TempBuffer;
+#else
+        IM_ASSERT(0 && "DragInt(): Invalid format string!"); // Old versions used a default parameter of "%.0f", please replace with e.g. "%d"
+#endif
+    }
+    return fmt;
+}
+
 bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9292,8 +9319,9 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     }
     const bool hovered = ItemHoverable(frame_bb, id);
 
-    if (!format)
-        format = "%.3f";
+    // Patch old "%.0f" format string to use "%d", read function comments for more details.
+    if (data_type == ImGuiDataType_S32)
+        format = (strcmp(format, "%.0f") == 0) ? "%d" : PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     bool start_text_input = false;

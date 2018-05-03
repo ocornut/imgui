@@ -42,6 +42,10 @@ VERSION 1.61 WIP
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
+ - DragInt: The default compile-time format string has been changed from "%.0f" to "%d", we are not using integers internally any more. 
+   If you used DragInt() with custom format strings, make sure you change them to use %d or an integer-compatible format.
+   To honor backward-compatibility, the DragInt() code will currently parse and modify format strings to replace %*f with %d, giving time to users to upgrade their code.
+   If you have IMGUI_DISABLE_OBSOLETE_FUNCTIONS enabled, the code will instead assert! You may run a reg-exp search on your codebase for e.g. "DragInt.*%f" to you find them. 
  - Misc: IM_DELETE() helper function added in 1.60 doesn't set the input pointer to NULL, more consistent with standard expectation and allows passing r-value.
 
 Other Changes:
