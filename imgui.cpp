@@ -761,6 +761,10 @@ static void             UpdateMovingWindow();
 static void             UpdateMouseInputs();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
+
+template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
+static bool             DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power);
+static bool             DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power);
 }
 
 //-----------------------------------------------------------------------------
@@ -1088,12 +1092,13 @@ void ImStrTrimBlanks(char* buf)
     buf[p - p_start] = 0;                   // Zero terminate
 }
 
-static const char* ImAtoi(const char* src, int* output)
+template<typename TYPE>
+static const char* ImAtoi(const char* src, TYPE* output)
 {
     int negative = 0;
     if (*src == '-') { negative = 1; src++; }
     if (*src == '+') { src++; }
-    int v = 0;
+    TYPE v = 0;
     while (*src >= '0' && *src <= '9')
         v = (v * 10) + (*src++ - '0');
     *output = negative ? -v : v;
@@ -8693,7 +8698,7 @@ int ImGui::ParseFormatPrecision(const char* fmt, int default_precision)
     int precision = INT_MAX;
     if (*fmt == '.')
     {
-        fmt = ImAtoi(fmt + 1, &precision);
+        fmt = ImAtoi<int>(fmt + 1, &precision);
         if (precision < 0 || precision > 99)
             precision = default_precision;
     }
@@ -9117,15 +9122,10 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
     return SliderIntN(label, v, 4, v_min, v_max, format);
 }
 
-bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, const char* format, float power)
+template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
+static bool ImGui::DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
-
-    // Draw frame
-    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
-    RenderNavHighlight(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, style.FrameRounding);
 
     // Process interacting with the drag
     if (g.ActiveId == id)
@@ -9139,10 +9139,11 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
         return false;
 
     // Default tweak speed
-    if (v_speed == 0.0f && (v_max - v_min) != 0.0f && (v_max - v_min) < FLT_MAX)
-        v_speed = (v_max - v_min) * g.DragSpeedDefaultRatio;
+    bool has_min_max = (v_min != v_max) && (v_max - v_max < FLT_MAX);
+    if (v_speed == 0.0f && has_min_max)
+        v_speed = (float)((v_max - v_min) * g.DragSpeedDefaultRatio);
 
-    // Inputs accumulate into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
+    // Inputs accumulates into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
     float adjust_delta = 0.0f;
     if (g.ActiveIdSource == ImGuiInputSource_Mouse && IsMousePosValid() && g.IO.MouseDragMaxDistanceSqr[0] > 1.0f*1.0f)
     {
@@ -9163,7 +9164,7 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
     // Clear current value on activation
     // Avoid altering values and clamping when we are _already_ past the limits and heading in the same direction, so e.g. if range is 0..255, current value is 300 and we are pushing to the right side, keep the 300.
     bool is_just_activated = g.ActiveIdIsJustActivated;
-    bool is_already_past_limits_and_pushing_outward = (v_min < v_max) && ((*v >= v_max && adjust_delta > 0.0f) || (*v <= v_min && adjust_delta < 0.0f));
+    bool is_already_past_limits_and_pushing_outward = has_min_max && ((*v >= v_max && adjust_delta > 0.0f) || (*v <= v_min && adjust_delta < 0.0f));
     if (is_just_activated || is_already_past_limits_and_pushing_outward)
     {
         g.DragCurrentAccum = 0.0f;
@@ -9175,46 +9176,92 @@ bool ImGui::DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_s
         g.DragCurrentAccumDirty = true;
     }
 
-    bool value_changed = false;
-    if (g.DragCurrentAccumDirty)
+    if (!g.DragCurrentAccumDirty)
+        return false;
+
+    TYPE v_cur = *v;
+    FLOATTYPE v_old_ref_for_accum_remainder = (FLOATTYPE)0.0f;
+
+    const bool is_power = (power != 1.0f && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) && has_min_max);
+    if (is_power)
     {
-        float v_cur = *v;
-        if (power != 1.0f && v_min != v_max)
-        {
-            // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
-            IM_ASSERT(v_min != v_max); // When using a power curve the drag needs to have known bounds
-            float v_old_norm_curved = powf((v_cur - v_min) / (v_max - v_min), 1.0f / power);
-            float v_new_norm_curved = v_old_norm_curved + (g.DragCurrentAccum / (v_max - v_min));
-            v_cur = v_min + powf(ImSaturate(v_new_norm_curved), power) * (v_max - v_min);
-            v_cur = RoundScalarWithFormat(format, v_cur);
-            float v_cur_norm_curved = powf((v_cur - v_min) / (v_max - v_min), 1.0f / power);
-            g.DragCurrentAccum -= (v_cur_norm_curved - v_old_norm_curved); // Preserve remainder
-        }
-        else
-        {
-            // Offset + round to user desired precision
-            v_cur += g.DragCurrentAccum;
-            v_cur = RoundScalarWithFormat(format, v_cur);
-            g.DragCurrentAccum -= (v_cur - *v); // Preserve remainder
-        }
-
-        // Clamp
-        if (*v != v_cur && v_min < v_max)
-            v_cur = ImClamp(v_cur, v_min, v_max);
-
-        // Apply result
-        if (*v != v_cur)
-        {
-            *v = v_cur;
-            value_changed = true;
-        }
-        g.DragCurrentAccumDirty = false;
+        // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
+        FLOATTYPE v_old_norm_curved = (FLOATTYPE)pow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
+        FLOATTYPE v_new_norm_curved = v_old_norm_curved + (g.DragCurrentAccum / (v_max - v_min));
+        v_cur = v_min + (TYPE)pow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
+        v_old_ref_for_accum_remainder = v_old_norm_curved;
+    }
+    else
+    {
+        v_cur += (TYPE)g.DragCurrentAccum;
     }
 
-    return value_changed;
+    // Round to user desired precision based on format string
+    char v_str[64];
+    ImFormatString(v_str, IM_ARRAYSIZE(v_str), ParseFormatTrimDecorationsLeading(format), v_cur);
+    if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
+        v_cur = (TYPE)atof(v_str);
+    else
+        ImAtoi(v_str, (SIGNEDTYPE*)&v_cur);
+
+    // Preserve remainder after rounding has been applied. This also allow slow tweaking of values.
+    g.DragCurrentAccumDirty = false;
+    if (is_power)
+    {
+        FLOATTYPE v_cur_norm_curved = (FLOATTYPE)pow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
+        g.DragCurrentAccum -= (float)(v_cur_norm_curved - v_old_ref_for_accum_remainder);
+    }
+    else
+    {
+        g.DragCurrentAccum -= (float)((SIGNEDTYPE)v_cur - (SIGNEDTYPE)*v);
+    }
+    
+    // Lose zero sign for float/double
+    if (v_cur == (TYPE)-0)
+        v_cur = (TYPE)0;
+
+    // Clamp values (handle overflow/wrap-around)
+    if (*v != v_cur && has_min_max)
+    {
+        if (v_cur < v_min || (v_cur > *v && adjust_delta < 0.0f))
+            v_cur = v_min;
+        if (v_cur > v_max || (v_cur < *v && adjust_delta > 0.0f))
+            v_cur = v_max;
+    }
+
+    // Apply result
+    if (*v == v_cur)
+        return false;
+    *v = v_cur;
+    return true;
 }
 
-bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, float power)
+static const ImS32  IM_S32_MIN = 0x80000000; // INT_MIN;
+static const ImS32  IM_S32_MAX = 0x7FFFFFFF; // INT_MAX;
+static const ImU32  IM_U32_MIN = 0;
+static const ImU32  IM_U32_MAX = 0xFFFFFFFF;
+static const ImS64  IM_S64_MIN = -9223372036854775807ll - 1ll;
+static const ImS64  IM_S64_MAX = 9223372036854775807ll;
+static const ImU64  IM_U64_MIN = 0;
+static const ImU64  IM_U64_MAX = 0xFFFFFFFFFFFFFFFFull;
+
+bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power)
+{
+    switch (data_type)
+    {
+    case ImGuiDataType_S32:    return DragBehaviorT<ImS32, ImS32, float >(id, data_type, (ImS32*)v,  v_speed, v_min ? *(const ImS32* )v_min : IM_S32_MIN, v_max ? *(const ImS32* )v_max : IM_S32_MAX, format, power);
+    case ImGuiDataType_U32:    return DragBehaviorT<ImU32, ImS32, float >(id, data_type, (ImU32*)v,  v_speed, v_min ? *(const ImU32* )v_min : IM_U32_MIN, v_max ? *(const ImU32* )v_max : IM_U32_MAX, format, power);
+    case ImGuiDataType_S64:    return DragBehaviorT<ImS64, ImS64, double>(id, data_type, (ImS64*)v,  v_speed, v_min ? *(const ImS64* )v_min : IM_S64_MIN, v_max ? *(const ImS64* )v_max : IM_S64_MAX, format, power);
+    case ImGuiDataType_U64:    return DragBehaviorT<ImU64, ImS64, double>(id, data_type, (ImU64*)v,  v_speed, v_min ? *(const ImU64* )v_min : IM_U64_MIN, v_max ? *(const ImU64* )v_max : IM_U64_MAX, format, power);
+    case ImGuiDataType_Float:  return DragBehaviorT<float, float, float >(id, data_type, (float*)v,  v_speed, v_min ? *(const float* )v_min : -FLT_MAX,   v_max ? *(const float* )v_max : FLT_MAX,    format, power);
+    case ImGuiDataType_Double: return DragBehaviorT<double,double,double>(id, data_type, (double*)v, v_speed, v_min ? *(const double*)v_min : -DBL_MAX,   v_max ? *(const double*)v_max : DBL_MAX,    format, power);
+    case ImGuiDataType_COUNT:  break;
+    }
+    IM_ASSERT(0);
+    return false;
+}
+
+bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9260,16 +9307,21 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return InputScalarAsWidgetReplacement(frame_bb, id, label, ImGuiDataType_Float, v, format);
+        return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
 
     // Actual drag behavior
     ItemSize(total_bb, style.FramePadding.y);
-    const bool value_changed = DragBehavior(frame_bb, id, v, v_speed, v_min, v_max, format, power);
+    const bool value_changed = DragBehavior(id, data_type, v, v_speed, v_min, v_max, format, power);
+
+    // Draw frame
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    RenderNavHighlight(frame_bb, id);
+    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, style.FrameRounding);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), format, *v);
-    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f,0.5f));
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, v, format);
+    RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f, 0.5f));
 
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, inner_bb.Min.y), label);
@@ -9277,7 +9329,7 @@ bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, f
     return value_changed;
 }
 
-bool ImGui::DragFloatN(const char* label, float* v, int components, float v_speed, float v_min, float v_max, const char* format, float power)
+bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* v, int components, float v_speed, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9288,13 +9340,15 @@ bool ImGui::DragFloatN(const char* label, float* v, int components, float v_spee
     BeginGroup();
     PushID(label);
     PushMultiItemsWidths(components);
+    size_t type_size = GDataTypeInfo[data_type].Size;
     for (int i = 0; i < components; i++)
     {
         PushID(i);
-        value_changed |= DragFloat("##v", &v[i], v_speed, v_min, v_max, format, power);
+        value_changed |= DragScalar("##v", data_type, v, v_speed, v_min, v_max, format, power);
         SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
+        v = (void*)((char*)v + type_size);
     }
     PopID();
 
@@ -9304,19 +9358,24 @@ bool ImGui::DragFloatN(const char* label, float* v, int components, float v_spee
     return value_changed;
 }
 
+bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, float power)
+{
+    return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, power);
+}
+
 bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, float power)
 {
-    return DragFloatN(label, v, 2, v_speed, v_min, v_max, format, power);
+    return DragScalarN(label, ImGuiDataType_Float, v, 2, v_speed, &v_min, &v_max, format, power);
 }
 
 bool ImGui::DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, float power)
 {
-    return DragFloatN(label, v, 3, v_speed, v_min, v_max, format, power);
+    return DragScalarN(label, ImGuiDataType_Float, v, 3, v_speed, &v_min, &v_max, format, power);
 }
 
 bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, float power)
 {
-    return DragFloatN(label, v, 4, v_speed, v_min, v_max, format, power);
+    return DragScalarN(label, ImGuiDataType_Float, v, 4, v_speed, &v_min, &v_max, format, power);
 }
 
 bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power)
@@ -9355,46 +9414,19 @@ bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_m
     return value_changed;
 }
 
-bool ImGui::DragIntN(const char* label, int* v, int components, float v_speed, int v_min, int v_max, const char* format)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
-    ImGuiContext& g = *GImGui;
-    bool value_changed = false;
-    BeginGroup();
-    PushID(label);
-    PushMultiItemsWidths(components);
-    for (int i = 0; i < components; i++)
-    {
-        PushID(i);
-        value_changed |= DragInt("##v", &v[i], v_speed, v_min, v_max, format);
-        SameLine(0, g.Style.ItemInnerSpacing.x);
-        PopID();
-        PopItemWidth();
-    }
-    PopID();
-
-    TextUnformatted(label, FindRenderedTextEnd(label));
-    EndGroup();
-
-    return value_changed;
-}
-
 bool ImGui::DragInt2(const char* label, int v[2], float v_speed, int v_min, int v_max, const char* format)
 {
-    return DragIntN(label, v, 2, v_speed, v_min, v_max, format);
+    return DragScalarN(label, ImGuiDataType_S32, v, 2, v_speed, &v_min, &v_max, format);
 }
 
 bool ImGui::DragInt3(const char* label, int v[3], float v_speed, int v_min, int v_max, const char* format)
 {
-    return DragIntN(label, v, 3, v_speed, v_min, v_max, format);
+    return DragScalarN(label, ImGuiDataType_S32, v, 3, v_speed, &v_min, &v_max, format);
 }
 
 bool ImGui::DragInt4(const char* label, int v[4], float v_speed, int v_min, int v_max, const char* format)
 {
-    return DragIntN(label, v, 4, v_speed, v_min, v_max, format);
+    return DragScalarN(label, ImGuiDataType_S32, v, 4, v_speed, &v_min, &v_max, format);
 }
 
 bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* format, const char* format_max)
