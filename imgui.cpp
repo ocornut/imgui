@@ -1072,6 +1072,22 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     return NULL;
 }
 
+// Trim str by offsetting contents when there's leading data + writing a \0 at the trailing position. We use this in situation where the cost is negligible.
+void ImStrTrimBlanks(char* buf)
+{
+    char* p = buf;
+    while (p[0] == ' ' || p[0] == '\t')     // Leading blanks
+        p++;
+    char* p_start = p;
+    while (*p != 0)                         // Find end of string
+        p++;
+    while (p > p_start && (p[-1] == ' ' || p[-1] == '\t'))  // Trailing blanks
+        p--;
+    if (p_start != buf)                     // Copy memory if we had leading blanks
+        memmove(buf, p_start, p - p_start);
+    buf[p - p_start] = 0;                   // Zero terminate
+}
+
 static const char* ImAtoi(const char* src, int* output)
 {
     int negative = 0;
@@ -8594,6 +8610,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     char data_buf[32];
     format = ParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
     DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, data_ptr, format);
+    ImStrTrimBlanks(data_buf);
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
     bool value_changed = InputTextEx(label, data_buf, IM_ARRAYSIZE(data_buf), bb.GetSize(), flags);
     if (g.ScalarAsInputTextId == 0)     // First frame we started displaying the InputText widget
