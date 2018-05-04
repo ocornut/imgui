@@ -8739,7 +8739,7 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     static const float min_steps[10] = { 1.0f, 0.1f, 0.01f, 0.001f, 0.0001f, 0.00001f, 0.000001f, 0.0000001f, 0.00000001f, 0.000000001f };
     if (decimal_precision < 0)
         return FLT_MIN;
-    return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : powf(10.0f, (float)-decimal_precision);
+    return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
 }
 
 static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
@@ -8754,12 +8754,12 @@ static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float
         if (v_clamped < 0.0f)
         {
             const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
-            return (1.0f - powf(f, 1.0f/power)) * linear_zero_pos;
+            return (1.0f - ImPow(f, 1.0f/power)) * linear_zero_pos;
         }
         else
         {
             const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
-            return linear_zero_pos + powf(f, 1.0f/power) * (1.0f - linear_zero_pos);
+            return linear_zero_pos + ImPow(f, 1.0f/power) * (1.0f - linear_zero_pos);
         }
     }
 
@@ -8798,8 +8798,8 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
     if (v_min * v_max < 0.0f)
     {
         // Different sign
-        const float linear_dist_min_to_0 = powf(v_min >= 0.0f ? v_min : -v_min, 1.0f/power);
-        const float linear_dist_max_to_0 = powf(v_max >= 0.0f ? v_max : -v_max, 1.0f/power);
+        const float linear_dist_min_to_0 = ImPow(v_min >= 0.0f ? v_min : -v_min, 1.0f/power);
+        const float linear_dist_max_to_0 = ImPow(v_max >= 0.0f ? v_max : -v_max, 1.0f/power);
         linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0);
     }
     else
@@ -8873,7 +8873,7 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
                 {
                     // Negative: rescale to the negative range before powering
                     float a = 1.0f - (clicked_t / linear_zero_pos);
-                    a = powf(a, power);
+                    a = ImPow(a, power);
                     v_new = ImLerp(ImMin(v_max,0.0f), v_min, a);
                 }
                 else
@@ -8884,7 +8884,7 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
                         a = (clicked_t - linear_zero_pos) / (1.0f - linear_zero_pos);
                     else
                         a = clicked_t;
-                    a = powf(a, power);
+                    a = ImPow(a, power);
                     v_new = ImLerp(ImMax(v_min,0.0f), v_max, a);
                 }
             }
@@ -9195,9 +9195,9 @@ static bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed
     if (is_power)
     {
         // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
-        FLOATTYPE v_old_norm_curved = (FLOATTYPE)pow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
+        FLOATTYPE v_old_norm_curved = ImPow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
         FLOATTYPE v_new_norm_curved = v_old_norm_curved + (g.DragCurrentAccum / (v_max - v_min));
-        v_cur = v_min + (TYPE)pow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
+        v_cur = v_min + (TYPE)ImPow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
         v_old_ref_for_accum_remainder = v_old_norm_curved;
     }
     else
@@ -9217,7 +9217,7 @@ static bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed
     g.DragCurrentAccumDirty = false;
     if (is_power)
     {
-        FLOATTYPE v_cur_norm_curved = (FLOATTYPE)pow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
+        FLOATTYPE v_cur_norm_curved = ImPow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
         g.DragCurrentAccum -= (float)(v_cur_norm_curved - v_old_ref_for_accum_remainder);
     }
     else
