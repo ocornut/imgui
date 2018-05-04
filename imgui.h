@@ -125,7 +125,7 @@ struct ImVec2
 struct ImVec4
 {
     float     x, y, z, w;
-    constexpr ImVec4(float _x = 0.f, float _y = 0.f, float _z = 0.f) : x(_x), y(_y), z(_z)
+    constexpr ImVec4(float _x = 0.f, float _y = 0.f, float _z = 0.f, float _w = 0.f) : x(_x), y(_y), z(_z), w(_w)
     {}
 #ifdef IM_VEC4_CLASS_EXTRA
     IM_VEC4_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec4.
