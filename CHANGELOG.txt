@@ -63,13 +63,16 @@ Other Changes:
 - InputText: Fixed returning true when edition is canceled with ESC and the current buffer matches the initial value.
 - InputFloat,InputFloat2,InputFloat3,InputFloat4: Added variations taking a more flexible and consistent optional "const char* format" parameter instead of "int decimal_precision". 
   This allow using custom formats to display values in scientific notation, and is generally more consistent with other API. Obsoleted functions using the optional "int decimal_precision" parameter. (#648)
+- Added DragScalar, DragScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
+- Added InputScalar, InputScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
+- Added SliderScalar, SliderScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
 - DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing in the same direction (keyboard/gamepad version already did this).
 - DragFloat, DragInt: Honor natural type limits (e.g. INT_MAX, FLT_MAX) instead of wrapping around. (#708, #320)
 - DragFloat, SliderFloat: Fixes to allow input of scientific notation numbers when using CTRL+Click to input the value. (~#648, #1011)
 - DragFloat, SliderFloat: Rounding-on-write uses the provided format string instead of parsing the precision from the string, which allows for finer uses of %e %g etc. (#648, #642)
 - DragFloat: Improved computation when using the power curve. Improved lost of input precision with very small steps. Added an assert than power-curve requires a min/max range. (~#642)
 - DragFloat: The 'power' parameter is only honored if the min/max parameter are also setup.
-- DragInt: Fixed handling of large integers (we previously passed data around internally as float, which reduced the range of valid integers).
+- DragInt, SliderInt: Fixed handling of large integers (we previously passed data around internally as float, which reduced the range of valid integers).
 - Nav: Fixed hovering a Selectable() with the mouse so that it update the navigation cursor (as it happened in the pre-1.60 navigation branch). (#787)
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
 - Misc: Added IMGUI_CHECKVERSION() macro to compare version string and data structure sizes in order to catch issues with mismatching compilation unit settings. (#1695, #1769)
@@ -77,7 +80,6 @@ Other Changes:
 - Examples: Calling IMGUI_CHECKVERSION() in the main.cpp of every example application.
 - Examples: Allegro 5: Added support for 32-bit indices setup via defining ImDrawIdx, to avoid an unnecessary conversion (Allegro 5 doesn't support 16-bit indices).
 - Examples: Allegro 5: Renamed bindings from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
-- Internal: DragScalar(), InputScalar() now support signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
 - Various minor fixes, tweaks, refactoring, comments.
 
 -----------------------------------------------------------------------

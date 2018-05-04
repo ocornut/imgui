@@ -131,7 +131,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: precision dragging
  - slider: step option (#1183)
- - slider: int data passing through a float
  - knob: rotating knob widget (#942)
  - drag float: up/down axis
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)

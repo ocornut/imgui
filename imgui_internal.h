@@ -251,17 +251,6 @@ enum ImGuiPlotType
     ImGuiPlotType_Histogram
 };
 
-enum ImGuiDataType
-{
-    ImGuiDataType_S32,      // int
-    ImGuiDataType_U32,      // unsigned int
-    ImGuiDataType_S64,      // long long / __int64
-    ImGuiDataType_U64,      // unsigned long long / unsigned __int64
-    ImGuiDataType_Float,
-    ImGuiDataType_Double,
-    ImGuiDataType_COUNT
-};
-
 enum ImGuiInputSource
 {
     ImGuiInputSource_None = 0,
@@ -1102,15 +1091,6 @@ namespace ImGui
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos, float radius);
 
-    IMGUI_API bool          SliderScalar(const char* label, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format = NULL, float power = 1.0f);
-    IMGUI_API bool          SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format = NULL, float power = 1.0f);
-    IMGUI_API bool          VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format = NULL, float power = 1.0f);
-
-    IMGUI_API bool          DragScalar(const char* label, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format = NULL, float power = 1.0f);
-    IMGUI_API bool          DragScalarN(const char* label, ImGuiDataType data_type, void* v, int components, float v_speed, const void* v_min, const void* v_max, const char* format = NULL, float power = 1.0f);
-
-    IMGUI_API bool          InputScalar(const char* label, ImGuiDataType data_type, void* v, const void* step, const void* step_fast, const char* format = NULL, ImGuiInputTextFlags extra_flags = 0);
-    IMGUI_API bool          InputScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* step, const void* step_fast, const char* format = NULL, ImGuiInputTextFlags extra_flags = 0);
     IMGUI_API bool          InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format);
 
