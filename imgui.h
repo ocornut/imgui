@@ -114,7 +114,6 @@ typedef unsigned long long ImU64;   // 64-bit unsigned integer
 struct ImVec2
 {
     float     x, y;
-    ImVec2()  { x = y = 0.f; }
     constexpr ImVec2(float _x = 0.f, float _y = 0.f) : x(_x), y(_y)
     {}
     float operator[] (size_t i) const { IM_ASSERT(i <= 1); return (&x)[i]; }    // We very rarely use this [] operator, the assert overhead is fine.
