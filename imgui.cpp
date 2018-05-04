@@ -9321,8 +9321,11 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     }
     const bool hovered = ItemHoverable(frame_bb, id);
 
+    // Default format string when passing NULL
     // Patch old "%.0f" format string to use "%d", read function comments for more details.
-    if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
+    if (format == NULL)
+        format = GDataTypeInfo[data_type].PrintFmt;
+    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
         format = PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
