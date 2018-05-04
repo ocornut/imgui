@@ -779,7 +779,9 @@ template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 static bool             DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power);
 static bool             DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power);
 
-static bool             SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags = 0);
+template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
+static bool             SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags);
+static bool             SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags = 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -8742,32 +8744,34 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
 }
 
-static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float v_max, float power, float linear_zero_pos)
+template<typename TYPE, typename FLOATTYPE>
+static inline float SliderBehaviorCalcRatioFromValue(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos)
 {
     if (v_min == v_max)
         return 0.0f;
 
-    const bool is_power = (power != 1.0f);
-    const float v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
+    const bool is_power = (power != 1.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
+    const TYPE v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
     if (is_power)
     {
         if (v_clamped < 0.0f)
         {
-            const float f = 1.0f - (v_clamped - v_min) / (ImMin(0.0f,v_max) - v_min);
+            const float f = 1.0f - (float)((v_clamped - v_min) / (ImMin((TYPE)0, v_max) - v_min));
             return (1.0f - ImPow(f, 1.0f/power)) * linear_zero_pos;
         }
         else
         {
-            const float f = (v_clamped - ImMax(0.0f,v_min)) / (v_max - ImMax(0.0f,v_min));
+            const float f = (float)((v_clamped - ImMax((TYPE)0, v_min)) / (v_max - ImMax((TYPE)0, v_min)));
             return linear_zero_pos + ImPow(f, 1.0f/power) * (1.0f - linear_zero_pos);
         }
     }
 
     // Linear slider
-    return (v_clamped - v_min) / (v_max - v_min);
+    return (float)((FLOATTYPE)(v_clamped - v_min) / (FLOATTYPE)(v_max - v_min));
 }
 
-static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags)
+template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
+static bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -8778,29 +8782,29 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
     RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, frame_col, true, style.FrameRounding);
 
-    const bool is_power = (power != 1.0f);
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
-    const bool is_decimal = ImParseFormatPrecision(format, 3) != 0;
+    const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
+    const bool is_power = (power != 1.0f) && is_decimal;
 
     const float grab_padding = 2.0f;
     const float slider_sz = is_horizontal ? (bb.GetWidth() - grab_padding * 2.0f) : (bb.GetHeight() - grab_padding * 2.0f);
-    float grab_sz;
-    if (is_decimal)
-        grab_sz = ImMin(style.GrabMinSize, slider_sz);
-    else
-        grab_sz = ImMin(ImMax(1.0f * (slider_sz / ((v_min < v_max ? v_max - v_min : v_min - v_max) + 1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
+    float grab_sz = style.GrabMinSize;
+    SIGNEDTYPE v_range = (v_min < v_max ? v_max - v_min : v_min - v_max);
+    if (!is_decimal && v_range >= 0)                                             // v_range < 0 may happen on integer overflows
+        grab_sz = ImMax((float)(slider_sz / (v_range + 1)), style.GrabMinSize);  // For integer sliders: if possible have the grab size represent 1 unit
+    grab_sz = ImMin(grab_sz, slider_sz);
     const float slider_usable_sz = slider_sz - grab_sz;
     const float slider_usable_pos_min = (is_horizontal ? bb.Min.x : bb.Min.y) + grab_padding + grab_sz*0.5f;
     const float slider_usable_pos_max = (is_horizontal ? bb.Max.x : bb.Max.y) - grab_padding - grab_sz*0.5f;
 
     // For power curve sliders that cross over sign boundary we want the curve to be symmetric around 0.0f
-    float linear_zero_pos = 0.0f;   // 0.0->1.0f
-    if (v_min * v_max < 0.0f)
+    float linear_zero_pos;   // 0.0->1.0f
+    if (is_power && v_min * v_max < 0.0f)
     {
         // Different sign
-        const float linear_dist_min_to_0 = ImPow(v_min >= 0.0f ? v_min : -v_min, 1.0f/power);
-        const float linear_dist_max_to_0 = ImPow(v_max >= 0.0f ? v_max : -v_max, 1.0f/power);
-        linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0);
+        const FLOATTYPE linear_dist_min_to_0 = ImPow(v_min >= 0 ? (FLOATTYPE)v_min : -(FLOATTYPE)v_min, (FLOATTYPE)1.0f/power);
+        const FLOATTYPE linear_dist_max_to_0 = ImPow(v_max >= 0 ? (FLOATTYPE)v_max : -(FLOATTYPE)v_max, (FLOATTYPE)1.0f/power);
+        linear_zero_pos = (float)(linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0));
     }
     else
     {
@@ -8839,7 +8843,7 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
             }
             else if (delta != 0.0f)
             {
-                clicked_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
+                clicked_t = SliderBehaviorCalcRatioFromValue<TYPE,FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos);
                 if (is_decimal || is_power)
                 {
                     delta /= 100.0f;    // Gamepad/keyboard tweak speeds in % of slider bounds
@@ -8848,8 +8852,8 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
                 }
                 else
                 {
-                    if (fabsf(v_max - v_min) <= 100.0f || IsNavInputDown(ImGuiNavInput_TweakSlow))
-                        delta = ((delta < 0.0f) ? -1.0f : +1.0f) / (v_max - v_min); // Gamepad/keyboard tweak speeds in integer steps
+                    if (v_max - v_min <= 100.0f || v_max - v_min >= -100.0f || IsNavInputDown(ImGuiNavInput_TweakSlow))
+                        delta = ((delta < 0.0f) ? -1.0f : +1.0f) / (float)(v_max - v_min); // Gamepad/keyboard tweak speeds in integer steps
                     else
                         delta /= 100.0f;
                 }
@@ -8865,7 +8869,7 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
 
         if (set_new_value)
         {
-            float v_new;
+            TYPE v_new;
             if (is_power)
             {
                 // Account for power curve scale on both sides of the zero
@@ -8874,7 +8878,7 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
                     // Negative: rescale to the negative range before powering
                     float a = 1.0f - (clicked_t / linear_zero_pos);
                     a = ImPow(a, power);
-                    v_new = ImLerp(ImMin(v_max,0.0f), v_min, a);
+                    v_new = ImLerp(ImMin(v_max, (TYPE)0), v_min, a);
                 }
                 else
                 {
@@ -8885,19 +8889,39 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
                     else
                         a = clicked_t;
                     a = ImPow(a, power);
-                    v_new = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                    v_new = ImLerp(ImMax(v_min, (TYPE)0), v_max, a);
                 }
             }
             else
             {
                 // Linear slider
-                v_new = ImLerp(v_min, v_max, clicked_t);
+                if (is_decimal)
+                {
+                    v_new = ImLerp(v_min, v_max, clicked_t);
+                }
+                else
+                {
+                    // For integer values we want the clicking position to match the grab box so we round above
+                    // This code is carefully tuned to work with large values (e.g. high ranges of U64) while preserving this property..
+                    FLOATTYPE v_new_off_f = (v_max - v_min) * clicked_t;
+                    TYPE v_new_off_floor = (TYPE)(v_new_off_f);
+                    TYPE v_new_off_round = (TYPE)(v_new_off_f + (FLOATTYPE)0.5);
+                    if (!is_decimal && v_new_off_floor < v_new_off_round)
+                        v_new = v_min + v_new_off_round;
+                    else
+                        v_new = v_min + v_new_off_floor;
+                }
             }
 
-            // Round past decimal precision
-            char buf[64];
-            ImFormatString(buf, IM_ARRAYSIZE(buf), ImParseFormatFindStart(format), v_new);
-            v_new = (float)atof(buf);
+            // Round to user desired precision based on format string
+            char v_str[64];
+            ImFormatString(v_str, IM_ARRAYSIZE(v_str), ImParseFormatFindStart(format), v_new);
+            if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
+                v_new = (TYPE)atof(v_str);
+            else
+                ImAtoi(v_str, (SIGNEDTYPE*)&v_new);
+
+            // Apply result
             if (*v != v_new)
             {
                 *v = v_new;
@@ -8907,7 +8931,7 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
     }
 
     // Draw
-    float grab_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
+    float grab_t = SliderBehaviorCalcRatioFromValue<TYPE,FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos);
     if (!is_horizontal)
         grab_t = 1.0f - grab_t;
     const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
@@ -8921,12 +8945,60 @@ static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float 
     return value_changed;
 }
 
-// Adjust format to decorate the value with a prefix or a suffix.
-//   "%.3f"         1.234
-//   "%5.2f secs"   01.23 secs
-//   "Gold: %.0f"   Gold: 1
-// Use power != 1.0f for non-linear sliders.
-bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power)
+static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags)
+{
+    switch (data_type)
+    {
+    case ImGuiDataType_S32:
+        IM_ASSERT(*(const ImS32*)v_min >= IM_S32_MIN/2 && *(const ImS32*)v_max <= IM_S32_MAX/2);
+        return SliderBehaviorT<ImS32, ImS32, float >(bb, id, data_type, (ImS32*)v,  *(const ImS32*)v_min,  *(const ImS32*)v_max,  format, power, flags);
+    case ImGuiDataType_U32:    
+        IM_ASSERT(*(const ImU32*)v_min <= IM_U32_MAX/2); 
+        return SliderBehaviorT<ImU32, ImS32, float >(bb, id, data_type, (ImU32*)v,  *(const ImU32*)v_min,  *(const ImU32*)v_max,  format, power, flags);
+    case ImGuiDataType_S64:    
+        IM_ASSERT(*(const ImS64*)v_min >= IM_S64_MIN/2 && *(const ImS64*)v_max <= IM_S64_MAX/2);
+        return SliderBehaviorT<ImS64, ImS64, double>(bb, id, data_type, (ImS64*)v,  *(const ImS64*)v_min,  *(const ImS64*)v_max,  format, power, flags);
+    case ImGuiDataType_U64:    
+        IM_ASSERT(*(const ImU64*)v_min <= IM_U64_MAX/2);
+        return SliderBehaviorT<ImU64, ImS64, double>(bb, id, data_type, (ImU64*)v,  *(const ImU64*)v_min,  *(const ImU64*)v_max,  format, power, flags);
+    case ImGuiDataType_Float:
+        IM_ASSERT(*(const float*)v_min >= -FLT_MAX/2.0f && *(const float*)v_max <= FLT_MAX/2.0f);
+        return SliderBehaviorT<float, float, float >(bb, id, data_type, (float*)v,  *(const float*)v_min,  *(const float*)v_max,  format, power, flags);
+    case ImGuiDataType_Double: 
+        IM_ASSERT(*(const double*)v_min >= -DBL_MAX/2.0f && *(const double*)v_max <= DBL_MAX/2.0f);
+        return SliderBehaviorT<double,double,double>(bb, id, data_type, (double*)v, *(const double*)v_min, *(const double*)v_max, format, power, flags);
+    case ImGuiDataType_COUNT:  
+        break;
+    }
+    IM_ASSERT(0);
+    return false;
+}
+
+// FIXME-LEGACY: Prior to 1.61 our DragInt() function internally used floats and because of this the compile-time default value for format was "%.0f".
+// Even though we changed the compile-time default, we expect users to have carried %f around, which would break the display of DragInt() calls. 
+// To honor backward compatibility we are rewriting the format string, unless IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. What could possibly go wrong?!
+static const char* PatchFormatStringFloatToInt(const char* fmt)
+{
+    if (fmt[0] == '%' && fmt[1] == '.' && fmt[2] == '0' && fmt[3] == 'f' && fmt[4] == 0) // Fast legacy path for "%.0f" which is expected to be the most common case.
+        return "%d";
+    const char* fmt_start = ImParseFormatFindStart(fmt);    // Find % (if any, and ignore %%)
+    const char* fmt_end = ImParseFormatFindEnd(fmt_start);  // Find end of format specifier, which itself is an exercise of confidence/recklessness (because snprintf is dependent on libc or user).
+    if (fmt_end > fmt_start && fmt_end[-1] == 'f')
+    {
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+        if (fmt_start == fmt && fmt_end[0] == 0)
+            return "%d";
+        ImGuiContext& g = *GImGui;
+        ImFormatString(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), "%.*s%%d%s", (int)(fmt_start - fmt), fmt, fmt_end); // Honor leading and trailing decorations, but lose alignment/precision.
+        return g.TempBuffer;
+#else
+        IM_ASSERT(0 && "DragInt(): Invalid format string!"); // Old versions used a default parameter of "%.0f", please replace with e.g. "%d"
+#endif
+    }
+    return fmt;
+}
+
+bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8947,14 +9019,19 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         ItemSize(total_bb, style.FramePadding.y);
         return false;
     }
-    const bool hovered = ItemHoverable(frame_bb, id);
 
-    if (!format)
-        format = "%.3f";
+    // Default format string when passing NULL
+    // Patch old "%.0f" format string to use "%d", read function comments for more details.
+    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
+    if (format == NULL)
+        format = GDataTypeInfo[data_type].PrintFmt;
+    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
+        format = PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     bool start_text_input = false;
     const bool tab_focus_requested = FocusableItemRegister(window, id);
+    const bool hovered = ItemHoverable(frame_bb, id);
     if (tab_focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || (g.NavInputId == id && g.ScalarAsInputTextId != id))
     {
         SetActiveID(id, window);
@@ -8968,15 +9045,15 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
-        return InputScalarAsWidgetReplacement(frame_bb, id, label, ImGuiDataType_Float, v, format);
+        return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
 
     // Actual slider behavior + render grab
     ItemSize(total_bb, style.FramePadding.y);
-    const bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, format, power);
+    const bool value_changed = SliderBehavior(frame_bb, id, data_type, v, v_min, v_max, format, power);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     char value_buf[64];
-    const char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), format, *v);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, v, format);
     RenderTextClipped(frame_bb.Min, frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f,0.5f));
 
     if (label_size.x > 0.0f)
@@ -8985,7 +9062,12 @@ bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, c
     return value_changed;
 }
 
-bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, float power)
+bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power)
+{
+    return SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, power);
+}
+
+bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9002,11 +9084,16 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     ItemSize(bb, style.FramePadding.y);
     if (!ItemAdd(frame_bb, id))
         return false;
+
+    // Default format string when passing NULL
+    // Patch old "%.0f" format string to use "%d", read function comments for more details.
+    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
+    if (format == NULL)
+        format = GDataTypeInfo[data_type].PrintFmt;
+    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
+        format = PatchFormatStringFloatToInt(format);
+
     const bool hovered = ItemHoverable(frame_bb, id);
-
-    if (!format)
-        format = "%.3f";
-
     if ((hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavInputId == id)
     {
         SetActiveID(id, window);
@@ -9016,12 +9103,12 @@ bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float 
     }
 
     // Actual slider behavior + render grab
-    bool value_changed = SliderBehavior(frame_bb, id, v, v_min, v_max, format, power, ImGuiSliderFlags_Vertical);
+    bool value_changed = SliderBehavior(frame_bb, id, data_type, v, v_min, v_max, format, power, ImGuiSliderFlags_Vertical);
 
     // Display value using user-provided display format so user can add prefix/suffix/decorations to the value.
     // For the vertical slider we allow centered text to overlap the frame padding
     char value_buf[64];
-    char* value_buf_end = value_buf + ImFormatString(value_buf, IM_ARRAYSIZE(value_buf), format, *v);
+    const char* value_buf_end = value_buf + DataTypeFormatString(value_buf, IM_ARRAYSIZE(value_buf), data_type, v, format);
     RenderTextClipped(ImVec2(frame_bb.Min.x, frame_bb.Min.y + style.FramePadding.y), frame_bb.Max, value_buf, value_buf_end, NULL, ImVec2(0.5f,0.0f));
     if (label_size.x > 0.0f)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);
@@ -9039,26 +9126,21 @@ bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, fl
 
 bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* format)
 {
-    if (!format)
-        format = "%.0f";
-    float v_f = (float)*v;
-    bool value_changed = SliderFloat(label, &v_f, (float)v_min, (float)v_max, format, 1.0f);
-    *v = (int)v_f;
-    return value_changed;
+    return SliderScalar(label, ImGuiDataType_S32, v, &v_min, &v_max, format);
+}
+
+bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, float power)
+{
+    return VSliderScalar(label, size, ImGuiDataType_Float, v, &v_min, &v_max, format, power);
 }
 
 bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* format)
 {
-    if (!format)
-        format = "%.0f";
-    float v_f = (float)*v;
-    bool value_changed = VSliderFloat(label, size, &v_f, (float)v_min, (float)v_max, format, 1.0f);
-    *v = (int)v_f;
-    return value_changed;
+    return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format);
 }
 
 // Add multiple sliders on 1 line for compact edition of multiple components
-bool ImGui::SliderFloatN(const char* label, float* v, int components, float v_min, float v_max, const char* format, float power)
+bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -9069,77 +9151,51 @@ bool ImGui::SliderFloatN(const char* label, float* v, int components, float v_mi
     BeginGroup();
     PushID(label);
     PushMultiItemsWidths(components);
+    size_t type_size = GDataTypeInfo[data_type].Size;
     for (int i = 0; i < components; i++)
     {
         PushID(i);
-        value_changed |= SliderFloat("##v", &v[i], v_min, v_max, format, power);
+        value_changed |= SliderScalar("##v", data_type, v, v_min, v_max, format, power);
         SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
+        v = (void*)((char*)v + type_size);
     }
     PopID();
 
     TextUnformatted(label, FindRenderedTextEnd(label));
     EndGroup();
-
     return value_changed;
 }
 
 bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, float power)
 {
-    return SliderFloatN(label, v, 2, v_min, v_max, format, power);
+    return SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, power);
 }
 
 bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, float power)
 {
-    return SliderFloatN(label, v, 3, v_min, v_max, format, power);
+    return SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, power);
 }
 
 bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, float power)
 {
-    return SliderFloatN(label, v, 4, v_min, v_max, format, power);
-}
-
-bool ImGui::SliderIntN(const char* label, int* v, int components, int v_min, int v_max, const char* format)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems)
-        return false;
-
-    ImGuiContext& g = *GImGui;
-    bool value_changed = false;
-    BeginGroup();
-    PushID(label);
-    PushMultiItemsWidths(components);
-    for (int i = 0; i < components; i++)
-    {
-        PushID(i);
-        value_changed |= SliderInt("##v", &v[i], v_min, v_max, format);
-        SameLine(0, g.Style.ItemInnerSpacing.x);
-        PopID();
-        PopItemWidth();
-    }
-    PopID();
-
-    TextUnformatted(label, FindRenderedTextEnd(label));
-    EndGroup();
-
-    return value_changed;
+    return SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, power);
 }
 
 bool ImGui::SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format)
 {
-    return SliderIntN(label, v, 2, v_min, v_max, format);
+    return SliderScalarN(label, ImGuiDataType_S32, v, 2, &v_min, &v_max, format);
 }
 
 bool ImGui::SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format)
 {
-    return SliderIntN(label, v, 3, v_min, v_max, format);
+    return SliderScalarN(label, ImGuiDataType_S32, v, 3, &v_min, &v_max, format);
 }
 
 bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format)
 {
-    return SliderIntN(label, v, 4, v_min, v_max, format);
+    return SliderScalarN(label, ImGuiDataType_S32, v, 4, &v_min, &v_max, format);
 }
 
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
@@ -9272,30 +9328,6 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_s
     return false;
 }
 
-// FIXME-LEGACY: Prior to 1.61 our DragInt() function internally used floats and because of this the compile-time default value for format was "%.0f".
-// Even though we changed the compile-time default, we expect users to have carried %f around, which would break the display of DragInt() calls. 
-// To honor backward compatibility we are rewriting the format string, unless IMGUI_DISABLE_OBSOLETE_FUNCTIONS is enabled. What could possibly go wrong?!
-static const char* PatchFormatStringFloatToInt(const char* fmt)
-{
-    if (fmt[0] == '%' && fmt[1] == '.' && fmt[2] == '0' && fmt[3] == 'f' && fmt[4] == 0) // Fast legacy path for "%.0f" which is expected to be the most common case.
-        return "%d";
-    const char* fmt_start = ImParseFormatFindStart(fmt);    // Find % (if any, and ignore %%)
-    const char* fmt_end = ImParseFormatFindEnd(fmt_start);  // Find end of format specifier, which itself is an exercise of confidence/recklessness (because snprintf is dependent on libc or user).
-    if (fmt_end > fmt_start && fmt_end[-1] == 'f')
-    {
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-        if (fmt_start == fmt && fmt_end[0] == 0)
-            return "%d";
-        ImGuiContext& g = *GImGui;
-        ImFormatString(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), "%.*s%%d%s", (int)(fmt_start - fmt), fmt, fmt_end); // Honor leading and trailing decorations, but lose alignment/precision.
-        return g.TempBuffer;
-#else
-        IM_ASSERT(0 && "DragInt(): Invalid format string!"); // Old versions used a default parameter of "%.0f", please replace with e.g. "%d"
-#endif
-    }
-    return fmt;
-}
-
 bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -9394,7 +9426,6 @@ bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* v, int
 
     TextUnformatted(label, FindRenderedTextEnd(label));
     EndGroup();
-
     return value_changed;
 }
 
