@@ -713,6 +713,15 @@
 #define IMGUI_CDECL
 #endif
 
+static const ImS32  IM_S32_MIN = 0x80000000; // INT_MIN;
+static const ImS32  IM_S32_MAX = 0x7FFFFFFF; // INT_MAX;
+static const ImU32  IM_U32_MIN = 0;
+static const ImU32  IM_U32_MAX = 0xFFFFFFFF;
+static const ImS64  IM_S64_MIN = -9223372036854775807ll - 1ll;
+static const ImS64  IM_S64_MAX = 9223372036854775807ll;
+static const ImU64  IM_U64_MIN = 0;
+static const ImU64  IM_U64_MAX = 0xFFFFFFFFFFFFFFFFull;
+
 //-------------------------------------------------------------------------
 // Forward Declarations
 //-------------------------------------------------------------------------
@@ -767,8 +776,10 @@ static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& si
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
-static bool             DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power);
+static bool             DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power);
 static bool             DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power);
+
+static bool             SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags = 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -8736,9 +8747,9 @@ static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float
     if (v_min == v_max)
         return 0.0f;
 
-    const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
+    const bool is_power = (power != 1.0f);
     const float v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
-    if (is_non_linear)
+    if (is_power)
     {
         if (v_clamped < 0.0f)
         {
@@ -8756,7 +8767,7 @@ static inline float SliderBehaviorCalcRatioFromValue(float v, float v_min, float
     return (v_clamped - v_min) / (v_max - v_min);
 }
 
-bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags)
+static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
@@ -8764,32 +8775,32 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
-    RenderNavHighlight(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, style.FrameRounding);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, frame_col, true, style.FrameRounding);
 
-    const bool is_non_linear = (power < 1.0f-0.00001f) || (power > 1.0f+0.00001f);
+    const bool is_power = (power != 1.0f);
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
     const bool is_decimal = ImParseFormatPrecision(format, 3) != 0;
 
     const float grab_padding = 2.0f;
-    const float slider_sz = is_horizontal ? (frame_bb.GetWidth() - grab_padding * 2.0f) : (frame_bb.GetHeight() - grab_padding * 2.0f);
+    const float slider_sz = is_horizontal ? (bb.GetWidth() - grab_padding * 2.0f) : (bb.GetHeight() - grab_padding * 2.0f);
     float grab_sz;
     if (is_decimal)
         grab_sz = ImMin(style.GrabMinSize, slider_sz);
     else
         grab_sz = ImMin(ImMax(1.0f * (slider_sz / ((v_min < v_max ? v_max - v_min : v_min - v_max) + 1.0f)), style.GrabMinSize), slider_sz);  // Integer sliders, if possible have the grab size represent 1 unit
     const float slider_usable_sz = slider_sz - grab_sz;
-    const float slider_usable_pos_min = (is_horizontal ? frame_bb.Min.x : frame_bb.Min.y) + grab_padding + grab_sz*0.5f;
-    const float slider_usable_pos_max = (is_horizontal ? frame_bb.Max.x : frame_bb.Max.y) - grab_padding - grab_sz*0.5f;
+    const float slider_usable_pos_min = (is_horizontal ? bb.Min.x : bb.Min.y) + grab_padding + grab_sz*0.5f;
+    const float slider_usable_pos_max = (is_horizontal ? bb.Max.x : bb.Max.y) - grab_padding - grab_sz*0.5f;
 
     // For power curve sliders that cross over sign boundary we want the curve to be symmetric around 0.0f
     float linear_zero_pos = 0.0f;   // 0.0->1.0f
     if (v_min * v_max < 0.0f)
     {
         // Different sign
-        const float linear_dist_min_to_0 = powf(fabsf(0.0f - v_min), 1.0f/power);
-        const float linear_dist_max_to_0 = powf(fabsf(v_max - 0.0f), 1.0f/power);
-        linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0+linear_dist_max_to_0);
+        const float linear_dist_min_to_0 = powf(v_min >= 0.0f ? v_min : -v_min, 1.0f/power);
+        const float linear_dist_max_to_0 = powf(v_max >= 0.0f ? v_max : -v_max, 1.0f/power);
+        linear_zero_pos = linear_dist_min_to_0 / (linear_dist_min_to_0 + linear_dist_max_to_0);
     }
     else
     {
@@ -8829,18 +8840,18 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
             else if (delta != 0.0f)
             {
                 clicked_t = SliderBehaviorCalcRatioFromValue(*v, v_min, v_max, power, linear_zero_pos);
-                if (!is_decimal && !is_non_linear)
+                if (is_decimal || is_power)
+                {
+                    delta /= 100.0f;    // Gamepad/keyboard tweak speeds in % of slider bounds
+                    if (IsNavInputDown(ImGuiNavInput_TweakSlow))
+                        delta /= 10.0f;
+                }
+                else
                 {
                     if (fabsf(v_max - v_min) <= 100.0f || IsNavInputDown(ImGuiNavInput_TweakSlow))
                         delta = ((delta < 0.0f) ? -1.0f : +1.0f) / (v_max - v_min); // Gamepad/keyboard tweak speeds in integer steps
                     else
                         delta /= 100.0f;
-                }
-                else
-                {
-                    delta /= 100.0f;    // Gamepad/keyboard tweak speeds in % of slider bounds
-                    if (IsNavInputDown(ImGuiNavInput_TweakSlow))
-                        delta /= 10.0f;
                 }
                 if (IsNavInputDown(ImGuiNavInput_TweakFast))
                     delta *= 10.0f;
@@ -8854,8 +8865,8 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
 
         if (set_new_value)
         {
-            float new_value;
-            if (is_non_linear)
+            float v_new;
+            if (is_power)
             {
                 // Account for power curve scale on both sides of the zero
                 if (clicked_t < linear_zero_pos)
@@ -8863,7 +8874,7 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                     // Negative: rescale to the negative range before powering
                     float a = 1.0f - (clicked_t / linear_zero_pos);
                     a = powf(a, power);
-                    new_value = ImLerp(ImMin(v_max,0.0f), v_min, a);
+                    v_new = ImLerp(ImMin(v_max,0.0f), v_min, a);
                 }
                 else
                 {
@@ -8874,22 +8885,22 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
                     else
                         a = clicked_t;
                     a = powf(a, power);
-                    new_value = ImLerp(ImMax(v_min,0.0f), v_max, a);
+                    v_new = ImLerp(ImMax(v_min,0.0f), v_max, a);
                 }
             }
             else
             {
                 // Linear slider
-                new_value = ImLerp(v_min, v_max, clicked_t);
+                v_new = ImLerp(v_min, v_max, clicked_t);
             }
 
             // Round past decimal precision
             char buf[64];
-            ImFormatString(buf, IM_ARRAYSIZE(buf), ImParseFormatFindStart(format), new_value);
-            new_value = (float)atof(buf);
-            if (*v != new_value)
+            ImFormatString(buf, IM_ARRAYSIZE(buf), ImParseFormatFindStart(format), v_new);
+            v_new = (float)atof(buf);
+            if (*v != v_new)
             {
-                *v = new_value;
+                *v = v_new;
                 value_changed = true;
             }
         }
@@ -8902,9 +8913,9 @@ bool ImGui::SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v
     const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
     ImRect grab_bb;
     if (is_horizontal)
-        grab_bb = ImRect(ImVec2(grab_pos - grab_sz*0.5f, frame_bb.Min.y + grab_padding), ImVec2(grab_pos + grab_sz*0.5f, frame_bb.Max.y - grab_padding));
+        grab_bb = ImRect(grab_pos - grab_sz*0.5f, bb.Min.y + grab_padding, grab_pos + grab_sz*0.5f, bb.Max.y - grab_padding);
     else
-        grab_bb = ImRect(ImVec2(frame_bb.Min.x + grab_padding, grab_pos - grab_sz*0.5f), ImVec2(frame_bb.Max.x - grab_padding, grab_pos + grab_sz*0.5f));
+        grab_bb = ImRect(bb.Min.x + grab_padding, grab_pos - grab_sz*0.5f, bb.Max.x - grab_padding, grab_pos + grab_sz*0.5f);
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
 
     return value_changed;
@@ -9132,20 +9143,9 @@ bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const 
 }
 
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
-static bool ImGui::DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power)
+static bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power)
 {
     ImGuiContext& g = *GImGui;
-
-    // Process interacting with the drag
-    if (g.ActiveId == id)
-    {
-        if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
-            ClearActiveID();
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
-            ClearActiveID();
-    }
-    if (g.ActiveId != id)
-        return false;
 
     // Default tweak speed
     bool has_min_max = (v_min != v_max) && (v_max - v_max < FLT_MAX);
@@ -9245,25 +9245,27 @@ static bool ImGui::DragBehaviorT(ImGuiID id, ImGuiDataType data_type, TYPE* v, f
     return true;
 }
 
-static const ImS32  IM_S32_MIN = 0x80000000; // INT_MIN;
-static const ImS32  IM_S32_MAX = 0x7FFFFFFF; // INT_MAX;
-static const ImU32  IM_U32_MIN = 0;
-static const ImU32  IM_U32_MAX = 0xFFFFFFFF;
-static const ImS64  IM_S64_MIN = -9223372036854775807ll - 1ll;
-static const ImS64  IM_S64_MAX = 9223372036854775807ll;
-static const ImU64  IM_U64_MIN = 0;
-static const ImU64  IM_U64_MAX = 0xFFFFFFFFFFFFFFFFull;
-
 bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power)
 {
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveId == id)
+    {
+        if (g.ActiveIdSource == ImGuiInputSource_Mouse && !g.IO.MouseDown[0])
+            ClearActiveID();
+        else if (g.ActiveIdSource == ImGuiInputSource_Nav && g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
+            ClearActiveID();
+    }
+    if (g.ActiveId != id)
+        return false;
+
     switch (data_type)
     {
-    case ImGuiDataType_S32:    return DragBehaviorT<ImS32, ImS32, float >(id, data_type, (ImS32*)v,  v_speed, v_min ? *(const ImS32* )v_min : IM_S32_MIN, v_max ? *(const ImS32* )v_max : IM_S32_MAX, format, power);
-    case ImGuiDataType_U32:    return DragBehaviorT<ImU32, ImS32, float >(id, data_type, (ImU32*)v,  v_speed, v_min ? *(const ImU32* )v_min : IM_U32_MIN, v_max ? *(const ImU32* )v_max : IM_U32_MAX, format, power);
-    case ImGuiDataType_S64:    return DragBehaviorT<ImS64, ImS64, double>(id, data_type, (ImS64*)v,  v_speed, v_min ? *(const ImS64* )v_min : IM_S64_MIN, v_max ? *(const ImS64* )v_max : IM_S64_MAX, format, power);
-    case ImGuiDataType_U64:    return DragBehaviorT<ImU64, ImS64, double>(id, data_type, (ImU64*)v,  v_speed, v_min ? *(const ImU64* )v_min : IM_U64_MIN, v_max ? *(const ImU64* )v_max : IM_U64_MAX, format, power);
-    case ImGuiDataType_Float:  return DragBehaviorT<float, float, float >(id, data_type, (float*)v,  v_speed, v_min ? *(const float* )v_min : -FLT_MAX,   v_max ? *(const float* )v_max : FLT_MAX,    format, power);
-    case ImGuiDataType_Double: return DragBehaviorT<double,double,double>(id, data_type, (double*)v, v_speed, v_min ? *(const double*)v_min : -DBL_MAX,   v_max ? *(const double*)v_max : DBL_MAX,    format, power);
+    case ImGuiDataType_S32:    return DragBehaviorT<ImS32, ImS32, float >(data_type, (ImS32*)v,  v_speed, v_min ? *(const ImS32* )v_min : IM_S32_MIN, v_max ? *(const ImS32* )v_max : IM_S32_MAX, format, power);
+    case ImGuiDataType_U32:    return DragBehaviorT<ImU32, ImS32, float >(data_type, (ImU32*)v,  v_speed, v_min ? *(const ImU32* )v_min : IM_U32_MIN, v_max ? *(const ImU32* )v_max : IM_U32_MAX, format, power);
+    case ImGuiDataType_S64:    return DragBehaviorT<ImS64, ImS64, double>(data_type, (ImS64*)v,  v_speed, v_min ? *(const ImS64* )v_min : IM_S64_MIN, v_max ? *(const ImS64* )v_max : IM_S64_MAX, format, power);
+    case ImGuiDataType_U64:    return DragBehaviorT<ImU64, ImS64, double>(data_type, (ImU64*)v,  v_speed, v_min ? *(const ImU64* )v_min : IM_U64_MIN, v_max ? *(const ImU64* )v_max : IM_U64_MAX, format, power);
+    case ImGuiDataType_Float:  return DragBehaviorT<float, float, float >(data_type, (float*)v,  v_speed, v_min ? *(const float* )v_min : -FLT_MAX,   v_max ? *(const float* )v_max : FLT_MAX,    format, power);
+    case ImGuiDataType_Double: return DragBehaviorT<double,double,double>(data_type, (double*)v, v_speed, v_min ? *(const double*)v_min : -DBL_MAX,   v_max ? *(const double*)v_max : DBL_MAX,    format, power);
     case ImGuiDataType_COUNT:  break;
     }
     IM_ASSERT(0);
@@ -9323,6 +9325,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
 
     // Default format string when passing NULL
     // Patch old "%.0f" format string to use "%d", read function comments for more details.
+    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
     if (format == NULL)
         format = GDataTypeInfo[data_type].PrintFmt;
     else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
@@ -10688,6 +10691,10 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
 
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
+
+    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
+    if (format == NULL)
+        format = GDataTypeInfo[data_type].PrintFmt;
 
     char buf[64];
     DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, format);
