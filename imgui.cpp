@@ -8744,6 +8744,21 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
     return (decimal_precision >= 0 && decimal_precision < 10) ? min_steps[decimal_precision] : ImPow(10.0f, (float)-decimal_precision);
 }
 
+template<typename TYPE, typename SIGNEDTYPE>
+static inline TYPE RoundScalarWithFormat(const char* format, ImGuiDataType data_type, TYPE v)
+{
+    const char* fmt_start = ImParseFormatFindStart(format);
+    if (fmt_start[0] != '%' || fmt_start[1] == '%') // Don't apply if the value is not visible in the format string
+        return v;
+    char v_str[64];
+    ImFormatString(v_str, IM_ARRAYSIZE(v_str), fmt_start, v);
+    if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
+        v = (TYPE)atof(v_str);
+    else
+        ImAtoi(v_str, (SIGNEDTYPE*)&v);
+    return v;
+}
+
 template<typename TYPE, typename FLOATTYPE>
 static inline float SliderBehaviorCalcRatioFromValue(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos)
 {
@@ -8914,12 +8929,7 @@ static bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType d
             }
 
             // Round to user desired precision based on format string
-            char v_str[64];
-            ImFormatString(v_str, IM_ARRAYSIZE(v_str), ImParseFormatFindStart(format), v_new);
-            if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
-                v_new = (TYPE)atof(v_str);
-            else
-                ImAtoi(v_str, (SIGNEDTYPE*)&v_new);
+            v_new = RoundScalarWithFormat<TYPE,SIGNEDTYPE>(format, data_type, v_new);
 
             // Apply result
             if (*v != v_new)
@@ -9262,12 +9272,7 @@ static bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed
     }
 
     // Round to user desired precision based on format string
-    char v_str[64];
-    ImFormatString(v_str, IM_ARRAYSIZE(v_str), ImParseFormatFindStart(format), v_cur);
-    if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
-        v_cur = (TYPE)atof(v_str);
-    else
-        ImAtoi(v_str, (SIGNEDTYPE*)&v_cur);
+    v_cur = RoundScalarWithFormat<TYPE, SIGNEDTYPE>(format, data_type, v_cur);
 
     // Preserve remainder after rounding has been applied. This also allow slow tweaking of values.
     g.DragCurrentAccumDirty = false;
