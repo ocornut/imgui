@@ -777,11 +777,9 @@ static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 static bool             DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power);
-static bool             DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_speed, const void* v_min, const void* v_max, const char* format, float power);
 
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 static bool             SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags);
-static bool             SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags = 0);
 }
 
 //-----------------------------------------------------------------------------
@@ -8955,7 +8953,7 @@ static bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType d
     return value_changed;
 }
 
-static bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags)
+bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     switch (data_type)
     {
