@@ -733,12 +733,6 @@ static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sort
 
 static ImGuiWindowSettings* AddWindowSettings(const char* name);
 
-static void             LoadIniSettingsFromDisk(const char* ini_filename);
-static void             LoadIniSettingsFromMemory(const char* buf);
-static void             SaveIniSettingsToDisk(const char* ini_filename);
-static void             SaveIniSettingsToMemory(ImVector<char>& out_buf);
-static void             MarkIniSettingsDirty(ImGuiWindow* window);
-
 static ImRect           GetViewportRect();
 
 static void             ClosePopupToLevel(int remaining);
@@ -1455,7 +1449,7 @@ FILE* ImFileOpen(const char* filename, const char* mode)
 
 // Load file content into memory
 // Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
-void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* out_file_size, int padding_bytes)
+void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size, int padding_bytes)
 {
     IM_ASSERT(filename && file_open_mode);
     if (out_file_size)
@@ -1472,14 +1466,14 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* 
         return NULL;
     }
 
-    int file_size = (int)file_size_signed;
-    void* file_data = ImGui::MemAlloc((size_t)(file_size + padding_bytes));
+    size_t file_size = (size_t)file_size_signed;
+    void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
     if (file_data == NULL)
     {
         fclose(f);
         return NULL;
     }
-    if (fread(file_data, 1, (size_t)file_size, f) != (size_t)file_size)
+    if (fread(file_data, 1, file_size, f) != file_size)
     {
         fclose(f);
         ImGui::MemFree(file_data);
@@ -3444,20 +3438,27 @@ void ImGui::NewFrame()
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
-    // Load settings on first frame
+    // Load settings on first frame (if not explicitly loaded manually before)
     if (!g.SettingsLoaded)
     {
         IM_ASSERT(g.SettingsWindows.empty());
-        LoadIniSettingsFromDisk(g.IO.IniFilename);
+        if (g.IO.IniFilename)
+            LoadIniSettingsFromDisk(g.IO.IniFilename);
         g.SettingsLoaded = true;
     }
 
-    // Save settings (with a delay so we don't spam disk too much)
+    // Save settings (with a delay after the last modification, so we don't spam disk too much)
     if (g.SettingsDirtyTimer > 0.0f)
     {
         g.SettingsDirtyTimer -= g.IO.DeltaTime;
         if (g.SettingsDirtyTimer <= 0.0f)
-            SaveIniSettingsToDisk(g.IO.IniFilename);
+        {
+            if (g.IO.IniFilename != NULL)
+                SaveIniSettingsToDisk(g.IO.IniFilename);
+            else
+                g.IO.WantSaveIniSettings = true;  // Let user know they can call SaveIniSettingsToMemory(). user will need to clear io.WantSaveIniSettings themselves.
+            g.SettingsDirtyTimer = 0.0f;
+        }
     }
 
     g.Time += g.IO.DeltaTime;
@@ -3685,19 +3686,18 @@ void ImGui::Initialize(ImGuiContext* context)
 // This function is merely here to free heap allocations.
 void ImGui::Shutdown(ImGuiContext* context)
 {
-    ImGuiContext& g = *context;
-
     // The fonts atlas can be used prior to calling NewFrame(), so we clear it even if g.Initialized is FALSE (which would happen if we never called NewFrame)
+    ImGuiContext& g = *context;
     if (g.IO.Fonts && g.FontAtlasOwnedByContext)
         IM_DELETE(g.IO.Fonts);
     g.IO.Fonts = NULL;
 
-    // Cleanup of other data are conditional on actually having initialize ImGui.
+    // Cleanup of other data are conditional on actually having initialized ImGui.
     if (!g.Initialized)
         return;
 
     // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
-    if (g.SettingsLoaded)
+    if (g.SettingsLoaded && g.IO.IniFilename != NULL)
         SaveIniSettingsToDisk(g.IO.IniFilename);
 
     // Clear everything else
@@ -3759,14 +3759,13 @@ static ImGuiWindowSettings* AddWindowSettings(const char* name)
     return settings;
 }
 
-static void LoadIniSettingsFromDisk(const char* ini_filename)
+void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 {
-    if (!ini_filename)
-        return;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", NULL, +1);
+    size_t file_data_size = 0;
+    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
     if (!file_data)
         return;
-    LoadIniSettingsFromMemory(file_data);
+    LoadIniSettingsFromMemory(file_data, (size_t)file_data_size);
     ImGui::MemFree(file_data);
 }
 
@@ -3781,13 +3780,21 @@ ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 }
 
 // Zero-tolerance, no error reporting, cheap .ini parsing
-static void LoadIniSettingsFromMemory(const char* buf_readonly)
+void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 {
-    // For convenience and to make the code simpler, we'll write zero terminators inside the buffer. So let's create a writable copy.
-    char* buf = ImStrdup(buf_readonly);
-    char* buf_end = buf + strlen(buf);
-
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.Initialized);
+    IM_ASSERT(g.SettingsLoaded == false && g.FrameCount == 0);
+
+    // For user convenience, we allow passing a non zero-terminated string (hence the ini_size parameter).
+    // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
+    if (ini_size == 0)
+        ini_size = strlen(ini_data);
+    char* buf = (char*)ImGui::MemAlloc(ini_size + 1);
+    char* buf_end = buf + ini_size;
+    memcpy(buf, ini_data, ini_size);
+    buf[ini_size] = 0;
+
     void* entry_data = NULL;
     ImGuiSettingsHandler* entry_handler = NULL;
 
@@ -3820,7 +3827,7 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
                 *type_end = 0; // Overwrite first ']' 
                 name_start++;  // Skip second '['
             }
-            entry_handler = ImGui::FindSettingsHandler(type_start);
+            entry_handler = FindSettingsHandler(type_start);
             entry_data = entry_handler ? entry_handler->ReadOpenFn(&g, entry_handler, name_start) : NULL;
         }
         else if (entry_handler != NULL && entry_data != NULL)
@@ -3833,37 +3840,37 @@ static void LoadIniSettingsFromMemory(const char* buf_readonly)
     g.SettingsLoaded = true;
 }
 
-static void SaveIniSettingsToDisk(const char* ini_filename)
+void ImGui::SaveIniSettingsToDisk(const char* ini_filename)
 {
     ImGuiContext& g = *GImGui;
     g.SettingsDirtyTimer = 0.0f;
     if (!ini_filename)
         return;
 
-    ImVector<char> buf;
-    SaveIniSettingsToMemory(buf);
-
+    size_t ini_data_size = 0;
+    const char* ini_data = SaveIniSettingsToMemory(&ini_data_size);
     FILE* f = ImFileOpen(ini_filename, "wt");
     if (!f)
         return;
-    fwrite(buf.Data, sizeof(char), (size_t)buf.Size, f);
+    fwrite(ini_data, sizeof(char), ini_data_size, f);
     fclose(f);
 }
 
-static void SaveIniSettingsToMemory(ImVector<char>& out_buf)
+// Call registered handlers (e.g. SettingsHandlerWindow_WriteAll() + custom handlers) to write their stuff into a text buffer
+const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
 {
     ImGuiContext& g = *GImGui;
     g.SettingsDirtyTimer = 0.0f;
-
-    ImGuiTextBuffer buf;
+    g.SettingsIniData.Buf.resize(0);
+    g.SettingsIniData.Buf.push_back(0);
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
     {
         ImGuiSettingsHandler* handler = &g.SettingsHandlers[handler_n];
-        handler->WriteAllFn(&g, handler, &buf);
+        handler->WriteAllFn(&g, handler, &g.SettingsIniData);
     }
-
-    buf.Buf.pop_back(); // Remove extra zero-terminator used by ImGuiTextBuffer
-    out_buf.swap(buf.Buf);
+    if (out_size)
+        *out_size = (size_t)g.SettingsIniData.size();
+    return g.SettingsIniData.c_str();
 }
 
 void ImGui::MarkIniSettingsDirty()
@@ -3873,7 +3880,7 @@ void ImGui::MarkIniSettingsDirty()
         g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
 
-static void MarkIniSettingsDirty(ImGuiWindow* window)
+void ImGui::MarkIniSettingsDirty(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     if (!(window->Flags & ImGuiWindowFlags_NoSavedSettings))

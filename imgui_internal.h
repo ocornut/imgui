@@ -96,7 +96,7 @@ IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, cons
 
 // Helpers: Misc
 IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
-IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* out_file_size = NULL, int padding_bytes = 0);
+IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 IMGUI_API FILE*         ImFileOpen(const char* filename, const char* file_open_mode);
 static inline bool      ImCharIsSpace(unsigned int c)   { return c == ' ' || c == '\t' || c == 0x3000; }
 static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
@@ -676,9 +676,10 @@ struct ImGuiContext
 
     // Settings
     bool                           SettingsLoaded;
-    float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
-    ImVector<ImGuiWindowSettings>  SettingsWindows;             // .ini settings for ImGuiWindow
+    float                          SettingsDirtyTimer;          // Save .ini Settings to memory when time reaches zero
+    ImGuiTextBuffer                SettingsIniData;             // In memory .ini settings
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
+    ImVector<ImGuiWindowSettings>  SettingsWindows;             // ImGuiWindow .ini settings entries (parsed from the last loaded .ini file and maintained on saving)
 
     // Logging
     bool                    LogEnabled;
@@ -1022,6 +1023,7 @@ namespace ImGui
     IMGUI_API void          NewFrameUpdateHoveredWindowAndCaptureFlags();
 
     IMGUI_API void                  MarkIniSettingsDirty();
+    IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
 

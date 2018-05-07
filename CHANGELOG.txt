@@ -53,6 +53,8 @@ Other Changes:
 - Window: Fixed windows using the ImGuiWindowFlags_NoSavedSettings flag from not using the same default position as other windows. (#1760)
 - Window: Relaxed the internal stack size checker to allow Push/Begin/Pop/.../End patterns to be used with PushStyleColor, PushStyleVar, PushFont without causing a false positive assert. (#1767)
 - Columns: Fixed a bug introduced in 1.51 where columns would affect the contents size of their container, often creating feedback loops when ImGuiWindowFlags_AlwaysAutoResize was used. (#1760)
+- Settings: Added LoadIniSettingsFromDisk(), LoadIniSettingsFromMemory(), SaveIniSettingsToDisk(), SaveIniSettingsToMemory() to manually load/save .ini settings. (#923, #993)
+- Settings: Added io.WantSaveIniSettings flag, which is set to notify the application that e.g. SaveIniSettingsToMemory() should be called. (#923, #993)
 - MenuBar: Made BeginMainMenuBar() honor style.DisplaySafeAreaPadding so the text can be made visible on TV settings that don't display all pixels. (#1439) [@dougbinks]
 - InputText: On Mac OS X, filter out characters when the CMD modifier is held. (#1747) [@sivu]
 - InputText: On Mac OS X, support CMD+SHIFT+Z for Redo. CMD+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
