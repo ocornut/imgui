@@ -182,6 +182,8 @@ namespace
     bool FreeTypeFont::CalcGlyphInfo(uint32_t codepoint, GlyphInfo &glyph_info, FT_Glyph& ft_glyph, FT_BitmapGlyph& ft_bitmap)
     {
         uint32_t glyph_index = FT_Get_Char_Index(FreetypeFace, codepoint);
+        if (glyph_index == 0)
+            return false;
         FT_Error error = FT_Load_Glyph(FreetypeFace, glyph_index, FreetypeLoadFlags);
         if (error)
             return false;
