@@ -683,7 +683,7 @@ struct ImGuiContext
     // Logging
     bool                    LogEnabled;
     FILE*                   LogFile;                            // If != NULL log to stdout/ file
-    ImGuiTextBuffer*        LogClipboard;                       // Else log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
+    ImGuiTextBuffer         LogClipboard;                       // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     int                     LogStartDepth;
     int                     LogAutoExpandMaxDepth;
 
@@ -783,7 +783,6 @@ struct ImGuiContext
 
         LogEnabled = false;
         LogFile = NULL;
-        LogClipboard = NULL;
         LogStartDepth = 0;
         LogAutoExpandMaxDepth = 2;
 

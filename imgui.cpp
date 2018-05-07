@@ -3669,7 +3669,6 @@ void ImGui::Initialize(ImGuiContext* context)
 {
     ImGuiContext& g = *context;
     IM_ASSERT(!g.Initialized && !g.SettingsLoaded);
-    g.LogClipboard = IM_NEW(ImGuiTextBuffer)();
 
     // Add .ini handle for ImGuiWindow type
     ImGuiSettingsHandler ini_handler;
@@ -3736,9 +3735,7 @@ void ImGui::Shutdown(ImGuiContext* context)
         fclose(g.LogFile);
         g.LogFile = NULL;
     }
-    if (g.LogClipboard)
-        IM_DELETE(g.LogClipboard);
-    g.LogClipboard = NULL;
+    g.LogClipboard.clear();
 
     g.Initialized = false;
 }
@@ -4179,7 +4176,7 @@ void ImGui::LogText(const char* fmt, ...)
     if (g.LogFile)
         vfprintf(g.LogFile, fmt, args);
     else
-        g.LogClipboard->appendfv(fmt, args);
+        g.LogClipboard.appendfv(fmt, args);
     va_end(args);
 }
 
@@ -7973,10 +7970,10 @@ void ImGui::LogFinish()
             fclose(g.LogFile);
         g.LogFile = NULL;
     }
-    if (g.LogClipboard->size() > 1)
+    if (g.LogClipboard.size() > 1)
     {
-        SetClipboardText(g.LogClipboard->begin());
-        g.LogClipboard->clear();
+        SetClipboardText(g.LogClipboard.begin());
+        g.LogClipboard.clear();
     }
     g.LogEnabled = false;
 }
