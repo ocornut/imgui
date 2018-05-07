@@ -8,6 +8,7 @@
 // If you do so you need to make sure that configuration settings are defined consistently _everywhere_ dear imgui is used, which include
 // the imgui*.cpp files but also _any_ of your code that uses imgui. This is because some compile-time options have an affect on data structures.
 // Defining those options in imconfig.h will ensure every compilation unit gets to see the same data structure layouts.
+// Call IMGUI_CHECKVERSION() from your .cpp files to verify that the data structures your files are using are matching the ones imgui.cpp is using.
 //-----------------------------------------------------------------------------
 
 #pragma once

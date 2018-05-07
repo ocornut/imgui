@@ -343,7 +343,8 @@ int main(int, char**)
     ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
     SetupVulkanWindowData(wd, surface, w, h);
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;

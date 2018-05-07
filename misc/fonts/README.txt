@@ -49,8 +49,9 @@ In this document:
    io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 
    // Usage, e.g.
-   ImGui::Text("%s Search", ICON_FA_SEARCH);
-
+   ImGui::Button(ICON_FA_SEARCH " Search");                     // C string literals can be concatenated at compilation time, this is the same as "A" "B" becoming "AB"
+   ImGui::Text("%s among %d items", ICON_FA_SEARCH, count);
+   
  See Links below for other icons fonts and related tools.
 
 

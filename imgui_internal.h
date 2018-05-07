@@ -96,7 +96,7 @@ IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, cons
 
 // Helpers: Misc
 IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
-IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, int* out_file_size = NULL, int padding_bytes = 0);
+IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 IMGUI_API FILE*         ImFileOpen(const char* filename, const char* file_open_mode);
 static inline bool      ImCharIsSpace(unsigned int c)   { return c == ' ' || c == '\t' || c == 0x3000; }
 static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
@@ -246,7 +246,8 @@ enum ImGuiPlotType
 
 enum ImGuiDataType
 {
-    ImGuiDataType_Int,
+    ImGuiDataType_Int32,
+    ImGuiDataType_Uint32,
     ImGuiDataType_Float,
     ImGuiDataType_Double,
     ImGuiDataType_COUNT
@@ -720,14 +721,15 @@ struct ImGuiContext
 
     // Settings
     bool                           SettingsLoaded;
-    float                          SettingsDirtyTimer;          // Save .ini Settings on disk when time reaches zero
-    ImVector<ImGuiWindowSettings>  SettingsWindows;             // .ini settings for ImGuiWindow
+    float                          SettingsDirtyTimer;          // Save .ini Settings to memory when time reaches zero
+    ImGuiTextBuffer                SettingsIniData;             // In memory .ini settings
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
+    ImVector<ImGuiWindowSettings>  SettingsWindows;             // ImGuiWindow .ini settings entries (parsed from the last loaded .ini file and maintained on saving)
 
     // Logging
     bool                    LogEnabled;
     FILE*                   LogFile;                            // If != NULL log to stdout/ file
-    ImGuiTextBuffer*        LogClipboard;                       // Else log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
+    ImGuiTextBuffer         LogClipboard;                       // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     int                     LogStartDepth;
     int                     LogAutoExpandMaxDepth;
 
@@ -831,7 +833,6 @@ struct ImGuiContext
 
         LogEnabled = false;
         LogFile = NULL;
-        LogClipboard = NULL;
         LogStartDepth = 0;
         LogAutoExpandMaxDepth = 2;
 
@@ -1085,6 +1086,7 @@ namespace ImGui
 
     // Settings
     IMGUI_API void                  MarkIniSettingsDirty();
+    IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
 
@@ -1161,19 +1163,19 @@ namespace ImGui
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos, float radius);
 
-    IMGUI_API bool          SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, float power, int decimal_precision, ImGuiSliderFlags flags = 0);
-    IMGUI_API bool          SliderFloatN(const char* label, float* v, int components, float v_min, float v_max, const char* display_format, float power);
-    IMGUI_API bool          SliderIntN(const char* label, int* v, int components, int v_min, int v_max, const char* display_format);
+    IMGUI_API bool          SliderBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_min, float v_max, const char* format, float power, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderFloatN(const char* label, float* v, int components, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool          SliderIntN(const char* label, int* v, int components, int v_min, int v_max, const char* format);
 
-    IMGUI_API bool          DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, int decimal_precision, float power);
-    IMGUI_API bool          DragFloatN(const char* label, float* v, int components, float v_speed, float v_min, float v_max, const char* display_format, float power);
-    IMGUI_API bool          DragIntN(const char* label, int* v, int components, float v_speed, int v_min, int v_max, const char* display_format);
+    IMGUI_API bool          DragBehavior(const ImRect& frame_bb, ImGuiID id, float* v, float v_speed, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool          DragFloatN(const char* label, float* v, int components, float v_speed, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool          DragIntN(const char* label, int* v, int components, float v_speed, int v_min, int v_max, const char* format);
 
     IMGUI_API bool          InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback = NULL, void* user_data = NULL);
-    IMGUI_API bool          InputFloatN(const char* label, float* v, int components, int decimal_precision, ImGuiInputTextFlags extra_flags);
+    IMGUI_API bool          InputFloatN(const char* label, float* v, int components, const char* format, ImGuiInputTextFlags extra_flags);
     IMGUI_API bool          InputIntN(const char* label, int* v, int components, ImGuiInputTextFlags extra_flags);
-    IMGUI_API bool          InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* scalar_format, ImGuiInputTextFlags extra_flags);
-    IMGUI_API bool          InputScalarAsWidgetReplacement(const ImRect& aabb, const char* label, ImGuiDataType data_type, void* data_ptr, ImGuiID id, int decimal_precision);
+    IMGUI_API bool          InputScalarEx(const char* label, ImGuiDataType data_type, void* data_ptr, void* step_ptr, void* step_fast_ptr, const char* format, ImGuiInputTextFlags extra_flags = 0);
+    IMGUI_API bool          InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format);
 
     IMGUI_API void          ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags flags);
     IMGUI_API void          ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags);
@@ -1184,8 +1186,10 @@ namespace ImGui
 
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 graph_size);
 
-    IMGUI_API int           ParseFormatPrecision(const char* fmt, int default_value);
-    IMGUI_API float         RoundScalar(float value, int decimal_precision);
+    IMGUI_API const char*   ParseFormatTrimDecorationsLeading(const char* format);
+    IMGUI_API const char*   ParseFormatTrimDecorations(const char* format, char* buf, int buf_size);
+    IMGUI_API int           ParseFormatPrecision(const char* format, int default_value);
+    IMGUI_API float         RoundScalarWithFormat(const char* format, float value);
 
     // Shade functions (write over already created vertices)
     IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);

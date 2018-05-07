@@ -183,7 +183,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
 
-!- settings: expose enough to save/load .ini from RAM instead of fopen
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - stb: add defines to disable stb implementations
