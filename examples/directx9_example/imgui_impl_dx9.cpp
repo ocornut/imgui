@@ -75,6 +75,13 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     IDirect3DStateBlock9* d3d9_state_block = NULL;
     if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
         return;
+    
+    D3DXMATRIXA16 matWorld;
+	D3DXMATRIXA16 matView;
+	D3DXMATRIXA16 matProj;
+	g_pd3dDevice->GetTransform(D3DTS_WORLD, &matWorld);
+	g_pd3dDevice->GetTransform(D3DTS_VIEW, &matView);
+	g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &matProj);
 
     // Copy and convert all vertices into a single contiguous buffer
     CUSTOMVERTEX* vtx_dst;
@@ -180,6 +187,10 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     }
 
     // Restore the DX9 state
+    g_pd3dDevice->SetTransform(D3DTS_WORLD, &matWorld);
+	g_pd3dDevice->SetTransform(D3DTS_VIEW, &matView);
+	g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &matProj);
+    
     d3d9_state_block->Apply();
     d3d9_state_block->Release();
 }
