@@ -2594,10 +2594,10 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
 //-----------------------------------------------------------------------------
 
-void* ImGui::MemAlloc(size_t sz)
+void* ImGui::MemAlloc(size_t size)
 {
     GImAllocatorActiveAllocationsCount++;
-    return GImAllocatorAllocFunc(sz, GImAllocatorUserData);
+    return GImAllocatorAllocFunc(size, GImAllocatorUserData);
 }
 
 void ImGui::MemFree(void* ptr)
