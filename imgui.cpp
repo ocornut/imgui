@@ -8681,6 +8681,9 @@ static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
 
 float ImGui::RoundScalarWithFormat(const char* format, float value)
 {
+    const char* fmt_start = ParseFormatTrimDecorationsLeading(format);
+    if (fmt_start[0] != '%' || fmt_start[1] == '%') // Don't apply if the value is not visible in the format string
+        return value;
     char buf[64];
     ImFormatString(buf, IM_ARRAYSIZE(buf), ParseFormatTrimDecorationsLeading(format), value);
     return (float)atof(buf);
