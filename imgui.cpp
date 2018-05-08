@@ -8750,10 +8750,13 @@ static inline TYPE RoundScalarWithFormat(const char* format, ImGuiDataType data_
         return v;
     char v_str[64];
     ImFormatString(v_str, IM_ARRAYSIZE(v_str), fmt_start, v);
+    const char* p = v_str;
+    while (*p == ' ')
+        p++;
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
-        v = (TYPE)atof(v_str);
+        v = (TYPE)atof(p);
     else
-        ImAtoi(v_str, (SIGNEDTYPE*)&v);
+        ImAtoi(p, (SIGNEDTYPE*)&v);
     return v;
 }
 
@@ -11910,9 +11913,9 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
         const char* fmt_table_int[3][4] =
         {
-            {   "%3.0f",   "%3.0f",   "%3.0f",   "%3.0f" }, // Short display
-            { "R:%3.0f", "G:%3.0f", "B:%3.0f", "A:%3.0f" }, // Long display for RGBA
-            { "H:%3.0f", "S:%3.0f", "V:%3.0f", "A:%3.0f" }  // Long display for HSVA
+            {   "%3d",   "%3d",   "%3d",   "%3d" }, // Short display
+            { "R:%3d", "G:%3d", "B:%3d", "A:%3d" }, // Long display for RGBA
+            { "H:%3d", "S:%3d", "V:%3d", "A:%3d" }  // Long display for HSVA
         };
         const char* fmt_table_float[3][4] =
         {
