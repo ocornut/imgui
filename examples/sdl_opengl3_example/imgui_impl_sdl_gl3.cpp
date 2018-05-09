@@ -14,6 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-05-09: Misc: Fixed clipboard paste memory leak (we didn't call SDL_FreeMemory on the data returned by SDL_GetClipboardText).
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-03-06: OpenGL: Added const char* glsl_version parameter to ImGui_ImplSdlGL3_Init() so user can override the GLSL version e.g. "#version 150".
 //  2018-02-23: OpenGL: Create the VAO in the render function so the setup can more easily be used with multiple shared GL context.
@@ -184,9 +185,9 @@ void ImGui_ImplSdlGL3_RenderDrawData(ImDrawData* draw_data)
 
 static const char* ImGui_ImplSdlGL3_GetClipboardText(void*)
 {
-    if (g_ClipboardTextData) SDL_free(g_ClipboardTextData);
+    if (g_ClipboardTextData) 
+        SDL_free(g_ClipboardTextData);
     g_ClipboardTextData = SDL_GetClipboardText();
-
     return g_ClipboardTextData;
 }
 
@@ -422,8 +423,9 @@ void ImGui_ImplSdlGL3_Shutdown()
         SDL_FreeCursor(g_MouseCursors[cursor_n]);
     memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
 
-    // Remove previously allocated clipboard text data
-    if (g_ClipboardTextData) SDL_free(g_ClipboardTextData);
+    // Destroy last known clipboard data
+    if (g_ClipboardTextData)
+        SDL_free(g_ClipboardTextData);
 
     // Destroy OpenGL objects
     ImGui_ImplSdlGL3_InvalidateDeviceObjects();

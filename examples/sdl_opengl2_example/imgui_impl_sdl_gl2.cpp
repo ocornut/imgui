@@ -21,6 +21,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-05-09: Misc: Fixed clipboard paste memory leak (we didn't call SDL_FreeMemory on the data returned by SDL_GetClipboardText).
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL2_RenderDrawData() in the .h file so you can call it yourself.
@@ -136,9 +137,9 @@ void ImGui_ImplSdlGL2_RenderDrawData(ImDrawData* draw_data)
 
 static const char* ImGui_ImplSdlGL2_GetClipboardText(void*)
 {
-    if (g_ClipboardTextData) SDL_free(g_ClipboardTextData);
+    if (g_ClipboardTextData) 
+        SDL_free(g_ClipboardTextData);
     g_ClipboardTextData = SDL_GetClipboardText();
-
     return g_ClipboardTextData;
 }
 
@@ -289,8 +290,9 @@ void ImGui_ImplSdlGL2_Shutdown()
         SDL_FreeCursor(g_MouseCursors[cursor_n]);
     memset(g_MouseCursors, 0, sizeof(g_MouseCursors));
 
-    // Remove previously allocated clipboard text data
-    if (g_ClipboardTextData) SDL_free(g_ClipboardTextData);
+    // Destroy last known clipboard data
+    if (g_ClipboardTextData)
+        SDL_free(g_ClipboardTextData);
 
     // Destroy OpenGL objects
     ImGui_ImplSdlGL2_InvalidateDeviceObjects();
