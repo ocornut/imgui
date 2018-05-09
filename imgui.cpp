@@ -10875,27 +10875,24 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
             SetNextWindowPos(pos);
         }
 
+    // Horizontally align ourselves with the framed text
+    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.FramePadding.x, style.WindowPadding.y));
+
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
     if (!Begin(name, NULL, window_flags))
     {
         EndPopup();
+        PopStyleVar();
         IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
         return false;
     }
-
-    // Horizontally align ourselves with the framed text
-    if (style.FramePadding.x != style.WindowPadding.x)
-        Indent(style.FramePadding.x - style.WindowPadding.x);
-
     return true;
 }
 
 void ImGui::EndCombo()
 {
-    const ImGuiStyle& style = GImGui->Style;
-    if (style.FramePadding.x != style.WindowPadding.x)
-        Unindent(style.FramePadding.x - style.WindowPadding.x);
     EndPopup();
+    PopStyleVar();
 }
 
 // Old API, prefer using BeginCombo() nowadays if you can.
