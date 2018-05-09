@@ -2169,20 +2169,34 @@ void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
     ItemSize(bb.GetSize(), text_offset_y);
 }
 
-static ImGuiDir NavScoreItemGetQuadrant(float dx, float dy)
+static ImGuiDir inline NavScoreItemGetQuadrant(float dx, float dy)
 {
     if (fabsf(dx) > fabsf(dy))
         return (dx > 0.0f) ? ImGuiDir_Right : ImGuiDir_Left;
     return (dy > 0.0f) ? ImGuiDir_Down : ImGuiDir_Up;
 }
 
-static float NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
+static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
 {
     if (a1 < b0) 
         return a1 - b0;
     if (b1 < a0) 
         return a0 - b1;
     return 0.0f;
+}
+
+static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect)
+{
+    if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
+    {
+        r.Min.y = ImClamp(r.Min.y, clip_rect.Min.y, clip_rect.Max.y);
+        r.Max.y = ImClamp(r.Max.y, clip_rect.Min.y, clip_rect.Max.y);
+    }
+    else
+    {
+        r.Min.x = ImClamp(r.Min.x, clip_rect.Min.x, clip_rect.Max.x);
+        r.Max.x = ImClamp(r.Max.x, clip_rect.Min.x, clip_rect.Max.x);
+    }
 }
 
 // Scoring function for directional navigation. Based on https://gist.github.com/rygorous/6981057
@@ -2196,17 +2210,9 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
     g.NavScoringCount++;
 
-    // We perform scoring on items bounding box clipped by their parent window on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
-    if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
-    {
-        cand.Min.y = ImClamp(cand.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y);
-        cand.Max.y = ImClamp(cand.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y);
-    }
-    else
-    {
-        cand.Min.x = ImClamp(cand.Min.x, window->ClipRect.Min.x, window->ClipRect.Max.x);
-        cand.Max.x = ImClamp(cand.Max.x, window->ClipRect.Min.x, window->ClipRect.Max.x);
-    }
+    // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
+    // For example, this ensure that items in one column are not reached when moving vertically from items in another column.
+    NavClampRectToVisibleAreaForMoveDir(g.NavMoveDir, cand, window->ClipRect);
 
     // Compute distance between boxes
     // FIXME-NAV: Introducing biases for vertical navigation, needs to be removed.
@@ -2389,6 +2395,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     }
 
     // Scoring for navigation
+    // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRectScreen + scoring from a rect wrapped according to current wrapping policy)
     if (g.NavId != id && !(item_flags & ImGuiItemFlags_NoNav))
     {
         ImGuiNavMoveResult* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
@@ -3266,7 +3273,7 @@ static void ImGui::NavUpdate()
     g.NavScoringCount = 0;
 #if IMGUI_DEBUG_NAV_RECTS
     if (g.NavWindow) { for (int layer = 0; layer < 2; layer++) GetOverlayDrawList()->AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); } // [DEBUG] 
-    if (g.NavWindow) { ImU32 col = (g.NavWindow->HiddenFrames == 0) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredMousePos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); g.OverlayDrawList.AddCircleFilled(p, 3.0f, col); g.OverlayDrawList.AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
+    if (g.NavWindow) { ImU32 col = (g.NavWindow->HiddenFrames == 0) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredRefPos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); g.OverlayDrawList.AddCircleFilled(p, 3.0f, col); g.OverlayDrawList.AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
 #endif
 }
 
@@ -5190,8 +5197,7 @@ void ImGui::EndChild()
     }
     else
     {
-        // When using auto-filling child window, we don't provide full width/height to ItemSize so that it doesn't feed back into automatic size-fitting.
-        ImVec2 sz = GetWindowSize();
+        ImVec2 sz = window->Size;
         if (window->AutoFitChildAxises & (1 << ImGuiAxis_X)) // Arbitrary minimum zero-ish child size of 4.0f causes less trouble than a 0.0f
             sz.x = ImMax(4.0f, sz.x);
         if (window->AutoFitChildAxises & (1 << ImGuiAxis_Y))
