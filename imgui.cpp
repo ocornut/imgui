@@ -725,7 +725,7 @@ static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, 
 static ImGuiWindow*     FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
-static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
+static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges);
 
 static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
 static void             AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window);
@@ -2996,8 +2996,8 @@ static void NavScrollToBringItemIntoView(ImGuiWindow* window, ImRect& item_rect_
         window->ScrollTargetCenterRatio.y = 1.0f;
     }
 
-    // Estimate upcoming scroll so we can offset our relative mouse position so mouse position can be applied immediately (under this block)
-    ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window);
+    // Estimate upcoming scroll so we can offset our relative mouse position so mouse position can be applied immediately after in NavUpdate()
+    ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window, false);
     item_rect_rel.Translate(window->Scroll - next_scroll);
 }
 
@@ -5503,15 +5503,26 @@ static float GetScrollMaxY(ImGuiWindow* window)
     return ImMax(0.0f, window->SizeContents.y - (window->SizeFull.y - window->ScrollbarSizes.y));
 }
 
-static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
+static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges)
 {
+    ImGuiContext& g = *GImGui;
     ImVec2 scroll = window->Scroll;
-    float cr_x = window->ScrollTargetCenterRatio.x;
-    float cr_y = window->ScrollTargetCenterRatio.y;
     if (window->ScrollTarget.x < FLT_MAX)
+    {
+        float cr_x = window->ScrollTargetCenterRatio.x;
         scroll.x = window->ScrollTarget.x - cr_x * (window->SizeFull.x - window->ScrollbarSizes.x);
+    }
     if (window->ScrollTarget.y < FLT_MAX)
-        scroll.y = window->ScrollTarget.y - (1.0f - cr_y) * (window->TitleBarHeight() + window->MenuBarHeight()) - cr_y * (window->SizeFull.y - window->ScrollbarSizes.y);
+    {
+        // 'snap_on_edges' allows for a discontinuity at the edge of scrolling limits to take account of WindowPadding so that scrolling to make the last item visible scroll far enough to see the padding.
+        float cr_y = window->ScrollTargetCenterRatio.y;
+        float target_y = window->ScrollTarget.y;
+        if (snap_on_edges && cr_y <= 0.0f && target_y <= window->WindowPadding.y)
+            target_y = 0.0f;
+        if (snap_on_edges && cr_y >= 1.0f && target_y >= window->SizeContents.y - window->WindowPadding.y + g.Style.ItemSpacing.y)
+            target_y = window->SizeContents.y;
+        scroll.y = target_y - (1.0f - cr_y) * (window->TitleBarHeight() + window->MenuBarHeight()) - cr_y * (window->SizeFull.y - window->ScrollbarSizes.y);
+    }
     scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
     if (!window->Collapsed && !window->SkipItems)
     {
@@ -5965,7 +5976,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = INT_MAX;
 
         // Apply scrolling
-        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window);
+        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window, true);
         window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
         // Apply focus, new windows appears in front
@@ -7292,12 +7303,6 @@ void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     window->ScrollTarget.y = (float)(int)(pos_y + window->Scroll.y);
     window->ScrollTargetCenterRatio.y = center_y_ratio;
-
-    // Minor hack to to make scrolling to top/bottom of window take account of WindowPadding, it looks more right to the user this way
-    if (center_y_ratio <= 0.0f && window->ScrollTarget.y <= window->WindowPadding.y)
-        window->ScrollTarget.y = 0.0f;
-    else if (center_y_ratio >= 1.0f && window->ScrollTarget.y >= window->SizeContents.y - window->WindowPadding.y + GImGui->Style.ItemSpacing.y)
-        window->ScrollTarget.y = window->SizeContents.y;
 }
 
 // center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.

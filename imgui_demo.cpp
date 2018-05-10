@@ -2656,7 +2656,7 @@ struct ExampleAppConsole
         Commands.push_back("HISTORY");
         Commands.push_back("CLEAR");
         Commands.push_back("CLASSIFY");  // "classify" is here to provide an example of "C"+[tab] completing to "CL" and displaying matches.
-        AddLog("Welcome to ImGui!");
+        AddLog("Welcome to Dear ImGui!");
     }
     ~ExampleAppConsole()
     {
@@ -2669,6 +2669,7 @@ struct ExampleAppConsole
     static int   Stricmp(const char* str1, const char* str2)         { int d; while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; } return d; }
     static int   Strnicmp(const char* str1, const char* str2, int n) { int d = 0; while (n > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; n--; } return d; }
     static char* Strdup(const char *str)                             { size_t len = strlen(str) + 1; void* buff = malloc(len); return (char*)memcpy(buff, (const void*)str, len); }
+    static void  Strtrim(char* str)                                  { char* str_end = str + strlen(str); while (str_end > str && str_end[-1] == ' ') str_end--; *str_end = 0; }
 
     void    ClearLog()
     {
@@ -2767,7 +2768,7 @@ struct ExampleAppConsole
         if (copy_to_clipboard)
             ImGui::LogFinish();
         if (ScrollToBottom)
-            ImGui::SetScrollHere();
+            ImGui::SetScrollHere(1.0f);
         ScrollToBottom = false;
         ImGui::PopStyleVar();
         ImGui::EndChild();
@@ -2777,8 +2778,7 @@ struct ExampleAppConsole
         bool reclaim_focus = false;
         if (ImGui::InputText("Input", InputBuf, IM_ARRAYSIZE(InputBuf), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory, &TextEditCallbackStub, (void*)this))
         {
-            char* input_end = InputBuf+strlen(InputBuf);
-            while (input_end > InputBuf && input_end[-1] == ' ') { input_end--; } *input_end = 0;
+            Strtrim(InputBuf);
             if (InputBuf[0])
                 ExecCommand(InputBuf);
             strcpy(InputBuf, "");

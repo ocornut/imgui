@@ -55,6 +55,7 @@ Other Changes:
 - Settings: Fixed saving an empty .ini file if CreateContext/DestroyContext are called without a single call to NewFrame(). (#1741)
 - Settings: Added LoadIniSettingsFromDisk(), LoadIniSettingsFromMemory(), SaveIniSettingsToDisk(), SaveIniSettingsToMemory() to manually load/save .ini settings. (#923, #993)
 - Settings: Added io.WantSaveIniSettings flag, which is set to notify the application that e.g. SaveIniSettingsToMemory() should be called. (#923, #993)
+- Scrolling: Fixed a case where using SetScrollHere(1.0f) at the bottom of a window on the same frame the window height has been growing would have the scroll clamped using the previous height. (#1804)
 - MenuBar: Made BeginMainMenuBar() honor style.DisplaySafeAreaPadding so the text can be made visible on TV settings that don't display all pixels. (#1439) [@dougbinks]
 - InputText: On Mac OS X, filter out characters when the CMD modifier is held. (#1747) [@sivu]
 - InputText: On Mac OS X, support CMD+SHIFT+Z for Redo. CMD+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
