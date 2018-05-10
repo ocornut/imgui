@@ -74,6 +74,7 @@ struct ImGuiListClipper;            // Helper to manually clip large list of ite
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiViewport;               // Viewport (generally ~1 per window to output to at the OS level. Need per-platform support to use multiple viewports)
 struct ImGuiPlatformIO;             // Multi-viewport support: interface for Platform/Renderer back-ends + viewports to render
+struct ImGuiPlatformMonitor;        // Multi-viewport support: user-provided bounds for each connected monitor/display. Used when positioning popups and tooltips to avoid them straddling monitors
 struct ImGuiContext;                // ImGui context (opaque)
 
 #ifndef ImTextureID
@@ -1890,10 +1891,10 @@ struct ImFont
 // Dear ImGui only uses this to clamp the position of popups and tooltips so they don't straddle multiple monitors
 struct ImGuiPlatformMonitor
 {
-    ImVec2  FullMin, FullMax;   // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
-    ImVec2  WorkMin, WorkMax;   // (Optional) Coordinates without task bars / side bars / menu bars. imgui uses this to avoid positioning popups/tooltips inside this region.
+    ImVec2  MainPos, MainSize;  // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
+    ImVec2  WorkPos, WorkSize;  // (Optional) Coordinates without task bars / side bars / menu bars. imgui uses this to avoid positioning popups/tooltips inside this region.
     float   DpiScale;
-    ImGuiPlatformMonitor() { FullMin = FullMax = WorkMin = WorkMax = ImVec2(0,0); DpiScale = 1.0f; }
+    ImGuiPlatformMonitor() { MainPos = MainSize = WorkPos = WorkSize = ImVec2(0,0); DpiScale = 1.0f; }
 };
 
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled
@@ -1956,7 +1957,7 @@ enum ImGuiViewportFlags_
     ImGuiViewportFlags_NoInputs                 = 1 << 2,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
     ImGuiViewportFlags_NoTaskBarIcon            = 1 << 3,   // Platform Window: Disable platform task bar icon (for popups, menus, or all windows if ImGuiConfigFlags_ViewportsNoTaskBarIcons if set)
     ImGuiViewportFlags_NoRendererClear          = 1 << 4,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
-    imGuiViewportFlags_TopMost                  = 1 << 5    // Platform Window: Display on top (for tooltips only)
+    ImGuiViewportFlags_TopMost                  = 1 << 5    // Platform Window: Display on top (for tooltips only)
 };
 
 // The viewports created and managed by imgui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.

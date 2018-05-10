@@ -317,7 +317,7 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
 #if SDL_HAS_ALWAYS_ON_TOP
-    sdl_flags |= (viewport->Flags & imGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
+    sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
 #endif
     data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
     data->WindowOwned = true; 
@@ -463,12 +463,12 @@ static void ImGui_ImplSDL2_UpdateMonitors()
         ImGuiPlatformMonitor monitor;
         SDL_Rect r;
         SDL_GetDisplayBounds(n, &r);
-        monitor.FullMin = monitor.WorkMin = ImVec2((float)(r.x), (float)(r.y));
-        monitor.FullMax = monitor.WorkMax = ImVec2((float)(r.x + r.w), (float)(r.y + r.h));
+        monitor.MainPos = monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
+        monitor.MainSize = monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
 #if SDL_HAS_USABLE_DISPLAY_BOUNDS
         SDL_GetDisplayUsableBounds(n, &r);
-        monitor.WorkMin = ImVec2((float)(r.x), (float)(r.y));
-        monitor.WorkMax = ImVec2((float)(r.x + r.w), (float)(r.y + r.h));
+        monitor.WorkPos = ImVec2((float)r.x, (float)r.y);
+        monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
 #endif
 #if SDL_HAS_PER_MONITOR_DPI
         float dpi = 0.0f;

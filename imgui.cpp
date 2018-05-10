@@ -3620,7 +3620,7 @@ void ImGui::UpdatePlatformWindows()
         {
             bool topmost = (viewport->Window->Flags & ImGuiWindowFlags_Tooltip) != 0;
             bool no_task_bar_icon = (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoTaskBarIcons) != 0 || (viewport->Window->Flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
-            viewport->Flags = topmost ? (viewport->Flags | imGuiViewportFlags_TopMost) : (viewport->Flags & ~imGuiViewportFlags_TopMost);
+            viewport->Flags = topmost ? (viewport->Flags | ImGuiViewportFlags_TopMost) : (viewport->Flags & ~ImGuiViewportFlags_TopMost);
             viewport->Flags = no_task_bar_icon ? (viewport->Flags | ImGuiViewportFlags_NoTaskBarIcon) : (viewport->Flags & ~ImGuiViewportFlags_NoTaskBarIcon);
         }
 
@@ -3881,8 +3881,8 @@ void ImGui::NewFrame()
         for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
         {
             ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[monitor_n];
-            IM_ASSERT(mon.FullMin.x < mon.FullMax.x && mon.FullMin.y < mon.FullMax.y && "Monitor bounds not setup properly.");
-            IM_ASSERT(mon.WorkMin.x < mon.WorkMax.x && mon.WorkMin.y < mon.WorkMax.y && "Monitor bounds not setup properly. If you don't have work area information, just copy Min/Max into them.");
+            IM_ASSERT(mon.MainSize.x > 0.0f && mon.MainSize.y > 0.0f && "Monitor bounds not setup properly.");
+            IM_ASSERT(mon.WorkSize.x > 0.0f && mon.WorkSize.y > 0.0f && "Monitor bounds not setup properly. If you don't have work area information, just copy Min/Max into them.");
             IM_ASSERT(mon.DpiScale != 0.0f);
         }
     }
@@ -4152,6 +4152,8 @@ void ImGui::Initialize(ImGuiContext* context)
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     viewport->Idx = 0;
     g.Viewports.push_back(viewport);
+    g.PlatformIO.MainViewport = g.Viewports[0]; // Make it accessible in public-facing GetPlatformIO() immediately (before the first call to EndFrame)
+    g.PlatformIO.Viewports.push_back(g.Viewports[0]);
 
     g.Initialized = true;
 }
@@ -5936,8 +5938,8 @@ static ImRect FindAllowedExtentRectForWindow(ImGuiWindow* window)
     {
         // Extent with be in the frame of reference of the given viewport (so Min is likely to be negative here)
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[window->ViewportAllowPlatformMonitorExtend];
-        r_screen.Min = monitor.WorkMin;
-        r_screen.Max = monitor.WorkMax;
+        r_screen.Min = monitor.WorkPos;
+        r_screen.Max = monitor.WorkPos + monitor.WorkSize;
     }
     else
     {
@@ -6119,7 +6121,7 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
             avail_size = ImVec2(FLT_MAX, FLT_MAX);
         const int monitor_idx = window->ViewportAllowPlatformMonitorExtend;
         if (monitor_idx >= 0 && monitor_idx < g.PlatformIO.Monitors.Size)
-            avail_size = (g.PlatformIO.Monitors[monitor_idx].WorkMax - g.PlatformIO.Monitors[monitor_idx].WorkMin);
+            avail_size = g.PlatformIO.Monitors[monitor_idx].WorkSize;
         ImVec2 size_auto_fit = ImClamp(size_contents, style.WindowMinSize, ImMax(style.WindowMinSize, avail_size - g.Style.DisplaySafeAreaPadding * 2.0f));
 
         // When the window cannot fit all contents (either because of constraints, either because screen is too small),
@@ -6190,7 +6192,7 @@ static int ImGui::FindPlatformMonitorForPos(const ImVec2& pos)
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
     {
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
-        if (ImRect(monitor.FullMin, monitor.FullMax).Contains(pos))
+        if (ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize).Contains(pos))
             return monitor_n;
     }
     return -1;
@@ -6207,10 +6209,10 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size && best_monitor_surface < surface_threshold; monitor_n++)
     {
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
-        if (ImRect(monitor.FullMin, monitor.FullMax).Contains(rect))
+        if (ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize).Contains(rect))
             return monitor_n;
         ImRect overlapping_rect = rect;
-        overlapping_rect.ClipWithFull(ImRect(monitor.FullMin, monitor.FullMax));
+        overlapping_rect.ClipWithFull(ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize));
         float overlapping_surface = overlapping_rect.GetWidth() * overlapping_rect.GetHeight();
         if (overlapping_surface < best_monitor_surface)
             continue;
@@ -6796,7 +6798,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 else
                 {
                     ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[window->Viewport->PlatformMonitor];
-                    ClampWindowRect(window, ImRect(monitor.WorkMin, monitor.WorkMax), clamp_padding);
+                    ClampWindowRect(window, ImRect(monitor.WorkPos, monitor.WorkPos + monitor.WorkSize), clamp_padding);
                 }
             }
         }
@@ -14401,10 +14403,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
                 {
                     const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
-                    ImGui::BulletText("Monitor #%d: DPI %.0f%%\n FullMin (%.0f,%.0f), FullMax (%.0f,%.0f), FullSize (%.0f,%.0f)\n WorkMin (%.0f,%.0f), WorkMax (%.0f,%.0f), WorkSize (%.0f,%.0f)", 
+                    ImGui::BulletText("Monitor #%d: DPI %.0f%%\n MainMin (%.0f,%.0f), MainMax (%.0f,%.0f), MainSize (%.0f,%.0f)\n WorkMin (%.0f,%.0f), WorkMax (%.0f,%.0f), WorkSize (%.0f,%.0f)", 
                         i, mon.DpiScale * 100.0f, 
-                        mon.FullMin.x, mon.FullMin.y, mon.FullMax.x, mon.FullMax.y, mon.FullMax.x - mon.FullMin.x, mon.FullMax.y - mon.FullMin.y,
-                        mon.WorkMin.x, mon.WorkMin.y, mon.WorkMax.x, mon.WorkMax.y, mon.WorkMax.x - mon.WorkMin.x, mon.WorkMax.y - mon.WorkMin.y);
+                        mon.MainPos.x, mon.MainPos.y, mon.MainPos.x + mon.MainSize.x, mon.MainPos.y + mon.MainSize.y, mon.MainSize.x, mon.MainSize.y,
+                        mon.WorkPos.x, mon.WorkPos.y, mon.WorkPos.x + mon.WorkSize.x, mon.WorkPos.y + mon.WorkSize.y, mon.WorkSize.x, mon.WorkSize.y);
                 }
                 ImGui::TreePop();
             }

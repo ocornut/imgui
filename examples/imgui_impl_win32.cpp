@@ -431,7 +431,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
         data->DwStyle = WS_OVERLAPPEDWINDOW;
         data->DwExStyle = no_task_bar_icon ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
     }
-    if (viewport->Flags & imGuiViewportFlags_TopMost)
+    if (viewport->Flags & ImGuiViewportFlags_TopMost)
         data->DwExStyle |= WS_EX_TOPMOST;
 
     // Create window
@@ -618,10 +618,10 @@ static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, H
     if (!::GetMonitorInfo(monitor, &info))
         return TRUE;
     ImGuiPlatformMonitor imgui_monitor;
-    imgui_monitor.FullMin = ImVec2((float)info.rcMonitor.left, (float)info.rcMonitor.top);
-    imgui_monitor.FullMax = ImVec2((float)info.rcMonitor.right, (float)info.rcMonitor.bottom);
-    imgui_monitor.WorkMin = ImVec2((float)info.rcWork.left, (float)info.rcWork.top);
-    imgui_monitor.WorkMax = ImVec2((float)info.rcWork.right, (float)info.rcWork.bottom);
+    imgui_monitor.MainPos = ImVec2((float)info.rcMonitor.left, (float)info.rcMonitor.top);
+    imgui_monitor.MainSize = ImVec2((float)(info.rcMonitor.right - info.rcMonitor.left), (float)(info.rcMonitor.bottom - info.rcMonitor.top));
+    imgui_monitor.WorkPos = ImVec2((float)info.rcWork.left, (float)info.rcWork.top);
+    imgui_monitor.WorkSize = ImVec2((float)(info.rcWork.right - info.rcWork.left), (float)(info.rcWork.bottom - info.rcWork.top));
     imgui_monitor.DpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
     ImGuiPlatformIO& io = ImGui::GetPlatformIO();
     if (info.dwFlags & MONITORINFOF_PRIMARY)
