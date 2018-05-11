@@ -135,7 +135,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: step option (#1183)
  - slider style: fill % of the bar instead of positioning a drag.
  - knob: rotating knob widget (#942)
- - slider & drag: int data passing through a float
  - drag float: up/down axis
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 

@@ -42,6 +42,10 @@ VERSION 1.61 WIP
 Breaking Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
+ - DragInt: The default compile-time format string has been changed from "%.0f" to "%d", we are not using integers internally any more. 
+   If you used DragInt() with custom format strings, make sure you change them to use %d or an integer-compatible format.
+   To honor backward-compatibility, the DragInt() code will currently parse and modify format strings to replace %*f with %d, giving time to users to upgrade their code.
+   If you have IMGUI_DISABLE_OBSOLETE_FUNCTIONS enabled, the code will instead assert! You may run a reg-exp search on your codebase for e.g. "DragInt.*%f" to you find them. 
  - Misc: IM_DELETE() helper function added in 1.60 doesn't set the input pointer to NULL, more consistent with standard expectation and allows passing r-value.
 
 Other Changes:
@@ -62,9 +66,16 @@ Other Changes:
 - InputText: Fixed returning true when edition is canceled with ESC and the current buffer matches the initial value.
 - InputFloat,InputFloat2,InputFloat3,InputFloat4: Added variations taking a more flexible and consistent optional "const char* format" parameter instead of "int decimal_precision". 
   This allow using custom formats to display values in scientific notation, and is generally more consistent with other API. Obsoleted functions using the optional "int decimal_precision" parameter. (#648)
+- Added DragScalar, DragScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
+- Added InputScalar, InputScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
+- Added SliderScalar, SliderScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
 - DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing in the same direction (keyboard/gamepad version already did this).
+- DragFloat, DragInt: Honor natural type limits (e.g. INT_MAX, FLT_MAX) instead of wrapping around. (#708, #320)
 - DragFloat, SliderFloat: Fixes to allow input of scientific notation numbers when using CTRL+Click to input the value. (~#648, #1011)
 - DragFloat, SliderFloat: Rounding-on-write uses the provided format string instead of parsing the precision from the string, which allows for finer uses of %e %g etc. (#648, #642)
+- DragFloat: Improved computation when using the power curve. Improved lost of input precision with very small steps. Added an assert than power-curve requires a min/max range. (~#642)
+- DragFloat: The 'power' parameter is only honored if the min/max parameter are also setup.
+- DragInt, SliderInt: Fixed handling of large integers (we previously passed data around internally as float, which reduced the range of valid integers).
 - Nav: Fixed hovering a Selectable() with the mouse so that it update the navigation cursor (as it happened in the pre-1.60 navigation branch). (#787)
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
 - Fonts: When building font atlas, glyphs that are missing in the fonts are not using the glyph slot to render a dummy/default glyph. Saves space and allow merging fonts with 
