@@ -14,6 +14,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-XX-XX: Misc: ImGui_ImplSDL2_Init() now takes a SDL_GLContext parameter. 
+//  2018-05-09: Misc: Fixed clipboard paste memory leak (we didn't call SDL_FreeMemory on the data returned by SDL_GetClipboardText).
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
@@ -50,6 +51,7 @@ static SDL_Window*  g_Window = NULL;
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
+static char*        g_ClipboardTextData = NULL;
 
 // Forward Declarations
 static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context);
@@ -57,7 +59,10 @@ static void ImGui_ImplSDL2_ShutdownPlatformInterface();
 
 static const char* ImGui_ImplSDL2_GetClipboardText(void*)
 {
-    return SDL_GetClipboardText();
+    if (g_ClipboardTextData)
+        SDL_free(g_ClipboardTextData);
+    g_ClipboardTextData = SDL_GetClipboardText();
+    return g_ClipboardTextData;
 }
 
 static void ImGui_ImplSDL2_SetClipboardText(void*, const char* text)
@@ -190,6 +195,10 @@ void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_ShutdownPlatformInterface();
     g_Window = NULL;
+
+    // Destroy last known clipboard data
+    if (g_ClipboardTextData)
+        SDL_free(g_ClipboardTextData);
 
     // Destroy SDL mouse cursors
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
