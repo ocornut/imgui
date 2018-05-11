@@ -791,7 +791,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Plots widgets"))
+        if (ImGui::TreeNode("Plots Widgets"))
         {
             static bool animate = true;
             ImGui::Checkbox("Animate", &animate);
