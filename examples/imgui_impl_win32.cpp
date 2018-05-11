@@ -120,38 +120,53 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
 }
 
 // This code supports multiple OS Windows mapped into different ImGui viewports, 
-// So it is a little more complicated than your typical single-viewport binding code (which only needs to set io.MousePos from the WM_MOUSEMOVE handler)
-// This is what imgui needs from the back-end to support multiple windows:
-// - io.MousePos               = mouse position in absolute coordinate (e.g. io.MousePos == ImVec2(0,0) when it is on the upper-left of the primary monitor)
-// - io.MousePosViewport       = viewport which mouse position is based from (generally the focused/active/capturing viewport)
-// - io.MouseHoveredWindow     = viewport which mouse is hovering, **regardless of it being the active/focused window**, **regardless of another window holding mouse captured**. [Optional]
+// Because of that, it is a little more complicated than your typical single-viewport binding code.
+// A) In Single-viewport mode imgui needs:
+//   - io.MousePos ............... mouse position, in client window coordinates (what you'd get from GetCursorPos+ScreenToClient() or from WM_MOUSEMOVE) 
+//                                 io.MousePos is (0,0) when the mouse is on the upper-left corner of the application window.
+// B) In Multi-viewport mode imgui needs: (when ImGuiConfigFlags_ViewportsEnable is set)
+//   - io.MousePos ............... mouse position, in OS absolute coordinates (what you'd get from GetCursorPos(), or from WM_MOUSEMOVE+viewport->Pos). 
+//                                 io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor.
+//   - io.MousePosViewport ....... viewport which mouse position is based from (generally the focused/active/capturing viewport)
+//   - io.MouseHoveredViewport ... [optional] viewport which mouse is hovering, with _very_ specific/strict conditions (Read comments next to io.MouseHoveredViewport. This is _NOT_ easy to provide in many high-level engine because of how we handle the ImGuiViewportFlags_NoInputs flag)
 // This function overwrite the value of io.MousePos normally updated by the WM_MOUSEMOVE handler. 
-// We keep the WM_MOUSEMOVE handling code so that WndProc function can be copied as-in in applications which do not need multiple OS windows support.
+// We keep the WM_MOUSEMOVE handling code so that WndProc function can be copied as-in in applications which do not need multi-viewport support.
 static void ImGui_ImplWin32_UpdateMousePos()
 {
     ImGuiIO& io = ImGui::GetIO();
+
+    // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+    // (When multi-viewports are enabled, all imgui positions are same as OS positions.)
+    if (io.WantSetMousePos)
+    {
+        POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
+        if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+            ::ClientToScreen(g_hWnd, &pos);
+        ::SetCursorPos(pos.x, pos.y);
+    }
+
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MousePosViewport = 0;
     io.MouseHoveredViewport = 0;
 
+    // Set mouse position and viewport
+    // (Note that ScreenToClient() and adding +viewport->Pos are mutually cancelling each others when we have multi-viewport enabled. In single-viewport mode, viewport->Pos will be zero)
     POINT pos;
     if (!::GetCursorPos(&pos))
         return;
-
-    // Our back-end can tell which window is under the mouse cursor (not every back-end can), so pass that info to imgui
-    HWND hovered_hwnd = ::WindowFromPoint(pos);
-    if (hovered_hwnd)
-        if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
-            io.MouseHoveredViewport = viewport->ID;
-
-    // Convert mouse from screen position to window client position
-    HWND focused_hwnd = ::GetActiveWindow();
-    if (focused_hwnd != 0 && ::ScreenToClient(focused_hwnd, &pos))
+    if (HWND focused_hwnd = ::GetActiveWindow())
         if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)focused_hwnd))
         {
-            io.MousePos = ImVec2(viewport->Pos.x + (float)pos.x, viewport->Pos.y + (float)pos.y);
+            POINT client_pos = pos;
+            ::ScreenToClient(focused_hwnd, &client_pos);
+            io.MousePos = ImVec2(viewport->Pos.x + (float)client_pos.x, viewport->Pos.y + (float)client_pos.y);
             io.MousePosViewport = viewport->ID;
         }
+
+    // Our back-end can tell which window is under the mouse cursor (not every back-end can), so pass that info to imgui
+    if (HWND hovered_hwnd = ::WindowFromPoint(pos))
+        if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
+            io.MouseHoveredViewport = viewport->ID;
 }
 
 void    ImGui_ImplWin32_NewFrame()
@@ -176,18 +191,10 @@ void    ImGui_ImplWin32_NewFrame()
     io.KeyShift = (::GetKeyState(VK_SHIFT) & 0x8000) != 0;
     io.KeyAlt = (::GetKeyState(VK_MENU) & 0x8000) != 0;
     io.KeySuper = false;
-    // io.KeysDown : filled by WM_KEYDOWN/WM_KEYUP events
-    // io.MousePos : filled by WM_MOUSEMOVE events
-    // io.MouseDown : filled by WM_*BUTTON* events
-    // io.MouseWheel : filled by WM_MOUSEWHEEL events
+    // io.KeysDown[], io.MousePos, io.MouseDown[], io.MouseWheel: filled by the WndProc handler below.
 
-    // Set OS mouse position if requested (only used when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    if (io.WantSetMousePos)
-    {
-        POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
-        ::ClientToScreen(g_hWnd, &pos);
-        ::SetCursorPos(pos.x, pos.y);
-    }
+    // Update OS mouse position
+    ImGui_ImplWin32_UpdateMousePos();
 
     // Update OS mouse cursor with the cursor requested by imgui
     ImGuiMouseCursor mouse_cursor = io.MouseDrawCursor ? ImGuiMouseCursor_None : ImGui::GetMouseCursor();
@@ -196,8 +203,6 @@ void    ImGui_ImplWin32_NewFrame()
         g_LastMouseCursor = mouse_cursor;
         ImGui_ImplWin32_UpdateMouseCursor();
     }
-
-    ImGui_ImplWin32_UpdateMousePos();
 
     // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
     ImGui::NewFrame();

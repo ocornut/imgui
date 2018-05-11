@@ -120,7 +120,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
-    //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
 #if GLFW_HAS_GLFW_HOVERED
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
@@ -198,13 +198,8 @@ void ImGui_ImplGlfw_Shutdown()
 
 static void ImGui_ImplGlfw_UpdateMouse()
 {
-#if 0
-    // Set OS mouse position if requested (only used when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    if (io.WantSetMousePos)
-        glfwSetCursorPos(g_Window, (double)io.MousePos.x, (double)io.MousePos.y);
-#endif
-
     ImGuiIO& io = ImGui::GetIO();
+    const ImVec2 mouse_pos_backup = io.MousePos;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MousePosViewport = 0;
     io.MouseHoveredViewport = 0;
@@ -225,9 +220,16 @@ static void ImGui_ImplGlfw_UpdateMouse()
         IM_ASSERT(window != NULL);
         if (glfwGetWindowAttrib(window, GLFW_FOCUSED))
         {
-            double mouse_x, mouse_y;
-            glfwGetCursorPos(window, &mouse_x, &mouse_y);
-            io.MousePos = ImVec2((float)mouse_x + viewport->Pos.x, (float)mouse_y + viewport->Pos.y);
+            if (io.WantSetMousePos)
+            {
+                glfwSetCursorPos(window, (double)(mouse_pos_backup.x - viewport->Pos.x), (double)(mouse_pos_backup.y - viewport->Pos.y));
+            }
+            else
+            {
+                double mouse_x, mouse_y;
+                glfwGetCursorPos(window, &mouse_x, &mouse_y);
+                io.MousePos = ImVec2((float)mouse_x + viewport->Pos.x, (float)mouse_y + viewport->Pos.y);
+            }
             io.MousePosViewport = viewport->ID;
             for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
                 io.MouseDown[i] |= glfwGetMouseButton(window, i) != 0;

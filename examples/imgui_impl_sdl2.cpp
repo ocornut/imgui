@@ -33,6 +33,7 @@
 // (the multi-viewports feature requires SDL features supported from SDL 2.0.5+)
 #include <SDL.h>
 #include <SDL_syswm.h>
+#define SDL_HAS_WARP_MOUSE_GLOBAL           SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_CAPTURE_MOUSE               SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_WINDOW_OPACITY              SDL_VERSION_ATLEAST(2,0,5)
 #define SDL_HAS_ALWAYS_ON_TOP               SDL_VERSION_ATLEAST(2,0,5)
@@ -131,6 +132,9 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
+#if SDL_HAS_WARP_MOUSE_GLOBAL
+    io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;        // We can honor io.WantSetMousePos requests (optional, rarely used)
+#endif
 #if SDL_HAS_CAPTURE_MOUSE
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;  // We can create multi-viewports on the Platform side (optional)
 #endif
@@ -196,9 +200,22 @@ void ImGui_ImplSDL2_Shutdown()
 static void ImGui_ImplSDL2_UpdateMouse()
 {
     ImGuiIO& io = ImGui::GetIO();
+    const ImVec2 mouse_pos_backup = io.MousePos;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MousePosViewport = 0;
     io.MouseHoveredViewport = 0;
+
+    // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
+    // (When multi-viewports are enabled, all imgui positions are same as OS positions.)
+#if SDL_HAS_WARP_MOUSE_GLOBAL
+    if (io.WantSetMousePos)
+    {
+        if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+            SDL_WarpMouseInWindow(g_Window, (int)mouse_pos_backup.x, (int)mouse_pos_backup.y);
+        else
+            SDL_WarpMouseGlobal((int)mouse_pos_backup.x, (int)mouse_pos_backup.y);
+    }
+#endif
 
     int mx, my;
     Uint32 mouse_buttons = SDL_GetMouseState(&mx, &my);
