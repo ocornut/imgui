@@ -82,7 +82,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open);
 static void ShowExampleAppLongText(bool* p_open);
 static void ShowExampleAppAutoResize(bool* p_open);
 static void ShowExampleAppConstrainedResize(bool* p_open);
-static void ShowExampleAppFixedOverlay(bool* p_open);
+static void ShowExampleAppSimpleOverlay(bool* p_open);
 static void ShowExampleAppWindowTitles(bool* p_open);
 static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleAppMainMenuBar();
@@ -135,7 +135,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool show_app_long_text = false;
     static bool show_app_auto_resize = false;
     static bool show_app_constrained_resize = false;
-    static bool show_app_fixed_overlay = false;
+    static bool show_app_simple_overlay = false;
     static bool show_app_window_titles = false;
     static bool show_app_custom_rendering = false;
     static bool show_app_style_editor = false;
@@ -151,7 +151,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (show_app_long_text)           ShowExampleAppLongText(&show_app_long_text);
     if (show_app_auto_resize)         ShowExampleAppAutoResize(&show_app_auto_resize);
     if (show_app_constrained_resize)  ShowExampleAppConstrainedResize(&show_app_constrained_resize);
-    if (show_app_fixed_overlay)       ShowExampleAppFixedOverlay(&show_app_fixed_overlay);
+    if (show_app_simple_overlay)      ShowExampleAppSimpleOverlay(&show_app_simple_overlay);
     if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
     if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
@@ -218,7 +218,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::MenuItem("Long text display", NULL, &show_app_long_text);
             ImGui::MenuItem("Auto-resizing window", NULL, &show_app_auto_resize);
             ImGui::MenuItem("Constrained-resizing window", NULL, &show_app_constrained_resize);
-            ImGui::MenuItem("Simple overlay", NULL, &show_app_fixed_overlay);
+            ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
             ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::EndMenu();
@@ -2551,7 +2551,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 }
 
 // Demonstrate creating a simple static window with no decoration + a context-menu to choose which corner of the screen to use.
-static void ShowExampleAppFixedOverlay(bool* p_open)
+static void ShowExampleAppSimpleOverlay(bool* p_open)
 {
     const float DISTANCE = 10.0f;
     static int corner = 0;
@@ -2560,7 +2560,7 @@ static void ShowExampleAppFixedOverlay(bool* p_open)
     if (corner != -1)
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
-    if (ImGui::Begin("Example: Fixed Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav))
+    if (ImGui::Begin("Example: Simple Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_NoFocusOnAppearing|ImGuiWindowFlags_NoNav))
     {
         ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
         ImGui::Separator();
