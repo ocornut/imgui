@@ -51,6 +51,9 @@ Breaking Changes:
 Other Changes:
 (IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
+- Added DragScalar, DragScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#643, #320, #708, #1011)
+- Added InputScalar, InputScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#643, #320, #708, #1011)
+- Added SliderScalar, SliderScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#643, #320, #708, #1011)
 - Window: Fixed default proportional item width lagging by one frame on resize.
 - Window: Fixed pop-ups/tooltips/menus not honoring style.DisplaySafeAreaPadding as well as it should have (part of menus displayed outside the safe area, etc.).
 - Window: Fixed windows using the ImGuiWindowFlags_NoSavedSettings flag from not using the same default position as other windows. (#1760)
@@ -66,9 +69,6 @@ Other Changes:
 - InputText: Fixed returning true when edition is canceled with ESC and the current buffer matches the initial value.
 - InputFloat,InputFloat2,InputFloat3,InputFloat4: Added variations taking a more flexible and consistent optional "const char* format" parameter instead of "int decimal_precision". 
   This allow using custom formats to display values in scientific notation, and is generally more consistent with other API. Obsoleted functions using the optional "int decimal_precision" parameter. (#648)
-- Added DragScalar, DragScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
-- Added InputScalar, InputScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
-- Added SliderScalar, SliderScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#320, #643, #708, #1011)
 - DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing in the same direction (keyboard/gamepad version already did this).
 - DragFloat, DragInt: Honor natural type limits (e.g. INT_MAX, FLT_MAX) instead of wrapping around. (#708, #320)
 - DragFloat, SliderFloat: Fixes to allow input of scientific notation numbers when using CTRL+Click to input the value. (~#648, #1011)
