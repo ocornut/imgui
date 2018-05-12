@@ -96,7 +96,7 @@ Demo Binaries
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20180407.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180407.zip) (Windows binaries, Dear ImGui 1.60 built 2018/04/07, 5 executables)
+- [imgui-demo-binaries-20180512.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180512.zip) (Windows binaries, Dear ImGui 1.61 WIP built 2018/05/12, 5 executables)
 
 The demo applications are unfortunately not yet DPI aware so expect some blurriness on a 4K screen. For DPI awareness you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
@@ -115,11 +115,12 @@ Languages: (third-party bindings)
 - Go: [go-imgui](https://github.com/Armored-Dragon/go-imgui)
 - Haxe/hxcpp: [linc_imgui](https://github.com/Aidan63/linc_imgui)
 - JavaScript: [imgui-js](https://github.com/flyover/imgui-js)
-- Lua: [imgui_lua_bindings](https://github.com/patrickriordan/imgui_lua_bindings)
+- Java: [jimgui](https://github.com/ice1000/jimgui)
+- Lua: [imgui_lua_bindings](https://github.com/patrickriordan/imgui_lua_bindings) or [lua-ffi-bindings](https://github.com/thenumbernine/lua-ffi-bindings)
 - Odin: [odin-dear_imgui](https://github.com/ThisDrunkDane/odin-dear_imgui)
 - Pascal: [imgui-pas](https://github.com/dpethes/imgui-pas)
-- Python [CyImGui](https://github.com/chromy/cyimgui)
-- Python [pyimgui](https://github.com/swistakm/pyimgui)
+- PureBasic: [pb-cimgui](https://github.com/hippyau/pb-cimgui)
+- Python [CyImGui](https://github.com/chromy/cyimgui) or [pyimgui](https://github.com/swistakm/pyimgui)
 - Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs)
 
 Frameworks:
@@ -140,10 +141,12 @@ Frameworks:
 - OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
 - LÖVE: [love-imgui](https://github.com/slages/love-imgui)
+- Magnum: [magnum-imgui](https://github.com/lecopivo/magnum-imgui), [MagnumImguiPort](https://github.com/lecopivo/MagnumImguiPort)
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
 - Qt3d: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d)
-- Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
 - SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml) or [imgui-backends](https://github.com/Mischa-Alff/imgui-backends)
+- Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
+- Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
 
 For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/). Also see [wiki](https://github.com/ocornut/imgui/wiki) for a few other links and ideas. Contact me if you would like to add to those lists.
 
@@ -312,10 +315,10 @@ Double-chocolate sponsors:
 - DotEmu
 
 Salty caramel supporters:
-- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert.
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert, Brandon Townsend, drudru
 
 Caramel supporters:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson, Sean Hunter, Jordan Mellow.
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey.
 
 And other supporters; thanks!
 (Please contact me or PR if you would like to be added or removed from this list)
