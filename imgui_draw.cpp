@@ -106,13 +106,15 @@ namespace IMGUI_STB_NAMESPACE
 
 #ifndef STB_TRUETYPE_IMPLEMENTATION                         // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
 #ifndef IMGUI_DISABLE_STB_TRUETYPE_IMPLEMENTATION
-#define STBTT_malloc(x,u)  ((void)(u), ImGui::MemAlloc(x))
-#define STBTT_free(x,u)    ((void)(u), ImGui::MemFree(x))
-#define STBTT_assert(x)    IM_ASSERT(x)
-#define STBTT_fmod(x,y)    ImFmod(x,y)
-#define STBTT_sqrt(x)      ImSqrt(x)
-#define STBTT_pow(x,y)     ImPow(x,y)
-#define STBTT_fabs(x)      ImFabs(x)
+#define STBTT_malloc(x,u)   ((void)(u), ImGui::MemAlloc(x))
+#define STBTT_free(x,u)     ((void)(u), ImGui::MemFree(x))
+#define STBTT_assert(x)     IM_ASSERT(x)
+#define STBTT_fmod(x,y)     ImFmod(x,y)
+#define STBTT_sqrt(x)       ImSqrt(x)
+#define STBTT_pow(x,y)      ImPow(x,y)
+#define STBTT_fabs(x)       ImFabs(x)
+#define STBTT_ifloor(x)     ((int)ImFloorStd(x))
+#define STBTT_iceil(x)      ((int)ImCeil(x))
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #else
@@ -309,7 +311,7 @@ ImDrawListSharedData::ImDrawListSharedData()
     for (int i = 0; i < IM_ARRAYSIZE(CircleVtx12); i++)
     {
         const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(CircleVtx12);
-        CircleVtx12[i] = ImVec2(cosf(a), sinf(a));
+        CircleVtx12[i] = ImVec2(ImCos(a), ImSin(a));
     }
 }
 
@@ -907,7 +909,7 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float a_min, floa
     for (int i = 0; i <= num_segments; i++)
     {
         const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
-        _Path.push_back(ImVec2(centre.x + cosf(a) * radius, centre.y + sinf(a) * radius));
+        _Path.push_back(ImVec2(centre.x + ImCos(a) * radius, centre.y + ImSin(a) * radius));
     }
 }
 
@@ -2706,7 +2708,7 @@ static inline float ImAcos01(float x)
 {
     if (x <= 0.0f) return IM_PI * 0.5f;
     if (x >= 1.0f) return 0.0f;
-    return acosf(x);
+    return ImAcos(x);
     //return (-0.69813170079773212f * x * x - 0.87266462599716477f) * x + 1.5707963267948966f; // Cheap approximation, may be enough for what we do.
 }
 

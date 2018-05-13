@@ -8776,7 +8776,7 @@ static inline TYPE RoundScalarWithFormat(const char* format, ImGuiDataType data_
     while (*p == ' ')
         p++;
     if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
-        v = (TYPE)atof(p);
+        v = (TYPE)ImAtof(p);
     else
         ImAtoi(p, (SIGNEDTYPE*)&v);
     return v;
@@ -12180,13 +12180,13 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             if (initial_dist2 >= (wheel_r_inner-1)*(wheel_r_inner-1) && initial_dist2 <= (wheel_r_outer+1)*(wheel_r_outer+1))
             {
                 // Interactive with Hue wheel
-                H = atan2f(current_off.y, current_off.x) / IM_PI*0.5f;
+                H = ImAtan2(current_off.y, current_off.x) / IM_PI*0.5f;
                 if (H < 0.0f)
                     H += 1.0f;
                 value_changed = value_changed_h = true;
             }
-            float cos_hue_angle = cosf(-H * 2.0f * IM_PI);
-            float sin_hue_angle = sinf(-H * 2.0f * IM_PI);
+            float cos_hue_angle = ImCos(-H * 2.0f * IM_PI);
+            float sin_hue_angle = ImSin(-H * 2.0f * IM_PI);
             if (ImTriangleContainsPoint(triangle_pa, triangle_pb, triangle_pc, ImRotate(initial_off, cos_hue_angle, sin_hue_angle)))
             {
                 // Interacting with SV triangle
@@ -12332,14 +12332,14 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             const int vert_end_idx = draw_list->VtxBuffer.Size;
 
             // Paint colors over existing vertices
-            ImVec2 gradient_p0(wheel_center.x + cosf(a0) * wheel_r_inner, wheel_center.y + sinf(a0) * wheel_r_inner);
-            ImVec2 gradient_p1(wheel_center.x + cosf(a1) * wheel_r_inner, wheel_center.y + sinf(a1) * wheel_r_inner);
+            ImVec2 gradient_p0(wheel_center.x + ImCos(a0) * wheel_r_inner, wheel_center.y + ImSin(a0) * wheel_r_inner);
+            ImVec2 gradient_p1(wheel_center.x + ImCos(a1) * wheel_r_inner, wheel_center.y + ImSin(a1) * wheel_r_inner);
             ShadeVertsLinearColorGradientKeepAlpha(draw_list->VtxBuffer.Data + vert_start_idx, draw_list->VtxBuffer.Data + vert_end_idx, gradient_p0, gradient_p1, hue_colors[n], hue_colors[n+1]);
         }
 
         // Render Cursor + preview on Hue Wheel
-        float cos_hue_angle = cosf(H * 2.0f * IM_PI);
-        float sin_hue_angle = sinf(H * 2.0f * IM_PI);
+        float cos_hue_angle = ImCos(H * 2.0f * IM_PI);
+        float sin_hue_angle = ImSin(H * 2.0f * IM_PI);
         ImVec2 hue_cursor_pos(wheel_center.x + cos_hue_angle * (wheel_r_inner+wheel_r_outer)*0.5f, wheel_center.y + sin_hue_angle * (wheel_r_inner+wheel_r_outer)*0.5f);
         float hue_cursor_rad = value_changed_h ? wheel_thickness * 0.65f : wheel_thickness * 0.55f;
         int hue_cursor_segments = ImClamp((int)(hue_cursor_rad / 1.4f), 9, 32);

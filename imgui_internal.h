@@ -154,6 +154,13 @@ static inline float  ImPow(float x, float y)                                    
 static inline double ImPow(double x, double y)                                  { return pow(x, y); }
 static inline float  ImFmod(float x, float y)                                   { return fmodf(x, y); }
 static inline double ImFmod(double x, double y)                                 { return fmod(x, y); }
+static inline float  ImCos(float x)                                             { return cosf(x); }
+static inline float  ImSin(float x)                                             { return sinf(x); }
+static inline float  ImAcos(float x)                                            { return acosf(x); }
+static inline float  ImAtan2(float y, float x)                                  { return atan2f(y, x); }
+static inline double ImAtof(const char* s)                                      { return atof(s); }
+static inline float  ImFloorStd(float x)                                        { return floorf(x); }   // we already uses our own ImFloor() { return (float)(int)v } internally so the standard one wrapper is named differently (it's used by stb_truetype)
+static inline float  ImCeil(float x)                                            { return ceilf(x); }
 #endif
 // - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support for variety of types: signed/unsigned int/long long float/double, using templates here but we could also redefine them 6 times
 template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
