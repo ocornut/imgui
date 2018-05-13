@@ -81,6 +81,7 @@ Other Changes:
 - Fonts: When building font atlas, glyphs that are missing in the fonts are not using the glyph slot to render a dummy/default glyph. Saves space and allow merging fonts with 
   overlapping font ranges such as FontAwesome5 which split out the Brands separately from the Solid fonts. (#1703, #1671)
 - Misc: Added IMGUI_CHECKVERSION() macro to compare version string and data structure sizes in order to catch issues with mismatching compilation unit settings. (#1695, #1769)
+- Misc: Added IMGUI_DISABLE_MATH_FUNCTIONS in imconfig.h to make it slightly easier to redefine wrappers to std maths functions such as fabsf(), fmodf(), etc.
 - Misc: Fix to allow compiling in unity builds where stb_rectpack/stb_truetype may be already included in the same compilation unit.
 - Demo: Simple Overlay: Added a context menu item to enable freely moving the window. 
 - Demo: Added demo for DragScalar(), InputScalar(), SliderScalar(). (#643)
