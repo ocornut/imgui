@@ -76,12 +76,13 @@ Other Changes:
 - DragFloat: Improved computation when using the power curve. Improved lost of input precision with very small steps. Added an assert than power-curve requires a min/max range. (~#642)
 - DragFloat: The 'power' parameter is only honored if the min/max parameter are also setup.
 - DragInt, SliderInt: Fixed handling of large integers (we previously passed data around internally as float, which reduced the range of valid integers).
+- ColorEdit: Fixed not being able to pass the ImGuiColorEditFlags_NoAlpha or ImGuiColorEditFlags_HDR flags to SetColorEditOptions().
 - Nav: Fixed hovering a Selectable() with the mouse so that it update the navigation cursor (as it happened in the pre-1.60 navigation branch). (#787)
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
 - Fonts: When building font atlas, glyphs that are missing in the fonts are not using the glyph slot to render a dummy/default glyph. Saves space and allow merging fonts with 
   overlapping font ranges such as FontAwesome5 which split out the Brands separately from the Solid fonts. (#1703, #1671)
 - Misc: Added IMGUI_CHECKVERSION() macro to compare version string and data structure sizes in order to catch issues with mismatching compilation unit settings. (#1695, #1769)
-- Misc: Added IMGUI_DISABLE_MATH_FUNCTIONS in imconfig.h to make it slightly easier to redefine wrappers to std maths functions such as fabsf(), fmodf(), cosf(), etc.
+- Misc: Added IMGUI_DISABLE_MATH_FUNCTIONS in imconfig.h to make it easier to redefine wrappers for std/crt math functions.
 - Misc: Fix to allow compiling in unity builds where stb_rectpack/stb_truetype may be already included in the same compilation unit.
 - Demo: Simple Overlay: Added a context menu item to enable freely moving the window. 
 - Demo: Added demo for DragScalar(), InputScalar(), SliderScalar(). (#643)
