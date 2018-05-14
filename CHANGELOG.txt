@@ -37,6 +37,14 @@ HOW TO UPDATE?
 
 -----------------------------------------------------------------------
 
+VERSION 1.62 WIP (IN PROGRESS)
+
+Breaking Changes:
+
+Other Changes:
+
+-----------------------------------------------------------------------
+
 VERSION 1.61 (Released 2018-05-14)
 
 Breaking Changes:
