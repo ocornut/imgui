@@ -36,8 +36,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: primtiives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
  - drawlist: non-AA strokes have gaps between points (#593, #288), especially RenderCheckmark().
- - drawlist: would be good to be able to deep copy a draw list (ImVector= op?).
+ - drawlist: would be good to be able to deep copy of ImDrawData (we have a deep copy of ImDrawList now).
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
+ - drawlist: rendering: provide a way for imgui to output to a single/global vertex buffer, re-order indices only at the end of the frame (ref: https://gist.github.com/floooh/10388a0afbe08fce9e617d8aefa7d302)
  
  - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
@@ -51,6 +52,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: add always-allow-overlap mode.
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
+ - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile. 
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
@@ -131,8 +133,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: precision dragging
  - slider: step option (#1183)
+ - slider style: fill % of the bar instead of positioning a drag.
  - knob: rotating knob widget (#942)
- - slider & drag: int data passing through a float
  - drag float: up/down axis
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
@@ -183,7 +185,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
 
-!- settings: expose enough to save/load .ini from RAM instead of fopen
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - stb: add defines to disable stb implementations
@@ -240,8 +241,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: fix AddRemapChar() to work before font has been built.
  - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
 
+ - nav: wrap around logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.)
+ - nav: patterns to make it possible for arrows key to update selection
  - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
  - nav: allow input system to be be more tolerant of io.DeltaTime=0.0f
+ - nav: ESC within a menu of a child window seems to exit the child window.
  - nav: ESC on a flattened child
  - nav: Left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
  - nav: menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
@@ -261,6 +265,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
  - inputs: support track pad style scrolling & slider edit.
+ - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
+ - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
 
  - misc: idle refresh: expose cursor blink animation timer for backend to be able to lower framerate.
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
@@ -268,18 +274,22 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
  - misc: ImVector: erase_unsorted() helper
+-  misc: imgui_cpp: perhaps a misc/ header file with more friendly helper (e.g. type-infer versions of DragScalar, vector<> variants if appropriate for some functions).
 
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
  - web/emscriptem: tweak OpenGL renderers to support OpenGL ES. (#1713, #336)
+ - web/emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
+ - demo: find a way to demonstrate textures in the examples application, as it such a a common issue for new users.
+ - demo: add drag and drop demo.
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
- - examples: directx9: save/restore device state more thoroughly.
+ - demo: demonstration Plot offset
  - examples: window minimize, maximize (#583)
  - examples: provide a zero-framerate/idle example.
- - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // the problem is that DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
+ - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)

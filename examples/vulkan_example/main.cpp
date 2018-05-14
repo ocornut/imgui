@@ -625,7 +625,8 @@ int main(int, char**)
     setup_vulkan(window);
     glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     ImGui_ImplGlfwVulkan_Init_Data init_data = {};
