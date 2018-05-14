@@ -1234,9 +1234,10 @@ public:
         if (new_capacity <= Capacity) 
             return;
         value_type* new_data = (value_type*)ImGui::MemAlloc((size_t)new_capacity * sizeof(value_type));
-        if (Data)
+        if (Data) {
             memcpy(new_data, Data, (size_t)Size * sizeof(value_type));
-        ImGui::MemFree(Data);
+            ImGui::MemFree(Data);
+        }
         Data = new_data;
         Capacity = new_capacity;
     }
