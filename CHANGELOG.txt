@@ -43,6 +43,8 @@ Breaking Changes:
 
 Other Changes:
 
+ - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
+
 -----------------------------------------------------------------------
 
 VERSION 1.61 (Released 2018-05-14)
