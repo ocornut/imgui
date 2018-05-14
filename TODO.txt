@@ -245,6 +245,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: patterns to make it possible for arrows key to update selection
  - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
  - nav: allow input system to be be more tolerant of io.DeltaTime=0.0f
+ - nav: ESC within a menu of a child window seems to exit the child window.
  - nav: ESC on a flattened child
  - nav: Left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
  - nav: menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
@@ -264,6 +265,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
  - inputs: support track pad style scrolling & slider edit.
+ - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
+ - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
 
  - misc: idle refresh: expose cursor blink animation timer for backend to be able to lower framerate.
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
@@ -271,6 +274,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
  - misc: ImVector: erase_unsorted() helper
+-  misc: imgui_cpp: perhaps a misc/ header file with more friendly helper (e.g. type-infer versions of DragScalar, vector<> variants if appropriate for some functions).
 
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
  - web/emscriptem: tweak OpenGL renderers to support OpenGL ES. (#1713, #336)

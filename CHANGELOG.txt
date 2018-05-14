@@ -37,27 +37,27 @@ HOW TO UPDATE?
 
 -----------------------------------------------------------------------
 
-VERSION 1.61 WIP
+VERSION 1.61 (Released 2018-05-14)
 
 Breaking Changes:
-(IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
- - DragInt: The default compile-time format string has been changed from "%.0f" to "%d", we are not using integers internally any more. 
+ - DragInt(): The default compile-time format string has been changed from "%.0f" to "%d", as we are not using integers internally any more. 
    If you used DragInt() with custom format strings, make sure you change them to use %d or an integer-compatible format.
    To honor backward-compatibility, the DragInt() code will currently parse and modify format strings to replace %*f with %d, giving time to users to upgrade their code.
    If you have IMGUI_DISABLE_OBSOLETE_FUNCTIONS enabled, the code will instead assert! You may run a reg-exp search on your codebase for e.g. "DragInt.*%f" to you find them. 
- - Misc: IM_DELETE() helper function added in 1.60 doesn't set the input pointer to NULL, more consistent with standard expectation and allows passing r-value.
+ - InputFloat(): Obsoleted InputFloat() functions taking an optional "int decimal_precision" in favor of an equivalent and more flexible "const char* format", 
+   consistent with other functions. Kept redirection functions (will obsolete).
+ - Misc: IM_DELETE() helper function added in 1.60 doesn't set the input pointer to NULL, more consistent with standard expectation and allows passing r-values.
 
 Other Changes:
-(IN PROGRESS, WILL ADD TO THIS LIST AS WE WORK ON 1.61)
 
 - Added DragScalar, DragScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#643, #320, #708, #1011)
 - Added InputScalar, InputScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#643, #320, #708, #1011)
 - Added SliderScalar, SliderScalarN: supports signed/unsigned, 32/64 bits, float/double data types. (#643, #320, #708, #1011)
-- Window: Fixed default proportional item width lagging by one frame on resize.
 - Window: Fixed pop-ups/tooltips/menus not honoring style.DisplaySafeAreaPadding as well as it should have (part of menus displayed outside the safe area, etc.).
 - Window: Fixed windows using the ImGuiWindowFlags_NoSavedSettings flag from not using the same default position as other windows. (#1760)
 - Window: Relaxed the internal stack size checker to allow Push/Begin/Pop/.../End patterns to be used with PushStyleColor, PushStyleVar, PushFont without causing a false positive assert. (#1767)
+- Window: Fixed the default proportional item width lagging by one frame on resize.
 - Columns: Fixed a bug introduced in 1.51 where columns would affect the contents size of their container, often creating feedback loops when ImGuiWindowFlags_AlwaysAutoResize was used. (#1760)
 - Settings: Fixed saving an empty .ini file if CreateContext/DestroyContext are called without a single call to NewFrame(). (#1741)
 - Settings: Added LoadIniSettingsFromDisk(), LoadIniSettingsFromMemory(), SaveIniSettingsToDisk(), SaveIniSettingsToMemory() to manually load/save .ini settings. (#923, #993)
@@ -66,7 +66,7 @@ Other Changes:
 - MenuBar: Made BeginMainMenuBar() honor style.DisplaySafeAreaPadding so the text can be made visible on TV settings that don't display all pixels. (#1439) [@dougbinks]
 - InputText: On Mac OS X, filter out characters when the CMD modifier is held. (#1747) [@sivu]
 - InputText: On Mac OS X, support CMD+SHIFT+Z for Redo. CMD+Y is also supported as major apps seems to default to support both. (#1765) [@lfnoise]
-- InputText: Fixed returning true when edition is canceled with ESC and the current buffer matches the initial value.
+- InputText: Fixed returning true when edition is cancelled with ESC and the current buffer matches the initial value.
 - InputFloat,InputFloat2,InputFloat3,InputFloat4: Added variations taking a more flexible and consistent optional "const char* format" parameter instead of "int decimal_precision". 
   This allow using custom formats to display values in scientific notation, and is generally more consistent with other API. Obsoleted functions using the optional "int decimal_precision" parameter. (#648)
 - DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing in the same direction (keyboard/gamepad version already did this).
