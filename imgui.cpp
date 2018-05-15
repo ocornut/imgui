@@ -264,6 +264,11 @@
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
  (Viewport Branch)
+ - 2018/XX/XX (1.XX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
+                        - reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are probably not what you want anymore. 
+                          you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
+                        - likewise io.MousePos and GetMousePos() will use OS coordinates coordinates. 
+                          If you query mouse positions to interact with non-imgui coordinates you will need to offset them, e.g. subtract GetWindowViewport()->Pos.
  - 2018/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
  - 2018/XX/XX (1.XX) - removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (it was used to clip within the DisplayMin..DisplayMax range, I don't know of anyone using it)
 
@@ -8123,6 +8128,13 @@ ImDrawList* ImGui::GetWindowDrawList()
 {
     ImGuiWindow* window = GetCurrentWindow();
     return window->DrawList;
+}
+
+ImGuiViewport* ImGui::GetWindowViewport()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    IM_ASSERT(window->Viewport != NULL);
+    return window->Viewport;
 }
 
 ImFont* ImGui::GetFont()

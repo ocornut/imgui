@@ -196,7 +196,8 @@ namespace ImGui
     IMGUI_API bool          IsWindowCollapsed();
     IMGUI_API bool          IsWindowFocused(ImGuiFocusedFlags flags=0); // is current window focused? or its root/child, depending on flags. see flags for options.
     IMGUI_API bool          IsWindowHovered(ImGuiHoveredFlags flags=0); // is current window hovered (and typically: not blocked by a popup/modal)? see flags for options. NB: If you are trying to check whether your mouse should be dispatched to imgui or to your app, you should use the 'io.WantCaptureMouse' boolean for that! Please read the FAQ!
-    IMGUI_API ImDrawList*   GetWindowDrawList();                        // get draw list associated to the window, to append your own drawing primitives
+    IMGUI_API ImDrawList*   GetWindowDrawList();                        // get draw list associated to the current window, to append your own drawing primitives
+    IMGUI_API ImGuiViewport*GetWindowViewport();                        // get viewport currently associated to the current window.
     IMGUI_API ImVec2        GetWindowPos();                             // get current window position in screen space (useful if you want to do your own drawing via the DrawList API)
     IMGUI_API ImVec2        GetWindowSize();                            // get current window size
     IMGUI_API float         GetWindowWidth();                           // get current window width (shortcut for GetWindowSize().x)
@@ -580,8 +581,9 @@ namespace ImGui
     IMGUI_API void          MemFree(void* ptr);
 
     // (Optional) Platform/OS interface for multi-viewport support
+    // Note: You may use GetWindowViewport() to get the current viewport of the current window.
     IMGUI_API ImGuiPlatformIO&  GetPlatformIO();                                                // platform/renderer functions, for back-end to setup + viewports list.
-    IMGUI_API ImGuiViewport*    GetMainViewport();                                              // shortcut to == GetPlatformIO().MainViewport == GetPlatformIO().Viewports[0]
+    IMGUI_API ImGuiViewport*    GetMainViewport();                                              // main viewport. same as GetPlatformIO().MainViewport == GetPlatformIO().Viewports[0].
     IMGUI_API void              UpdatePlatformWindows();                                        // call in main loop. will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
     IMGUI_API void              RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport. may be reimplemented by user for custom rendering needs.
     IMGUI_API void              DestroyPlatformWindows();                                       // call DestroyWindow platform functions for all viewports. call from back-end Shutdown() if you need to close platform windows before imgui shutdown. otherwise will be called by DestroyContext().
@@ -1971,7 +1973,7 @@ struct ImGuiPlatformIO
     // Output - List of viewports to render into platform windows
     //------------------------------------------------------------------
 
-    // List of viewports (updated by ImGui::UpdatePlatformWindows() along when calling the Platform/Renderer functions)
+    // List of viewports (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     ImGuiViewport*                  MainViewport;                           // Guaranteed to be == Viewports[0]
     ImVector<ImGuiViewport*>        Viewports;                              // Main viewports, followed by all secondary viewports. 
 
