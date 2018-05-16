@@ -3553,7 +3553,7 @@ static void ImGui::UpdateViewports()
         if (viewport->PlatformRequestResize)
             viewport->Size = g.PlatformIO.Platform_GetWindowSize(viewport);
 
-        // Translate imgui windows when a host viewport has been moved
+        // Translate imgui windows when a Host Viewport has been moved
         ImVec2 delta = viewport->Pos - viewport->LastPos;
         if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) && (delta.x != 0.0f || delta.y != 0.0f))
             for (int window_n = 0; window_n < g.Windows.Size; window_n++)
@@ -6827,13 +6827,19 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
         }
 
-        // Synchronize viewport --> window
+        // Synchronize viewport --> window in case the platform window has been moved or resized from the OS/WM
         if (window->ViewportOwned)
         {
             if (window->Viewport->PlatformRequestMove)
+            {
                 window->Pos = window->Viewport->Pos;
+                window->ViewportTryMerge = true;
+            }
             if (window->Viewport->PlatformRequestResize)
+            {
                 window->Size = window->SizeFull = window->Viewport->Size;
+                window->ViewportTryMerge = true;
+            }
 
             // We also tell the back-end that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
             window->Viewport->Flags |= ImGuiViewportFlags_NoRendererClear;

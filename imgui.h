@@ -2004,8 +2004,8 @@ struct ImGuiViewport
     void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. suggested to use natural platform handle such as HWND, GlfwWindow*, SDL_Window*)
     bool                PlatformRequestClose;   // Platform window requested closure
-    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved using OS windowing facility)
-    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resize using OS windowing facility)
+    bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved by the OS / host window manager)
+    bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resize by the OS / host window manager)
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. swap chain, frame-buffers etc.)
 
     ImGuiViewport()     { ID = 0; Flags = 0; DpiScale = 0.0f; DrawData = NULL; PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; RendererUserData = NULL; }
