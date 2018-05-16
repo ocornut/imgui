@@ -228,10 +228,11 @@ enum ImGuiColumnsFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_Menu               = 1 << 3,   // -> PressedOnClick
-    ImGuiSelectableFlags_MenuItem           = 1 << 4,   // -> PressedOnRelease
-    ImGuiSelectableFlags_Disabled           = 1 << 5,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 6
+    ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 3,
+    ImGuiSelectableFlags_PressedOnClick     = 1 << 4,
+    ImGuiSelectableFlags_PressedOnRelease   = 1 << 5,
+    ImGuiSelectableFlags_Disabled           = 1 << 6,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 7
 };
 
 enum ImGuiSeparatorFlags_
