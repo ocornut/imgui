@@ -8138,7 +8138,7 @@ ImDrawList* ImGui::GetWindowDrawList()
 
 ImGuiViewport* ImGui::GetWindowViewport()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = GetCurrentWindowRead();
     IM_ASSERT(window->Viewport != NULL);
     return window->Viewport;
 }
