@@ -1,4 +1,4 @@
-// dear imgui, v1.61
+// dear imgui, v1.62 WIP
 // (drawing and font code)
 
 // Contains implementation for
@@ -54,6 +54,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
 #pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
 #pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
+#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: ‘memset/memcpy’ clearing/writing an object of type ‘xxxx’ with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
 //-------------------------------------------------------------------------
@@ -306,7 +307,7 @@ ImDrawListSharedData::ImDrawListSharedData()
     FontSize = 0.0f;
     CurveTessellationTol = 0.0f;
     ClipRectFullscreen = ImVec4(-8192.0f, -8192.0f, +8192.0f, +8192.0f);
-    
+
     // Const data
     for (int i = 0; i < IM_ARRAYSIZE(CircleVtx12); i++)
     {
@@ -2268,19 +2269,19 @@ void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1,
     Glyphs.resize(Glyphs.Size + 1);
     ImFontGlyph& glyph = Glyphs.back();
     glyph.Codepoint = (ImWchar)codepoint;
-    glyph.X0 = x0; 
-    glyph.Y0 = y0; 
-    glyph.X1 = x1; 
+    glyph.X0 = x0;
+    glyph.Y0 = y0;
+    glyph.X1 = x1;
     glyph.Y1 = y1;
-    glyph.U0 = u0; 
-    glyph.V0 = v0; 
-    glyph.U1 = u1; 
+    glyph.U0 = u0;
+    glyph.V0 = v0;
+    glyph.U1 = u1;
     glyph.V1 = v1;
     glyph.AdvanceX = advance_x + ConfigData->GlyphExtraSpacing.x;  // Bake spacing into AdvanceX
 
     if (ConfigData->PixelSnapH)
         glyph.AdvanceX = (float)(int)(glyph.AdvanceX + 0.5f);
-    
+
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
     DirtyLookupTables = true;
     MetricsTotalSurface += (int)((glyph.U1 - glyph.U0) * ContainerAtlas->TexWidth + 1.99f) * (int)((glyph.V1 - glyph.V0) * ContainerAtlas->TexHeight + 1.99f);

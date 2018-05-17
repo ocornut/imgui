@@ -10,6 +10,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2018-XX-XX: OpenGL: Offset projection matrix and clipping rectangle by draw_data->DisplayPos (which will be non-zero for multi-viewport applications).
+//  2018-05-14: OpenGL: Making the call to glBindSampler() optional so 3.2 context won't fail if the function is a NULL pointer.
 //  2018-03-06: OpenGL: Added const char* glsl_version parameter to ImGui_ImplOpenGL3_Init() so user can override the GLSL version e.g. "#version 150".
 //  2018-02-23: OpenGL: Create the VAO in the render function so the setup can more easily be used with multiple shared GL context.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplSdlGL3_RenderDrawData() in the .h file so you can call it yourself.
@@ -132,7 +133,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glUseProgram(g_ShaderHandle);
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
-    glBindSampler(0, 0); // Rely on combined texture/sampler state.
+    if (glBindSampler) glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
 
     // Recreate the VAO every time 
     // (This is to easily allow multiple GL contexts. VAO are not shared among GL contexts, and we don't track creation/deletion of windows so we don't have an obvious key to use to cache them.)
@@ -189,7 +190,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Restore modified GL state
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
-    glBindSampler(0, last_sampler);
+    if (glBindSampler) glBindSampler(0, last_sampler);
     glActiveTexture(last_active_texture);
     glBindVertexArray(last_vertex_array);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);

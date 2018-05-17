@@ -25,6 +25,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: increase minimum size of a window with menus or fix the menu rendering so that it doesn't look odd.
  - window: double-clicking on title bar to minimize isn't consistent, perhaps move to single-click on left-most collapse icon?
  - window: expose contents size. (#1045)
+ - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
@@ -39,7 +40,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: would be good to be able to deep copy of ImDrawData (we have a deep copy of ImDrawList now).
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
  - drawlist: rendering: provide a way for imgui to output to a single/global vertex buffer, re-order indices only at the end of the frame (ref: https://gist.github.com/floooh/10388a0afbe08fce9e617d8aefa7d302)
- 
+ - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
+
  - main: considering adding an Init() function? some constructs are awkward in the implementation because of the lack of them.
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes

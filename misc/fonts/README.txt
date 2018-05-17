@@ -5,11 +5,12 @@ You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
 (Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
 
-Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
+Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
 
 In this document:
 
+- Readme First / FAQ
 - Using Icons
 - Fonts Loading Instructions
 - FreeType rasterizer, Small font sizes
@@ -18,6 +19,16 @@ In this document:
 - Embedding Fonts in Source Code
 - Credits/Licences for fonts included in this folder
 - Links, Other fonts
+
+
+---------------------------------------
+ README FIRST / FAQ
+---------------------------------------
+
+ - You can use the style editor ImGui::ShowStyleEditor() to browse your fonts and understand what's going on if you have an issue.
+ - Make sure your font ranges data are persistent (available during the call to GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
+ - Use C++11 u8"my text" syntax to encode literal strings as UTF-8. 
+ - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
 
 
 ---------------------------------------
