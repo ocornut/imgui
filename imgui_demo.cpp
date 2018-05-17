@@ -12,9 +12,9 @@
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
 
-// Message to beginner C/C++ programmers. About the meaning of 'static': in this demo code, we frequently we use 'static' variables inside functions. 
-// We do this as a way to gather code and data in the same place, just to make the demo code faster to read, faster to write, and use less code. 
-// A static variable persist across calls, so it is essentially like a global variable but declared inside the scope of the function. 
+// Message to beginner C/C++ programmers. About the meaning of 'static': in this demo code, we frequently we use 'static' variables inside functions.
+// We do this as a way to gather code and data in the same place, just to make the demo code faster to read, faster to write, and use less code.
+// A static variable persist across calls, so it is essentially like a global variable but declared inside the scope of the function.
 // It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
 // This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your function.
 
@@ -272,7 +272,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         if (ImGui::TreeNode("Basic"))
         {
             static int clicked = 0;
-            if (ImGui::Button("Button")) 
+            if (ImGui::Button("Button"))
                 clicked++;
             if (clicked & 1)
             {
@@ -419,7 +419,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
                     {
                         ImGui::Text("blah blah");
-                        ImGui::SameLine(); 
+                        ImGui::SameLine();
                         if (ImGui::SmallButton("button")) { };
                         ImGui::TreePop();
                     }
@@ -446,7 +446,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     {
                         // Node
                         bool node_open = ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Node %d", i);
-                        if (ImGui::IsItemClicked()) 
+                        if (ImGui::IsItemClicked())
                             node_clicked = i;
                         if (node_open)
                         {
@@ -554,7 +554,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 // - From C++11 you can use the u8"my text" syntax to encode literal strings as UTF-8
                 // - For earlier compiler, you may be able to encode your sources as UTF-8 (e.g. Visual Studio save your file as 'UTF-8 without signature')
                 // - FOR THIS DEMO FILE ONLY, BECAUSE WE WANT TO SUPPORT OLD COMPILERS, WE ARE *NOT* INCLUDING RAW UTF-8 CHARACTERS IN THIS SOURCE FILE.
-                //   Instead we are encoding a few strings with hexadecimal constants. Don't do this in your application! 
+                //   Instead we are encoding a few strings with hexadecimal constants. Don't do this in your application!
                 //   Please use u8"text in any language" in your application!
                 // Note that characters values are preserved even by InputText() if the font cannot be displayed, so you can safely copy & paste garbled characters into another application.
                 ImGui::TextWrapped("CJK text will only appears if the font was loaded with the appropriate CJK character ranges. Call io.Font->LoadFromFileTTF() manually to load extra character ranges. Read misc/fonts/README.txt for details.");
@@ -580,7 +580,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // If you decided that ImTextureID = MyEngineTexture*, then you can pass your MyEngineTexture* pointers to ImGui::Image(), and gather width/height through your own functions, etc.
             // Using ShowMetricsWindow() as a "debugger" to inspect the draw data that are being passed to your render will help you debug issues if you are confused about this.
             // Consider using the lower-level ImDrawList::AddImage() API, via ImGui::GetWindowDrawList()->AddImage().
-            ImTextureID my_tex_id = io.Fonts->TexID; 
+            ImTextureID my_tex_id = io.Fonts->TexID;
             float my_tex_w = (float)io.Fonts->TexWidth;
             float my_tex_h = (float)io.Fonts->TexHeight;
 
@@ -645,7 +645,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
 
             // Simplified one-liner Combo() API, using values packed in a single constant string
-            static int item_current_2 = 0; 
+            static int item_current_2 = 0;
             ImGui::Combo("combo 2 (one-liner)", &item_current_2, "aaaa\0bbbb\0cccc\0dddd\0eeee\0\0");
 
             // Simplified one-liner Combo() using an array of const char*
@@ -685,7 +685,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 {
                     char buf[32];
                     sprintf(buf, "Object %d", n);
-                    if (ImGui::Selectable(buf, selected == n)) 
+                    if (ImGui::Selectable(buf, selected == n))
                         selected = n;
                 }
                 ImGui::TreePop();
@@ -701,7 +701,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     if (ImGui::Selectable(buf, selection[n]))
                     {
                         if (!ImGui::GetIO().KeyCtrl)    // Clear selection when CTRL is not held
-                            memset(selection, 0, sizeof(selection)); 
+                            memset(selection, 0, sizeof(selection));
                         selection[n] ^= 1;
                     }
                 }
@@ -1007,11 +1007,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // The DragScalar, InputScalar, SliderScalar functions allow manipulating most common data types: signed/unsigned int/long long and float/double
             // To avoid polluting the public API with all possible combinations, we use the ImGuiDataType enum to pass the type, and argument-by-values are turned into argument-by-address.
             // This is the reason the test code below creates local variables to hold "zero" "one" etc. for each types.
-            // In practice, if you frequently use a given type that is not covered by the normal API entry points, you may want to wrap it yourself inside a 1 line function 
+            // In practice, if you frequently use a given type that is not covered by the normal API entry points, you may want to wrap it yourself inside a 1 line function
             // which can take typed values argument instead of void*, and then pass their address to the generic function. For example:
             //   bool SliderU64(const char *label, u64* value, u64 min = 0, u64 max = 0, const char* format = "%lld") { return SliderScalar(label, ImGuiDataType_U64, value, &min, &max, format); }
             // Below are helper variables we can take the address of to work-around this:
-            // Note that the SliderScalar function has a maximum usable range of half the natural type maximum, hence the /2 below. 
+            // Note that the SliderScalar function has a maximum usable range of half the natural type maximum, hence the /2 below.
             const ImS32   s32_zero = 0,   s32_one = 1,   s32_fifty = 50, s32_min = INT_MIN/2,   s32_max = INT_MAX/2,    s32_hi_a = INT_MAX/2 - 100,    s32_hi_b = INT_MAX/2;
             const ImU32   u32_zero = 0,   u32_one = 1,   u32_fifty = 50, u32_min = 0,           u32_max = UINT_MAX/2,   u32_hi_a = UINT_MAX/2 - 100,   u32_hi_b = UINT_MAX/2;
             const ImS64   s64_zero = 0,   s64_one = 1,   s64_fifty = 50, s64_min = LLONG_MIN/2, s64_max = LLONG_MAX/2,  s64_hi_a = LLONG_MAX/2 - 100,  s64_hi_b = LLONG_MAX/2;
@@ -1491,7 +1491,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::BeginChild("scrolling", ImVec2(0, ImGui::GetFrameHeightWithSpacing()*7 + 30), true, ImGuiWindowFlags_HorizontalScrollbar);
             for (int line = 0; line < lines; line++)
             {
-                // Display random stuff (for the sake of this trivial demo we are using basic Button+SameLine. If you want to create your own time line for a real application you may be better off 
+                // Display random stuff (for the sake of this trivial demo we are using basic Button+SameLine. If you want to create your own time line for a real application you may be better off
                 // manipulating the cursor position yourself, aka using SetCursorPos/SetCursorScreenPos to position the widgets yourself. You may also want to use the lower-level ImDrawList API)
                 int num_buttons = 10 + ((line & 1) ? line * 9 : line * 3);
                 for (int n = 0; n < num_buttons; n++)
@@ -1514,9 +1514,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::EndChild();
             ImGui::PopStyleVar(2);
             float scroll_x_delta = 0.0f;
-            ImGui::SmallButton("<<"); if (ImGui::IsItemActive()) scroll_x_delta = -ImGui::GetIO().DeltaTime * 1000.0f; ImGui::SameLine(); 
+            ImGui::SmallButton("<<"); if (ImGui::IsItemActive()) scroll_x_delta = -ImGui::GetIO().DeltaTime * 1000.0f; ImGui::SameLine();
             ImGui::Text("Scroll from code"); ImGui::SameLine();
-            ImGui::SmallButton(">>"); if (ImGui::IsItemActive()) scroll_x_delta = +ImGui::GetIO().DeltaTime * 1000.0f; ImGui::SameLine(); 
+            ImGui::SmallButton(">>"); if (ImGui::IsItemActive()) scroll_x_delta = +ImGui::GetIO().DeltaTime * 1000.0f; ImGui::SameLine();
             ImGui::Text("%.0f/%.0f", scroll_x, scroll_max_x);
             if (scroll_x_delta != 0.0f)
             {
@@ -1933,9 +1933,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
         ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos); 
+        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
         ImGui::SameLine(); ShowHelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
-        ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);   
+        ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
         ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
 
         if (ImGui::TreeNode("Keyboard, Mouse & Navigation State"))
@@ -2091,7 +2091,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         {
             ImGui::TextWrapped("You can use ImGui::GetMouseDragDelta(0) to query for the dragged amount on any widget.");
             for (int button = 0; button < 3; button++)
-                ImGui::Text("IsMouseDragging(%d):\n  w/ default threshold: %d,\n  w/ zero threshold: %d\n  w/ large threshold: %d", 
+                ImGui::Text("IsMouseDragging(%d):\n  w/ default threshold: %d,\n  w/ zero threshold: %d\n  w/ large threshold: %d",
                     button, ImGui::IsMouseDragging(button), ImGui::IsMouseDragging(button, 0.0f), ImGui::IsMouseDragging(button, 20.0f));
             ImGui::Button("Drag Me");
             if (ImGui::IsItemActive())
@@ -2166,7 +2166,7 @@ void ImGui::ShowFontSelector(const char* label)
                 io.FontDefault = io.Fonts->Fonts[n];
         ImGui::EndCombo();
     }
-    ImGui::SameLine(); 
+    ImGui::SameLine();
     ShowHelpMarker(
         "- Load additional fonts with io.Fonts->AddFontFromFileTTF().\n"
         "- The font atlas is built when calling io.Fonts->GetTexDataAsXXXX() or io.Fonts->Build().\n"
@@ -2195,7 +2195,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     ImGui::ShowFontSelector("Fonts##Selector");
 
     // Simplified Settings
-    if (ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f")) 
+    if (ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f"))
         style.GrabRounding = style.FrameRounding; // Make GrabRounding always the same value as FrameRounding
     { bool window_border = (style.WindowBorderSize > 0.0f); if (ImGui::Checkbox("WindowBorder", &window_border)) style.WindowBorderSize = window_border ? 1.0f : 0.0f; }
     ImGui::SameLine();
@@ -2283,8 +2283,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         filter.Draw("Filter colors", 200);
 
         static ImGuiColorEditFlags alpha_flags = 0;
-        ImGui::RadioButton("Opaque", &alpha_flags, 0); ImGui::SameLine(); 
-        ImGui::RadioButton("Alpha", &alpha_flags, ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine(); 
+        ImGui::RadioButton("Opaque", &alpha_flags, 0); ImGui::SameLine();
+        ImGui::RadioButton("Alpha", &alpha_flags, ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine();
         ImGui::RadioButton("Both", &alpha_flags, ImGuiColorEditFlags_AlphaPreviewHalf);
 
         ImGui::BeginChild("#colors", ImVec2(0, 300), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
@@ -2526,7 +2526,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     ImGuiWindowFlags flags = auto_resize ? ImGuiWindowFlags_AlwaysAutoResize : 0;
     if (ImGui::Begin("Example: Constrained Resize", p_open, flags))
     {
-        const char* desc[] = 
+        const char* desc[] =
         {
             "Resize vertical only",
             "Resize horizontal only",
@@ -2575,7 +2575,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
             if (ImGui::MenuItem("Top-right", NULL, corner == 1)) corner = 1;
             if (ImGui::MenuItem("Bottom-left", NULL, corner == 2)) corner = 2;
             if (ImGui::MenuItem("Bottom-right", NULL, corner == 3)) corner = 3;
-            if (p_open && ImGui::MenuItem("Close")) *p_open = false; 
+            if (p_open && ImGui::MenuItem("Close")) *p_open = false;
             ImGui::EndPopup();
         }
         ImGui::End();
@@ -2609,7 +2609,7 @@ static void ShowExampleAppWindowTitles(bool*)
     ImGui::End();
 }
 
-// Demonstrate using the low-level ImDrawList to draw custom shapes. 
+// Demonstrate using the low-level ImDrawList to draw custom shapes.
 static void ShowExampleAppCustomRendering(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(350,560), ImGuiCond_FirstUseEver);
