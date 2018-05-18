@@ -31,10 +31,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 !- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
 
- - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded renderering.
+ - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
- - drawlist: primtiives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
+ - drawlist: primitives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
  - drawlist: non-AA strokes have gaps between points (#593, #288), especially RenderCheckmark().
  - drawlist: would be good to be able to deep copy of ImDrawData (we have a deep copy of ImDrawList now).
@@ -50,7 +50,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
- - widgets: add visauls for Disabled/ReadOnly mode and expose publicly (#211)
+ - widgets: add visuals for Disabled/ReadOnly mode and expose publicly (#211)
  - widgets: add always-allow-overlap mode.
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
@@ -67,13 +67,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
- - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependant). actually a very old bug but no one appears to have noticed it.
+ - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)
  - input text multi-line: behave better when user changes input buffer while editing is active (even though it is illegal behavior). namely, the change of buffer can create a scrollbar glitch (#725)
  - input text multi-line: better horizontal scrolling support (#383, #1224)
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
+ - input text: what's the easiest way to implement a nice IP/Mac address input editor?
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
@@ -86,12 +87,12 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - layout: BeginGroup() needs a border option. (~#1496)
- - layout: vertical alignement of mixed height items (e.g. buttons) within a same line (#1284)
+ - layout: vertical alignment of mixed height items (e.g. buttons) within a same line (#1284)
  
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
  - columns: headers. reorderable. (#513, #125)
- - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-critera. notify user when sort order changed.
+ - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-criteria. notify user when sort order changed.
  - columns: option to alternate background colors on odd/even scanlines.  
  - columns: allow columns to recurse. 
  - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them. 
@@ -104,7 +105,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - coloredit: it is still somehow awkward to copy colors around (unless going through Hex mode).
 
  - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
- - plot: PlotLines() should use the polygon-stroke facilities, less verticles (currently issues with averaging normals)
+ - plot: PlotLines() should use the polygon-stroke facilities, less vertices (currently issues with averaging normals)
  - plot: make it easier for user to draw extra stuff into the graph (e.g: draw basis, highlight certain points, 2d plots, multiple plots)
  - plot: "smooth" automatic scale over time, user give an input 0.0(full user scale) 1.0(full derived from value)
  - plot: option/feature: draw the zero line
@@ -161,7 +162,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - popups: border options. richer api like BeginChild() perhaps? (#197)
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
- - tooltip: allow tooltips with timers? or general timer policy? (instaneous vs timed)
+ - tooltip: allow tooltips with timers? or general timer policy? (instantaneous vs timed)
  
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - menus: menu bars inside modals windows are acting weird.
@@ -229,7 +230,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
- - font: finish CustomRectRegister() to allow mapping unicode codepoint to custom texture data 
+ - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
@@ -276,8 +277,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
  - misc: ImVector: erase_unsorted() helper
--  misc: imgui_cpp: perhaps a misc/ header file with more friendly helper (e.g. type-infer versions of DragScalar, vector<> variants if appropriate for some functions).
+ - misc: imgui_cpp: perhaps a misc/ header file with more friendly helper (e.g. type-infer versions of DragScalar, vector<> variants if appropriate for some functions).
 
+ - backend: bgfx? https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
+ - backend: freeglut (#801, #795)
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
  - web/emscriptem: tweak OpenGL renderers to support OpenGL ES. (#1713, #336)
  - web/emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
