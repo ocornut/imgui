@@ -3638,6 +3638,11 @@ static void ImGui::UpdateViewports()
     IM_ASSERT(g.MouseRefViewport != NULL);
 }
 
+static bool IsWindowActiveAndVisible(ImGuiWindow* window)
+{
+    return (window->HiddenFrames == 0) && (window->Active);
+}
+
 void ImGui::UpdatePlatformWindows()
 {
     ImGuiContext& g = *GImGui;
@@ -3672,7 +3677,9 @@ void ImGui::UpdatePlatformWindows()
         // New windows that appears directly in a new viewport won't always have a size on their frame
         if (viewport->Size.x <= 0 || viewport->Size.y <= 0)
             continue;
-        if (viewport->Window && viewport->Window->HiddenFrames > 0)
+
+        // Ignore viewport that are hosting a hidden window (also check the Active flag, as the implicit Debug window will be registering its viewport then immediately disabled)
+        if (viewport->Window && !IsWindowActiveAndVisible(viewport->Window))
             continue;
 
         // Update viewport flags
@@ -4514,7 +4521,7 @@ static void AddWindowToDrawData(ImGuiWindow* window, int layer)
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
         ImGuiWindow* child = window->DC.ChildWindows[i];
-        if (child->Active && child->HiddenFrames == 0) // Clipped children may have been marked not active
+        if (IsWindowActiveAndVisible(child)) // Clipped children may have been marked not active
             AddWindowToDrawData(child, layer);
     }
 }
@@ -4657,7 +4664,7 @@ void ImGui::EndFrame()
         ImGuiViewportP* viewport = g.Viewports[i];
         if (viewport->LastFrameActive < g.FrameCount || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f)
             continue;
-        if (viewport->Window && viewport->Window->HiddenFrames > 0)
+        if (viewport->Window && !IsWindowActiveAndVisible(viewport->Window))
             continue;
         if (i > 0)
             IM_ASSERT(viewport->Window != NULL);
@@ -4704,10 +4711,10 @@ void ImGui::Render()
     for (int n = 0; n != g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
-        if (window->Active && window->HiddenFrames == 0 && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != window_to_render_front_most)
+        if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != window_to_render_front_most)
             AddRootWindowToDrawData(window);
     }
-    if (window_to_render_front_most && window_to_render_front_most->Active && window_to_render_front_most->HiddenFrames == 0) // NavWindowingTarget is always temporarily displayed as the front-most window
+    if (window_to_render_front_most && IsWindowActiveAndVisible(window_to_render_front_most)) // NavWindowingTarget is always temporarily displayed as the front-most window
         AddRootWindowToDrawData(window_to_render_front_most);
 
     // Draw software mouse cursor if requested
