@@ -233,6 +233,7 @@ static void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
 bool    ImGui_ImplGlfwGL2_Init(GLFWwindow* window, bool install_callbacks)
 {
     g_Window = window;
+    g_Time = 0;
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
