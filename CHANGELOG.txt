@@ -45,6 +45,7 @@ Other Changes:
 
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
  - TreeNode: Fixed nodes with ImGuiTreeNodeFlags_Leaf flag always returning true which was meaningless.
+ - ColorEdit3, ColorEdit4, ColorButton: Added ImGuiColorEditFlags_NoDragDrop flag to disable ColorEditX as drag target and ColorButton as drag source. (#1826) 
 
 -----------------------------------------------------------------------
 
