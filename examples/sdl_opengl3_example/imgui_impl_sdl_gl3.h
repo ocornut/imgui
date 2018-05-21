@@ -12,6 +12,10 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// About GLSL version:
+// The 'glsl_version' initialization parameter defaults to "#version 150" if NULL.
+// Only override if your GL version doesn't handle this GLSL version. Keep NULL if unsure!
+
 struct SDL_Window;
 typedef union SDL_Event SDL_Event;
 

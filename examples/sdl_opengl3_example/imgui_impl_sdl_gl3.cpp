@@ -358,7 +358,7 @@ void    ImGui_ImplSdlGL3_InvalidateDeviceObjects()
 
 bool    ImGui_ImplSdlGL3_Init(SDL_Window* window, const char* glsl_version)
 {
-    // Store GL version string so we can refer to it later in case we recreate shaders.
+    // Store GLSL version string so we can refer to it later in case we recreate shaders. Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
     if (glsl_version == NULL)
         glsl_version = "#version 150";
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(g_GlslVersion));
