@@ -52,7 +52,7 @@
 
 // GLFW data
 static GLFWwindow*  g_Window = NULL;
-static double       g_Time = 0.0f;
+static double       g_Time = 0.0;
 static bool         g_MouseJustPressed[3] = { false, false, false };
 static GLFWcursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 
@@ -358,7 +358,7 @@ static void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
 bool    ImGui_ImplGlfwGL3_Init(GLFWwindow* window, bool install_callbacks, const char* glsl_version)
 {
     g_Window = window;
-    g_Time = 0;
+    g_Time = 0.0;
 
     // Store GL version string so we can refer to it later in case we recreate shaders.
     if (glsl_version == NULL)
