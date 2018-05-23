@@ -3555,22 +3555,25 @@ static void ImGui::UpdateViewports()
             continue;
         }
 
-        // Apply Position and Size (from Platform Window to ImGui) if requested. 
-        // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
-        if (viewport->PlatformRequestMove)
-            viewport->Pos = g.PlatformIO.Platform_GetWindowPos(viewport);
-        if (viewport->PlatformRequestResize)
-            viewport->Size = g.PlatformIO.Platform_GetWindowSize(viewport);
+        if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+        {
+            // Apply Position and Size (from Platform Window to ImGui) if requested. 
+            // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
+            if (viewport->PlatformRequestMove)
+                viewport->Pos = g.PlatformIO.Platform_GetWindowPos(viewport);
+            if (viewport->PlatformRequestResize)
+                viewport->Size = g.PlatformIO.Platform_GetWindowSize(viewport);
 
-        // Translate imgui windows when a Host Viewport has been moved
-        ImVec2 delta = viewport->Pos - viewport->LastPos;
-        if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) && (delta.x != 0.0f || delta.y != 0.0f))
-            for (int window_n = 0; window_n < g.Windows.Size; window_n++)
-                if (g.Windows[window_n]->Viewport == viewport)
-                    TranslateWindow(g.Windows[window_n], delta);
+            // Translate imgui windows when a Host Viewport has been moved
+            ImVec2 delta = viewport->Pos - viewport->LastPos;
+            if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) && (delta.x != 0.0f || delta.y != 0.0f))
+                for (int window_n = 0; window_n < g.Windows.Size; window_n++)
+                    if (g.Windows[window_n]->Viewport == viewport)
+                        TranslateWindow(g.Windows[window_n], delta);
 
-        // Update monitor (we'll use this info to clamp windows and save windows lost in a removed monitor)
-        viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
+            // Update monitor (we'll use this info to clamp windows and save windows lost in a removed monitor)
+            viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
+        }
 
         // Update DPI scale
         float new_dpi_scale;
