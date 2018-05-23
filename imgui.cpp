@@ -13203,7 +13203,11 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             // FIXME-DRAG
             //SetNextWindowPos(g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding);
             //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This is better but e.g ColorButton with checkboard has issue with transparent colors :(
-            SetNextWindowPos(g.IO.MousePos);
+
+            // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
+            // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
+            ImVec2 tooltip_pos = g.IO.MousePos + ImVec2(16 * g.Style.MouseCursorScale, 8 * g.Style.MouseCursorScale);
+            SetNextWindowPos(tooltip_pos);
             PushStyleColor(ImGuiCol_PopupBg, GetStyleColorVec4(ImGuiCol_PopupBg) * ImVec4(1.0f, 1.0f, 1.0f, 0.6f));
             BeginTooltip();
         }
