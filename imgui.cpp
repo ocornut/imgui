@@ -8192,11 +8192,18 @@ ImDrawList* ImGui::GetWindowDrawList()
     return window->DrawList;
 }
 
+float ImGui::GetWindowDpiScale()
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentViewport != NULL);
+    return g.CurrentViewport->DpiScale;
+}
+
 ImGuiViewport* ImGui::GetWindowViewport()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
-    IM_ASSERT(window->Viewport != NULL);
-    return window->Viewport;
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.CurrentViewport != NULL && g.CurrentViewport == g.CurrentWindow->Viewport);
+    return g.CurrentViewport;
 }
 
 ImFont* ImGui::GetFont()

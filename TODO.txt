@@ -264,6 +264,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
 
+ - examples: move ImGui::NewFrame() out of the backend _NewFrame() ?
+ - viewport: make it possible to have no main/hosting viewport
  - viewport: use getfocus/setfocus api to synchronize imgui<>platform focus better (e.g imgui-side ctrl-tab can focus os window, OS initial setup and alt-tab can focus imgui window etc.)
  - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
  - viewport: vulkan renderer implementation. 
