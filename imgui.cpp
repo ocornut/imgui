@@ -5320,14 +5320,15 @@ bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags ext
     PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
     PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
     PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-    return BeginChild(id, size, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding | extra_flags);
+    bool ret = BeginChild(id, size, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding | extra_flags);
+    PopStyleVar(3);
+    PopStyleColor();
+    return ret;
 }
 
 void ImGui::EndChildFrame()
 {
     EndChild();
-    PopStyleVar(3);
-    PopStyleColor();
 }
 
 // Save and compare stack sizes on Begin()/End() to detect usage errors
@@ -11065,13 +11066,13 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         }
 
     // Horizontally align ourselves with the framed text
-    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.FramePadding.x, style.WindowPadding.y));
-
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
-    if (!Begin(name, NULL, window_flags))
+    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.FramePadding.x, style.WindowPadding.y));
+    bool ret = Begin(name, NULL, window_flags);
+    PopStyleVar();
+    if (!ret)
     {
         EndPopup();
-        PopStyleVar();
         IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
         return false;
     }
@@ -11081,7 +11082,6 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 void ImGui::EndCombo()
 {
     EndPopup();
-    PopStyleVar();
 }
 
 // Old API, prefer using BeginCombo() nowadays if you can.
@@ -11436,11 +11436,11 @@ bool ImGui::BeginMainMenuBar()
     PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0,0));
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
     bool is_open = Begin("##MainMenuBar", NULL, window_flags) && BeginMenuBar();
+    PopStyleVar(2);
     g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
     if (!is_open)
     {
         End();
-        PopStyleVar(2);
         return false;
     }
     return true;
@@ -11456,7 +11456,6 @@ void ImGui::EndMainMenuBar()
         FocusFrontMostActiveWindow(g.NavWindow);
 
     End();
-    PopStyleVar(2);
 }
 
 bool ImGui::BeginMenuBar()
