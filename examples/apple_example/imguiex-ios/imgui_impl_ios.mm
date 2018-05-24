@@ -277,8 +277,7 @@ void ImGui_KeyboardCallback(uSynergyCookie cookie, uint16_t key,
         // If this key maps to a character input, apply it
         int charForKeycode = (modifiers & USYNERGY_MODIFIER_SHIFT) ? g_keycodeCharShifted[scanCode] : g_keycodeCharUnshifted[scanCode];
         io.AddInputCharacter((unsigned short)charForKeycode);
-    }
-    
+    }   
 }
 
 void ImGui_JoystickCallback(uSynergyCookie cookie, uint8_t joyNum, uint16_t buttons, int8_t leftStickX, int8_t leftStickY, int8_t rightStickX, int8_t rightStickY)
@@ -461,14 +460,15 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 
 - (void)setupImGuiHooks
 {
-    ImGuiIO &io = ImGui::GetIO();
+    ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO();
     
     [self setupKeymaps];
     
     // Account for retina display for glScissor
     g_displayScale = [[UIScreen mainScreen] scale];
     
-    ImGuiStyle &style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
     style.TouchExtraPadding = ImVec2( 4.0, 4.0 );
     
     io.RenderDrawListsFn = ImGui_ImplIOS_RenderDrawLists;
@@ -532,9 +532,8 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     // Create a background thread for synergy
     _synergyQueue = dispatch_queue_create( "imgui-usynergy", NULL );
     dispatch_async( _synergyQueue, ^{
-        while (1) {
-            uSynergyUpdate( &_synergyCtx );
-        }
+        while (1)
+            uSynergyUpdate(&_synergyCtx);
     });
 }
 
@@ -569,24 +568,20 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 - (void)newFrame
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiStyle &style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
     
     if (!g_FontTexture)
-    {
         ImGui_ImplIOS_CreateDeviceObjects();
-    }
     
-    io.DisplaySize = ImVec2( _view.bounds.size.width, _view.bounds.size.height );
+    io.DisplaySize = ImVec2(_view.bounds.size.width, _view.bounds.size.height);
 
     io.MouseDrawCursor = g_synergyPtrActive;
     if (g_synergyPtrActive)
     {
-        style.TouchExtraPadding = ImVec2( 0.0, 0.0 );
-        io.MousePos = ImVec2( g_mousePosX, g_mousePosY );
+        style.TouchExtraPadding = ImVec2(0.0, 0.0);
+        io.MousePos = ImVec2(g_mousePosX, g_mousePosY);
         for (int i=0; i < 3; i++)
-        {
             io.MouseDown[i] = g_MousePressed[i];
-        }
 
         // This is an arbitrary scaling factor that works for me. Not sure what units these mousewheel values from synergy are supposed to be in.
         io.MouseWheel = g_mouseWheelY / 500.0;
@@ -595,8 +590,8 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
     else
     {
         // Synergy not active, use touch events
-        style.TouchExtraPadding = ImVec2( 4.0, 4.0 );
-        io.MousePos = ImVec2(_touchPos.x, _touchPos.y );
+        style.TouchExtraPadding = ImVec2(4.0, 4.0);
+        io.MousePos = ImVec2(_touchPos.x, _touchPos.y);
         if ((_mouseDown) || (_mouseTapped))
         {
             io.MouseDown[0] = true;
