@@ -215,6 +215,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
+ - drag and drop: allow drag target to alter tooltip / and or disable tooltip.
  - drag and drop: add demo. (#143, #479)
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
  - drag and drop: test with reordering nodes (in a list, or a tree node). (#143)
@@ -296,6 +297,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - demo: demonstration Plot offset
  - examples: window minimize, maximize (#583)
  - examples: provide a zero-framerate/idle example.
+ - examples: apple: apple_example should be using modern GL3.
  - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
