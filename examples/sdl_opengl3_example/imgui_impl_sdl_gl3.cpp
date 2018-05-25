@@ -15,6 +15,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-05-25: OpenGL: Removed unnecessary backup/restore of GL_ELEMENT_ARRAY_BUFFER_BINDING since this is part of the VAO state.
+//  2018-05-14: OpenGL: Making the call to glBindSampler() optional so 3.2 context won't fail if the function is a NULL pointer.
 //  2018-05-09: Misc: Fixed clipboard paste memory leak (we didn't call SDL_FreeMemory on the data returned by SDL_GetClipboardText).
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-03-06: OpenGL: Added const char* glsl_version parameter to ImGui_ImplSdlGL3_Init() so user can override the GLSL version e.g. "#version 150".
