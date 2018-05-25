@@ -711,7 +711,9 @@
 #pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"        // warning: format not a string literal, format string not checked
 #pragma GCC diagnostic ignored "-Wstrict-overflow"          // warning: assuming signed overflow does not occur when assuming that (X - c) > X is always false
-#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: ‘memset/memcpy’ clearing/writing an object of type ‘xxxx’ with no trivial copy-assignment; use assignment or value-initialization instead
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#endif
 #endif
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
@@ -5946,14 +5948,15 @@ bool ImGui::BeginChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags ext
     PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
     PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
     PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
-    return BeginChild(id, size, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding | extra_flags);
+    bool ret = BeginChild(id, size, true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding | extra_flags);
+    PopStyleVar(3);
+    PopStyleColor();
+    return ret;
 }
 
 void ImGui::EndChildFrame()
 {
     EndChild();
-    PopStyleVar(3);
-    PopStyleColor();
 }
 
 // Save and compare stack sizes on Begin()/End() to detect usage errors
@@ -8624,8 +8627,12 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     bool pressed = false;
     bool hovered = ItemHoverable(bb, id);
 
+    // Drag source doesn't report as hovered
+    if (hovered && g.DragDropActive && g.DragDropPayload.SourceId == id)
+        hovered = false;
+
     // Special mode for Drag and Drop where holding button pressed for a long time while dragging another item triggers the button
-    if ((flags & ImGuiButtonFlags_PressedOnDragDropHold) && g.DragDropActive && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
+    if (g.DragDropActive && (flags & ImGuiButtonFlags_PressedOnDragDropHold) && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoHoldToOpenOthers))
         if (IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem))
         {
             hovered = true;
@@ -12008,13 +12015,13 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
         }
 
     // Horizontally align ourselves with the framed text
-    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.FramePadding.x, style.WindowPadding.y));
-
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_Popup | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoSavedSettings;
-    if (!Begin(name, NULL, window_flags))
+    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(style.FramePadding.x, style.WindowPadding.y));
+    bool ret = Begin(name, NULL, window_flags);
+    PopStyleVar();
+    if (!ret)
     {
         EndPopup();
-        PopStyleVar();
         IM_ASSERT(0);   // This should never happen as we tested for IsPopupOpen() above
         return false;
     }
@@ -12024,7 +12031,6 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 void ImGui::EndCombo()
 {
     EndPopup();
-    PopStyleVar();
 }
 
 // Old API, prefer using BeginCombo() nowadays if you can.
@@ -12379,11 +12385,11 @@ bool ImGui::BeginMainMenuBar()
     PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0,0));
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
     bool is_open = Begin("##MainMenuBar", NULL, window_flags) && BeginMenuBar();
+    PopStyleVar(2);
     g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
     if (!is_open)
     {
         End();
-        PopStyleVar(2);
         return false;
     }
     return true;
@@ -12399,7 +12405,6 @@ void ImGui::EndMainMenuBar()
         FocusFrontMostActiveWindow(g.NavWindow);
 
     End();
-    PopStyleVar(2);
 }
 
 bool ImGui::BeginMenuBar()
@@ -12758,7 +12763,8 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
 
     // Drag and Drop Source
-    if (g.ActiveId == id && BeginDragDropSource()) // NB: The ActiveId test is merely an optional micro-optimization
+    // NB: The ActiveId test is merely an optional micro-optimization, BeginDragDropSource() does the same test.
+    if (g.ActiveId == id && !(flags & ImGuiColorEditFlags_NoDragDrop) && BeginDragDropSource())
     {
         if (flags & ImGuiColorEditFlags_NoAlpha)
             SetDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F, &col, sizeof(float) * 3, ImGuiCond_Once);
@@ -12768,7 +12774,6 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
         SameLine();
         TextUnformatted("Color");
         EndDragDropSource();
-        hovered = false;
     }
 
     // Tooltip
@@ -13049,7 +13054,8 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     EndGroup();
 
     // Drag and Drop Target
-    if ((window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect) && BeginDragDropTarget()) // NB: The flag test is merely an optional micro-optimization, BeginDragDropTarget() does the same test.
+    // NB: The flag test is merely an optional micro-optimization, BeginDragDropTarget() does the same test.
+    if ((window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HoveredRect) && !(flags & ImGuiColorEditFlags_NoDragDrop) && BeginDragDropTarget())
     {
         if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
         {
@@ -14114,6 +14120,10 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             if (g.ActiveId == source_id) // Allow the underlying widget to display/return hovered during the mouse release frame, else we would get a flicker.
                 g.ActiveIdAllowOverlap = is_hovered;
         }
+        else
+        {
+            g.ActiveIdAllowOverlap = false;
+        }
         if (g.ActiveId != source_id)
             return false;
         source_parent_id = window->IDStack.back();
@@ -14145,7 +14155,11 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             // FIXME-DRAG
             //SetNextWindowPos(g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding);
             //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This is better but e.g ColorButton with checkboard has issue with transparent colors :(
-            SetNextWindowPos(g.IO.MousePos);
+
+            // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
+            // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
+            ImVec2 tooltip_pos = g.IO.MousePos + ImVec2(16 * g.Style.MouseCursorScale, 8 * g.Style.MouseCursorScale);
+            SetNextWindowPos(tooltip_pos);
             PushStyleColor(ImGuiCol_PopupBg, GetStyleColorVec4(ImGuiCol_PopupBg) * ImVec4(1.0f, 1.0f, 1.0f, 0.6f));
             BeginTooltip();
         }
@@ -14659,8 +14673,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             const char* input_source_names[] = { "None", "Mouse", "Nav", "NavKeyboard", "NavGamepad" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT);
             ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
             ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
-            ImGui::Text("HoveredId: 0x%08X/0x%08X (%.2f sec)", g.HoveredId, g.HoveredIdPreviousFrame, g.HoveredIdTimer); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
-            ImGui::Text("ActiveId: 0x%08X/0x%08X (%.2f sec), ActiveIdSource: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, input_source_names[g.ActiveIdSource]);
+            ImGui::Text("HoveredId: 0x%08X/0x%08X (%.2f sec), AllowOverlap: %d", g.HoveredId, g.HoveredIdPreviousFrame, g.HoveredIdTimer, g.HoveredIdAllowOverlap); // Data is "in-flight" so depending on when the Metrics window is called we may see current frame information or not
+            ImGui::Text("ActiveId: 0x%08X/0x%08X (%.2f sec), AllowOverlap: %d, Source: %s", g.ActiveId, g.ActiveIdPreviousFrame, g.ActiveIdTimer, g.ActiveIdAllowOverlap, input_source_names[g.ActiveIdSource]);
             ImGui::Text("ActiveIdWindow: '%s'", g.ActiveIdWindow ? g.ActiveIdWindow->Name : "NULL");
             ImGui::Text("MovingWindow: '%s'", g.MovingWindow ? g.MovingWindow->Name : "NULL");
             ImGui::Text("NavWindow: '%s'", g.NavWindow ? g.NavWindow->Name : "NULL");

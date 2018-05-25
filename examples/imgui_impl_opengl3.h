@@ -6,7 +6,11 @@
 //  [X] User texture binding. Use 'GLUint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 //  [X] Multi-viewport rendering (when ImGuiConfigFlags_ViewportsEnable is enabled).
 
-IMGUI_API bool  ImGui_ImplOpenGL3_Init(const char* glsl_version = NULL);
+// About GLSL version:
+// The 'glsl_version' initialization parameter defaults to "#version 150" if NULL.
+// Only override if your GL version doesn't handle this GLSL version. Keep NULL if unsure!
+
+IMGUI_API bool  ImGui_ImplOpenGL3_Init(const char* glsl_version = "#version 150");
 IMGUI_API void  ImGui_ImplOpenGL3_Shutdown();
 IMGUI_API void  ImGui_ImplOpenGL3_NewFrame();
 IMGUI_API void  ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data);

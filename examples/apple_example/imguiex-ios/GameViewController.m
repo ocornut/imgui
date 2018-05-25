@@ -8,11 +8,9 @@
 #import "imgui_impl_ios.h"
 #import "debug_hud.h"
 
-#define BUFFER_OFFSET(i) ((char *)NULL + (i))
-
-#define SERVERNAME_KEY @"ServerName"
-
-#define SERVERNAME_ALERT_TAG (10)
+#define BUFFER_OFFSET(i)        ((char *)NULL + (i))
+#define SERVERNAME_KEY          @"ServerName"
+#define SERVERNAME_ALERT_TAG    10
 
 // Uniform index.
 enum
@@ -20,85 +18,80 @@ enum
     UNIFORM_MODELVIEWPROJECTION_MATRIX,
     UNIFORM_NORMAL_MATRIX,
     UNIFORM_DIFFUSE_COLOR,
-    
-    NUM_UNIFORMS
+    UNIFORM_COUNT_
 };
-GLint uniforms[NUM_UNIFORMS];
+static GLint uniforms[UNIFORM_COUNT_];
 
 // Attribute index.
 enum
 {
     ATTRIB_VERTEX,
     ATTRIB_NORMAL,
-    NUM_ATTRIBUTES
+    ATTRIB_COUNT_
 };
 
-GLfloat gCubeVertexData[216] = 
+static const GLfloat gCubeVertexData[216] = 
 {
     // Data layout for each line below is:
-    // positionX, positionY, positionZ,     normalX, normalY, normalZ,
-    0.5f, -0.5f, -0.5f,        1.0f, 0.0f, 0.0f,
-    0.5f, 0.5f, -0.5f,         1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, 0.5f,         1.0f, 0.0f, 0.0f,
-    0.5f, -0.5f, 0.5f,         1.0f, 0.0f, 0.0f,
-    0.5f, 0.5f, -0.5f,          1.0f, 0.0f, 0.0f,
-    0.5f, 0.5f, 0.5f,         1.0f, 0.0f, 0.0f,
+    // pos x/y/z,           normal x/y/z,
+    0.5f, -0.5f, -0.5f,     1.0f, 0.0f, 0.0f,
+    0.5f,  0.5f, -0.5f,     1.0f, 0.0f, 0.0f,
+    0.5f, -0.5f,  0.5f,     1.0f, 0.0f, 0.0f,
+    0.5f, -0.5f,  0.5f,     1.0f, 0.0f, 0.0f,
+    0.5f,  0.5f, -0.5f,     1.0f, 0.0f, 0.0f,
+    0.5f,  0.5f,  0.5f,     1.0f, 0.0f, 0.0f,
     
-    0.5f, 0.5f, -0.5f,         0.0f, 1.0f, 0.0f,
-    -0.5f, 0.5f, -0.5f,        0.0f, 1.0f, 0.0f,
-    0.5f, 0.5f, 0.5f,          0.0f, 1.0f, 0.0f,
-    0.5f, 0.5f, 0.5f,          0.0f, 1.0f, 0.0f,
-    -0.5f, 0.5f, -0.5f,        0.0f, 1.0f, 0.0f,
-    -0.5f, 0.5f, 0.5f,         0.0f, 1.0f, 0.0f,
+     0.5f, 0.5f, -0.5f,     0.0f, 1.0f, 0.0f,
+    -0.5f, 0.5f, -0.5f,     0.0f, 1.0f, 0.0f,
+     0.5f, 0.5f,  0.5f,     0.0f, 1.0f, 0.0f,
+     0.5f, 0.5f,  0.5f,     0.0f, 1.0f, 0.0f,
+    -0.5f, 0.5f, -0.5f,     0.0f, 1.0f, 0.0f,
+    -0.5f, 0.5f,  0.5f,     0.0f, 1.0f, 0.0f,
     
-    -0.5f, 0.5f, -0.5f,        -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,       -1.0f, 0.0f, 0.0f,
-    -0.5f, 0.5f, 0.5f,         -1.0f, 0.0f, 0.0f,
-    -0.5f, 0.5f, 0.5f,         -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, -0.5f,       -1.0f, 0.0f, 0.0f,
-    -0.5f, -0.5f, 0.5f,        -1.0f, 0.0f, 0.0f,
+    -0.5f,  0.5f, -0.5f,    -1.0f, 0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,    -1.0f, 0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,    -1.0f, 0.0f, 0.0f,
+    -0.5f,  0.5f,  0.5f,    -1.0f, 0.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,    -1.0f, 0.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,    -1.0f, 0.0f, 0.0f,
     
-    -0.5f, -0.5f, -0.5f,       0.0f, -1.0f, 0.0f,
-    0.5f, -0.5f, -0.5f,        0.0f, -1.0f, 0.0f,
-    -0.5f, -0.5f, 0.5f,        0.0f, -1.0f, 0.0f,
-    -0.5f, -0.5f, 0.5f,        0.0f, -1.0f, 0.0f,
-    0.5f, -0.5f, -0.5f,        0.0f, -1.0f, 0.0f,
-    0.5f, -0.5f, 0.5f,         0.0f, -1.0f, 0.0f,
+    -0.5f, -0.5f, -0.5f,    0.0f, -1.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,    0.0f, -1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,    0.0f, -1.0f, 0.0f,
+    -0.5f, -0.5f,  0.5f,    0.0f, -1.0f, 0.0f,
+     0.5f, -0.5f, -0.5f,    0.0f, -1.0f, 0.0f,
+     0.5f, -0.5f,  0.5f,    0.0f, -1.0f, 0.0f,
     
-    0.5f, 0.5f, 0.5f,          0.0f, 0.0f, 1.0f,
-    -0.5f, 0.5f, 0.5f,         0.0f, 0.0f, 1.0f,
-    0.5f, -0.5f, 0.5f,         0.0f, 0.0f, 1.0f,
-    0.5f, -0.5f, 0.5f,         0.0f, 0.0f, 1.0f,
-    -0.5f, 0.5f, 0.5f,         0.0f, 0.0f, 1.0f,
-    -0.5f, -0.5f, 0.5f,        0.0f, 0.0f, 1.0f,
+     0.5f,  0.5f, 0.5f,     0.0f, 0.0f, 1.0f,
+    -0.5f,  0.5f, 0.5f,     0.0f, 0.0f, 1.0f,
+     0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f,
+     0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f,
+    -0.5f,  0.5f, 0.5f,     0.0f, 0.0f, 1.0f,
+    -0.5f, -0.5f, 0.5f,     0.0f, 0.0f, 1.0f,
     
-    0.5f, -0.5f, -0.5f,        0.0f, 0.0f, -1.0f,
-    -0.5f, -0.5f, -0.5f,       0.0f, 0.0f, -1.0f,
-    0.5f, 0.5f, -0.5f,         0.0f, 0.0f, -1.0f,
-    0.5f, 0.5f, -0.5f,         0.0f, 0.0f, -1.0f,
-    -0.5f, -0.5f, -0.5f,       0.0f, 0.0f, -1.0f,
-    -0.5f, 0.5f, -0.5f,        0.0f, 0.0f, -1.0f
+     0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f,
+     0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f,
+    -0.5f, -0.5f, -0.5f,    0.0f, 0.0f, -1.0f,
+    -0.5f,  0.5f, -0.5f,    0.0f, 0.0f, -1.0f
 };
 
 @interface GameViewController () <UIAlertViewDelegate>
 {
-    GLuint _program;
-    
-    GLKMatrix4 _modelViewProjectionMatrix;
-    GLKMatrix3 _normalMatrix;
-    float _rotation;
-    
-    GLuint _vertexArray;
-    GLuint _vertexBuffer;
-    
-    DebugHUD _hud;
+    GLuint      _program;
+    GLKMatrix4  _modelViewProjectionMatrix;
+    GLKMatrix3  _normalMatrix;
+    float       _rotation;
+    GLuint      _vertexArray;
+    GLuint      _vertexBuffer;
+    DebugHUD    _hud;
 }
-@property (strong, nonatomic) EAGLContext *context;
-@property (strong, nonatomic) GLKBaseEffect *effect;
-@property (strong, nonatomic) ImGuiHelper *imgui;
-@property (weak, nonatomic) IBOutlet UIButton *btnServername;
-
-@property (strong, nonatomic) NSString *serverName;
+@property (strong, nonatomic) EAGLContext*      context;
+@property (strong, nonatomic) GLKBaseEffect*    effect;
+@property (strong, nonatomic) ImGuiHelper*      imgui;
+@property (weak, nonatomic) IBOutlet UIButton*  btnServername;
+@property (strong, nonatomic) NSString*         serverName;
 
 - (IBAction)onServernameTapped:(id)sender;
 
@@ -106,7 +99,7 @@ GLfloat gCubeVertexData[216] =
 - (void)tearDownGL;
 
 - (BOOL)loadShaders;
-- (BOOL)compileShader:(GLuint *)shader type:(GLenum)type file:(NSString *)file;
+- (BOOL)compileShader:(GLuint*)shader type:(GLenum)type file:(NSString*)file;
 - (BOOL)linkProgram:(GLuint)prog;
 - (BOOL)validateProgram:(GLuint)prog;
 @end
@@ -119,9 +112,8 @@ GLfloat gCubeVertexData[216] =
     
     self.context = [[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2];
 
-    if (!self.context) {
+    if (!self.context)
         NSLog(@"Failed to create ES context");
-    }
     
     GLKView *view = (GLKView *)self.view;
     view.context = self.context;
@@ -140,30 +132,29 @@ GLfloat gCubeVertexData[216] =
         [self.imgui connectServer: self.serverName ];
     }
     
-    DebugHUD_InitDefaults( &_hud );
+    DebugHUD_InitDefaults(&_hud);
 }
 
 - (void)dealloc
 {    
     [self tearDownGL];
     
-    if ([EAGLContext currentContext] == self.context) {
+    if ([EAGLContext currentContext] == self.context)
         [EAGLContext setCurrentContext:nil];
-    }
 }
 
 - (void)didReceiveMemoryWarning
 {
     [super didReceiveMemoryWarning];
 
-    if ([self isViewLoaded] && ([[self view] window] == nil)) {
+    if ([self isViewLoaded] && ([[self view] window] == nil)) 
+    {
         self.view = nil;
         
         [self tearDownGL];
         
-        if ([EAGLContext currentContext] == self.context) {
+        if ([EAGLContext currentContext] == self.context)
             [EAGLContext setCurrentContext:nil];
-        }
         self.context = nil;
     }
 
@@ -171,7 +162,8 @@ GLfloat gCubeVertexData[216] =
 }
 
 
-- (BOOL)prefersStatusBarHidden {
+- (BOOL)prefersStatusBarHidden 
+{
     return YES;
 }
 
@@ -185,7 +177,7 @@ GLfloat gCubeVertexData[216] =
 
 - (void)alertView:(UIAlertView *)alertView clickedButtonAtIndex:(NSInteger)buttonIndex
 {
-    if ((buttonIndex==0)&&(alertView.tag==SERVERNAME_ALERT_TAG))
+    if ((buttonIndex==0) && (alertView.tag == SERVERNAME_ALERT_TAG))
     {
         // This is really janky. I usually just hardcode the servername since I'm building it anyway.
         // If you want to properly handle updating the server, you'll want to tear down and recreate
@@ -193,7 +185,8 @@ GLfloat gCubeVertexData[216] =
         BOOL serverNameWasSet = self.serverName.length > 0;
         NSString *serverName = [[alertView textFieldAtIndex:0] text];
 
-        if ([serverName length] > 0) {
+        if ([serverName length] > 0) 
+        {
             self.serverName = serverName;
             NSUserDefaults *userDefaults = [NSUserDefaults standardUserDefaults];
             [userDefaults setObject:serverName forKey:SERVERNAME_KEY ];
@@ -202,7 +195,8 @@ GLfloat gCubeVertexData[216] =
             [self.btnServername setTitle:self.serverName forState:UIControlStateNormal];
             
             // If we hadn't previously connected, try now
-            if (!serverNameWasSet) {
+            if (!serverNameWasSet) 
+            {
                 [self.imgui connectServer:self.serverName];
             }
             else
@@ -241,8 +235,6 @@ GLfloat gCubeVertexData[216] =
     glVertexAttribPointer(GLKVertexAttribNormal, 3, GL_FLOAT, GL_FALSE, 24, BUFFER_OFFSET(12));
     
     glBindVertexArrayOES(0);
-    
-
 }
 
 - (void)tearDownGL
@@ -254,7 +246,8 @@ GLfloat gCubeVertexData[216] =
     
     self.effect = nil;
     
-    if (_program) {
+    if (_program) 
+    {
         glDeleteProgram(_program);
         _program = 0;
     }
@@ -285,9 +278,7 @@ GLfloat gCubeVertexData[216] =
     modelViewMatrix = GLKMatrix4Multiply(baseModelViewMatrix, modelViewMatrix);
     
     _normalMatrix = GLKMatrix3InvertAndTranspose(GLKMatrix4GetMatrix3(modelViewMatrix), NULL);
-    
     _modelViewProjectionMatrix = GLKMatrix4Multiply(projectionMatrix, modelViewMatrix);
-    
     _rotation += self.timeSinceLastUpdate * (_hud.rotation_speed * (M_PI / 180.0));
 }
 
@@ -359,7 +350,8 @@ GLfloat gCubeVertexData[216] =
     glBindAttribLocation(_program, GLKVertexAttribNormal, "normal");
     
     // Link program.
-    if (![self linkProgram:_program]) {
+    if (![self linkProgram:_program]) 
+    {
         NSLog(@"Failed to link program: %d", _program);
         
         if (vertShader) {
@@ -384,11 +376,13 @@ GLfloat gCubeVertexData[216] =
     uniforms[UNIFORM_DIFFUSE_COLOR] = glGetUniformLocation(_program, "diffuseColor");
     
     // Release vertex and fragment shaders.
-    if (vertShader) {
+    if (vertShader) 
+    {
         glDetachShader(_program, vertShader);
         glDeleteShader(vertShader);
     }
-    if (fragShader) {
+    if (fragShader) 
+    {
         glDetachShader(_program, fragShader);
         glDeleteShader(fragShader);
     }
@@ -402,7 +396,8 @@ GLfloat gCubeVertexData[216] =
     const GLchar *source;
     
     source = (GLchar *)[[NSString stringWithContentsOfFile:file encoding:NSUTF8StringEncoding error:nil] UTF8String];
-    if (!source) {
+    if (!source) 
+    {
         NSLog(@"Failed to load vertex shader");
         return NO;
     }
@@ -423,7 +418,8 @@ GLfloat gCubeVertexData[216] =
 #endif
     
     glGetShaderiv(*shader, GL_COMPILE_STATUS, &status);
-    if (status == 0) {
+    if (status == 0) 
+    {
         glDeleteShader(*shader);
         return NO;
     }
@@ -439,7 +435,8 @@ GLfloat gCubeVertexData[216] =
 #if defined(DEBUG)
     GLint logLength;
     glGetProgramiv(prog, GL_INFO_LOG_LENGTH, &logLength);
-    if (logLength > 0) {
+    if (logLength > 0) 
+    {
         GLchar *log = (GLchar *)malloc(logLength);
         glGetProgramInfoLog(prog, logLength, &logLength, log);
         NSLog(@"Program link log:\n%s", log);
@@ -448,10 +445,8 @@ GLfloat gCubeVertexData[216] =
 #endif
     
     glGetProgramiv(prog, GL_LINK_STATUS, &status);
-    if (status == 0) {
+    if (status == 0)
         return NO;
-    }
-    
     return YES;
 }
 
@@ -469,10 +464,8 @@ GLfloat gCubeVertexData[216] =
     }
     
     glGetProgramiv(prog, GL_VALIDATE_STATUS, &status);
-    if (status == 0) {
+    if (status == 0)
         return NO;
-    }
-    
     return YES;
 }
 
