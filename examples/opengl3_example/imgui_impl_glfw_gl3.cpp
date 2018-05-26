@@ -64,6 +64,7 @@ static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
+static GLuint       g_VaoHandle = 0;
 
 // OpenGL3 Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -123,18 +124,7 @@ void ImGui_ImplGlfwGL3_RenderDrawData(ImDrawData* draw_data)
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
     if (glBindSampler) glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
 
-    // Recreate the VAO every time 
-    // (This is to easily allow multiple GL contexts. VAO are not shared among GL contexts, and we don't track creation/deletion of windows so we don't have an obvious key to use to cache them.)
-    GLuint vao_handle = 0;
-    glGenVertexArrays(1, &vao_handle);
-    glBindVertexArray(vao_handle);
-    glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
-    glEnableVertexAttribArray(g_AttribLocationPosition);
-    glEnableVertexAttribArray(g_AttribLocationUV);
-    glEnableVertexAttribArray(g_AttribLocationColor);
-    glVertexAttribPointer(g_AttribLocationPosition, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
-    glVertexAttribPointer(g_AttribLocationUV, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
-    glVertexAttribPointer(g_AttribLocationColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
+    glBindVertexArray(g_VaoHandle);
 
     // Draw
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -164,7 +154,6 @@ void ImGui_ImplGlfwGL3_RenderDrawData(ImDrawData* draw_data)
             idx_buffer_offset += pcmd->ElemCount;
         }
     }
-    glDeleteVertexArrays(1, &vao_handle);
 
     // Restore modified GL state
     glUseProgram(last_program);
@@ -311,6 +300,16 @@ bool ImGui_ImplGlfwGL3_CreateDeviceObjects()
     glGenBuffers(1, &g_VboHandle);
     glGenBuffers(1, &g_ElementsHandle);
 
+    glGenVertexArrays(1, &g_VaoHandle);
+    glBindVertexArray(g_VaoHandle);
+    glBindBuffer(GL_ARRAY_BUFFER, g_VboHandle);
+    glEnableVertexAttribArray(g_AttribLocationPosition);
+    glEnableVertexAttribArray(g_AttribLocationUV);
+    glEnableVertexAttribArray(g_AttribLocationColor);
+    glVertexAttribPointer(g_AttribLocationPosition, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, pos));
+    glVertexAttribPointer(g_AttribLocationUV, 2, GL_FLOAT, GL_FALSE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, uv));
+    glVertexAttribPointer(g_AttribLocationColor, 4, GL_UNSIGNED_BYTE, GL_TRUE, sizeof(ImDrawVert), (GLvoid*)IM_OFFSETOF(ImDrawVert, col));
+
     ImGui_ImplGlfwGL3_CreateFontsTexture();
 
     // Restore modified GL state
@@ -337,6 +336,9 @@ void    ImGui_ImplGlfwGL3_InvalidateDeviceObjects()
 
     if (g_ShaderHandle) glDeleteProgram(g_ShaderHandle);
     g_ShaderHandle = 0;
+
+    if (g_VaoHandle) glDeleteVertexArrays(1, &g_VaoHandle);
+    g_VaoHandle = 0;
 
     if (g_FontTexture)
     {
