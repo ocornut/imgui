@@ -70,7 +70,7 @@ In this document:
  FONTS LOADING INSTRUCTIONS
 ---------------------------------------
 
- Load default font with:
+ Load default font:
 
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontDefault();
@@ -78,15 +78,22 @@ In this document:
  Load .TTF/.OTF file with:
 
    ImGuiIO& io = ImGui::GetIO();
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
+   ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
+   ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
   
- For advanced options create a ImFontConfig structure and pass it to the AddFont function (it will be copied internally)
+   // Select font at runtime
+   ImGui::Text("Hello");	// use the default font (which is the first loaded font)
+   ImGui::PushFont(font2);
+   ImGui::Text("Hello with another font");
+   ImGui::PopFont();
+
+ For advanced options create a ImFontConfig structure and pass it to the AddFont function (it will be copied internally):
 
    ImFontConfig config;
    config.OversampleH = 3;
    config.OversampleV = 1;
    config.GlyphExtraSpacing.x = 1.0f;
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
+   ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 
  If you have very large number of glyphs or multiple fonts:
 
@@ -99,7 +106,7 @@ In this document:
  Combine two fonts into one:
 
    // Load a first font
-   io.Fonts->AddFontDefault();
+   ImFont* font = io.Fonts->AddFontDefault();
 
    // Add character ranges and merge into the previous font
    // The ranges array is not copied by the AddFont* functions and is used lazily
@@ -144,7 +151,7 @@ In this document:
 ---------------------------------------
 
  You can use the ImFontAtlas::GlyphRangesBuilder helper to create glyph ranges based on text input.
- For exemple: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
+ For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
 
    ImVector<ImWchar> ranges;
    ImFontAtlas::GlyphRangesBuilder builder;
