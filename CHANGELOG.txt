@@ -49,6 +49,7 @@ Other Changes:
  - BeginDragDropSource(): Offset tooltip position so it is off the mouse cursor, but also closer to it than regular tooltips, and not clamped by viewport. (#1739)
  - BeginCombo(), BeginMainMenuBar(), BeginChildFrame(): Temporary style modification are restored at the end of BeginXXX instead of EndXXX, to not affect tooltips and child windows.
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
+ - Internals: PushItemFlag() flags are inherited by BeginChild().
 
 -----------------------------------------------------------------------
 
