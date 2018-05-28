@@ -163,7 +163,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
- - tooltip: allow tooltips with timers? or general timer policy? (instantaneous vs timed)
+ - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed) (#1485)
  
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - menus: menu bars inside modals windows are acting weird.
@@ -215,7 +215,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
- - drag and drop: allow drag target to alter tooltip.
  - drag and drop: add demo. (#143, #479)
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)

@@ -13230,11 +13230,9 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
 
         if (!(flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
         {
-            SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
-            BeginTooltipEx(0, true);
-
             // Target can request the Source to not display its tooltip (we use a dedicated flag to make this request explicit)
             // We unfortunately can't just modify the source flags and skip the call to BeginTooltip, as caller may be emitting contents. 
+            BeginDragDropTooltip();
             if (g.DragDropActive && g.DragDropAcceptIdPrev && (g.DragDropAcceptFlags & ImGuiDragDropFlags_AcceptNoPreviewTooltip))
             {
                 ImGuiWindow* tooltip_window = g.CurrentWindow;
@@ -13257,11 +13255,30 @@ void ImGui::EndDragDropSource()
     IM_ASSERT(g.DragDropActive);
 
     if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
-        EndTooltip();
+        EndDragDropTooltip();
 
     // Discard the drag if have not called SetDragDropPayload()
     if (g.DragDropPayload.DataFrameCount == -1)
         ClearDragDrop();
+}
+
+void ImGui::BeginDragDropTooltip()
+{
+    // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
+    // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
+    // Whatever we do we want to call SetNextWindowPos() to enforce a tooltip position and disable clipping the tooltip without our display area, like regular tooltip do.
+    ImGuiContext& g = *GImGui;
+    //ImVec2 tooltip_pos = g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding;
+    ImVec2 tooltip_pos = g.IO.MousePos + ImVec2(16 * g.Style.MouseCursorScale, 8 * g.Style.MouseCursorScale);
+    SetNextWindowPos(tooltip_pos);
+    SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
+    //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkboard has issue with transparent colors :(
+    BeginTooltipEx(0, true);
+}
+
+void ImGui::EndDragDropTooltip()
+{
+    EndTooltip();
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
