@@ -688,7 +688,8 @@ struct ImGuiContext
     ImGuiPayload            DragDropPayload;
     ImRect                  DragDropTargetRect;
     ImGuiID                 DragDropTargetId;
-    float                   DragDropAcceptIdCurrRectSurface;
+    ImGuiDragDropFlags      DragDropAcceptFlags;
+    float                   DragDropAcceptIdCurrRectSurface;    // Target item surface (we resolve overlapping targets by prioritizing the smaller surface)
     ImGuiID                 DragDropAcceptIdCurr;               // Target item id (set at the time of accepting the payload)
     ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
     int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
@@ -799,6 +800,7 @@ struct ImGuiContext
         DragDropSourceFlags = 0;
         DragDropMouseButton = -1;
         DragDropTargetId = 0;
+        DragDropAcceptFlags = 0;
         DragDropAcceptIdCurrRectSurface = 0.0f;
         DragDropAcceptIdPrev = DragDropAcceptIdCurr = 0;
         DragDropAcceptFrameCount = -1;

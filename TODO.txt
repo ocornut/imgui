@@ -215,11 +215,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: handle wildcards (with implicit leading/trailing *), regexps
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
- - drag and drop: allow drag target to alter tooltip / and or disable tooltip.
+ - drag and drop: allow drag target to alter tooltip.
  - drag and drop: add demo. (#143, #479)
+ - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
  - drag and drop: test with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop.
+ - drag and drop: make payload optional? (#143)
  - node/graph editor (#306)
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)
