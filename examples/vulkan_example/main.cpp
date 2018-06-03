@@ -198,6 +198,9 @@ static void resize_vulkan(int w, int h)
             check_vk_result(err);
         }
     }
+
+    g_FrameIndex = 0;
+    g_ResizeWanted = false;
 }
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -515,7 +518,7 @@ static void cleanup_vulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void frame_begin()
+static bool frame_begin()
 {
     VkResult err;
     for (;;)
@@ -527,6 +530,12 @@ static void frame_begin()
     }
     {
         err = vkAcquireNextImageKHR(g_Device, g_Swapchain, UINT64_MAX, g_PresentCompleteSemaphore[g_FrameIndex], VK_NULL_HANDLE, &g_BackbufferIndices[g_FrameIndex]);
+        if (err == VK_ERROR_OUT_OF_DATE_KHR)
+        {
+            resize_vulkan(g_ResizeWidth, g_ResizeHeight);
+            return false;
+        }
+
         check_vk_result(err);
     }
     {
@@ -549,6 +558,7 @@ static void frame_begin()
         info.pClearValues = &g_ClearValue;
         vkCmdBeginRenderPass(g_CommandBuffer[g_FrameIndex], &info, VK_SUBPASS_CONTENTS_INLINE);
     }
+    return true;
 }
 
 static void frame_end()
@@ -589,7 +599,8 @@ static void frame_present()
     info.pSwapchains = swapchains;
     info.pImageIndices = indices;
     err = vkQueuePresentKHR(g_Queue, &info);
-    check_vk_result(err);
+    if (err != VK_ERROR_OUT_OF_DATE_KHR)
+        check_vk_result(err);
 
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 }
@@ -703,7 +714,6 @@ int main(int, char**)
 
         if (g_ResizeWanted)
             resize_vulkan(g_ResizeWidth, g_ResizeHeight);
-        g_ResizeWanted = false;
 
         ImGui_ImplGlfwVulkan_NewFrame();
 
@@ -745,10 +755,16 @@ int main(int, char**)
         }
 
         memcpy(&g_ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
-        frame_begin();
-        ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
-        frame_end();
-        frame_present();
+        if (frame_begin())
+        {
+            ImGui_ImplGlfwVulkan_Render(g_CommandBuffer[g_FrameIndex]);
+            frame_end();
+            frame_present();
+        }
+        else
+        {
+            ImGui::EndFrame();
+        }
     }
 
     // Cleanup
