@@ -3182,23 +3182,27 @@ static void ImGui::NavUpdate()
     {
         // Select which result to use
         ImGuiNavMoveResult* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-        if (g.NavMoveResultOther.ID != 0 && g.NavMoveResultOther.Window->ParentWindow == g.NavWindow) // Maybe entering a flattened child? In this case solve the tie using the regular scoring rules
+
+        // Maybe entering a flattened child from the outside? In this case solve the tie using the regular scoring rules
+        if (g.NavMoveResultOther.ID != 0 && g.NavMoveResultOther.Window->ParentWindow == g.NavWindow)
             if ((g.NavMoveResultOther.DistBox < g.NavMoveResultLocal.DistBox) || (g.NavMoveResultOther.DistBox == g.NavMoveResultLocal.DistBox && g.NavMoveResultOther.DistCenter < g.NavMoveResultLocal.DistCenter))
                 result = &g.NavMoveResultOther;
-
         IM_ASSERT(g.NavWindow && result->Window);
 
-        // Scroll to keep newly navigated item fully into view. Also scroll parent window if necessary.
+        // Scroll to keep newly navigated item fully into view.
         if (g.NavLayer == 0)
         {
             ImRect rect_abs = ImRect(result->RectRel.Min + result->Window->Pos, result->RectRel.Max + result->Window->Pos);
             NavScrollToBringItemIntoView(result->Window, rect_abs);
-            if (result->Window->Flags & ImGuiWindowFlags_ChildWindow)
-                NavScrollToBringItemIntoView(result->Window->ParentWindow, rect_abs);
 
             // Estimate upcoming scroll so we can offset our result position so mouse position can be applied immediately after in NavUpdate()
             ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(result->Window, false);
-            result->RectRel.Translate(result->Window->Scroll - next_scroll);
+            ImVec2 delta_scroll = result->Window->Scroll - next_scroll;
+            result->RectRel.Translate(delta_scroll);
+
+            // Also scroll parent window to keep us into view if necessary (we could/should technically recurse back the whole the parent hierarchy).
+            if (result->Window->Flags & ImGuiWindowFlags_ChildWindow)
+                NavScrollToBringItemIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
         }
 
         // Apply result from previous frame navigation directional move request
