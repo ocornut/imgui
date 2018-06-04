@@ -2341,6 +2341,15 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
     g.NavScoringCount++;
 
+    if (window != g.NavWindow)
+    {
+        // When crossing through a NavFlattened border, we score items on the other windows fully clipped
+        IM_ASSERT((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened);
+        if (!window->ClipRect.Contains(cand))
+            return false;
+        cand.ClipWithFull(window->ClipRect); // This allows the scored item to not overlap other candidates in the parent window
+    }
+
     // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
     // For example, this ensure that items in one column are not reached when moving vertically from items in another column.
     NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window->ClipRect);
