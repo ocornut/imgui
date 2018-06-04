@@ -503,7 +503,7 @@
         // Turn the RGBA pixel data into an OpenGL texture:
         GLuint my_opengl_texture;
         glGenTextures(1, &my_opengl_texture);
-        glBindTexture(GL_TEXTURE_2D, image_tex);
+        glBindTexture(GL_TEXTURE_2D, my_opengl_texture);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
         glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, image_width, image_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, image_data);
 
@@ -2541,7 +2541,6 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
         if (new_best)
         {
             result->ID = id;
-            result->ParentID = window->IDStack.back();
             result->Window = window;
             result->RectRel = nav_bb_rel;
         }
