@@ -1,4 +1,5 @@
 // [ImGui] this is a slightly modified version of stb_textedit.h 1.12. Those changes would need to be pushed into nothings/stb
+// [ImGui] - 2018-06: fixed undo/redo after pasting large amount of text (over 32 kb). Redo will still fail when undo buffers are exhausted, but text won't be corrupted (see nothings/stb issue #620)
 // [ImGui] - 2018-06: fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
 // [ImGui] - fixed some minor warnings
 
@@ -90,8 +91,8 @@
 //   moderate sizes. The undo system does no memory allocations, so
 //   it grows STB_TexteditState by the worst-case storage which is (in bytes):
 //
-//        [4 + sizeof(STB_TEXTEDIT_POSITIONTYPE)] * STB_TEXTEDIT_UNDOSTATE_COUNT
-//      +      sizeof(STB_TEXTEDIT_CHARTYPE)      * STB_TEXTEDIT_UNDOCHAR_COUNT
+//        [4 + 3 * sizeof(STB_TEXTEDIT_POSITIONTYPE)] * STB_TEXTEDIT_UNDOSTATE_COUNT
+//      +          sizeof(STB_TEXTEDIT_CHARTYPE)      * STB_TEXTEDIT_UNDOCHAR_COUNT
 //
 //
 // Implementation mode:
@@ -114,7 +115,7 @@
 // Symbols that must be the same in header-file and implementation mode:
 //
 //     STB_TEXTEDIT_CHARTYPE             the character type
-//     STB_TEXTEDIT_POSITIONTYPE         small type that a valid cursor position
+//     STB_TEXTEDIT_POSITIONTYPE         small type that is a valid cursor position
 //     STB_TEXTEDIT_UNDOSTATECOUNT       the number of undo states to allow
 //     STB_TEXTEDIT_UNDOCHARCOUNT        the number of characters to store in the undo buffer
 //
@@ -299,9 +300,9 @@ typedef struct
 {
    // private data
    STB_TEXTEDIT_POSITIONTYPE  where;
-   short           insert_length;
-   short           delete_length;
-   short           char_storage;
+   STB_TEXTEDIT_POSITIONTYPE  insert_length;
+   STB_TEXTEDIT_POSITIONTYPE  delete_length;
+   int                        char_storage;
 } StbUndoRecord;
 
 typedef struct
@@ -310,7 +311,7 @@ typedef struct
    StbUndoRecord          undo_rec [STB_TEXTEDIT_UNDOSTATECOUNT];
    STB_TEXTEDIT_CHARTYPE  undo_char[STB_TEXTEDIT_UNDOCHARCOUNT];
    short undo_point, redo_point;
-   short undo_char_point, redo_char_point;
+   int undo_char_point, redo_char_point;
 } StbUndoState;
 
 typedef struct
@@ -1100,14 +1101,14 @@ static void stb_textedit_discard_undo(StbUndoState *state)
       if (state->undo_rec[0].char_storage >= 0) {
          int n = state->undo_rec[0].insert_length, i;
          // delete n characters from all other records
-         state->undo_char_point = state->undo_char_point - (short) n;  // vsnet05
-         STB_TEXTEDIT_memmove(state->undo_char, state->undo_char + n, (size_t) ((size_t)state->undo_char_point*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         state->undo_char_point -= n;
+         STB_TEXTEDIT_memmove(state->undo_char, state->undo_char + n, (size_t) (state->undo_char_point*sizeof(STB_TEXTEDIT_CHARTYPE)));
          for (i=0; i < state->undo_point; ++i)
             if (state->undo_rec[i].char_storage >= 0)
-               state->undo_rec[i].char_storage = state->undo_rec[i].char_storage - (short) n; // vsnet05 // @OPTIMIZE: get rid of char_storage and infer it
+               state->undo_rec[i].char_storage -= n; // @OPTIMIZE: get rid of char_storage and infer it
       }
       --state->undo_point;
-      STB_TEXTEDIT_memmove(state->undo_rec, state->undo_rec+1, (size_t) ((size_t)state->undo_point*sizeof(state->undo_rec[0])));
+      STB_TEXTEDIT_memmove(state->undo_rec, state->undo_rec+1, (size_t) (state->undo_point*sizeof(state->undo_rec[0])));
    }
 }
 
@@ -1124,15 +1125,15 @@ static void stb_textedit_discard_redo(StbUndoState *state)
       if (state->undo_rec[k].char_storage >= 0) {
          int n = state->undo_rec[k].insert_length, i;
          // move the remaining redo character data to the end of the buffer
-         state->redo_char_point = state->redo_char_point + (short) n; // vsnet05
-         STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((size_t)(STB_TEXTEDIT_UNDOCHARCOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         state->redo_char_point += n;
+         STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((STB_TEXTEDIT_UNDOCHARCOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
          // adjust the position of all the other records to account for above memmove
          for (i=state->redo_point; i < k; ++i)
             if (state->undo_rec[i].char_storage >= 0)
-               state->undo_rec[i].char_storage += (short) n; // vsnet05
+               state->undo_rec[i].char_storage += n;
       }
       // now move all the redo records towards the end of the buffer; the first one is at 'redo_point'
-      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point+1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - (size_t)state->redo_point - 1)*sizeof(state->undo_rec[0])));
+      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point+1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
       // now move redo_point to point to the new one
       ++state->redo_point;
    }
@@ -1169,15 +1170,15 @@ static STB_TEXTEDIT_CHARTYPE *stb_text_createundo(StbUndoState *state, int pos, 
       return NULL;
 
    r->where = pos;
-   r->insert_length = (short) insert_len;
-   r->delete_length = (short) delete_len;
+   r->insert_length = (STB_TEXTEDIT_POSITIONTYPE) insert_len;
+   r->delete_length = (STB_TEXTEDIT_POSITIONTYPE) delete_len;
 
    if (insert_len == 0) {
       r->char_storage = -1;
       return NULL;
    } else {
       r->char_storage = state->undo_char_point;
-      state->undo_char_point = state->undo_char_point + (short) insert_len;
+      state->undo_char_point += insert_len;
       return &state->undo_char[r->char_storage];
    }
 }
@@ -1226,7 +1227,7 @@ static void stb_text_undo(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
          r = &s->undo_rec[s->redo_point-1];
 
          r->char_storage = s->redo_char_point - u.delete_length;
-         s->redo_char_point = s->redo_char_point - (short) u.delete_length;
+         s->redo_char_point = s->redo_char_point - u.delete_length;
 
          // now save the characters
          for (i=0; i < u.delete_length; ++i)

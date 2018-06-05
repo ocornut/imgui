@@ -44,7 +44,8 @@ Other Changes:
  - BeginDragDropSource(): Offset tooltip position so it is off the mouse cursor, but also closer to it than regular tooltips, and not clamped by viewport. (#1739)
  - BeginDragDropTarget(): Added ImGuiDragDropFlags_AcceptNoPreviewTooltip flag to request hiding the drag source tooltip from the target site. (#143)
  - BeginCombo(), BeginMainMenuBar(), BeginChildFrame(): Temporary style modification are restored at the end of BeginXXX instead of EndXXX, to not affect tooltips and child windows.
- - InputTextMultiline(): Fixed double navigation highlight when scrollbar is active. (#787)  
+ - InputTextMultiline(): Fixed double navigation highlight when scrollbar is active. (#787)
+ - InputText(): Fixed Undo after pasting large amount of text (Redo will still fail when undo buffers are exhausted, but text won't be corrupted).
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
  - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.
  - Internals: PushItemFlag() flags are inherited by BeginChild().
