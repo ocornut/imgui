@@ -2341,9 +2341,9 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
     g.NavScoringCount++;
 
-    if (window != g.NavWindow)
+    // When entering through a NavFlattened border, we consider child window items as fully clipped for scoring
+    if (window->ParentWindow == g.NavWindow)
     {
-        // When crossing through a NavFlattened border, we score items on the other windows fully clipped
         IM_ASSERT((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened);
         if (!window->ClipRect.Contains(cand))
             return false;
