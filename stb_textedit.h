@@ -1,10 +1,8 @@
-// [ImGui] this is a slightly modified version of stb_textedit.h 1.9. Those changes would need to be pushed into nothings/stb
-// [ImGui] - fixed linestart handler when over last character of multi-line buffer + simplified existing code (#588, #815)
-// [ImGui] - fixed a state corruption/crash bug in stb_text_redo and stb_textedit_discard_redo (#715)
-// [ImGui] - fixed a crash bug in stb_textedit_discard_redo (#681)
+// [ImGui] this is a slightly modified version of stb_textedit.h 1.12. Those changes would need to be pushed into nothings/stb
+// [ImGui] - 2018-06: fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
 // [ImGui] - fixed some minor warnings
 
-// stb_textedit.h - v1.9  - public domain - Sean Barrett
+// stb_textedit.h - v1.12  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -23,9 +21,7 @@
 //
 // LICENSE
 //
-//   This software is dual-licensed to the public domain and under the following
-//   license: you are granted a perpetual, irrevocable license to copy, modify,
-//   publish, and distribute this file as you see fit.
+// See end of file for license information.
 //
 //
 // DEPENDENCIES
@@ -37,6 +33,9 @@
 //
 // VERSION HISTORY
 //
+//   1.12 (2018-01-29) user can change STB_TEXTEDIT_KEYTYPE, fix redo to avoid crash
+//   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield
+//   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
 //   1.9  (2016-08-27) customizable move-by-word
 //   1.8  (2016-04-02) better keyboard handling when mouse button is down
 //   1.7  (2015-09-13) change y range handling in case baseline is non-0
@@ -55,12 +54,13 @@
 //
 //   Ulf Winklemann: move-by-word in 1.1
 //   Fabian Giesen: secondary key inputs in 1.5
-//   Martins Mozeiko: STB_TEXTEDIT_memmove
+//   Martins Mozeiko: STB_TEXTEDIT_memmove in 1.6
 //
 //   Bugfixes:
 //      Scott Graham
 //      Daniel Keller
 //      Omar Cornut
+//      Dan Thompson
 //
 // USAGE
 //
@@ -203,7 +203,7 @@
 //    void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 //    int  stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 //    int  stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
-//    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, int key)
+//    void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXEDIT_KEYTYPE key)
 //
 //    Each of these functions potentially updates the string and updates the
 //    state.
@@ -237,7 +237,9 @@
 //          inputs, set a high bit to distinguish the two; then you can define the
 //          various definitions like STB_TEXTEDIT_K_LEFT have the is-key-event bit
 //          set, and make STB_TEXTEDIT_KEYTOCHAR check that the is-key-event bit is
-//          clear.
+//          clear. STB_TEXTEDIT_KEYTYPE defaults to int, but you can #define it to
+//          anything other type you wante before including.
+//
 //     
 //   When rendering, you can read the cursor position and selection state from
 //   the STB_TexteditState.
@@ -450,6 +452,15 @@ static int stb_text_locate_coord(STB_TEXTEDIT_STRING *str, float x, float y)
 // API click: on mouse down, move the cursor to the clicked location, and reset the selection
 static void stb_textedit_click(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 {
+   // In single-line mode, just always make y = 0. This lets the drag keep working if the mouse
+   // goes off the top or bottom of the text
+   if( state->single_line )
+   {
+      StbTexteditRow r;
+      STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
+      y = r.ymin;
+   }
+
    state->cursor = stb_text_locate_coord(str, x, y);
    state->select_start = state->cursor;
    state->select_end = state->cursor;
@@ -459,9 +470,21 @@ static void stb_textedit_click(STB_TEXTEDIT_STRING *str, STB_TexteditState *stat
 // API drag: on mouse drag, move the cursor and selection endpoint to the clicked location
 static void stb_textedit_drag(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, float x, float y)
 {
-   int p = stb_text_locate_coord(str, x, y);
+   int p = 0;
+
+   // In single-line mode, just always make y = 0. This lets the drag keep working if the mouse
+   // goes off the top or bottom of the text
+   if( state->single_line )
+   {
+      StbTexteditRow r;
+      STB_TEXTEDIT_LAYOUTROW(&r, str, 0);
+      y = r.ymin;
+   }
+
    if (state->select_start == state->select_end)
       state->select_start = state->cursor;
+
+   p = stb_text_locate_coord(str, x, y);
    state->cursor = state->select_end = p;
 }
 
@@ -677,7 +700,7 @@ static int stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 }
 
 // API paste: replace existing selection with passed-in text
-static int stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE const *text, int len)
+static int stb_textedit_paste_internal(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE *text, int len)
 {
    // if there's a selection, the paste should delete it
    stb_textedit_clamp(str, state);
@@ -695,8 +718,12 @@ static int stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state
    return 0;
 }
 
+#ifndef STB_TEXTEDIT_KEYTYPE
+#define STB_TEXTEDIT_KEYTYPE int
+#endif
+
 // API key: process a keyboard input
-static void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, int key)
+static void stb_textedit_key(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_KEYTYPE key)
 {
 retry:
    switch (key) {
@@ -1096,14 +1123,17 @@ static void stb_textedit_discard_redo(StbUndoState *state)
       // if the k'th undo state has characters, clean those up
       if (state->undo_rec[k].char_storage >= 0) {
          int n = state->undo_rec[k].insert_length, i;
-         // delete n characters from all other records
+         // move the remaining redo character data to the end of the buffer
          state->redo_char_point = state->redo_char_point + (short) n; // vsnet05
          STB_TEXTEDIT_memmove(state->undo_char + state->redo_char_point, state->undo_char + state->redo_char_point-n, (size_t) ((size_t)(STB_TEXTEDIT_UNDOCHARCOUNT - state->redo_char_point)*sizeof(STB_TEXTEDIT_CHARTYPE)));
+         // adjust the position of all the other records to account for above memmove
          for (i=state->redo_point; i < k; ++i)
             if (state->undo_rec[i].char_storage >= 0)
-               state->undo_rec[i].char_storage = state->undo_rec[i].char_storage + (short) n; // vsnet05
+               state->undo_rec[i].char_storage += (short) n; // vsnet05
       }
-      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point, state->undo_rec + state->redo_point-1, (size_t) ((size_t)(STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point)*sizeof(state->undo_rec[0])));
+      // now move all the redo records towards the end of the buffer; the first one is at 'redo_point'
+      STB_TEXTEDIT_memmove(state->undo_rec + state->redo_point+1, state->undo_rec + state->redo_point, (size_t) ((STB_TEXTEDIT_UNDOSTATECOUNT - (size_t)state->redo_point - 1)*sizeof(state->undo_rec[0])));
+      // now move redo_point to point to the new one
       ++state->redo_point;
    }
 }
@@ -1187,11 +1217,11 @@ static void stb_text_undo(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 
          // there's definitely room to store the characters eventually
          while (s->undo_char_point + u.delete_length > s->redo_char_point) {
-            // there's currently not enough room, so discard a redo record
-            stb_textedit_discard_redo(s);
             // should never happen:
             if (s->redo_point == STB_TEXTEDIT_UNDOSTATECOUNT)
                return;
+            // there's currently not enough room, so discard a redo record
+            stb_textedit_discard_redo(s);
          }
          r = &s->undo_rec[s->redo_point-1];
 
@@ -1318,4 +1348,61 @@ static void stb_textedit_initialize_state(STB_TexteditState *state, int is_singl
 {
    stb_textedit_clear_state(state, is_single_line);
 }
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
+
+static int stb_textedit_paste(STB_TEXTEDIT_STRING *str, STB_TexteditState *state, STB_TEXTEDIT_CHARTYPE const *ctext, int len)
+{
+   return stb_textedit_paste_internal(str, state, (STB_TEXTEDIT_CHARTYPE *) ctext, len);
+}
+
+#if defined(__GNUC__) || defined(__clang__)
+#pragma GCC diagnostic pop
+#endif
+
 #endif//STB_TEXTEDIT_IMPLEMENTATION
+
+/*
+------------------------------------------------------------------------------
+This software is available under 2 licenses -- choose whichever you prefer.
+------------------------------------------------------------------------------
+ALTERNATIVE A - MIT License
+Copyright (c) 2017 Sean Barrett
+Permission is hereby granted, free of charge, to any person obtaining a copy of 
+this software and associated documentation files (the "Software"), to deal in 
+the Software without restriction, including without limitation the rights to 
+use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies 
+of the Software, and to permit persons to whom the Software is furnished to do 
+so, subject to the following conditions:
+The above copyright notice and this permission notice shall be included in all 
+copies or substantial portions of the Software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER 
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, 
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE 
+SOFTWARE.
+------------------------------------------------------------------------------
+ALTERNATIVE B - Public Domain (www.unlicense.org)
+This is free and unencumbered software released into the public domain.
+Anyone is free to copy, modify, publish, use, compile, sell, or distribute this 
+software, either in source code form or as a compiled binary, for any purpose, 
+commercial or non-commercial, and by any means.
+In jurisdictions that recognize copyright laws, the author or authors of this 
+software dedicate any and all copyright interest in the software to the public 
+domain. We make this dedication for the benefit of the public at large and to 
+the detriment of our heirs and successors. We intend this dedication to be an 
+overt act of relinquishment in perpetuity of all present and future rights to 
+this software under copyright law.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR 
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, 
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE 
+AUTHORS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN 
+ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION 
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+------------------------------------------------------------------------------
+*/
