@@ -1221,11 +1221,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::Columns(2);
                 for (int i = 0; i < 100; i++)
                 {
-                    if (i == 50)
-                        ImGui::NextColumn();
                     char buf[32];
-                    sprintf(buf, "%08x", i*5731);
+                    sprintf(buf, "%03d", i);
                     ImGui::Button(buf, ImVec2(-1.0f, 0.0f));
+                    ImGui::NextColumn();
                 }
                 ImGui::EndChild();
                 ImGui::PopStyleVar();
