@@ -1,28 +1,19 @@
 dear imgui
 CHANGELOG
 
------------------------------------------------------------------------
+This document holds the user-facing changelog that we also use in release notes.
+We generally fold multiple commits pertaining to the same topic as a single entry.
+Changes to the examples/bindings are included within the individual .cpp files in the examples/ folder.
 
-This document holds the programmer changelog that we also use in release notes.
-We generally fold multiple commits pertaining to the same topic as a single entry, and simplify various things.
-
-Release notes: (with links and screenshots)
-  https://github.com/ocornut/imgui/releases
-
-Changes to the examples/bindings are included within the individual .cpp files in examples.
-
-Individual commits:
-  https://github.com/ocornut/imgui/commits/master
-
-Report issues, ask questions:
-  https://github.com/ocornut/imgui/issues
-
------------------------------------------------------------------------
+RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
+REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
+COMMITS HISTORY:                https://github.com/ocornut/imgui/commits/master
 
 WHEN TO UPDATE?
 
-It is generally safe to sync to the latest commit in master. The library is fairly stable and regressions tends to be fixed fast when reported.
-Keeping your copy of dear imgui updated once in a while is recommended.
+- Keeping your copy of dear imgui updated once in a while is recommended.
+- It is generally safe to sync to the latest commit in master. 
+  The library is fairly stable and regressions tends to be fixed fast when reported.
 
 HOW TO UPDATE?
 
@@ -32,27 +23,34 @@ HOW TO UPDATE?
 - If you have a problem with a missing function/symbols, search for its name in the code, there will likely be a comment about it.
 - If you are dropping this repository in your codebase, please leave the demo and text files in there, they will be useful.
 - You may diff your previous Changelog with the one you just copied and read that diff.
-- You may enable `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in imconfig.h to forcefully disable legacy names and symbols. Doing it every once in a while is a good way to make sure you are not using obsolete symbols. Dear ImGui is in active development API updates have a little more frequent lately. They are carefully documented and should not affect all users.
+- You may enable `IMGUI_DISABLE_OBSOLETE_FUNCTIONS` in imconfig.h to forcefully disable legacy names and symbols. 
+  Doing it every once in a while is a good way to make sure you are not using obsolete symbols. Dear ImGui is in active development, 
+  and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
------------------------------------------------------------------------
 
-VERSION 1.62 WIP (IN PROGRESS)
+-----------------------------------------------------------------------
+ VERSION 1.62 WIP (IN PROGRESS)
+-----------------------------------------------------------------------
 
 Breaking Changes:
 
 Other Changes:
 
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
+ - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
  - TreeNode: Fixed nodes with ImGuiTreeNodeFlags_Leaf flag always returning true which was meaningless.
  - ColorEdit3, ColorEdit4, ColorButton: Added ImGuiColorEditFlags_NoDragDrop flag to disable ColorEditX as drag target and ColorButton as drag source. (#1826) 
  - BeginDragDropSource(): Offset tooltip position so it is off the mouse cursor, but also closer to it than regular tooltips, and not clamped by viewport. (#1739)
+ - BeginDragDropTarget(): Added ImGuiDragDropFlags_AcceptNoPreviewTooltip flag to request hiding the drag source tooltip from the target site. (#143)
  - BeginCombo(), BeginMainMenuBar(), BeginChildFrame(): Temporary style modification are restored at the end of BeginXXX instead of EndXXX, to not affect tooltips and child windows.
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
+ - Internals: PushItemFlag() flags are inherited by BeginChild().
+
 
 -----------------------------------------------------------------------
-
-VERSION 1.61 (Released 2018-05-14)
+ VERSION 1.61 (Released 2018-05-14)
+-----------------------------------------------------------------------
 
 Breaking Changes:
 
@@ -108,9 +106,11 @@ Other Changes:
 - Examples: SDL: Fixed clipboard paste memory leak in the SDL binding code. (#1803) [@eliasdaler]
 - Various minor fixes, tweaks, refactoring, comments.
 
+
+-----------------------------------------------------------------------
+ VERSION 1.60 (Released 2018-04-07)
 -----------------------------------------------------------------------
 
-VERSION 1.60 (Released 2018-04-07)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.60
 
 The gamepad/keyboard navigation branch (which has been in the work since July 2016) has been merged.
@@ -300,9 +300,11 @@ Other Changes:
 - Examples: Visual Studio: Disabled extraneous function-level check in Release build.
 - Various fixes, tweaks, internal refactoring, optimizations, comments.
 
+
+-----------------------------------------------------------------------
+ VERSION 1.53 (Released 2017-12-25)
 -----------------------------------------------------------------------
 
-VERSION 1.53 (Released 2017-12-25)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.53
 
 Breaking Changes:
@@ -438,9 +440,11 @@ Other Changes:
 - Fix for using alloca() in "Clang with Microsoft Codechain" mode.
 - Various fixes, optimizations, comments.
 
+
+-----------------------------------------------------------------------
+ VERSION 1.52 (2017-10-27)
 -----------------------------------------------------------------------
 
-VERSION 1.52 (2017-10-27)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.52
 
 Breaking Changes:
@@ -539,9 +543,11 @@ Beta Navigation Branch:
 - Nav: More consistently drawing a (thin) navigation rectangle hover filled frames such as tree nodes, collapsing header, menus. (#787)
 - Nav: Various internal refactoring.
 
+
+-----------------------------------------------------------------------
+ VERSION 1.51 (2017-08-24)
 -----------------------------------------------------------------------
 
-VERSION 1.51 (2017-08-24)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.51
 
 Breaking Changes:
@@ -601,9 +607,11 @@ Other Changes:
 - Examples: Enabled vsync by default in example applications, so it doesn't confuse people that the sample run at 2000+ fps and waste an entire CPU. (#1213, #1151).
 - Various other small fixes, tweaks, comments, optimizations.
 
+
+-----------------------------------------------------------------------
+ VERSION 1.50 (2017-06-02)
 -----------------------------------------------------------------------
 
-VERSION 1.50 (2017-06-02)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.50
 
 Breaking Changes:
@@ -695,9 +703,11 @@ Other Changes:
 - Added various links to language/engine bindings.
 - Various other minor fixes, tweaks, comments, optimizations.
 
+
+-----------------------------------------------------------------------
+ VERSION 1.49 (2016-05-09)
 -----------------------------------------------------------------------
 
-VERSION 1.49 (2016-05-09)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.49
 
 Breaking Changes:
@@ -771,9 +781,11 @@ Other changes:
 - Examples: SDL: Initialize video+timer subsystem only.
 - Examples: Apple/iOS: lowered XCode project deployment target from 10.7 to 10.11. (#598, #575)
 
+
+-----------------------------------------------------------------------
+ VERSION 1.48 (2016-04-09)
 -----------------------------------------------------------------------
 
-VERSION 1.48 (2016-04-09)
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.48
 
 Breaking Changes:
