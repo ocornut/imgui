@@ -49,6 +49,7 @@ Other Changes:
  - BeginDragDropSource(): Offset tooltip position so it is off the mouse cursor, but also closer to it than regular tooltips, and not clamped by viewport. (#1739)
  - BeginDragDropTarget(): Added ImGuiDragDropFlags_AcceptNoPreviewTooltip flag to request hiding the drag source tooltip from the target site. (#143)
  - BeginCombo(), BeginMainMenuBar(), BeginChildFrame(): Temporary style modification are restored at the end of BeginXXX instead of EndXXX, to not affect tooltips and child windows.
+ - Popup: Improved handling of (erroneously) repeating calls to OpenPopup() to not fully close/re-open the popup so its child popups won't get closed. (#1497, #1533, #1865).
  - InputTextMultiline(): Fixed double navigation highlight when scrollbar is active. (#787)
  - InputText(): Fixed Undo after pasting large amount of text (Redo will still fail when undo buffers are exhausted, but text won't be corrupted).
  - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese characters. (#1859) [@JX-Master, @ocornut]
