@@ -35,6 +35,10 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+ - TreeNodeEx(): The helper ImGuiTreeNodeFlags_CollapsingHeader flag now include ImGuiTreeNodeFlags_NoTreePushOnOpen. The flag was already set by CollapsingHeader(). 
+   The only difference is if you were using TreeNodeEx() manually with ImGuiTreeNodeFlags_CollapsingHeader and without ImGuiTreeNodeFlags_NoTreePushOnOpen. In which case
+   you can remove the ImGuiTreeNodeFlags_NoTreePushOnOpen flag from your call (ImGuiTreeNodeFlags_CollapsingHeader & ~ImGuiTreeNodeFlags_NoTreePushOnOpen). (#1864)
+
 Other Changes:
 
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
