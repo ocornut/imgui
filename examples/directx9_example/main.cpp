@@ -2,8 +2,8 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include "imgui.h"
-#include "../imgui_impl_dx9.h"
-#include "../imgui_impl_win32.h"
+#include "imgui_impl_dx9.h"
+#include "imgui_impl_win32.h"
 #include <d3d9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>

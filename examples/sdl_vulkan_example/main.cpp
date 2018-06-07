@@ -2,8 +2,8 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include "imgui.h"
-#include "../imgui_impl_sdl2.h"
-#include "../imgui_impl_vulkan.h"
+#include "imgui_impl_sdl2.h"
+#include "imgui_impl_vulkan.h"
 #include <stdio.h>
 #include <SDL.h>
 #include <SDL_vulkan.h>
