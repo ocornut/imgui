@@ -1935,7 +1935,7 @@ struct ImGuiPlatformMonitor
     ImGuiPlatformMonitor() { MainPos = MainSize = WorkPos = WorkSize = ImVec2(0,0); DpiScale = 1.0f; }
 };
 
-// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled
+// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled. Access via ImGui::GetPlatformIO().
 // This is designed so we can mix and match two imgui_impl_xxxx files, one for the Platform (~window handling), one for Renderer.
 // Custom engine back-ends will often provide both Platform and Renderer interfaces and thus may not need to use all functions.
 // Platform functions are typically called before their Renderer counterpart, apart from Destroy which are called the other way.
