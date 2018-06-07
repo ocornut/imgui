@@ -15,7 +15,8 @@
 #CXX = clang++
 
 EXE = sdl_opengl3_example
-SOURCES = main.cpp ../imgui_impl_sdl2.cpp ../imgui_impl_opengl3.cpp
+SOURCES = main.cpp
+SOURCES += ../imgui_impl_sdl2.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
 SOURCES += ../libs/gl3w/GL/gl3w.c
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
@@ -27,7 +28,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	LIBS = -lGL -ldl `sdl2-config --libs`
 
-	CXXFLAGS = -I../../ -I../libs/gl3w `sdl2-config --cflags`
+	CXXFLAGS = -I../ -I../../ -I../libs/gl3w `sdl2-config --cflags`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -36,7 +37,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
 	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
 
-	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include `sdl2-config --cflags`
+	CXXFLAGS = -I../ -I../../ -I../libs/gl3w -I/usr/local/include `sdl2-config --cflags`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -45,7 +46,7 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    ECHO_MESSAGE = "Windows"
    LIBS = -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
-   CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags sdl2`
+   CXXFLAGS = -I../ -I../../ -I../libs/gl3w `pkg-config --cflags sdl2`
    CXXFLAGS += -Wall -Wformat
    CFLAGS = $(CXXFLAGS)
 endif

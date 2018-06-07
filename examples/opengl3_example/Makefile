@@ -15,7 +15,8 @@
 #CXX = clang++
 
 EXE = opengl3_example
-SOURCES = main.cpp ../imgui_impl_glfw.cpp ../imgui_impl_opengl3.cpp
+SOURCES = main.cpp
+SOURCES += ../imgui_impl_glfw.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
 SOURCES += ../libs/gl3w/GL/gl3w.c
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
@@ -27,7 +28,7 @@ ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	LIBS = -lGL `pkg-config --static --libs glfw3`
 
-	CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+	CXXFLAGS = -I../ -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -38,7 +39,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	#LIBS += -L/usr/local/lib -lglfw3
 	LIBS += -L/usr/local/lib -lglfw
 
-	CXXFLAGS = -I../../ -I../libs/gl3w -I/usr/local/include
+	CXXFLAGS = -I../ -I../../ -I../libs/gl3w -I/usr/local/include
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -47,7 +48,7 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    ECHO_MESSAGE = "Windows"
    LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32
 
-   CXXFLAGS = -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+   CXXFLAGS = -I../ -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
    CXXFLAGS += -Wall -Wformat
    CFLAGS = $(CXXFLAGS)
 endif
