@@ -307,7 +307,4 @@ void ImGui_ImplAllegro5_NewFrame()
         }
         al_set_system_mouse_cursor(g_Display, cursor_id);
     }
-
-    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
-    ImGui::NewFrame();
 }

@@ -153,6 +153,7 @@ int main(int, char**)
     ZeroMemory(&msg, sizeof(msg));
     while (msg.message != WM_QUIT)
     {
+        // Poll and handle messages (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -163,8 +164,11 @@ int main(int, char**)
             DispatchMessage(&msg);
             continue;
         }
+
+        // Start the ImGui frame
         ImGui_ImplDX10_NewFrame();
         ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -204,9 +208,9 @@ int main(int, char**)
         }
 
         // Rendering
+        ImGui::Render();
         g_pd3dDevice->OMSetRenderTargets(1, &g_mainRenderTargetView, NULL);
         g_pd3dDevice->ClearRenderTargetView(g_mainRenderTargetView, (float*)&clear_color);
-        ImGui::Render();
         ImGui_ImplDX10_RenderDrawData(ImGui::GetDrawData());
 
         // Update and Render additional Platform Windows

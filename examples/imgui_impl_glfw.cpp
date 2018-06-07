@@ -326,9 +326,6 @@ void ImGui_ImplGlfw_NewFrame()
         else
             io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
     }
-
-    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
-    ImGui::NewFrame();
 }
 
 //--------------------------------------------------------------------------------------------------------
