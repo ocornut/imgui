@@ -15,7 +15,6 @@ In this document:
 - Fonts Loading Instructions
 - FreeType rasterizer, Small font sizes
 - Building Custom Glyph Ranges
-- Remapping Codepoints
 - Embedding Fonts in Source Code
 - Credits/Licences for fonts included in this folder
 - Links, Other fonts
@@ -27,7 +26,9 @@ In this document:
 
  - You can use the style editor ImGui::ShowStyleEditor() to browse your fonts and understand what's going on if you have an issue.
  - Make sure your font ranges data are persistent (available during the call to GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
- - Use C++11 u8"my text" syntax to encode literal strings as UTF-8. 
+ - Use C++11 u8"my text" syntax to encode literal strings as UTF-8. e.g.:
+       u8"hello"
+       u8"こんにちは"   // this will be encoded as UTF-8
  - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
 
 
@@ -122,12 +123,13 @@ In this document:
    // Basic Latin, Extended Latin
    io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
    
-   // Include full set of about 21000 CJK Unified Ideographs
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
+   // Default + Selection of 2500 Ideographs used by Simplified Chinese
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
    
    // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
 
+ See "BUILDING CUSTOM GLYPH RANGES" section to create your own ranges. 
  Offset font vertically by altering the io.Font->DisplayOffset value:
 
    ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
@@ -160,18 +162,6 @@ In this document:
    builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
    builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
    io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
-
-
----------------------------------------
- REMAPPING CODEPOINTS
----------------------------------------
-
- All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese, or CP-1251 for Cyrillic) will NOT work!
- In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
- e.g.
-      u8"hello"
-      u8"こんにちは"
- You may also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
 
 
 ---------------------------------------
