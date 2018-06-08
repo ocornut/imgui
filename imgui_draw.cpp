@@ -1325,6 +1325,8 @@ ImFontConfig::ImFontConfig()
     GlyphExtraSpacing = ImVec2(0.0f, 0.0f);
     GlyphOffset = ImVec2(0.0f, 0.0f);
     GlyphRanges = NULL;
+    GlyphMinAdvanceX = 0.0f;
+    GlyphMaxAdvanceX = FLT_MAX;
     MergeMode = false;
     RasterizerFlags = 0x00;
     RasterizerMultiply = 1.0f;
@@ -1867,8 +1869,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         const float ascent = ImFloor(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
         const float descent = ImFloor(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
-        const float off_x = cfg.GlyphOffset.x;
-        const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
+        const float font_off_x = cfg.GlyphOffset.x;
+        const float font_off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
         for (int i = 0; i < tmp.RangesCount; i++)
         {
@@ -1883,10 +1885,16 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                 if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
                     continue;
 
+                float char_advance_x_org = pc.xadvance;
+                float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
+                float char_off_x = font_off_x;
+                if (char_advance_x_org != char_advance_x_mod)
+                    char_off_x += cfg.PixelSnapH ? (float)(int)((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
+
                 stbtt_aligned_quad q;
                 float dummy_x = 0.0f, dummy_y = 0.0f;
                 stbtt_GetPackedQuad(range.chardata_for_range, atlas->TexWidth, atlas->TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
-                dst_font->AddGlyph((ImWchar)codepoint, q.x0 + off_x, q.y0 + off_y, q.x1 + off_x, q.y1 + off_y, q.s0, q.t0, q.s1, q.t1, pc.xadvance);
+                dst_font->AddGlyph((ImWchar)codepoint, q.x0 + char_off_x, q.y0 + font_off_y, q.x1 + char_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, char_advance_x_mod);
             }
         }
     }
