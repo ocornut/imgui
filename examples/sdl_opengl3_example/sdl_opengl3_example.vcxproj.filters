@@ -22,14 +22,17 @@
     <ClCompile Include="..\..\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="imgui_impl_sdl_gl3.cpp">
-      <Filter>sources</Filter>
-    </ClCompile>
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="..\libs\gl3w\GL\gl3w.c">
       <Filter>gl3w</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_impl_opengl3.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_impl_sdl2.cpp">
+      <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -42,14 +45,17 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="imgui_impl_sdl_gl3.h">
-      <Filter>sources</Filter>
-    </ClInclude>
     <ClInclude Include="..\libs\gl3w\GL\gl3w.h">
       <Filter>gl3w</Filter>
     </ClInclude>
     <ClInclude Include="..\libs\gl3w\GL\glcorearb.h">
       <Filter>gl3w</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_impl_opengl3.h">
+      <Filter>sources</Filter>
+    </ClInclude>
+    <ClInclude Include="..\imgui_impl_sdl2.h">
+      <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>

@@ -1,4 +1,4 @@
-// ImGui Marmalade binding with IwGx
+// ImGui Renderer + Platform Binding for: Marmalade + IwGx
 
 // Implemented features:
 //  [X] User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
@@ -217,7 +217,7 @@ void    ImGui_Marmalade_InvalidateDeviceObjects()
 bool    ImGui_Marmalade_Init(bool install_callbacks)
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = s3eKeyLeft;
     io.KeyMap[ImGuiKey_RightArrow] = s3eKeyRight;
     io.KeyMap[ImGuiKey_UpArrow] = s3eKeyUp;
@@ -288,9 +288,6 @@ void ImGui_Marmalade_NewFrame()
 
     // TODO: Hide OS mouse cursor if ImGui is drawing it
     // s3ePointerSetInt(S3E_POINTER_HIDE_CURSOR,(io.MouseDrawCursor ? 0 : 1));
-
-    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
-    ImGui::NewFrame();
 
      // Show/hide OSD keyboard
     if (io.WantTextInput)

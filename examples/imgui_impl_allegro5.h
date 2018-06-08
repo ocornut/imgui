@@ -1,4 +1,5 @@
-// ImGui Allegro 5 bindings
+// ImGui Renderer + Platform Binding for: Allegro 5
+// (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:
 //  [X] User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
@@ -15,12 +16,12 @@
 struct ALLEGRO_DISPLAY;
 union ALLEGRO_EVENT;
 
-IMGUI_API bool    ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display);
-IMGUI_API void    ImGui_ImplA5_Shutdown();
-IMGUI_API void    ImGui_ImplA5_NewFrame();
-IMGUI_API void    ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data);
-IMGUI_API bool    ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT* event);
+IMGUI_API bool    ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display);
+IMGUI_API void    ImGui_ImplAllegro5_Shutdown();
+IMGUI_API void    ImGui_ImplAllegro5_NewFrame();
+IMGUI_API void    ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data);
+IMGUI_API bool    ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* event);
 
 // Use if you want to reset your rendering device without losing ImGui state.
-IMGUI_API bool    Imgui_ImplA5_CreateDeviceObjects();
-IMGUI_API void    ImGui_ImplA5_InvalidateDeviceObjects();
+IMGUI_API bool    ImGui_ImplAllegro5_CreateDeviceObjects();
+IMGUI_API void    ImGui_ImplAllegro5_InvalidateDeviceObjects();

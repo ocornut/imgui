@@ -39,6 +39,16 @@ Breaking Changes:
    The only difference is if you were using TreeNodeEx() manually with ImGuiTreeNodeFlags_CollapsingHeader and without ImGuiTreeNodeFlags_NoTreePushOnOpen. In which case
    you can remove the ImGuiTreeNodeFlags_NoTreePushOnOpen flag from your call (ImGuiTreeNodeFlags_CollapsingHeader & ~ImGuiTreeNodeFlags_NoTreePushOnOpen). (#1864)
  - ImFontAtlas: Renamed GetGlyphRangesChinese() to GetGlyphRangesChineseFull() to distinguish other variants and discourage using the full set. (#1859)
+ - Examples Bindings have been refactored to separate them into "Platform" and "Renderer" components that are more easy to combine.
+   - The "Platform" bindings are in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, etc.
+     Examples: Windows (imgui_impl_win32.cpp), GLFW (imgui_impl_glfw.cpp), SDL2 (imgui_impl_sdl2.cpp).
+   - The "Renderer" bindings are in charge of: creating the main font texture, rendering imgui draw data.
+     Examples: DirectX11 (imgui_impl_dx11.cpp), GL3 (imgui_impl_opengl3.cpp), Vulkan (imgui_impl_vulkan.cpp)
+   - This is not strictly a breaking change if you keep your old bindings, but _WHEN_ you'll want to fully update your bindings, 
+     expect to have to reshuffle a few things. This refactor will greatly facilitate maintenance and re-usability, and was designed 
+     to get us closer to the upcoming "multi-viewport" feature branch.
+   - Please read examples/README.txt for details.
+
 
 Other Changes:
 

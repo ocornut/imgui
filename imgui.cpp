@@ -4218,10 +4218,13 @@ void ImDrawDataBuilder::FlattenIntoSingleLayer()
 
 static void SetupDrawData(ImVector<ImDrawList*>* draw_lists, ImDrawData* out_draw_data)
 {
+    ImGuiIO& io = ImGui::GetIO();
     out_draw_data->Valid = true;
     out_draw_data->CmdLists = (draw_lists->Size > 0) ? draw_lists->Data : NULL;
     out_draw_data->CmdListsCount = draw_lists->Size;
     out_draw_data->TotalVtxCount = out_draw_data->TotalIdxCount = 0;
+    out_draw_data->DisplayPos = ImVec2(0.0f, 0.0f);
+    out_draw_data->DisplaySize = io.DisplaySize;
     for (int n = 0; n < draw_lists->Size; n++)
     {
         out_draw_data->TotalVtxCount += draw_lists->Data[n]->VtxBuffer.Size;

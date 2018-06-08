@@ -3,6 +3,7 @@
 // FIXME: 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*))
 
 #include "imgui.h"
+#include "imgui_impl_win32.h"
 #include "imgui_impl_dx12.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
@@ -92,7 +93,7 @@ void ResizeSwapChain(HWND hWnd, int width, int height)
     sd.Width = width;
     sd.Height = height;
 
-    IDXGIFactory4* dxgiFactory = nullptr;
+    IDXGIFactory4* dxgiFactory = NULL;
     g_pSwapChain->GetParent(IID_PPV_ARGS(&dxgiFactory));
 
     g_pSwapChain->Release();
@@ -290,9 +291,11 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    ImGui_ImplDX12_Init(hwnd, NUM_FRAMES_IN_FLIGHT, g_pd3dDevice,
+
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT, 
         DXGI_FORMAT_R8G8B8A8_UNORM,
-        g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(),
+        g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(), 
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
     // Setup style
@@ -323,6 +326,7 @@ int main(int, char**)
     ZeroMemory(&msg, sizeof(msg));
     while (msg.message != WM_QUIT)
     {
+        // Poll and handle messages (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -333,7 +337,11 @@ int main(int, char**)
             DispatchMessage(&msg);
             continue;
         }
+
+        // Start the ImGui frame
         ImGui_ImplDX12_NewFrame(g_pd3dCommandList);
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -410,6 +418,7 @@ int main(int, char**)
 
     WaitForLastSubmittedFrame();
     ImGui_ImplDX12_Shutdown();
+    ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
     CleanupDeviceD3D();

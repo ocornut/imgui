@@ -3,6 +3,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
+#include "imgui_impl_win32.h"
 #include <d3d9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -79,7 +80,8 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    ImGui_ImplDX9_Init(hwnd, g_pd3dDevice);
+    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplDX9_Init(g_pd3dDevice);
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -111,6 +113,7 @@ int main(int, char**)
     UpdateWindow(hwnd);
     while (msg.message != WM_QUIT)
     {
+        // Poll and handle messages (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -121,7 +124,11 @@ int main(int, char**)
             DispatchMessage(&msg);
             continue;
         }
+
+        // Start the ImGui frame
         ImGui_ImplDX9_NewFrame();
+        ImGui_ImplWin32_NewFrame();
+        ImGui::NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -185,6 +192,7 @@ int main(int, char**)
     }
 
     ImGui_ImplDX9_Shutdown();
+    ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
     if (g_pd3dDevice) g_pd3dDevice->Release();

@@ -27,7 +27,7 @@ int main(int, char**)
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    ImGui_ImplA5_Init(display);
+    ImGui_ImplAllegro5_Init(display);
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -56,6 +56,7 @@ int main(int, char**)
     bool running = true;
     while (running)
     {
+        // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -63,17 +64,20 @@ int main(int, char**)
         ALLEGRO_EVENT ev;
         while (al_get_next_event(queue, &ev))
         {
-            ImGui_ImplA5_ProcessEvent(&ev);
+            ImGui_ImplAllegro5_ProcessEvent(&ev);
             if (ev.type == ALLEGRO_EVENT_DISPLAY_CLOSE) 
                 running = false;
             if (ev.type == ALLEGRO_EVENT_DISPLAY_RESIZE)
             {
-                ImGui_ImplA5_InvalidateDeviceObjects();
+                ImGui_ImplAllegro5_InvalidateDeviceObjects();
                 al_acknowledge_resize(display);
-                Imgui_ImplA5_CreateDeviceObjects();
+                ImGui_ImplAllegro5_CreateDeviceObjects();
             }
         }
-        ImGui_ImplA5_NewFrame();
+
+        // Start the ImGui frame
+        ImGui_ImplAllegro5_NewFrame();
+        ImGui::NewFrame();
 
         // 1. Show a simple window.
         // Tip: if we don't call ImGui::Begin()/ImGui::End() the widgets automatically appears in a window called "Debug".
@@ -113,14 +117,14 @@ int main(int, char**)
         }
 
         // Rendering
-        al_clear_to_color(al_map_rgba_f(clear_color.x, clear_color.y, clear_color.z, clear_color.w));
         ImGui::Render();
-        ImGui_ImplA5_RenderDrawData(ImGui::GetDrawData());
+        al_clear_to_color(al_map_rgba_f(clear_color.x, clear_color.y, clear_color.z, clear_color.w));
+        ImGui_ImplAllegro5_RenderDrawData(ImGui::GetDrawData());
         al_flip_display();
     }
 
     // Cleanup
-    ImGui_ImplA5_Shutdown();
+    ImGui_ImplAllegro5_Shutdown();
     ImGui::DestroyContext();
     al_destroy_event_queue(queue);
     al_destroy_display(display);

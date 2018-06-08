@@ -1,4 +1,5 @@
-// ImGui Allegro 5 bindings
+// ImGui Renderer + Platform Binding for: Allegro 5
+// (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:
 //  [X] User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
@@ -14,7 +15,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-04-18: Misc: Renamed file from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
 //  2018-04-18: Misc: Added support for 32-bits vertex indices to avoid conversion at runtime. Added imconfig_allegro5.h to enforce 32-bit indices when included from imgui.h.
-//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplA5_RenderDrawData() in the .h file so you can call it yourself.
+//  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplAllegro5_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 
@@ -45,7 +46,7 @@ struct ImDrawVertAllegro
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 {
     int op, src, dst;
     al_get_blender(&op, &src, &dst);
@@ -108,7 +109,7 @@ void ImGui_ImplA5_RenderDrawData(ImDrawData* draw_data)
     al_set_clipping_rectangle(0, 0, al_get_display_width(g_Display), al_get_display_height(g_Display));
 }
 
-bool Imgui_ImplA5_CreateDeviceObjects()
+bool ImGui_ImplAllegro5_CreateDeviceObjects()
 {
     // Build texture atlas
     ImGuiIO &io = ImGui::GetIO();
@@ -155,7 +156,7 @@ bool Imgui_ImplA5_CreateDeviceObjects()
     return true;
 }
 
-void ImGui_ImplA5_InvalidateDeviceObjects()
+void ImGui_ImplAllegro5_InvalidateDeviceObjects()
 {
     if (g_Texture)
     {
@@ -170,7 +171,7 @@ void ImGui_ImplA5_InvalidateDeviceObjects()
     }
 }
 
-bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
+bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 {
     g_Display = display;
 
@@ -209,23 +210,19 @@ bool ImGui_ImplA5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
 
-#ifdef _WIN32
-    io.ImeWindowHandle = al_get_win_window_handle(g_Display);
-#endif
-
     return true;
 }
 
-void ImGui_ImplA5_Shutdown()
+void ImGui_ImplAllegro5_Shutdown()
 {
-    ImGui_ImplA5_InvalidateDeviceObjects();
+    ImGui_ImplAllegro5_InvalidateDeviceObjects();
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
+bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT *ev)
 {
     ImGuiIO &io = ImGui::GetIO();
 
@@ -249,10 +246,10 @@ bool ImGui_ImplA5_ProcessEvent(ALLEGRO_EVENT *ev)
     return false;
 }
 
-void ImGui_ImplA5_NewFrame()
+void ImGui_ImplAllegro5_NewFrame()
 {
     if (!g_Texture)
-        Imgui_ImplA5_CreateDeviceObjects();
+        ImGui_ImplAllegro5_CreateDeviceObjects();
 
     ImGuiIO &io = ImGui::GetIO();
 
@@ -310,7 +307,4 @@ void ImGui_ImplA5_NewFrame()
         }
         al_set_system_mouse_cursor(g_Display, cursor_id);
     }
-
-    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
-    ImGui::NewFrame();
 }

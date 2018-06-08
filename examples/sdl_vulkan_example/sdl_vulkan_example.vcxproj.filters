@@ -19,10 +19,10 @@
     <ClCompile Include="..\..\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="main.cpp">
+    <ClCompile Include="..\imgui_impl_sdl2.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_glfw.cpp">
+    <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="..\imgui_impl_vulkan.cpp">
@@ -39,7 +39,7 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_glfw.h">
+    <ClInclude Include="..\imgui_impl_sdl2.h">
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="..\imgui_impl_vulkan.h">
