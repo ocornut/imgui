@@ -4,12 +4,13 @@
 #include "imgui.h"
 #include "imgui_impl_sdl2.h"
 #include "imgui_impl_vulkan.h"
-#include <stdio.h>
+#include <stdio.h>          // printf, fprintf
+#include <stdlib.h>         // abort
 #include <SDL.h>
 #include <SDL_vulkan.h>
 #include <vulkan/vulkan.h>
 
-#define IMGUI_UNLIMITED_FRAME_RATE
+//#define IMGUI_UNLIMITED_FRAME_RATE
 #ifdef _DEBUG
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
@@ -24,7 +25,7 @@ static VkDebugReportCallbackEXT     g_DebugReport = VK_NULL_HANDLE;
 static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 
-static ImGui_ImplVulkan_WindowData  g_WindowData;
+static ImGui_ImplVulkanH_WindowData g_WindowData;
 
 static void check_vk_result(VkResult err)
 {
@@ -172,7 +173,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
     }
 }
 
-static void SetupVulkanWindowData(ImGui_ImplVulkan_WindowData* wd, VkSurfaceKHR surface, int width, int height)
+static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
 
@@ -205,7 +206,7 @@ static void SetupVulkanWindowData(ImGui_ImplVulkan_WindowData* wd, VkSurfaceKHR 
 
 static void CleanupVulkan()
 {
-    ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
     ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
@@ -219,7 +220,7 @@ static void CleanupVulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
+static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
 {
 	VkResult err;
 
@@ -227,7 +228,7 @@ static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
 	err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
 	check_vk_result(err);
 
-    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
     {
 		err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);	// wait indefinitely instead of periodically checking
         check_vk_result(err);
@@ -280,9 +281,9 @@ static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
     }
 }
 
-static void FramePresent(ImGui_ImplVulkan_WindowData* wd)
+static void FramePresent(ImGui_ImplVulkanH_WindowData* wd)
 {
-    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
@@ -328,7 +329,7 @@ int main(int, char**)
     // Create Framebuffers
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
-    ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
     SetupVulkanWindowData(wd, surface, w, h);
 
     // Setup ImGui binding
@@ -339,7 +340,7 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     // Setup SDL binding
-    ImGui_ImplSDL2_Init(window, NULL);
+    ImGui_ImplSDL2_InitForVulkan(window);
 
     // Setup Vulkan binding
     ImGui_ImplVulkan_InitInfo init_info = {};

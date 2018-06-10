@@ -4,6 +4,8 @@
 
 // Implemented features:
 //  [X] Multi-viewport windows (when ImGuiConfigFlags_ViewportsEnable is enabled).
+// Missing features:
+//  [ ] SDL2 handling of IME under Windows appears to be broken and it explicitly disable the regular Windows IME. You can restore Windows IME by compiling SDL with SDL_DISABLE_WINDOWS_IME.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -13,7 +15,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
-//  2018-XX-XX: Misc: ImGui_ImplSDL2_Init() now takes a SDL_GLContext parameter. 
+//  2018-06-08: Misc: Extracted imgui_impl_sdl2.cpp/.h away from the old combined SDL2+OpenGL/Vulkan examples.
+//  2018-06-08: Misc: Renamed ImGui_ImplSDL2_Init() to ImGui_ImplSDL2_InitForOpenGL() which now takes the SDL_GLContext parameter. 
 //  2018-05-09: Misc: Fixed clipboard paste memory leak (we didn't call SDL_FreeMemory on the data returned by SDL_GetClipboardText).
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-02-16: Inputs: Added support for mouse cursors, honoring ImGui::GetMouseCursor() value.
@@ -130,7 +133,7 @@ bool ImGui_ImplSDL2_ProcessEvent(SDL_Event* event)
     return false;
 }
 
-bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
+static bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
 {
     g_Window = window;
 
@@ -191,6 +194,20 @@ bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     return true;
 }
 
+bool ImGui_ImplSDL2_InitForOpenGL(SDL_Window* window, void* sdl_gl_context)
+{
+    (void)sdl_gl_context; // Viewport branch will need this.
+    return ImGui_ImplSDL2_Init(window, sdl_gl_context);
+}
+
+bool ImGui_ImplSDL2_InitForVulkan(SDL_Window* window)
+{
+    #if !SDL_HAS_VULKAN
+    IM_ASSERT(0 && "Unsupported");
+    #endif
+    return ImGui_ImplSDL2_Init(window, NULL);
+}
+
 void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_ShutdownPlatformInterface();
@@ -237,8 +254,8 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     if (focused_window)
     {
-        // SDL_GetMouseState() gives me mouse position seemingly based on the last window entered/focused(?)
-        // The creation of new window and SDL_CaptureMouse both seems to severely mess up with that, so we retrieve that position globally.
+        // SDL_GetMouseState() gives mouse position seemingly based on the last window entered/focused(?)
+        // The creation of new windows at runtime and SDL_CaptureMouse both seems to severely mess up with that, so we retrieve that position globally.
         int wx, wy;
         SDL_GetWindowPosition(focused_window, &wx, &wy);
         SDL_GetGlobalMouseState(&mx, &my);

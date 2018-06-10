@@ -294,8 +294,10 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
     ImGui_ImplWin32_Init(hwnd);
-    ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT, DXGI_FORMAT_R8G8B8A8_UNORM,
-                        g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(), g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
+    ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT, 
+        DXGI_FORMAT_R8G8B8A8_UNORM,
+        g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(), 
+        g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
 
     // Setup style
     ImGui::StyleColorsDark();

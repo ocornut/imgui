@@ -11,6 +11,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-06-08: Misc: Extracted imgui_impl_dx12.cpp/.h away from the old combined DX12+Win32 example.
+//  2018-06-08: DirectX12: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle (to ease support for future multi-viewport).
 //  2018-02-22: Merged into master with all Win32 code synchronized to other examples.
 
 #include "imgui.h"
@@ -46,7 +48,7 @@ static UINT                         g_frameIndex = UINT_MAX;
 
 struct VERTEX_CONSTANT_BUFFER
 {
-    float        mvp[4][4];
+    float   mvp[4][4];
 };
 
 // Forward Declarations
@@ -57,7 +59,7 @@ static void ImGui_ImplDX12_ShutdownPlatformInterface();
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
 {
-    // NOTE: I'm assuming that this only get's called once per frame!
+    // FIXME: I'm assuming that this only gets called once per frame!
     // If not, we can't just re-allocate the IB or VB, we'll have to do a proper allocator.
     g_frameIndex = g_frameIndex + 1;
     FrameResources* frameResources = &g_pFrameResources[g_frameIndex % g_numFramesInFlight];
@@ -88,8 +90,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
         desc.SampleDesc.Count = 1;
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        if (g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE,
-            &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&g_pVB)) < 0)
+        if (g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&g_pVB)) < 0)
             return;
         frameResources->VB = g_pVB;
         frameResources->VertexBufferSize = g_VertexBufferSize;
@@ -114,8 +115,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
         desc.SampleDesc.Count = 1;
         desc.Layout = D3D12_TEXTURE_LAYOUT_ROW_MAJOR;
         desc.Flags = D3D12_RESOURCE_FLAG_NONE;
-        if (g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE,
-            &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&g_pIB)) < 0)
+        if (g_pd3dDevice->CreateCommittedResource(&props, D3D12_HEAP_FLAG_NONE, &desc, D3D12_RESOURCE_STATE_GENERIC_READ, NULL, IID_PPV_ARGS(&g_pIB)) < 0)
             return;
         frameResources->IB = g_pIB;
         frameResources->IndexBufferSize = g_IndexBufferSize;
@@ -143,13 +143,14 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
     g_pIB->Unmap(0, &range);
 
     // Setup orthographic projection matrix into our constant buffer
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is (0,0) for single viewport apps.
     VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
     {
         VERTEX_CONSTANT_BUFFER* constant_buffer = &vertex_constant_buffer;
-        float L = 0.0f;
-        float R = ImGui::GetIO().DisplaySize.x;
-        float B = ImGui::GetIO().DisplaySize.y;
-        float T = 0.0f;
+        float L = draw_data->DisplayPos.x;
+        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+        float T = draw_data->DisplayPos.y;
+        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
         float mvp[4][4] =
         {
             { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
@@ -163,8 +164,8 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
     // Setup viewport
     D3D12_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-    vp.Width = ImGui::GetIO().DisplaySize.x;
-    vp.Height = ImGui::GetIO().DisplaySize.y;
+    vp.Width = draw_data->DisplaySize.x;
+    vp.Height = draw_data->DisplaySize.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -197,6 +198,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
     // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
+    ImVec2 pos = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -209,7 +211,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
-                const D3D12_RECT r = { (LONG)pcmd->ClipRect.x, (LONG)pcmd->ClipRect.y, (LONG)pcmd->ClipRect.z, (LONG)pcmd->ClipRect.w };
+                const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - pos.x), (LONG)(pcmd->ClipRect.y - pos.y), (LONG)(pcmd->ClipRect.z - pos.x), (LONG)(pcmd->ClipRect.w - pos.y) };
                 ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
                 ctx->RSSetScissorRects(1, &r);
                 ctx->DrawIndexedInstanced(pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);

@@ -4,7 +4,6 @@
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
-
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #define GLFW_INCLUDE_NONE
@@ -27,7 +26,7 @@ static VkDebugReportCallbackEXT     g_DebugReport = VK_NULL_HANDLE;
 static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 
-static ImGui_ImplVulkan_WindowData  g_WindowData;
+static ImGui_ImplVulkanH_WindowData g_WindowData;
 static bool                         g_ResizeWanted = false;
 static int                          g_ResizeWidth = 0, g_ResizeHeight = 0;
 
@@ -177,7 +176,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
     }
 }
 
-static void SetupVulkanWindowData(ImGui_ImplVulkan_WindowData* wd, VkSurfaceKHR surface, int width, int height)
+static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
 
@@ -210,7 +209,7 @@ static void SetupVulkanWindowData(ImGui_ImplVulkan_WindowData* wd, VkSurfaceKHR 
 
 static void CleanupVulkan()
 {
-    ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
     ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
@@ -224,7 +223,7 @@ static void CleanupVulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
+static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
 {
 	VkResult err;
 
@@ -232,7 +231,7 @@ static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
 	err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
 	check_vk_result(err);
 
-    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
     {
 		err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);	// wait indefinitely instead of periodically checking
 		check_vk_result(err);
@@ -285,9 +284,9 @@ static void FrameRender(ImGui_ImplVulkan_WindowData* wd)
 	}
 }
 
-static void FramePresent(ImGui_ImplVulkan_WindowData* wd)
+static void FramePresent(ImGui_ImplVulkanH_WindowData* wd)
 {
-    ImGui_ImplVulkan_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
 	VkPresentInfoKHR info = {};
 	info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
 	info.waitSemaphoreCount = 1;
@@ -340,7 +339,7 @@ int main(int, char**)
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
     glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
-    ImGui_ImplVulkan_WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
     SetupVulkanWindowData(wd, surface, w, h);
 
     // Setup Dear ImGui binding
@@ -350,6 +349,7 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
     // Setup GLFW binding
     ImGui_ImplGlfw_InitForVulkan(window, true);

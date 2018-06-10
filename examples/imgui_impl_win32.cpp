@@ -10,6 +10,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2018-06-08: Misc: Extracted imgui_impl_win32.cpp/.h away from the old combined DX9/DX10/DX11/DX12 examples.
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors and ImGuiBackendFlags_HasSetMousePos flags + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-02-20: Inputs: Added support for mouse cursors (ImGui::GetMouseCursor() value and WM_SETCURSOR message handling).
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -129,8 +130,6 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
 //                                 io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor.
 //   - io.MousePosViewport ....... viewport which mouse position is based from (generally the focused/active/capturing viewport)
 //   - io.MouseHoveredViewport ... [optional] viewport which mouse is hovering, with _very_ specific/strict conditions (Read comments next to io.MouseHoveredViewport. This is _NOT_ easy to provide in many high-level engine because of how we handle the ImGuiViewportFlags_NoInputs flag)
-// This function overwrite the value of io.MousePos normally updated by the WM_MOUSEMOVE handler. 
-// We keep the WM_MOUSEMOVE handling code so that WndProc function can be copied as-in in applications which do not need multi-viewport support.
 static void ImGui_ImplWin32_UpdateMousePos()
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -256,10 +255,6 @@ IMGUI_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wPa
         return 0;
     case WM_MOUSEHWHEEL:
         io.MouseWheelH += GET_WHEEL_DELTA_WPARAM(wParam) > 0 ? +1.0f : -1.0f;
-        return 0;
-    case WM_MOUSEMOVE:
-        io.MousePos.x = (signed short)(lParam);                 // Note: this is used for single-viewport support, but in reality the code in ImGui_ImplWin32_UpdateMousePos() overwrite this.
-        io.MousePos.y = (signed short)(lParam >> 16);
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
