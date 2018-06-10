@@ -41,7 +41,7 @@ You can find binaries of some of those example applications at:
    ChangeLog at the top of the .cpp files, so if you want to update them later it will be easier to
    catch up with what changed.
 
- - To LEARN how to setup imgui, you may refer to 'opengl2_example/' because is the simplest one to read.
+ - To LEARN how to setup imgui, you may refer to 'example_glfw_opengl2/' because is the simplest one to read.
    However, do NOT USE the OpenGL2 renderer if your code is using any modern GL3+ calls.
    Mixing old fixed-pipeline OpenGL2 and modern OpenGL3+ is going to make everything more complicated.
    Read comments below for details. If you are not sure, in doubt, use the OpenGL3 renderer.
@@ -71,7 +71,7 @@ Most the example bindings are split in 2 parts:
    Examples: DirectX11 (imgui_impl_dx11.cpp), GL3 (imgui_impl_opengl3.cpp), Vulkan (imgui_impl_vulkan.cpp)
 
  - The example _applications_ usually combine 1 platform + 1 renderer binding to create a working program.
-   Examples: the directx11_example/ application combines imgui_impl_win32.cpp + imgui_impl_dx11.cpp.
+   Examples: the example_win32_directx11/ application combines imgui_impl_win32.cpp + imgui_impl_dx11.cpp.
 
  - Some bindings for higher level frameworks carry both "Platform" and "Renderer" parts in one file.
    This is the case for Allegro 5 (imgui_impl_allegro5.cpp), Marmalade (imgui_impl_marmalade5.cpp).
@@ -215,7 +215,7 @@ example_sdl_vulkan/
 example_apple/
     OSX & iOS example + OpenGL2.
     THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
-    Consider using the opengl3_example/ instead.
+    Consider using the example_glfw_opengl3/ instead.
     On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 

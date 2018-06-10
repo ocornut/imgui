@@ -6,7 +6,7 @@ THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
 
 This example is the default XCode "OpenGL" example code, modified to support ImGui and [Synergy](http://synergy-project.org/) to share mouse/keyboard on an iOS device.
 
-It is a rather complex and messy example because of all of the faff required to get an XCode/iOS application running. Refer to the regular OpenGL examples if you want to learn about integrating ImGui. **The opengl3_example/ should also work on OS X and is much simpler.** This is an integration for iOS with Synergy.
+It is a rather complex and messy example because of all of the faff required to get an XCode/iOS application running. Refer to the regular OpenGL examples if you want to learn about integrating ImGui. **The code in example_glfw_opengl3/ should also work on OS X and is much simpler.** This is an integration for iOS with Synergy.
 
 Synergy (remote keyboard/mouse) is not required, but it's pretty hard to use ImGui without it. Synergy includes a "uSynergy" library that allows embedding a synergy client, this is what is used here. ImGui supports "TouchPadding", and this is enabled when Synergy is not active.
 
