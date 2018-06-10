@@ -39,19 +39,30 @@ Breaking Changes:
    The only difference is if you were using TreeNodeEx() manually with ImGuiTreeNodeFlags_CollapsingHeader and without ImGuiTreeNodeFlags_NoTreePushOnOpen. In which case
    you can remove the ImGuiTreeNodeFlags_NoTreePushOnOpen flag from your call (ImGuiTreeNodeFlags_CollapsingHeader & ~ImGuiTreeNodeFlags_NoTreePushOnOpen). (#1864)
  - ImFontAtlas: Renamed GetGlyphRangesChinese() to GetGlyphRangesChineseFull() to distinguish other variants and discourage using the full set. (#1859)
- - Examples Bindings have been refactored to separate them into "Platform" and "Renderer" components that are more easy to combine.
-   - The "Platform" bindings are in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, etc.
-     Examples: Windows (imgui_impl_win32.cpp), GLFW (imgui_impl_glfw.cpp), SDL2 (imgui_impl_sdl2.cpp).
-   - The "Renderer" bindings are in charge of: creating the main font texture, rendering imgui draw data.
-     Examples: DirectX11 (imgui_impl_dx11.cpp), GL3 (imgui_impl_opengl3.cpp), Vulkan (imgui_impl_vulkan.cpp)
-   - This is not strictly a breaking change if you keep your old bindings, but _WHEN_ you'll want to fully update your bindings, 
-     expect to have to reshuffle a few things. This refactor will greatly facilitate maintenance and re-usability, and was designed 
-     to get us closer to the upcoming "multi-viewport" feature branch.
-   - Please read examples/README.txt for details.
-
+   This also apply if you were using internal's TreeNodeBehavior() with the ImGuiTreeNodeFlags_CollapsingHeader flag directly.
 
 Other Changes:
 
+ - Examples back-ends have been refactored to separate the platform code (e.g. Win32, Glfw, SDL2) from the renderer code (e.g. DirectX11, OpenGL3, Vulkan).
+   The "Platform" bindings are in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, etc.
+   The "Renderer" bindings are in charge of: creating the main font texture, rendering imgui draw data.
+       before: imgui_impl_dx11.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx11.cpp
+       before: imgui_impl_dx12.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx12.cpp
+       before: imgui_impl_glfw_gl3.cpp    --> after: imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
+       before: imgui_impl_glfw_vulkan.cpp --> after: imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
+       before: imgui_impl_sdl_gl3.cpp     --> after: imgui_impl_sdl2.cpp + imgui_impl_opengl2.cpp
+       before: imgui_impl_sdl_gl3.cpp     --> after: imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp etc.
+   - The idea is what we can now easily combine and maintain back-ends and reduce code redundancy. Individual files are smaller and more reusable.
+     Integration of imgui into a new/custom engine may also be easier as there is less overlap between "windowing / inputs" and "rendering" code, 
+     so you may study or grab one half of the code and not the other.
+   - This change was motivated by the fact that adding support for the upcoming multi-viewport feature requires more work from the Platform and Renderer 
+     back-ends, and the amount of redundancy across files was becoming too difficult to maintain. If you use default back-ends, you'll benefit from an 
+     easy update path to support multi-viewports later.
+   - This is not strictly a breaking change if you keep your old bindings, but when you'll want to fully update your bindings, 
+     expect to have to reshuffle a few things. 
+   - Each example still has its own main.cpp which you may refer you to understand how to initialize and glue everything together.
+   - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
+   - Please read examples/README.txt for details.
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
  - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
  - TreeNode: Fixed nodes with ImGuiTreeNodeFlags_Leaf flag always returning true which was meaningless.
@@ -63,6 +74,7 @@ Other Changes:
  - InputTextMultiline(): Fixed double navigation highlight when scrollbar is active. (#787)
  - InputText(): Fixed Undo after pasting large amount of text (Redo will still fail when undo buffers are exhausted, but text won't be corrupted).
  - SliderFloat(): When using keyboard/gamepad and a zero precision format string (e.g. "%.0f"), always step in integer units. (#1866)
+ - ImFontConfig: Added GlyphMinAdvanceX/GlyphMaxAdvanceX settings useful to make a font appears monospaced, particularly useful for icon fonts. (#1869)
  - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese characters. (#1859) [@JX-Master, @ocornut]
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
  - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.

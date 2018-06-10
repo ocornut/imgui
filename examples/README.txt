@@ -66,7 +66,7 @@ You can find binaries of some of those example applications at:
 Most the example bindings are split in 2 parts:
 
  - The "Platform" bindings, in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, windowing.
-   Examples: Windows (imgui_impl_win32.cpp), GLFW (imgui_impl_glfw.cpp), SDL2 (imgui_impl_sdl2.cpp)
+   Examples: Windows (imgui_impl_win32.cpp), GLFW (imgui_impl_glfw.cpp), SDL2 (imgui_impl_sdl.cpp)
 
  - The "Renderer" bindings, in charge of: creating the main font texture, rendering imgui draw data.
    Examples: DirectX11 (imgui_impl_dx11.cpp), GL3 (imgui_impl_opengl3.cpp), Vulkan (imgui_impl_vulkan.cpp)
@@ -110,7 +110,7 @@ Most the example bindings are split in 2 parts:
 List of officially maintained Platforms Bindings:
 
     imgui_impl_glfw.cpp
-    imgui_impl_sdl2.cpp
+    imgui_impl_sdl.cpp
     imgui_impl_win32.cpp
 
 List of officially maintained Renderer Bindings:
@@ -154,76 +154,76 @@ Building:
   directly with a command-line compiler.
 
 
-directx9_example/
+example_win32_directx9/
     DirectX9 example, Windows only.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx9.cpp
     
-directx10_example/
+example_win32_directx10/
     DirectX10 example, Windows only.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx10.cpp
 
-directx11_example/
+example_win32_directx11/
     DirectX11 example, Windows only.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx11.cpp
     
-directx12_example/
+example_win32_directx12/
     DirectX12 example, Windows only.
     This is quite long and tedious, because: DirectX12.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp
 
-opengl2_example/
-    **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
-    **Prefer using the code in the opengl3_example/ folder**
-    GLFW + OpenGL example (legacy, fixed pipeline).
+example_glfw_opengl2/
+    **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+    **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
+    GLFW + OpenGL2 example (legacy, fixed pipeline).
     This code is mostly provided as a reference to learn about ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended.
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
 
-opengl3_example/
-    GLFW (Win32, Mac, Linux) + OpenGL example (programmable pipeline, binding modern functions with GL3W).
+example_glfw_opengl3/
+    GLFW (Win32, Mac, Linux) + OpenGL3+ example (programmable pipeline, binding modern functions with GL3W).
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp
 	
-vulkan_example/
-    Vulkan example.
+example_glfw_vulkan/
+    GLFW (Win32, Mac, Linux) + Vulkan example.
     This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
 
-sdl_opengl2_example/
-    **DO NOT USE THIS CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
-    **Prefer using the code in the sdl_opengl3_example/ folder**
+example_sdl_opengl2/
+    **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
+    **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
     This code is mostly provided as a reference to learn about ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended. 
-    = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl2.cpp
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
 
-sdl_opengl3_example/
-    SDL2 (Win32, Mac, Linux, etc.) + OpenGL3 example.
+example_sdl_opengl3/
+    SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+ example.
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
-    = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
 
-sdl_vulkan_example/
+example_sdl_vulkan/
     SDL2 (Win32, Mac, Linux, etc.) + Vulkan example.
     This is quite long and tedious, because: Vulkan.
-    = main.cpp + imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
 
-apple_example/
+example_apple/
     OSX & iOS example + OpenGL2.
     THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
     Consider using the opengl3_example/ instead.
     On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 
-allegro5_example/
+example_allegro5/
     Allegro 5 example.
     = main.cpp + imgui_impl_allegro5.cpp
 
-marmalade_example/
-    Marmalade example using IwGx
+example_marmalade/
+    Marmalade example using IwGx.
     = main.cpp + imgui_impl_marmalade.cpp
