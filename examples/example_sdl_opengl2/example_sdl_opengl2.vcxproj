@@ -154,7 +154,7 @@
     <ClCompile Include="..\..\imgui_demo.cpp" />
     <ClCompile Include="..\..\imgui_draw.cpp" />
     <ClCompile Include="..\imgui_impl_opengl2.cpp" />
-    <ClCompile Include="..\imgui_impl_sdl2.cpp" />
+    <ClCompile Include="..\imgui_impl_sdl.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -162,7 +162,7 @@
     <ClInclude Include="..\..\imgui.h" />
     <ClInclude Include="..\..\imgui_internal.h" />
     <ClInclude Include="..\imgui_impl_opengl2.h" />
-    <ClInclude Include="..\imgui_impl_sdl2.h" />
+    <ClInclude Include="..\imgui_impl_sdl.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\misc\natvis\imgui.natvis" />

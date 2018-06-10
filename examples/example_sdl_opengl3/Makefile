@@ -16,7 +16,7 @@
 
 EXE = example_sdl_opengl3
 SOURCES = main.cpp
-SOURCES += ../imgui_impl_sdl2.cpp ../imgui_impl_opengl3.cpp
+SOURCES += ../imgui_impl_sdl.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
 SOURCES += ../libs/gl3w/GL/gl3w.c
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))

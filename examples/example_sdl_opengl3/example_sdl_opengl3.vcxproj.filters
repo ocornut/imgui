@@ -31,7 +31,7 @@
     <ClCompile Include="..\imgui_impl_opengl3.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_sdl2.cpp">
+    <ClCompile Include="..\imgui_impl_sdl.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>
@@ -54,7 +54,7 @@
     <ClInclude Include="..\imgui_impl_opengl3.h">
       <Filter>sources</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_sdl2.h">
+    <ClInclude Include="..\imgui_impl_sdl.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>

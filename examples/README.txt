@@ -65,7 +65,7 @@ You can find binaries of some of those example applications at:
 Most the example bindings are split in 2 parts:
 
  - The "Platform" bindings, in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, windowing.
-   Examples: Windows (imgui_impl_win32.cpp), GLFW (imgui_impl_glfw.cpp), SDL2 (imgui_impl_sdl2.cpp)
+   Examples: Windows (imgui_impl_win32.cpp), GLFW (imgui_impl_glfw.cpp), SDL2 (imgui_impl_sdl.cpp)
 
  - The "Renderer" bindings, in charge of: creating the main font texture, rendering imgui draw data.
    Examples: DirectX11 (imgui_impl_dx11.cpp), GL3 (imgui_impl_opengl3.cpp), Vulkan (imgui_impl_vulkan.cpp)
@@ -109,7 +109,7 @@ Most the example bindings are split in 2 parts:
 List of officially maintained Platforms Bindings:
 
     imgui_impl_glfw.cpp
-    imgui_impl_sdl2.cpp
+    imgui_impl_sdl.cpp
     imgui_impl_win32.cpp
 
 List of officially maintained Renderer Bindings:
@@ -199,18 +199,18 @@ example_sdl_opengl2/
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended. 
-    = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl2.cpp
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
 
 example_sdl_opengl3/
     SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+ example.
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
-    = main.cpp + imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
 
 example_sdl_vulkan/
     SDL2 (Win32, Mac, Linux, etc.) + Vulkan example.
     This is quite long and tedious, because: Vulkan.
-    = main.cpp + imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
 
 example_apple/
     OSX & iOS example + OpenGL2.
