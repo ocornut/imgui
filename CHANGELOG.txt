@@ -79,6 +79,7 @@ Other Changes:
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
  - Examples: Win32: Fixed handling of mouse wheel messages to support finer position messages (typically sent by track-pads). (#1874) [zx64]  
  - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag.
+ - Examples: FreeGLUT: Added FreeGLUT bindings. Added FreeGLUT+OpenGL2 example. (#801)
  - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.
  - Internals: PushItemFlag() flags are inherited by BeginChild().
 

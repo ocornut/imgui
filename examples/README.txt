@@ -106,23 +106,24 @@ Most the example bindings are split in 2 parts:
    improvements and fixes related to viewports and platform windows without extra work on your side.
    See 'ImGuiPlatformIO' for details.  
 
-List of officially maintained Platforms Bindings:
+List of Platforms Bindings in this repository:
 
-    imgui_impl_glfw.cpp
-    imgui_impl_sdl.cpp
-    imgui_impl_win32.cpp
+    imgui_impl_glfw.cpp       ; GLFW (Windows, macOS, Linux, etc.) http://www.glfw.org/
+    imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
+    imgui_impl_win32.cpp      ; Windows native API (Windows)
+    imgui_impl_freeglut.cpp   ; FreeGLUT (if you really miss the 90's)
 
-List of officially maintained Renderer Bindings:
+List of Renderer Bindings in this repository:
 
-    imgui_impl_dx9.cpp
-    imgui_impl_dx10.cpp
-    imgui_impl_dx11.cpp
-    imgui_impl_dx12.cpp
-    imgui_impl_opengl2.cpp
-    imgui_impl_opengl3.cpp
-    imgui_impl_vulkan.cpp
+    imgui_impl_dx9.cpp        ; DirectX9
+    imgui_impl_dx10.cpp       ; DirectX10
+    imgui_impl_dx11.cpp       ; DirectX11
+    imgui_impl_dx12.cpp       ; DirectX12 
+    imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline)
+    imgui_impl_opengl3.cpp    ; OpenGL3 (modern programmable pipeline)
+    imgui_impl_vulkan.cpp     ; Vulkan
 
-List of officially maintained high-level Frameworks Bindings (combine Platform + Renderer)
+List of high-level Frameworks Bindings in this repository: (combine Platform + Renderer)
 
     imgui_impl_allegro5.cpp
     imgui_impl_marmalade.cpp
@@ -132,7 +133,7 @@ Third-party framework, graphics API and languages bindings:
     https://github.com/ocornut/imgui/wiki/Links
 
     Languages: C, C#, ChaiScript, D, Go, Haxe, Java, Lua, Odin, Pascal, PureBasic, Python, Rust, Swift...
-    Frameworks: FreeGlut, Cinder, Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
+    Frameworks: Cinder, Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
     OpenSceneGraph, openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
     Miscellaneous: Software Renderer, RemoteImgui, etc.
 
