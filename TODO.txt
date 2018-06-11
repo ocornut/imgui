@@ -285,7 +285,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: imgui_cpp: perhaps a misc/ header file with more friendly helper (e.g. type-infer versions of DragScalar, vector<> variants if appropriate for some functions).
 
  - backend: bgfx? https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
- - backend: freeglut (#801, #795)
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
  - web/emscriptem: tweak OpenGL renderers to support OpenGL ES. (#1713, #336)
  - web/emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)

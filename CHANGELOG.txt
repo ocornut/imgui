@@ -57,27 +57,28 @@ Other Changes:
      so you may study or grab one half of the code and not the other.
    - This change was motivated by the fact that adding support for the upcoming multi-viewport feature requires more work from the Platform and Renderer 
      back-ends, and the amount of redundancy across files was becoming too difficult to maintain. If you use default back-ends, you'll benefit from an 
-     easy update path to support multi-viewports later.
+     easy update path to support multi-viewports later (for future ImGui 1.7x).
    - This is not strictly a breaking change if you keep your old bindings, but when you'll want to fully update your bindings, 
      expect to have to reshuffle a few things. 
    - Each example still has its own main.cpp which you may refer you to understand how to initialize and glue everything together.
    - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
-   - Please read examples/README.txt for details.
- - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
+   - Read examples/README.txt for details.
  - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
+ - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
  - TreeNode: Fixed nodes with ImGuiTreeNodeFlags_Leaf flag always returning true which was meaningless.
  - ColorEdit3, ColorEdit4, ColorButton: Added ImGuiColorEditFlags_NoDragDrop flag to disable ColorEditX as drag target and ColorButton as drag source. (#1826) 
  - BeginDragDropSource(): Offset tooltip position so it is off the mouse cursor, but also closer to it than regular tooltips, and not clamped by viewport. (#1739)
  - BeginDragDropTarget(): Added ImGuiDragDropFlags_AcceptNoPreviewTooltip flag to request hiding the drag source tooltip from the target site. (#143)
  - BeginCombo(), BeginMainMenuBar(), BeginChildFrame(): Temporary style modification are restored at the end of BeginXXX instead of EndXXX, to not affect tooltips and child windows.
- - Popup: Improved handling of (erroneously) repeating calls to OpenPopup() to not fully close/re-open the popup so its child popups won't get closed. (#1497, #1533, #1865).
+ - Popup: Improved handling of (erroneously) repeating calls to OpenPopup() to not close the popup's child popups. (#1497, #1533, #1865).
  - InputTextMultiline(): Fixed double navigation highlight when scrollbar is active. (#787)
- - InputText(): Fixed Undo after pasting large amount of text (Redo will still fail when undo buffers are exhausted, but text won't be corrupted).
+ - InputText(): Fixed Undo corruption after pasting large amount of text (Redo will still fail when undo buffers are exhausted, but text won't be corrupted).
  - SliderFloat(): When using keyboard/gamepad and a zero precision format string (e.g. "%.0f"), always step in integer units. (#1866)
  - ImFontConfig: Added GlyphMinAdvanceX/GlyphMaxAdvanceX settings useful to make a font appears monospaced, particularly useful for icon fonts. (#1869)
  - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese characters. (#1859) [@JX-Master, @ocornut]
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
- - Examples: Win32: Fixed handling of mouse wheel messages to support finer position messages (typically sent by track-pads). (#1874) [zx64]  
+ - Examples: Win32: Fixed handling of mouse wheel messages to support sub-unit scrolling messages (typically sent by track-pads). (#1874) [@zx64]  
+ - Examples: Added SDL+Vulkan example.
  - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag.
  - Examples: FreeGLUT: Added FreeGLUT bindings. Added FreeGLUT+OpenGL2 example. (#801)
  - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.
