@@ -38,11 +38,12 @@ bool ImGui_ImplFreeGLUT_Init()
     io.KeyMap[ImGuiKey_PageDown]    = 256 + GLUT_KEY_PAGE_DOWN;
     io.KeyMap[ImGuiKey_Home]        = 256 + GLUT_KEY_HOME;
     io.KeyMap[ImGuiKey_End]         = 256 + GLUT_KEY_END;
+    io.KeyMap[ImGuiKey_Insert]      = 256 + GLUT_KEY_INSERT;
     io.KeyMap[ImGuiKey_Delete]      = 127;
     io.KeyMap[ImGuiKey_Backspace]   = 8;  // == CTRL+H
+    io.KeyMap[ImGuiKey_Space]       = ' ';
     io.KeyMap[ImGuiKey_Enter]       = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_Escape]      = 27;
-    io.KeyMap[ImGuiKey_Insert]      = 256 + GLUT_KEY_INSERT;
     io.KeyMap[ImGuiKey_A]           = 'A';
     io.KeyMap[ImGuiKey_C]           = 'C';
     io.KeyMap[ImGuiKey_V]           = 'V';
