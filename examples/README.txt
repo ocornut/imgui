@@ -109,6 +109,7 @@ Most the example bindings are split in 2 parts:
 List of officially maintained Platforms Bindings:
 
     imgui_impl_glfw.cpp
+    imgui_impl_osx.mm
     imgui_impl_sdl.cpp
     imgui_impl_win32.cpp
 
@@ -212,10 +213,14 @@ example_sdl_vulkan/
     This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
 
+example_osx_opengl2/
+    OSX Cocoa + OpenGL2.
+    = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
+
 example_apple/
     OSX & iOS example + OpenGL2.
     THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
-    Consider using the example_glfw_opengl3/ instead.
+    Consider using the example_glfw_opengl3/ or example_osx_opengl2/ example instead.
     On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 
