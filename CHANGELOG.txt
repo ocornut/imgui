@@ -77,6 +77,7 @@ Other Changes:
  - ImFontConfig: Added GlyphMinAdvanceX/GlyphMaxAdvanceX settings useful to make a font appears monospaced, particularly useful for icon fonts. (#1869)
  - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese characters. (#1859) [@JX-Master, @ocornut]
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
+ - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag.
  - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.
  - Internals: PushItemFlag() flags are inherited by BeginChild().
 
