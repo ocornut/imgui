@@ -1,9 +1,10 @@
 // ImGui Platform Binding for: OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan..)
 
-// FIXME-OSX: Keyboard mapping is weird.
-// FIXME-OSX: Mouse cursor shape support (see https://github.com/glfw/glfw/issues/427)
-// FIXME-OSX: Test renderer backend combination, e.g. OpenGL3
+// Issues:
+// [ ] Platform: CTRL+Tab can't be read.
+// [ ] Platform: Mouse cursor shapes are not supported (see end of https://github.com/glfw/glfw/issues/427)
+// [ ] Test with another renderer back-end than OpenGL2. e.g. OpenGL3.
 
 #include "imgui.h"
 #include "imgui_impl_osx.h"
@@ -11,7 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Initial version.
+//  2018-06-XX: Initial version.
 
 // Data
 static clock_t  g_Time = 0;
@@ -28,31 +29,28 @@ bool ImGui_ImplOSX_Init()
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_Tab] = 9;
-    io.KeyMap[ImGuiKey_LeftArrow] = ImGuiKey_LeftArrow;
-    io.KeyMap[ImGuiKey_RightArrow] = ImGuiKey_RightArrow;
-    io.KeyMap[ImGuiKey_UpArrow] = ImGuiKey_UpArrow;
-    io.KeyMap[ImGuiKey_DownArrow] = ImGuiKey_DownArrow;
-    io.KeyMap[ImGuiKey_PageUp] = ImGuiKey_PageUp;
-    io.KeyMap[ImGuiKey_PageDown] = ImGuiKey_PageDown;
-    io.KeyMap[ImGuiKey_Home] = ImGuiKey_Home;
-    io.KeyMap[ImGuiKey_End] = ImGuiKey_End;
-    io.KeyMap[ImGuiKey_Insert] = ImGuiKey_Insert;
-    io.KeyMap[ImGuiKey_Delete] = ImGuiKey_Delete;
-    io.KeyMap[ImGuiKey_Backspace] = 127;
-    io.KeyMap[ImGuiKey_Space] = 32;
-    io.KeyMap[ImGuiKey_Enter] = 13;
-    io.KeyMap[ImGuiKey_Escape] = 27;
-    io.KeyMap[ImGuiKey_A] = 'a';
-    io.KeyMap[ImGuiKey_C] = 'c';
-    io.KeyMap[ImGuiKey_V] = 'v';
-    io.KeyMap[ImGuiKey_X] = 'x';
-    io.KeyMap[ImGuiKey_Y] = 'y';
-    io.KeyMap[ImGuiKey_Z] = 'z';
-    
-    // Time elapsed since last frame, in seconds
-    // (in this sample app we'll override this every frame because our time step is variable)
-    io.DeltaTime = 1.0f/60.0f;
+    const int offset_for_function_keys = 256 - 0xF700;
+    io.KeyMap[ImGuiKey_Tab]         = '\t';
+    io.KeyMap[ImGuiKey_LeftArrow]   = NSLeftArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_RightArrow]  = NSRightArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_UpArrow]     = NSUpArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_DownArrow]   = NSDownArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageUp]      = NSPageUpFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageDown]    = NSPageDownFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Home]        = NSHomeFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_End]         = NSEndFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Insert]      = NSInsertFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Delete]      = NSDeleteFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Backspace]   = 127;
+    io.KeyMap[ImGuiKey_Space]       = 32;
+    io.KeyMap[ImGuiKey_Enter]       = 13;
+    io.KeyMap[ImGuiKey_Escape]      = 27;
+    io.KeyMap[ImGuiKey_A]           = 'A';
+    io.KeyMap[ImGuiKey_C]           = 'C';
+    io.KeyMap[ImGuiKey_V]           = 'V';
+    io.KeyMap[ImGuiKey_X]           = 'X';
+    io.KeyMap[ImGuiKey_Y]           = 'Y';
+    io.KeyMap[ImGuiKey_Z]           = 'Z';
     
     return true;
 }
@@ -63,9 +61,8 @@ void ImGui_ImplOSX_Shutdown()
 
 void ImGui_ImplOSX_NewFrame(NSOpenGLView* view)
 {
-    ImGuiIO& io = ImGui::GetIO();
-
     // Setup display size
+    ImGuiIO& io = ImGui::GetIO();
     const float dpi = [view.window backingScaleFactor];
     io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
     io.DisplayFramebufferScale = ImVec2(dpi, dpi);
@@ -86,47 +83,26 @@ void ImGui_ImplOSX_NewFrame(NSOpenGLView* view)
     ImGui::NewFrame();
 }
 
-// FIXME-OSX: Store in io.KeysDown[]
-static bool mapKeymap(int* keymap)
+static int mapCharacterToKey(int c)
 {
-    if (*keymap == NSUpArrowFunctionKey)
-        *keymap = ImGuiKey_LeftArrow;
-    else if (*keymap == NSDownArrowFunctionKey)
-        *keymap = ImGuiKey_DownArrow;
-    else if (*keymap == NSLeftArrowFunctionKey)
-        *keymap = ImGuiKey_LeftArrow;
-    else if (*keymap == NSRightArrowFunctionKey)
-        *keymap = ImGuiKey_RightArrow;
-    else if (*keymap == NSHomeFunctionKey)
-        *keymap = ImGuiKey_Home;
-    else if (*keymap == NSEndFunctionKey)
-        *keymap = ImGuiKey_End;
-    else if (*keymap == NSDeleteFunctionKey)
-        *keymap = ImGuiKey_Delete;
-    else if (*keymap == 25) // SHIFT + TAB
-        *keymap = 9; // TAB
-    else
-        return true;
-    
-    return false;
+    if (c >= 'a' && c <= 'z')
+        return c - 'a' + 'A';
+    if (c == 25) // SHIFT+TAB -> TAB
+        return 9;
+    if (c >= 0 && c < 256)
+        return c;
+    if (c >= 0xF700 && c < 0xF700 + 256)
+        return c - 0xF700 + 256;
+    return -1;
 }
 
-static void ResetKeys()
+// Reset the non-characters keys
+static void resetKeys()
 {
-    // FIXME-OSX: Mapping
     ImGuiIO& io = ImGui::GetIO();
-    io.KeysDown[io.KeyMap[ImGuiKey_A]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_C]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_V]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_X]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_Y]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_Z]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_LeftArrow]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_RightArrow]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_Tab]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_UpArrow]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_DownArrow]] = false;
-    io.KeysDown[io.KeyMap[ImGuiKey_Tab]] = false;
+    for (int n = 0; n < IM_ARRAYSIZE(io.KeyMap); n++)
+        if (io.KeyMap[n] != -1 && io.KeyMap[n] >= 256)
+            io.KeysDown[io.KeyMap[n]] = false;
 }
 
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
@@ -186,16 +162,16 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
         int len = (int)[str length];
         for (int i = 0; i < len; i++)
         {
-            int keymap = [str characterAtIndex:i];
-            if (mapKeymap(&keymap) && !io.KeyCtrl)
-                io.AddInputCharacter(keymap);
-            if (keymap < 512)
-            {
-                // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
-                if (io.KeyCtrl)
-                    ResetKeys();
-                io.KeysDown[keymap] = true;
-            }
+            int c = [str characterAtIndex:i];
+            if (c < 0xF700 && !io.KeyCtrl)
+                io.AddInputCharacter(c);
+
+            // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
+            int key = mapCharacterToKey(c);
+            if (key != -1 && key < 256 && !io.KeyCtrl)
+                resetKeys();
+            if (key != -1)
+                io.KeysDown[key] = true;
         }
         return io.WantCaptureKeyboard;
     }
@@ -206,29 +182,31 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
         int len = (int)[str length];
         for (int i = 0; i < len; i++)
         {
-            int keymap = [str characterAtIndex:i];
-            mapKeymap(&keymap);
-            if (keymap < 512)
-                io.KeysDown[keymap] = false;
+            int c = [str characterAtIndex:i];
+            int key = mapCharacterToKey(c);
+            if (key != -1)
+                io.KeysDown[key] = false;
         }
         return io.WantCaptureKeyboard;
     }
 
     if (event.type == NSEventTypeFlagsChanged)
     {
-        unsigned int flags;
-        flags = [event modifierFlags] & NSDeviceIndependentModifierFlagsMask;
         ImGuiIO& io = ImGui::GetIO();
-        bool wasKeyShift= io.KeyShift;
-        bool wasKeyCtrl = io.KeyCtrl;
-        io.KeyShift     = flags & NSShiftKeyMask;
-        io.KeyCtrl      = flags & NSCommandKeyMask;
-        bool keyShiftReleased = wasKeyShift && !io.KeyShift;
-        bool keyCtrlReleased  = wasKeyCtrl  && !io.KeyCtrl;
+        unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
+
+        bool oldKeyCtrl = io.KeyCtrl;
+        bool oldKeyShift = io.KeyShift;
+        bool oldKeyAlt = io.KeyAlt;
+        bool oldKeySuper = io.KeySuper;
+        io.KeyCtrl      = flags & NSEventModifierFlagControl;
+        io.KeyShift     = flags & NSEventModifierFlagShift;
+        io.KeyAlt       = flags & NSEventModifierFlagOption;
+        io.KeySuper     = flags & NSEventModifierFlagCommand;
 
         // We must reset them as we will not receive any keyUp event if they where pressed during shift or command
-        if (keyShiftReleased || keyCtrlReleased)
-            ResetKeys();
+        if ((oldKeyShift && !io.KeyShift) || (oldKeyCtrl && !io.KeyCtrl))
+            resetKeys();
         return io.WantCaptureKeyboard;
     }
     

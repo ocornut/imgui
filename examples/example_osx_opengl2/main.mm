@@ -191,7 +191,7 @@
 
     appMenu = [[NSMenu alloc] initWithTitle:@"ImGui OSX+OpenGL2 Example"];
     menuItem = [appMenu addItemWithTitle:@"Quit ImGui OSX+OpenGL2 Example" action:@selector(terminate:) keyEquivalent:@"q"];
-    [menuItem setKeyEquivalentModifierMask:NSCommandKeyMask];
+    [menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
 	
     menuItem = [[NSMenuItem alloc] init];
     [menuItem setSubmenu:appMenu];
