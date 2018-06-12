@@ -396,6 +396,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
                 static int listbox_item_current = 1;
                 ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
+                ImGui::Text("Hovered %d, Active %d, Deactivated %d", ImGui::IsItemHovered(), ImGui::IsItemActive(), ImGui::IsItemDeactivated());
 
                 //static int listbox_item_current2 = 2;
                 //ImGui::PushItemWidth(-1);
@@ -1170,6 +1171,89 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
             ImGui::PopID();
             ImGui::PopStyleVar();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Active, Focused, Hovered & Focused Tests"))
+        {
+            // Testing IsItemHovered() and other functions with their various flags. Note that the flags can be combined.
+            // (because BulletText is an item itself and that would affect the output of IsItemHovered() we pass all state in a single call to simplify the code).
+            static int item_type = 1;
+            static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
+            ImGui::RadioButton("Text", &item_type, 0); ImGui::SameLine();
+            ImGui::RadioButton("Button", &item_type, 1); ImGui::SameLine();
+            ImGui::RadioButton("Multi-Component", &item_type, 2);
+            bool return_value = false;
+            if (item_type == 0)
+                ImGui::Text("ITEM: Text");
+            if (item_type == 1)
+                return_value = ImGui::Button("ITEM: Button");
+            if (item_type == 2)
+                return_value = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f);
+            ImGui::BulletText(
+                "Return value = %d\n"
+                "IsItemFocused() = %d\n"
+                "IsItemHovered() = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsItemHovered(_AllowWhenOverlapped) = %d\n"
+                "IsItemHovered(_RectOnly) = %d\n"
+                "IsItemActive() = %d\n"
+                "IsItemDeactivated() = %d\n"
+                "IsItemVisible() = %d\n",
+                return_value,
+                ImGui::IsItemFocused(),
+                ImGui::IsItemHovered(),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
+                ImGui::IsItemActive(),
+                ImGui::IsItemDeactivated(),
+                ImGui::IsItemVisible()
+            );
+
+            static bool embed_all_inside_a_child_window = false;
+            ImGui::Checkbox("Embed everything inside a child window (for additional testing)", &embed_all_inside_a_child_window);
+            if (embed_all_inside_a_child_window)
+                ImGui::BeginChild("outer_child", ImVec2(0, ImGui::GetFontSize() * 20), true);
+
+            // Testing IsWindowFocused() function with its various flags. Note that the flags can be combined.
+            ImGui::BulletText(
+                "IsWindowFocused() = %d\n"
+                "IsWindowFocused(_ChildWindows) = %d\n"
+                "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
+                "IsWindowFocused(_RootWindow) = %d\n"
+                "IsWindowFocused(_AnyWindow) = %d\n",
+                ImGui::IsWindowFocused(),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow));
+
+            // Testing IsWindowHovered() function with its various flags. Note that the flags can be combined.
+            ImGui::BulletText(
+                "IsWindowHovered() = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsWindowHovered(_ChildWindows) = %d\n"
+                "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
+                "IsWindowHovered(_RootWindow) = %d\n"
+                "IsWindowHovered(_AnyWindow) = %d\n",
+                ImGui::IsWindowHovered(),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+
+            ImGui::BeginChild("child", ImVec2(0, 50), true);
+            ImGui::Text("This is another child window for testing with the _ChildWindows flag.");
+            ImGui::EndChild();
+            if (embed_all_inside_a_child_window)
+                EndChild();
+
             ImGui::TreePop();
         }
     }
@@ -2025,73 +2109,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SliderFloat3("Float3", &f3[0], 0.0f, 1.0f);
 
             ImGui::TextWrapped("NB: Cursor & selection are preserved when refocusing last used item in code.");
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Active, Focused & Hovered Test"))
-        {
-            static bool embed_all_inside_a_child_window = false;
-            ImGui::Checkbox("Embed everything inside a child window (for additional testing)", &embed_all_inside_a_child_window);
-            if (embed_all_inside_a_child_window)
-                ImGui::BeginChild("embeddingchild", ImVec2(0, ImGui::GetFontSize() * 25), true);
-
-            // Testing IsWindowFocused() function with its various flags (note that the flags can be combined)
-            ImGui::BulletText(
-                "IsWindowFocused() = %d\n"
-                "IsWindowFocused(_ChildWindows) = %d\n"
-                "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
-                "IsWindowFocused(_RootWindow) = %d\n"
-                "IsWindowFocused(_AnyWindow) = %d\n",
-                ImGui::IsWindowFocused(),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow));
-
-            // Testing IsWindowHovered() function with its various flags (note that the flags can be combined)
-            ImGui::BulletText(
-                "IsWindowHovered() = %d\n"
-                "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
-                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-                "IsWindowHovered(_ChildWindows) = %d\n"
-                "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
-                "IsWindowHovered(_RootWindow) = %d\n"
-                "IsWindowHovered(_AnyWindow) = %d\n",
-                ImGui::IsWindowHovered(),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
-
-            // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
-            ImGui::Button("ITEM");
-            ImGui::BulletText(
-                "IsItemFocused() = %d\n"
-                "IsItemHovered() = %d\n"
-                "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
-                "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-                "IsItemHovered(_AllowWhenOverlapped) = %d\n"
-                "IsItemHovered(_RectOnly) = %d\n"
-                "IsItemActive() = %d\n"
-                "IsItemDeactivated() = %d\n",
-                ImGui::IsItemFocused(),
-                ImGui::IsItemHovered(),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
-                ImGui::IsItemActive(),
-                ImGui::IsItemDeactivated());
-
-            ImGui::BeginChild("child", ImVec2(0,50), true);
-            ImGui::Text("This is another child window for testing IsWindowHovered() flags.");
-            ImGui::EndChild();
-
-            if (embed_all_inside_a_child_window)
-                EndChild();
-
             ImGui::TreePop();
         }
 
