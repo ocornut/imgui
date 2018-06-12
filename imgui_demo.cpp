@@ -396,7 +396,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 const char* listbox_items[] = { "Apple", "Banana", "Cherry", "Kiwi", "Mango", "Orange", "Pineapple", "Strawberry", "Watermelon" };
                 static int listbox_item_current = 1;
                 ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
-                ImGui::Text("Hovered %d, Active %d, Deactivated %d", ImGui::IsItemHovered(), ImGui::IsItemActive(), ImGui::IsItemDeactivated());
 
                 //static int listbox_item_current2 = 2;
                 //ImGui::PushItemWidth(-1);
@@ -1176,20 +1175,21 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         if (ImGui::TreeNode("Active, Focused, Hovered & Focused Tests"))
         {
-            // Testing IsItemHovered() and other functions with their various flags. Note that the flags can be combined.
+            // Display the value of IsItemHovered() and other common item state functions. Note that the flags can be combined.
             // (because BulletText is an item itself and that would affect the output of IsItemHovered() we pass all state in a single call to simplify the code).
             static int item_type = 1;
             static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
             ImGui::RadioButton("Text", &item_type, 0); ImGui::SameLine();
             ImGui::RadioButton("Button", &item_type, 1); ImGui::SameLine();
-            ImGui::RadioButton("Multi-Component", &item_type, 2);
-            bool return_value = false;
-            if (item_type == 0)
-                ImGui::Text("ITEM: Text");
-            if (item_type == 1)
-                return_value = ImGui::Button("ITEM: Button");
-            if (item_type == 2)
-                return_value = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f);
+            ImGui::RadioButton("SliderFloat", &item_type, 2); ImGui::SameLine();
+            ImGui::RadioButton("ColorEdit4", &item_type, 3); ImGui::SameLine();
+            ImGui::RadioButton("ListBox", &item_type, 4);
+            bool ret = false;
+            if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
+            if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
+            if (item_type == 2) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
+            if (item_type == 3) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
+            if (item_type == 4) { const char* items[] = { "Apple", "Banana", "Cherry" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
             ImGui::BulletText(
                 "Return value = %d\n"
                 "IsItemFocused() = %d\n"
@@ -1201,7 +1201,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsItemActive() = %d\n"
                 "IsItemDeactivated() = %d\n"
                 "IsItemVisible() = %d\n",
-                return_value,
+                ret,
                 ImGui::IsItemFocused(),
                 ImGui::IsItemHovered(),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
