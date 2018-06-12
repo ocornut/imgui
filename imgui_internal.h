@@ -625,7 +625,9 @@ struct ImGuiContext
     bool                    ActiveIdIsAlive;                    // Active widget has been seen this frame
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
+    bool                    ActiveIdValueChanged;
     bool                    ActiveIdPreviousFrameIsAlive;
+    bool                    ActiveIdPreviousFrameValueChanged;
     int                     ActiveIdAllowNavDirFlags;           // Active widget allows using directional navigation (e.g. can activate a button and move away from it)
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
@@ -765,7 +767,9 @@ struct ImGuiContext
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
+        ActiveIdValueChanged = false;
         ActiveIdPreviousFrameIsAlive = false;
+        ActiveIdPreviousFrameValueChanged = false;
         ActiveIdAllowNavDirFlags = 0;
         ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = ActiveIdPreviousFrameWindow = NULL;
@@ -1082,6 +1086,7 @@ namespace ImGui
     IMGUI_API ImGuiID       GetHoveredID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
+    IMGUI_API void          MarkItemValueChanged(ImGuiID id);
 
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
     IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
