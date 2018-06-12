@@ -2028,7 +2028,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Focused & Hovered Test"))
+        if (ImGui::TreeNode("Active, Focused & Hovered Test"))
         {
             static bool embed_all_inside_a_child_window = false;
             ImGui::Checkbox("Embed everything inside a child window (for additional testing)", &embed_all_inside_a_child_window);
@@ -2068,16 +2068,22 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
             ImGui::Button("ITEM");
             ImGui::BulletText(
+                "IsItemFocused() = %d\n"
                 "IsItemHovered() = %d\n"
                 "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
                 "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
                 "IsItemHovered(_AllowWhenOverlapped) = %d\n"
-                "IsItemhovered(_RectOnly) = %d\n",
+                "IsItemHovered(_RectOnly) = %d\n"
+                "IsItemActive() = %d\n"
+                "IsItemDeactivated() = %d\n",
+                ImGui::IsItemFocused(),
                 ImGui::IsItemHovered(),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly));
+                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
+                ImGui::IsItemActive(),
+                ImGui::IsItemDeactivated());
 
             ImGui::BeginChild("child", ImVec2(0,50), true);
             ImGui::Text("This is another child window for testing IsWindowHovered() flags.");

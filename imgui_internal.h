@@ -394,6 +394,7 @@ struct ImGuiGroupData
     float       BackupCurrentLineTextBaseOffset;
     float       BackupLogLinePosY;
     bool        BackupActiveIdIsAlive;
+    bool        BackupActiveIdPreviousFrameIsAlive;
     bool        AdvanceCursor;
 };
 
@@ -624,9 +625,11 @@ struct ImGuiContext
     bool                    ActiveIdIsAlive;                    // Active widget has been seen this frame
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
+    bool                    ActiveIdPreviousFrameIsAlive;
     int                     ActiveIdAllowNavDirFlags;           // Active widget allows using directional navigation (e.g. can activate a button and move away from it)
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
+    ImGuiWindow*            ActiveIdPreviousFrameWindow;
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
@@ -762,9 +765,10 @@ struct ImGuiContext
         ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
+        ActiveIdPreviousFrameIsAlive = false;
         ActiveIdAllowNavDirFlags = 0;
         ActiveIdClickOffset = ImVec2(-1,-1);
-        ActiveIdWindow = NULL;
+        ActiveIdWindow = ActiveIdPreviousFrameWindow = NULL;
         ActiveIdSource = ImGuiInputSource_None;
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
