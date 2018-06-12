@@ -328,6 +328,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
             {
                 // Using the _simplified_ one-liner Combo() api here
+                // See "Combo" section for examples of how to use the more complete BeginCombo()/EndCombo() api.
                 const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
                 static int item_current = 0;
                 ImGui::Combo("combo", &item_current, items, IM_ARRAYSIZE(items));
