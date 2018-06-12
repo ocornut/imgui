@@ -3,8 +3,8 @@
 // (Note: We are using GL3W as a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc..)
 
 // Implemented features:
-//  [X] User texture binding. Use 'GLUint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-//  [X] Multi-viewport rendering (when ImGuiConfigFlags_ViewportsEnable is enabled).
+//  [X] Renderer: User texture binding. Use 'GLUint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: Multi-viewport support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 // About GLSL version:
 // The 'glsl_version' initialization parameter defaults to "#version 150" if NULL.
