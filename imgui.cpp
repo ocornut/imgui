@@ -2684,7 +2684,7 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
     if (!IsMouseHoveringRect(bb.Min, bb.Max))
         return false;
-    if (g.NavDisableMouseHover || !IsWindowContentHoverable(window, ImGuiHoveredFlags_Default))
+    if (g.NavDisableMouseHover || !IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
         return false;
     if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
         return false;
@@ -5007,7 +5007,7 @@ bool ImGui::IsItemFocused()
 
 bool ImGui::IsItemClicked(int mouse_button)
 {
-    return IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_Default);
+    return IsMouseClicked(mouse_button) && IsItemHovered(ImGuiHoveredFlags_None);
 }
 
 bool ImGui::IsAnyItemHovered()

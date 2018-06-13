@@ -582,6 +582,7 @@ namespace ImGui
 // Flags for ImGui::Begin()
 enum ImGuiWindowFlags_
 {
+    ImGuiWindowFlags_None                   = 0,
     ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
     ImGuiWindowFlags_NoResize               = 1 << 1,   // Disable user resizing with the lower-right grip
     ImGuiWindowFlags_NoMove                 = 1 << 2,   // Disable user moving the window
@@ -616,6 +617,7 @@ enum ImGuiWindowFlags_
 // Flags for ImGui::InputText()
 enum ImGuiInputTextFlags_
 {
+    ImGuiInputTextFlags_None                = 0,
     ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
     ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
     ImGuiInputTextFlags_CharsUppercase      = 1 << 2,   // Turn a..z into A..Z
@@ -641,6 +643,7 @@ enum ImGuiInputTextFlags_
 // Flags for ImGui::TreeNodeEx(), ImGui::CollapsingHeader*()
 enum ImGuiTreeNodeFlags_
 {
+    ImGuiTreeNodeFlags_None                 = 0,
     ImGuiTreeNodeFlags_Selected             = 1 << 0,   // Draw as selected
     ImGuiTreeNodeFlags_Framed               = 1 << 1,   // Full colored frame (e.g. for CollapsingHeader)
     ImGuiTreeNodeFlags_AllowItemOverlap     = 1 << 2,   // Hit testing to allow subsequent widgets to overlap this one
@@ -666,6 +669,7 @@ enum ImGuiTreeNodeFlags_
 // Flags for ImGui::Selectable()
 enum ImGuiSelectableFlags_
 {
+    ImGuiSelectableFlags_None               = 0,
     ImGuiSelectableFlags_DontClosePopups    = 1 << 0,   // Clicking this don't close parent popup window
     ImGuiSelectableFlags_SpanAllColumns     = 1 << 1,   // Selectable frame can span all columns (text will still fit in current column)
     ImGuiSelectableFlags_AllowDoubleClick   = 1 << 2    // Generate press events on double clicks too
@@ -674,6 +678,7 @@ enum ImGuiSelectableFlags_
 // Flags for ImGui::BeginCombo()
 enum ImGuiComboFlags_
 {
+    ImGuiComboFlags_None                    = 0,
     ImGuiComboFlags_PopupAlignLeft          = 1 << 0,   // Align the popup toward the left by default
     ImGuiComboFlags_HeightSmall             = 1 << 1,   // Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
     ImGuiComboFlags_HeightRegular           = 1 << 2,   // Max ~8 items visible (default)
@@ -687,6 +692,7 @@ enum ImGuiComboFlags_
 // Flags for ImGui::IsWindowFocused()
 enum ImGuiFocusedFlags_
 {
+    ImGuiFocusedFlags_None                          = 0,
     ImGuiFocusedFlags_ChildWindows                  = 1 << 0,   // IsWindowFocused(): Return true if any children of the window is focused
     ImGuiFocusedFlags_RootWindow                    = 1 << 1,   // IsWindowFocused(): Test from root window (top most parent of the current hierarchy)
     ImGuiFocusedFlags_AnyWindow                     = 1 << 2,   // IsWindowFocused(): Return true if any window is focused
@@ -697,7 +703,7 @@ enum ImGuiFocusedFlags_
 // Note: If you are trying to check whether your mouse should be dispatched to imgui or to your app, you should use the 'io.WantCaptureMouse' boolean for that. Please read the FAQ!
 enum ImGuiHoveredFlags_
 {
-    ImGuiHoveredFlags_Default                       = 0,        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
+    ImGuiHoveredFlags_None                          = 0,        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
     ImGuiHoveredFlags_ChildWindows                  = 1 << 0,   // IsWindowHovered() only: Return true if any children of the window is hovered
     ImGuiHoveredFlags_RootWindow                    = 1 << 1,   // IsWindowHovered() only: Test from root window (top most parent of the current hierarchy)
     ImGuiHoveredFlags_AnyWindow                     = 1 << 2,   // IsWindowHovered() only: Return true if any window is hovered
@@ -712,6 +718,7 @@ enum ImGuiHoveredFlags_
 // Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
 enum ImGuiDragDropFlags_
 {
+    ImGuiDragDropFlags_None                         = 0,
     // BeginDragDropSource() flags
     ImGuiDragDropFlags_SourceNoPreviewTooltip       = 1 << 0,   // By default, a successful call to BeginDragDropSource opens a tooltip so you can display a preview or description of the source contents. This flag disable this behavior.
     ImGuiDragDropFlags_SourceNoDisableHover         = 1 << 1,   // By default, when dragging we clear data so that IsItemHovered() will return true, to avoid subsequent user code submitting tooltips. This flag disable this behavior so you can still call IsItemHovered() on the source item.
@@ -930,6 +937,7 @@ enum ImGuiStyleVar_
 // Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
 enum ImGuiColorEditFlags_
 {
+    ImGuiColorEditFlags_None            = 0,
     ImGuiColorEditFlags_NoAlpha         = 1 << 1,   //              // ColorEdit, ColorPicker, ColorButton: ignore Alpha component (read 3 components from the input pointer).
     ImGuiColorEditFlags_NoPicker        = 1 << 2,   //              // ColorEdit: disable picker when clicking on colored square.
     ImGuiColorEditFlags_NoOptions       = 1 << 3,   //              // ColorEdit: disable toggling options menu when right-clicking on inputs/small preview.
