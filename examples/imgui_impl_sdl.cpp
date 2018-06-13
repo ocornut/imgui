@@ -190,6 +190,7 @@ void ImGui_ImplSDL2_Shutdown()
     // Destroy last known clipboard data
     if (g_ClipboardTextData)
         SDL_free(g_ClipboardTextData);
+    g_ClipboardTextData = NULL;
 
     // Destroy SDL mouse cursors
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
