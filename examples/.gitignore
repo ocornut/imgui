@@ -10,6 +10,7 @@ build/*
 *.o
 *.obj
 *.exe
+*.log
 *.pdb
 *.ilk
 *.VC.db

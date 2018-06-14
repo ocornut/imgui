@@ -3,10 +3,11 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'ALLEGRO_BITMAP*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Platform: Clipboard support (from Allegro 5.1.12)
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+
 // Issues:
-//  [ ] Renderer: The renderer is suboptimal as we need to convert vertices.
-//  [ ] Platform: Clipboard support via al_set_clipboard_text/al_clipboard_has_text.
+//  [ ] Renderer: The renderer is suboptimal as we need to unindex our buffers and convert the format of vertices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -15,6 +16,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-06-13: Platform: Added clipboard support (from Allegro 5.1.12).
+//  2018-06-13: Renderer: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
+//  2018-06-13: Renderer: Backup/restore transform and clipping rectangle.
 //  2018-06-11: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
 //  2018-04-18: Misc: Renamed file from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
 //  2018-04-18: Misc: Added support for 32-bits vertex indices to avoid conversion at runtime. Added imconfig_allegro5.h to enforce 32-bit indices when included from imgui.h.
@@ -26,11 +30,18 @@
 #include <cstring>      // memcpy
 #include "imgui.h"
 #include "imgui_impl_allegro5.h"
+
+// Allegro
 #include <allegro5/allegro.h>
 #include <allegro5/allegro_primitives.h>
-
 #ifdef _WIN32
 #include <allegro5/allegro_windows.h>
+#endif
+#define ALLEGRO_HAS_CLIPBOARD   (ALLEGRO_VERSION_INT >= ((5 << 24) | (1 << 16) | (12 << 8)))    // Clipboard only supported from Allegro 5.1.12
+
+// Visual Studio warnings
+#ifdef _MSC_VER
+#pragma warning (disable: 4127) // condition expression is constant
 #endif
 
 // Data
@@ -39,6 +50,7 @@ static ALLEGRO_BITMAP*          g_Texture = NULL;
 static double                   g_Time = 0.0;
 static ALLEGRO_MOUSE_CURSOR*    g_MouseCursorInvisible = NULL;
 static ALLEGRO_VERTEX_DECL*     g_VertexDecl = NULL;
+static char*                    g_ClipboardTextData = NULL;
 
 struct ImDrawVertAllegro
 {
@@ -51,32 +63,53 @@ struct ImDrawVertAllegro
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 {
-    int op, src, dst;
-    al_get_blender(&op, &src, &dst);
+    // Backup Allegro state that will be modified
+    ALLEGRO_TRANSFORM last_transform = *al_get_current_transform();
+    ALLEGRO_TRANSFORM last_projection_transform = *al_get_current_projection_transform();
+    int last_clip_x, last_clip_y, last_clip_w, last_clip_h;
+    al_get_clipping_rectangle(&last_clip_x, &last_clip_y, &last_clip_w, &last_clip_h);
+    int last_blender_op, last_blender_src, last_blender_dst;
+    al_get_blender(&last_blender_op, &last_blender_src, &last_blender_dst);
+
+    // Setup render state
     al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
+
+    // Setup orthographic projection matrix
+    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
+    {
+        float L = draw_data->DisplayPos.x;
+        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
+        float T = draw_data->DisplayPos.y;
+        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+        ALLEGRO_TRANSFORM transform;
+        al_identity_transform(&transform);
+        al_use_transform(&transform);
+        al_orthographic_transform(&transform, L, T, 1.0f, R, B, -1.0f);
+        al_use_projection_transform(&transform);
+    }
 
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
 
-        // FIXME-OPT: Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats
+        // Allegro's implementation of al_draw_indexed_prim() for DX9 is completely broken. Unindex our buffers ourselves.
+        // FIXME-OPT: Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 float as well..
         static ImVector<ImDrawVertAllegro> vertices;
-        vertices.resize(cmd_list->VtxBuffer.Size);
-        for (int i = 0; i < cmd_list->VtxBuffer.Size; ++i)
+        vertices.resize(cmd_list->IdxBuffer.Size);
+        for (int i = 0; i < cmd_list->IdxBuffer.Size; i++)
         {
-            const ImDrawVert &dv = cmd_list->VtxBuffer[i];
-            ImDrawVertAllegro v;
-            v.pos = dv.pos;
-            v.uv = dv.uv;
-            unsigned char *c = (unsigned char*)&dv.col;
-            v.col = al_map_rgba(c[0], c[1], c[2], c[3]);
-            vertices[i] = v;
+            const ImDrawVert* src_v = &cmd_list->VtxBuffer[cmd_list->IdxBuffer[i]];
+            ImDrawVertAllegro* dst_v = &vertices[i];
+            dst_v->pos = src_v->pos;
+            dst_v->uv = src_v->uv;
+            unsigned char* c = (unsigned char*)&src_v->col;
+            dst_v->col = al_map_rgba(c[0], c[1], c[2], c[3]);
         }
 
         const int* indices = NULL;
         if (sizeof(ImDrawIdx) == 2)
         {
-            // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices.. You can '#define ImDrawIdx  int' in imconfig.h to request ImGui to output 32-bit indices.
+            // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices.. You can '#define ImDrawIdx int' in imconfig.h to request ImGui to output 32-bit indices.
             // Otherwise, we convert them from 16-bit to 32-bit at runtime here, which works perfectly but is a little wasteful.
             static ImVector<int> indices_converted;
             indices_converted.resize(cmd_list->IdxBuffer.Size);
@@ -90,6 +123,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
         }
 
         int idx_offset = 0;
+        ImVec2 pos = draw_data->DisplayPos;
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
@@ -100,16 +134,18 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 ALLEGRO_BITMAP* texture = (ALLEGRO_BITMAP*)pcmd->TextureId;
-                al_set_clipping_rectangle(pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z-pcmd->ClipRect.x, pcmd->ClipRect.w-pcmd->ClipRect.y);
-                al_draw_indexed_prim(&vertices[0], g_VertexDecl, texture, &indices[idx_offset], pcmd->ElemCount, ALLEGRO_PRIM_TRIANGLE_LIST);
+                al_set_clipping_rectangle(pcmd->ClipRect.x - pos.x, pcmd->ClipRect.y - pos.y, pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y);
+                al_draw_prim(&vertices[0], g_VertexDecl, texture, idx_offset, idx_offset + pcmd->ElemCount, ALLEGRO_PRIM_TRIANGLE_LIST);
             }
             idx_offset += pcmd->ElemCount;
         }
     }
 
-    // Restore modified state
-    al_set_blender(op, src, dst);
-    al_set_clipping_rectangle(0, 0, al_get_display_width(g_Display), al_get_display_height(g_Display));
+    // Restore modified Allegro state
+    al_set_blender(last_blender_op, last_blender_src, last_blender_dst);
+    al_set_clipping_rectangle(last_clip_x, last_clip_y, last_clip_w, last_clip_h);
+    al_use_transform(&last_transform);
+    al_use_projection_transform(&last_projection_transform);
 }
 
 bool ImGui_ImplAllegro5_CreateDeviceObjects()
@@ -174,6 +210,21 @@ void ImGui_ImplAllegro5_InvalidateDeviceObjects()
     }
 }
 
+#if ALLEGRO_HAS_CLIPBOARD
+static const char* ImGui_ImplAllegro5_GetClipboardText(void*)
+{
+    if (g_ClipboardTextData)
+        al_free(g_ClipboardTextData);
+    g_ClipboardTextData = al_get_clipboard_text(g_Display);
+    return g_ClipboardTextData;
+}
+
+static void ImGui_ImplAllegro5_SetClipboardText(void*, const char* text)
+{
+    al_set_clipboard_text(g_Display, text);
+}
+#endif
+
 bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 {
     g_Display = display;
@@ -216,12 +267,24 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Y] = ALLEGRO_KEY_Y;
     io.KeyMap[ImGuiKey_Z] = ALLEGRO_KEY_Z;
 
+#if ALLEGRO_HAS_CLIPBOARD
+    io.SetClipboardTextFn = ImGui_ImplAllegro5_SetClipboardText;
+    io.GetClipboardTextFn = ImGui_ImplAllegro5_GetClipboardText;
+    io.ClipboardUserData = NULL;
+#endif
+
     return true;
 }
 
 void ImGui_ImplAllegro5_Shutdown()
 {
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
+    g_Display = NULL;
+
+    // Destroy last known clipboard data
+    if (g_ClipboardTextData)
+        al_free(g_ClipboardTextData);
+    g_ClipboardTextData = NULL;
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
