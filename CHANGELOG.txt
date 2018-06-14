@@ -68,7 +68,6 @@ Other Changes:
    Note that you may still get false positive (e.g. drag value and while holding return on the same value). (#820, #956, #1875)
  - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
- - TreeNode: Fixed nodes with ImGuiTreeNodeFlags_Leaf flag always returning true which was meaningless.
  - ColorEdit3, ColorEdit4, ColorButton: Added ImGuiColorEditFlags_NoDragDrop flag to disable ColorEditX as drag target and ColorButton as drag source. (#1826) 
  - BeginDragDropSource(): Offset tooltip position so it is off the mouse cursor, but also closer to it than regular tooltips, and not clamped by viewport. (#1739)
  - BeginDragDropTarget(): Added ImGuiDragDropFlags_AcceptNoPreviewTooltip flag to request hiding the drag source tooltip from the target site. (#143)
