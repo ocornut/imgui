@@ -3617,9 +3617,11 @@ static void ImGui::UpdateMovingWindow()
         }
         else
         {
+            // Try to merge the window back into the main viewport. 
+            // This works because MouseRefViewport shouldn't be == MovingWindow->Viewport which should have the NoInputs flag during moving.
             UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseRefViewport);
 
-            // Patch the mouse viewport so that we don't hover under the moved window during the mouse released frame
+            // Restore the mouse viewport so that we don't hover the viewport _under_ the moved window during the frame we released the mouse button.
             if (!IsDragDropPayloadBeingAccepted())
                 g.MouseRefViewport = moving_window->Viewport;
 
@@ -6608,12 +6610,13 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     {
         window->Viewport = g.MouseRefViewport;
     }
-    else if (!window->ViewportOwned && g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
+    else if (g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
     {
+        // Transition to a standalone viewport
         if (!window->Viewport->GetRect().Contains(window->Rect()))
             window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs);
     }
-    else if (!window->ViewportOwned && GetWindowAlwaysWantOwnViewport(window))
+    else if (GetWindowAlwaysWantOwnViewport(window))
     {
         window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration);
     }
@@ -7176,7 +7179,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             viewport_rect = window->Viewport->GetRect();
         }
 
-        // Save last knonw viewport position within the window itself (so it can be saved in .ini file and restored)
+        // Save last known viewport position within the window itself (so it can be saved in .ini file and restored)
         window->ViewportPos = window->Viewport->Pos;
 
         // Default item width. Make it proportional to window size if window manually resizes
@@ -14881,9 +14884,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->Window ? viewport->Window->Name : "N/A"))
                 {
                     ImGuiWindowFlags flags = viewport->Flags;
-                    ImGui::BulletText("Pos: (%.0f,%.0f), Monitor: %d", viewport->Pos.x, viewport->Pos.y, viewport->PlatformMonitor);
-                    if (viewport->Idx > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset")) { viewport->Pos = ImVec2(200,200); if (viewport->Window) viewport->Window->Pos = ImVec2(200,200); } }
-                    ImGui::BulletText("Size: (%0.f,%.0f), DpiScale: %.0f%%", viewport->Size.x, viewport->Size.y, viewport->DpiScale * 100.0f);
+                    ImGui::BulletText("Pos: (%.0f,%.0f), Size: (%.0f, %.0f), Monitor: %d, DpiScale: %.0f%%", viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y, viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
+                    if (viewport->Idx > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200,200); if (viewport->Window) viewport->Window->Pos = ImVec2(200,200); } }
                     ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s", viewport->Flags,
                         (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
                         (flags & ImGuiViewportFlags_NoFocusOnAppearing)  ? " NoFocusOnAppearing"  : "", (flags & ImGuiViewportFlags_NoInputs)     ? " NoInputs"     : "",
