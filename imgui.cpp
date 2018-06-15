@@ -3612,6 +3612,8 @@ static void ImGui::UpdateMovingWindow()
             {
                 MarkIniSettingsDirty(moving_window);
                 SetWindowPos(moving_window, pos, ImGuiCond_Always);
+                if (moving_window->ViewportOwned) // Synchronize viewport immediately because some overlays may relies on clipping rectangle before we Begin() into the window.
+                    moving_window->Viewport->Pos = pos;
             }
             FocusWindow(g.MovingWindow);
         }
@@ -6612,8 +6614,12 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if (g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
     {
-        // Transition to a standalone viewport
-        if (!window->Viewport->GetRect().Contains(window->Rect()))
+        // Transition to our own viewport when leaving our host boundaries + set the NoInputs flag (which will be cleared in UpdateMovingWindow when releasing the mouse)
+        // If we are already in our own viewport, if need to set the NoInputs flag.
+        bool own_viewport = window->Viewport->Window == window; // We test window->Viewport->Window because window->ViewportOwned is not valid during this function.
+        bool leave_host_viewport = !own_viewport && !window->Viewport->GetRect().Contains(window->Rect());
+        bool move_from_own_viewport = own_viewport && !(window->Viewport->Flags & ImGuiViewportFlags_NoInputs);
+        if (leave_host_viewport || move_from_own_viewport)
             window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs);
     }
     else if (GetWindowAlwaysWantOwnViewport(window))
