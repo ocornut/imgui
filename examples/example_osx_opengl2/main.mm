@@ -245,7 +245,6 @@
     ImGui_ImplOpenGL2_Init();
 
     // Setup style
-    ImGui::GetStyle().WindowRounding = 0.0f;
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 

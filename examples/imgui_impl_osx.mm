@@ -2,7 +2,7 @@
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan..)
 
 // Issues:
-// [ ] Platform: CTRL+Tab can't be read.
+// [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 // [ ] Platform: Mouse cursor shapes are not supported (see end of https://github.com/glfw/glfw/issues/427)
 // [ ] Test with another renderer back-end than OpenGL2. e.g. OpenGL3.
 
@@ -52,6 +52,32 @@ bool ImGui_ImplOSX_Init()
     io.KeyMap[ImGuiKey_Y]           = 'Y';
     io.KeyMap[ImGuiKey_Z]           = 'Z';
     
+    io.SetClipboardTextFn = [](void*, const char* str) -> void
+    {
+        NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+        [pasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+        [pasteboard setString:[NSString stringWithUTF8String:str] forType:NSPasteboardTypeString];
+    };
+    
+    io.GetClipboardTextFn = [](void*) -> const char*
+    {
+        NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+        NSString* available = [pasteboard availableTypeFromArray: [NSArray arrayWithObject:NSPasteboardTypeString]];
+        if (![available isEqualToString:NSPasteboardTypeString])
+            return NULL;
+
+        NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
+        if (string == nil)
+            return NULL;
+            
+        const char* string_c = (const char*)[string UTF8String];
+        size_t string_len = strlen(string_c);
+        static ImVector<char> s_clipboard;
+        s_clipboard.resize((int)string_len + 1);
+        strcpy(s_clipboard.Data, string_c);
+        return s_clipboard.Data;
+    };
+    
     return true;
 }
 
@@ -96,13 +122,11 @@ static int mapCharacterToKey(int c)
     return -1;
 }
 
-// Reset the non-characters keys
 static void resetKeys()
 {
     ImGuiIO& io = ImGui::GetIO();
-    for (int n = 0; n < IM_ARRAYSIZE(io.KeyMap); n++)
-        if (io.KeyMap[n] != -1 && io.KeyMap[n] >= 256)
-            io.KeysDown[io.KeyMap[n]] = false;
+    for (int n = 0; n < IM_ARRAYSIZE(io.KeysDown); n++)
+        io.KeysDown[n] = false;
 }
 
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
@@ -155,9 +179,9 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
         return io.WantCaptureMouse;
     }
 
+    // FIXME: All the key handling is wrong and broken. Refer to GLFW's cocoa_init.mm and cocoa_window.mm.
     if (event.type == NSEventTypeKeyDown)
     {
-        // FIXME-OSX: Try to store native NS keys in KeyDown[]
         NSString* str = [event characters];
         int len = (int)[str length];
         for (int i = 0; i < len; i++)
@@ -204,8 +228,8 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
         io.KeyAlt       = flags & NSEventModifierFlagOption;
         io.KeySuper     = flags & NSEventModifierFlagCommand;
 
-        // We must reset them as we will not receive any keyUp event if they where pressed during shift or command
-        if ((oldKeyShift && !io.KeyShift) || (oldKeyCtrl && !io.KeyCtrl))
+        // We must reset them as we will not receive any keyUp event if they where pressed with a modifier
+        if ((oldKeyShift && !io.KeyShift) || (oldKeyCtrl && !io.KeyCtrl) || (oldKeyAlt && !io.KeyAlt) || (oldKeySuper && !io.KeySuper))
             resetKeys();
         return io.WantCaptureKeyboard;
     }

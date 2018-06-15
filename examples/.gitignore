@@ -17,7 +17,7 @@ build/*
 ## XCode cruft
 .DS_Store
 project.xcworkspace
-xcuserdata/*
+xcuserdata
 
 ## Executables
 *.exe
