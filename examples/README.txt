@@ -124,7 +124,7 @@ List of high-level Frameworks Bindings in this repository: (combine Platform + R
 
 Third-party framework, graphics API and languages bindings are listed at:
 
-    https://github.com/ocornut/imgui/wiki/Links
+    https://github.com/ocornut/imgui/wiki/Bindings
 
     Languages: C, C#, ChaiScript, D, Go, Haxe, Java, Lua, Odin, Pascal, PureBasic, Python, Rust, Swift...
     Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
