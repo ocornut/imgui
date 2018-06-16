@@ -122,12 +122,12 @@ List of high-level Frameworks Bindings in this repository: (combine Platform + R
     imgui_impl_allegro5.cpp
     imgui_impl_marmalade.cpp
 
-Third-party framework, graphics API and languages bindings:
+Third-party framework, graphics API and languages bindings are listed at:
 
     https://github.com/ocornut/imgui/wiki/Links
 
     Languages: C, C#, ChaiScript, D, Go, Haxe, Java, Lua, Odin, Pascal, PureBasic, Python, Rust, Swift...
-    Frameworks: Cinder, Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
+    Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
     OpenSceneGraph, openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
     Miscellaneous: Software Renderer, RemoteImgui, etc.
 
