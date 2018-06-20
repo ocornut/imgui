@@ -31,7 +31,7 @@
 static HWND                 g_hWnd = 0;
 static INT64                g_Time = 0;
 static INT64                g_TicksPerSecond = 0;
-static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_Count_;
+static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
