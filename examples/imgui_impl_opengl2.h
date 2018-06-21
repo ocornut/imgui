@@ -12,13 +12,13 @@
 // confuse your GPU driver. 
 // The GL2 code is unable to reset attributes or even call e.g. "glUseProgram(0)" because they don't exist in that API.
 
-IMGUI_API bool  ImGui_ImplOpenGL2_Init();
-IMGUI_API void  ImGui_ImplOpenGL2_Shutdown();
-IMGUI_API void  ImGui_ImplOpenGL2_NewFrame();
-IMGUI_API void  ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data);
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_Init();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL2_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL2_NewFrame();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data);
 
 // Called by Init/NewFrame/Shutdown
-IMGUI_API bool  ImGui_ImplOpenGL2_CreateFontsTexture();
-IMGUI_API void  ImGui_ImplOpenGL2_DestroyFontsTexture();
-IMGUI_API bool  ImGui_ImplOpenGL2_CreateDeviceObjects();
-IMGUI_API void  ImGui_ImplOpenGL2_DestroyDeviceObjects();
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_CreateFontsTexture();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL2_DestroyFontsTexture();
+IMGUI_IMPL_API bool     ImGui_ImplOpenGL2_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplOpenGL2_DestroyDeviceObjects();

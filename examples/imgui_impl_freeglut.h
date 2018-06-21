@@ -9,19 +9,19 @@
 // If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-IMGUI_API bool      ImGui_ImplFreeGLUT_Init();
-IMGUI_API void      ImGui_ImplFreeGLUT_InstallFuncs();
-IMGUI_API void      ImGui_ImplFreeGLUT_Shutdown();
-IMGUI_API void      ImGui_ImplFreeGLUT_NewFrame();
+IMGUI_IMPL_API bool     ImGui_ImplFreeGLUT_Init();
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_InstallFuncs();
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_NewFrame();
 
 // You can call ImGui_ImplFreeGLUT_InstallFuncs() to get all those functions installed automatically,
 // or call them yourself from your own GLUT handlers. We are using the same weird names as GLUT for consistency..
-//------------------------------------ GLUT name --------------------------------------------- Decent Name --------------
-IMGUI_API void      ImGui_ImplFreeGLUT_ReshapeFunc(int w, int h);                           // ~ ResizeFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_MotionFunc(int x, int y);                            // ~ MouseMoveFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_MouseFunc(int button, int state, int x, int y);      // ~ MouseButtonFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_MouseWheelFunc(int button, int dir, int x, int y);   // ~ MouseWheelFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_KeyboardFunc(unsigned char c, int x, int y);         // ~ CharPressedFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_KeyboardUpFunc(unsigned char c, int x, int y);       // ~ CharReleasedFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_SpecialFunc(int key, int x, int y);                  // ~ KeyPressedFunc
-IMGUI_API void      ImGui_ImplFreeGLUT_SpecialUpFunc(int key, int x, int y);                // ~ KeyReleasedFunc
+//---------------------------------------- GLUT name --------------------------------------------- Decent Name ---------
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_ReshapeFunc(int w, int h);                           // ~ ResizeFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_MotionFunc(int x, int y);                            // ~ MouseMoveFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_MouseFunc(int button, int state, int x, int y);      // ~ MouseButtonFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_MouseWheelFunc(int button, int dir, int x, int y);   // ~ MouseWheelFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_KeyboardFunc(unsigned char c, int x, int y);         // ~ CharPressedFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_KeyboardUpFunc(unsigned char c, int x, int y);       // ~ CharReleasedFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_SpecialFunc(int key, int x, int y);                  // ~ KeyPressedFunc
+IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_SpecialUpFunc(int key, int x, int y);                // ~ KeyReleasedFunc
