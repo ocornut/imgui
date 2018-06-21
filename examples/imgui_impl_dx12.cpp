@@ -1,8 +1,10 @@
-// ImGui Win32 + DirectX12 binding
-// FIXME: 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*))
+// ImGui Renderer for: DirectX12
+// This needs to be used along with a Platform Binding (e.g. Win32)
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+// Issues:
+//  [ ] 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*)). See github.com/ocornut/imgui/pull/301
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -11,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-06-12: DirectX12: Moved the ID3D12GraphicsCommandList* parameter from NewFrame() to RenderDrawData().
 //  2018-06-08: Misc: Extracted imgui_impl_dx12.cpp/.h away from the old combined DX12+Win32 example.
 //  2018-06-08: DirectX12: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle (to ease support for future multi-viewport).
 //  2018-02-22: Merged into master with all Win32 code synchronized to other examples.
@@ -25,7 +28,6 @@
 
 // DirectX data
 static ID3D12Device*                g_pd3dDevice = NULL;
-static ID3D12GraphicsCommandList*   g_pd3dCommandList = NULL;
 static ID3D10Blob*                  g_pVertexShaderBlob = NULL;
 static ID3D10Blob*                  g_pPixelShaderBlob = NULL;
 static ID3D12RootSignature*         g_pRootSignature = NULL;
@@ -53,7 +55,7 @@ struct VERTEX_CONSTANT_BUFFER
 
 // Render function
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx)
 {
     // FIXME: I'm assuming that this only gets called once per frame!
     // If not, we can't just re-allocate the IB or VB, we'll have to do a proper allocator.
@@ -63,7 +65,6 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data)
     ID3D12Resource* g_pIB = frameResources->IB;
     int g_VertexBufferSize = frameResources->VertexBufferSize;
     int g_IndexBufferSize = frameResources->IndexBufferSize;
-    ID3D12GraphicsCommandList* ctx = g_pd3dCommandList;
 
     // Create and grow vertex/index buffers if needed
     if (!g_pVB || g_VertexBufferSize < draw_data->TotalVtxCount)
@@ -453,29 +454,29 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         static const char* vertexShader =
             "cbuffer vertexBuffer : register(b0) \
             {\
-            float4x4 ProjectionMatrix; \
+              float4x4 ProjectionMatrix; \
             };\
             struct VS_INPUT\
             {\
-            float2 pos : POSITION;\
-            float4 col : COLOR0;\
-            float2 uv  : TEXCOORD0;\
+              float2 pos : POSITION;\
+              float4 col : COLOR0;\
+              float2 uv  : TEXCOORD0;\
             };\
             \
             struct PS_INPUT\
             {\
-            float4 pos : SV_POSITION;\
-            float4 col : COLOR0;\
-            float2 uv  : TEXCOORD0;\
+              float4 pos : SV_POSITION;\
+              float4 col : COLOR0;\
+              float2 uv  : TEXCOORD0;\
             };\
             \
             PS_INPUT main(VS_INPUT input)\
             {\
-            PS_INPUT output;\
-            output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
-            output.col = input.col;\
-            output.uv  = input.uv;\
-            return output;\
+              PS_INPUT output;\
+              output.pos = mul( ProjectionMatrix, float4(input.pos.xy, 0.f, 1.f));\
+              output.col = input.col;\
+              output.uv  = input.uv;\
+              return output;\
             }";
 
         D3DCompile(vertexShader, strlen(vertexShader), NULL, NULL, NULL, "main", "vs_5_0", 0, 0, &g_pVertexShaderBlob, NULL);
@@ -497,17 +498,17 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         static const char* pixelShader =
             "struct PS_INPUT\
             {\
-            float4 pos : SV_POSITION;\
-            float4 col : COLOR0;\
-            float2 uv  : TEXCOORD0;\
+              float4 pos : SV_POSITION;\
+              float4 col : COLOR0;\
+              float2 uv  : TEXCOORD0;\
             };\
             SamplerState sampler0 : register(s0);\
             Texture2D texture0 : register(t0);\
             \
             float4 main(PS_INPUT input) : SV_Target\
             {\
-            float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
-            return out_col; \
+              float4 out_col = input.col * texture0.Sample(sampler0, input.uv); \
+              return out_col; \
             }";
 
         D3DCompile(pixelShader, strlen(pixelShader), NULL, NULL, NULL, "main", "ps_5_0", 0, 0, &g_pPixelShaderBlob, NULL);
@@ -594,6 +595,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     g_numFramesInFlight = num_frames_in_flight;
     g_frameIndex = UINT_MAX;
 
+    // Create buffers with a default size (they will later be grown as needed)
     for (int i = 0; i < num_frames_in_flight; i++)
     {
         g_pFrameResources[i].IB = NULL;
@@ -610,7 +612,6 @@ void ImGui_ImplDX12_Shutdown()
     ImGui_ImplDX12_InvalidateDeviceObjects();
     delete[] g_pFrameResources;
     g_pd3dDevice = NULL;
-    g_pd3dCommandList = NULL;
     g_hFontSrvCpuDescHandle.ptr = 0;
     g_hFontSrvGpuDescHandle.ptr = 0;
     g_pFrameResources = NULL;
@@ -618,10 +619,8 @@ void ImGui_ImplDX12_Shutdown()
     g_frameIndex = UINT_MAX;
 }
 
-void ImGui_ImplDX12_NewFrame(ID3D12GraphicsCommandList* command_list)
+void ImGui_ImplDX12_NewFrame()
 {
     if (!g_pPipelineState)
         ImGui_ImplDX12_CreateDeviceObjects();
-
-    g_pd3dCommandList = command_list;
 }
