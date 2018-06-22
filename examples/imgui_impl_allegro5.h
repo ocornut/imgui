@@ -18,12 +18,12 @@
 struct ALLEGRO_DISPLAY;
 union ALLEGRO_EVENT;
 
-IMGUI_API bool    ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display);
-IMGUI_API void    ImGui_ImplAllegro5_Shutdown();
-IMGUI_API void    ImGui_ImplAllegro5_NewFrame();
-IMGUI_API void    ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data);
-IMGUI_API bool    ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* event);
+IMGUI_IMPL_API bool     ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display);
+IMGUI_IMPL_API void     ImGui_ImplAllegro5_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplAllegro5_NewFrame();
+IMGUI_IMPL_API void     ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data);
+IMGUI_IMPL_API bool     ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT* event);
 
 // Use if you want to reset your rendering device without losing ImGui state.
-IMGUI_API bool    ImGui_ImplAllegro5_CreateDeviceObjects();
-IMGUI_API void    ImGui_ImplAllegro5_InvalidateDeviceObjects();
+IMGUI_IMPL_API bool     ImGui_ImplAllegro5_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplAllegro5_InvalidateDeviceObjects();

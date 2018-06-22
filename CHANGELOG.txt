@@ -30,16 +30,16 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.62 WIP (IN PROGRESS)
+ VERSION 1.62 (Released 2018-06-22)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
  - TreeNodeEx(): The helper ImGuiTreeNodeFlags_CollapsingHeader flag now include ImGuiTreeNodeFlags_NoTreePushOnOpen. The flag was already set by CollapsingHeader(). 
-   The only difference is if you were using TreeNodeEx() manually with ImGuiTreeNodeFlags_CollapsingHeader and without ImGuiTreeNodeFlags_NoTreePushOnOpen. In which case
-   you can remove the ImGuiTreeNodeFlags_NoTreePushOnOpen flag from your call (ImGuiTreeNodeFlags_CollapsingHeader & ~ImGuiTreeNodeFlags_NoTreePushOnOpen). (#1864)
- - ImFontAtlas: Renamed GetGlyphRangesChinese() to GetGlyphRangesChineseFull() to distinguish other variants and discourage using the full set. (#1859)
+   The only difference is if you were using TreeNodeEx() manually with ImGuiTreeNodeFlags_CollapsingHeader and without ImGuiTreeNodeFlags_NoTreePushOnOpen. 
+   In this case you can remove the ImGuiTreeNodeFlags_NoTreePushOnOpen flag from your call (ImGuiTreeNodeFlags_CollapsingHeader & ~ImGuiTreeNodeFlags_NoTreePushOnOpen). (#1864)
    This also apply if you were using internal's TreeNodeBehavior() with the ImGuiTreeNodeFlags_CollapsingHeader flag directly.
+ - ImFontAtlas: Renamed GetGlyphRangesChinese() to GetGlyphRangesChineseFull() to distinguish new smaller variants and discourage using the full set. (#1859)
 
 Other Changes:
 
@@ -80,10 +80,14 @@ Other Changes:
  - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese characters. (#1859) [@JX-Master, @ocornut]
  - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
  - Examples: Win32: Fixed handling of mouse wheel messages to support sub-unit scrolling messages (typically sent by track-pads). (#1874) [@zx64]  
- - Examples: Added SDL+Vulkan example.
+ - Examples: SDL+Vulkan: Added SDL+Vulkan example.
  - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag. Added clipboard support. 
- - Examples: Allegro5: Unindexing buffers ourselves as Allegro indexed drawing primitives are buggy in the DirectX9 back-end.
+ - Examples: Allegro5: Unindexing buffers ourselves as Allegro indexed drawing primitives are buggy in the DirectX9 back-end (will be fixed in Allegro 5.2.5+).
+ - Examples: DirectX12: Moved the ID3D12GraphicsCommandList* parameter from ImGui_ImplDX12_NewFrame() to ImGui_ImplDX12_RenderDrawData() which makes a lots more sense. (#301)
+ - Examples: Vulkan: Reordered parameters ImGui_ImplVulkan_RenderDrawData() to be consistent with other bindings, a good occasion since we refactored the code. 
  - Examples: FreeGLUT: Added FreeGLUT bindings. Added FreeGLUT+OpenGL2 example. (#801)
+ - Examples: The functions in imgui_impl_xxx.cpp are prefixed with IMGUI_IMPL_API (which defaults to IMGUI_API) to facilitate some uses. (#1888)
+ - Examples: Fixed bindings to use ImGuiMouseCursor_COUNT instead of old name ImGuiMouseCursor_Count_ so they can compile with IMGUI_DISABLE_OBSOLETE_FUNCTIONS. (#1887) 
  - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.
  - Internals: PushItemFlag() flags are inherited by BeginChild().
 

@@ -1,4 +1,4 @@
-// dear imgui, v1.62 WIP
+// dear imgui, v1.62
 // (internals)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!

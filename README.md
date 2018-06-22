@@ -108,30 +108,31 @@ Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/
 _NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
 Languages: (third-party bindings)
-- C: [cimgui](https://github.com/Extrawurst/cimgui)
+- C: [cimgui](https://github.com/Extrawurst/cimgui) and [#1879](https://github.com/ocornut/imgui/issues/1879)
 - C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
 - ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
 - D: [DerelictImgui](https://github.com/Extrawurst/DerelictImgui)
 - Go: [go-imgui](https://github.com/Armored-Dragon/go-imgui)
 - Haxe/hxcpp: [linc_imgui](https://github.com/Aidan63/linc_imgui)
-- JavaScript: [imgui-js](https://github.com/flyover/imgui-js)
 - Java: [jimgui](https://github.com/ice1000/jimgui)
+- JavaScript: [imgui-js](https://github.com/flyover/imgui-js)
 - Lua: [imgui_lua_bindings](https://github.com/patrickriordan/imgui_lua_bindings) or [lua-ffi-bindings](https://github.com/thenumbernine/lua-ffi-bindings)
 - Odin: [odin-dear_imgui](https://github.com/ThisDrunkDane/odin-dear_imgui)
 - Pascal: [imgui-pas](https://github.com/dpethes/imgui-pas)
 - PureBasic: [pb-cimgui](https://github.com/hippyau/pb-cimgui)
 - Python [CyImGui](https://github.com/chromy/cyimgui) or [pyimgui](https://github.com/swistakm/pyimgui)
 - Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs)
+- Swift [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
 Frameworks:
-- DirectX 9, DirectX 10, DirectX 11, DirectX 12: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- OpenGL 2/3 (with GLFW or SDL): [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Vulkan (with GLFW): [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Allegro 5, iOS, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Renderers: DirectX 9, DirectX 10, DirectX 11, DirectX 12, OpenGL2, OpenGL3+, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Platform: GLFW, SDL, Win32, Freeglut: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Framework: Allegro 5, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Unmerged Branch: OSX platform without GLFW/SDL: [#1873](https://github.com/ocornut/imgui/tree/osx)
 - Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
-- Unmerged PR: FreeGlut + OpenGL2: [#801](https://github.com/ocornut/imgui/pull/801)
 - Unmerged PR: Native Win32 and OSX: [#281](https://github.com/ocornut/imgui/pull/281)
 - Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
+- Unmerged PR: ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [issue #551](https://github.com/ocornut/imgui/issues/551)
 - Flexium/SFML: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
@@ -140,7 +141,7 @@ Frameworks:
 - Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
 - OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
-- LÖVE: [love-imgui](https://github.com/slages/love-imgui)
+- LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
 - Magnum: [magnum-imgui](https://github.com/lecopivo/magnum-imgui), [MagnumImguiPort](https://github.com/lecopivo/MagnumImguiPort)
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
 - Qt3d: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d)
@@ -148,7 +149,7 @@ Frameworks:
 - Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
 - Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
 
-For other bindings: see [this page](https://github.com/ocornut/imgui/wiki/Links/). Also see [wiki](https://github.com/ocornut/imgui/wiki) for a few other links and ideas. Contact me if you would like to add to those lists.
+For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/). Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 
 Roadmap
 -------
@@ -210,7 +211,7 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Nicolas Guillemot's CppCon'16 flash-talk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
 - [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
 
-See the [Links page](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to different languages and frameworks.
+See the [Wiki](https://github.com/ocornut/imgui/wiki) and [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to different languages and frameworks.
 
 Frequently Asked Question (FAQ)
 -------------------------------
@@ -272,7 +273,7 @@ You can alter the look of the interface to some degree: changing colors, sizes, 
 
 Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
-There is an reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly designed for binding in other languages. I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Links](https://github.com/ocornut/imgui/wiki/Links) for third-party bindings to other languages.
+There is an reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly designed for binding in other languages. I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to other languages.
 
 Support dear imgui
 ------------------

@@ -55,7 +55,7 @@ static GLFWwindow*      g_Window = NULL;
 static GlfwClientApi    g_ClientApi = GlfwClientApi_Unknown;
 static double           g_Time = 0.0;
 static bool             g_MouseJustPressed[5] = { false, false, false, false, false };
-static GLFWcursor*      g_MouseCursors[ImGuiMouseCursor_Count_] = { 0 };
+static GLFWcursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 static bool             g_WantUpdateMonitors = true;
 
 // Forward Declarations
@@ -192,7 +192,7 @@ void ImGui_ImplGlfw_Shutdown()
 {
     ImGui_ImplGlfw_ShutdownPlatformInterface();
 
-    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_Count_; cursor_n++)
+    for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
     {
         glfwDestroyCursor(g_MouseCursors[cursor_n]);
         g_MouseCursors[cursor_n] = NULL;

@@ -27,16 +27,16 @@ struct ImGui_ImplVulkan_InitInfo
     void                            (*CheckVkResultFn)(VkResult err);
 };
 
-IMGUI_API bool        ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
-IMGUI_API void        ImGui_ImplVulkan_Shutdown();
-IMGUI_API void        ImGui_ImplVulkan_NewFrame();
-IMGUI_API void        ImGui_ImplVulkan_RenderDrawData(VkCommandBuffer command_buffer, ImDrawData* draw_data);
+IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
 
 // Called by Init/NewFrame/Shutdown
-IMGUI_API void        ImGui_ImplVulkan_InvalidateFontUploadObjects();
-IMGUI_API void        ImGui_ImplVulkan_InvalidateDeviceObjects();
-IMGUI_API bool        ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
-IMGUI_API bool        ImGui_ImplVulkan_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
+IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
+IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
 
 //-------------------------------------------------------------------------
 // Miscellaneous Vulkan Helpers
@@ -50,12 +50,12 @@ IMGUI_API bool        ImGui_ImplVulkan_CreateDeviceObjects();
 struct ImGui_ImplVulkanH_FrameData;
 struct ImGui_ImplVulkanH_WindowData;
 
-IMGUI_API void                  ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-IMGUI_API void                  ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h);
-IMGUI_API void                  ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-IMGUI_API VkSurfaceFormatKHR    ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
-IMGUI_API VkPresentModeKHR      ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
-IMGUI_API int                   ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h);
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
+IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
+IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
+IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 struct ImGui_ImplVulkanH_FrameData
 {
@@ -66,7 +66,7 @@ struct ImGui_ImplVulkanH_FrameData
     VkSemaphore         ImageAcquiredSemaphore;
     VkSemaphore         RenderCompleteSemaphore;
 
-    IMGUI_API ImGui_ImplVulkanH_FrameData();
+    IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
 };
 
 struct ImGui_ImplVulkanH_WindowData
@@ -87,6 +87,6 @@ struct ImGui_ImplVulkanH_WindowData
     uint32_t            FrameIndex;
     ImGui_ImplVulkanH_FrameData Frames[IMGUI_VK_QUEUED_FRAMES];
 
-    IMGUI_API ImGui_ImplVulkanH_WindowData();
+    IMGUI_IMPL_API ImGui_ImplVulkanH_WindowData();
 };
 

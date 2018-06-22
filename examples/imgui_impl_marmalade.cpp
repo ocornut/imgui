@@ -120,12 +120,12 @@ static void ImGui_Marmalade_SetClipboardText(void* /*user_data*/, const char* te
         s3eClipboardSetText(text);
 }
 
-int32 ImGui_Marmalade_PointerButtonEventCallback(void* SystemData, void* pUserData)
+int32 ImGui_Marmalade_PointerButtonEventCallback(void* system_data, void* user_data)
 {
     // pEvent->m_Button is of type s3ePointerButton and indicates which mouse
     // button was pressed.  For touchscreen this should always have the value
     // S3E_POINTER_BUTTON_SELECT
-    s3ePointerEvent* pEvent = (s3ePointerEvent*)SystemData;
+    s3ePointerEvent* pEvent = (s3ePointerEvent*)system_data;
 
     if (pEvent->m_Pressed == 1)
     {
@@ -144,10 +144,10 @@ int32 ImGui_Marmalade_PointerButtonEventCallback(void* SystemData, void* pUserDa
     return 0;
 }
 
-int32 ImGui_Marmalade_KeyCallback(void* SystemData, void* userData)
+int32 ImGui_Marmalade_KeyCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
-    s3eKeyboardEvent* e = (s3eKeyboardEvent*)SystemData;
+    s3eKeyboardEvent* e = (s3eKeyboardEvent*)system_data;
     if (e->m_Pressed == 1)
         io.KeysDown[e->m_Key] = true;
     if (e->m_Pressed == 0)
@@ -161,10 +161,10 @@ int32 ImGui_Marmalade_KeyCallback(void* SystemData, void* userData)
     return 0;
 }
 
-int32 ImGui_Marmalade_CharCallback(void* SystemData, void* userData)
+int32 ImGui_Marmalade_CharCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
-    s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)SystemData;
+    s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)system_data;
     if ((e->m_Char > 0 && e->m_Char < 0x10000))
         io.AddInputCharacter((unsigned short)e->m_Char);
 

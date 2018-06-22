@@ -6,9 +6,9 @@
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
-IMGUI_API bool        ImGui_ImplWin32_Init(void* hwnd);
-IMGUI_API void        ImGui_ImplWin32_Shutdown();
-IMGUI_API void        ImGui_ImplWin32_NewFrame();
+IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
+IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
+IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 
 // DPI-related helpers (which run and compile without requiring 8.1 or 10, neither Windows version, neither associated SDK)
 IMGUI_API void        ImGui_ImplWin32_EnableDpiAwareness();
@@ -20,5 +20,5 @@ IMGUI_API float       ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2,
 // You may or not need this for your implementation, but it can serve as reference for handling inputs.
 // Intentionally commented out to avoid dragging dependencies on <windows.h> types. You can copy the extern declaration in your code.
 /*
-IMGUI_API LRESULT   ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+IMGUI_IMPL_API LRESULT  ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 */
