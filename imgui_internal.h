@@ -966,7 +966,7 @@ struct IMGUI_API ImGuiWindow
     bool                    CollapseToggleWanted;
     bool                    SkipItems;                          // Set when items can safely be all clipped (e.g. window not visible or collapsed)
     bool                    Appearing;                          // Set during the frame where the window is appearing (or re-appearing)
-    bool                    CloseButton;                        // Set when the window has a close button (p_open != NULL)
+    bool                    HasCloseButton;                     // Set when the window has a close button (p_open != NULL)
     int                     BeginOrderWithinParent;             // Order within immediate parent window, if we are a child window. Otherwise 0.
     int                     BeginOrderWithinContext;            // Order within entire imgui context. This is mostly used for debugging submission order related issues.
     int                     BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
@@ -1070,7 +1070,8 @@ namespace ImGui
     IMGUI_API void          Initialize(ImGuiContext* context);
     IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
-    IMGUI_API void          NewFrameUpdateHoveredWindowAndCaptureFlags();
+    IMGUI_API void          UpdateHoveredWindowAndCaptureFlags();
+    IMGUI_API void          UpdateMovingWindow();
 
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
