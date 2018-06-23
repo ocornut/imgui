@@ -365,7 +365,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     }
 
     // Store our identifier
-    static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID");
+    static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
     io.Fonts->TexID = (void *)g_hFontSrvGpuDescHandle.ptr;
 }
 
