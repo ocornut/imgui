@@ -1175,7 +1175,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
         }
     }
 
-    ImGui_ImplVulkan_RenderDrawData(wd->Frames[wd->FrameIndex].CommandBuffer, viewport->DrawData);
+    ImGui_ImplVulkan_RenderDrawData(viewport->DrawData, wd->Frames[wd->FrameIndex].CommandBuffer);
 
     {
         ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
