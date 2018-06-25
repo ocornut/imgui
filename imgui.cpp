@@ -9073,13 +9073,8 @@ template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 static bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
     const ImGuiStyle& style = g.Style;
-
-    // Draw frame
-    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
-    RenderNavHighlight(bb, id);
-    RenderFrame(bb.Min, bb.Max, frame_col, true, style.FrameRounding);
 
     const bool is_horizontal = (flags & ImGuiSliderFlags_Vertical) == 0;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
@@ -9241,10 +9236,16 @@ static bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType d
 }
 
 // For 32-bits and larger types, slider bounds are limited to half the natural type range.
-// So e.g. an integer Slider between INT_MAX-10 and INT_MAX will fail, but an integer Slider between INT_MAX/2-10 and INT_MAX/2.
-// It would be possible to life that limitation with some work but it doesn't seem to be work it for sliders.
+// So e.g. an integer Slider between INT_MAX-10 and INT_MAX will fail, but an integer Slider between INT_MAX/2-10 and INT_MAX/2 will be ok.
+// It would be possible to lift that limitation with some work but it doesn't seem to be worth it for sliders.
 bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
+    // Draw frame
+    ImGuiContext& g = *GImGui;
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    RenderNavHighlight(bb, id);
+    RenderFrame(bb.Min, bb.Max, frame_col, true, g.Style.FrameRounding);
+
     switch (data_type)
     {
     case ImGuiDataType_S32:
@@ -9520,7 +9521,7 @@ static bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed
         if (g.IO.KeyShift)
             adjust_delta *= 10.0f;
     }
-    if (g.ActiveIdSource == ImGuiInputSource_Nav)
+    else if (g.ActiveIdSource == ImGuiInputSource_Nav)
     {
         int decimal_precision = (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImParseFormatPrecision(format, 3) : 0;
         adjust_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard|ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 1.0f/10.0f, 10.0f).x;
