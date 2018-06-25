@@ -31,7 +31,7 @@
 //#include <glew.h>
 
 // OpenGL Data
-static char         g_GlslVersion[32] = "#version 150";
+static char         g_GlslVersion[32] = "";
 static GLuint       g_FontTexture = 0;
 static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
