@@ -2608,8 +2608,8 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
             if (p_open && ImGui::MenuItem("Close")) *p_open = false;
             ImGui::EndPopup();
         }
-        ImGui::End();
     }
+    ImGui::End();
 }
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
