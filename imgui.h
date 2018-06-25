@@ -1,4 +1,4 @@
-// dear imgui, v1.62
+// dear imgui, v1.63 WIP
 // (headers)
 
 // See imgui.cpp file for documentation.
@@ -22,7 +22,7 @@
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
 // Version
-#define IMGUI_VERSION               "1.62"
+#define IMGUI_VERSION               "1.63 WIP"
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
