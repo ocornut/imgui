@@ -1,4 +1,4 @@
-// dear imgui, v1.62
+// dear imgui, v1.63 WIP
 // (drawing and font code)
 
 // Contains implementation for
@@ -2855,8 +2855,9 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
 //-----------------------------------------------------------------------------
 // DEFAULT FONT DATA
 //-----------------------------------------------------------------------------
-// Compressed with stb_compress() then converted to a C array.
+// Compressed with stb_compress() then converted to a C array and encoded as base85.
 // Use the program in misc/fonts/binary_to_compressed_c.cpp to create the array from a TTF file.
+// The purpose of encoding as base85 instead of "0x00,0x01,..." style is only save on _source code_ size.
 // Decompression from stb.h (public domain) by Sean Barrett https://github.com/nothings/stb/blob/master/stb.h
 //-----------------------------------------------------------------------------
 
@@ -2978,7 +2979,8 @@ static unsigned int stb_decompress(unsigned char *output, const unsigned char *i
 // Download and more information at http://upperbounds.net
 //-----------------------------------------------------------------------------
 // File: 'ProggyClean.ttf' (41208 bytes)
-// Exported using binary_to_compressed_c.cpp
+// Exported using misc/fonts/binary_to_compressed_c.cpp (with compression + base85 string encoding).
+// The purpose of encoding as base85 instead of "0x00,0x01,..." style is only save on _source code_ size.
 //-----------------------------------------------------------------------------
 static const char proggy_clean_ttf_compressed_data_base85[11980+1] =
     "7])#######hV0qs'/###[),##/l:$#Q6>##5[n42>c-TH`->>#/e>11NNV=Bv(*:.F?uu#(gRU.o0XGH`$vhLG1hxt9?W`#,5LsCp#-i>.r$<$6pD>Lb';9Crc6tgXmKVeU2cD4Eo3R/"

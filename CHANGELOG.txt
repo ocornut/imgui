@@ -30,6 +30,15 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.63 WIP (IN PROGRESS)
+-----------------------------------------------------------------------
+
+Other Changes:
+ - ArrowButton: Fixed to honor PushButtonRepeat() setting (and internals' ImGuiItemFlags_ButtonRepeat).
+ - ArrowButton: Setup current line text baseline so that ArrowButton() + SameLine() + Text() are aligned properly.
+
+
+-----------------------------------------------------------------------
  VERSION 1.62 (Released 2018-06-22)
 -----------------------------------------------------------------------
 
