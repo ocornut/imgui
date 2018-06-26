@@ -8072,7 +8072,7 @@ bool ImGui::SmallButton(const char* label)
     return pressed;
 }
 
-bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
+bool ImGui::ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size, ImGuiButtonFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -8080,22 +8080,31 @@ bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
 
     ImGuiContext& g = *GImGui;
     const ImGuiID id = window->GetID(str_id);
-    float sz = ImGui::GetFrameHeight();
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(sz, sz));
-    ItemSize(bb);
+    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
+    const float default_size = GetFrameHeight();
+    ItemSize(bb, (size.y >= default_size) ? g.Style.FramePadding.y : 0.0f);
     if (!ItemAdd(bb, id))
         return false;
 
+    if (window->DC.ItemFlags & ImGuiItemFlags_ButtonRepeat)
+        flags |= ImGuiButtonFlags_Repeat;
+
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, flags);
 
     // Render
     const ImU32 col = GetColorU32((hovered && held) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     RenderNavHighlight(bb, id);
     RenderFrame(bb.Min, bb.Max, col, true, g.Style.FrameRounding);
-    RenderArrow(bb.Min + g.Style.FramePadding, dir);
+    RenderArrow(bb.Min + ImVec2(ImMax(0.0f, size.x - g.FontSize - g.Style.FramePadding.x), ImMax(0.0f, size.y - g.FontSize - g.Style.FramePadding.y)), dir);
 
     return pressed;
+}
+
+bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
+{
+    float sz = GetFrameHeight();
+    return ArrowButtonEx(str_id, dir, ImVec2(sz, sz), 0);
 }
 
 // Tip: use ImGui::PushID()/PopID() to push indices or pointers in the ID stack.
