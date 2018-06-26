@@ -908,7 +908,7 @@ static ImGuiViewportP*  AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const
 static void             UpdateViewports();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
 static void             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
-static void             SetCurrentViewport(ImGuiViewportP* viewport);
+static void             SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 static int              FindPlatformMonitorForPos(const ImVec2& pos);
 static int              FindPlatformMonitorForRect(const ImRect& r);
 
@@ -4924,7 +4924,7 @@ void ImGui::EndFrame()
         g.CurrentWindow->Active = false;
     End();
 
-    SetCurrentViewport(NULL);
+    SetCurrentViewport(NULL, NULL);
 
     if (g.ActiveId == 0 && g.HoveredId == 0)
     {
@@ -5105,16 +5105,26 @@ ImGuiViewport* ImGui::FindViewportByPlatformHandle(void* platform_handle)
     return NULL;
 }
 
-void ImGui::SetCurrentViewport(ImGuiViewportP* viewport)
+void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* viewport)
 {
-    // Notify platform layer of viewport changes
-    // FIXME-DPI: This is only currently used for experimenting with handling of multiple DPI
     ImGuiContext& g = *GImGui;
     if (viewport)
+    {
+        // First window submitted gets viewport ownership
+        if (viewport->LastFrameActive < g.FrameCount && viewport->Window != current_window && viewport->Window != NULL && current_window != NULL)
+        {
+            //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
+            viewport->Window = current_window;
+            viewport->ID = current_window->ID;
+        }
         viewport->LastFrameActive = g.FrameCount;
+    }
     if (g.CurrentViewport == viewport)
         return;
     g.CurrentViewport = viewport;
+
+    // Notify platform layer of viewport changes
+    // FIXME-DPI: This is only currently used for experimenting with handling of multiple DPI
     if (g.CurrentViewport && g.PlatformIO.Platform_OnChangedViewport)
         g.PlatformIO.Platform_OnChangedViewport(g.CurrentViewport);
 }
@@ -5150,6 +5160,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
     viewport->Window = window;
     viewport->Flags = flags;
     viewport->LastFrameActive = g.FrameCount;
+    IM_ASSERT(window == NULL || viewport->ID == window->ID);
 
     if (window != NULL)
         window->ViewportOwned = true;
@@ -7142,7 +7153,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // We need to do this before using any style/font sizes, as viewport with a different DPI may affect font sizes.
 
         UpdateSelectWindowViewport(window);
-        SetCurrentViewport(window->Viewport);
+        SetCurrentViewport(window, window->Viewport);
         window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
         SetCurrentWindow(window);
         flags = window->Flags;
@@ -7260,7 +7271,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
                 // FIXME-DPI
                 //IM_ASSERT(old_viewport->DpiScale == window->Viewport->DpiScale); // FIXME-DPI: Something went wrong
-                SetCurrentViewport(window->Viewport);
+                SetCurrentViewport(window, window->Viewport);
                 window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
                 SetCurrentWindow(window);
             }
@@ -7632,7 +7643,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     else
     {
         // Append
-        SetCurrentViewport(window->Viewport);
+        SetCurrentViewport(window, window->Viewport);
         SetCurrentWindow(window);
     }
 
@@ -7707,7 +7718,7 @@ void ImGui::End()
     CheckStacksSize(window, false);
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
     if (g.CurrentWindow)
-        SetCurrentViewport(g.CurrentWindow->Viewport);
+        SetCurrentViewport(g.CurrentWindow, g.CurrentWindow->Viewport);
 }
 
 // Vertical scrollbar
