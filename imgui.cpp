@@ -5536,6 +5536,11 @@ static void FindHoveredWindow()
 {
     ImGuiContext& g = *GImGui;
 
+    // Special handling for the window being moved: Ignore the mouse viewport check (because it may reset/lose its viewport during the undocking frame)
+    ImGuiViewportP* moving_window_viewport = g.MovingWindow ? g.MovingWindow->Viewport : NULL;
+    if (g.MovingWindow)
+        g.MovingWindow->Viewport = g.MouseRefViewport;
+
     ImGuiWindow* hovered_window = NULL;
     ImGuiWindow* hovered_window_ignoring_moving_window = NULL;
     if (g.MovingWindow && !(g.MovingWindow->Flags & ImGuiWindowFlags_NoInputs))
@@ -5568,6 +5573,9 @@ static void FindHoveredWindow()
     g.HoveredWindow = hovered_window;
     g.HoveredRootWindow = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
     g.HoveredWindowUnderMovingWindow = hovered_window_ignoring_moving_window;
+
+    if (g.MovingWindow)
+        g.MovingWindow->Viewport = moving_window_viewport;
 }
 
 // Test if mouse cursor is hovering given rectangle
@@ -6764,16 +6772,19 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         window->ViewportId = 0;
     }
 
-    // By default inherit from parent window
-    if (window->Viewport == NULL && window->ParentWindow)
-        window->Viewport = window->ParentWindow->Viewport;
-
-    // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
-    if (window->Viewport == NULL && window->ViewportId != 0)
+    if (!g.NextWindowData.ViewportCond)
     {
-        window->Viewport = FindViewportByID(window->ViewportId);
-        if (window->Viewport == NULL && window->ViewportPos.x != FLT_MAX && window->ViewportPos.y != FLT_MAX)
-            window->Viewport = AddUpdateViewport(window, window->ID, window->ViewportPos, window->Size, ImGuiViewportFlags_NoDecoration);
+        // By default inherit from parent window
+        if (window->Viewport == NULL && window->ParentWindow)
+            window->Viewport = window->ParentWindow->Viewport;
+
+        // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
+        if (window->Viewport == NULL && window->ViewportId != 0)
+        {
+            window->Viewport = FindViewportByID(window->ViewportId);
+            if (window->Viewport == NULL && window->ViewportPos.x != FLT_MAX && window->ViewportPos.y != FLT_MAX)
+                window->Viewport = AddUpdateViewport(window, window->ID, window->ViewportPos, window->Size, ImGuiViewportFlags_NoDecoration);
+        }
     }
 
     if (g.NextWindowData.ViewportCond)
@@ -6795,10 +6806,13 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     {
         // Transition to our own viewport when leaving our host boundaries + set the NoInputs flag (which will be cleared in UpdateMovingWindow when releasing the mouse)
         // If we are already in our own viewport, if need to set the NoInputs flag.
-        bool own_viewport = window->Viewport->Window == window; // We test window->Viewport->Window because window->ViewportOwned is not valid during this function.
-        bool leave_host_viewport = !own_viewport && !window->Viewport->GetRect().Contains(window->Rect());
-        bool move_from_own_viewport = own_viewport && !(window->Viewport->Flags & ImGuiViewportFlags_NoInputs);
-        if (leave_host_viewport || move_from_own_viewport)
+        // If we have no viewport (which happens when detaching a docked node) immediately create one.
+        // We test for 'window->Viewport->Window == window' instead of 'window->ViewportOwned' because ViewportOwned is not valid during this function.
+        bool has_viewport = (window->Viewport != NULL);
+        bool own_viewport = has_viewport && (window->Viewport->Window == window);
+        bool leave_host_viewport = has_viewport && !own_viewport && !window->Viewport->GetRect().Contains(window->Rect());
+        bool move_from_own_viewport = has_viewport && own_viewport && !(window->Viewport->Flags & ImGuiViewportFlags_NoInputs);
+        if (!has_viewport || leave_host_viewport || move_from_own_viewport)
             window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs);
     }
     else if (GetWindowAlwaysWantOwnViewport(window))
