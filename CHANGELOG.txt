@@ -34,8 +34,10 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Other Changes:
+
  - ArrowButton: Fixed to honor PushButtonRepeat() setting (and internals' ImGuiItemFlags_ButtonRepeat).
  - ArrowButton: Setup current line text baseline so that ArrowButton() + SameLine() + Text() are aligned properly.
+ - Window: Allow menu windows from ignoring the style.WindowMinSize values so short menus are not padded. (#1909)
 
 
 -----------------------------------------------------------------------
