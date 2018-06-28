@@ -32,19 +32,13 @@ You can find binaries of some of those example applications at:
  MISC COMMENTS AND SUGGESTIONS
 ---------------------------------------
 
- - Newcomers, read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup ImGui in your codebase.
-
- - Please read the comments and instruction at the top of each file.
-
+ - Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
+   Please read the comments and instruction at the top of each file.
+   
  - If you are using of the backend provided here, so you can copy the imgui_impl_xxx.cpp/h files
    to your project and use them unmodified. Each imgui_impl_xxxx.cpp comes with its own individual
    ChangeLog at the top of the .cpp files, so if you want to update them later it will be easier to
    catch up with what changed.
-
- - To LEARN how to setup imgui, you may refer to 'opengl2_example/' because is the simplest one to read.
-   However, do NOT USE the OpenGL2 renderer if your code is using any modern GL3+ calls.
-   Mixing old fixed-pipeline OpenGL2 and modern OpenGL3+ is going to make everything more complicated.
-   Read comments below for details. If you are not sure, in doubt, use the OpenGL3 renderer.
 
  - Dear ImGui has 0 to 1 frame of lag for most behaviors, at 60 FPS your experience should be pleasant.
    However, consider that OS mouse cursors are typically drawn through a specific hardware accelerated path
@@ -54,8 +48,8 @@ You can find binaries of some of those example applications at:
    at 60 FPS will feel slow. It might be beneficial to the user experience to switch to a software rendered
    cursor only when an interactive drag is in progress. 
    Note that some setup or GPU drivers are likely to be causing extra lag depending on their settings.
-   If you are not sure who to blame if you feeling that dragging something is laggy, try to build an
-   application drawing a shape directly under the mouse cursor. 
+   If you feel that dragging windows feels laggy and you are not sure who to blame: try to build an 
+   application drawing a shape directly under the mouse cursor.
 
 
 ---------------------------------------
@@ -71,7 +65,7 @@ Most the example bindings are split in 2 parts:
    Examples: DirectX11 (imgui_impl_dx11.cpp), GL3 (imgui_impl_opengl3.cpp), Vulkan (imgui_impl_vulkan.cpp)
 
  - The example _applications_ usually combine 1 platform + 1 renderer binding to create a working program.
-   Examples: the directx11_example/ application combines imgui_impl_win32.cpp + imgui_impl_dx11.cpp.
+   Examples: the example_win32_directx11/ application combines imgui_impl_win32.cpp + imgui_impl_dx11.cpp.
 
  - Some bindings for higher level frameworks carry both "Platform" and "Renderer" parts in one file.
    This is the case for Allegro 5 (imgui_impl_allegro5.cpp), Marmalade (imgui_impl_marmalade5.cpp).
@@ -82,8 +76,8 @@ Most the example bindings are split in 2 parts:
    imgui_impl_xxxx files to fit under your coding style, consider that it is not necessary!
    In fact, if you are new to Dear ImGui, rewriting them will almost always be harder.
 
-   Example: your engine is built over Windows + DirectX11 but you have your own high-level rendering system 
-   layered over DirectX11.
+   Example: your engine is built over Windows + DirectX11 but you have your own high-level rendering 
+   system layered over DirectX11.
      Suggestion: step 1: try using imgui_impl_win32.cpp + imgui_impl_dx11.cpp first. 
      Once this work, _if_ you want you can replace the imgui_impl_dx11.cpp code with a custom renderer 
      using your own functions, etc. 
@@ -102,37 +96,38 @@ Most the example bindings are split in 2 parts:
    integration. It is also much more complicated and require more work to integrate correctly.
    If you are new to imgui and you are trying to integrate it into your application, first try to ignore
    everything related to Viewport and Platform Windows. You'll be able to come back to it later!
-   Note that if you decide to use unmodified imgui_impl_xxxx.cpp files, you will automatically benefit from 
-   improvements and fixes related to viewports and platform windows without extra work on your side.
+   Note that if you decide to use unmodified imgui_impl_xxxx.cpp files, you will automatically benefit
+   from improvements and fixes related to viewports and platform windows without extra work on your side.
    See 'ImGuiPlatformIO' for details.  
 
-List of officially maintained Platforms Bindings:
+List of Platforms Bindings in this repository:
 
-    imgui_impl_glfw.cpp
-    imgui_impl_sdl.cpp
-    imgui_impl_win32.cpp
+    imgui_impl_glfw.cpp       ; GLFW (Windows, macOS, Linux, etc.) http://www.glfw.org/
+    imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
+    imgui_impl_win32.cpp      ; Windows native API (Windows)
+    imgui_impl_freeglut.cpp   ; FreeGLUT (if you really miss the 90's)
 
-List of officially maintained Renderer Bindings:
+List of Renderer Bindings in this repository:
 
-    imgui_impl_dx9.cpp
-    imgui_impl_dx10.cpp
-    imgui_impl_dx11.cpp
-    imgui_impl_dx12.cpp
-    imgui_impl_opengl2.cpp
-    imgui_impl_opengl3.cpp
-    imgui_impl_vulkan.cpp
+    imgui_impl_dx9.cpp        ; DirectX9
+    imgui_impl_dx10.cpp       ; DirectX10
+    imgui_impl_dx11.cpp       ; DirectX11
+    imgui_impl_dx12.cpp       ; DirectX12 
+    imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
+    imgui_impl_opengl3.cpp    ; OpenGL3 (modern programmable pipeline)
+    imgui_impl_vulkan.cpp     ; Vulkan
 
-List of officially maintained high-level Frameworks Bindings (combine Platform + Renderer)
+List of high-level Frameworks Bindings in this repository: (combine Platform + Renderer)
 
     imgui_impl_allegro5.cpp
     imgui_impl_marmalade.cpp
 
-Third-party framework, graphics API and languages bindings:
+Third-party framework, graphics API and languages bindings are listed at:
 
-    https://github.com/ocornut/imgui/wiki/Links
+    https://github.com/ocornut/imgui/wiki/Bindings
 
     Languages: C, C#, ChaiScript, D, Go, Haxe, Java, Lua, Odin, Pascal, PureBasic, Python, Rust, Swift...
-    Frameworks: FreeGlut, Cinder, Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
+    Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre, 
     OpenSceneGraph, openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
     Miscellaneous: Software Renderer, RemoteImgui, etc.
 
@@ -215,13 +210,17 @@ example_sdl_vulkan/
 example_apple/
     OSX & iOS example + OpenGL2.
     THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
-    Consider using the opengl3_example/ instead.
+    Consider using the example_glfw_opengl3/ instead.
     On iOS, Using Synergy to access keyboard/mouse data from server computer.
     Synergy keyboard integration is rather hacky.
 
 example_allegro5/
     Allegro 5 example.
     = main.cpp + imgui_impl_allegro5.cpp
+
+example_freeglut_opengl2/
+    FreeGLUT + OpenGL2.
+    = main.cpp + imgui_impl_freeglut.cpp + imgui_impl_opengl2.cpp
 
 example_marmalade/
     Marmalade example using IwGx.

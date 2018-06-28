@@ -1,7 +1,7 @@
 // ImGui Renderer + Platform Binding for: Marmalade + IwGx
 
 // Implemented features:
-//  [X] User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
@@ -120,12 +120,12 @@ static void ImGui_Marmalade_SetClipboardText(void* /*user_data*/, const char* te
         s3eClipboardSetText(text);
 }
 
-int32 ImGui_Marmalade_PointerButtonEventCallback(void* SystemData, void* pUserData)
+int32 ImGui_Marmalade_PointerButtonEventCallback(void* system_data, void* user_data)
 {
     // pEvent->m_Button is of type s3ePointerButton and indicates which mouse
     // button was pressed.  For touchscreen this should always have the value
     // S3E_POINTER_BUTTON_SELECT
-    s3ePointerEvent* pEvent = (s3ePointerEvent*)SystemData;
+    s3ePointerEvent* pEvent = (s3ePointerEvent*)system_data;
 
     if (pEvent->m_Pressed == 1)
     {
@@ -144,10 +144,10 @@ int32 ImGui_Marmalade_PointerButtonEventCallback(void* SystemData, void* pUserDa
     return 0;
 }
 
-int32 ImGui_Marmalade_KeyCallback(void* SystemData, void* userData)
+int32 ImGui_Marmalade_KeyCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
-    s3eKeyboardEvent* e = (s3eKeyboardEvent*)SystemData;
+    s3eKeyboardEvent* e = (s3eKeyboardEvent*)system_data;
     if (e->m_Pressed == 1)
         io.KeysDown[e->m_Key] = true;
     if (e->m_Pressed == 0)
@@ -161,10 +161,10 @@ int32 ImGui_Marmalade_KeyCallback(void* SystemData, void* userData)
     return 0;
 }
 
-int32 ImGui_Marmalade_CharCallback(void* SystemData, void* userData)
+int32 ImGui_Marmalade_CharCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
-    s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)SystemData;
+    s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)system_data;
     if ((e->m_Char > 0 && e->m_Char < 0x10000))
         io.AddInputCharacter((unsigned short)e->m_Char);
 

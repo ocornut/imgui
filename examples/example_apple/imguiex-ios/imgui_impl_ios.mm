@@ -610,7 +610,7 @@ void ImGui_ClipboardCallback(uSynergyCookie cookie, enum uSynergyClipboardFormat
 // This is the main rendering function that you have to implement and provide to ImGui (via setting up 'RenderDrawListsFn' in the ImGuiIO structure)
 // If text or lines are blurry when integrating ImGui in your engine:
 // - in your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f)
-// NOTE: this is copied pretty much entirely from the opengl3_example, with only minor changes for ES
+// NOTE: this is copied pretty much entirely from the example_glfw_opengl3, with only minor changes for ES
 static void ImGui_ImplIOS_RenderDrawLists (ImDrawData *draw_data)
 {
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
