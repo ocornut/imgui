@@ -440,12 +440,12 @@ struct IMGUI_API ImGuiTextEditState
 struct ImGuiWindowSettings
 {
     char*       Name;
-    ImGuiID     Id;
+    ImGuiID     ID;
     ImVec2      Pos;
     ImVec2      Size;
     bool        Collapsed;
 
-    ImGuiWindowSettings() { Name = NULL; Id = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
+    ImGuiWindowSettings() { Name = NULL; ID = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
@@ -994,6 +994,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumnsSet> ColumnsStorage;
     float                   FontWindowScale;                    // User scale multiplier per-window
+    int                     SettingsIdx;                        // Index into SettingsWindow[] (indices are always valid as we only grow the array from the back)
 
     ImDrawList*             DrawList;                           // == &DrawListInst (for backward compatibility reason with code using imgui_internal.h we keep this a pointer)
     ImDrawList              DrawListInst;
