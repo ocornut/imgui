@@ -38,7 +38,8 @@ Other Changes:
  - ArrowButton: Fixed to honor PushButtonRepeat() setting (and internals' ImGuiItemFlags_ButtonRepeat).
  - ArrowButton: Setup current line text baseline so that ArrowButton() + SameLine() + Text() are aligned properly.
  - Window: Allow menu windows from ignoring the style.WindowMinSize values so short menus are not padded. (#1909)
-
+ - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
+ - Examples: Win32, Glfw, SDL: Added support for the ImGuiMouseCursor_Hand cursor.
 
 -----------------------------------------------------------------------
  VERSION 1.62 (Released 2018-06-22)
