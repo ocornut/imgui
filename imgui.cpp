@@ -8777,6 +8777,40 @@ void ImGui::BulletText(const char* fmt, ...)
     va_end(args);
 }
 
+bool ImGui::HyperLink(const char* label, bool active)
+{
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->SkipItems)
+		      return false;
+	   ImGuiContext& g = *GImGui;
+	   const ImGuiStyle& style = g.Style;
+	   const ImGuiID id = window->GetID(label);
+	   const ImVec2 label_size = ImGui::CalcTextSize(label, NULL, true);
+	   ImVec2 pos = window->DC.CursorPos;
+	   ImVec2 size = ImGui::CalcItemSize(ImVec2(0.0f, 0.0f), label_size.x + style.FramePadding.x * 1.0f, label_size.y);
+	   const ImRect bb(pos, pos + size);
+	   ImGui::ItemSize(bb, 0.0f);
+	   if (!ImGui::ItemAdd(bb, id))
+		      return false;
+	   ImGuiButtonFlags flags = 0;
+	   bool hovered, held;
+	   bool pressed = ImGui::ButtonBehavior(bb, id, &hovered, &held, flags);
+	   if (held || (g.HoveredId == id && g.HoveredIdPreviousFrame == id))
+		      SetMouseCursor(ImGuiMouseCursor_Hand);
+	   ImGui::RenderNavHighlight(bb, id);
+	   ImVec4 col = (hovered && held) ? vClickColor : hovered ? vHoveredColor : vColor;
+	   if (hovered && held)
+	   {
+		      bb.Min += ImVec2(1, 1);
+		      bb.Max += ImVec2(1, 1);
+	   }
+	   window->DrawList->AddLine(ImVec2(bb.Min.x + style.FramePadding.x, bb.Max.y), ImVec2(p1.x - style.FramePadding.x, bb.Max.y), ImGui::GetColorU32(col));
+	   ImGui::PushStyleColor(ImGuiCol_Text, col);
+	   ImGui::RenderTextClipped(bb.Min, bb.Max, label, NULL, &label_size, style.ButtonTextAlign, &bb);
+	   ImGui::PopStyleColor(1);
+	   return pressed;
+}
+
 static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* format)
 {
     if (data_type == ImGuiDataType_S32 || data_type == ImGuiDataType_U32)   // Signedness doesn't matter when pushing the argument
