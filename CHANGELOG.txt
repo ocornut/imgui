@@ -40,6 +40,7 @@ Other Changes:
  - Window: Allow menu windows from ignoring the style.WindowMinSize values so short menus are not padded. (#1909)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
+ - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
  - Examples: Win32, Glfw, SDL: Added support for the ImGuiMouseCursor_Hand cursor.
 
 -----------------------------------------------------------------------
