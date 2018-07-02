@@ -6,7 +6,7 @@ build/*
 *.opensdf
 *.sdf
 *.suo
-*.vcxproj.user
+*.user
 *.o
 *.obj
 *.exe
@@ -15,6 +15,11 @@ build/*
 *.ilk
 *.VC.db
 *.VC.VC.opendb
+
+## Xcode cruft
+.DS_Store
+project.xcworkspace
+xcuserdata
 
 ## Unix executables
 example_glfw_opengl2/example_glfw_opengl2

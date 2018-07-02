@@ -7,6 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07DB0B2E20E3767000FF57F1 /* imgui_impl_opengl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07DB0B2B20E3767000FF57F1 /* imgui_impl_opengl2.cpp */; };
+		07DB0B2F20E3767000FF57F1 /* imgui_impl_glfw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07DB0B2D20E3767000FF57F1 /* imgui_impl_glfw.cpp */; };
+		07DB0B3120E3768400FF57F1 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07DB0B3020E3768400FF57F1 /* main.cpp */; };
 		197E1E871B8943FE00E3FE6A /* imgui_draw.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */; };
 		197E1E891B89443600E3FE6A /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E881B89443600E3FE6A /* imgui_demo.cpp */; };
 		1A1A0F231CB39FB50090F036 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A0F221CB39FB50090F036 /* AppDelegate.m */; };
@@ -16,8 +19,6 @@
 		1A1A0F321CB3A0DE0090F036 /* uSynergy.c in Sources */ = {isa = PBXBuildFile; fileRef = 6D1E39151B35EEF10017B40F /* uSynergy.c */; };
 		1A1A0F331CB3A0E10090F036 /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 197E1E881B89443600E3FE6A /* imgui_demo.cpp */; };
 		1A1A0F341CB3A0EC0090F036 /* debug_hud.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5891B2E6A5500C130BA /* debug_hud.cpp */; };
-		1A1A0F481CB3A2E50090F036 /* main.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A0F391CB3A1B20090F036 /* main.cpp */; };
-		1A1A0F4A1CB3A5070090F036 /* imgui_impl_glfw_gl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw_gl2.cpp */; };
 		1A1A0F4E1CB3C54D0090F036 /* libglfw.dylib in Frameworks */ = {isa = PBXBuildFile; fileRef = 1A1A0F4D1CB3C54D0090F036 /* libglfw.dylib */; };
 		6D1E39171B35EEF10017B40F /* uSynergy.c in Sources */ = {isa = PBXBuildFile; fileRef = 6D1E39151B35EEF10017B40F /* uSynergy.c */; };
 		6D2FC55A1B2E632000C130BA /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 6D2FC5591B2E632000C130BA /* main.m */; };
@@ -36,6 +37,11 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07DB0B2A20E3767000FF57F1 /* imgui_impl_glfw.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_glfw.h; path = ../../imgui_impl_glfw.h; sourceTree = "<group>"; };
+		07DB0B2B20E3767000FF57F1 /* imgui_impl_opengl2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_impl_opengl2.cpp; path = ../../imgui_impl_opengl2.cpp; sourceTree = "<group>"; };
+		07DB0B2C20E3767000FF57F1 /* imgui_impl_opengl2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_opengl2.h; path = ../../imgui_impl_opengl2.h; sourceTree = "<group>"; };
+		07DB0B2D20E3767000FF57F1 /* imgui_impl_glfw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_impl_glfw.cpp; path = ../../imgui_impl_glfw.cpp; sourceTree = "<group>"; };
+		07DB0B3020E3768400FF57F1 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = main.cpp; path = ../../example_glfw_opengl2/main.cpp; sourceTree = "<group>"; };
 		197E1E861B8943FE00E3FE6A /* imgui_draw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_draw.cpp; path = ../../imgui_draw.cpp; sourceTree = "<group>"; };
 		197E1E881B89443600E3FE6A /* imgui_demo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = ../../../imgui_demo.cpp; sourceTree = "<group>"; };
 		1A1A0F1F1CB39FB50090F036 /* imguiex-osx.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "imguiex-osx.app"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -43,9 +49,6 @@
 		1A1A0F221CB39FB50090F036 /* AppDelegate.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = AppDelegate.m; sourceTree = "<group>"; };
 		1A1A0F271CB39FB50090F036 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		1A1A0F2C1CB39FB50090F036 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw_gl2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = imgui_impl_glfw_gl2.cpp; sourceTree = "<group>"; };
-		1A1A0F381CB3A1B20090F036 /* imgui_impl_glfw_gl2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = imgui_impl_glfw_gl2.h; sourceTree = "<group>"; };
-		1A1A0F391CB3A1B20090F036 /* main.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = main.cpp; sourceTree = "<group>"; };
 		1A1A0F4D1CB3C54D0090F036 /* libglfw.dylib */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.dylib"; name = libglfw.dylib; path = /usr/local/lib/libglfw.dylib; sourceTree = "<absolute>"; };
 		6D1E39151B35EEF10017B40F /* uSynergy.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = uSynergy.c; sourceTree = "<group>"; };
 		6D1E39161B35EEF10017B40F /* uSynergy.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = uSynergy.h; sourceTree = "<group>"; };
@@ -93,11 +96,23 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		07DB0B2920E3762C00FF57F1 /* example_glfw_gl2 */ = {
+			isa = PBXGroup;
+			children = (
+				07DB0B3020E3768400FF57F1 /* main.cpp */,
+				07DB0B2D20E3767000FF57F1 /* imgui_impl_glfw.cpp */,
+				07DB0B2A20E3767000FF57F1 /* imgui_impl_glfw.h */,
+				07DB0B2B20E3767000FF57F1 /* imgui_impl_opengl2.cpp */,
+				07DB0B2C20E3767000FF57F1 /* imgui_impl_opengl2.h */,
+			);
+			name = example_glfw_gl2;
+			sourceTree = "<group>";
+		};
 		1A1A0F201CB39FB50090F036 /* imguiex-osx */ = {
 			isa = PBXGroup;
 			children = (
+				07DB0B2920E3762C00FF57F1 /* example_glfw_gl2 */,
 				1A1A0F4D1CB3C54D0090F036 /* libglfw.dylib */,
-				1A1A0F351CB3A1B20090F036 /* opengl2_example */,
 				1A1A0F211CB39FB50090F036 /* AppDelegate.h */,
 				1A1A0F221CB39FB50090F036 /* AppDelegate.m */,
 				1A1A0F271CB39FB50090F036 /* Assets.xcassets */,
@@ -112,17 +127,6 @@
 			children = (
 			);
 			name = "Supporting Files";
-			sourceTree = "<group>";
-		};
-		1A1A0F351CB3A1B20090F036 /* opengl2_example */ = {
-			isa = PBXGroup;
-			children = (
-				1A1A0F371CB3A1B20090F036 /* imgui_impl_glfw_gl2.cpp */,
-				1A1A0F381CB3A1B20090F036 /* imgui_impl_glfw_gl2.h */,
-				1A1A0F391CB3A1B20090F036 /* main.cpp */,
-			);
-			name = opengl2_example;
-			path = ../../opengl2_example;
 			sourceTree = "<group>";
 		};
 		6D1E39141B35EEF10017B40F /* usynergy */ = {
@@ -302,12 +306,13 @@
 			files = (
 				1A1A0F301CB3A0DA0090F036 /* imgui_draw.cpp in Sources */,
 				1A1A0F311CB3A0DA0090F036 /* imgui.cpp in Sources */,
+				07DB0B3120E3768400FF57F1 /* main.cpp in Sources */,
 				1A1A0F331CB3A0E10090F036 /* imgui_demo.cpp in Sources */,
 				1A1A0F341CB3A0EC0090F036 /* debug_hud.cpp in Sources */,
-				1A1A0F481CB3A2E50090F036 /* main.cpp in Sources */,
+				07DB0B2E20E3767000FF57F1 /* imgui_impl_opengl2.cpp in Sources */,
 				1A1A0F321CB3A0DE0090F036 /* uSynergy.c in Sources */,
 				1A1A0F231CB39FB50090F036 /* AppDelegate.m in Sources */,
-				1A1A0F4A1CB3A5070090F036 /* imgui_impl_glfw_gl2.cpp in Sources */,
+				07DB0B2F20E3767000FF57F1 /* imgui_impl_glfw.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
