@@ -4334,6 +4334,8 @@ static ImVec2 CalcSizeContents(ImGuiWindow* window)
 {
     if (window->Collapsed)
         return window->SizeContents;
+    if (window->Hidden && window->HiddenFramesForResize == 0 && window->HiddenFramesRegular > 0)
+        return window->SizeContents;
 
     ImVec2 sz;
     sz.x = (float)(int)((window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : (window->DC.CursorMaxPos.x - window->Pos.x + window->Scroll.x));
