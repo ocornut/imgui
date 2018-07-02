@@ -6,7 +6,7 @@ build/*
 *.opensdf
 *.sdf
 *.suo
-*.vcxproj.user
+*.user
 *.o
 *.obj
 *.exe
