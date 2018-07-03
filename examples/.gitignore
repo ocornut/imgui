@@ -21,6 +21,10 @@ build/*
 project.xcworkspace
 xcuserdata
 
+## Emscripten output
+*.out.js
+*.out.wasm
+
 ## Unix executables
 example_glfw_opengl2/example_glfw_opengl2
 example_glfw_opengl3/example_glfw_opengl3
