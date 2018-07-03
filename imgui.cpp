@@ -839,13 +839,6 @@
 #endif
 #endif
 
-// Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
-#ifdef _MSC_VER
-#define IMGUI_CDECL __cdecl
-#else
-#define IMGUI_CDECL
-#endif
-
 static const ImS32  IM_S32_MIN = 0x80000000; // INT_MIN;
 static const ImS32  IM_S32_MAX = 0x7FFFFFFF; // INT_MAX;
 static const ImU32  IM_U32_MIN = 0;
