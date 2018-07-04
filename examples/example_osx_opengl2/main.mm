@@ -42,6 +42,7 @@
 {
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplOSX_NewFrame(self);
+    ImGui::NewFrame();
 
     // Global data for the demo
     static bool show_demo_window = true;

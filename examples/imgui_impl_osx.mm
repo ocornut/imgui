@@ -1,5 +1,5 @@
 // ImGui Platform Binding for: OSX / Cocoa
-// This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan..)
+// This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
 
 // Issues:
 // [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
@@ -85,7 +85,7 @@ void ImGui_ImplOSX_Shutdown()
 {
 }
 
-void ImGui_ImplOSX_NewFrame(NSOpenGLView* view)
+void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
@@ -99,14 +99,6 @@ void ImGui_ImplOSX_NewFrame(NSOpenGLView* view)
     clock_t current_time = clock();
     io.DeltaTime = (double)(current_time - g_Time) / CLOCKS_PER_SEC;
     g_Time = current_time;
-
-    NSWindow* main_window = [view window];
-    NSPoint mouse_pos = [main_window mouseLocationOutsideOfEventStream];
-    mouse_pos = [view convertPoint:mouse_pos fromView:nil];
-    io.MousePos = ImVec2(mouse_pos.x, mouse_pos.y - 1);
-
-    // Start the frame. This call will update the io.WantCaptureMouse, io.WantCaptureKeyboard flag that you can use to dispatch inputs (or not) to your application.
-    ImGui::NewFrame();
 }
 
 static int mapCharacterToKey(int c)
@@ -129,11 +121,11 @@ static void resetKeys()
         io.KeysDown[n] = false;
 }
 
-bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
+bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
 
-    if (event.type == NSEventTypeLeftMouseDown)
+    if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
         if (button >= 0 && button < IM_ARRAYSIZE(io.MouseDown))
@@ -141,12 +133,20 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event)
         return io.WantCaptureMouse;
     }
 
-    if (event.type == NSEventTypeLeftMouseUp)
+    if (event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeRightMouseUp || event.type == NSEventTypeOtherMouseUp)
     {
         int button = (int)[event buttonNumber];
         if (button >= 0 && button < IM_ARRAYSIZE(io.MouseDown))
             io.MouseDown[button] = false;
         return io.WantCaptureMouse;
+    }
+
+    if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged)
+    {
+        NSPoint mousePoint = event.locationInWindow;
+        mousePoint = [view convertPoint:mousePoint fromView:nil];
+        mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
+        io.MousePos = ImVec2(mousePoint.x, mousePoint.y);
     }
 
     if (event.type == NSEventTypeScrollWheel)
