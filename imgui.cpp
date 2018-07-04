@@ -120,34 +120,73 @@
  - Refer to the bindings and demo applications in the examples/ folder for instruction on how to setup your code.
 
  THIS IS HOW A SIMPLE APPLICATION MAY LOOK LIKE
+ EXHIBIT 1: USING THE EXAMPLE BINDINGS (imgui_impl_XXX.cpp files from the examples/ folder)
 
-     // Application init
-     // Create a context
+     // Application init: create a dear imgui context, setup some options, load fonts
      ImGui::CreateContext();
      ImGuiIO& io = ImGui::GetIO();
+     // TODO: Set optional io.ConfigFlags values, e.g. 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard' to enable keyboard controls
      // TODO: Fill optional settings of the io structure later.
-     // TODO: Load fonts if you don't want to use the default font.
+     // TODO: Load TTF/OTF fonts if you don't want to use the default font.
+
+     // Initialize helper Platform and Renderer bindings (here we are using imgui_impl_win32 and imgui_impl_dx11)
+     ImGui_ImplWin32_Init(hwnd);
+     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
+
+     // Application main loop
+     while (true)
+     {
+         // Feed inputs to dear imgui, start new frame
+         ImGui_ImplDX11_NewFrame();
+         ImGui_ImplWin32_NewFrame();
+         ImGui::NewFrame();
+
+         // Any application code here
+         ImGui::Text("Hello, world!");
+
+         // Render dear imgui into screen
+         ImGui::Render();
+         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
+         g_pSwapChain->Present(1, 0);
+     }
+     
+     // Shutdown
+     ImGui_ImplDX11_Shutdown();
+     ImGui_ImplWin32_Shutdown();
+     ImGui::DestroyContext();
+
+ THIS IS HOW A SIMPLE APPLICATION MAY LOOK LIKE
+ EXHIBIT 2: IMPLEMENTING CUSTOM BINDING / CUSTOM ENGINE
+
+     // Application init: create a dear imgui context, setup some options, load fonts
+     ImGui::CreateContext();
+     ImGuiIO& io = ImGui::GetIO();
+     // TODO: Set optional io.ConfigFlags values, e.g. 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard' to enable keyboard controls
+     // TODO: Fill optional settings of the io structure later.
+     // TODO: Load TTF/OTF fonts if you don't want to use the default font.
 
      // Build and load the texture atlas into a texture
-     unsigned char* pixels = NULL;
+     // (In the examples/ app this is usually done within the ImGui_ImplXXX_Init() function from one of the demo Renderer)
      int width, height;
+     unsigned char* pixels = NULL;
      io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
+
      // At this point you've got the texture data and you need to upload that your your graphic system:
+     // After we have created the texture, store its pointer/identifier (_in whichever format your engine uses_) in 'io.Fonts->TexID'.
+     // This will be passed back to your via the renderer. Basically ImTextureID == void*. Read FAQ below for details about ImTextureID.
      MyTexture* texture = MyEngine::CreateTextureFromMemoryPixels(pixels, width, height, TEXTURE_TYPE_RGBA32)
-     // Store your texture pointer/identifier (in whatever formatyour engine uses) in 'io.Fonts->TexID'. 
-     // This will be passed back to your via the renderer. Read FAQ for details about ImTextureID.
      io.Fonts->TexID = (void*)texture;
 
      // Application main loop
      while (true)
      {
-        // Setup low-level inputs (e.g. on Win32, GetKeyboardState(), or write to those fields from your Windows message loop handlers, etc.)
-        ImGuiIO& io = ImGui::GetIO();
-        io.DeltaTime = 1.0f/60.0f;
-        io.DisplaySize.x = 1920.0f;
-        io.DisplaySize.y = 1280.0f;
-        io.MousePos = my_mouse_pos;
-        io.MouseDown[0] = my_mouse_buttons[0];
+        // Setup low-level inputs, e.g. on Win32: calling GetKeyboardState(), or write to those fields from your Windows message handlers, etc.
+        // (In the examples/ app this is usually done within the ImGui_ImplXXX_NewFrame() function from one of the demo Platform bindings)
+        io.DeltaTime = 1.0f/60.0f;              // set the time elapsed since the previous frame (in seconds)
+        io.DisplaySize.x = 1920.0f;             // set the current display width
+        io.DisplaySize.y = 1280.0f;             // set the current display height here
+        io.MousePos = my_mouse_pos;             // set the mouse position
+        io.MouseDown[0] = my_mouse_buttons[0];  // set the mouse button states
         io.MouseDown[1] = my_mouse_buttons[1];
 
         // Call NewFrame(), after this point you can use ImGui::* functions anytime
@@ -163,7 +202,8 @@
         // (You want to try calling EndFrame/Render as late as you can, to be able to use imgui in your own game rendering code)
         ImGui::EndFrame();
         ImGui::Render();
-        MyImGuiRenderFunction(ImGui::GetDrawData());
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        MyImGuiRenderFunction(draw_data);
         SwapBuffers();
      }
 

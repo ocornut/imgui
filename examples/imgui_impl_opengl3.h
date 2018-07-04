@@ -5,6 +5,10 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
+// You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
+// If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
+// https://github.com/ocornut/imgui
+
 // About GLSL version:
 // The 'glsl_version' initialization parameter defaults to "#version 150" if NULL.
 // Only override if your GL version doesn't handle this GLSL version. Keep NULL if unsure!
