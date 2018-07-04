@@ -765,6 +765,7 @@ enum ImGuiDir_
 };
 
 // User fill ImGuiIO.KeyMap[] array with indices into the ImGuiIO.KeysDown[512] array
+#ifndef IM_CUSTOM_KEYLIST
 enum ImGuiKey_
 {
     ImGuiKey_Tab,
@@ -790,6 +791,7 @@ enum ImGuiKey_
     ImGuiKey_Z,         // for text edit CTRL+Z: undo
     ImGuiKey_COUNT
 };
+#endif
 
 // [BETA] Gamepad/Keyboard directional navigation
 // Keyboard: Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable. NewFrame() will automatically fill io.NavInputs[] based on your io.KeysDown[] + io.KeyMap[] arrays.

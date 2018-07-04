@@ -63,6 +63,17 @@
 //---- Use 32-bit vertex indices (default is 16-bit) to allow meshes with more than 64K vertices. Render function needs to support it.
 //#define ImDrawIdx unsigned int
 
+//---- Allow custom keymap for expanded key access (for widget hotkeys or other custom code)
+//#define IM_CUSTOM_KEYLIST
+//
+// enum ImGuiKey_
+// {
+// 	    ImGuiKey_Tab,
+//		ImGuiKey_G,
+//		...
+//		ImGuiKey_COUNT
+// }
+
 //---- Tip: You can add extra functions within the ImGui:: namespace, here or in your own headers files.
 /*
 namespace ImGui
@@ -70,3 +81,5 @@ namespace ImGui
     void MyFunction(const char* name, const MyMatrix44& v);
 }
 */
+
+
