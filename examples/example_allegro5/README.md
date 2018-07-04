@@ -12,12 +12,12 @@ Note that the back-end supports _BOTH_ 16-bit and 32-bit indices, but 32-bit ind
 - On Ubuntu 14.04+
 
 ```bash
-g++ -DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" -I .. -I ../.. main.cpp imgui_impl_allegro5.cpp ../../imgui*.cpp -lallegro -lallegro_primitives -o allegro5_example
+g++ -DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" -I .. -I ../.. main.cpp ..\imgui_impl_allegro5.cpp ../../imgui*.cpp -lallegro -lallegro_primitives -o allegro5_example
 ```
 
 - On Windows with Visual Studio's CLI
 
 ```
 set ALLEGRODIR=path_to_your_allegro5_folder
-cl /Zi /MD /I %ALLEGRODIR%\include /DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" /I .. /I ..\.. main.cpp imgui_impl_allegro5.cpp ..\..\imgui*.cpp /link /LIBPATH:%ALLEGRODIR%\lib allegro-5.0.10-monolith-md.lib user32.lib
+cl /Zi /MD /I %ALLEGRODIR%\include /DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" /I .. /I ..\.. main.cpp ..\imgui_impl_allegro5.cpp ..\..\imgui*.cpp /link /LIBPATH:%ALLEGRODIR%\lib allegro-5.0.10-monolith-md.lib user32.lib
 ```

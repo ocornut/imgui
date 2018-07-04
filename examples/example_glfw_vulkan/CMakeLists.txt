@@ -20,7 +20,7 @@ include_directories(${GLFW_DIR}/include)
 
 # ImGui
 set(IMGUI_DIR ../../)
-include_directories(${IMGUI_DIR})
+include_directories(${IMGUI_DIR} ..)
 
 # Libraries
 find_library(VULKAN_LIBRARY

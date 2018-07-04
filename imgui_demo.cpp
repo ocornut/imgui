@@ -1,4 +1,4 @@
-// dear imgui, v1.62 WIP
+// dear imgui, v1.63 WIP
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:
@@ -12,11 +12,11 @@
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
 
-// Message to beginner C/C++ programmers. About the meaning of 'static': in this demo code, we frequently we use 'static' variables inside functions.
-// We do this as a way to gather code and data in the same place, just to make the demo code faster to read, faster to write, and use less code.
+// Message to beginner C/C++ programmers about the meaning of the 'static' keyword: in this demo code, we frequently we use 'static' variables inside functions.
 // A static variable persist across calls, so it is essentially like a global variable but declared inside the scope of the function.
+// We do this as a way to gather code and data in the same place, just to make the demo code faster to read, faster to write, and use less code.
 // It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
-// This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your function.
+// This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your functions.
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -76,6 +76,7 @@
 
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
+// Forward Declarations
 static void ShowExampleAppConsole(bool* p_open);
 static void ShowExampleAppLog(bool* p_open);
 static void ShowExampleAppLayout(bool* p_open);
@@ -89,6 +90,7 @@ static void ShowExampleAppCustomRendering(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleMenuFile();
 
+// Helper to display a little (?) mark which shows a tooltip when hovered.
 static void ShowHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
@@ -102,6 +104,7 @@ static void ShowHelpMarker(const char* desc)
     }
 }
 
+// Helper to display basic user controls.
 void ImGui::ShowUserGuide()
 {
     ImGui::BulletText("Double-click on title bar to collapse window.");
@@ -124,10 +127,11 @@ void ImGui::ShowUserGuide()
     ImGui::Unindent();
 }
 
-// Demonstrate most ImGui features (big function!)
+// Demonstrate most Dear ImGui features (this is big function!)
+// You may execute this function to experiment with the UI and understand what it does. You may then search for keywords in the code when you are interested by a specific feature.
 void ImGui::ShowDemoWindow(bool* p_open)
 {
-    // Examples apps
+    // Examples Apps (accessible from the "Examples" menu)
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
     static bool show_app_log = false;
@@ -139,10 +143,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool show_app_simple_overlay = false;
     static bool show_app_window_titles = false;
     static bool show_app_custom_rendering = false;
-    static bool show_app_style_editor = false;
-
-    static bool show_app_metrics = false;
-    static bool show_app_about = false;
 
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_console)             ShowExampleAppConsole(&show_app_console);
@@ -156,6 +156,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (show_app_window_titles)       ShowExampleAppWindowTitles(&show_app_window_titles);
     if (show_app_custom_rendering)    ShowExampleAppCustomRendering(&show_app_custom_rendering);
 
+    // Dear ImGui Apps (accessible from the "Help" menu)
+    static bool show_app_metrics = false;
+    static bool show_app_style_editor = false;
+    static bool show_app_about = false;
+
     if (show_app_metrics)             { ImGui::ShowMetricsWindow(&show_app_metrics); }
     if (show_app_style_editor)        { ImGui::Begin("Style Editor", &show_app_style_editor); ImGui::ShowStyleEditor(); ImGui::End(); }
     if (show_app_about)
@@ -168,6 +173,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::End();
     }
 
+    // Demonstrate the various window flags. Typically you would just use the default!
     static bool no_titlebar = false;
     static bool no_scrollbar = false;
     static bool no_menu = false;
@@ -177,7 +183,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_close = false;
     static bool no_nav = false;
 
-    // Demonstrate the various window flags. Typically you would just use the default.
     ImGuiWindowFlags window_flags = 0;
     if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
     if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
@@ -188,18 +193,21 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (no_nav)       window_flags |= ImGuiWindowFlags_NoNav;
     if (no_close)     p_open = NULL; // Don't pass our bool* to Begin
 
+    // We specify a default size in case there's no data in the .ini file. Typically this isn't required! We only do it to make the Demo applications a little more welcoming.
     ImGui::SetNextWindowSize(ImVec2(550,680), ImGuiCond_FirstUseEver);
+
+    // Main body of the Demo window starts here.
     if (!ImGui::Begin("ImGui Demo", p_open, window_flags))
     {
         // Early out if the window is collapsed, as an optimization.
         ImGui::End();
         return;
     }
-
-    //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // 2/3 of the space for widget and 1/3 for labels
-    ImGui::PushItemWidth(-140);                                 // Right align, keep 140 pixels for labels
-
     ImGui::Text("dear imgui says hello. (%s)", IMGUI_VERSION);
+
+    // Most "big" widgets share a common width settings by default.
+    //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // Use 2/3 of the space for widgets and 1/3 for labels (default)
+    ImGui::PushItemWidth(ImGui::GetFontSize() * -12);           // Use fixed width for labels (by passing a negative value), the rest goes to widgets. We choose a width proportional to our font size.
 
     // Menu
     if (ImGui::BeginMenuBar())
@@ -302,10 +310,15 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
 
             // Arrow buttons
+            static int counter = 0;
             float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-            if (ImGui::ArrowButton("##left", ImGuiDir_Left)) {}
+            ImGui::PushButtonRepeat(true);
+            if (ImGui::ArrowButton("##left", ImGuiDir_Left)) { counter--; }
             ImGui::SameLine(0.0f, spacing);
-            if (ImGui::ArrowButton("##left", ImGuiDir_Right)) {}
+            if (ImGui::ArrowButton("##right", ImGuiDir_Right)) { counter++; }
+            ImGui::PopButtonRepeat();
+            ImGui::SameLine();
+            ImGui::Text("%d", counter);
 
             ImGui::Text("Hover over me");
             if (ImGui::IsItemHovered())
@@ -328,6 +341,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
             {
                 // Using the _simplified_ one-liner Combo() api here
+                // See "Combo" section for examples of how to use the more complete BeginCombo()/EndCombo() api.
                 const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD", "EEEE", "FFFF", "GGGG", "HHHH", "IIII", "JJJJ", "KKKK", "LLLLLLL", "MMMM", "OOOOOOO" };
                 static int item_current = 0;
                 ImGui::Combo("combo", &item_current, items, IM_ARRAYSIZE(items));
@@ -457,7 +471,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     else
                     {
                         // Leaf: The only reason we have a TreeNode at all is to allow selection of the leaf. Otherwise we can use BulletText() or TreeAdvanceToLabelPos()+Text().
-                        node_flags |= ImGuiTreeNodeFlags_Leaf; // | ImGuiTreeNodeFlags_Bullet;
+                        node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
                         ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
                         if (ImGui::IsItemClicked())
                             node_clicked = i;
@@ -1169,6 +1183,95 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
             ImGui::PopID();
             ImGui::PopStyleVar();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Active, Focused, Hovered & Focused Tests"))
+        {
+            // Display the value of IsItemHovered() and other common item state functions. Note that the flags can be combined.
+            // (because BulletText is an item itself and that would affect the output of IsItemHovered() we pass all state in a single call to simplify the code).
+            static int item_type = 1;
+            static bool b = false;
+            static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
+            ImGui::RadioButton("Text", &item_type, 0); ImGui::SameLine();
+            ImGui::RadioButton("Button", &item_type, 1); ImGui::SameLine();
+            ImGui::RadioButton("CheckBox", &item_type, 2); ImGui::SameLine();
+            ImGui::RadioButton("SliderFloat", &item_type, 3); ImGui::SameLine();
+            ImGui::RadioButton("ColorEdit4", &item_type, 4); ImGui::SameLine();
+            ImGui::RadioButton("ListBox", &item_type, 5);
+            bool ret = false;
+            if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
+            if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
+            if (item_type == 2) { ret = ImGui::Checkbox("ITEM: CheckBox", &b); }                            // Testing checkbox
+            if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
+            if (item_type == 4) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
+            if (item_type == 5) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
+            ImGui::BulletText(
+                "Return value = %d\n"
+                "IsItemFocused() = %d\n"
+                "IsItemHovered() = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsItemHovered(_AllowWhenOverlapped) = %d\n"
+                "IsItemHovered(_RectOnly) = %d\n"
+                "IsItemActive() = %d\n"
+                "IsItemDeactivated() = %d\n"
+                "IsItemDeactivatedAfterChange() = %d\n"
+                "IsItemVisible() = %d\n",
+                ret,
+                ImGui::IsItemFocused(),
+                ImGui::IsItemHovered(),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
+                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
+                ImGui::IsItemActive(),
+                ImGui::IsItemDeactivated(),
+                ImGui::IsItemDeactivatedAfterChange(),
+                ImGui::IsItemVisible()
+            );
+
+            static bool embed_all_inside_a_child_window = false;
+            ImGui::Checkbox("Embed everything inside a child window (for additional testing)", &embed_all_inside_a_child_window);
+            if (embed_all_inside_a_child_window)
+                ImGui::BeginChild("outer_child", ImVec2(0, ImGui::GetFontSize() * 20), true);
+
+            // Testing IsWindowFocused() function with its various flags. Note that the flags can be combined.
+            ImGui::BulletText(
+                "IsWindowFocused() = %d\n"
+                "IsWindowFocused(_ChildWindows) = %d\n"
+                "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
+                "IsWindowFocused(_RootWindow) = %d\n"
+                "IsWindowFocused(_AnyWindow) = %d\n",
+                ImGui::IsWindowFocused(),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow),
+                ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow));
+
+            // Testing IsWindowHovered() function with its various flags. Note that the flags can be combined.
+            ImGui::BulletText(
+                "IsWindowHovered() = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
+                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
+                "IsWindowHovered(_ChildWindows) = %d\n"
+                "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
+                "IsWindowHovered(_RootWindow) = %d\n"
+                "IsWindowHovered(_AnyWindow) = %d\n",
+                ImGui::IsWindowHovered(),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
+                ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
+
+            ImGui::BeginChild("child", ImVec2(0, 50), true);
+            ImGui::Text("This is another child window for testing with the _ChildWindows flag.");
+            ImGui::EndChild();
+            if (embed_all_inside_a_child_window)
+                EndChild();
+
             ImGui::TreePop();
         }
     }
@@ -2027,67 +2130,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Focused & Hovered Test"))
-        {
-            static bool embed_all_inside_a_child_window = false;
-            ImGui::Checkbox("Embed everything inside a child window (for additional testing)", &embed_all_inside_a_child_window);
-            if (embed_all_inside_a_child_window)
-                ImGui::BeginChild("embeddingchild", ImVec2(0, ImGui::GetFontSize() * 25), true);
-
-            // Testing IsWindowFocused() function with its various flags (note that the flags can be combined)
-            ImGui::BulletText(
-                "IsWindowFocused() = %d\n"
-                "IsWindowFocused(_ChildWindows) = %d\n"
-                "IsWindowFocused(_ChildWindows|_RootWindow) = %d\n"
-                "IsWindowFocused(_RootWindow) = %d\n"
-                "IsWindowFocused(_AnyWindow) = %d\n",
-                ImGui::IsWindowFocused(),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_ChildWindows | ImGuiFocusedFlags_RootWindow),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_RootWindow),
-                ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow));
-
-            // Testing IsWindowHovered() function with its various flags (note that the flags can be combined)
-            ImGui::BulletText(
-                "IsWindowHovered() = %d\n"
-                "IsWindowHovered(_AllowWhenBlockedByPopup) = %d\n"
-                "IsWindowHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-                "IsWindowHovered(_ChildWindows) = %d\n"
-                "IsWindowHovered(_ChildWindows|_RootWindow) = %d\n"
-                "IsWindowHovered(_RootWindow) = %d\n"
-                "IsWindowHovered(_AnyWindow) = %d\n",
-                ImGui::IsWindowHovered(),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_ChildWindows | ImGuiHoveredFlags_RootWindow),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_RootWindow),
-                ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
-
-            // Testing IsItemHovered() function (because BulletText is an item itself and that would affect the output of IsItemHovered, we pass all lines in a single items to shorten the code)
-            ImGui::Button("ITEM");
-            ImGui::BulletText(
-                "IsItemHovered() = %d\n"
-                "IsItemHovered(_AllowWhenBlockedByPopup) = %d\n"
-                "IsItemHovered(_AllowWhenBlockedByActiveItem) = %d\n"
-                "IsItemHovered(_AllowWhenOverlapped) = %d\n"
-                "IsItemhovered(_RectOnly) = %d\n",
-                ImGui::IsItemHovered(),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByActiveItem),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
-                ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly));
-
-            ImGui::BeginChild("child", ImVec2(0,50), true);
-            ImGui::Text("This is another child window for testing IsWindowHovered() flags.");
-            ImGui::EndChild();
-
-            if (embed_all_inside_a_child_window)
-                EndChild();
-
-            ImGui::TreePop();
-        }
-
         if (ImGui::TreeNode("Dragging"))
         {
             ImGui::TextWrapped("You can use ImGui::GetMouseDragDelta(0) to query for the dragged amount on any widget.");
@@ -2115,7 +2157,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         if (ImGui::TreeNode("Mouse cursors"))
         {
-            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "Move", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE" };
+            const char* mouse_cursors_names[] = { "Arrow", "TextInput", "Move", "ResizeNS", "ResizeEW", "ResizeNESW", "ResizeNWSE", "Hand" };
             IM_ASSERT(IM_ARRAYSIZE(mouse_cursors_names) == ImGuiMouseCursor_COUNT);
 
             ImGui::Text("Current mouse cursor = %d: %s", ImGui::GetMouseCursor(), mouse_cursors_names[ImGui::GetMouseCursor()]);
@@ -2579,8 +2621,8 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
             if (p_open && ImGui::MenuItem("Close")) *p_open = false;
             ImGui::EndPopup();
         }
-        ImGui::End();
     }
+    ImGui::End();
 }
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
@@ -3191,7 +3233,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
                     {
                         // Here we use a TreeNode to highlight on hover (we could use e.g. Selectable as well)
                         ImGui::AlignTextToFramePadding();
-                        ImGui::TreeNodeEx("Field", ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet, "Field_%d", i);
+                        ImGui::TreeNodeEx("Field", ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet, "Field_%d", i);
                         ImGui::NextColumn();
                         ImGui::PushItemWidth(-1);
                         if (i >= 5)

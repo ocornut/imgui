@@ -261,7 +261,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
 	}
 
 	// Record Imgui Draw Data and draw funcs into command buffer
-	ImGui_ImplVulkan_RenderDrawData(fd->CommandBuffer, ImGui::GetDrawData());
+	ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer);
 
 	// Submit command buffer
 	vkCmdEndRenderPass(fd->CommandBuffer);

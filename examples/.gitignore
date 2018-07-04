@@ -6,21 +6,26 @@ build/*
 *.opensdf
 *.sdf
 *.suo
-*.vcxproj.user
+*.user
 *.o
 *.obj
+*.exe
+*.log
 *.pdb
 *.ilk
 *.VC.db
 *.VC.VC.opendb
 
-## XCode cruft
+## Xcode cruft
 .DS_Store
 project.xcworkspace
 xcuserdata
 
-## Executables
-*.exe
+## Emscripten output
+*.out.js
+*.out.wasm
+
+## Unix executables
 example_glfw_opengl2/example_glfw_opengl2
 example_glfw_opengl3/example_glfw_opengl3
 example_sdl_opengl2/example_sdl_opengl2
