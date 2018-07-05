@@ -2,9 +2,8 @@
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
 
 @class NSEvent;
-@class NSVew;
+@class NSView;
 
-// FIXME-OSX: Try replacing with NSView
 IMGUI_API bool        ImGui_ImplOSX_Init();
 IMGUI_API void        ImGui_ImplOSX_Shutdown();
 IMGUI_API void        ImGui_ImplOSX_NewFrame(NSView *_Nonnull view);
