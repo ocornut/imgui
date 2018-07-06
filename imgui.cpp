@@ -5831,8 +5831,10 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
     else
     {
         // When the window cannot fit all contents (either because of constraints, either because screen is too small): we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
-        ImVec2 size_min(0.0f, 0.0f);
-        if (!(window->Flags & ImGuiWindowFlags_ChildMenu))
+        const bool is_popup = (window->Flags & ImGuiWindowFlags_Popup) != 0 && (window->Flags & ImGuiWindowFlags_AlwaysAutoResize) != 0;
+        const bool is_menu = (window->Flags & ImGuiWindowFlags_ChildMenu) != 0;
+        ImVec2 size_min(1.0f, 1.0f);
+        if (!is_popup && !is_menu)
             size_min = style.WindowMinSize;
         ImVec2 size_auto_fit = ImClamp(size_contents, size_min, ImMax(size_min, g.IO.DisplaySize - style.DisplaySafeAreaPadding * 2.0f));
         ImVec2 size_auto_fit_after_constraint = CalcSizeAfterConstraint(window, size_auto_fit);
