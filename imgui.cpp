@@ -6545,6 +6545,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
                 size = ImFloor(settings->Size);
         }
     window->Size = window->SizeFull = window->SizeFullAtLastBegin = size;
+    window->DC.CursorMaxPos = window->Pos; // So first call to CalcSizeContents() doesn't return crazy values
 
     if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
     {
