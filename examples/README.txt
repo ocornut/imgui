@@ -166,12 +166,12 @@ example_win32_directx12/
 example_apple_metal/
     OSX & iOS + Metal.
     It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
-    Note that instead of the OSX bindings, you may want to use GLFW or SDL which will also support Windows, Linux along with OSX.
+    (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
     = game template + imgui_impl_osx.mm + imgui_impl_metal.mm
 
 example_apple_opengl2/
     OSX + OpenGL2.
-    Note that instead of the OSX bindings, you may want to use GLFW or SDL which will also support Windows, Linux along with OSX.
+    (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
     = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
 
 example_glfw_opengl2/
