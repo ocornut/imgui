@@ -101,11 +101,13 @@ Most the example bindings are split in 2 parts:
    from improvements and fixes related to viewports and platform windows without extra work on your side.
    See 'ImGuiPlatformIO' for details.  
 
+
 List of Platforms Bindings in this repository:
 
     imgui_impl_glfw.cpp       ; GLFW (Windows, macOS, Linux, etc.) http://www.glfw.org/
+    imgui_impl_osx.mm         ; macOS native API
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
-    imgui_impl_win32.cpp      ; Windows native API (Windows)
+    imgui_impl_win32.cpp      ; Win32 native API (Windows)
     imgui_impl_freeglut.cpp   ; FreeGLUT (if you really miss the 90's)
 
 List of Renderer Bindings in this repository:
@@ -113,7 +115,8 @@ List of Renderer Bindings in this repository:
     imgui_impl_dx9.cpp        ; DirectX9
     imgui_impl_dx10.cpp       ; DirectX10
     imgui_impl_dx11.cpp       ; DirectX11
-    imgui_impl_dx12.cpp       ; DirectX12 
+    imgui_impl_dx12.cpp       ; DirectX12
+    imgui_impl_metal.mm       ; Metal (with ObjC)
     imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
     imgui_impl_opengl3.cpp    ; OpenGL3 (modern programmable pipeline)
     imgui_impl_vulkan.cpp     ; Vulkan
@@ -144,6 +147,7 @@ Building:
    - Makefiles for Linux/OSX
    - Batch files for Visual Studio 2008+
    - A .sln project file for Visual Studio 2010+ 
+   - Xcode project files for the Apple examples
   Please let me know if they don't work with your setup!
   You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
   directly with a command-line compiler.
@@ -165,6 +169,17 @@ example_win32_directx12/
     DirectX12 example, Windows only.
     This is quite long and tedious, because: DirectX12.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp
+
+example_apple_metal/
+    OSX & iOS + Metal.
+    It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
+    (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
+    = game template + imgui_impl_osx.mm + imgui_impl_metal.mm
+
+example_apple_opengl2/
+    OSX + OpenGL2.
+    (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
+    = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
 
 example_glfw_opengl2/
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
@@ -207,13 +222,6 @@ example_sdl_vulkan/
     SDL2 (Win32, Mac, Linux, etc.) + Vulkan example.
     This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
-
-example_apple/
-    OSX & iOS example + OpenGL2.
-    THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
-    Consider using the example_glfw_opengl3/ instead.
-    On iOS, Using Synergy to access keyboard/mouse data from server computer.
-    Synergy keyboard integration is rather hacky.
 
 example_allegro5/
     Allegro 5 example.
