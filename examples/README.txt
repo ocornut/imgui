@@ -90,22 +90,17 @@ Most the example bindings are split in 2 parts:
 
  - Road-map: Dear ImGui 1.70 (WIP currently in the "viewport" branch) will allows imgui windows to be 
    seamlessly detached from the main application window. This is achieved using an extra layer to the 
-   platform and renderer bindings, which allows imgui to communicate platform-specific requests such as 
-   "create an additional OS window", "create a render context", "get the OS position of this window" etc. 
-   When using this feature, the coupling with your OS/renderer becomes much tighter than a regular imgui 
-   integration. It is also much more complicated and require more work to integrate correctly.
-   If you are new to imgui and you are trying to integrate it into your application, first try to ignore
-   everything related to Viewport and Platform Windows. You'll be able to come back to it later!
-   Note that if you decide to use unmodified imgui_impl_xxxx.cpp files, you will automatically benefit
-   from improvements and fixes related to viewports and platform windows without extra work on your side.
-   See 'ImGuiPlatformIO' for details.  
+   platform and renderer bindings, which allows imgui to communicate platform-specific requests.
+   If you decide to use unmodified imgui_impl_xxxx.cpp files, you will automatically benefit from 
+   improvements and fixes related to viewports and platform windows without extra work on your side.
+
 
 List of Platforms Bindings in this repository:
 
     imgui_impl_glfw.cpp       ; GLFW (Windows, macOS, Linux, etc.) http://www.glfw.org/
     imgui_impl_osx.mm         ; macOS native API
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
-    imgui_impl_win32.cpp      ; Windows native API (Windows)
+    imgui_impl_win32.cpp      ; Win32 native API (Windows)
     imgui_impl_freeglut.cpp   ; FreeGLUT (if you really miss the 90's)
 
 List of Renderer Bindings in this repository:
@@ -168,6 +163,17 @@ example_win32_directx12/
     This is quite long and tedious, because: DirectX12.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp
 
+example_apple_metal/
+    OSX & iOS + Metal.
+    It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
+    Note that instead of the OSX bindings, you may want to use GLFW or SDL which will also support Windows, Linux along with OSX.
+    = game template + imgui_impl_osx.mm + imgui_impl_metal.mm
+
+example_apple_opengl2/
+    OSX + OpenGL2.
+    Note that instead of the OSX bindings, you may want to use GLFW or SDL which will also support Windows, Linux along with OSX.
+    = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
+
 example_glfw_opengl2/
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
@@ -209,22 +215,6 @@ example_sdl_vulkan/
     SDL2 (Win32, Mac, Linux, etc.) + Vulkan example.
     This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
-
-example_apple_metal/
-    OSX & iOS + Metal.
-    It is based on the cross-platform game template provided with Xcode as of Xcode 9.
-    = game template + imgui_impl_osx.mm + imgui_impl_metal.mm
-
-example_apple_opengl2/
-    OSX Cocoa + OpenGL2.
-    = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
-
-example_apple/
-    OSX & iOS example + OpenGL2.
-    THIS EXAMPLE HAS NOT BEEN MAINTAINED PROPERLY AND NEEDS A MAINTAINER.
-    Consider using the example_glfw_opengl3/ or example_osx_opengl2/ example instead.
-    On iOS, Using Synergy to access keyboard/mouse data from server computer.
-    Synergy keyboard integration is rather hacky.
 
 example_allegro5/
     Allegro 5 example.
