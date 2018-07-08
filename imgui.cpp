@@ -7954,7 +7954,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     bool hovered = ItemHoverable(bb, id);
 
     // Drag source doesn't report as hovered
-    if (hovered && g.DragDropActive && g.DragDropPayload.SourceId == id)
+    if (hovered && g.DragDropActive && g.DragDropPayload.SourceId == id && !(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoDisableHover))
         hovered = false;
 
     // Special mode for Drag and Drop where holding button pressed for a long time while dragging another item triggers the button

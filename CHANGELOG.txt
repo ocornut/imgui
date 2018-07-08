@@ -46,9 +46,11 @@ Other Changes:
  - Window: Added global io.OptResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
  - Drag and Drop: Fixed an incorrect assert when dropping a source that is submitted after the target (bug introduced with 1.62 changes 
    related to the addition of IsItemDeactivated()). (#1875, #143)
+ - Drag and Drop: Fixed ImGuiDragDropFlags_SourceNoDisableHover to affect hovering state prior to calling IsItemHovered() + fixed description. (#143)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
+ - Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
  - Examples: Metal: Added Metal rendering backend. (#1929, #1873) [@warrenm]
  - Examples: OSX: Added early raw OSX platform backend. (#1873) [@pagghiu, @itamago, @ocornut]
  - Examples: Added mac OSX & iOS + Metal example in example_apple_metal/. (#1929, #1873) [@warrenm]
