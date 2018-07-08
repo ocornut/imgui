@@ -2299,7 +2299,7 @@ void ImGui::MarkItemValueChanged(ImGuiID id)
     // ActiveId might have been released by the time we call this (as in the typical press/release button behavior) but still need need to fill the data.
     (void)id; // Avoid unused variable warnings when asserts are compiled out.
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.ActiveId == id || g.ActiveId == 0);
+    IM_ASSERT(g.ActiveId == id || g.ActiveId == 0 || g.DragDropActive);
     g.ActiveIdValueChanged = true;
 }
 
