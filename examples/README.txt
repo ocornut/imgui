@@ -113,7 +113,8 @@ List of Renderer Bindings in this repository:
     imgui_impl_dx9.cpp        ; DirectX9
     imgui_impl_dx10.cpp       ; DirectX10
     imgui_impl_dx11.cpp       ; DirectX11
-    imgui_impl_dx12.cpp       ; DirectX12 
+    imgui_impl_dx12.cpp       ; DirectX12
+    imgui_impl_metal.mm       ; Metal (with ObjC)
     imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
     imgui_impl_opengl3.cpp    ; OpenGL3 (modern programmable pipeline)
     imgui_impl_vulkan.cpp     ; Vulkan
@@ -144,6 +145,7 @@ Building:
    - Makefiles for Linux/OSX
    - Batch files for Visual Studio 2008+
    - A .sln project file for Visual Studio 2010+ 
+   - Xcode project files for the Apple examples
   Please let me know if they don't work with your setup!
   You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
   directly with a command-line compiler.
@@ -208,7 +210,12 @@ example_sdl_vulkan/
     This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
 
-example_osx_opengl2/
+example_apple_metal/
+    OSX & iOS + Metal.
+    It is based on the cross-platform game template provided with Xcode as of Xcode 9.
+    = game template + imgui_impl_osx.mm + imgui_impl_metal.mm
+
+example_apple_opengl2/
     OSX Cocoa + OpenGL2.
     = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
 
