@@ -13826,6 +13826,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
             cf.ptCurrentPos.y = y;
             cf.dwStyle = CFS_FORCE_POSITION;
             ::ImmSetCompositionWindow(himc, &cf);
+            ::ImmReleaseContext(hwnd, himc);
         }
 }
 
