@@ -2135,7 +2135,6 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     ParentWindow = NULL;
     RootWindow = NULL;
     RootWindowForTitleBarHighlight = NULL;
-    RootWindowForTabbing = NULL;
     RootWindowForNav = NULL;
 
     NavLastIds[0] = NavLastIds[1] = 0;
@@ -3063,12 +3062,19 @@ static void ImGui::NavUpdateWindowing()
     ImGuiWindow* apply_focus_window = NULL;
     bool apply_toggle_layer = false;
 
+    ImGuiWindow* modal_window = GetFrontMostPopupModal();
+    if (modal_window != NULL)
+    {
+        g.NavWindowingTarget = NULL;
+        return;
+    }
+
     bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
     bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavigable(g.Windows.Size - 1, -INT_MAX, -1))
         {
-            g.NavWindowingTarget = window->RootWindowForTabbing;
+            g.NavWindowingTarget = window;
             g.NavWindowingHighlightTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_NavKeyboard : ImGuiInputSource_NavGamepad;
@@ -3137,7 +3143,7 @@ static void ImGui::NavUpdateWindowing()
     }
 
     // Apply final focus
-    if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindowForTabbing))
+    if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
     {
         g.NavDisableHighlight = false;
         g.NavDisableMouseHover = true;
@@ -3813,6 +3819,7 @@ void ImGui::NewFrame()
     UpdateMovingWindow();
     UpdateHoveredWindowAndCaptureFlags();
 
+    // Background darkening/whitening
     if (GetFrontMostPopupModal() != NULL)
         g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
     else
@@ -6181,11 +6188,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Initialize
         window->ParentWindow = parent_window;
-        window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForTabbing = window->RootWindowForNav = window;
+        window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
         if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !window_is_child_tooltip)
             window->RootWindow = parent_window->RootWindow;
         if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
-            window->RootWindowForTitleBarHighlight = window->RootWindowForTabbing = parent_window->RootWindowForTitleBarHighlight; // Same value in master branch, will differ for docking
+            window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
         while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
             window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
 
@@ -7262,7 +7269,7 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
 bool ImGui::IsWindowNavFocusable(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    return window->Active && window == window->RootWindowForTabbing && (!(window->Flags & ImGuiWindowFlags_NoNavFocus) || window == g.NavWindow);
+    return window->Active && window == window->RootWindow && (!(window->Flags & ImGuiWindowFlags_NoNavFocus) || window == g.NavWindow);
 }
 
 float ImGui::GetWindowWidth()
