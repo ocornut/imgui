@@ -2905,7 +2905,7 @@ struct ExampleAppConsole
         // Here we create a context menu only available from the title bar.
         if (ImGui::BeginPopupContextItem())
         {
-            if (ImGui::MenuItem("Close"))
+            if (ImGui::MenuItem("Close Console"))
                 *p_open = false;
             ImGui::EndPopup();
         }
@@ -3172,7 +3172,11 @@ struct ExampleAppLog
     void    Draw(const char* title, bool* p_open = NULL)
     {
         ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiCond_FirstUseEver);
-        ImGui::Begin(title, p_open);
+        if (!ImGui::Begin(title, p_open))
+        {
+            ImGui::End();
+            return;
+        }
         if (ImGui::Button("Clear")) Clear();
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");

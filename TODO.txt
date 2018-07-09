@@ -17,7 +17,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: background options for child windows, border option (disable rounding).
  - window: resizing from any sides? done. > need backends to honor mouse cursors properly. (#822)
  - window: resize from borders: support some form of outer padding to make it easier to grab borders. (#822)
- - window: begin with *p_open == false should return false.
+ - window: fix resize glitch when collapsing an AlwaysAutoResize window.
+ - window: begin with *p_open == false could return false.
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
  - window: when window is very small, prioritize resize button over close button.
@@ -28,7 +29,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
-!- scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
+ - window: investigate better auto-positioning for new windows.
+ - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
 
  - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
@@ -218,6 +220,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag and drop: add demo. (#143, #479)
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
+ - drag and drop: make it easier and provide a demo to have tooltip both are source and target site, with a more detailed one on target site (tooltip ordering problem)
  - drag and drop: test with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop.
  - drag and drop: make payload optional? (#143)
