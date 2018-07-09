@@ -16,5 +16,4 @@ namespace px_render {
 
 IMGUI_IMPL_API void     ImGui_Impl_pxrender_Init(px_render::RenderContext *ctx);
 IMGUI_IMPL_API void     ImGui_Impl_pxrender_Shutdown();
-IMGUI_IMPL_API void     ImGui_Impl_pxrender_NewFrame();
 IMGUI_IMPL_API void     ImGui_Impl_pxrender_RenderDrawData(ImDrawData* draw_data, px_render::DisplayList *dl_output);
