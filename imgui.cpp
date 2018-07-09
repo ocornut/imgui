@@ -316,6 +316,7 @@
  - 2018/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
  - 2018/XX/XX (1.XX) - removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (it was used to clip within the DisplayMin..DisplayMax range, I don't know of anyone using it)
 
+ - 2018/07/08 (1.63) - style: renamed ImGuiCol_ModalWindowDarkening to ImGuiCol_ModalWindowDimBg for consistency with other features. Kept redirection enum (will obsolete).
  - 2018/07/06 (1.63) - removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor of a global io.OptResizeWindowsFromEdges to enable the feature.
  - 2018/06/06 (1.62) - renamed GetGlyphRangesChinese() to GetGlyphRangesChineseFull() to distinguish other variants and discourage using the full set.
  - 2018/06/06 (1.62) - TreeNodeEx()/TreeNodeBehavior(): the ImGuiTreeNodeFlags_CollapsingHeader helper now include the ImGuiTreeNodeFlags_NoTreePushOnOpen flag. See Changelog for details. 
@@ -901,6 +902,7 @@ static bool             BeginChildEx(const char* name, ImGuiID id, const ImVec2&
 
 static void             NavUpdate();
 static void             NavUpdateWindowing();
+static void             NavUpdateWindowingList();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
 
 static void             UpdateMouseInputs();
@@ -3104,7 +3106,8 @@ static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
     ImGuiWindow* window_target = FindWindowNavigable(i_current + focus_change_dir, -INT_MAX, focus_change_dir);
     if (!window_target)
         window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
-    g.NavWindowingTarget = window_target;
+    if (window_target) // Don't reset windowing target if there's a single window in the list
+        g.NavWindowingTarget = window_target;
     g.NavWindowingToggleLayer = false;
 }
 
@@ -3189,7 +3192,7 @@ static void ImGui::NavUpdateWindowing()
         {
             const float NAV_MOVE_SPEED = 800.0f;
             const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y)); // FIXME: Doesn't code variable framerate very well
-            g.NavWindowingTarget->Pos += move_delta * move_speed;
+            g.NavWindowingTarget->RootWindow->Pos += move_delta * move_speed;
             g.NavDisableMouseHover = true;
             MarkIniSettingsDirty(g.NavWindowingTarget);
         }
@@ -3229,6 +3232,47 @@ static void ImGui::NavUpdateWindowing()
         g.NavDisableMouseHover = true;
         NavRestoreLayer((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0);
     }
+}
+
+// Window has already passed the IsWindowNavFocusable()
+static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window)
+{
+    if (window->Flags & ImGuiWindowFlags_Popup)
+        return "(Popup)";
+    if ((window->Flags & ImGuiWindowFlags_MenuBar) && strcmp(window->Name, "##MainMenuBar") == 0)
+        return "(Main menu bar)";
+    return "(Untitled)";
+}
+
+// Overlay displayed when using CTRL+TAB. Called by EndFrame().
+void ImGui::NavUpdateWindowingList()
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.NavWindowingTarget)
+    {
+        g.NavWindowingList = NULL;
+        return;
+    }
+
+    if (g.NavWindowingList == NULL)
+        g.NavWindowingList = FindWindowByName("###NavWindowList");
+    ImGuiViewportP* viewport = /*g.NavWindow ? g.NavWindow->Viewport :*/ (ImGuiViewportP*)GetMainViewport();
+    SetNextWindowSizeConstraints(ImVec2(viewport->Size.x * 0.20f, viewport->Size.y * 0.20f), ImVec2(FLT_MAX, FLT_MAX));
+    SetNextWindowPos(viewport->Pos + viewport->Size * 0.5f, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+    PushStyleVar(ImGuiStyleVar_WindowPadding, g.Style.WindowPadding * 2.0f);
+    Begin("###NavWindowList", NULL, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoInputs | ImGuiWindowFlags_AlwaysAutoResize);
+    for (int n = g.Windows.Size - 1; n >= 0; n--)
+    {
+        ImGuiWindow* window = g.Windows[n];
+        if (!IsWindowNavFocusable(window))
+            continue;
+        const char* label = window->Name;
+        if (label == FindRenderedTextEnd(label))
+            label = GetFallbackWindowNameForWindowingList(window);
+        Selectable(label, g.NavWindowingTarget == window);
+    }
+    End();
+    PopStyleVar();
 }
 
 // Scroll to keep newly navigated item fully into view
@@ -3951,16 +3995,19 @@ void ImGui::UpdatePlatformWindows()
         viewport->RendererLastSize = viewport->Size;
 
         // Update title bar (if it changed)
-        const char* title_begin = viewport->Window->Name;
-        char* title_end = (char*)(intptr_t)ImGui::FindRenderedTextEnd(title_begin);
-        const ImGuiID title_hash = ImHash(title_begin, (int)(title_end - title_begin));
-        if (viewport->LastNameHash != title_hash)
+        if (ImGuiWindow* window_for_title = viewport->Window)
         {
-            char title_end_backup_c = *title_end;
-            *title_end = 0; // Cut existing buffer short instead of doing an alloc/free
-            g.PlatformIO.Platform_SetWindowTitle(viewport, title_begin);
-            *title_end = title_end_backup_c;
-            viewport->LastNameHash = title_hash;
+            const char* title_begin = window_for_title->Name;
+            char* title_end = (char*)(intptr_t)ImGui::FindRenderedTextEnd(title_begin);
+            const ImGuiID title_hash = ImHash(title_begin, (int)(title_end - title_begin));
+            if (viewport->LastNameHash != title_hash)
+            {
+                char title_end_backup_c = *title_end;
+                *title_end = 0; // Cut existing buffer short instead of doing an alloc/free
+                g.PlatformIO.Platform_SetWindowTitle(viewport, title_begin);
+                *title_end = title_end_backup_c;
+                viewport->LastNameHash = title_hash;
+            }
         }
 
         // Update alpha
@@ -4300,10 +4347,10 @@ void ImGui::NewFrame()
     UpdateHoveredWindowAndCaptureFlags();
 
     // Background darkening/whitening
-    if (GetFrontMostPopupModal() != NULL)
-        g.ModalWindowDarkeningRatio = ImMin(g.ModalWindowDarkeningRatio + g.IO.DeltaTime * 6.0f, 1.0f);
+    if (GetFrontMostPopupModal() != NULL || g.NavWindowingTarget != NULL)
+        g.DimBgRatio = ImMin(g.DimBgRatio + g.IO.DeltaTime * 6.0f, 1.0f);
     else
-        g.ModalWindowDarkeningRatio = 0.0f;
+        g.DimBgRatio = 0.0f;
 
     g.MouseCursor = ImGuiMouseCursor_Arrow;
     g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
@@ -4856,6 +4903,27 @@ void ImGui::EndFrame()
         g.PlatformImePosViewport = NULL;
     }
 
+    // Draw modal whitening background on _other_ viewports than the one the modal is one
+    ImGuiWindow* modal_window = GetFrontMostPopupModal();
+    const bool dim_bg_for_modal = (modal_window != NULL);
+    const bool dim_bg_for_window_list = (g.NavWindowingTarget != NULL);
+    if (dim_bg_for_modal || dim_bg_for_window_list)
+        for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
+        {
+            ImGuiViewportP* viewport = g.Viewports[viewport_n];
+            if (modal_window && viewport == modal_window->Viewport)
+                continue;
+            if (g.NavWindowingList && viewport == g.NavWindowingList->Viewport)
+                continue;
+            if (g.NavWindowingTarget && viewport == g.NavWindowingTarget->Viewport)
+                continue;
+            ImDrawList* draw_list = GetOverlayDrawList(viewport);
+            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowListDimBg, g.DimBgRatio);
+            draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
+        }
+
+    NavUpdateWindowingList();
+
     // Hide implicit "Debug" window if it hasn't been used
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin()/End() calls, did you forget to call end on g.CurrentWindow->Name?
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
@@ -4962,15 +5030,18 @@ void ImGui::Render()
     g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
     for (int n = 0; n != g.Viewports.Size; n++)
         g.Viewports[n]->DrawDataBuilder.Clear();
-    ImGuiWindow* window_to_render_front_most = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget : NULL;
+    ImGuiWindow* windows_to_render_front_most[2];
+    windows_to_render_front_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
+    windows_to_render_front_most[1] = (g.NavWindowingList);
     for (int n = 0; n != g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
-        if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != window_to_render_front_most)
+        if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != windows_to_render_front_most[0] && window != windows_to_render_front_most[1])
             AddRootWindowToDrawData(window);
     }
-    if (window_to_render_front_most && IsWindowActiveAndVisible(window_to_render_front_most)) // NavWindowingTarget is always temporarily displayed as the front-most window
-        AddRootWindowToDrawData(window_to_render_front_most);
+    for (int n = 0; n < IM_ARRAYSIZE(windows_to_render_front_most); n++)
+        if (windows_to_render_front_most[n] && IsWindowActiveAndVisible(windows_to_render_front_most[n])) // NavWindowingTarget is always temporarily displayed as the front-most window
+            AddRootWindowToDrawData(windows_to_render_front_most[n]);
 
     // Draw software mouse cursor if requested
     ImVec2 offset, size, uv[4];
@@ -6843,7 +6914,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     PopID();
 
     // Navigation resize (keyboard/gamepad)
-    if (g.NavWindowingTarget == window)
+    if (g.NavWindowingTarget && g.NavWindowingTarget->RootWindow == window)
     {
         ImVec2 nav_resize_delta;
         if (g.NavInputSource == ImGuiInputSource_NavKeyboard && g.IO.KeyShift)
@@ -7294,27 +7365,31 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             PushClipRect(viewport_rect.Min, viewport_rect.Max, true);
 
         // Draw modal window background (darkens what is behind them, all viewports)
-        if ((flags & ImGuiWindowFlags_Modal) != 0 && window == GetFrontMostPopupModal() && window->HiddenFrames <= 0)
+        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFrames <= 0;
+        const bool dim_bg_for_window_list = g.NavWindowingTarget && ((window == g.NavWindowingTarget->RootWindow) || (g.NavWindowingList && (window == g.NavWindowingList) && g.NavWindowingList->Viewport != g.NavWindowingTarget->Viewport));
+        if (dim_bg_for_modal || dim_bg_for_window_list)
             for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
             {
                 ImGuiViewportP* viewport = g.Viewports[viewport_n];
                 ImDrawList* draw_list = (viewport == window->Viewport) ? window->DrawList : GetOverlayDrawList(viewport);
-                draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, GetColorU32(ImGuiCol_ModalWindowDarkening, g.ModalWindowDarkeningRatio));
+                const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowListDimBg, g.DimBgRatio);
+                draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
             }
 
         // Draw navigation selection/windowing rectangle background
-        if (g.NavWindowingTarget == window)
+        if (dim_bg_for_window_list && window == g.NavWindowingTarget->RootWindow)
         {
             ImRect bb = window->Rect();
             bb.Expand(g.FontSize);
             if (!bb.Contains(viewport_rect)) // Avoid drawing if the window covers all the viewport anyway
-                window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
+                window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowListHighlight, g.NavWindowingHighlightAlpha * 0.25f), g.Style.WindowRounding);
         }
 
         // Draw window + handle manual resize
         const float window_rounding = window->WindowRounding;
         const float window_border_size = window->WindowBorderSize;
-        const bool title_bar_is_highlight = want_focus || (g.NavWindow && window->RootWindowForTitleBarHighlight == g.NavWindow->RootWindowForTitleBarHighlight);
+        const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
+        const bool title_bar_is_highlight = want_focus || (window_to_highlight && window->RootWindowForTitleBarHighlight == window_to_highlight->RootWindowForTitleBarHighlight);
         const ImRect title_bar_rect = window->TitleBarRect();
         if (window->Collapsed)
         {
@@ -7396,7 +7471,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 bb.Expand(-g.FontSize - 1.0f);
                 rounding = window->WindowRounding;
             }
-            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowListHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
         }
 
         // Store a backup of SizeFull which we will use next frame to decide if we need scrollbars.
@@ -8105,10 +8180,10 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_PlotHistogram: return "PlotHistogram";
     case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
-    case ImGuiCol_ModalWindowDarkening: return "ModalWindowDarkening";
     case ImGuiCol_DragDropTarget: return "DragDropTarget";
     case ImGuiCol_NavHighlight: return "NavHighlight";
-    case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
+    case ImGuiCol_NavWindowListDimBg: return "NavWindowListDimBg";
+    case ImGuiCol_ModalWindowDimBg: return "ModalWindowDimBg";
     }
     IM_ASSERT(0);
     return "Unknown";
