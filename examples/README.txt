@@ -163,6 +163,10 @@ example_win32_directx12/
     This is quite long and tedious, because: DirectX12.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp
 
+example_win32_opengl3/
+    OpenGL3+ example (programmable pipeline, binding modern functions with GL3W), Windows only.
+    = main.cpp + imgui_impl_win32.cpp + imgui_impl_opengl3.cpp
+    
 example_apple_metal/
     OSX & iOS + Metal.
     It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.

@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_glfw_opengl2", "exa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_glfw_opengl3", "example_glfw_opengl3\example_glfw_opengl3.vcxproj", "{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_win32_opengl3", "example_win32_opengl3\example_win32_opengl3.vcxproj", "{B1833440-B67B-4120-981B-0DE867038479}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
