@@ -396,8 +396,11 @@ static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
 {
     COMPOSITIONFORM cf = { CFS_FORCE_POSITION,{ (LONG)(pos.x - viewport->Pos.x), (LONG)(pos.y - viewport->Pos.y) },{ 0, 0, 0, 0 } };
     if (HWND hwnd = (HWND)viewport->PlatformHandle)
-        if (HIMC himc = ImmGetContext(hwnd))
-            ImmSetCompositionWindow(himc, &cf);
+        if (HIMC himc = ::ImmGetContext(hwnd))
+        {
+            ::ImmSetCompositionWindow(himc, &cf);
+            ::ImmReleaseContext(hwnd, himc);
+        }
 }
 #else
 #define HAS_WIN32_IME   0

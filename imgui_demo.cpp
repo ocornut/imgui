@@ -399,7 +399,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 static float col1[3] = { 1.0f,0.0f,0.2f };
                 static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
                 ImGui::ColorEdit3("color 1", col1);
-                ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
+                ImGui::SameLine(); ShowHelpMarker("Click on the colored square to open a color picker.\nClick and hold to use drag and drop.\nRight-click on the colored square to show options.\nCTRL+click on individual component to input value.\n");
 
                 ImGui::ColorEdit4("color 2", col2);
             }
@@ -1183,6 +1183,83 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
             ImGui::PopID();
             ImGui::PopStyleVar();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Drag and Drop"))
+        {
+            {
+                // ColorEdit widgets automatically act as drag source and drag target.
+                // They are using standardized payload strings IMGUI_PAYLOAD_TYPE_COLOR_3F and IMGUI_PAYLOAD_TYPE_COLOR_4F to allow your own widgets
+                // to use colors in their drag and drop interaction. Also see the demo in Color Picker -> Palette demo.
+                ImGui::BulletText("Drag and drop in standard widgets");
+                ImGui::Indent();
+                static float col1[3] = { 1.0f,0.0f,0.2f };
+                static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
+                ImGui::ColorEdit3("color 1", col1);
+                ImGui::ColorEdit4("color 2", col2);
+                ImGui::Unindent();
+            }
+
+            {
+                ImGui::BulletText("Drag and drop to copy/swap items");
+                ImGui::Indent();
+                enum Mode
+                {
+                    Mode_Copy,
+                    Mode_Move,
+                    Mode_Swap
+                };
+                static int mode = 0;
+                if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
+                if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
+                if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; } 
+                static const char* names[9] = { "Bobby", "Beatrice", "Betty", "Brianna", "Barry", "Bernard", "Bibi", "Blaine", "Bryn" };
+                for (int n = 0; n < IM_ARRAYSIZE(names); n++)
+                {
+                    ImGui::PushID(n);
+                    if ((n % 3) != 0)
+                        ImGui::SameLine();
+                    ImGui::Button(names[n], ImVec2(60,60));
+
+                    // Our buttons are both drag sources and drag targets here!
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_None))
+                    {
+                        ImGui::SetDragDropPayload("DND_DEMO_CELL", &n, sizeof(int));        // Set payload to carry the index of our item (could be anything)
+                        if (mode == Mode_Copy) { ImGui::Text("Copy %s", names[n]); }        // Display preview (could be anything, e.g. when dragging an image we could decide to display the filename and a small preview of the image, etc.)
+                        if (mode == Mode_Move) { ImGui::Text("Move %s", names[n]); }
+                        if (mode == Mode_Swap) { ImGui::Text("Swap %s", names[n]); }
+                        ImGui::EndDragDropSource();
+                    }
+                    if (ImGui::BeginDragDropTarget())
+                    {
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload("DND_DEMO_CELL"))
+                        {
+                            IM_ASSERT(payload->DataSize == sizeof(int));
+                            int payload_n = *(const int*)payload->Data;
+                            if (mode == Mode_Copy)
+                            {
+                                names[n] = names[payload_n];
+                            }
+                            if (mode == Mode_Move)
+                            {
+                                names[n] = names[payload_n];
+                                names[payload_n] = "";
+                            }
+                            if (mode == Mode_Swap)
+                            {
+                                const char* tmp = names[n];
+                                names[n] = names[payload_n];
+                                names[payload_n] = tmp;
+                            }
+                        }
+                        ImGui::EndDragDropTarget();
+                    }
+                    ImGui::PopID();
+                }
+                ImGui::Unindent();
+            }
+
             ImGui::TreePop();
         }
 
@@ -2834,7 +2911,7 @@ struct ExampleAppConsole
         // Here we create a context menu only available from the title bar.
         if (ImGui::BeginPopupContextItem())
         {
-            if (ImGui::MenuItem("Close"))
+            if (ImGui::MenuItem("Close Console"))
                 *p_open = false;
             ImGui::EndPopup();
         }
@@ -3101,7 +3178,11 @@ struct ExampleAppLog
     void    Draw(const char* title, bool* p_open = NULL)
     {
         ImGui::SetNextWindowSize(ImVec2(500,400), ImGuiCond_FirstUseEver);
-        ImGui::Begin(title, p_open);
+        if (!ImGui::Begin(title, p_open))
+        {
+            ImGui::End();
+            return;
+        }
         if (ImGui::Button("Clear")) Clear();
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");

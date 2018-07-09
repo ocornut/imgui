@@ -7,9 +7,12 @@
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
-#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may freely use any other OpenGL loader such as: glew, glad, glLoadGen, etc.
-//#include <glew.h>
 #include <SDL.h>
+
+#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
+//#include <glew.h>
+//#include <glext.h>
+//#include <glad/glad.h>
 
 int main(int, char**)
 {
