@@ -51,10 +51,11 @@ Other Changes:
  - Drag and Drop: Fixed ImGuiDragDropFlags_SourceNoDisableHover to affect hovering state prior to calling IsItemHovered() + fixed description. (#143)
  - Drag and Drop: Calling BeginTooltip() between a BeginDragSource()/EndDragSource() or BeginDropTarget()/EndDropTarget() uses adjusted tooltip
    settings matching the one created when calling BeginDragSource() without the ImGuiDragDropFlags_SourceNoPreviewTooltip flag. (#143)
+ - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
- - Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
+ - OS/Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
  - Demo: Added basic Drag and Drop demo. (#143)
  - Examples: Metal: Added Metal rendering backend. (#1929, #1873) [@warrenm]
  - Examples: OSX: Added early raw OSX platform backend. (#1873) [@pagghiu, @itamago, @ocornut]
@@ -733,9 +734,9 @@ Other Changes:
 - Clipboard: Added a void* user_data parameter to Clipboard function handlers. (#875) (BREAKING API)
 - Internals: Refactor internal text alignment options to use ImVec2, removed ImGuiAlign. (#842, #222)
 - Internals: Renamed ImLoadFileToMemory to ImFileLoadToMemory to be consistent with ImFileOpen + fix mismatching .h name. (#917)
-- Windows: Fixed Windows default clipboard handler leaving its buffer unfreed on application's exit. (#714)
-- Windows: No default IME handler when compiling for Windows using GCC. (#738)
-- Windows: Now using _wfopen() instead of fopen() to allow passing in paths/filenames with UTF-8 characters. (#917)
+- OS/Windows: Fixed Windows default clipboard handler leaving its buffer unfreed on application's exit. (#714)
+- OS/Windows: No default IME handler when compiling for Windows using GCC. (#738)
+- OS/Windows: Now using _wfopen() instead of fopen() to allow passing in paths/filenames with UTF-8 characters. (#917)
 - Tools: binary_to_compressed_c: Avoid ?? trigraphs sequences in string outputs which break some older compilers. (#839)
 - Demo: Added an extra 3-way columns demo.
 - Demo: ShowStyleEditor: show font character map / grid in more details.

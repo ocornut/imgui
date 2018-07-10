@@ -2699,7 +2699,7 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         return false;
 
     // Test if the item is disabled
-    if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
+    if ((window->DC.ItemFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
         return false;
 
     // Special handling for the 1st item after Begin() which represent the title bar. When the window is collapsed (SkipItems==true) that last item will never be overwritten so we need to detect tht case.
