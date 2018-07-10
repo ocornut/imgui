@@ -7254,6 +7254,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
     case ImGuiCol_DragDropTarget: return "DragDropTarget";
     case ImGuiCol_NavHighlight: return "NavHighlight";
+    case ImGuiCol_NavWindowListHighlight: return "NavWindowListHighlight";
     case ImGuiCol_NavWindowListDimBg: return "NavWindowListDimBg";
     case ImGuiCol_ModalWindowDimBg: return "ModalWindowDimBg";
     }
