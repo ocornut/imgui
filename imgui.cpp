@@ -3590,7 +3590,21 @@ static void ImGui::NavUpdate()
 #endif
 }
 
-void ImGui::UpdateMovingWindow()
+void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
+{
+    // Set ActiveId even if the _NoMove flag is set. Without it, dragging away from a window with _NoMove would activate hover on other windows.
+    ImGuiContext& g = *GImGui;
+    FocusWindow(window);
+    SetActiveID(window->MoveId, window);
+    g.NavDisableHighlight = true;
+    g.ActiveIdClickOffset = g.IO.MousePos - window->RootWindow->Pos;
+    if (!(window->Flags & ImGuiWindowFlags_NoMove) && !(window->RootWindow->Flags & ImGuiWindowFlags_NoMove))
+        g.MovingWindow = window;
+}
+
+// Handle mouse moving window
+// Note: moving window with the navigation keys (Square + d-pad / CTRL+TAB + Arrows) are processed in NavUpdateWindowing()
+void ImGui::UpdateMouseMovingWindow()
 {
     ImGuiContext& g = *GImGui;
     if (g.MovingWindow != NULL)
@@ -3858,7 +3872,7 @@ void ImGui::NewFrame()
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
-    UpdateMovingWindow();
+    UpdateMouseMovingWindow();
     UpdateHoveredWindowAndCaptureFlags();
 
     // Background darkening/whitening
@@ -4391,20 +4405,9 @@ void ImGui::EndFrame()
             if (g.IO.MouseClicked[0])
             {
                 if (g.HoveredRootWindow != NULL)
-                {
-                    // Set ActiveId even if the _NoMove flag is set, without it dragging away from a window with _NoMove would activate hover on other windows.
-                    FocusWindow(g.HoveredWindow);
-                    SetActiveID(g.HoveredWindow->MoveId, g.HoveredWindow);
-                    g.NavDisableHighlight = true;
-                    g.ActiveIdClickOffset = g.IO.MousePos - g.HoveredRootWindow->Pos;
-                    if (!(g.HoveredWindow->Flags & ImGuiWindowFlags_NoMove) && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoMove))
-                        g.MovingWindow = g.HoveredWindow;
-                }
+                    StartMouseMovingWindow(g.HoveredWindow);
                 else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
-                {
-                    // Clicking on void disable focus
-                    FocusWindow(NULL);
-                }
+                    FocusWindow(NULL);  // Clicking on void disable focus
             }
 
             // With right mouse button we close popups without changing focus

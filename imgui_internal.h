@@ -210,6 +210,7 @@ static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                
 
 enum ImGuiButtonFlags_
 {
+    ImGuiButtonFlags_None                   = 0,
     ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
     ImGuiButtonFlags_PressedOnClickRelease  = 1 << 1,   // return true on click + release on same item [DEFAULT if no PressedOn* flag is set]
     ImGuiButtonFlags_PressedOnClick         = 1 << 2,   // return true on click (default requires click+release)
@@ -228,12 +229,14 @@ enum ImGuiButtonFlags_
 
 enum ImGuiSliderFlags_
 {
+    ImGuiSliderFlags_None                   = 0,
     ImGuiSliderFlags_Vertical               = 1 << 0
 };
 
 enum ImGuiColumnsFlags_
 {
     // Default: 0
+    ImGuiColumnsFlags_None                  = 0,
     ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
     ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
     ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
@@ -253,6 +256,7 @@ enum ImGuiSelectableFlagsPrivate_
 
 enum ImGuiSeparatorFlags_
 {
+    ImGuiSeparatorFlags_None                = 0,
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
     ImGuiSeparatorFlags_Vertical            = 1 << 1
 };
@@ -260,6 +264,7 @@ enum ImGuiSeparatorFlags_
 // Storage for LastItem data
 enum ImGuiItemStatusFlags_
 {
+    ImGuiItemStatusFlags_None               = 0,
     ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
     ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1
 };
@@ -1080,7 +1085,8 @@ namespace ImGui
     IMGUI_API void          Shutdown(ImGuiContext* context);    // Since 1.60 this is a _private_ function. You can call DestroyContext() to destroy the context created by CreateContext().
 
     IMGUI_API void          UpdateHoveredWindowAndCaptureFlags();
-    IMGUI_API void          UpdateMovingWindow();
+    IMGUI_API void          StartMouseMovingWindow(ImGuiWindow* window);
+    IMGUI_API void          UpdateMouseMovingWindow();
 
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
