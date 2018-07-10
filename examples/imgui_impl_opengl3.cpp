@@ -11,6 +11,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-07-10: OpenGL: Added error output when shaders fail to compile/link.
 //  2018-06-08: Misc: Extracted imgui_impl_opengl3.cpp/.h away from the old combined GLFW/SDL+OpenGL3 examples.
 //  2018-06-08: OpenGL: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
 //  2018-05-25: OpenGL: Removed unnecessary backup/restore of GL_ELEMENT_ARRAY_BUFFER_BINDING since this is part of the VAO state.
@@ -31,6 +32,7 @@
 
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
+#include <stdio.h>
 
 #include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
 //#include <glew.h>
@@ -40,7 +42,7 @@
 // OpenGL Data
 static char         g_GlslVersion[32] = "";
 static GLuint       g_FontTexture = 0;
-static int          g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
+static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;
 static int          g_AttribLocationPosition = 0, g_AttribLocationUV = 0, g_AttribLocationColor = 0;
 static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
@@ -239,6 +241,42 @@ void ImGui_ImplOpenGL3_DestroyFontsTexture()
     }
 }
 
+// If you get an error please report on github. You may try different GL context version or GLSL version.
+static bool CheckShader(GLuint handle, const char* desc)
+{
+    GLint status = 0, log_length = 0;
+    glGetShaderiv(handle, GL_COMPILE_STATUS, &status);
+    glGetShaderiv(handle, GL_INFO_LOG_LENGTH, &log_length);
+    if (status == GL_FALSE)
+        fprintf(stderr, "ERROR: ImGui_ImplOpenGL3_CreateDeviceObjects: failed to compile %s!\n", desc);
+    if (log_length > 0)
+    {
+        ImVector<char> buf;
+        buf.resize((int)(log_length + 1));
+        glGetShaderInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
+        fprintf(stderr, "%s\n", buf.begin());
+    }
+    return status == GL_TRUE;
+}
+
+// If you get an error please report on github. You may try different GL context version or GLSL version.
+static bool CheckProgram(GLuint handle, const char* desc)
+{
+    GLint status = 0, log_length = 0;
+    glGetProgramiv(handle, GL_LINK_STATUS, &status);
+    glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &log_length);
+    if (status == GL_FALSE)
+        fprintf(stderr, "ERROR: ImGui_ImplOpenGL3_CreateDeviceObjects: failed to link %s!\n", desc);
+    if (log_length > 0)
+    {
+        ImVector<char> buf;
+        buf.resize((int)(log_length + 1));
+        glGetProgramInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
+        fprintf(stderr, "%s\n", buf.begin());
+    }
+    return status == GL_TRUE;
+}
+
 bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 {
     // Backup GL state
@@ -248,7 +286,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 
     // Create shaders
-    const GLchar *vertex_shader =
+    const GLchar* vertex_shader =
         "uniform mat4 ProjMtx;\n"
         "in vec2 Position;\n"
         "in vec2 UV;\n"
@@ -273,18 +311,22 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "}\n";
 
     const GLchar* vertex_shader_with_version[2] = { g_GlslVersion, vertex_shader };
+    g_VertHandle = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(g_VertHandle, 2, vertex_shader_with_version, NULL);
+    glCompileShader(g_VertHandle);
+    CheckShader(g_VertHandle, "vertex shader");
+
     const GLchar* fragment_shader_with_version[2] = { g_GlslVersion, fragment_shader };
+    g_FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(g_FragHandle, 2, fragment_shader_with_version, NULL);
+    glCompileShader(g_FragHandle);
+    CheckShader(g_FragHandle, "fragment shader");
 
     g_ShaderHandle = glCreateProgram();
-    g_VertHandle = glCreateShader(GL_VERTEX_SHADER);
-    g_FragHandle = glCreateShader(GL_FRAGMENT_SHADER);
-    glShaderSource(g_VertHandle, 2, vertex_shader_with_version, NULL);
-    glShaderSource(g_FragHandle, 2, fragment_shader_with_version, NULL);
-    glCompileShader(g_VertHandle);
-    glCompileShader(g_FragHandle);
     glAttachShader(g_ShaderHandle, g_VertHandle);
     glAttachShader(g_ShaderHandle, g_FragHandle);
     glLinkProgram(g_ShaderHandle);
+    CheckProgram(g_ShaderHandle, "shader program");
 
     g_AttribLocationTex = glGetUniformLocation(g_ShaderHandle, "Texture");
     g_AttribLocationProjMtx = glGetUniformLocation(g_ShaderHandle, "ProjMtx");
@@ -292,6 +334,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     g_AttribLocationUV = glGetAttribLocation(g_ShaderHandle, "UV");
     g_AttribLocationColor = glGetAttribLocation(g_ShaderHandle, "Color");
 
+    // Create buffers
     glGenBuffers(1, &g_VboHandle);
     glGenBuffers(1, &g_ElementsHandle);
 
