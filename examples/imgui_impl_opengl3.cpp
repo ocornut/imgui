@@ -51,6 +51,11 @@
 #include "imgui.h"
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
+#if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
+#include <stddef.h>     // intptr_t
+#else
+#include <stdint.h>     // intptr_t
+#endif
 
 #include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
 //#include <glew.h>
