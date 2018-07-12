@@ -7405,17 +7405,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         else
             PushClipRect(viewport_rect.Min, viewport_rect.Max, true);
 
-        // Draw modal window background (darkens what is behind them, all viewports)
+        // Draw modal or window list full viewport dimming background (for other viewports we'll render them in EndFrame)
         const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFrames <= 0;
         const bool dim_bg_for_window_list = g.NavWindowingTarget && ((window == g.NavWindowingTarget->RootWindow) || (g.NavWindowingList && (window == g.NavWindowingList) && g.NavWindowingList->Viewport != g.NavWindowingTarget->Viewport));
         if (dim_bg_for_modal || dim_bg_for_window_list)
-            for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
-            {
-                ImGuiViewportP* viewport = g.Viewports[viewport_n];
-                ImDrawList* draw_list = (viewport == window->Viewport) ? window->DrawList : GetOverlayDrawList(viewport);
-                const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
-                draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
-            }
+        {
+            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
+            window->DrawList->AddRectFilled(viewport_rect.Min, viewport_rect.Max, dim_bg_col);
+        }
 
         // Draw navigation selection/windowing rectangle background
         if (dim_bg_for_window_list && window == g.NavWindowingTarget->RootWindow)
