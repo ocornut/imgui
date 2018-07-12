@@ -865,7 +865,6 @@ static const ImU64  IM_U64_MAX = 0xFFFFFFFFFFFFFFFFull;
 
 static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
 
-static ImFont*          GetDefaultFont();
 static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
 static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
@@ -874,12 +873,13 @@ static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, I
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
 static void             FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
+static ImGuiWindowSettings* CreateNewWindowSettings(const char* name);
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges);
 
-static ImGuiWindowSettings* AddWindowSettings(const char* name);
-
-static void             ClosePopupToLevel(int remaining);
+static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
+static void             AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window);
+static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
@@ -1708,7 +1708,7 @@ void ImGuiStorage::BuildSortByKey()
         }
     };
     if (Data.Size > 1)
-        qsort(Data.Data, (size_t)Data.Size, sizeof(Pair), StaticFunc::PairCompareByID);
+        ImQsort(Data.Data, (size_t)Data.Size, sizeof(Pair), StaticFunc::PairCompareByID);
 }
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
@@ -4450,7 +4450,7 @@ static void* SettingsHandlerWindow_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*
 {
     ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHash(name, 0));
     if (!settings)
-        settings = AddWindowSettings(name);
+        settings = CreateNewWindowSettings(name);
     return (void*)settings;
 }
 
@@ -4480,7 +4480,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
         ImGuiWindowSettings* settings = (window->SettingsIdx != -1) ? &g.SettingsWindows[window->SettingsIdx] : ImGui::FindWindowSettings(window->ID);
         if (!settings)
         {
-            settings = AddWindowSettings(window->Name);
+            settings = CreateNewWindowSettings(window->Name);
             window->SettingsIdx = g.SettingsWindows.index_from_pointer(settings);
         }
         IM_ASSERT(settings->ID == window->ID);
@@ -4626,7 +4626,7 @@ ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id)
     return NULL;
 }
 
-static ImGuiWindowSettings* AddWindowSettings(const char* name)
+static ImGuiWindowSettings* CreateNewWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
     g.SettingsWindows.push_back(ImGuiWindowSettings());
@@ -4785,7 +4785,7 @@ static void AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, 
     {
         int count = window->DC.ChildWindows.Size;
         if (count > 1)
-            qsort(window->DC.ChildWindows.begin(), (size_t)count, sizeof(ImGuiWindow*), ChildWindowComparer);
+            ImQsort(window->DC.ChildWindows.begin(), (size_t)count, sizeof(ImGuiWindow*), ChildWindowComparer);
         for (int i = 0; i < count; i++)
         {
             ImGuiWindow* child = window->DC.ChildWindows[i];
@@ -6026,14 +6026,14 @@ ImGuiWindow* ImGui::GetFrontMostPopupModal()
     return NULL;
 }
 
-static void ClosePopupToLevel(int remaining)
+void ImGui::ClosePopupToLevel(int remaining)
 {
     IM_ASSERT(remaining >= 0);
     ImGuiContext& g = *GImGui;
     ImGuiWindow* focus_window = (remaining > 0) ? g.OpenPopupStack[remaining-1].Window : g.OpenPopupStack[0].ParentWindow;
     if (g.NavLayer == 0)
         focus_window = NavRestoreLastChildNavWindow(focus_window);
-    ImGui::FocusWindow(focus_window);
+    FocusWindow(focus_window);
     focus_window->DC.NavHideHighlightOneFrame = true;
     g.OpenPopupStack.resize(remaining);
 }
@@ -7969,12 +7969,6 @@ float ImGui::CalcItemWidth()
     }
     w = (float)(int)w;
     return w;
-}
-
-static ImFont* GetDefaultFont()
-{
-    ImGuiContext& g = *GImGui;
-    return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0];
 }
 
 void ImGui::SetCurrentFont(ImFont* font)
