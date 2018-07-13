@@ -52,7 +52,7 @@
 #include "imgui_impl_opengl3.h"
 #include <stdio.h>
 
-#ifdef __EMSCRIPTEN_BUILD__
+#ifdef __EMSCRIPTEN__
     #define GLFW_INCLUDE_ES3
     #include <GLFW/glfw3.h>
 #else
