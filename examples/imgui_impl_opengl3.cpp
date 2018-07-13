@@ -53,7 +53,7 @@
 #include <stdio.h>
 
 #ifdef __EMSCRIPTEN__
-    #define GLFW_INCLUDE_ES3
+    #include <GLES3/gl3.h>
     #include <GLFW/glfw3.h>
 #else
     #include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
