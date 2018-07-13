@@ -10,6 +10,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-07-13: DirectX10: Fixed unreleased resources in Init and Shutdown functions.
 //  2018-06-08: Misc: Extracted imgui_impl_dx10.cpp/.h away from the old combined DX10+Win32 example.
 //  2018-06-08: DirectX10: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
 //  2018-04-09: Misc: Fixed erroneous call to io.Fonts->ClearInputData() + ClearTexData() that was left in DX10 example but removed in 1.47 (Nov 2015) on other back-ends.
@@ -465,15 +466,16 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     IDXGIDevice* pDXGIDevice = NULL;
     IDXGIAdapter* pDXGIAdapter = NULL;
     IDXGIFactory* pFactory = NULL;
-    if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) != S_OK)
-        return false;
-    if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) != S_OK)
-        return false;
-    if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) != S_OK)
-        return false;
 
-    g_pd3dDevice = device;
-    g_pFactory = pFactory;
+    if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) == S_OK)
+        if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) == S_OK)
+            if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) == S_OK)
+            {
+                g_pd3dDevice = device;
+                g_pFactory = pFactory;
+            }
+    if (pDXGIDevice) pDXGIDevice->Release();
+    if (pDXGIAdapter) pDXGIAdapter->Release();
 
     return true;
 }
@@ -481,6 +483,7 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 void ImGui_ImplDX10_Shutdown()
 {
     ImGui_ImplDX10_InvalidateDeviceObjects();
+    if (g_pFactory) { g_pFactory->Release(); g_pFactory = NULL; }
     g_pd3dDevice = NULL;
 }
 

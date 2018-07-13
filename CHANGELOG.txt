@@ -64,6 +64,7 @@ Other Changes:
  - Examples: OpenGL3: Added shaders more versions of GLSL. (#1938, #1900, #1513, #1466, etc.) 
  - Examples: OpenGL3: Made the example app default to GL 3.0 + GLSL 130 (instead of GL 3.2 + GLSL 150) unless on Mac.
  - Examples: OpenGL3: Added error output when shaders fail to compile/link.
+ - Examples: DirectX10, DirectX11: Fixed unreleased resources in Init and Shutdown functions. (#1944)
  - Examples: Win32, Glfw, SDL: Added support for the ImGuiMouseCursor_Hand cursor.
 
 
