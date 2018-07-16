@@ -878,7 +878,6 @@ static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges);
 
 static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
-static void             AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window);
 static void             AddWindowToSortedBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data);
@@ -5117,12 +5116,16 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
     if (viewport)
     {
         // First window submitted gets viewport ownership
+        // [2018-07-18] This is problematic: e.g. a drag and drop tooltip may steal viewport of the window it is hovered. Disabling, will rework in Docking branch.
+        (void)current_window;
+        /*
         if (viewport->LastFrameActive < g.FrameCount && viewport->Window != current_window && viewport->Window != NULL && current_window != NULL)
         {
             //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
             viewport->Window = current_window;
             viewport->ID = current_window->ID;
         }
+        */
         viewport->LastFrameActive = g.FrameCount;
     }
     if (g.CurrentViewport == viewport)
