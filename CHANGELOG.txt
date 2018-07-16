@@ -57,6 +57,7 @@ Other Changes:
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
  - OS/Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
  - Demo: Added basic Drag and Drop demo. (#143)
+ - Examples: Tweaked the main.cpp of each example.
  - Examples: Metal: Added Metal rendering backend. (#1929, #1873) [@warrenm]
  - Examples: OSX: Added early raw OSX platform backend. (#1873) [@pagghiu, @itamago, @ocornut]
  - Examples: Added mac OSX & iOS + Metal example in example_apple_metal/. (#1929, #1873) [@warrenm]
