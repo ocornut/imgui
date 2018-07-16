@@ -1479,6 +1479,13 @@ static inline int ImTextCharToUtf8(char* buf, int buf_size, unsigned int c)
     }
 }
 
+// Not optimal but we very rarely use this function.
+int ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end)
+{
+    unsigned int dummy = 0;
+    return ImTextCharFromUtf8(&dummy, in_text, in_text_end);
+}
+
 static inline int ImTextCountUtf8BytesFromChar(unsigned int c)
 {
     if (c < 0x80) return 1;
