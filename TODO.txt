@@ -237,6 +237,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
+ - font/atlas: add a missing Glyphs.reserve()
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font/atlas: allow user to submit its own primitive to be rectpacked, and allow to map them on a Unicode point.
