@@ -257,12 +257,17 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     }
 
     // Setup viewport:
+
+    /*Since the display frame buffer scale is larger than 1.0 on some platforms(e.g., MacBook Pro (13-inch, 2017) with macOS High Serria version 10.13.5), we need to handle this by
+     scaling viewport and scissor with io.DisplayFramebufferScale*/
+    
+    ImGuiIO& io = ImGui::GetIO();
     {
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = draw_data->DisplaySize.x;
-        viewport.height = draw_data->DisplaySize.y;
+        viewport.width = draw_data->DisplaySize.x*io.DisplayFramebufferScale.x;
+        viewport.height = draw_data->DisplaySize.y*io.DisplayFramebufferScale.y;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
@@ -303,7 +308,14 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 scissor.offset.x = (int32_t)(pcmd->ClipRect.x - display_pos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - display_pos.x) : 0;
                 scissor.offset.y = (int32_t)(pcmd->ClipRect.y - display_pos.y) > 0 ? (int32_t)(pcmd->ClipRect.y - display_pos.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-                scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
+                scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y);
+		
+		//Scale scissor by DisplayFramebufferScale.
+                scissor.offset.x*= io.DisplayFramebufferScale.x;
+                scissor.offset.y*= io.DisplayFramebufferScale.y;
+                scissor.extent.width*=io.DisplayFramebufferScale.x;
+                scissor.extent.height=scissor.extent.height*io.DisplayFramebufferScale.y+1;// FIXME: Why +1 here?
+		
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
                 
                 // Draw
