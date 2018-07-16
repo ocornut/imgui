@@ -12,7 +12,7 @@ By [Vuhdo](https://github.com/Vuhdo) (Aleksei Skriabin). Improvements by @mikesa
 
 ```cpp
 // See ImGuiFreeType::RasterizationFlags
-unsigned int flags = ImGuiFreeType::DisableHinting;
+unsigned int flags = ImGuiFreeType::NoHinting;
 ImGuiFreeType::BuildFontAtlas(io.Fonts, flags);
 io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 ```
@@ -121,8 +121,9 @@ struct FreeTypeTest
 ```
 
 **Known issues**
-- Output texture has excessive resolution (lots of vertical waste)
+- Output texture has excessive resolution (lots of vertical waste).
 - FreeType's memory allocator is not overridden.
+- `cfg.OversampleH`, `OversampleV` are ignored (but perhaps not so necessary with this rasterizer).
 
 **Obligatory comparison screenshots**
 

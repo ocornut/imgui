@@ -5,19 +5,31 @@ You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
 (Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
 
-Fonts are rasterized in a single texture at the time of calling either of io.Fonts.GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
+Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
 
 In this document:
 
+- Readme First / FAQ
 - Using Icons
 - Fonts Loading Instructions
 - FreeType rasterizer, Small font sizes
 - Building Custom Glyph Ranges
-- Remapping Codepoints
 - Embedding Fonts in Source Code
 - Credits/Licences for fonts included in this folder
 - Links, Other fonts
+
+
+---------------------------------------
+ README FIRST / FAQ
+---------------------------------------
+
+ - You can use the style editor ImGui::ShowStyleEditor() to browse your fonts and understand what's going on if you have an issue.
+ - Make sure your font ranges data are persistent (available during the call to GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
+ - Use C++11 u8"my text" syntax to encode literal strings as UTF-8. e.g.:
+       u8"hello"
+       u8"こんにちは"   // this will be encoded as UTF-8
+ - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
 
 
 ---------------------------------------
@@ -45,12 +57,14 @@ In this document:
 
    ImFontConfig config;
    config.MergeMode = true;
+   config.GlyphMinAdvanceX = 13.0f; // Use if you want to make the icon monospaced
    static const ImWchar icon_ranges[] = { ICON_MIN_FA, ICON_MAX_FA, 0 };
    io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 
    // Usage, e.g.
-   ImGui::Text("%s Search", ICON_FA_SEARCH);
-
+   ImGui::Button(ICON_FA_SEARCH " Search");                     // C string literals can be concatenated at compilation time, this is the same as "A" "B" becoming "AB"
+   ImGui::Text("%s among %d items", ICON_FA_SEARCH, count);
+   
  See Links below for other icons fonts and related tools.
 
 
@@ -58,7 +72,7 @@ In this document:
  FONTS LOADING INSTRUCTIONS
 ---------------------------------------
 
- Load default font with:
+ Load default font:
 
    ImGuiIO& io = ImGui::GetIO();
    io.Fonts->AddFontDefault();
@@ -66,28 +80,35 @@ In this document:
  Load .TTF/.OTF file with:
 
    ImGuiIO& io = ImGui::GetIO();
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
+   ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
+   ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
   
- For advanced options create a ImFontConfig structure and pass it to the AddFont function (it will be copied internally)
+   // Select font at runtime
+   ImGui::Text("Hello");	// use the default font (which is the first loaded font)
+   ImGui::PushFont(font2);
+   ImGui::Text("Hello with another font");
+   ImGui::PopFont();
+
+ For advanced options create a ImFontConfig structure and pass it to the AddFont function (it will be copied internally):
 
    ImFontConfig config;
    config.OversampleH = 3;
    config.OversampleV = 1;
    config.GlyphExtraSpacing.x = 1.0f;
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
+   ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 
  If you have very large number of glyphs or multiple fonts:
 
   - Mind the fact that some graphics drivers have texture size limitation.
   - Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
   - Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
-  - You may reduce oversampling, e.g. config.OversampleH = 2 or 1.
+  - You may reduce oversampling, e.g. config.OversampleH = 1, this will largely reduce your textue size.
   - Reduce glyphs ranges, consider calculating them based on your source data if this is possible.
 
  Combine two fonts into one:
 
    // Load a first font
-   io.Fonts->AddFontDefault();
+   ImFont* font = io.Fonts->AddFontDefault();
 
    // Add character ranges and merge into the previous font
    // The ranges array is not copied by the AddFont* functions and is used lazily
@@ -103,12 +124,13 @@ In this document:
    // Basic Latin, Extended Latin
    io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
    
-   // Include full set of about 21000 CJK Unified Ideographs
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
+   // Default + Selection of 2500 Ideographs used by Simplified Chinese
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
    
    // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
-   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChinese());
+   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
 
+ See "BUILDING CUSTOM GLYPH RANGES" section to create your own ranges. 
  Offset font vertically by altering the io.Font->DisplayOffset value:
 
    ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
@@ -132,7 +154,7 @@ In this document:
 ---------------------------------------
 
  You can use the ImFontAtlas::GlyphRangesBuilder helper to create glyph ranges based on text input.
- For exemple: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
+ For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
 
    ImVector<ImWchar> ranges;
    ImFontAtlas::GlyphRangesBuilder builder;
@@ -141,18 +163,6 @@ In this document:
    builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
    builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
    io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
-
-
----------------------------------------
- REMAPPING CODEPOINTS
----------------------------------------
-
- All your strings needs to use UTF-8 encoding. Specifying literal in your source code using a local code page (such as CP-923 for Japanese, or CP-1251 for Cyrillic) will NOT work!
- In C++11 you can encode a string literal in UTF-8 by using the u8"hello" syntax. Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
- e.g.
-      u8"hello"
-      u8"こんにちは"
- You may also try to remap your local codepage characters to their Unicode codepoint using font->AddRemapChar(), but international users may have problems reading/editing your source code.
 
 
 ---------------------------------------
