@@ -3808,9 +3808,6 @@ static void ImGui::UpdateViewports()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
-    // Update mouse reference viewport
-    g.MouseRefViewport = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
-
     // Update main viewport with current platform position and size
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
@@ -3820,6 +3817,7 @@ static void ImGui::UpdateViewports()
     AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, g.IO.DisplaySize, ImGuiViewportFlags_CanHostOtherWindows);
 
     g.CurrentViewport = NULL;
+    g.MouseRefViewport = NULL;
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         // Erase unused viewports
@@ -3835,7 +3833,6 @@ static void ImGui::UpdateViewports()
             g.Viewports.erase(g.Viewports.Data + n);
 
             // Destroy
-            if (viewport == g.MouseRefViewport)         g.MouseRefViewport = main_viewport;
             if (viewport == g.MouseLastHoveredViewport) g.MouseLastHoveredViewport = NULL;
             IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
             IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
@@ -3894,13 +3891,14 @@ static void ImGui::UpdateViewports()
     }
 
     // Mouse handling: decide on the actual mouse viewport for this frame between the active/focused viewport and the hovered viewport.
+    // Note that 'viewport_hovered' should skip over any viewport that has the ImGuiViewportFlags_NoInputs flags set.
     ImGuiViewportP* viewport_hovered = NULL;
     if (g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)
     {
         viewport_hovered = g.IO.MouseHoveredViewport ? FindViewportByID(g.IO.MouseHoveredViewport) : NULL;
         if (viewport_hovered && (viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
         {
-            // Back-end failed at honoring its contract if it returned a viewport with the _NoInputs flag
+            // Back-end failed at honoring its contract if it returned a viewport with the _NoInputs flag.
             IM_ASSERT(0);
             viewport_hovered = FindViewportHoveredFromPlatformWindowStack(g.IO.MousePos);
         }
@@ -3915,17 +3913,23 @@ static void ImGui::UpdateViewports()
     if (viewport_hovered != NULL)
         g.MouseLastHoveredViewport = viewport_hovered;
 
+    // Update mouse reference viewport
+    g.MouseRefViewport = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
+
+    // When moving a window we aim at its viewport
+    if (g.MovingWindow)
+        g.MouseRefViewport = g.MovingWindow->Viewport;
+
     // When dragging something, always refer to the last hovered viewport. 
-    // (So when we are between viewports, our dragged preview will tend to show in the last viewport even if we don't have tooltips in viewports)
-    // Also consider the case of holding on a menu item to browse child menus: even thought a mouse button is held, there's no active id because menu items only react on mouse release.
-    const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive || (g.MovingWindow != NULL);
+    // - when releasing a moving window we will revert to aiming behind (at viewport_hovered)
+    // - when we are between viewports, our dragged preview will tend to show in the last viewport _even_ if we don't have tooltips in their viewports (when lacking monitor info)
+    // - consider the case of holding on a menu item to browse child menus: even thou a mouse button is held, there's no active id because menu items only react on mouse release.
+    const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive;// || (g.MovingWindow != NULL);
+    if (is_mouse_dragging_with_an_expected_destination && viewport_hovered == NULL)
+        viewport_hovered = g.MouseLastHoveredViewport;
     if (is_mouse_dragging_with_an_expected_destination || g.ActiveId == 0 || !ImGui::IsAnyMouseDown())
-    {
-        if (is_mouse_dragging_with_an_expected_destination && viewport_hovered == NULL)
-            viewport_hovered = g.MouseLastHoveredViewport;
         if (viewport_hovered != NULL && viewport_hovered != g.MouseRefViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
             g.MouseRefViewport = viewport_hovered;
-    }
 
     IM_ASSERT(g.MouseRefViewport != NULL);
 }
