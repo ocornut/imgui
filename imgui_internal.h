@@ -700,7 +700,7 @@ struct ImGuiContext
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (always 1+, and generally 1 unless multi-viewports are enabled). Each viewports hold their copy of ImDrawData. 
     ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
-    ImGuiViewportP*         MouseRefViewport;
+    ImGuiViewportP*         MouseViewport;
     ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more)
     ImGuiID                 PlatformLastFocusedViewport;        // Record of last focused platform window/viewport, when this changes we stamp the viewport as front-most
 
@@ -843,7 +843,7 @@ struct ImGuiContext
         NextTreeNodeOpenCond = 0;
 
         CurrentViewport = NULL;
-        MouseRefViewport = MouseLastHoveredViewport = NULL;
+        MouseViewport = MouseLastHoveredViewport = NULL;
         PlatformLastFocusedViewport = 0;
 
         NavWindow = NULL;

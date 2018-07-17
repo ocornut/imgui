@@ -2331,7 +2331,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFla
             }
 
     // Filter by viewport
-    if (window->Viewport != g.MouseRefViewport)
+    if (window->Viewport != g.MouseViewport)
         if (g.MovingWindow == NULL || window->RootWindow != g.MovingWindow->RootWindow)
             return false;
 
@@ -3722,12 +3722,12 @@ void ImGui::UpdateMouseMovingWindow()
         else
         {
             // Try to merge the window back into the main viewport. 
-            // This works because MouseRefViewport shouldn't be == MovingWindow->Viewport which should have the NoInputs flag during moving.
-            UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseRefViewport);
+            // This works because MouseViewport should be != MovingWindow->Viewport on release (as per code in UpdateViewports)
+            UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseViewport);
 
             // Restore the mouse viewport so that we don't hover the viewport _under_ the moved window during the frame we released the mouse button.
             if (!IsDragDropPayloadBeingAccepted())
-                g.MouseRefViewport = moving_window->Viewport;
+                g.MouseViewport = moving_window->Viewport;
 
             // Clear the NoInput window flag set by the Viewport system
             moving_window->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs;
@@ -3817,7 +3817,7 @@ static void ImGui::UpdateViewports()
     AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, g.IO.DisplaySize, ImGuiViewportFlags_CanHostOtherWindows);
 
     g.CurrentViewport = NULL;
-    g.MouseRefViewport = NULL;
+    g.MouseViewport = NULL;
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         // Erase unused viewports
@@ -3886,7 +3886,7 @@ static void ImGui::UpdateViewports()
 
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
-        g.MouseRefViewport = main_viewport;
+        g.MouseViewport = main_viewport;
         return;
     }
 
@@ -3914,24 +3914,24 @@ static void ImGui::UpdateViewports()
         g.MouseLastHoveredViewport = viewport_hovered;
 
     // Update mouse reference viewport
-    g.MouseRefViewport = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
-
-    // When moving a window we aim at its viewport
+    // (when moving a window we aim at its viewport, but this will be overwritten below if we go in drag and drop mode)
     if (g.MovingWindow)
-        g.MouseRefViewport = g.MovingWindow->Viewport;
+        g.MouseViewport = g.MovingWindow->Viewport; 
+    else
+        g.MouseViewport = g.IO.MousePosViewport ? FindViewportByID(g.IO.MousePosViewport) : g.Viewports[0];
 
     // When dragging something, always refer to the last hovered viewport. 
     // - when releasing a moving window we will revert to aiming behind (at viewport_hovered)
     // - when we are between viewports, our dragged preview will tend to show in the last viewport _even_ if we don't have tooltips in their viewports (when lacking monitor info)
     // - consider the case of holding on a menu item to browse child menus: even thou a mouse button is held, there's no active id because menu items only react on mouse release.
-    const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive;// || (g.MovingWindow != NULL);
+    const bool is_mouse_dragging_with_an_expected_destination = g.DragDropActive;
     if (is_mouse_dragging_with_an_expected_destination && viewport_hovered == NULL)
         viewport_hovered = g.MouseLastHoveredViewport;
     if (is_mouse_dragging_with_an_expected_destination || g.ActiveId == 0 || !ImGui::IsAnyMouseDown())
-        if (viewport_hovered != NULL && viewport_hovered != g.MouseRefViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
-            g.MouseRefViewport = viewport_hovered;
+        if (viewport_hovered != NULL && viewport_hovered != g.MouseViewport && !(viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
+            g.MouseViewport = viewport_hovered;
 
-    IM_ASSERT(g.MouseRefViewport != NULL);
+    IM_ASSERT(g.MouseViewport != NULL);
 }
 
 static bool IsWindowActiveAndVisible(ImGuiWindow* window)
@@ -4152,7 +4152,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     // - When moving a window we can skip the search, which also conveniently bypasses the fact that window->WindowRectClipped is lagging as this point of the frame.
     // - We also support the moved window toggling the NoInputs flag after moving has started in order to be able to detect windows below it, which is useful for e.g. docking mechanisms.
     FindHoveredWindow();
-    IM_ASSERT(g.HoveredWindow == NULL || g.HoveredWindow == g.MovingWindow || g.HoveredWindow->Viewport == g.MouseRefViewport);
+    IM_ASSERT(g.HoveredWindow == NULL || g.HoveredWindow == g.MovingWindow || g.HoveredWindow->Viewport == g.MouseViewport);
 
     // Modal windows prevents cursor from hovering behind them.
     ImGuiWindow* modal_window = GetFrontMostPopupModal();
@@ -4596,7 +4596,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.CurrentPopupStack.clear();
-    g.CurrentViewport = g.MouseRefViewport = g.MouseLastHoveredViewport = NULL;
+    g.CurrentViewport = g.MouseViewport = g.MouseLastHoveredViewport = NULL;
     for (int i = 0; i < g.Viewports.Size; i++)
         IM_DELETE(g.Viewports[i]);
     g.Viewports.clear();
@@ -5549,7 +5549,7 @@ static void FindHoveredWindow()
     // Special handling for the window being moved: Ignore the mouse viewport check (because it may reset/lose its viewport during the undocking frame)
     ImGuiViewportP* moving_window_viewport = g.MovingWindow ? g.MovingWindow->Viewport : NULL;
     if (g.MovingWindow)
-        g.MovingWindow->Viewport = g.MouseRefViewport;
+        g.MovingWindow->Viewport = g.MouseViewport;
 
     ImGuiWindow* hovered_window = NULL;
     ImGuiWindow* hovered_window_ignoring_moving_window = NULL;
@@ -5564,7 +5564,7 @@ static void FindHoveredWindow()
         if (window->Flags & ImGuiWindowFlags_NoInputs)
             continue;
         IM_ASSERT(window->Viewport);
-        if (window->Viewport != g.MouseRefViewport)
+        if (window->Viewport != g.MouseViewport)
             continue;
 
         // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
@@ -5604,7 +5604,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
     if (!rect_for_touch.Contains(g.IO.MousePos))
         return false;
-    if (!g.MouseRefViewport->GetRect().Overlaps(rect_clipped))
+    if (!g.MouseViewport->GetRect().Overlaps(rect_clipped))
         return false;
     return true;
 }
@@ -6811,7 +6811,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if (flags & ImGuiWindowFlags_Tooltip)
     {
-        window->Viewport = g.MouseRefViewport;
+        window->Viewport = g.MouseViewport;
     }
     else if (g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
     {
@@ -15165,7 +15165,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
             ImGui::Text("NavWindowingTarget: '%s'", g.NavWindowingTarget ? g.NavWindowingTarget->Name : "NULL");
             ImGui::Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
-            ImGui::Text("MousePosViewport: 0x%08X, Hovered: 0x%08X -> Ref 0x%08X", g.IO.MousePosViewport, g.IO.MouseHoveredViewport, g.MouseRefViewport->ID);
+            ImGui::Text("MousePosViewport: 0x%08X, Hovered: 0x%08X -> Ref 0x%08X", g.IO.MousePosViewport, g.IO.MouseHoveredViewport, g.MouseViewport->ID);
             ImGui::TreePop();
         }
 
