@@ -207,7 +207,6 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
     ImGuiIO& io = ImGui::GetIO();
     const ImVec2 mouse_pos_backup = io.MousePos;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    io.MousePosViewport = 0;
     io.MouseHoveredViewport = 0;
 
     // Update buttons
@@ -236,7 +235,6 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
                 glfwGetCursorPos(window, &mouse_x, &mouse_y);
                 io.MousePos = ImVec2((float)mouse_x + viewport->Pos.x, (float)mouse_y + viewport->Pos.y);
             }
-            io.MousePosViewport = viewport->ID;
             for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
                 io.MouseDown[i] |= glfwGetMouseButton(window, i) != 0;
         }

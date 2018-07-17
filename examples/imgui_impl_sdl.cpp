@@ -233,7 +233,6 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     ImGuiIO& io = ImGui::GetIO();
     const ImVec2 mouse_pos_backup = io.MousePos;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    io.MousePosViewport = 0;
     io.MouseHoveredViewport = 0;
 
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
@@ -268,10 +267,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
         my -= wy;
     }
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)focused_window))
-    {
         io.MousePos = ImVec2(viewport->Pos.x + (float)mx, viewport->Pos.y + (float)my);
-        io.MousePosViewport = viewport->ID;
-    }
 
     // We already retrieve global mouse position, SDL_CaptureMouse() also let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't trigger the OS window resize cursor
     // The function is only supported from SDL 2.0.4 (released Jan 2016)
