@@ -1351,6 +1351,25 @@ void ImGui::ShowDemoWindow(bool* p_open)
             if (embed_all_inside_a_child_window)
                 EndChild();
 
+            // Calling IsItemHovered() after begin returns the hovered status of the title bar. 
+            // This is useful in particular if you want to create a context menu (with BeginPopupContextItem) associated to the title bar of a window.
+            static bool test_window = false;
+            ImGui::Checkbox("Hovered/Active tests after Begin() for title bar testing", &test_window);
+            if (test_window)
+            {
+                ImGui::Begin("Title bar Hovered/Active tests", &test_window);
+                if (ImGui::BeginPopupContextItem()) // <-- This is using IsItemHovered()
+                {
+                    if (ImGui::MenuItem("Close")) { test_window = false; }
+                    ImGui::EndPopup();
+                }
+                ImGui::Text(
+                    "IsItemHovered() after begin = %d (== is title bar hovered)\n"
+                    "IsItemActive() after begin = %d (== is window being clicked/moved)\n",
+                    ImGui::IsItemHovered(), ImGui::IsItemActive());
+                ImGui::End();
+            }
+
             ImGui::TreePop();
         }
     }
