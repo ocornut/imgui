@@ -3188,11 +3188,7 @@ static const char* GetFallbackWindowNameForWindowingList(ImGuiWindow* window)
 void ImGui::NavUpdateWindowingList()
 {
     ImGuiContext& g = *GImGui;
-    if (!g.NavWindowingTarget)
-    {
-        g.NavWindowingList = NULL;
-        return;
-    }
+    IM_ASSERT(g.NavWindowingTarget != NULL);
 
     if (g.NavWindowingList == NULL)
         g.NavWindowingList = FindWindowByName("###NavWindowingList");
@@ -4387,14 +4383,17 @@ void ImGui::EndFrame()
         g.PlatformImeLastPos = g.PlatformImePos;
     }
 
-    NavUpdateWindowingList();
-
     // Hide implicit "Debug" window if it hasn't been used
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin()/End() calls, did you forget to call end on g.CurrentWindow->Name?
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
 
+    // Show CTRL+TAB list
+    if (g.NavWindowingTarget)
+        NavUpdateWindowingList();
+
+    // Initiate moving window
     if (g.ActiveId == 0 && g.HoveredId == 0)
     {
         if (!g.NavWindow || !g.NavWindow->Appearing) // Unless we just made a window/popup appear
@@ -4468,7 +4467,7 @@ void ImGui::Render()
     g.DrawDataBuilder.Clear();
     ImGuiWindow* windows_to_render_front_most[2];
     windows_to_render_front_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
-    windows_to_render_front_most[1] = (g.NavWindowingList);
+    windows_to_render_front_most[1] = g.NavWindowingTarget ? g.NavWindowingList : NULL;
     for (int n = 0; n != g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
