@@ -2378,7 +2378,7 @@ void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
     ItemSize(bb.GetSize(), text_offset_y);
 }
 
-static ImGuiDir inline NavScoreItemGetQuadrant(float dx, float dy)
+ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy)
 {
     if (ImFabs(dx) > ImFabs(dy))
         return (dx > 0.0f) ? ImGuiDir_Right : ImGuiDir_Left;
@@ -2454,7 +2454,7 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
         dax = dbx;
         day = dby;
         dist_axial = dist_box;
-        quadrant = NavScoreItemGetQuadrant(dbx, dby);
+        quadrant = ImGetDirQuadrantFromDelta(dbx, dby);
     }
     else if (dcx != 0.0f || dcy != 0.0f)
     {
@@ -2462,7 +2462,7 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
         dax = dcx;
         day = dcy;
         dist_axial = dist_center;
-        quadrant = NavScoreItemGetQuadrant(dcx, dcy);
+        quadrant = ImGetDirQuadrantFromDelta(dcx, dcy);
     }
     else
     {
