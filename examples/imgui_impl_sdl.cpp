@@ -204,6 +204,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
 {
     ImGuiIO& io = ImGui::GetIO();
     const ImVec2 mouse_pos_backup = io.MousePos;
+    (void)mouse_pos_backup; //avoid warning if unused
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
