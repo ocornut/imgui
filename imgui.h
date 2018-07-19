@@ -1309,6 +1309,14 @@ struct ImGuiOnceUponAFrame
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 struct ImGuiTextFilter
 {
+    IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
+    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
+    IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
+    IMGUI_API void      Build();
+    void                Clear()          { InputBuf[0] = 0; Build(); }
+    bool                IsActive() const { return !Filters.empty(); }
+
+    // [Internal]
     struct TextRange
     {
         const char* b;
@@ -1316,25 +1324,14 @@ struct ImGuiTextFilter
 
         TextRange() { b = e = NULL; }
         TextRange(const char* _b, const char* _e) { b = _b; e = _e; }
-        const char* begin() const { return b; }
-        const char* end() const { return e; }
-        bool empty() const { return b == e; }
-        char front() const { return *b; }
-        static bool is_blank(char c) { return c == ' ' || c == '\t'; }
-        void trim_blanks() { while (b < e && is_blank(*b)) b++; while (e > b && is_blank(*(e-1))) e--; }
-        IMGUI_API void split(char separator, ImVector<TextRange>& out);
+        const char*     begin() const   { return b; }
+        const char*     end () const    { return e; }
+        bool            empty() const   { return b == e; }
+        IMGUI_API void  split(char separator, ImVector<TextRange>* out) const;
     };
-
     char                InputBuf[256];
     ImVector<TextRange> Filters;
     int                 CountGrep;
-
-    IMGUI_API           ImGuiTextFilter(const char* default_filter = "");
-    IMGUI_API bool      Draw(const char* label = "Filter (inc,-exc)", float width = 0.0f);    // Helper calling InputText+Build
-    IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
-    IMGUI_API void      Build();
-    void                Clear() { InputBuf[0] = 0; Build(); }
-    bool                IsActive() const { return !Filters.empty(); }
 };
 
 // Helper: Text buffer for logging/accumulating text

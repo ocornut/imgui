@@ -1833,37 +1833,41 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
     return value_changed;
 }
 
-void ImGuiTextFilter::TextRange::split(char separator, ImVector<TextRange>& out)
+void ImGuiTextFilter::TextRange::split(char separator, ImVector<TextRange>* out) const
 {
-    out.resize(0);
+    out->resize(0);
     const char* wb = b;
     const char* we = wb;
     while (we < e)
     {
         if (*we == separator)
         {
-            out.push_back(TextRange(wb, we));
+            out->push_back(TextRange(wb, we));
             wb = we + 1;
         }
         we++;
     }
     if (wb != we)
-        out.push_back(TextRange(wb, we));
+        out->push_back(TextRange(wb, we));
 }
 
 void ImGuiTextFilter::Build()
 {
     Filters.resize(0);
     TextRange input_range(InputBuf, InputBuf+strlen(InputBuf));
-    input_range.split(',', Filters);
+    input_range.split(',', &Filters);
 
     CountGrep = 0;
     for (int i = 0; i != Filters.Size; i++)
     {
-        Filters[i].trim_blanks();
-        if (Filters[i].empty())
+        TextRange& f = Filters[i];
+        while (f.b < f.e && ImCharIsBlankA(f.b[0]))
+            f.b++;
+        while (f.e > f.b && ImCharIsBlankA(f.e[-1]))
+            f.e--;
+        if (f.empty())
             continue;
-        if (Filters[i].front() != '-')
+        if (Filters[i].b[0] != '-')
             CountGrep += 1;
     }
 }
@@ -1881,7 +1885,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
         const TextRange& f = Filters[i];
         if (f.empty())
             continue;
-        if (f.front() == '-')
+        if (f.b[0] == '-')
         {
             // Subtract
             if (ImStristr(text, text_end, f.begin()+1, f.end()) != NULL)
