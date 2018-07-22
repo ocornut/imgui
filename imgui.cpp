@@ -893,6 +893,7 @@ static void             NavUpdateWindowingList();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
 
 static void             UpdateMouseInputs();
+static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
@@ -3696,6 +3697,52 @@ static void ImGui::UpdateMouseInputs()
     }
 }
 
+void ImGui::UpdateMouseWheel()
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.HoveredWindow || g.HoveredWindow->Collapsed)
+        return;
+    if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
+        return;
+
+    // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
+    ImGuiWindow* window = g.HoveredWindow;
+    ImGuiWindow* scroll_window = window;
+    while ((scroll_window->Flags & ImGuiWindowFlags_ChildWindow) && (scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoScrollbar) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs) && scroll_window->ParentWindow)
+        scroll_window = scroll_window->ParentWindow;
+    const bool scroll_allowed = !(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs);
+
+    if (g.IO.MouseWheel != 0.0f)
+    {
+        if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
+        {
+            // Zoom / Scale window
+            const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+            const float scale = new_font_scale / window->FontWindowScale;
+            window->FontWindowScale = new_font_scale;
+
+            const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
+            window->Pos += offset;
+            window->Size *= scale;
+            window->SizeFull *= scale;
+        }
+        else if (!g.IO.KeyCtrl && scroll_allowed)
+        {
+            // Mouse wheel vertical scrolling
+            float scroll_amount = 5 * scroll_window->CalcFontSize();
+            scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
+            SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
+        }
+    }
+    if (g.IO.MouseWheelH != 0.0f && scroll_allowed)
+    {
+        // Mouse wheel horizontal scrolling (for hardware that supports it)
+        float scroll_amount = scroll_window->CalcFontSize();
+        if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
+            SetWindowScrollX(window, window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
+    }
+}
+
 // The reason this is exposed in imgui_internal.h is: on touch-based system that don't have hovering, we want to dispatch inputs to the right target (imgui vs imgui+app)
 void ImGui::UpdateHoveredWindowAndCaptureFlags()
 {
@@ -3887,45 +3934,7 @@ void ImGui::NewFrame()
     g.PlatformImePos = ImVec2(1.0f, 1.0f); // OS Input Method Editor showing on top-left of our window by default
 
     // Mouse wheel scrolling, scale
-    if (g.HoveredWindow && !g.HoveredWindow->Collapsed && (g.IO.MouseWheel != 0.0f || g.IO.MouseWheelH != 0.0f))
-    {
-        // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
-        ImGuiWindow* window = g.HoveredWindow;
-        ImGuiWindow* scroll_window = window;
-        while ((scroll_window->Flags & ImGuiWindowFlags_ChildWindow) && (scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoScrollbar) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs) && scroll_window->ParentWindow)
-            scroll_window = scroll_window->ParentWindow;
-        const bool scroll_allowed = !(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoInputs);
-
-        if (g.IO.MouseWheel != 0.0f)
-        {
-            if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
-            {
-                // Zoom / Scale window
-                const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-                const float scale = new_font_scale / window->FontWindowScale;
-                window->FontWindowScale = new_font_scale;
-
-                const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
-                window->Pos += offset;
-                window->Size *= scale;
-                window->SizeFull *= scale;
-            }
-            else if (!g.IO.KeyCtrl && scroll_allowed)
-            {
-                // Mouse wheel vertical scrolling
-                float scroll_amount = 5 * scroll_window->CalcFontSize();
-                scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
-                SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
-            }
-        }
-        if (g.IO.MouseWheelH != 0.0f && scroll_allowed)
-        {
-            // Mouse wheel horizontal scrolling (for hardware that supports it)
-            float scroll_amount = scroll_window->CalcFontSize();
-            if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
-                SetWindowScrollX(window, window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
-        }
-    }
+    UpdateMouseWheel();
 
     // Pressing TAB activate widget focus
     if (g.ActiveId == 0 && g.NavWindow != NULL && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab, false))
