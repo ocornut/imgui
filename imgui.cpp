@@ -3955,27 +3955,27 @@ void ImGui::UpdatePlatformWindows()
     {
         ImGuiViewportP* viewport = g.Viewports[i];
         viewport->LastPos = viewport->Pos;
-        if (viewport->LastFrameActive < g.FrameCount)
+
+        // Destroy platform window if the viewport hasn't been submitted or if it is hosting a hidden window (the implicit Debug window will be registered its viewport then be disabled)
+        bool destroy_platform_window = false;
+        destroy_platform_window |= (viewport->LastFrameActive < g.FrameCount - 1);
+        destroy_platform_window |= (viewport->Window && !IsWindowActiveAndVisible(viewport->Window));
+        if (destroy_platform_window)
         {
-            if (viewport->LastFrameActive < g.FrameCount - 1)
-            {
-                if (g.PlatformIO.Renderer_DestroyWindow)
-                    g.PlatformIO.Renderer_DestroyWindow(viewport);
-                if (g.PlatformIO.Platform_DestroyWindow)
-                    g.PlatformIO.Platform_DestroyWindow(viewport);
-                viewport->CreatedPlatformWindow = false;
-                IM_ASSERT(viewport->RendererUserData == NULL);
-                IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
-            }
+            if (viewport->CreatedPlatformWindow && g.PlatformIO.Renderer_DestroyWindow)
+                g.PlatformIO.Renderer_DestroyWindow(viewport);
+            if (viewport->CreatedPlatformWindow && g.PlatformIO.Platform_DestroyWindow)
+                g.PlatformIO.Platform_DestroyWindow(viewport);
+            viewport->CreatedPlatformWindow = false;
+            IM_ASSERT(viewport->RendererUserData == NULL);
+            IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
             continue;
         }
+        if (viewport->LastFrameActive < g.FrameCount)
+            continue;
 
         // New windows that appears directly in a new viewport won't always have a size on their frame
         if (viewport->Size.x <= 0 || viewport->Size.y <= 0)
-            continue;
-
-        // Ignore viewport that are hosting a hidden window (also check the Active flag, as the implicit Debug window will be registering its viewport then immediately disabled)
-        if (viewport->Window && !IsWindowActiveAndVisible(viewport->Window))
             continue;
 
         // Update viewport flags
@@ -15102,7 +15102,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->Window ? viewport->Window->Name : "N/A"))
                 {
                     ImGuiWindowFlags flags = viewport->Flags;
-                    ImGui::BulletText("Pos: (%.0f,%.0f), Size: (%.0f, %.0f), Monitor: %d, DpiScale: %.0f%%", viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y, viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
+                    ImGui::BulletText("Pos: (%.0f,%.0f), Size: (%.0f,%.0f), Monitor: %d, DpiScale: %.0f%%", viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y, viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
                     if (viewport->Idx > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200,200); if (viewport->Window) viewport->Window->Pos = ImVec2(200,200); } }
                     ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s", viewport->Flags,
                         (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",
