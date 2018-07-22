@@ -52,7 +52,7 @@
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"
-#elif defined(__GNUC__) and __GNUC__ >= 8
+#elif defined(__GNUC__) && __GNUC__ >= 8
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
@@ -1925,7 +1925,7 @@ struct ImFont
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
-#elif defined(__GNUC__) and __GNUC__ >= 8
+#elif defined(__GNUC__) && __GNUC__ >= 8
 #pragma GCC diagnostic pop
 #endif
 
