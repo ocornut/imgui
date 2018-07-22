@@ -36,7 +36,7 @@
 
 // Helpers
 #ifndef IM_ASSERT
-#include <assert.h>                                                             
+#include <assert.h>
 #define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
 #endif
 #if defined(__clang__) || defined(__GNUC__)
@@ -52,6 +52,9 @@
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"
+#elif defined(__GNUC__) && __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 
 // Forward declarations
@@ -1922,6 +1925,8 @@ struct ImFont
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUC__) && __GNUC__ >= 8
+#pragma GCC diagnostic pop
 #endif
 
 // Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
