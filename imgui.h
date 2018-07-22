@@ -52,11 +52,9 @@
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"
-#elif defined(__GNUC__)
-#if __GNUC__ >= 8
+#elif defined(__GNUC__) and __GNUC__ >= 8
 #pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
-#endif
+#pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 
 // Forward declarations
@@ -1927,6 +1925,8 @@ struct ImFont
 
 #if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUC__) and __GNUC__ >= 8
+#pragma GCC diagnostic pop
 #endif
 
 // Include imgui_user.h at the end of imgui.h (convenient for user to only explicitly include vanilla imgui.h)
