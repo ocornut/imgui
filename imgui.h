@@ -36,7 +36,7 @@
 
 // Helpers
 #ifndef IM_ASSERT
-#include <assert.h>                                                             
+#include <assert.h>
 #define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
 #endif
 #if defined(__clang__) || defined(__GNUC__)
@@ -52,6 +52,11 @@
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"
+#elif defined(__GNUC__)
+#if __GNUC__ >= 8
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#endif
 #endif
 
 // Forward declarations
