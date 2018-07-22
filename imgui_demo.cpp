@@ -819,7 +819,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
             static float values[90] = { 0 };
             static int values_offset = 0;
-            static float refresh_time = 0.0f;
+            static double refresh_time = 0.0;
             if (!animate || refresh_time == 0.0f)
                 refresh_time = ImGui::GetTime();
             while (refresh_time < ImGui::GetTime()) // Create dummy data at fixed 60 hz rate for the demo
@@ -3020,8 +3020,8 @@ static void ShowExampleAppLog(bool* p_open)
     static ExampleAppLog log;
 
     // Demo: add random items (unless Ctrl is held)
-    static float last_time = -1.0f;
-    float time = ImGui::GetTime();
+    static double last_time = -1.0;
+    double time = ImGui::GetTime();
     if (time - last_time >= 0.20f && !ImGui::GetIO().KeyCtrl)
     {
         const char* random_words[] = { "system", "info", "warning", "error", "fatal", "notice", "log" };
