@@ -136,7 +136,7 @@
 // Flip coordinate system upside down on Y
 -(BOOL)isFlipped
 {
-    return (YES);
+    return (NO);
 }
 
 -(void)dealloc
@@ -150,6 +150,20 @@
 -(void)flagsChanged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseDown:(NSEvent *)event       { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseUp:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseMoved:(NSEvent *)event
+{
+	ImGui_ImplOSX_HandleEvent(event, self);
+	[super mouseMoved: event];
+
+}
+
+-(void)mouseDragged:(NSEvent *)event
+{
+	ImGui_ImplOSX_HandleEvent(event, self);
+	[super mouseMoved: event];
+
+}
+
 -(void)scrollWheel:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self); }
 
 @end
@@ -182,6 +196,8 @@
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
 	
+	[_window setAcceptsMouseMovedEvents:YES];
+
     return (_window);
 }
 
