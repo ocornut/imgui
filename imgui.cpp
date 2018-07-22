@@ -3734,12 +3734,11 @@ void ImGui::UpdateMouseWheel()
             SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
         }
     }
-    if (g.IO.MouseWheelH != 0.0f && scroll_allowed)
+    if (g.IO.MouseWheelH != 0.0f && scroll_allowed && !g.IO.KeyCtrl)
     {
         // Mouse wheel horizontal scrolling (for hardware that supports it)
         float scroll_amount = scroll_window->CalcFontSize();
-        if (!g.IO.KeyCtrl && !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse))
-            SetWindowScrollX(window, window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
+        SetWindowScrollX(scroll_window, scroll_window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
     }
 }
 
