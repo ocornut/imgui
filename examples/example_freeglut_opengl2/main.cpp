@@ -88,7 +88,7 @@ int main(int argc, char** argv)
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
     glutInitWindowSize(1280, 720);
-    glutCreateWindow("ImGui FreeGLUT+OpenGL2 Example");
+    glutCreateWindow("Dear ImGui FreeGLUT+OpenGL2 Example");
 
     // Setup GLUT display function
     // We will also call ImGui_ImplFreeGLUT_InstallFuncs() to get all the other functions installed for us, 

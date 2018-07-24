@@ -231,20 +231,19 @@ void ImGui_ImplSDL2_Shutdown()
 static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
 {
     ImGuiIO& io = ImGui::GetIO();
-    const ImVec2 mouse_pos_backup = io.MousePos;
-    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MouseHoveredViewport = 0;
 
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
     // (When multi-viewports are enabled, all imgui positions are same as OS positions.)
 #if SDL_HAS_WARP_MOUSE_GLOBAL
-    if (io.WantSetMousePos)
-    {
-        if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
-            SDL_WarpMouseInWindow(g_Window, (int)mouse_pos_backup.x, (int)mouse_pos_backup.y);
-        else
-            SDL_WarpMouseGlobal((int)mouse_pos_backup.x, (int)mouse_pos_backup.y);
-    }
+    if (!io.WantSetMousePos)
+        io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
+    else if ((io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) == 0)
+        SDL_WarpMouseInWindow(g_Window, (int)io.MousePos.x, (int)io.MousePos.y);
+    else
+        SDL_WarpMouseGlobal((int)io.MousePos.x, (int)io.MousePos.y);
+#else
+    io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
 #endif
 
     int mx, my;
