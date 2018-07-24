@@ -1545,7 +1545,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     if (font_cfg.SizePixels <= 0.0f) font_cfg.SizePixels = 13.0f;
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-    const ImWchar* glyph_ranges = font_cfg.GlyphRanges != nullptr ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
+    const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
     ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, glyph_ranges);
     font->DisplayOffset.y = 1.0f;
     return font;
