@@ -233,6 +233,14 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::EndMenu();
         }
+		if (ImGui::BeginMenu("MultiTextColored"))
+		{
+			ImGui::MenuItem2("Primary Text", "Secondary Text in Red", false, true, ImVec4(1.0, 0.0, 0.0, 1.0));
+			ImGui::MenuItem2("Primary Long Text", "Green Text checked", true, true, ImVec4(0.0, 1.0, 0.0, 1.0));
+			ImGui::MenuItem2("Short", "Blue Text", false, true, ImVec4(0.0, 0.0, 1.0, 1.0));
+			ImGui::EndMenu();
+		}
+
         if (ImGui::BeginMenu("Help"))
         {
             ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
@@ -2101,6 +2109,25 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Separator();
             ImGui::TreePop();
         }
+
+		if (ImGui::TreeNode("Multi-Text Right-Aligned"))
+		{
+			ImGui::Columns(3, NULL, true);
+			for (int i = 0; i < 3 * 3; i++)
+			{
+				if (ImGui::GetColumnIndex() == 0)
+					ImGui::Separator();
+				
+				ImGui::Text("Width");
+				ImGui::Text2(ImVec4(0.0, 1.0, 0.0, 1.0), "%.2f", ImGui::GetColumnWidth());
+				ImGui::NextColumn();
+			}
+			ImGui::Columns(1);
+			ImGui::Separator();
+			ImGui::TreePop();
+		}
+
+
         ImGui::PopID();
     }
 
