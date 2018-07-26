@@ -1259,6 +1259,7 @@ static const char* ImAtoi(const char* src, TYPE* output)
 #ifndef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
 int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 {
+    IM_ASSERT(fmt != NULL);
     va_list args;
     va_start(args, fmt);
     int w = vsnprintf(buf, buf_size, fmt, args);
@@ -1273,6 +1274,7 @@ int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 
 int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 {
+    IM_ASSERT(fmt != NULL);
     int w = vsnprintf(buf, buf_size, fmt, args);
     if (buf == NULL)
         return w;
