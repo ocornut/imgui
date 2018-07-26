@@ -238,6 +238,7 @@ The library started its life and is best known as "ImGui" only due to the fact t
 <b>How can I tell whether to dispatch mouse/keyboard to imgui or to my application?</b>
 <br><b>How can I display an image? What is ImTextureID, how does it works?</b>
 <br><b>How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.</b>
+<br><b>How can I use my own math types instead of ImVec2/ImVec4?</b>
 <br><b>How can I load a different font than the default?</b>
 <br><b>How can I easily use icons in my application?</b>
 <br><b>How can I load multiple fonts?</b>

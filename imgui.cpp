@@ -32,6 +32,7 @@
    - How can I tell whether to dispatch mouse/keyboard to imgui or to my application?
    - How can I display an image? What is ImTextureID, how does it works?
    - How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.
+   - How can I use my own math types instead of ImVec2/ImVec4? 
    - How can I load a different font than the default?
    - How can I easily use icons in my application?
    - How can I load multiple fonts?
@@ -695,6 +696,10 @@
        will preserve your node open/closed state when the targeted object change.
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
        node open/closed state differently. See what makes more sense in your situation!
+
+ Q: How can I use my own math types instead of ImVec2/ImVec4? 
+ A: You can edit imconfig.h and setup the IM_VEC2_CLASS_EXTRA/IM_VEC4_CLASS_EXTRA macros to add implicit type conversions.
+    This way you'll be able to use your own types everywhere, e.g. passsing glm::vec2 to ImGui functions instead of ImVec2.
 
  Q: How can I load a different font than the default?
  A: Use the font atlas to load the TTF/OTF file you want:
@@ -2135,6 +2140,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     CollapseToggleWanted = false;
     SkipItems = false;
     Appearing = false;
+    Hidden = false;
     HasCloseButton = false;
     BeginOrderWithinParent = -1;
     BeginOrderWithinContext = -1;
@@ -2144,7 +2150,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     AutoFitOnlyGrows = false;
     AutoFitChildAxises = 0x00;
     AutoPosLastDirection = ImGuiDir_None;
-    HiddenFrames = 0;
+    HiddenFramesRegular = HiddenFramesForResize = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
 
@@ -3958,7 +3964,7 @@ static void ImGui::UpdateViewports()
 
 static bool IsWindowActiveAndVisible(ImGuiWindow* window)
 {
-    return (window->HiddenFrames == 0) && (window->Active);
+    return (window->Active) && (!window->Hidden);
 }
 
 void ImGui::UpdatePlatformWindows()
@@ -5605,7 +5611,7 @@ static void FindHoveredWindow()
     for (int i = g.Windows.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* window = g.Windows[i];
-        if (!window->Active)
+        if (!window->Active || window->Hidden)
             continue;
         if (window->Flags & ImGuiWindowFlags_NoInputs)
             continue;
@@ -5936,7 +5942,8 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_
             if (window->Active)
             {
                 // Hide previous tooltip from being displayed. We can't easily "reset" the content of a window so we create a new one.
-                window->HiddenFrames = 1;
+                window->Hidden = true;
+                window->HiddenFramesRegular = 1;
                 ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip_%02d", ++g.TooltipOverrideCount);
             }
     ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNav;
@@ -7109,7 +7116,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     // Update the Appearing flag
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
-    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFrames > 0);
+    const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesForResize > 0);
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
@@ -7205,18 +7212,20 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
         window->SizeContents = CalcSizeContents(window);
-        if (window->HiddenFrames > 0)
-            window->HiddenFrames--;
+        if (window->HiddenFramesRegular > 0)
+            window->HiddenFramesRegular--;
+        if (window->HiddenFramesForResize > 0)
+            window->HiddenFramesForResize--;
 
         // Hide new windows for one frame until they calculate their size
         if (window_just_created && (!window_size_x_set_by_api || !window_size_y_set_by_api))
-            window->HiddenFrames = 1;
+            window->HiddenFramesForResize = 1;
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
         // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
-            window->HiddenFrames = 1;
+            window->HiddenFramesForResize = 1;
             if (flags & ImGuiWindowFlags_AlwaysAutoResize)
             {
                 if (!window_size_x_set_by_api)
@@ -7328,7 +7337,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->Pos = parent_window->DC.CursorPos;
         }
 
-        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFrames == 0);
+        const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFramesForResize == 0);
         if (window_pos_with_pivot)
             SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0); // Position given a pivot (e.g. for centering)
         else if ((flags & ImGuiWindowFlags_ChildMenu) != 0)
@@ -7459,7 +7468,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             PushClipRect(viewport_rect.Min, viewport_rect.Max, true);
 
         // Draw modal or window list full viewport dimming background (for other viewports we'll render them in EndFrame)
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFrames <= 0;
+        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFramesForResize <= 0;
         const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && ((window == g.NavWindowingTargetAnim->RootWindow) || (g.NavWindowingList && (window == g.NavWindowingList) && g.NavWindowingList->Viewport != g.NavWindowingTargetAnim->Viewport));
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
@@ -7724,29 +7733,31 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     window->BeginCount++;
     g.NextWindowData.Clear();
 
-
     if (flags & ImGuiWindowFlags_ChildWindow)
     {
         // Child window can be out of sight and have "negative" clip windows.
         // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
         IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
-        window->Collapsed = parent_window && parent_window->Collapsed;
 
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-            window->Collapsed |= (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y);
+            if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
+                window->HiddenFramesRegular = 1;
 
-        // We also hide the window from rendering because we've already added its border to the command list.
-        // (we could perform the check earlier in the function but it is simpler at this point)
-        if (window->Collapsed)
-            window->Active = false;
+        // Completely hide along with parent or if parent is collapsed
+        if (parent_window && (parent_window->Collapsed || parent_window->Hidden))
+            window->HiddenFramesRegular = 1;
     }
 
     // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)
     if (style.Alpha <= 0.0f)
-        window->Active = false;
+        window->HiddenFramesRegular = 1;
+
+    // Update the Hidden flag
+    window->Hidden = (window->HiddenFramesRegular > 0) || (window->HiddenFramesForResize);
 
     // Return false if we don't intend to display anything to allow user to perform an early out optimization
-    window->SkipItems = (window->Collapsed || !window->Active) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0;
+    window->SkipItems = (window->Collapsed || !window->Active || window->Hidden) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesForResize <= 0;
+
     return !window->SkipItems;
 }
 
@@ -13977,7 +13988,8 @@ void ImGui::VerticalSeparator()
         LogText(" |");
 }
 
-bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend)
+// Using 'hover_visibility_delay' allows us to hide the highlight and mouse cursor for a short time, which can be convenient to reduce visual noise.
+bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend, float hover_visibility_delay)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -13996,7 +14008,7 @@ bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float
     if (g.ActiveId != id)
         SetItemAllowOverlap();
 
-    if (held || (g.HoveredId == id && g.HoveredIdPreviousFrame == id))
+    if (held || (g.HoveredId == id && g.HoveredIdPreviousFrame == id && g.HoveredIdTimer >= hover_visibility_delay))
         SetMouseCursor(axis == ImGuiAxis_Y ? ImGuiMouseCursor_ResizeNS : ImGuiMouseCursor_ResizeEW);
 
     ImRect bb_render = bb;
@@ -14020,7 +14032,7 @@ bool ImGui::SplitterBehavior(ImGuiID id, const ImRect& bb, ImGuiAxis axis, float
     }
 
     // Render
-    const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
+    const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : (hovered && g.HoveredIdTimer >= hover_visibility_delay) ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
     window->DrawList->AddRectFilled(bb_render.Min, bb_render.Max, col, g.Style.FrameRounding);
 
     return held;
@@ -14675,7 +14687,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             {
                 ImGuiWindow* tooltip_window = g.CurrentWindow;
                 tooltip_window->SkipItems = true;
-                tooltip_window->HiddenFrames = 1;
+                tooltip_window->HiddenFramesRegular = 1;
             }
         }
 
@@ -15106,7 +15118,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     (flags & ImGuiWindowFlags_NoInputs)    ? "NoInputs":"", (flags & ImGuiWindowFlags_AlwaysAutoResize) ? "AlwaysAutoResize" : "");
                 ImGui::BulletText("Scroll: (%.2f/%.2f,%.2f/%.2f)", window->Scroll.x, GetScrollMaxX(window), window->Scroll.y, GetScrollMaxY(window));
                 ImGui::BulletText("Active: %d/%d, WriteAccessed: %d, BeginOrderWithinContext: %d", window->Active, window->WasActive, window->WriteAccessed, (window->Active || window->WasActive) ? window->BeginOrderWithinContext : -1);
-
+                ImGui::BulletText("Appearing: %d, Hidden: %d (Reg %d Resize %d), SkipItems: %d", window->Appearing, window->Hidden, window->HiddenFramesRegular, window->HiddenFramesForResize, window->SkipItems);
                 ImGui::BulletText("NavLastIds: 0x%08X,0x%08X, NavLayerActiveMask: %X", window->NavLastIds[0], window->NavLastIds[1], window->DC.NavLayerActiveMask);
                 ImGui::BulletText("NavLastChildNavWindow: %s", window->NavLastChildNavWindow ? window->NavLastChildNavWindow->Name : "NULL");
                 if (!window->NavRectRel[0].IsInverted())
