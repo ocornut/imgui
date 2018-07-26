@@ -862,6 +862,10 @@ static const ImS64  IM_S64_MAX = 9223372036854775807ll;
 static const ImU64  IM_U64_MIN = 0;
 static const ImU64  IM_U64_MAX = 0xFFFFFFFFFFFFFFFFull;
 
+// When using CTRL+TAB (or Gamepad Square+L/R) we delay the visual a little in order to reduce visual noise doing a fast switch.
+static const float NAV_WINDOWING_HIGHLIGHT_DELAY   = 0.20f; // Time before the highlight and screen dimming starts fading in
+static const float NAV_WINDOWING_LIST_APPEAR_DELAY = 0.15f; // Time before the window list starts to appear
+
 //-------------------------------------------------------------------------
 // Forward Declarations
 //-------------------------------------------------------------------------
@@ -3108,7 +3112,7 @@ static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
     if (!window_target)
         window_target = FindWindowNavigable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
     if (window_target) // Don't reset windowing target if there's a single window in the list
-        g.NavWindowingTarget = window_target;
+        g.NavWindowingTarget = g.NavWindowingTargetAnim = window_target;
     g.NavWindowingToggleLayer = false;
 }
 
@@ -3126,23 +3130,32 @@ static void ImGui::NavUpdateWindowing()
         return;
     }
 
+    // Fade out
+    if (g.NavWindowingTargetAnim && g.NavWindowingTarget == NULL)
+    {
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha - g.IO.DeltaTime * 10.0f, 0.0f);
+        if (g.DimBgRatio <= 0.0f && g.NavWindowingHighlightAlpha <= 0.0f)
+            g.NavWindowingTargetAnim = NULL;
+    }
+
+    // Start CTRL-TAB or Square+L/R window selection
     bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
     bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavigable(g.Windows.Size - 1, -INT_MAX, -1))
         {
-            g.NavWindowingTarget = window;
-            g.NavWindowingHighlightTimer = g.NavWindowingHighlightAlpha = 0.0f;
+            g.NavWindowingTarget = g.NavWindowingTargetAnim = window;
+            g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_NavKeyboard : ImGuiInputSource_NavGamepad;
         }
 
     // Gamepad update
-    g.NavWindowingHighlightTimer += g.IO.DeltaTime;
+    g.NavWindowingTimer += g.IO.DeltaTime;
     if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_NavGamepad)
     {
         // Highlight only appears after a brief time holding the button, so that a fast tap on PadMenu (to toggle NavLayer) doesn't add visual noise
-        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingHighlightTimer - 0.20f) / 0.05f));
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
 
         // Select window to focus
         const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_FocusPrev, ImGuiInputReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_FocusNext, ImGuiInputReadMode_RepeatSlow);
@@ -3168,7 +3181,7 @@ static void ImGui::NavUpdateWindowing()
     if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_NavKeyboard)
     {
         // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
-        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingHighlightTimer - 0.15f) / 0.04f)); // 1.0f
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
         if (IsKeyPressedMap(ImGuiKey_Tab, true))
             NavUpdateWindowingHighlightWindow(g.IO.KeyShift ? +1 : -1);
         if (!g.IO.KeyCtrl)
@@ -3252,6 +3265,9 @@ void ImGui::NavUpdateWindowingList()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindowingTarget != NULL);
+
+    if (g.NavWindowingTimer < NAV_WINDOWING_LIST_APPEAR_DELAY)
+        return;
 
     if (g.NavWindowingList == NULL)
         g.NavWindowingList = FindWindowByName("###NavWindowingList");
@@ -4414,10 +4430,10 @@ void ImGui::NewFrame()
     UpdateMouseMovingWindow();
 
     // Background darkening/whitening
-    if (GetFrontMostPopupModal() != NULL || g.NavWindowingTarget != NULL)
+    if (GetFrontMostPopupModal() != NULL || (g.NavWindowingTarget != NULL && g.NavWindowingHighlightAlpha > 0.0f))
         g.DimBgRatio = ImMin(g.DimBgRatio + g.IO.DeltaTime * 6.0f, 1.0f);
     else
-        g.DimBgRatio = 0.0f;
+        g.DimBgRatio = ImMax(g.DimBgRatio - g.IO.DeltaTime * 10.0f, 0.0f);
 
     g.MouseCursor = ImGuiMouseCursor_Arrow;
     g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
@@ -4940,7 +4956,7 @@ void ImGui::EndFrame()
     // Draw modal whitening background on _other_ viewports than the one the modal is one
     ImGuiWindow* modal_window = GetFrontMostPopupModal();
     const bool dim_bg_for_modal = (modal_window != NULL);
-    const bool dim_bg_for_window_list = (g.NavWindowingTarget != NULL);
+    const bool dim_bg_for_window_list = (g.NavWindowingTargetAnim != NULL);
     if (dim_bg_for_modal || dim_bg_for_window_list)
         for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
         {
@@ -4949,7 +4965,7 @@ void ImGui::EndFrame()
                 continue;
             if (g.NavWindowingList && viewport == g.NavWindowingList->Viewport)
                 continue;
-            if (g.NavWindowingTarget && viewport == g.NavWindowingTarget->Viewport)
+            if (g.NavWindowingTargetAnim && viewport == g.NavWindowingTargetAnim->Viewport)
                 continue;
             ImDrawList* draw_list = GetOverlayDrawList(viewport);
             const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
@@ -7444,7 +7460,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Draw modal or window list full viewport dimming background (for other viewports we'll render them in EndFrame)
         const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFrames <= 0;
-        const bool dim_bg_for_window_list = g.NavWindowingTarget && ((window == g.NavWindowingTarget->RootWindow) || (g.NavWindowingList && (window == g.NavWindowingList) && g.NavWindowingList->Viewport != g.NavWindowingTarget->Viewport));
+        const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && ((window == g.NavWindowingTargetAnim->RootWindow) || (g.NavWindowingList && (window == g.NavWindowingList) && g.NavWindowingList->Viewport != g.NavWindowingTargetAnim->Viewport));
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
             const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
@@ -7452,7 +7468,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Draw navigation selection/windowing rectangle background
-        if (dim_bg_for_window_list && window == g.NavWindowingTarget->RootWindow)
+        if (dim_bg_for_window_list && window == g.NavWindowingTargetAnim)
         {
             ImRect bb = window->Rect();
             bb.Expand(g.FontSize);
@@ -7536,7 +7552,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Draw navigation selection/windowing rectangle border
-        if (g.NavWindowingTarget == window)
+        if (g.NavWindowingTargetAnim == window)
         {
             float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
             ImRect bb = window->Rect();
