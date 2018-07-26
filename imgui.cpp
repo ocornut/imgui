@@ -6178,6 +6178,18 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     window->Size = window->SizeFull;
 }
 
+void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window)
+{
+    window->ParentWindow = parent_window;
+    window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
+    if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+        window->RootWindow = parent_window->RootWindow;
+    if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
+        window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
+    while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
+        window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
+}
+
 // Push a new ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
@@ -6296,17 +6308,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // When reusing window again multiple times a frame, just append content (don't need to setup again)
     if (first_begin_of_the_frame)
     {
-        const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
-
         // Initialize
-        window->ParentWindow = parent_window;
-        window->RootWindow = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
-        if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !window_is_child_tooltip)
-            window->RootWindow = parent_window->RootWindow;
-        if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
-            window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
-        while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
-            window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
+        const bool window_is_child_tooltip = (flags & ImGuiWindowFlags_ChildWindow) && (flags & ImGuiWindowFlags_Tooltip); // FIXME-WIP: Undocumented behavior of Child+Tooltip for pinned tooltip (#1345)
+        UpdateWindowParentAndRootLinks(window, flags, parent_window);
 
         window->Active = true;
         window->BeginOrderWithinParent = 0;
