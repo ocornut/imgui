@@ -233,6 +233,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::EndMenu();
         }
+
         if (ImGui::BeginMenu("Help"))
         {
             ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
@@ -536,9 +537,14 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
             if (ImGui::TreeNode("Word Wrapping"))
             {
+				ImGui::SetTextAlignment(ImGuiTextAlignment_Right);
                 // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
-                ImGui::TextWrapped("This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
-                ImGui::Spacing();
+                ImGui::TextWrapped("[Right Align] This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
+				ImGui::Spacing();
+				ImGui::SetTextAlignment(ImGuiTextAlignment_Center);
+				ImGui::TextWrapped("[Center Align] This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
+				ImGui::SetTextAlignment();
+				ImGui::Spacing();
 
                 static float wrap_width = 200.0f;
                 ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
@@ -559,6 +565,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
                 ImGui::PopTextWrapPos();
 
+				ImGui::SetTextAlignment();
                 ImGui::TreePop();
             }
 
@@ -2009,11 +2016,14 @@ void ImGui::ShowDemoWindow(bool* p_open)
         {
             ImGui::Columns(2, "word-wrapping");
             ImGui::Separator();
+			
             ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
             ImGui::TextWrapped("Hello Left");
             ImGui::NextColumn();
             ImGui::TextWrapped("The quick brown fox jumps over the lazy dog.");
             ImGui::TextWrapped("Hello Right");
+
+
             ImGui::Columns(1);
             ImGui::Separator();
             ImGui::TreePop();
@@ -2101,6 +2111,30 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Separator();
             ImGui::TreePop();
         }
+
+		if (ImGui::TreeNode("Multi-Text Right-Aligned"))
+		{
+			ImGui::Columns(3, NULL, true);
+			for (int i = 0; i < 3 * 3; i++)
+			{
+				if (ImGui::GetColumnIndex() == 0)
+					ImGui::Separator();
+				
+				ImGui::SetTextAlignment(ImGuiTextAlignment_Left);
+				ImGui::Text("Width");
+				ImGui::SameLine();
+
+				ImGui::SetTextAlignment(ImGuiTextAlignment_Right);
+				ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), "%.2f", ImGui::GetColumnWidth());
+				ImGui::NextColumn();
+			}
+			ImGui::Columns(1);
+			ImGui::Separator();
+			ImGui::TreePop();
+			ImGui::SetTextAlignment(ImGuiTextAlignment_Left);
+		}
+
+
         ImGui::PopID();
     }
 

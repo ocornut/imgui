@@ -756,6 +756,7 @@ struct ImGuiContext
     int                     WantCaptureKeyboardNextFrame;
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // Temporary text buffer
+	
 
     ImGuiContext(ImFontAtlas* shared_font_atlas) : OverlayDrawList(NULL)
     {
@@ -912,6 +913,7 @@ struct IMGUI_API ImGuiWindowTempData
     ImVector<ImGuiItemFlags>ItemFlagsStack;
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
+	ImGuiTextAlignment      TextAlignment;			// text alignment
     ImVector<ImGuiGroupData>GroupStack;
     int                     StackSizesBackup[6];    // Store size of various stacks for asserting
 
