@@ -15,7 +15,7 @@
 //  2018-07-07: Initial version.
 
 // Data
-static clock_t  g_Time = 0;
+static CFAbsoluteTime g_Time = 0.0;
 
 // Functions
 bool ImGui_ImplOSX_Init()
@@ -94,10 +94,10 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     io.DisplayFramebufferScale = ImVec2(dpi, dpi);
 
     // Setup time step
-    if (g_Time == 0)
-        g_Time = clock();
-    clock_t current_time = clock();
-    io.DeltaTime = (double)(current_time - g_Time) / CLOCKS_PER_SEC;
+    if (g_Time == 0.0)
+        g_Time = CFAbsoluteTimeGetCurrent();
+    CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
+    io.DeltaTime = current_time - g_Time;
     g_Time = current_time;
 }
 
