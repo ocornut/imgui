@@ -710,6 +710,7 @@ struct ImGuiContext
     bool                    DragDropActive;
     bool                    DragDropWithinSourceOrTarget;
     ImGuiDragDropFlags      DragDropSourceFlags;
+    int                     DragDropSourceFrameCount;
     int                     DragDropMouseButton;
     ImGuiPayload            DragDropPayload;
     ImRect                  DragDropTargetRect;
@@ -830,6 +831,7 @@ struct ImGuiContext
 
         DragDropActive = DragDropWithinSourceOrTarget = false;
         DragDropSourceFlags = 0;
+        DragDropSourceFrameCount = -1;
         DragDropMouseButton = -1;
         DragDropTargetId = 0;
         DragDropAcceptFlags = 0;

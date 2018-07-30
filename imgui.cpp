@@ -3903,6 +3903,10 @@ void ImGui::NewFrame()
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it
     g.DrawData.Clear();
 
+    // Drag and drop keep the source ID alive so even if the source disappear our state is consistent
+    if (g.DragDropActive && g.DragDropPayload.SourceId == g.ActiveId)
+        KeepAliveID(g.DragDropPayload.SourceId);
+
     // Clear reference to active widget if the widget isn't alive anymore
     if (!g.HoveredIdPreviousFrame)
         g.HoveredIdTimer = 0.0f;
@@ -3924,13 +3928,7 @@ void ImGui::NewFrame()
     if (g.ScalarAsInputTextId && g.ActiveId != g.ScalarAsInputTextId)
         g.ScalarAsInputTextId = 0;
 
-    // Elapse drag & drop payload
-    if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
-    {
-        ClearDragDrop();
-        g.DragDropPayloadBufHeap.clear();
-        memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
-    }
+    // Drag and drop
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
@@ -4426,7 +4424,6 @@ void ImGui::EndFrame()
     if (g.FrameCountEnded == g.FrameCount)          // Don't process EndFrame() multiple times.
         return;
     IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()");
-    g.FrameScopeActive = false;
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.IO.ImeSetInputScreenPosFn && ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f)
@@ -4444,6 +4441,22 @@ void ImGui::EndFrame()
     // Show CTRL+TAB list
     if (g.NavWindowingTarget)
         NavUpdateWindowingList();
+
+    // Drag and Drop: Elapse payload at the end of the frame if mouse has been released
+    if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount && !IsMouseDown(g.DragDropMouseButton))
+    {
+        ClearDragDrop();
+        g.DragDropPayloadBufHeap.clear();
+        memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
+    }
+
+    // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
+    if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
+    {
+        g.DragDropWithinSourceOrTarget = true;
+        SetTooltip("...");
+        g.DragDropWithinSourceOrTarget = false;
+    }
 
     // Initiate moving window
     if (g.ActiveId == 0 && g.HoveredId == 0)
@@ -4505,6 +4518,7 @@ void ImGui::EndFrame()
     memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
     memset(g.IO.NavInputs, 0, sizeof(g.IO.NavInputs));
 
+    g.FrameScopeActive = false;
     g.FrameCountEnded = g.FrameCount;
 }
 
@@ -5277,7 +5291,11 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_
 
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
-    BeginTooltipEx(0, true);
+    ImGuiContext& g = *GImGui;
+    if (g.DragDropWithinSourceOrTarget)
+        BeginTooltip();
+    else
+        BeginTooltipEx(0, true);
     TextV(fmt, args);
     EndTooltip();
 }
@@ -13689,6 +13707,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             g.DragDropSourceFlags = flags;
             g.DragDropMouseButton = mouse_button;
         }
+        g.DragDropSourceFrameCount = g.FrameCount;
         g.DragDropWithinSourceOrTarget = true;
 
         if (!(flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
