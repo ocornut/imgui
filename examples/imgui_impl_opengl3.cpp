@@ -61,7 +61,11 @@
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>  // Use GL ES 3
 #else
-#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
+// About OpenGL function loaders:
+// Modern OpenGL requires individual functions to be loaded manually. Helper libraries are often used for this purpose.
+// Here we are using gl3w.h, which requires a call to gl3wInit(). 
+// You may use another any other loader/header of your choice, such as glew, glext, glad, glLoadGen, etc.
+#include <GL/gl3w.h>
 //#include <glew.h>
 //#include <glext.h>
 //#include <glad/glad.h>
