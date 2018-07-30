@@ -8332,6 +8332,9 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     if (window->SkipItems)
         return false;
 
+    // Cannot use zero-size for InvisibleButton(). Unlike Button() there is not way to fallback using the label size.
+    IM_ASSERT(size_arg.x != 0.0f && size_arg.y != 0.0f);
+
     const ImGuiID id = window->GetID(str_id);
     ImVec2 size = CalcItemSize(size_arg, 0.0f, 0.0f);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
