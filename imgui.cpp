@@ -1257,6 +1257,11 @@ static const char* ImAtoi(const char* src, TYPE* output)
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 // B) When buf==NULL vsnprintf() will return the output size.
 #ifndef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
+
+#if defined(_MSC_VER) && !defined(vsnprintf)
+#define vsnprintf _vsnprintf
+#endif
+
 int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 {
     IM_ASSERT(fmt != NULL);
