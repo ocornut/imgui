@@ -7137,10 +7137,23 @@ void ImGui::PopStyleColor(int count)
     }
 }
 
-void ImGui::SetTextAlignment(ImGuiTextAlignment alignment)
-{	
-	ImGuiWindow* window = GetCurrentWindow();
-	window->DC.TextAlignment = alignment;
+void ImGui::PushTextAlignment(float alignment)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    float backup = window->DC.TextAlignment;
+    window->DC.TextAlignmentStack.push_back(backup);
+    window->DC.TextAlignment = alignment;
+}
+
+void ImGui::PopTextAlignment(int count )
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    while (count > 0)
+    {
+        window->DC.TextAlignment = window->DC.TextAlignmentStack.back();        
+        window->DC.TextAlignmentStack.pop_back();
+        count--;
+    }
 }
 
 struct ImGuiStyleVarInfo
@@ -7907,7 +7920,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrentLineTextBaseOffset);
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
-	const ImRect clip_rect = window->ClipRect;
+    const ImRect clip_rect = window->ClipRect;
     if (text_end - text > 2000 && !wrap_enabled)
     {
         // Long text!

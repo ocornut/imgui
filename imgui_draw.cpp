@@ -1125,7 +1125,7 @@ void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImV
     PathStroke(col, false, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImGuiTextAlignment alignment)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, float alignment)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -2607,130 +2607,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     }
 }
 
-
-void ImFont::RenderTextLine(ImDrawList* draw_list, float scale, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextAlignment alignment) const
-{
-	// Skip non-visible lines
-	const char* s = text_begin;
-	if (!text_end)
-		text_end = text_begin + strlen(text_begin); // ImGui functions generally already provides a valid text_end, so this is merely to handle direct calls.
-
-	// Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
-	const int vtx_count_max = (int)(text_end - s) * 4;
-	const int idx_count_max = (int)(text_end - s) * 6;
-	const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
-	draw_list->PrimReserve(idx_count_max, vtx_count_max);
-
-	ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
-	ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
-	unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
-
-	ImVec2 text_size = CalcTextSizeA(size, FLT_MAX, wrap_width, text_begin, NULL, NULL);
-	float textBoundWidth = wrap_width > 0 ? ImMin(wrap_width, (clip_rect.z - clip_rect.x)) : (clip_rect.z - clip_rect.x);
-	int x = pos.x; // align left
-	if (alignment == ImGuiTextAlignment_Center)
-	{
-		x = pos.x + textBoundWidth / 2 - text_size.x / 2; // align center
-	}
-	else if (alignment == ImGuiTextAlignment_Right)
-	{
-		x = clip_rect.z - text_size.x; // Align Right		
-	}
-	int y = pos.y;
-
-	while (s < text_end)
-	{
-		unsigned int c = (unsigned int)*s;
-		if (c < 0x80)
-		{
-			s += 1;
-		}
-		else
-		{
-			s += ImTextCharFromUtf8(&c, s, text_end);
-			if (c == 0) // Malformed UTF-8?
-				break;
-		}
-		float char_width = 0.0f;
-		if (const ImFontGlyph* glyph = FindGlyph((unsigned short)c))
-		{
-			char_width = glyph->AdvanceX * scale;
-
-			// Arbitrarily assume that both space and tabs are empty glyphs as an optimization
-			if (c != ' ' && c != '\t')
-			{
-				// We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
-				float x1 = x + glyph->X0 * scale;
-				float x2 = x + glyph->X1 * scale;
-				float y1 = y + glyph->Y0 * scale;
-				float y2 = y + glyph->Y1 * scale;
-				if (x1 <= clip_rect.z && x2 >= clip_rect.x)
-				{
-					// Render a character
-					float u1 = glyph->U0;
-					float v1 = glyph->V0;
-					float u2 = glyph->U1;
-					float v2 = glyph->V1;
-
-					// CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads.
-					if (cpu_fine_clip)
-					{
-						if (x1 < clip_rect.x)
-						{
-							u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
-							x1 = clip_rect.x;
-						}
-						if (y1 < clip_rect.y)
-						{
-							v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
-							y1 = clip_rect.y;
-						}
-						if (x2 > clip_rect.z)
-						{
-							u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
-							x2 = clip_rect.z;
-						}
-						if (y2 > clip_rect.w)
-						{
-							v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
-							y2 = clip_rect.w;
-						}
-						if (y1 >= y2)
-						{
-							x += char_width;
-							continue;
-						}
-					}
-
-					// We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
-					{
-						idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx + 1); idx_write[2] = (ImDrawIdx)(vtx_current_idx + 2);
-						idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx + 2); idx_write[5] = (ImDrawIdx)(vtx_current_idx + 3);
-						vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
-						vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
-						vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
-						vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
-						vtx_write += 4;
-						vtx_current_idx += 4;
-						idx_write += 6;
-					}
-				}
-			}
-		}
-
-		x += char_width;
-	}
-
-	// Give back unused vertices
-	draw_list->VtxBuffer.resize((int)(vtx_write - draw_list->VtxBuffer.Data));
-	draw_list->IdxBuffer.resize((int)(idx_write - draw_list->IdxBuffer.Data));
-	draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
-	draw_list->_VtxWritePtr = vtx_write;
-	draw_list->_IdxWritePtr = idx_write;
-	draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
-
-}
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextAlignment alignment) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, float alignment) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -2754,9 +2631,22 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         while (s < text_end && *s != '\n')  // Fast-forward to next line
             s++;
 
-	char LineString[1024];
-	memset(LineString, 0, 1024);
-	unsigned int insertpos = 0;
+    // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
+    const int vtx_count_max = (int)(text_end - s) * 4;
+    const int idx_count_max = (int)(text_end - s) * 6;
+    const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
+    draw_list->PrimReserve(idx_count_max, vtx_count_max);
+
+    ImDrawVert* vtx_write = draw_list->_VtxWritePtr;
+    ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
+    unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
+
+
+    const char* line_start = text_begin;
+    const char* line_end = text_begin;
+    bool flush_line = false;
+    float line_width = 0.0;
+    ImVec2 flush_line_pos = pos;
 
     while (s < text_end)
     {
@@ -2772,19 +2662,22 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
             if (s >= word_wrap_eol)
             {
-				RenderTextLine(draw_list, scale, size, ImVec2(x, y), col, clip_rect, LineString, NULL, wrap_width, cpu_fine_clip, alignment);
-				insertpos = 0;
-				memset(LineString, 0, 1024);
+                flush_line = true;
+                flush_line_pos.y = y;
+                flush_line_pos.x = x;
 
                 x = pos.x;
                 y += line_height;
+
                 word_wrap_eol = NULL;
 
                 // Wrapping skips upcoming blanks
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsBlankA(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
+                    if (ImCharIsBlankA(c)) { s++; }
+                    else if (c == '\n') { s++; break; }
+                    else { break; }
                 }
                 continue;
             }
@@ -2807,10 +2700,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         {
             if (c == '\n')
             {
-				// render the line
-				RenderTextLine(draw_list, scale, size, ImVec2(x, y), col, clip_rect, LineString, NULL, wrap_width, cpu_fine_clip, alignment);
-				insertpos = 0;
-				memset(LineString, 0, 1024);
+                flush_line = true;
+                flush_line_pos.y = y;
+                flush_line_pos.x = x;
 
                 x = pos.x;
                 y += line_height;
@@ -2826,10 +2718,120 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 continue;
         }
 
-		// add char to line string
-		LineString[insertpos++] = c;
+        // move one character in line_end
+        line_end++;
+        // accumulate current line width if alignment > 0
+        if (alignment > 0.0f)
+        {
+            const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX) * scale;
+            line_width += char_width;
+        }
+
+        if (line_end == text_end)
+        {
+            flush_line_pos.y = y;
+            flush_line_pos.x = x;
+        }
+
+        // render current line
+        if (flush_line | (line_end == text_end))
+        {
+            // inner loop for lines
+            const char* s_line = line_start;
+            int x_line = (int)flush_line_pos.x;
+            if (alignment > 0)
+            {
+                x_line = clip_rect.x + (clip_rect.z - clip_rect.x) * alignment - line_width * alignment;            
+            }
+            int y_line = (int)flush_line_pos.y;
+
+            while (s_line < line_end)
+            {
+                unsigned int c_line = (unsigned int)*s_line;
+                float char_width = 0.0f;
+                if (const ImFontGlyph* glyph = FindGlyph((unsigned short)c_line))
+                {
+                    char_width = glyph->AdvanceX * scale;
+                    // Arbitrarily assume that both space and tabs are empty glyphs as an optimization
+                    if (c_line != ' ' && c_line != '\t')
+                    {
+                        // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
+                        float x1 = x_line + glyph->X0 * scale;
+                        float x2 = x_line + glyph->X1 * scale;
+                        float y1 = y_line + glyph->Y0 * scale;
+                        float y2 = y_line + glyph->Y1 * scale;
+                        if (x1 <= clip_rect.z && x2 >= clip_rect.x)
+                        {
+                            // Render a character
+                            float u1 = glyph->U0;
+                            float v1 = glyph->V0;
+                            float u2 = glyph->U1;
+                            float v2 = glyph->V1;
+
+                            // CPU side clipping used to fit text in their frame when the frame is too small. Only does clipping for axis aligned quads.
+                            if (cpu_fine_clip)
+                            {
+                                if (x1 < clip_rect.x)
+                                {
+                                    u1 = u1 + (1.0f - (x2 - clip_rect.x) / (x2 - x1)) * (u2 - u1);
+                                    x1 = clip_rect.x;
+                                }
+                                if (y1 < clip_rect.y)
+                                {
+                                    v1 = v1 + (1.0f - (y2 - clip_rect.y) / (y2 - y1)) * (v2 - v1);
+                                    y1 = clip_rect.y;
+                                }
+                                if (x2 > clip_rect.z)
+                                {
+                                    u2 = u1 + ((clip_rect.z - x1) / (x2 - x1)) * (u2 - u1);
+                                    x2 = clip_rect.z;
+                                }
+                                if (y2 > clip_rect.w)
+                                {
+                                    v2 = v1 + ((clip_rect.w - y1) / (y2 - y1)) * (v2 - v1);
+                                    y2 = clip_rect.w;
+                                }
+                                if (y1 >= y2)
+                                {
+                                    x_line += char_width;
+                                    continue;
+                                }
+                            }
+
+                            // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
+                            {
+                                idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx + 1); idx_write[2] = (ImDrawIdx)(vtx_current_idx + 2);
+                                idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx + 2); idx_write[5] = (ImDrawIdx)(vtx_current_idx + 3);
+                                vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                                vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                                vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                                vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                                vtx_write += 4;
+                                vtx_current_idx += 4;
+                                idx_write += 6;
+                            }
+                        }
+                    }
+                }
+
+                x_line += char_width;
+                s_line++;
+            }
+            flush_line = false;
+            line_end = s;
+            line_start = s;
+            line_width = 0;
+        }        
     }
-	RenderTextLine(draw_list, scale, size, ImVec2(x,y), col, clip_rect, LineString, NULL, wrap_width, cpu_fine_clip, alignment);
+
+    // Give back unused vertices
+    draw_list->VtxBuffer.resize((int)(vtx_write - draw_list->VtxBuffer.Data));
+    draw_list->IdxBuffer.resize((int)(idx_write - draw_list->IdxBuffer.Data));
+    draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
+    draw_list->_VtxWritePtr = vtx_write;
+    draw_list->_IdxWritePtr = idx_write;
+    draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
+
 }
 
 //-----------------------------------------------------------------------------
