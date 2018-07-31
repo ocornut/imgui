@@ -4441,11 +4441,15 @@ void ImGui::EndFrame()
     // Show CTRL+TAB list
     if (g.NavWindowingTarget)
         NavUpdateWindowingList();
- 
-    // Drag and Drop: Elapse payload (if source stops being submitted)
-    if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
-        if ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceAutoExpirePayload) || !IsMouseDown(g.DragDropMouseButton))
+
+    // Drag and Drop: Elapse payload (if delivered, or if source stops being submitted)
+    if (g.DragDropActive)
+    {
+        bool is_delivered = g.DragDropPayload.Delivery;
+        bool is_elapsed = (g.DragDropPayload.DataFrameCount + 1 < g.FrameCount) && ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceAutoExpirePayload) || !IsMouseDown(g.DragDropMouseButton));
+        if (is_delivered || is_elapsed)
             ClearDragDrop();
+    }
 
     // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
     if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
