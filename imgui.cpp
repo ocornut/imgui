@@ -6923,8 +6923,9 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
     {
         ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.CurrentPopupStack.back().OpenMousePos;
-        if (window->Appearing || (flags & ImGuiWindowFlags_Tooltip))
-            window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && IsMousePosValid(&mouse_ref)) ? mouse_ref : NavCalcPreferredRefPos());
+        bool mouse_valid = IsMousePosValid(&mouse_ref);
+        if ((window->Appearing || (flags & ImGuiWindowFlags_Tooltip)) && (!use_mouse_ref || mouse_valid))
+            window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
         else
             window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
     }
