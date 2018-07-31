@@ -4444,11 +4444,7 @@ void ImGui::EndFrame()
 
     // Drag and Drop: Elapse payload at the end of the frame if mouse has been released
     if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount && !IsMouseDown(g.DragDropMouseButton))
-    {
         ClearDragDrop();
-        g.DragDropPayloadBufHeap.clear();
-        memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
-    }
 
     // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
     if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
@@ -13629,6 +13625,9 @@ void ImGui::ClearDragDrop()
     g.DragDropAcceptIdCurr = g.DragDropAcceptIdPrev = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropAcceptFrameCount = -1;
+
+    g.DragDropPayloadBufHeap.clear();
+    memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
 }
 
 // Call when current ID is active.
@@ -13801,6 +13800,8 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
         return false;
     IM_ASSERT(id != 0);
     if (!IsMouseHoveringRect(bb.Min, bb.Max) || (id == g.DragDropPayload.SourceId))
+        return false;
+    if (window->SkipItems)
         return false;
 
     IM_ASSERT(g.DragDropWithinSourceOrTarget == false);
