@@ -13,6 +13,7 @@
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2018-07-30: OpenGL: Support for GLSL 300 ES and 410 core. Fixes for Emscripten compilation.
 //  2018-07-10: OpenGL: Support for more GLSL versions (based on the GLSL version string). Added error output when shaders fail to compile/link.
 //  2018-06-08: Misc: Extracted imgui_impl_opengl3.cpp/.h away from the old combined GLFW/SDL+OpenGL3 examples.
 //  2018-06-08: OpenGL: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
@@ -39,7 +40,7 @@
 //  3.2       150       "#version 150"
 //  3.3       330
 //  4.0       400
-//  4.1       410
+//  4.1       410       "#version 410 core"
 //  4.2       420
 //  4.3       430
 //  ES 2.0    100       "#version 100"
@@ -59,10 +60,18 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
+#ifdef __EMSCRIPTEN__
+#include <GLES3/gl3.h>  // Use GL ES 3
+#else
+// About OpenGL function loaders:
+// Modern OpenGL requires individual functions to be loaded manually. Helper libraries are often used for this purpose.
+// Here we are using gl3w.h, which requires a call to gl3wInit(). 
+// You may use another any other loader/header of your choice, such as glew, glext, glad, glLoadGen, etc.
+#include <GL/gl3w.h>
 //#include <glew.h>
 //#include <glext.h>
 //#include <glad/glad.h>
+#endif
 
 // OpenGL Data
 static char         g_GlslVersionString[32] = "";
@@ -128,7 +137,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLint last_sampler; glGetIntegerv(GL_SAMPLER_BINDING, &last_sampler);
     GLint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
     GLint last_vertex_array; glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
+#ifdef GL_POLYGON_MODE
     GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
+#endif
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
     GLenum last_blend_src_rgb; glGetIntegerv(GL_BLEND_SRC_RGB, (GLint*)&last_blend_src_rgb);
@@ -149,7 +160,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
+#ifdef GL_POLYGON_MODE
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+#endif
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is (0,0) for single viewport apps.
@@ -168,8 +181,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glUseProgram(g_ShaderHandle);
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
-    if (glBindSampler) glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
-
+#ifdef GL_SAMPLER_BINDING
+    glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
+#endif
     // Recreate the VAO every time 
     // (This is to easily allow multiple GL contexts. VAO are not shared among GL contexts, and we don't track creation/deletion of windows so we don't have an obvious key to use to cache them.)
     GLuint vao_handle = 0;
@@ -225,7 +239,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Restore modified GL state
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
-    if (glBindSampler) glBindSampler(0, last_sampler);
+#ifdef GL_SAMPLER_BINDING
+    glBindSampler(0, last_sampler);
+#endif
     glActiveTexture(last_active_texture);
     glBindVertexArray(last_vertex_array);
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
@@ -235,7 +251,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+#ifdef GL_POLYGON_MODE
     glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
+#endif
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
@@ -354,6 +372,35 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
+    const GLchar* vertex_shader_glsl_300_es =
+        "precision mediump float;\n"
+        "layout (location = 0) in vec2 Position;\n"
+        "layout (location = 1) in vec2 UV;\n"
+        "layout (location = 2) in vec4 Color;\n"
+        "uniform mat4 ProjMtx;\n"
+        "out vec2 Frag_UV;\n"
+        "out vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Frag_UV = UV;\n"
+        "    Frag_Color = Color;\n"
+        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+        "}\n";
+
+    const GLchar* vertex_shader_glsl_410_core =
+        "layout (location = 0) in vec2 Position;\n"
+        "layout (location = 1) in vec2 UV;\n"
+        "layout (location = 2) in vec4 Color;\n"
+        "uniform mat4 ProjMtx;\n"
+        "out vec2 Frag_UV;\n"
+        "out vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Frag_UV = UV;\n"
+        "    Frag_Color = Color;\n"
+        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+        "}\n";
+
     const GLchar* fragment_shader_glsl_120 =
         "#ifdef GL_ES\n"
         "    precision mediump float;\n"
@@ -376,6 +423,27 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
         "}\n";
 
+    const GLchar* fragment_shader_glsl_300_es =
+        "precision mediump float;\n"
+        "uniform sampler2D Texture;\n"
+        "in vec2 Frag_UV;\n"
+        "in vec4 Frag_Color;\n"
+        "layout (location = 0) out vec4 Out_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "}\n";
+
+    const GLchar* fragment_shader_glsl_410_core =
+        "in vec2 Frag_UV;\n"
+        "in vec4 Frag_Color;\n"
+        "uniform sampler2D Texture;\n"
+        "layout (location = 0) out vec4 Out_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "}\n";
+
     // Select shaders matching our GLSL versions
     const GLchar* vertex_shader = NULL;
     const GLchar* fragment_shader = NULL;
@@ -383,6 +451,16 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     {
         vertex_shader = vertex_shader_glsl_120;
         fragment_shader = fragment_shader_glsl_120;
+    }
+    else if (glsl_version == 410)
+    {
+        vertex_shader = vertex_shader_glsl_410_core;
+        fragment_shader = fragment_shader_glsl_410_core;
+    }
+    else if (glsl_version == 300)
+    {
+        vertex_shader = vertex_shader_glsl_300_es;
+        fragment_shader = fragment_shader_glsl_300_es;
     }
     else
     {

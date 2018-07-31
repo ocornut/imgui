@@ -1210,7 +1210,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& a, c
     PathRect(a, b, rounding, rounding_corners);
     PathFillConvex(col);
     int vert_end_idx = VtxBuffer.Size;
-    ImGui::ShadeVertsLinearUV(VtxBuffer.Data + vert_start_idx, VtxBuffer.Data + vert_end_idx, a, b, uv_a, uv_b, true);
+    ImGui::ShadeVertsLinearUV(this, vert_start_idx, vert_end_idx, a, b, uv_a, uv_b, true);
 
     if (push_texture_id)
         PopTextureID();
@@ -1258,10 +1258,12 @@ void ImDrawData::ScaleClipRects(const ImVec2& scale)
 //-----------------------------------------------------------------------------
 
 // Generic linear color gradient, write to RGB fields, leave A untouched.
-void ImGui::ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDrawVert* vert_end, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1)
+void ImGui::ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1)
 {
     ImVec2 gradient_extent = gradient_p1 - gradient_p0;
     float gradient_inv_length2 = 1.0f / ImLengthSqr(gradient_extent);
+    ImDrawVert* vert_start = draw_list->VtxBuffer.Data + vert_start_idx;
+    ImDrawVert* vert_end = draw_list->VtxBuffer.Data + vert_end_idx;
     for (ImDrawVert* vert = vert_start; vert < vert_end; vert++)
     {
         float d = ImDot(vert->pos - gradient_p0, gradient_extent);
@@ -1274,7 +1276,7 @@ void ImGui::ShadeVertsLinearColorGradientKeepAlpha(ImDrawVert* vert_start, ImDra
 }
 
 // Distribute UV over (a, b) rectangle
-void ImGui::ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp)
+void ImGui::ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp)
 {
     const ImVec2 size = b - a;
     const ImVec2 uv_size = uv_b - uv_a;
@@ -1282,11 +1284,12 @@ void ImGui::ShadeVertsLinearUV(ImDrawVert* vert_start, ImDrawVert* vert_end, con
         size.x != 0.0f ? (uv_size.x / size.x) : 0.0f,
         size.y != 0.0f ? (uv_size.y / size.y) : 0.0f);
 
+    ImDrawVert* vert_start = draw_list->VtxBuffer.Data + vert_start_idx;
+    ImDrawVert* vert_end = draw_list->VtxBuffer.Data + vert_end_idx;
     if (clamp)
     {
         const ImVec2 min = ImMin(uv_a, uv_b);
         const ImVec2 max = ImMax(uv_a, uv_b);
-
         for (ImDrawVert* vertex = vert_start; vertex < vert_end; ++vertex)
             vertex->uv = ImClamp(uv_a + ImMul(ImVec2(vertex->pos.x, vertex->pos.y) - a, scale), min, max);
     }
@@ -1545,7 +1548,8 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
     if (font_cfg.SizePixels <= 0.0f) font_cfg.SizePixels = 13.0f;
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
-    ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, GetGlyphRangesDefault());
+    const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
+    ImFont* font = AddFontFromMemoryCompressedBase85TTF(ttf_compressed_base85, font_cfg.SizePixels, &font_cfg, glyph_ranges);
     font->DisplayOffset.y = 1.0f;
     return font;
 }
@@ -2342,6 +2346,8 @@ void ImFont::GrowIndex(int new_size)
     IndexLookup.resize(new_size, (unsigned short)-1);
 }
 
+// x0/y0/x1/y1 are offset from the character upper-left layout position, in pixels. Therefore x0/y0 are often fairly close to zero.
+// Not to be mistaken with texture coordinates, which are held by u0/v0/u1/v1 in normalized format (0.0..1.0 on each texture axis).
 void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x)
 {
     Glyphs.resize(Glyphs.Size + 1);

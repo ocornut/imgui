@@ -36,7 +36,8 @@
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#define snprintf _snprintf
+#define snprintf  _snprintf
+#define vsnprintf _vsnprintf
 #endif
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wold-style-cast"             // warning : use of old-style cast                              // yes, they are more terse.
@@ -1035,7 +1036,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             const ImS64   s64_zero = 0,   s64_one = 1,   s64_fifty = 50, s64_min = LLONG_MIN/2, s64_max = LLONG_MAX/2,  s64_hi_a = LLONG_MAX/2 - 100,  s64_hi_b = LLONG_MAX/2;
             const ImU64   u64_zero = 0,   u64_one = 1,   u64_fifty = 50, u64_min = 0,           u64_max = ULLONG_MAX/2, u64_hi_a = ULLONG_MAX/2 - 100, u64_hi_b = ULLONG_MAX/2;
             const float   f32_zero = 0.f, f32_one = 1.f, f32_lo_a = -10000000000.0f, f32_hi_a = +10000000000.0f;
-            const double  f64_zero = 0.,  f64_one = 1.,  f64_lo_a = -1000000000000000, f64_hi_a = +1000000000000000;
+            const double  f64_zero = 0.,  f64_one = 1.,  f64_lo_a = -1000000000000000.0, f64_hi_a = +1000000000000000.0;
 
             // State
             static ImS32  s32_v = -1;
@@ -1534,10 +1535,26 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::PopItemWidth();
 
             // Dummy
-            ImVec2 sz(30,30);
-            ImGui::Button("A", sz); ImGui::SameLine();
-            ImGui::Dummy(sz); ImGui::SameLine();
-            ImGui::Button("B", sz);
+            ImVec2 button_sz(40,40);
+            ImGui::Button("A", button_sz); ImGui::SameLine();
+            ImGui::Dummy(button_sz); ImGui::SameLine();
+            ImGui::Button("B", button_sz);
+
+            // Manually wrapping (we should eventually provide this as an automatic layout feature, but for now you can do it manually)
+            ImGui::Text("Manually wrapping:");
+            ImGuiStyle& style = ImGui::GetStyle();
+            int buttons_count = 20;
+            float window_visible_x2 = ImGui::GetWindowPos().x + ImGui::GetWindowContentRegionMax().x;
+            for (int n = 0; n < buttons_count; n++)
+            {
+                ImGui::PushID(n);
+                ImGui::Button("Box", button_sz);
+                float last_button_x2 = ImGui::GetItemRectMax().x;
+                float next_button_x2 = last_button_x2 + style.ItemSpacing.x + button_sz.x; // Expected position if next button was on same line
+                if (n + 1 < buttons_count && next_button_x2 < window_visible_x2)
+                    ImGui::SameLine();
+                ImGui::PopID();
+            }
 
             ImGui::TreePop();
         }

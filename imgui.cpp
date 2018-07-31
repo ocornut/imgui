@@ -1271,9 +1271,13 @@ static const char* ImAtoi(const char* src, TYPE* output)
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 // B) When buf==NULL vsnprintf() will return the output size.
 #ifndef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
+
+#if defined(_MSC_VER) && !defined(vsnprintf)
+#define vsnprintf _vsnprintf
+#endif
+
 int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 {
-    IM_ASSERT(fmt != NULL);
     va_list args;
     va_start(args, fmt);
     int w = vsnprintf(buf, buf_size, fmt, args);
@@ -1288,7 +1292,6 @@ int ImFormatString(char* buf, size_t buf_size, const char* fmt, ...)
 
 int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 {
-    IM_ASSERT(fmt != NULL);
     int w = vsnprintf(buf, buf_size, fmt, args);
     if (buf == NULL)
         return w;
@@ -1940,7 +1943,11 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 // On some platform vsnprintf() takes va_list by reference and modifies it.
 // va_copy is the 'correct' way to copy a va_list but Visual Studio prior to 2013 doesn't have it.
 #ifndef va_copy
+#if defined(__GNUC__) || defined(__clang__)
+#define va_copy(dest, src) __builtin_va_copy(dest, src)
+#else
 #define va_copy(dest, src) (dest = src)
+#endif
 #endif
 
 // Helper: Text buffer for logging/accumulating text
@@ -2305,7 +2312,8 @@ void ImGui::SetHoveredID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
     g.HoveredIdAllowOverlap = false;
-    g.HoveredIdTimer = (id != 0 && g.HoveredIdPreviousFrame == id) ? (g.HoveredIdTimer + g.IO.DeltaTime) : 0.0f;
+    if (id != 0 && g.HoveredIdPreviousFrame != id)
+        g.HoveredIdTimer = 0.0f;
 }
 
 ImGuiID ImGui::GetHoveredID()
@@ -4357,6 +4365,7 @@ void ImGui::NewFrame()
     }
 
     g.Time += g.IO.DeltaTime;
+    g.FrameScopeActive = true;
     g.FrameCount += 1;
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
@@ -4382,9 +4391,15 @@ void ImGui::NewFrame()
         viewport->DrawDataP.Clear();
     }
 
+    // Drag and drop keep the source ID alive so even if the source disappear our state is consistent
+    if (g.DragDropActive && g.DragDropPayload.SourceId == g.ActiveId)
+        KeepAliveID(g.DragDropPayload.SourceId);
+
     // Clear reference to active widget if the widget isn't alive anymore
     if (!g.HoveredIdPreviousFrame)
         g.HoveredIdTimer = 0.0f;
+    if (g.HoveredId)
+        g.HoveredIdTimer += g.IO.DeltaTime;
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
@@ -4401,13 +4416,7 @@ void ImGui::NewFrame()
     if (g.ScalarAsInputTextId && g.ActiveId != g.ScalarAsInputTextId)
         g.ScalarAsInputTextId = 0;
 
-    // Elapse drag & drop payload
-    if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount)
-    {
-        ClearDragDrop();
-        g.DragDropPayloadBufHeap.clear();
-        memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
-    }
+    // Drag and drop
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
@@ -4943,9 +4952,10 @@ void ImGui::PopClipRect()
 void ImGui::EndFrame()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.Initialized);
     if (g.FrameCountEnded == g.FrameCount)          // Don't process EndFrame() multiple times.
         return;
+    IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()");
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.PlatformIO.Platform_SetImeInputPos && g.PlatformImePosViewport != NULL && ImLengthSqr(g.PlatformImePos - g.PlatformImeLastPos) > 0.0001f)
@@ -4985,6 +4995,22 @@ void ImGui::EndFrame()
         NavUpdateWindowingList();
 
     SetCurrentViewport(NULL, NULL);
+
+    // Drag and Drop: Elapse payload at the end of the frame if mouse has been released
+    if (g.DragDropActive && g.DragDropPayload.DataFrameCount + 1 < g.FrameCount && !IsMouseDown(g.DragDropMouseButton))
+    {
+        ClearDragDrop();
+        g.DragDropPayloadBufHeap.clear();
+        memset(&g.DragDropPayloadBufLocal, 0, sizeof(g.DragDropPayloadBufLocal));
+    }
+
+    // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
+    if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
+    {
+        g.DragDropWithinSourceOrTarget = true;
+        SetTooltip("...");
+        g.DragDropWithinSourceOrTarget = false;
+    }
 
     // Initiate moving window
     if (g.ActiveId == 0 && g.HoveredId == 0)
@@ -5061,13 +5087,14 @@ void ImGui::EndFrame()
     memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
     memset(g.IO.NavInputs, 0, sizeof(g.IO.NavInputs));
 
+    g.FrameScopeActive = false;
     g.FrameCountEnded = g.FrameCount;
 }
 
 void ImGui::Render()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.Initialized);   // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.Initialized);
 
     if (g.FrameCountEnded != g.FrameCount)
         ImGui::EndFrame();
@@ -5954,7 +5981,11 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_
 
 void ImGui::SetTooltipV(const char* fmt, va_list args)
 {
-    BeginTooltipEx(0, true);
+    ImGuiContext& g = *GImGui;
+    if (g.DragDropWithinSourceOrTarget)
+        BeginTooltip();
+    else
+        BeginTooltipEx(0, true);
     TextV(fmt, args);
     EndTooltip();
 }
@@ -7084,7 +7115,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     IM_ASSERT(name != NULL);                        // Window name required
-    IM_ASSERT(g.Initialized);                       // Forgot to call ImGui::NewFrame()
+    IM_ASSERT(g.FrameScopeActive);                  // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
     // Find or create
@@ -7659,7 +7690,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             // Collapse button
             if (!(flags & ImGuiWindowFlags_NoCollapse))
-                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos + style.FramePadding))
+                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
                     window->CollapseToggleWanted = true; // Defer collapsing to next frame as we are too far in the Begin() function
 
             // Close button
@@ -9330,6 +9361,9 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     if (window->SkipItems)
         return false;
 
+    // Cannot use zero-size for InvisibleButton(). Unlike Button() there is not way to fallback using the label size.
+    IM_ASSERT(size_arg.x != 0.0f && size_arg.y != 0.0f);
+
     const ImGuiID id = window->GetID(str_id);
     ImVec2 size = CalcItemSize(size_arg, 0.0f, 0.0f);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
@@ -9378,17 +9412,21 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    ImRect bb(pos, pos + ImVec2(g.FontSize, g.FontSize));
+    ImRect bb(pos, pos + ImVec2(g.FontSize, g.FontSize) + g.Style.FramePadding * 2.0f);
     ItemAdd(bb, id);
-    bool ret = ButtonBehavior(bb, id, NULL, NULL, ImGuiButtonFlags_None);
-    RenderNavHighlight(bb, id);
-    RenderArrow(bb.Min, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
+
+    ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    if (hovered || held)
+        window->DrawList->AddCircleFilled(bb.GetCenter() + ImVec2(0.0f, -0.5f), g.FontSize * 0.5f + 1.0f, col, 9);
+    RenderArrow(bb.Min + g.Style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
     if (IsItemActive() && IsMouseDragging())
         StartMouseMovingWindow(window);
 
-    return ret;
+    return pressed;
 }
 
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
@@ -9780,9 +9818,10 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
     {
         // Create a small overlapping close button // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
         ImGuiContext& g = *GImGui;
-        float button_sz = g.FontSize * 0.5f;
         ImGuiItemHoveredDataBackup last_item_backup;
-        if (CloseButton(window->GetID((void*)(intptr_t)(id+1)), ImVec2(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x - button_sz, window->DC.LastItemRect.Min.y + g.Style.FramePadding.y + button_sz), button_sz))
+        float button_radius = g.FontSize * 0.5f;
+        ImVec2 button_center = ImVec2(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x - button_radius, window->DC.LastItemRect.GetCenter().y);
+        if (CloseButton(window->GetID((void*)(intptr_t)(id+1)), button_center, button_radius))
             *p_open = false;
         last_item_backup.Restore();
     }
@@ -13853,7 +13892,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             // Paint colors over existing vertices
             ImVec2 gradient_p0(wheel_center.x + ImCos(a0) * wheel_r_inner, wheel_center.y + ImSin(a0) * wheel_r_inner);
             ImVec2 gradient_p1(wheel_center.x + ImCos(a1) * wheel_r_inner, wheel_center.y + ImSin(a1) * wheel_r_inner);
-            ShadeVertsLinearColorGradientKeepAlpha(draw_list->VtxBuffer.Data + vert_start_idx, draw_list->VtxBuffer.Data + vert_end_idx, gradient_p0, gradient_p1, hue_colors[n], hue_colors[n+1]);
+            ShadeVertsLinearColorGradientKeepAlpha(draw_list, vert_start_idx, vert_end_idx, gradient_p0, gradient_p1, hue_colors[n], hue_colors[n+1]);
         }
 
         // Render Cursor + preview on Hue Wheel
@@ -14682,6 +14721,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             g.DragDropSourceFlags = flags;
             g.DragDropMouseButton = mouse_button;
         }
+        g.DragDropSourceFrameCount = g.FrameCount;
         g.DragDropWithinSourceOrTarget = true;
 
         if (!(flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
@@ -14850,7 +14890,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
         // FIXME-DRAG: Settle on a proper default visuals for drop target.
         r.Expand(3.5f);
         bool push_clip_rect = !window->ClipRect.Contains(r);
-        if (push_clip_rect) window->DrawList->PushClipRect(r.Min, r.Max);
+        if (push_clip_rect) window->DrawList->PushClipRect(r.Min-ImVec2(1,1), r.Max+ImVec2(1,1));
         window->DrawList->AddRect(r.Min, r.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, ~0, 2.0f);
         if (push_clip_rect) window->DrawList->PopClipRect();
     }
