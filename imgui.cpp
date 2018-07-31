@@ -2194,6 +2194,12 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
     return ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
 }
 
+ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
+{
+    ImGuiID seed = IDStack.back();
+    return ImHash(&ptr, sizeof(void*), seed);
+}
+
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
 ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
 {
@@ -8929,26 +8935,26 @@ void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiCond cond)
 void ImGui::PushID(const char* str_id)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    window->IDStack.push_back(window->GetID(str_id));
+    window->IDStack.push_back(window->GetIDNoKeepAlive(str_id));
 }
 
 void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    window->IDStack.push_back(window->GetID(str_id_begin, str_id_end));
+    window->IDStack.push_back(window->GetIDNoKeepAlive(str_id_begin, str_id_end));
 }
 
 void ImGui::PushID(const void* ptr_id)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    window->IDStack.push_back(window->GetID(ptr_id));
+    window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
 }
 
 void ImGui::PushID(int int_id)
 {
     const void* ptr_id = (void*)(intptr_t)int_id;
     ImGuiWindow* window = GetCurrentWindowRead();
-    window->IDStack.push_back(window->GetID(ptr_id));
+    window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
 }
 
 void ImGui::PopID()
