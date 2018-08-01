@@ -1,18 +1,21 @@
 build/*
 */Debug/*
 */Release/*
-*/ipch/*
 */x64/*
-*.opensdf
-*.sdf
-*.suo
-*.user
 *.o
 *.obj
 *.exe
+
+## Visual Studio cruft
+.vs/*
+*/ipch/*
+*.opensdf
 *.log
 *.pdb
 *.ilk
+*.user
+*.sdf
+*.suo
 *.VC.db
 *.VC.VC.opendb
 

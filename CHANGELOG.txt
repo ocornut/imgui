@@ -35,10 +35,11 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
- - Removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor `io.OptResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
-   The feature is not currently enabled by default because it is not satisfying enough.
  - Style: Renamed ImGuiCol_ModalWindowDarkening to ImGuiCol_ModalWindowDimBg for consistency with other features. Kept redirection enum (will obsolete).
  - Changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
+ - Removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor `io.ConfigResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
+   The feature is not currently enabled by default because it is not satisfying enough.
+ - Renamed io.OptCursorBlink to io.ConfigCursorBlink, io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
 
 Other Changes:
 
@@ -54,10 +55,12 @@ Other Changes:
  - Drag and Drop: Calling BeginTooltip() between a BeginDragSource()/EndDragSource() or BeginDropTarget()/EndDropTarget() uses adjusted tooltip
    settings matching the one created when calling BeginDragSource() without the ImGuiDragDropFlags_SourceNoPreviewTooltip flag. (#143)
  - Drag and Drop: Payload stays available and under the mouse if the source stops being submitted, however the tooltip is replaced by "...". (#1725)
+ - Drag and Drop: Added ImGuiDragDropFlags_SourceAutoExpirePayload flag to force payload to expire if the source stops being submitted. (#1725, #143).
  - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
  - Made assertion more clear when trying to call Begin() outside of the NewFrame()..EndFrame() scope. (#1987)
+ - Fixed PushID() from keeping alive the new ID Stack top value (if a previously active widget shared the ID it would be erroneously kept alive).  
  - Fixed horizontal mouse wheel not forwarding the request to the parent window if ImGuiWindowFlags_NoScrollWithMouse is set. (#1463, #1380, #1502)
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
  - OS/Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
@@ -73,6 +76,7 @@ Other Changes:
  - Examples: OpenGL3: Made the example app default to GL 3.0 + GLSL 130 (instead of GL 3.2 + GLSL 150) unless on Mac.
  - Examples: OpenGL3: Added error output when shaders fail to compile/link.
  - Examples: DirectX10, DirectX11: Fixed unreleased resources in Init and Shutdown functions. (#1944)
+ - Examples: DirectX11: Querying for IDXGIFactory instead of IDXGIFactory1 to increase compatibility. (#1989) [@matt77hias]
  - Examples: Win32, Glfw, SDL: Added support for the ImGuiMouseCursor_Hand cursor.
 
 
@@ -423,7 +427,7 @@ Breaking Changes:
 
 Other Changes:
 
-- Added `io.OptCursorBlink` option to allow disabling cursor blinking. (#1427)
+- Added `io.OptCursorBlink` option to allow disabling cursor blinking. (#1427) [renamed to io.ConfigCursorBlink in 1.63]
 - Added `GetOverlayDrawList()` helper to quickly get access to a ImDrawList that will be rendered in front of every windows.
 - Added `GetFrameHeight()` helper which returns `(FontSize + style.FramePadding.y * 2)`.
 - Drag and Drop: Added Beta API to easily use drag and drop patterns between imgui widgets.
