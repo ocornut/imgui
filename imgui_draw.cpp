@@ -1125,7 +1125,7 @@ void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImV
     PathStroke(col, false, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, float alignment)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, float alignment, ImVec4* text_bound)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1151,7 +1151,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, alignment);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, alignment, text_bound);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -2607,7 +2607,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     }
 }
 
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, float alignment) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, float x_alignment, const ImVec4* bound_rect) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -2641,13 +2641,13 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
-
-    const char* line_start = text_begin;
+    const char* line_begin = text_begin;
     const char* line_end = text_begin;
+    const char* line_begin_next = text_begin;
+
     bool flush_line = false;
     float line_width = 0.0;
     ImVec2 flush_line_pos = pos;
-
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -2665,19 +2665,30 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 flush_line = true;
                 flush_line_pos.y = y;
                 flush_line_pos.x = x;
-
                 x = pos.x;
                 y += line_height;
-
                 word_wrap_eol = NULL;
 
                 // Wrapping skips upcoming blanks
                 while (s < text_end)
                 {
                     const char c = *s;
-                    if (ImCharIsBlankA(c)) { s++; }
-                    else if (c == '\n') { s++; break; }
-                    else { break; }
+                    if (ImCharIsBlankA(c)) 
+                    { 
+                        s++; 
+                        line_begin_next = s;
+                    }
+                    else if (c == '\n') 
+                    { 
+                        s++; 
+                        line_begin_next = s;
+                        break; 
+                    }
+                    else 
+                    { 
+                        line_begin_next = s;
+                        break; 
+                    }
                 }
                 continue;
             }
@@ -2687,7 +2698,16 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
         {
-            s += 1;
+            if (c != '\n' && !flush_line)
+            {
+                s += 1;
+                line_end++;
+                if (x_alignment > 0.0f)
+                {
+                    const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX) * scale;
+                    line_width += char_width;
+                }
+            }
         }
         else
         {
@@ -2703,7 +2723,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 flush_line = true;
                 flush_line_pos.y = y;
                 flush_line_pos.x = x;
-
                 x = pos.x;
                 y += line_height;
 
@@ -2712,39 +2731,33 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 if (!word_wrap_enabled && y + line_height < clip_rect.y)
                     while (s < text_end && *s != '\n')  // Fast-forward to next line
                         s++;
-                continue;
+                    
+                s++;
+                line_begin_next = s; // next line start after \n
             }
             if (c == '\r')
                 continue;
-        }
-
-        // move one character in line_end
-        line_end++;
-        // accumulate current line width if alignment > 0
-        if (alignment > 0.0f)
-        {
-            const float char_width = ((int)c < IndexAdvanceX.Size ? IndexAdvanceX[(int)c] : FallbackAdvanceX) * scale;
-            line_width += char_width;
         }
 
         if (line_end == text_end)
         {
             flush_line_pos.y = y;
             flush_line_pos.x = x;
+            line_begin_next = text_end;
         }
 
         // render current line
         if (flush_line | (line_end == text_end))
         {
             // inner loop for lines
-            const char* s_line = line_start;
+             const char* s_line = line_begin;
             int x_line = (int)flush_line_pos.x;
-            if (alignment > 0)
+            if (x_alignment > 0)
             {
-                x_line = clip_rect.x + (clip_rect.z - clip_rect.x) * alignment - line_width * alignment;            
+                ImVec4 text_bound_rect = bound_rect ? *bound_rect : clip_rect;               
+                x_line = text_bound_rect.x + (text_bound_rect.z - text_bound_rect.x) * x_alignment - line_width * x_alignment;
             }
             int y_line = (int)flush_line_pos.y;
-
             while (s_line < line_end)
             {
                 unsigned int c_line = (unsigned int)*s_line;
@@ -2818,8 +2831,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 s_line++;
             }
             flush_line = false;
-            line_end = s;
-            line_start = s;
+            line_end = line_begin_next; //line_begin_next;
+            line_begin = line_begin_next;
             line_width = 0;
         }        
     }
@@ -2827,11 +2840,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     // Give back unused vertices
     draw_list->VtxBuffer.resize((int)(vtx_write - draw_list->VtxBuffer.Data));
     draw_list->IdxBuffer.resize((int)(idx_write - draw_list->IdxBuffer.Data));
-    draw_list->CmdBuffer[draw_list->CmdBuffer.Size - 1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
+    draw_list->CmdBuffer[draw_list->CmdBuffer.Size-1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
     draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
     draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
-
 }
 
 //-----------------------------------------------------------------------------

@@ -4643,7 +4643,8 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
     if (text != text_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width, 0, window->DC.TextAlignment);
+        ImVec4 textBound(window->DC.LastItemRect.Min.x, window->DC.LastItemRect.Min.y, window->DC.LastItemRect.Max.x, window->DC.LastItemRect.Max.y);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width, 0, window->DC.TextAlignment, &textBound);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
     }
@@ -7150,7 +7151,7 @@ void ImGui::PopTextAlignment(int count )
     ImGuiWindow* window = GetCurrentWindow();
     while (count > 0)
     {
-        window->DC.TextAlignment = window->DC.TextAlignmentStack.back();        
+        window->DC.TextAlignment = window->DC.TextAlignmentStack.empty() ? 0.0f : window->DC.TextAlignmentStack.back();        
         window->DC.TextAlignmentStack.pop_back();
         count--;
     }
@@ -8003,6 +8004,11 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         // Account of baseline offset
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(text_size);
+
+        if (window->DC.TextAlignment > 0.0f)
+        {
+            bb.TranslateX((clip_rect.Max.x - text_pos.x) * window->DC.TextAlignment - text_size.x * window->DC.TextAlignment);
+        }
         if (!ItemAdd(bb, 0))
             return;
 
