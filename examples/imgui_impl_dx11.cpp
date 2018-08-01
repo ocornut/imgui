@@ -28,14 +28,14 @@
 // DirectX data
 static ID3D11Device*            g_pd3dDevice = NULL;
 static ID3D11DeviceContext*     g_pd3dDeviceContext = NULL;
-static IDXGIFactory1*           g_pFactory = NULL;
+static IDXGIFactory*            g_pFactory = NULL;
 static ID3D11Buffer*            g_pVB = NULL;
 static ID3D11Buffer*            g_pIB = NULL;
-static ID3D10Blob *             g_pVertexShaderBlob = NULL;
+static ID3D10Blob*              g_pVertexShaderBlob = NULL;
 static ID3D11VertexShader*      g_pVertexShader = NULL;
 static ID3D11InputLayout*       g_pInputLayout = NULL;
 static ID3D11Buffer*            g_pVertexConstantBuffer = NULL;
-static ID3D10Blob *             g_pPixelShaderBlob = NULL;
+static ID3D10Blob*              g_pPixelShaderBlob = NULL;
 static ID3D11PixelShader*       g_pPixelShader = NULL;
 static ID3D11SamplerState*      g_pFontSampler = NULL;
 static ID3D11ShaderResourceView*g_pFontTextureView = NULL;
@@ -471,7 +471,7 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
     // Get factory from device
     IDXGIDevice* pDXGIDevice = NULL;
     IDXGIAdapter* pDXGIAdapter = NULL;
-    IDXGIFactory1* pFactory = NULL;
+    IDXGIFactory* pFactory = NULL;
 
     if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) == S_OK)
         if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) == S_OK)
