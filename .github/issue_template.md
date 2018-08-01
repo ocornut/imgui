@@ -13,9 +13,11 @@ SELECT "PREVIEW CHANGES" TO TURN THE URL ABOVE INTO A CLICKABLE LINK.
 
 XXX
 
-**Back-end/Renderer/OS:** _(if the question is related to inputs or rendering, otherwise delete this section)_
+**Back-end file/Renderer/OS:** _(or specify if you are using a custom engine back-end)_
 
-XXX
+Back-ends: imgui_impl_XXX.cpp + imgui_impl_XXX.cpp
+OS: XXX 
+Compiler: XXX _(if the question is related to building)_
 
 **My Issue/Question:** _(please provide context)_
 

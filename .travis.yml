@@ -26,6 +26,6 @@ before_install:
     fi
 
 script: 
-  - make -C examples/opengl2_example
-  - make -C examples/opengl3_example
-  - make -C examples/sdl_opengl3_example
+  - make -C examples/example_glfw_opengl2
+  - make -C examples/example_glfw_opengl3
+  - make -C examples/example_sdl_opengl3

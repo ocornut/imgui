@@ -9,6 +9,7 @@
 // - v0.53: (2017/10/22) minor inconsequential change to match change in master (removed an unnecessary statement)
 // - v0.54: (2018/01/22) fix for addition of ImFontAtlas::TexUvscale member
 // - v0.55: (2018/02/04) moved to main imgui repository (away from http://www.github.com/ocornut/imgui_club)
+// - v0.56: (2018/06/08) added support for ImFontConfig::GlyphMinAdvanceX, GlyphMaxAdvanceX
 
 // Gamma Correct Blending:
 //  FreeType assumes blending in linear space rather than gamma space.
@@ -182,6 +183,8 @@ namespace
     bool FreeTypeFont::CalcGlyphInfo(uint32_t codepoint, GlyphInfo &glyph_info, FT_Glyph& ft_glyph, FT_BitmapGlyph& ft_bitmap)
     {
         uint32_t glyph_index = FT_Get_Char_Index(FreetypeFace, codepoint);
+        if (glyph_index == 0)
+            return false;
         FT_Error error = FT_Load_Glyph(FreetypeFace, glyph_index, FreetypeLoadFlags);
         if (error)
             return false;
@@ -322,8 +325,8 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
         const float ascent = font_face.Info.Ascender;
         const float descent = font_face.Info.Descender;
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
-        const float off_x = cfg.GlyphOffset.x;
-        const float off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
+        const float font_off_x = cfg.GlyphOffset.x;
+        const float font_off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
         bool multiply_enabled = (cfg.RasterizerMultiply != 1.0f);
         unsigned char multiply_table[256];
@@ -354,17 +357,23 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
                 font_face.BlitGlyph(ft_glyph_bitmap, blit_dst, atlas->TexWidth, multiply_enabled ? multiply_table : NULL);
                 FT_Done_Glyph(ft_glyph);
 
+                float char_advance_x_org = glyph_info.AdvanceX;
+                float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
+                float char_off_x = font_off_x;
+                if (char_advance_x_org != char_advance_x_mod)
+                    char_off_x += cfg.PixelSnapH ? (float)(int)((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
+
                 // Register glyph
                 dst_font->AddGlyph((ImWchar)codepoint, 
-                    glyph_info.OffsetX + off_x, 
-                    glyph_info.OffsetY + off_y, 
-                    glyph_info.OffsetX + off_x + glyph_info.Width, 
-                    glyph_info.OffsetY + off_y + glyph_info.Height,
+                    glyph_info.OffsetX + char_off_x, 
+                    glyph_info.OffsetY + font_off_y, 
+                    glyph_info.OffsetX + char_off_x + glyph_info.Width, 
+                    glyph_info.OffsetY + font_off_y + glyph_info.Height,
                     rect.x / (float)atlas->TexWidth, 
                     rect.y / (float)atlas->TexHeight, 
                     (rect.x + glyph_info.Width) / (float)atlas->TexWidth, 
                     (rect.y + glyph_info.Height) / (float)atlas->TexHeight,
-                    glyph_info.AdvanceX);
+                    char_advance_x_mod);
             }
         }
     }

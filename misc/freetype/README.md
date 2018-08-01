@@ -12,7 +12,7 @@ By [Vuhdo](https://github.com/Vuhdo) (Aleksei Skriabin). Improvements by @mikesa
 
 ```cpp
 // See ImGuiFreeType::RasterizationFlags
-unsigned int flags = ImGuiFreeType::DisableHinting;
+unsigned int flags = ImGuiFreeType::NoHinting;
 ImGuiFreeType::BuildFontAtlas(io.Fonts, flags);
 io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 ```

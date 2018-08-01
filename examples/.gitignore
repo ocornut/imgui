@@ -1,25 +1,38 @@
 build/*
 */Debug/*
 */Release/*
-*/ipch/*
 */x64/*
-*.opensdf
-*.sdf
-*.suo
-*.vcxproj.user
 *.o
 *.obj
 *.exe
+
+## Visual Studio cruft
+.vs/*
+*/ipch/*
+*.opensdf
+*.log
 *.pdb
 *.ilk
+*.user
+*.sdf
+*.suo
 *.VC.db
 *.VC.VC.opendb
 
+## Xcode cruft
+.DS_Store
+project.xcworkspace
+xcuserdata
+
+## Emscripten output
+*.out.js
+*.out.wasm
+
 ## Unix executables
-opengl2_example/opengl2_example
-opengl3_example/opengl3_example
-sdl_opengl2_example/sdl_opengl2_example
-sdl_opengl3_example/sdl_opengl3_example
+example_glfw_opengl2/example_glfw_opengl2
+example_glfw_opengl3/example_glfw_opengl3
+example_sdl_opengl2/example_sdl_opengl2
+example_sdl_opengl3/example_sdl_opengl3
 
 ## Dear ImGui Ini files
 imgui.ini
