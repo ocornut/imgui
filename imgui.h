@@ -1158,7 +1158,8 @@ struct ImGuiIO
     float       Framerate;                  // Application framerate estimation, in frame per second. Solely for convenience. Rolling average estimation based on IO.DeltaTime over 120 frames
     int         MetricsRenderVertices;      // Vertices output during last call to Render()
     int         MetricsRenderIndices;       // Indices output during last call to Render() = number of triangles * 3
-    int         MetricsActiveWindows;       // Number of visible root windows (exclude child windows)
+    int         MetricsRenderWindows;       // Number of visible windows
+    int         MetricsActiveWindows;       // Number of active windows
     ImVec2      MouseDelta;                 // Mouse delta. Note that this is zero if either current or previous position are invalid (-FLT_MAX,-FLT_MAX), so a disappearing/reappearing mouse won't have a huge delta.
 
     //------------------------------------------------------------------

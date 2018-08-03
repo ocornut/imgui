@@ -4356,6 +4356,8 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
 
 static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWindow* window)
 {
+    ImGuiContext& g = *GImGui;
+    g.IO.MetricsRenderWindows++;
     AddDrawListToDrawData(out_render_list, window->DrawList);
     for (int i = 0; i < window->DC.ChildWindows.Size; i++)
     {
@@ -4368,7 +4370,6 @@ static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWin
 static void AddWindowToDrawDataSelectLayer(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
-    g.IO.MetricsActiveWindows++;
     if (window->Flags & ImGuiWindowFlags_Tooltip)
         AddWindowToDrawData(&g.DrawDataBuilder.Layers[1], window);
     else
@@ -4518,6 +4519,7 @@ void ImGui::EndFrame()
 
     IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
     g.Windows.swap(g.WindowsSortBuffer);
+    g.IO.MetricsActiveWindows = g.WindowsActiveCount;
 
     // Unlock font atlas
     g.IO.Fonts->Locked = false;
@@ -4541,7 +4543,7 @@ void ImGui::Render()
     g.FrameCountRendered = g.FrameCount;
 
     // Gather windows to render
-    g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsActiveWindows = 0;
+    g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsRenderWindows = 0;
     g.DrawDataBuilder.Clear();
     ImGuiWindow* windows_to_render_front_most[2];
     windows_to_render_front_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
@@ -14037,9 +14039,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         static bool show_draw_cmd_clip_rects = true;
         static bool show_window_begin_order = false;
+        ImGuiIO& io = ImGui::GetIO();
         ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
-        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-        ImGui::Text("%d vertices, %d indices (%d triangles)", ImGui::GetIO().MetricsRenderVertices, ImGui::GetIO().MetricsRenderIndices, ImGui::GetIO().MetricsRenderIndices / 3);
+        ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+        ImGui::Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
+        ImGui::Text("%d active windows (%d visible)", io.MetricsActiveWindows, io.MetricsRenderWindows);
         ImGui::Text("%d allocations", (int)GImAllocatorActiveAllocationsCount);
         ImGui::Checkbox("Show clipping rectangles when hovering draw commands", &show_draw_cmd_clip_rects);
         ImGui::Checkbox("Ctrl shows window begin order", &show_window_begin_order);
