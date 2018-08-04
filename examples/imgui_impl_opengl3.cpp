@@ -58,14 +58,6 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-// Set default OpenGL loader to be gl3w
-#if !defined(IMGUI_IMPL_OPENGL_LOADER_GL3W) \
-    && !defined(IMGUI_IMPL_OPENGL_LOADER_GLEW) \
-    && !defined(IMGUI_IMPL_OPENGL_LOADER_GLAD) \
-    && !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
-#define IMGUI_IMPL_OPENGL_LOADER_GL3W
-#endif
-
 #ifdef __EMSCRIPTEN__
 #include <GLES3/gl3.h>  // Use GL ES 3
 // About OpenGL function loaders:
