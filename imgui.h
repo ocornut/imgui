@@ -34,6 +34,20 @@
 #define IMGUI_IMPL_API      IMGUI_API
 #endif
 
+// Define custom loader for the implementations
+#ifdef IMGUI_IMPL_OPENGL_LOADER_GL3W
+#pragma message("gl3w defined")
+#endif
+#ifdef IMGUI_IMPL_OPENGL_LOADER_GLAD
+#pragma message("glad defined")
+#endif
+#if !defined(IMGUI_IMPL_OPENGL_LOADER_GL3W) \
+    && !defined(IMGUI_IMPL_OPENGL_LOADER_GLEW) \
+    && !defined(IMGUI_IMPL_OPENGL_LOADER_GLAD) \
+    && !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
+#define IMGUI_IMPL_OPENGL_LOADER_GL3W
+#endif
+
 // Helpers
 #ifndef IM_ASSERT
 #include <assert.h>
