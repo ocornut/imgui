@@ -12,7 +12,7 @@
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-#include <glew.h>
+#include <GL/glew.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>
 #else
@@ -58,12 +58,14 @@ int main(int, char**)
     glfwSwapInterval(1); // Enable vsync
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
     GLenum err = gl3wInit();
+    if (!err) {
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
     GLenum err = glewInit();
+    if (GLEW_OK != err) {
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
     GLenum err = gladLoadGL();
-#endif
     if (!err) {
+#endif
         fprintf(stderr, "Failed to initialize OpenGL\n");
         return 1;
     }

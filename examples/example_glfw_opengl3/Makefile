@@ -29,7 +29,11 @@ CXXFLAGS = -I../libs/gl3w
 # You can switch to glad by changing the following compilation options,
 # and changing the rule L73 of this Makefile
 # SOURCES += ../libs/glad/src/glad.c
-# CXXFLAGS = -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD -g
+# CXXFLAGS = -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
+
+# You can also use glew are you OpenGL loader
+# This assumes a system-wide installation
+# CXXFLAGS = -lGLEW -DIMGUI_IMPL_OPENGL_LOADER_GLEW
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"

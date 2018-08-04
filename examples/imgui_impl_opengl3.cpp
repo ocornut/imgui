@@ -67,7 +67,7 @@
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-#include <glew.h>
+#include <GL/glew.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEXT)
