@@ -168,7 +168,7 @@ User screenshots:
 <br>[Gallery Part 3](https://github.com/ocornut/imgui/issues/772) (Aug 2016 to Jan 2017)
 <br>[Gallery Part 4](https://github.com/ocornut/imgui/issues/973) (Jan 2017 to Aug 2017)
 <br>[Gallery Part 5](https://github.com/ocornut/imgui/issues/1269) (Aug 2017 to Feb 2018)
-<br>[Gallery Part 6](https://github.com/ocornut/imgui/issues/1607) (Feb 2018 onward)
+<br>[Gallery Part 6](https://github.com/ocornut/imgui/issues/1607) (Feb 2018 to June 2018)
 <br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 onward)
 <br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
