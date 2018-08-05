@@ -2128,7 +2128,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Active = WasActive = false;
     WriteAccessed = false;
     Collapsed = false;
-    CollapseToggleWanted = false;
+    WantCollapseToggle = false;
     SkipItems = false;
     Appearing = false;
     Hidden = false;
@@ -6407,8 +6407,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // We don't use a regular button+id to test for double-click on title bar (mostly due to legacy reason, could be fixed), so verify that we don't have items over the title bar.
             ImRect title_bar_rect = window->TitleBarRect();
             if (g.HoveredWindow == window && g.HoveredId == 0 && g.HoveredIdPreviousFrame == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && g.IO.MouseDoubleClicked[0])
-                window->CollapseToggleWanted = true;
-            if (window->CollapseToggleWanted)
+                window->WantCollapseToggle = true;
+            if (window->WantCollapseToggle)
             {
                 window->Collapsed = !window->Collapsed;
                 MarkIniSettingsDirty(window);
@@ -6419,7 +6419,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             window->Collapsed = false;
         }
-        window->CollapseToggleWanted = false;
+        window->WantCollapseToggle = false;
 
         // SIZE
 
@@ -6729,7 +6729,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Collapse button
             if (!(flags & ImGuiWindowFlags_NoCollapse))
                 if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
-                    window->CollapseToggleWanted = true; // Defer collapsing to next frame as we are too far in the Begin() function
+                    window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
 
             // Close button
             if (p_open != NULL)
