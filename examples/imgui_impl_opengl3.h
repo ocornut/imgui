@@ -11,12 +11,20 @@
 
 // About OpenGL function loaders:
 // Modern OpenGL requires individual functions to be loaded manually. Helper libraries are often used for this purpose.
-// Here we are using gl3w.h, which requires a call to gl3wInit(). 
+// Here we are using gl3w.h, which requires a call to gl3wInit().
 // You may use another any other loader/header of your choice, such as glew, glext, glad, glLoadGen, etc.
 
 // About GLSL version:
 // The 'glsl_version' initialization parameter defaults to "#version 130" if NULL.
 // Only override if your GL version doesn't handle this GLSL version (see table at the top of imgui_impl_opengl3.cpp). Keep NULL if unsure!
+
+// Set default OpenGL loader to be gl3w
+#if !defined(IMGUI_IMPL_OPENGL_LOADER_GL3W) \
+    && !defined(IMGUI_IMPL_OPENGL_LOADER_GLEW) \
+    && !defined(IMGUI_IMPL_OPENGL_LOADER_GLAD) \
+    && !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
+#define IMGUI_IMPL_OPENGL_LOADER_GL3W
+#endif
 
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(const char* glsl_version = NULL);
 IMGUI_IMPL_API void     ImGui_ImplOpenGL3_Shutdown();
