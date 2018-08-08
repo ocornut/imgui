@@ -57,8 +57,11 @@
 #else
 #include <stdint.h>     // intptr_t
 #endif
+#if defined(__APPLE__)
+#include "TargetConditionals.h"
+#endif
 
-#ifdef __EMSCRIPTEN__
+#if (defined(__APPLE__) && TARGET_OS_IOS) || (defined(__EMSCRIPTEN__))
 #include <GLES3/gl3.h>  // Use GL ES 3
 #else
 // About OpenGL function loaders:
