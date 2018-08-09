@@ -13929,8 +13929,9 @@ void ImGui::EndDragDropTarget()
 //-----------------------------------------------------------------------------
 
 #if defined(_WIN32) && !defined(_WINDOWS_) && (!defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS) || !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS))
-#undef WIN32_LEAN_AND_MEAN
+#ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
+#endif
 #ifndef __MINGW32__
 #include <Windows.h>
 #else

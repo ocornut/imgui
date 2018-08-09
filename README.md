@@ -125,7 +125,7 @@ Languages: (third-party bindings)
 - Swift [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
 Frameworks:
-- Renderers: DirectX 9, DirectX 10, DirectX 11, DirectX 12, Metal, OpenGL2, OpenGL3+, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Renderers: DirectX 9, DirectX 10, DirectX 11, DirectX 12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Platform: GLFW, SDL, Win32, OSX, Freeglut: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Framework: Allegro 5, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
