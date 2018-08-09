@@ -313,6 +313,7 @@ enum ImGuiInputReadMode
 
 enum ImGuiNavHighlightFlags_
 {
+    ImGuiNavHighlightFlags_None         = 0,
     ImGuiNavHighlightFlags_TypeDefault  = 1 << 0,
     ImGuiNavHighlightFlags_TypeThin     = 1 << 1,
     ImGuiNavHighlightFlags_AlwaysDraw   = 1 << 2,
@@ -321,6 +322,7 @@ enum ImGuiNavHighlightFlags_
 
 enum ImGuiNavDirSourceFlags_
 {
+    ImGuiNavDirSourceFlags_None         = 0,
     ImGuiNavDirSourceFlags_Keyboard     = 1 << 0,
     ImGuiNavDirSourceFlags_PadDPad      = 1 << 1,
     ImGuiNavDirSourceFlags_PadLStick    = 1 << 2
@@ -328,6 +330,7 @@ enum ImGuiNavDirSourceFlags_
 
 enum ImGuiNavMoveFlags_
 {
+    ImGuiNavMoveFlags_None                  = 0,
     ImGuiNavMoveFlags_LoopX                 = 1 << 0,   // On failed request, restart from opposite side
     ImGuiNavMoveFlags_LoopY                 = 1 << 1,
     ImGuiNavMoveFlags_WrapX                 = 1 << 2,   // On failed request, request from opposite side one line down (when NavDir==right) or one line up (when NavDir==left)
