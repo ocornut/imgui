@@ -98,7 +98,7 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     [g_sharedMetalContext makeFontTextureWithDevice:device];
     
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture;
+    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture; // ImTextureID == void*
 
     return (g_sharedMetalContext.fontTexture != nil);
 }

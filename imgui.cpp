@@ -1671,7 +1671,7 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_
         return NULL;
     }
     if (padding_bytes > 0)
-        memset((void *)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
+        memset((void*)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
 
     fclose(f);
     if (out_file_size)
@@ -8476,7 +8476,7 @@ bool ImGui::ImageButton(ImTextureID user_texture_id, const ImVec2& size, const I
 
     // Default to using texture ID as ID. User can still push string/integer prefixes.
     // We could hash the size/uv to create a unique ID but that would prevent the user from animating UV.
-    PushID((void *)user_texture_id);
+    PushID((void*)user_texture_id);
     const ImGuiID id = window->GetID("#image");
     PopID();
 
