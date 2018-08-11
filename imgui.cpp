@@ -13050,17 +13050,25 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
         float mouse_delta = (axis == ImGuiAxis_Y) ? mouse_delta_2d.y : mouse_delta_2d.x;
 
         // Minimum pane size
-        if (mouse_delta < min_size1 - *size1)
-            mouse_delta = min_size1 - *size1;
-        if (mouse_delta > *size2 - min_size2)
-            mouse_delta = *size2 - min_size2;
+        float size_1_maximum_delta = ImMax(0.0f, *size1 - min_size1);
+        float size_2_maximum_delta = ImMax(0.0f, *size2 - min_size2);
+        if (mouse_delta < -size_1_maximum_delta)
+            mouse_delta = -size_1_maximum_delta;
+        if (mouse_delta > size_2_maximum_delta)
+            mouse_delta = size_2_maximum_delta;
 
         // Apply resize
-        *size1 += mouse_delta;
-        *size2 -= mouse_delta;
-        bb_render.Translate((axis == ImGuiAxis_X) ? ImVec2(mouse_delta, 0.0f) : ImVec2(0.0f, mouse_delta));
-
-        MarkItemValueChanged(id);
+        if (mouse_delta != 0.0f)
+        {
+            if (mouse_delta < 0.0f)
+                IM_ASSERT(*size1 + mouse_delta >= min_size1);
+            if (mouse_delta > 0.0f)
+               IM_ASSERT(*size2 - mouse_delta >= min_size2);
+            *size1 += mouse_delta;
+            *size2 -= mouse_delta;
+            bb_render.Translate((axis == ImGuiAxis_X) ? ImVec2(mouse_delta, 0.0f) : ImVec2(0.0f, mouse_delta));
+            MarkItemValueChanged(id);
+        }
     }
 
     // Render
