@@ -5233,7 +5233,10 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport->Size = size;
         viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
         g.Viewports.push_back(viewport);
-        
+
+        if (window && (window->Flags & ImGuiWindowFlags_NoFocusOnAppearing))
+            flags |= ImGuiViewportFlags_NoFocusOnAppearing;
+
         // We normally setup for all viewports in NewFrame() but here need to handle the mid-frame creation of a new viewport.
         // We need to extend the fullscreen clip rect so the OverlayDrawList clip is correct for that the first frame
         g.DrawListSharedData.ClipRectFullscreen.z = ImMax(g.DrawListSharedData.ClipRectFullscreen.z, viewport->Pos.x + viewport->Size.x);
