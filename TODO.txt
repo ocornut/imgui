@@ -32,6 +32,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: investigate better auto-positioning for new windows.
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
+ - scrolling/style: shadows on scrollable areas to denote that there is more contents
 
  - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
@@ -158,6 +159,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: scrolling should track modified selection.
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
+ - popups/modal: make modal title bar blink when trying to click outside the modal
  - popups: reopening context menu at new position should be the behavior by default? (equivalent to internal OpenPopupEx() with reopen_existing=true) (~#1497)
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
@@ -166,7 +168,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
- - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed) (#1485)
+ - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485) 
  
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - menus: menu bars inside modal windows are acting weird.
@@ -224,6 +226,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag and drop: test with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop (make it easy to do a naive WM_DROPFILE integration)
  - drag and drop: make payload optional? (#143)
+ - drag and drop: feedback when hovering a modal (cursor?)
  - node/graph editor (#306)
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)
