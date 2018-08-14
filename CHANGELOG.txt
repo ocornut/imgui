@@ -59,6 +59,7 @@ Other Changes:
  - Drag and Drop: Payload stays available and under the mouse if the source stops being submitted, however the tooltip is replaced by "...". (#1725)
  - Drag and Drop: Added ImGuiDragDropFlags_SourceAutoExpirePayload flag to force payload to expire if the source stops being submitted. (#1725, #143).
  - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
+ - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
  - Made assertion more clear when trying to call Begin() outside of the NewFrame()..EndFrame() scope. (#1987)
