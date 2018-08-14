@@ -1,4 +1,4 @@
-// ImGui Renderer for: OpenGL3 (modern OpenGL with shaders / programmatic pipeline)
+// ImGui Renderer for: OpenGL3 / OpenGL ES2 / OpenGL ES3 (modern OpenGL with shaders / programmatic pipeline)
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 // (Note: We are using GL3W as a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc..)
 
@@ -13,6 +13,7 @@
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2018-08-09: OpenGL: Default to OpenGL ES 3 on iOS and Android. GLSL version default to "#version 300 ES".
 //  2018-07-30: OpenGL: Support for GLSL 300 ES and 410 core. Fixes for Emscripten compilation.
 //  2018-07-10: OpenGL: Support for more GLSL versions (based on the GLSL version string). Added error output when shaders fail to compile/link.
 //  2018-06-08: Misc: Extracted imgui_impl_opengl3.cpp/.h away from the old combined GLFW/SDL+OpenGL3 examples.
@@ -59,14 +60,24 @@
 #else
 #include <stdint.h>     // intptr_t
 #endif
+#if defined(__APPLE__)
+#include "TargetConditionals.h"
+#endif
 
-#ifdef __EMSCRIPTEN__
+// iOS, Android and Emscripten can use GL ES 3
+// Call ImGui_ImplOpenGL3_Init() with "#version 300 es"
+#if (defined(__APPLE__) && TARGET_OS_IOS) || (defined(__ANDROID__)) || (defined(__EMSCRIPTEN__))
+#define USE_GL_ES3
+#endif
+
+#ifdef USE_GL_ES3
+// OpenGL ES 3
 #include <GLES3/gl3.h>  // Use GL ES 3
 #else
-// About OpenGL function loaders:
-// Modern OpenGL requires individual functions to be loaded manually. Helper libraries are often used for this purpose.
-// Here we are using gl3w.h, which requires a call to gl3wInit(). 
-// You may use another any other loader/header of your choice, such as glew, glext, glad, glLoadGen, etc.
+// OpenGL Regular
+// (About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual functions to be loaded manually. 
+//  Helper libraries are often used for this purpose! Here we are using gl3w.h, which requires a call to gl3wInit(). 
+//  You may use another any other loader/header of your choice, such as glew, glext, glad, glLoadGen, etc.)
 #include <GL/gl3w.h>
 //#include <glew.h>
 //#include <glext.h>
@@ -89,8 +100,13 @@ static void ImGui_ImplOpenGL3_ShutdownPlatformInterface();
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
     // Store GLSL version string so we can refer to it later in case we recreate shaders. Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
+#ifdef USE_GL_ES3
+    if (glsl_version == NULL)
+        glsl_version = "#version 300 es";
+#else
     if (glsl_version == NULL)
         glsl_version = "#version 130";
+#endif
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(g_GlslVersionString));
     strcpy(g_GlslVersionString, glsl_version);
     strcat(g_GlslVersionString, "\n");
@@ -277,7 +293,7 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
+    io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontTexture;
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);

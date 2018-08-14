@@ -190,7 +190,7 @@ bool ImGui_Marmalade_CreateDeviceObjects()
     g_FontTexture->Upload();
 
     // Store our identifier
-    io.Fonts->TexID = (void *)g_FontTexture;
+    io.Fonts->TexID = (ImTextureID)g_FontTexture;
 
     return true;
 }

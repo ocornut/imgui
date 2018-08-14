@@ -177,7 +177,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 const RECT r = { (LONG)(pcmd->ClipRect.x - pos.x), (LONG)(pcmd->ClipRect.y - pos.y), (LONG)(pcmd->ClipRect.z - pos.x), (LONG)(pcmd->ClipRect.w - pos.y) };
-                g_pd3dDevice->SetTexture(0, (LPDIRECT3DTEXTURE9)pcmd->TextureId);
+                const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
+                g_pd3dDevice->SetTexture(0, texture);
                 g_pd3dDevice->SetScissorRect(&r);
                 g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, vtx_offset, 0, (UINT)cmd_list->VtxBuffer.Size, idx_offset, pcmd->ElemCount/3);
             }
@@ -228,7 +229,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
     g_FontTexture->UnlockRect(0);
 
     // Store our identifier
-    io.Fonts->TexID = (void *)g_FontTexture;
+    io.Fonts->TexID = (ImTextureID)g_FontTexture;
 
     return true;
 }

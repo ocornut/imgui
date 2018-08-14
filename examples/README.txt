@@ -118,7 +118,7 @@ List of Renderer Bindings in this repository:
     imgui_impl_dx12.cpp       ; DirectX12
     imgui_impl_metal.mm       ; Metal (with ObjC)
     imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
-    imgui_impl_opengl3.cpp    ; OpenGL3 (modern programmable pipeline)
+    imgui_impl_opengl3.cpp    ; OpenGL3, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
     imgui_impl_vulkan.cpp     ; Vulkan
 
 List of high-level Frameworks Bindings in this repository: (combine Platform + Renderer)
@@ -192,7 +192,7 @@ example_glfw_opengl2/
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
 
 example_glfw_opengl3/
-    GLFW (Win32, Mac, Linux) + OpenGL3+ example (programmable pipeline, binding modern functions with GL3W).
+    GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (programmable pipeline, binding modern functions with GL3W).
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp
@@ -213,7 +213,7 @@ example_sdl_opengl2/
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
 
 example_sdl_opengl3/
-    SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+ example.
+    SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example.
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
