@@ -5241,6 +5241,11 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         // We need to extend the fullscreen clip rect so the OverlayDrawList clip is correct for that the first frame
         g.DrawListSharedData.ClipRectFullscreen.z = ImMax(g.DrawListSharedData.ClipRectFullscreen.z, viewport->Pos.x + viewport->Size.x);
         g.DrawListSharedData.ClipRectFullscreen.w = ImMax(g.DrawListSharedData.ClipRectFullscreen.w, viewport->Pos.y + viewport->Size.y);
+
+        // Request an initial DpiScale before the OS platform window creation
+        // This is so we can select an appropriate font size on the first frame of our window lifetime
+        if (g.PlatformIO.Platform_GetWindowDpiScale)
+            viewport->DpiScale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
     }
 
     viewport->Window = window;
@@ -5251,10 +5256,6 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
     if (window != NULL)
         window->ViewportOwned = true;
 
-    // Request an initial DpiScale before the OS platform window creation
-    // This is so we can select an appropriate font size on the first frame of our window lifetime
-    if (g.PlatformIO.Platform_GetWindowDpiScale)
-        viewport->DpiScale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
     return viewport;
 }
 
