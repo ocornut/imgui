@@ -4599,6 +4599,7 @@ void ImGui::Initialize(ImGuiContext* context)
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     viewport->Idx = 0;
+    viewport->CreatedPlatformWindow = true;     // Set this flag so DestroyPlatformWindows() gives a chance for backend to receive DestroyWindow calls for the main viewport.
     g.Viewports.push_back(viewport);
     g.PlatformIO.MainViewport = g.Viewports[0]; // Make it accessible in public-facing GetPlatformIO() immediately (before the first call to EndFrame)
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
@@ -4608,16 +4609,20 @@ void ImGui::Initialize(ImGuiContext* context)
 
 void ImGui::DestroyPlatformWindows()
 {
-    // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data it may hold on it.
+    // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data 
+    // have stored in e.g. PlatformHandle.
     // It is expected that the back-end stored a flag to remember that it doesn't own the window created for the main viewport, 
-    // and won't destroy the underlying platform/renderer data.
+    // and won't destroy the underlying platform/renderer data (e.g. 
     ImGuiContext& g = *GImGui;
-    if (g.PlatformIO.Renderer_DestroyWindow)
-        for (int i = 0; i < g.Viewports.Size; i++)
-            g.PlatformIO.Renderer_DestroyWindow(g.Viewports[i]);
-    if (g.PlatformIO.Platform_DestroyWindow)
-        for (int i = 0; i < g.Viewports.Size; i++)
-            g.PlatformIO.Platform_DestroyWindow(g.Viewports[i]);
+    for (int i = 0; i < g.Viewports.Size; i++)
+        if (g.Viewports[i]->CreatedPlatformWindow)
+        {
+            if (g.PlatformIO.Renderer_DestroyWindow)
+                g.PlatformIO.Renderer_DestroyWindow(g.Viewports[i]);
+            if (g.PlatformIO.Platform_DestroyWindow)
+                g.PlatformIO.Platform_DestroyWindow(g.Viewports[i]);
+            g.Viewports[i]->CreatedPlatformWindow = false;
+        }
 }
 
 // This function is merely here to free heap allocations.
