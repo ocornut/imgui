@@ -70,6 +70,7 @@ Other Changes:
  - Metrics: Changed io.MetricsActiveWindows to reflect the number of active windows (!= from visible windows), which is useful
    for lazy/idle render mechanisms as new windows are typically not visible for one frame.
  - Metrics: Added io.MetricsRenderWindow to reflect the number of visible windows.
+ - Metrics: Added io.MetricsActiveAllocations, moving away from the cross-context global counters than we previously used. (#1565, #1599, #586)
  - Demo: Added basic Drag and Drop demo. (#143)
  - Demo: Clarified the use of IsItemHovered()/IsItemActive() right after being in the "Active, Focused, Hovered & Focused Tests" section.
  - Examples: Tweaked the main.cpp of each example.
