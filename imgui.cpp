@@ -2271,7 +2271,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     g.ActiveIdWindow = window;
     if (id)
     {
-        g.ActiveIdIsAlive = true;
+        g.ActiveIdIsAlive = id;
         g.ActiveIdSource = (g.NavActivateId == id || g.NavInputId == id || g.NavJustTabbedId == id || g.NavJustMovedToId == id) ? ImGuiInputSource_Nav : ImGuiInputSource_Mouse;
     }
 }
@@ -2322,7 +2322,7 @@ void ImGui::KeepAliveID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
-        g.ActiveIdIsAlive = true;
+        g.ActiveIdIsAlive = id;
     if (g.ActiveIdPreviousFrame == id)
         g.ActiveIdPreviousFrameIsAlive = true;
 }
@@ -3934,7 +3934,7 @@ void ImGui::NewFrame()
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
-    if (!g.ActiveIdIsAlive && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
+    if (g.ActiveIdIsAlive != g.ActiveId && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
         ClearActiveID();
     if (g.ActiveId)
         g.ActiveIdTimer += g.IO.DeltaTime;
@@ -3942,7 +3942,8 @@ void ImGui::NewFrame()
     g.ActiveIdPreviousFrame = g.ActiveId;
     g.ActiveIdPreviousFrameWindow = g.ActiveIdWindow;
     g.ActiveIdPreviousFrameValueChanged = g.ActiveIdValueChanged;
-    g.ActiveIdIsAlive = g.ActiveIdPreviousFrameIsAlive = false;
+    g.ActiveIdIsAlive = 0;
+    g.ActiveIdPreviousFrameIsAlive = false;
     g.ActiveIdIsJustActivated = false;
     if (g.ScalarAsInputTextId && g.ActiveId != g.ScalarAsInputTextId)
         g.ScalarAsInputTextId = 0;
@@ -13155,7 +13156,7 @@ void ImGui::EndGroup()
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive(), IsItemDeactivated() etc. will be functional on the entire group.
     // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but put a little more burden on individual widgets.
     // (and if you grep for LastItemId you'll notice it is only used in that context.
-    if (!group_data.BackupActiveIdIsAlive && g.ActiveIdIsAlive && g.ActiveId) // && g.ActiveIdWindow->RootWindow == window->RootWindow)
+    if ((group_data.BackupActiveIdIsAlive != g.ActiveId) && (g.ActiveIdIsAlive == g.ActiveId) && g.ActiveId) // && g.ActiveIdWindow->RootWindow == window->RootWindow)
         window->DC.LastItemId = g.ActiveId;
     else if (!group_data.BackupActiveIdPreviousFrameIsAlive && g.ActiveIdPreviousFrameIsAlive) // && g.ActiveIdPreviousFrameWindow->RootWindow == window->RootWindow)
         window->DC.LastItemId = g.ActiveIdPreviousFrame;

@@ -408,7 +408,7 @@ struct ImGuiGroupData
     float       BackupCurrentLineHeight;
     float       BackupCurrentLineTextBaseOffset;
     float       BackupLogLinePosY;
-    bool        BackupActiveIdIsAlive;
+    ImGuiID     BackupActiveIdIsAlive;
     bool        BackupActiveIdPreviousFrameIsAlive;
     bool        AdvanceCursor;
 };
@@ -637,8 +637,8 @@ struct ImGuiContext
     float                   HoveredIdTimer;
     ImGuiID                 ActiveId;                           // Active widget
     ImGuiID                 ActiveIdPreviousFrame;
+    ImGuiID                 ActiveIdIsAlive;                    // Active widget has been seen this frame (we can't use a bool as the ActiveId may change within the frame)
     float                   ActiveIdTimer;
-    bool                    ActiveIdIsAlive;                    // Active widget has been seen this frame
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
     bool                    ActiveIdValueChanged;
@@ -784,8 +784,8 @@ struct ImGuiContext
         HoveredIdTimer = 0.0f;
         ActiveId = 0;
         ActiveIdPreviousFrame = 0;
+        ActiveIdIsAlive = 0;
         ActiveIdTimer = 0.0f;
-        ActiveIdIsAlive = false;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
         ActiveIdValueChanged = false;
