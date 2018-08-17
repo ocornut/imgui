@@ -134,7 +134,7 @@ Frameworks:
 - Unmerged PR: ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [issue #551](https://github.com/ocornut/imgui/issues/551)
-- Flexium/SFML: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
+- Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
 - GML/GameMakerStudio2: [ImGuiGML](https://marketplace.yoyogames.com/assets/6221/imguigml)
 - Irrlicht: [IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
 - Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
@@ -144,7 +144,7 @@ Frameworks:
 - Magnum: [magnum-imgui](https://github.com/lecopivo/magnum-imgui), [MagnumImguiPort](https://github.com/lecopivo/MagnumImguiPort)
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
 - Qt3d: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d)
-- SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml) or [imgui-backends](https://github.com/Mischa-Alff/imgui-backends)
+- SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml)
 - Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
 - Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
 
