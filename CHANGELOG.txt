@@ -59,9 +59,11 @@ Other Changes:
  - Drag and Drop: Payload stays available and under the mouse if the source stops being submitted, however the tooltip is replaced by "...". (#1725)
  - Drag and Drop: Added ImGuiDragDropFlags_SourceAutoExpirePayload flag to force payload to expire if the source stops being submitted. (#1725, #143).
  - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
+ - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
  - Made assertion more clear when trying to call Begin() outside of the NewFrame()..EndFrame() scope. (#1987)
+ - Fixed assertion when transitioning from an active ID to another within a group, affecting ColorPicker (broken in 1.62). (#2023, #820, #956, #1875).
  - Fixed PushID() from keeping alive the new ID Stack top value (if a previously active widget shared the ID it would be erroneously kept alive).  
  - Fixed horizontal mouse wheel not forwarding the request to the parent window if ImGuiWindowFlags_NoScrollWithMouse is set. (#1463, #1380, #1502)
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
@@ -69,6 +71,7 @@ Other Changes:
  - Metrics: Changed io.MetricsActiveWindows to reflect the number of active windows (!= from visible windows), which is useful
    for lazy/idle render mechanisms as new windows are typically not visible for one frame.
  - Metrics: Added io.MetricsRenderWindow to reflect the number of visible windows.
+ - Metrics: Added io.MetricsActiveAllocations, moving away from the cross-context global counters than we previously used. (#1565, #1599, #586)
  - Demo: Added basic Drag and Drop demo. (#143)
  - Demo: Clarified the use of IsItemHovered()/IsItemActive() right after being in the "Active, Focused, Hovered & Focused Tests" section.
  - Examples: Tweaked the main.cpp of each example.
