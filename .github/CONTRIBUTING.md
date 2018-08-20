@@ -4,6 +4,9 @@ Hello!
 
 You may use the Issue Tracker to submit bug reports, feature requests or suggestions. You may ask for help or advice as well. However please read this wall of text before doing so. The amount of incomplete or ambiguous requests due to people not following those guidelines is often overwhelming. Please do your best to clarify your request. Thank you!
 
+**IF YOU ARE HAVING AN ISSUE COMPILING/LINKING/RUNNING/DISPLAYING/ADDING FONTS/WIRING INPUTS**
+- Please post on the "Getting Started" Discourse forum: https://discourse.dearimgui.org/c/getting-started
+
 **Prerequisites for new users of dear imgui:**
 - Please read the FAQ in imgui.cpp.
 - Please read misc/fonts/README.txt if your question relates to fonts or text.
