@@ -73,6 +73,7 @@ Other Changes:
  - Fixed PushID() from keeping alive the new ID Stack top value (if a previously active widget shared the ID it would be erroneously kept alive).  
  - Fixed horizontal mouse wheel not forwarding the request to the parent window if ImGuiWindowFlags_NoScrollWithMouse is set. (#1463, #1380, #1502)
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
+ - ImDrawList: Fixed clipping of leading lines above the clipping rectangle from counting in the worst-case vertices reservation. (fix code added in #200!)
  - OS/Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
  - Metrics: Changed io.MetricsActiveWindows to reflect the number of active windows (!= from visible windows), which is useful
    for lazy/idle render mechanisms as new windows are typically not visible for one frame.

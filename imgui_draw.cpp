@@ -2632,11 +2632,16 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    // Skip non-visible lines
+    // Fast-forward to first visible line
     const char* s = text_begin;
     if (!word_wrap_enabled && y + line_height < clip_rect.y)
-        while (s < text_end && *s != '\n')  // Fast-forward to next line
-            s++;
+        while (y + line_height < clip_rect.y)
+        {
+            while (s < text_end)
+                if (*s++ == '\n')
+                    break;
+            y += line_height;
+        }
 
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
     const int vtx_count_max = (int)(text_end - s) * 4;
@@ -2695,12 +2700,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
             {
                 x = pos.x;
                 y += line_height;
-
                 if (y > clip_rect.w)
-                    break;
-                if (!word_wrap_enabled && y + line_height < clip_rect.y)
-                    while (s < text_end && *s != '\n')  // Fast-forward to next line
-                        s++;
+                    break; // break out of main loop
                 continue;
             }
             if (c == '\r')
