@@ -55,6 +55,7 @@ Other Changes:
  - Window: Added global io.OptResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
  - Window: Collapse button shows hovering highlight + clicking and dragging on it allows to drag the window as well. 
  - InputText: Added support for buffer size/capacity changes via the ImGuiInputTextFlags_CallbackResize flag. (#2006, #1443, #1008).
+ - InputText: Fixed not tracking the cursor horizontally When modifying the text buffer through a callback.
  - InputText: Fixed minor off-by-one issue when submitting a buffer size smaller than the initial zero-terminated buffer contents.
  - Drag and Drop: Fixed an incorrect assert when dropping a source that is submitted after the target (bug introduced with 1.62 changes 
    related to the addition of IsItemDeactivated()). (#1875, #143)
