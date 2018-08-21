@@ -10535,14 +10535,22 @@ static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
 
 static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const ImWchar* new_text, int new_text_len)
 {
+    const bool is_resizable = (obj->UserFlags & ImGuiInputTextFlags_CallbackResize) != 0;
     const int text_len = obj->CurLenW;
     IM_ASSERT(pos <= text_len);
-    if (new_text_len + text_len + 1 > obj->Text.Size)
-        return false;
 
     const int new_text_len_utf8 = ImTextCountUtf8BytesFromStr(new_text, new_text + new_text_len);
-    if (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufCapacityA)
+    if (!is_resizable && (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufCapacityA))
         return false;
+
+    // Grow internal buffer if needed
+    if (new_text_len + text_len + 1 > obj->Text.Size)
+    {
+        if (!is_resizable)
+            return false;
+        IM_ASSERT(text_len < obj->Text.Size);
+        obj->Text.resize(text_len + ImClamp(new_text_len * 4, 32, ImMax(256, new_text_len)) + 1);
+    }
 
     ImWchar* text = obj->Text.Data;
     if (pos != text_len)
@@ -10583,6 +10591,11 @@ void ImGuiTextEditState::OnKeyPressed(int key)
     stb_textedit_key(this, &StbState, key);
     CursorFollow = true;
     CursorAnimReset();
+}
+
+ImGuiTextEditCallbackData::ImGuiTextEditCallbackData()
+{
+    memset(this, 0, sizeof(*this));
 }
 
 // Public API to manipulate UTF-8 text
@@ -10693,6 +10706,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackHistory) && (flags & ImGuiInputTextFlags_Multiline))); // Can't use both together (they both use up/down keys)
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackCompletion) && (flags & ImGuiInputTextFlags_AllowTabInput))); // Can't use both together (they both use tab key)
+    if (flags & ImGuiInputTextFlags_CallbackResize)
+        IM_ASSERT(callback != NULL);
 
     ImGuiContext& g = *GImGui;
     const ImGuiIO& io = g.IO;
@@ -10818,6 +10833,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     bool value_changed = false;
     bool enter_pressed = false;
+    int backup_current_text_length = 0;
 
     if (g.ActiveId == id)
     {
@@ -10831,7 +10847,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             edit_state.CursorClamp();
         }
 
+        backup_current_text_length = edit_state.CurLenA;
         edit_state.BufCapacityA = buf_size;
+        edit_state.UserFlags = flags;
+        edit_state.UserCallback = callback;
+        edit_state.UserCallbackData = callback_user_data;
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
@@ -11009,13 +11029,15 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     if (g.ActiveId == id)
     {
+        const char* apply_new_text = NULL;
+        int apply_new_text_length = 0;
         if (cancel_edit)
         {
             // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
             if (is_editable && strncmp(buf, edit_state.InitialText.Data, buf_size) != 0)
             {
-                ImStrncpy(buf, edit_state.InitialText.Data, buf_size);
-                value_changed = true;
+                apply_new_text = edit_state.InitialText.Data;
+                apply_new_text_length = buf_size - 1;
             }
         }
 
@@ -11100,13 +11122,40 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 }
             }
 
-            // Copy back to user buffer
+            // Will copy result string if modified
             if (is_editable && strcmp(edit_state.TempTextBuffer.Data, buf) != 0)
             {
-                ImStrncpy(buf, edit_state.TempTextBuffer.Data, edit_state.CurLenA + 1);
-                value_changed = true;
+                apply_new_text = edit_state.TempTextBuffer.Data;
+                apply_new_text_length = edit_state.CurLenA;
             }
         }
+
+        // Copy result to user buffer
+        if (apply_new_text)
+        {
+            IM_ASSERT(apply_new_text_length >= 0);
+            if (backup_current_text_length != apply_new_text_length && (flags & ImGuiInputTextFlags_CallbackResize))
+            {
+                ImGuiTextEditCallbackData callback_data;
+                callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
+                callback_data.Flags = flags;
+                callback_data.Buf = buf;
+                callback_data.BufTextLen = edit_state.CurLenA;
+                callback_data.BufSize = ImMax(buf_size, apply_new_text_length + 1);
+                callback_data.UserData = callback_user_data;
+                callback(&callback_data);
+                buf = callback_data.Buf;
+                buf_size = callback_data.BufSize;
+            }
+            IM_ASSERT(apply_new_text_length <= buf_size);
+            ImStrncpy(buf, edit_state.TempTextBuffer.Data, apply_new_text_length + 1);
+            value_changed = true;
+        }
+
+        // Clear temporary user storage
+        edit_state.UserFlags = 0;
+        edit_state.UserCallback = NULL;
+        edit_state.UserCallbackData = NULL;
     }
 
     // Release active ID at the end of the function (so e.g. pressing Return still does a final application of the value)

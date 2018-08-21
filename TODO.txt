@@ -66,7 +66,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: expose CursorPos in char filter event (#816)
  - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active.
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
- - input text: way to dynamically grow the buffer without forcing the user to initially allocate for worse case, e.g. more natural std::string (follow up on #200)
  - input text: hover tooltip could show unclamped text
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
