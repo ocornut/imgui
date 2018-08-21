@@ -60,6 +60,7 @@ Other Changes:
  - Drag and Drop: Payload stays available and under the mouse if the source stops being submitted, however the tooltip is replaced by "...". (#1725)
  - Drag and Drop: Added ImGuiDragDropFlags_SourceAutoExpirePayload flag to force payload to expire if the source stops being submitted. (#1725, #143).
  - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
+ - InputText: Fixed minor off-by-one issue when submitting a buffer size smaller than the initial zero-terminated buffer contents.
  - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
  - Misc: Added IMGUI_VERSION_NUM for easy compile-time testing. (#2025)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 

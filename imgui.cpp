@@ -10776,9 +10776,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             const int prev_len_w = edit_state.CurLenW;
             edit_state.Text.resize(buf_size+1);        // wchar count <= UTF-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
             edit_state.InitialText.resize(buf_size+1); // UTF-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
-            ImStrncpy(edit_state.InitialText.Data, buf, edit_state.InitialText.Size);
+            ImStrncpy(edit_state.InitialText.Data, buf, buf_size);
             const char* buf_end = NULL;
-            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, edit_state.Text.Size, buf, NULL, &buf_end);
+            edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, buf_size, buf, NULL, &buf_end);
             edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.CursorAnimReset();
 
