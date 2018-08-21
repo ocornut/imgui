@@ -22,7 +22,9 @@
 #include <string.h>                 // memset, memmove, memcpy, strlen, strchr, strcpy, strcmp
 
 // Version
+// (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY00 then bounced up to XYY01 when release tagging happens)
 #define IMGUI_VERSION               "1.63 WIP"
+#define IMGUI_VERSION_NUM           16300 
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
@@ -179,7 +181,7 @@ namespace ImGui
     IMGUI_API bool          ShowStyleSelector(const char* label);       // add style selector block (not a window), essentially a combo listing the default styles.
     IMGUI_API void          ShowFontSelector(const char* label);        // add font selector block (not a window), essentially a combo listing the loaded fonts.
     IMGUI_API void          ShowUserGuide();                            // add basic help/info block (not a window): how to manipulate ImGui as a end-user (mouse/keyboard controls).
-    IMGUI_API const char*   GetVersion();                               // get a version string e.g. "1.23"
+    IMGUI_API const char*   GetVersion();                               // get the compiled version string e.g. "1.23"
 
     // Styles
     IMGUI_API void          StyleColorsDark(ImGuiStyle* dst = NULL);    // new, recommended style (default)
