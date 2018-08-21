@@ -11303,7 +11303,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
         }
 
-        // FIXME-OPT: We should coarse clip very large text on this end (even though the low-level ImFont::RenderText perform line-based will do it, it will lead us to temporary vertex allocations) 
         draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display + edit_state.CurLenA, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor

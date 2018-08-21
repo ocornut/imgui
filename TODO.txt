@@ -240,13 +240,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
+ - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font/atlas: add a missing Glyphs.reserve()
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font/atlas: allow user to submit its own primitive to be rectpacked, and allow to map them on a Unicode point.
- - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
- - font draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
- - font draw: need to be able to specify wrap start position.
+ - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
+ - font/draw: need to be able to specify wrap start position.
+ - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
  - font: imgui_freetype.h alternative renderer (#618)
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct).
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
