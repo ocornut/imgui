@@ -920,6 +920,9 @@ struct IMGUI_API ImGuiWindowTempData
     ImVector<ImGuiItemFlags>ItemFlagsStack;
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
+    float                   TextAlignment;          // text alignment
+    ImVector<float>         TextAlignmentStack;     // text alignment
+ 
     ImVector<ImGuiGroupData>GroupStack;
     int                     StackSizesBackup[6];    // Store size of various stacks for asserting
 

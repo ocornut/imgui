@@ -4699,7 +4699,7 @@ void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool 
 
     if (text != text_display_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, 0, window->DC.TextAlignment);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_display_end);
     }
@@ -4715,7 +4715,8 @@ void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end
 
     if (text != text_end)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
+        ImVec4 textBound(window->DC.LastItemRect.Min.x, window->DC.LastItemRect.Min.y, window->DC.LastItemRect.Max.x, window->DC.LastItemRect.Max.y);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width, 0, window->DC.TextAlignment, &textBound);
         if (g.LogEnabled)
             LogRenderedText(&pos, text, text_end);
     }
@@ -7209,6 +7210,25 @@ void ImGui::PopStyleColor(int count)
     }
 }
 
+void ImGui::PushTextAlignment(float alignment)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    float backup = window->DC.TextAlignment;
+    window->DC.TextAlignmentStack.push_back(backup);
+    window->DC.TextAlignment = alignment;
+}
+
+void ImGui::PopTextAlignment(int count )
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    while (count > 0)
+    {
+        window->DC.TextAlignment = window->DC.TextAlignmentStack.empty() ? 0.0f : window->DC.TextAlignmentStack.back();        
+        window->DC.TextAlignmentStack.pop_back();
+        count--;
+    }
+}
+
 struct ImGuiStyleVarInfo
 {
     ImGuiDataType   Type;
@@ -7972,6 +7992,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrentLineTextBaseOffset);
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = wrap_pos_x >= 0.0f;
+    const ImRect clip_rect = window->ClipRect;
     if (text_end - text > 2000 && !wrap_enabled)
     {
         // Long text!
@@ -7980,7 +8001,6 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         // We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
         const char* line = text;
         const float line_height = GetTextLineHeight();
-        const ImRect clip_rect = window->ClipRect;
         ImVec2 text_size(0,0);
 
         if (text_pos.y <= clip_rect.Max.y)
@@ -8055,6 +8075,11 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         // Account of baseline offset
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(text_size);
+
+        if (window->DC.TextAlignment > 0.0f)
+        {
+            bb.TranslateX((clip_rect.Max.x - text_pos.x) * window->DC.TextAlignment - text_size.x * window->DC.TextAlignment);
+        }
         if (!ItemAdd(bb, 0))
             return;
 

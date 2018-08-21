@@ -234,6 +234,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
             ImGui::EndMenu();
         }
+
         if (ImGui::BeginMenu("Help"))
         {
             ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
@@ -537,28 +538,61 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
             if (ImGui::TreeNode("Word Wrapping"))
             {
+                ImGui::TextWrapped("[Left Align] This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+                ImGui::NewLine();
+                ImGui::PushTextAlignment(1.0f);
                 // Using shortcut. You can use PushTextWrapPos()/PopTextWrapPos() for more flexibility.
-                ImGui::TextWrapped("This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
-                ImGui::Spacing();
+                ImGui::TextWrapped("[Right Align] This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+                ImGui::NewLine();
+                ImGui::PushTextAlignment(0.5f);
+                ImGui::TextWrapped("[Center Align] This text should automatically wrap on the edge of the window. The current implementation for text wrapping follows simple rules suitable for English and possibly other languages.");
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+                ImGui::PopTextAlignment(2);
+                ImGui::NewLine();
 
-                static float wrap_width = 200.0f;
+                static float wrap_width = 287.0f;
                 ImGui::SliderFloat("Wrap width", &wrap_width, -20, 600, "%.0f");
 
-                ImGui::Text("Test paragraph 1:");
+                ImGui::Text("Test paragraph 1 [Left Aligned]:");
                 ImVec2 pos = ImGui::GetCursorScreenPos();
                 ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), IM_COL32(255,0,255,255));
-                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-                ImGui::Text("The lazy dog is a good dog. This paragraph is made to fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.", wrap_width);
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);                
+                ImGui::Text("The lazy dog is a good dog. This paragraph is made to fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.X", wrap_width);
                 ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
                 ImGui::PopTextWrapPos();
 
-                ImGui::Text("Test paragraph 2:");
-                pos = ImGui::GetCursorScreenPos();
-                ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(pos.x + wrap_width, pos.y), ImVec2(pos.x + wrap_width + 10, pos.y + ImGui::GetTextLineHeight()), IM_COL32(255,0,255,255));
+                ImGui::NewLine();
+                ImGui::Text("Test paragraph 2 [Right Aligned]:");
+                ImGui::PushTextAlignment(1.0f);
+                pos = ImGui::GetCursorScreenPos();                
                 ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
-                ImGui::Text("aaaaaaaa bbbbbbbb, c cccccccc,dddddddd. d eeeeeeee   ffffffff. gggggggg!hhhhhhhh");
+                ImGui::Text("The lazy dog is a good dog. This paragraph is made to fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.X", wrap_width);
                 ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255,255,0,255));
                 ImGui::PopTextWrapPos();
+                ImGui::PopTextAlignment();
+
+
+                ImGui::NewLine();
+                ImGui::Text("Test paragraph 3 [Center Aligned]:");
+                ImGui::PushTextAlignment(0.5f);
+                pos = ImGui::GetCursorScreenPos();                
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + wrap_width);
+                ImGui::Text("The lazy dog is a good dog. This paragraph is made to fit within %.0f pixels. Testing a 1 character word. The quick brown fox jumps over the lazy dog.X", wrap_width);
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));
+                ImGui::PopTextWrapPos();
+                ImGui::PopTextAlignment();
+
+                ImGui::NewLine();
+                ImGui::Text("Test paragraph 4 [Right Aligned][Predefined Text Bounding]:");
+                ImGui::PushTextAlignment(1.0f);
+                pos = ImGui::GetCursorScreenPos();
+                ImGui::PushTextWrapPos(ImGui::GetCursorPos().x + 200); 
+                //ImGui::PushTextBoudingRect ?                
+                ImGui::Text("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.");
+                ImGui::GetWindowDrawList()->AddRect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax(), IM_COL32(255, 255, 0, 255));                
+                ImGui::PopTextAlignment();
 
                 ImGui::TreePop();
             }
@@ -2129,6 +2163,29 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Separator();
             ImGui::TreePop();
         }
+
+        if (ImGui::TreeNode("Multi-Text Right-Aligned"))
+        {
+            ImGui::Columns(3, NULL, true);
+            for (int i = 0; i < 3 * 3; i++)
+            {
+                if (ImGui::GetColumnIndex() == 0)
+                    ImGui::Separator();
+
+                ImGui::PushTextAlignment(0.0f);
+                ImGui::Text("Width");
+                ImGui::SameLine();
+
+                ImGui::PushTextAlignment(1.0f);
+                ImGui::TextColored(ImVec4(0.0, 1.0, 0.0, 1.0), "%.2f", ImGui::GetColumnWidth());
+                ImGui::NextColumn();
+                ImGui::PopTextAlignment(2);
+            }
+            ImGui::Columns(1);
+            ImGui::Separator();
+            ImGui::TreePop();            
+        }
+
         ImGui::PopID();
     }
 
