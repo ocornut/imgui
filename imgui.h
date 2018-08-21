@@ -1429,7 +1429,7 @@ struct ImGuiTextEditCallbackData
     ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only
     char*               Buf;            // Current text buffer                  // Read-write (pointed data only, can't replace the actual pointer)
     int                 BufTextLen;     // Current text length in bytes         // Read-write
-    int                 BufSize;        // Maximum text length in bytes         // Read-only
+    int                 BufSize;        // Capacity (maximum text length + 1)   // Read-only
     bool                BufDirty;       // Set if you modify Buf/BufTextLen!!   // Write
     int                 CursorPos;      //                                      // Read-write
     int                 SelectionStart; //                                      // Read-write (== to SelectionEnd when no selection)

@@ -10541,7 +10541,7 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
         return false;
 
     const int new_text_len_utf8 = ImTextCountUtf8BytesFromStr(new_text, new_text + new_text_len);
-    if (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufSizeA)
+    if (new_text_len_utf8 + obj->CurLenA + 1 > obj->BufCapacityA)
         return false;
 
     ImWchar* text = obj->Text.Data;
@@ -10685,7 +10685,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 // Edit a string of text
 // NB: when active, hold on a privately held copy of the text (and apply back to 'buf'). So changing 'buf' while active has no effect.
 // FIXME: Rather messy function partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF-8 all the time. See https://github.com/nothings/stb/issues/188
-bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* user_data)
+bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiTextEditCallback callback, void* callback_user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -10760,7 +10760,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.Id == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
+    const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.ID == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
 
     bool clear_active_id = false;
@@ -10779,12 +10779,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             ImStrncpy(edit_state.InitialText.Data, buf, buf_size);
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.Text.Data, buf_size, buf, NULL, &buf_end);
-            edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImFormatString() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
+            edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
             edit_state.CursorAnimReset();
 
             // Preserve cursor position and undo/redo stack if we come back to same widget
             // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
-            const bool recycle_state = (edit_state.Id == id) && (prev_len_w == edit_state.CurLenW);
+            const bool recycle_state = (edit_state.ID == id) && (prev_len_w == edit_state.CurLenW);
             if (recycle_state)
             {
                 // Recycle existing cursor/selection/undo stack but clamp position
@@ -10793,7 +10793,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
             else
             {
-                edit_state.Id = id;
+                edit_state.ID = id;
                 edit_state.ScrollX = 0.0f;
                 stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
                 if (!is_multiline && focus_requested_by_code)
@@ -10831,7 +10831,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             edit_state.CursorClamp();
         }
 
-        edit_state.BufSizeA = buf_size;
+        edit_state.BufCapacityA = buf_size;
 
         // Although we are active we don't prevent mouse from hovering other elements unless we are interacting right now with the widget.
         // Down the line we should have a cleaner library-wide concept of Selected vs Active.
@@ -10881,7 +10881,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 {
                     // Insert character if they pass filtering
                     unsigned int c = (unsigned int)io.InputCharacters[n];
-                    if (InputTextFilterCharacter(&c, flags, callback, user_data))
+                    if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                         edit_state.OnKeyPressed((int)c);
                 }
 
@@ -10935,14 +10935,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             else if (is_editable)
             {
                 unsigned int c = '\n'; // Insert new line
-                if (InputTextFilterCharacter(&c, flags, callback, user_data))
+                if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                     edit_state.OnKeyPressed((int)c);
             }
         }
         else if ((flags & ImGuiInputTextFlags_AllowTabInput) && IsKeyPressedMap(ImGuiKey_Tab) && !io.KeyCtrl && !io.KeyShift && !io.KeyAlt && is_editable)
         {
             unsigned int c = '\t'; // Insert TAB
-            if (InputTextFilterCharacter(&c, flags, callback, user_data))
+            if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                 edit_state.OnKeyPressed((int)c);
         }
         else if (IsKeyPressedMap(ImGuiKey_Escape))
@@ -10992,7 +10992,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     s += ImTextCharFromUtf8(&c, s, NULL);
                     if (c == 0)
                         break;
-                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, user_data))
+                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                         continue;
                     clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                 }
@@ -11066,12 +11066,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     memset(&callback_data, 0, sizeof(ImGuiTextEditCallbackData));
                     callback_data.EventFlag = event_flag;
                     callback_data.Flags = flags;
-                    callback_data.UserData = user_data;
+                    callback_data.UserData = callback_user_data;
 
                     callback_data.EventKey = event_key;
                     callback_data.Buf = edit_state.TempTextBuffer.Data;
                     callback_data.BufTextLen = edit_state.CurLenA;
-                    callback_data.BufSize = edit_state.BufSizeA;
+                    callback_data.BufSize = edit_state.BufCapacityA;
                     callback_data.BufDirty = false;
 
                     // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar buffer, see https://github.com/nothings/stb/issues/188)
@@ -11085,7 +11085,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
                     // Read back what user may have modified
                     IM_ASSERT(callback_data.Buf == edit_state.TempTextBuffer.Data);  // Invalid to modify those fields
-                    IM_ASSERT(callback_data.BufSize == edit_state.BufSizeA);
+                    IM_ASSERT(callback_data.BufSize == edit_state.BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos);
                     if (callback_data.SelectionStart != utf8_selection_start)  edit_state.StbState.select_start = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionStart);
@@ -11103,7 +11103,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Copy back to user buffer
             if (is_editable && strcmp(edit_state.TempTextBuffer.Data, buf) != 0)
             {
-                ImStrncpy(buf, edit_state.TempTextBuffer.Data, buf_size);
+                ImStrncpy(buf, edit_state.TempTextBuffer.Data, edit_state.CurLenA + 1);
                 value_changed = true;
             }
         }
@@ -11126,7 +11126,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.f, 0.f);
-    const bool is_currently_scrolling = (edit_state.Id == id && is_multiline && g.ActiveId == draw_window->GetIDNoKeepAlive("#SCROLLY"));
+    const bool is_currently_scrolling = (edit_state.ID == id && is_multiline && g.ActiveId == draw_window->GetIDNoKeepAlive("#SCROLLY"));
     if (g.ActiveId == id || is_currently_scrolling)
     {
         edit_state.CursorAnim += io.DeltaTime;
