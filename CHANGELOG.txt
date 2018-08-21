@@ -39,6 +39,8 @@ Breaking Changes:
  - Changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
  - Removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor `io.ConfigResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
    The feature is not currently enabled by default because it is not satisfying enough.
+ - InputText: Renamed ImGuiTextEditCallback to ImGuiInputTextCallback, ImGuiTextEditCallbackData to ImGuiInputTextCallbackData for consistency. 
+   Kept redirection types (will obsolete). 
  - InputText: Removed ImGuiTextEditCallbackData::ReadOnly since it is a duplication of (ImGuiTextEditCallbackData::Flags & ImGuiInputTextFlags_ReadOnly).
  - Renamed io.OptCursorBlink to io.ConfigCursorBlink, io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
 
