@@ -11163,15 +11163,18 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;
                 callback_data.Flags = flags;
                 callback_data.Buf = buf;
-                callback_data.BufTextLen = edit_state.CurLenA;
+                callback_data.BufTextLen = apply_new_text_length;
                 callback_data.BufSize = ImMax(buf_size, apply_new_text_length + 1);
                 callback_data.UserData = callback_user_data;
                 callback(&callback_data);
                 buf = callback_data.Buf;
                 buf_size = callback_data.BufSize;
+                apply_new_text_length = ImMin(callback_data.BufTextLen, buf_size - 1);
+                IM_ASSERT(apply_new_text_length <= buf_size);
             }
-            IM_ASSERT(apply_new_text_length <= buf_size);
-            ImStrncpy(buf, edit_state.TempBuffer.Data, apply_new_text_length + 1);
+
+            // If the underlying buffer resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
+            ImStrncpy(buf, edit_state.TempBuffer.Data, ImMin(apply_new_text_length + 1, buf_size));
             value_changed = true;
         }
 
