@@ -36,18 +36,23 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, V
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
 
-// Called by ImGui_ImplVulkan_Init()
+// Called by ImGui_ImplVulkan_Init() might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 
+
 //-------------------------------------------------------------------------
-// Optional / Miscellaneous Vulkan Helpers
+// Internal / Miscellaneous Vulkan Helpers
 //-------------------------------------------------------------------------
-// - Those functions do NOT use any of the state used/affected by the regular ImGui_ImplVulkan_XXX functions.
-// - If your application/engine already has code to create all that stuff (swap chain, render pass, frame buffers, etc.) you may ignore those.
-// - Those functions are used by the example main.cpp and will be used by imgui_impl_vulkan.cpp in the upcoming multi-viewport branch (1.70).
-//   Generally we try to not provide any kind of superfluous high-level helpers in the examples, but it is too much code to duplicate 
-//   in the main.cpp of every examples. Since the upcoming multi-viewport will need these, we include them here.
+// You probably do NOT need to use or care about those functions. 
+// Those functions only exist because:
+//   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
+//   2) the upcoming multi-viewport feature will need them internally.
+// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings, 
+// but it is too much code to duplicate everywhere so we exceptionally expose them.
+// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+// You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
+// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
 struct ImGui_ImplVulkanH_FrameData;
@@ -60,9 +65,10 @@ IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhys
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
+// Helper structure to hold the data needed by one rendering frame
 struct ImGui_ImplVulkanH_FrameData
 {
-    uint32_t            BackbufferIndex;    // keep track of recently rendered swapchain frame indices
+    uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
     VkFence             Fence;
@@ -72,6 +78,7 @@ struct ImGui_ImplVulkanH_FrameData
     IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
 };
 
+// Helper structure to hold the data needed by one rendering context into one OS window
 struct ImGui_ImplVulkanH_WindowData
 {
     int                 Width;

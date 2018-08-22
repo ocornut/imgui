@@ -726,14 +726,19 @@ void ImGui_ImplVulkan_NewFrame()
 {
 }
 
+
 //-------------------------------------------------------------------------
-// Optional / Miscellaneous Vulkan Helpers
+// Internal / Miscellaneous Vulkan Helpers
 //-------------------------------------------------------------------------
-// - Those functions do NOT use any of the state used/affected by the regular ImGui_ImplVulkan_XXX functions.
-// - If your application/engine already has code to create all that stuff (swap chain, render pass, frame buffers, etc.) you may ignore those.
-// - Those functions are used by the example main.cpp and will be used by imgui_impl_vulkan.cpp in the upcoming multi-viewport branch (1.70).
-//   Generally we try to not provide any kind of superfluous high-level helpers in the examples, but it is too much code to duplicate 
-//   in the main.cpp of every examples. Since the upcoming multi-viewport will need these, we include them here.
+// You probably do NOT need to use or care about those functions. 
+// Those functions only exist because:
+//   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
+//   2) the upcoming multi-viewport feature will need them internally.
+// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings, 
+// but it is too much code to duplicate everywhere so we exceptionally expose them.
+// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+// You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
+// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
 #include <stdlib.h> // malloc
