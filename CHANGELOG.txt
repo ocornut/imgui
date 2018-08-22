@@ -39,6 +39,9 @@ Breaking Changes:
  - Changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
  - Removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor `io.ConfigResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
    The feature is not currently enabled by default because it is not satisfying enough.
+ - InputText: Renamed ImGuiTextEditCallback to ImGuiInputTextCallback, ImGuiTextEditCallbackData to ImGuiInputTextCallbackData for consistency. 
+   Kept redirection types (will obsolete). 
+ - InputText: Removed ImGuiTextEditCallbackData::ReadOnly since it is a duplication of (ImGuiTextEditCallbackData::Flags & ImGuiInputTextFlags_ReadOnly).
  - Renamed io.OptCursorBlink to io.ConfigCursorBlink, io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
 
 Other Changes:
@@ -51,6 +54,13 @@ Other Changes:
  - Window: Allow menu and popups windows from ignoring the style.WindowMinSize values so short menus/popups are not padded. (#1909)
  - Window: Added global io.OptResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
  - Window: Collapse button shows hovering highlight + clicking and dragging on it allows to drag the window as well. 
+ - InputText: Added support for buffer size/capacity changes via the ImGuiInputTextFlags_CallbackResize flag. (#2006, #1443, #1008).
+ - InputText: Fixed not tracking the cursor horizontally When modifying the text buffer through a callback.
+ - InputText: Fixed minor off-by-one issue when submitting a buffer size smaller than the initial zero-terminated buffer contents.
+ - InputText: Fixed a few pathological crash cases on single-line InputText widget with multiple millions characters worth of contents. 
+   Because the current text drawing function reserve for a worst-case amount of vertices and how we handle horizontal clipping,
+   we currently just avoid displaying those single-line widgets when they are over a threshold of 2 millions characters, 
+   until a better solution is found.
  - Drag and Drop: Fixed an incorrect assert when dropping a source that is submitted after the target (bug introduced with 1.62 changes 
    related to the addition of IsItemDeactivated()). (#1875, #143)
  - Drag and Drop: Fixed ImGuiDragDropFlags_SourceNoDisableHover to affect hovering state prior to calling IsItemHovered() + fixed description. (#143)
@@ -60,6 +70,8 @@ Other Changes:
  - Drag and Drop: Added ImGuiDragDropFlags_SourceAutoExpirePayload flag to force payload to expire if the source stops being submitted. (#1725, #143).
  - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
  - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
+ - Misc; Added optional misc/stl/imgui_stl.h wrapper to use with STL types (e.g. InputText with std::string). (#2006, #1443, #1008)
+ - Misc: Added IMGUI_VERSION_NUM for easy compile-time testing. (#2025)
  - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
  - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
  - Made assertion more clear when trying to call Begin() outside of the NewFrame()..EndFrame() scope. (#1987)
@@ -67,12 +79,16 @@ Other Changes:
  - Fixed PushID() from keeping alive the new ID Stack top value (if a previously active widget shared the ID it would be erroneously kept alive).  
  - Fixed horizontal mouse wheel not forwarding the request to the parent window if ImGuiWindowFlags_NoScrollWithMouse is set. (#1463, #1380, #1502)
  - Fixed a include build issue for Cygwin in non-POSIX (Win32) mode. (#1917, #1319, #276)
+ - ImDrawList: Improved handling for worst-case vertices reservation policy when large amount of text (e.g. 1+ million character strings)
+   are being submitted in a single call. It would typically have crashed InputTextMultiline(). (#200)
  - OS/Windows: Fixed missing ImmReleaseContext() call in the default Win32 IME handler. (#1932) [@vby]
  - Metrics: Changed io.MetricsActiveWindows to reflect the number of active windows (!= from visible windows), which is useful
    for lazy/idle render mechanisms as new windows are typically not visible for one frame.
  - Metrics: Added io.MetricsRenderWindow to reflect the number of visible windows.
  - Metrics: Added io.MetricsActiveAllocations, moving away from the cross-context global counters than we previously used. (#1565, #1599, #586)
  - Demo: Added basic Drag and Drop demo. (#143)
+ - Demo: Modified the Console example to use InsertChars() in the input text callback instead of poking directly into the buffer.
+   Although this won't make a difference in the example itself, using InsertChars() will honor the resizing callback properly. (#2006, #1443, #1008).
  - Demo: Clarified the use of IsItemHovered()/IsItemActive() right after being in the "Active, Focused, Hovered & Focused Tests" section.
  - Examples: Tweaked the main.cpp of each example.
  - Examples: Metal: Added Metal rendering backend. (#1929, #1873) [@warrenm]

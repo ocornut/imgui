@@ -66,7 +66,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: expose CursorPos in char filter event (#816)
  - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active.
  - input text: flag to disable live update of the user buffer (also applies to float/int text input) (#701)
- - input text: way to dynamically grow the buffer without forcing the user to initially allocate for worse case, e.g. more natural std::string (follow up on #200)
  - input text: hover tooltip could show unclamped text
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
@@ -80,6 +79,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text multi-line: line numbers? status bar? (follow up on #200)
  - input text multi-line: behave better when user changes input buffer while editing is active (even though it is illegal behavior). namely, the change of buffer can create a scrollbar glitch (#725)
  - input text multi-line: better horizontal scrolling support (#383, #1224)
+ - input text multi-line: single call to AddText() should be coarse clipped on InputTextEx() end.
  - input number: optional range min/max for Input*() functions
  - input number: holding [-]/[+] buttons could increase the step speed non-linearly (or user-controlled)
  - input number: use mouse wheel to step up/down
@@ -240,13 +240,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
+ - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font/atlas: add a missing Glyphs.reserve()
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font/atlas: allow user to submit its own primitive to be rectpacked, and allow to map them on a Unicode point.
- - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
- - font draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
- - font draw: need to be able to specify wrap start position.
+ - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
+ - font/draw: need to be able to specify wrap start position.
+ - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
  - font: imgui_freetype.h alternative renderer (#618)
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct).
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
