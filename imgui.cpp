@@ -2344,7 +2344,9 @@ void ImGui::MarkItemValueChanged(ImGuiID id)
     (void)id; // Avoid unused variable warnings when asserts are compiled out.
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.ActiveId == id || g.ActiveId == 0 || g.DragDropActive);
+    //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
     g.ActiveIdValueChanged = true;
+    g.CurrentWindow->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ValueChanged;
 }
 
 static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFlags flags)

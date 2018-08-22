@@ -268,7 +268,8 @@ enum ImGuiItemStatusFlags_
 {
     ImGuiItemStatusFlags_None               = 0,
     ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
-    ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1
+    ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1,
+    ImGuiItemStatusFlags_ValueChanged       = 1 << 2    // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -648,7 +649,7 @@ struct ImGuiContext
     float                   ActiveIdTimer;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
-    bool                    ActiveIdValueChanged;
+    bool                    ActiveIdValueChanged;               // Was the value associated to the widget changed over the course of the Active state.
     bool                    ActiveIdPreviousFrameIsAlive;
     bool                    ActiveIdPreviousFrameValueChanged;
     int                     ActiveIdAllowNavDirFlags;           // Active widget allows using directional navigation (e.g. can activate a button and move away from it)
