@@ -7182,7 +7182,7 @@ void ImGui::PopTextWrapPos()
 void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiColMod backup;
+    ImGuiColorMod backup;
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
     g.ColorModifiers.push_back(backup);
@@ -7192,7 +7192,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
 void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiColMod backup;
+    ImGuiColorMod backup;
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
     g.ColorModifiers.push_back(backup);
@@ -7204,7 +7204,7 @@ void ImGui::PopStyleColor(int count)
     ImGuiContext& g = *GImGui;
     while (count > 0)
     {
-        ImGuiColMod& backup = g.ColorModifiers.back();
+        ImGuiColorMod& backup = g.ColorModifiers.back();
         g.Style.Colors[backup.Col] = backup.BackupValue;
         g.ColorModifiers.pop_back();
         count--;
