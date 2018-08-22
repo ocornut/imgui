@@ -8,9 +8,12 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification. 
+// IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
+
 #include <vulkan/vulkan.h>
 
-#define IMGUI_VK_QUEUED_FRAMES 2
+#define IMGUI_VK_QUEUED_FRAMES      2
 
 struct ImGui_ImplVulkan_InitInfo
 {
@@ -25,24 +28,26 @@ struct ImGui_ImplVulkan_InitInfo
     void                            (*CheckVkResultFn)(VkResult err);
 };
 
+// Called by user code
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
-
-// Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
+
+// Called by ImGui_ImplVulkan_Init()
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 
 //-------------------------------------------------------------------------
-// Miscellaneous Vulkan Helpers
-// Generally we try to NOT provide any kind of superfluous high-level helpers in the examples. 
-// But for the upcoming multi-viewport feature, the Vulkan will need this code anyway, so we decided to shared it and use it in the examples' main.cpp
-// If your application/engine already has code to create all that data (swap chain, render pass, frame buffers, etc.) you can ignore all of this.
+// Optional / Miscellaneous Vulkan Helpers
 //-------------------------------------------------------------------------
-// NB: Those functions do NOT use any of the state used/affected by the regular ImGui_ImplVulkan_XXX functions.
+// - Those functions do NOT use any of the state used/affected by the regular ImGui_ImplVulkan_XXX functions.
+// - If your application/engine already has code to create all that stuff (swap chain, render pass, frame buffers, etc.) you may ignore those.
+// - Those functions are used by the example main.cpp and will be used by imgui_impl_vulkan.cpp in the upcoming multi-viewport branch (1.70).
+//   Generally we try to not provide any kind of superfluous high-level helpers in the examples, but it is too much code to duplicate 
+//   in the main.cpp of every examples. Since the upcoming multi-viewport will need these, we include them here.
 //-------------------------------------------------------------------------
 
 struct ImGui_ImplVulkanH_FrameData;

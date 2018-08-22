@@ -8,6 +8,9 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification. 
+// IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
+
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-06-22: Inverted the parameters to ImGui_ImplVulkan_RenderDrawData() to be consistent with other bindings.
@@ -214,8 +217,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     // Upload Vertex and index Data:
     {
-        ImDrawVert* vtx_dst;
-        ImDrawIdx* idx_dst;
+        ImDrawVert* vtx_dst = NULL;
+        ImDrawIdx* idx_dst = NULL;
         err = vkMapMemory(g_Device, fd->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
         check_vk_result(err);
         err = vkMapMemory(g_Device, fd->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst));
@@ -724,7 +727,13 @@ void ImGui_ImplVulkan_NewFrame()
 }
 
 //-------------------------------------------------------------------------
-// Miscellaneous Vulkan Helpers
+// Optional / Miscellaneous Vulkan Helpers
+//-------------------------------------------------------------------------
+// - Those functions do NOT use any of the state used/affected by the regular ImGui_ImplVulkan_XXX functions.
+// - If your application/engine already has code to create all that stuff (swap chain, render pass, frame buffers, etc.) you may ignore those.
+// - Those functions are used by the example main.cpp and will be used by imgui_impl_vulkan.cpp in the upcoming multi-viewport branch (1.70).
+//   Generally we try to not provide any kind of superfluous high-level helpers in the examples, but it is too much code to duplicate 
+//   in the main.cpp of every examples. Since the upcoming multi-viewport will need these, we include them here.
 //-------------------------------------------------------------------------
 
 #include <stdlib.h> // malloc
