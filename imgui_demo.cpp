@@ -36,7 +36,6 @@
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#define snprintf  _snprintf
 #define vsnprintf _vsnprintf
 #endif
 #ifdef __clang__
@@ -2809,14 +2808,15 @@ struct ExampleAppConsole
         bool reclaim_focus = false;
         if (ImGui::InputText("Input", InputBuf, IM_ARRAYSIZE(InputBuf), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory, &TextEditCallbackStub, (void*)this))
         {
-            Strtrim(InputBuf);
-            if (InputBuf[0])
-                ExecCommand(InputBuf);
-            strcpy(InputBuf, "");
+            char* s = InputBuf;
+            Strtrim(s);
+            if (s[0])
+                ExecCommand(s);
+            strcpy(s, "");
             reclaim_focus = true;
         }
 
-        // Demonstrate keeping focus on the input box
+        // Auto-focus on window apparition
         ImGui::SetItemDefaultFocus();
         if (reclaim_focus)
             ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
@@ -2959,9 +2959,9 @@ struct ExampleAppConsole
                 // A better implementation would preserve the data on the current input line along with cursor position.
                 if (prev_history_pos != HistoryPos)
                 {
-                    int sz = (int)snprintf(data->Buf, (size_t)data->BufSize, "%s", (HistoryPos >= 0) ? History[HistoryPos] : "");
-                    data->CursorPos = data->SelectionStart = data->SelectionEnd = data->BufTextLen = sz;
-                    data->BufDirty = true;
+                    const char* history_str = (HistoryPos >= 0) ? History[HistoryPos] : "";
+                    data->DeleteChars(0, data->BufTextLen);
+                    data->InsertChars(0, history_str);
                 }
             }
         }

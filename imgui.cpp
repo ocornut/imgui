@@ -10622,9 +10622,23 @@ void ImGuiInputTextCallbackData::DeleteChars(int pos, int bytes_count)
 
 void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, const char* new_text_end)
 {
+    const bool is_resizable = (Flags & ImGuiInputTextFlags_CallbackResize) != 0;
     const int new_text_len = new_text_end ? (int)(new_text_end - new_text) : (int)strlen(new_text);
-    if (new_text_len + BufTextLen + 1 >= BufSize)
-        return;
+    if (new_text_len + BufTextLen >= BufSize)
+    {
+        if (!is_resizable)
+            return;
+
+        // Contrary to STB_TEXTEDIT_INSERTCHARS() this is working in the UTF8 buffer, hence the midly similar code (until we remove the U16 buffer alltogether!)
+        ImGuiContext& g = *GImGui;
+        ImGuiInputTextState* edit_state = &g.InputTextState;
+        IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
+        IM_ASSERT(Buf == edit_state->TempBuffer.Data);
+        int new_buf_size = BufTextLen + ImClamp(new_text_len * 4, 32, ImMax(256, new_text_len)) + 1;
+        edit_state->TempBuffer.reserve(new_buf_size + 1);
+        Buf = edit_state->TempBuffer.Data;
+        BufSize = edit_state->BufCapacityA = new_buf_size;
+    }
 
     if (BufTextLen != pos)
         memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(BufTextLen - pos));
@@ -10710,8 +10724,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackHistory) && (flags & ImGuiInputTextFlags_Multiline)));        // Can't use both together (they both use up/down keys)
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackCompletion) && (flags & ImGuiInputTextFlags_AllowTabInput))); // Can't use both together (they both use tab key)
-    if (flags & ImGuiInputTextFlags_CallbackResize)
-        IM_ASSERT(callback != NULL);
 
     ImGuiContext& g = *GImGui;
     const ImGuiIO& io = g.IO;
@@ -10721,6 +10733,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool is_editable = (flags & ImGuiInputTextFlags_ReadOnly) == 0;
     const bool is_password = (flags & ImGuiInputTextFlags_Password) != 0;
     const bool is_undoable = (flags & ImGuiInputTextFlags_NoUndoRedo) == 0;
+    const bool is_resizable = (flags & ImGuiInputTextFlags_CallbackResize) != 0;
+    if (is_resizable)
+        IM_ASSERT(callback != NULL); // Must provide a callback if you set the ImGuiInputTextFlags_CallbackResize flag!
 
     if (is_multiline) // Open group before calling GetID() because groups tracks id created within their scope, 
         BeginGroup();
@@ -11056,7 +11071,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks.
             if (is_editable)
             {
-                edit_state.TempBuffer.resize(edit_state.TextW.Size * 4);
+                edit_state.TempBuffer.resize(edit_state.TextW.Size * 4 + 1);
                 ImTextStrToUtf8(edit_state.TempBuffer.Data, edit_state.TempBuffer.Size, edit_state.TextW.Data, NULL);
             }
 
@@ -11119,6 +11134,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     if (callback_data.BufDirty)
                     {
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
+                        if (callback_data.BufTextLen > backup_current_text_length && is_resizable)
+                            edit_state.TextW.resize(edit_state.TextW.Size + (callback_data.BufTextLen - backup_current_text_length));
                         edit_state.CurLenW = ImTextStrFromUtf8(edit_state.TextW.Data, edit_state.TextW.Size, callback_data.Buf, NULL);
                         edit_state.CurLenA = callback_data.BufTextLen;  // Assume correct length and valid UTF-8 from user, saves us an extra strlen()
                         edit_state.CursorAnimReset();
@@ -11138,7 +11155,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (apply_new_text)
         {
             IM_ASSERT(apply_new_text_length >= 0);
-            if (backup_current_text_length != apply_new_text_length && (flags & ImGuiInputTextFlags_CallbackResize))
+            if (backup_current_text_length != apply_new_text_length && is_resizable)
             {
                 ImGuiInputTextCallbackData callback_data;
                 callback_data.EventFlag = ImGuiInputTextFlags_CallbackResize;

@@ -1419,7 +1419,7 @@ struct ImGuiStorage
 // The callback function should return 0 by default.
 // Special processing:
 // - ImGuiInputTextFlags_CallbackCharFilter:  return 1 if the character is not allowed. You may also set 'EventChar=0' as any character replacement are allowed.
-// - ImGuiInputTextFlags_CallbackResize:      BufTextLen is set to the new desired string length so you can allocate or update the size on your side of the fence. No need to initialize new characters or zero-terminator as InputText will do it.
+// - ImGuiInputTextFlags_CallbackResize:      notified by InputText() when the string is resized. BufTextLen is set to the new desired string length so you can update the string size on your side of the fence. You can also replace Buf pointer if your underlying data is reallocated. No need to initialize new characters or zero-terminator as InputText will do it right after the resize callback.
 struct ImGuiInputTextCallbackData
 {
     ImGuiInputTextFlags EventFlag;      // One ImGuiInputTextFlags_Callback*    // Read-only
@@ -1427,7 +1427,8 @@ struct ImGuiInputTextCallbackData
     void*               UserData;       // What user passed to InputText()      // Read-only
 
     // Arguments for the different callback events
-    // (If you modify the 'buf' contents make sure you update 'BufTextLen' and set 'BufDirty' to true!)
+    // - To modify the text buffer in a callback, prefer using the InsertChars() / DeleteChars() function. InsertChars() will take care of calling the resize callback if necessary.
+    // - If you know your edits are not going to resize the underlying buffer allocation, you may modify the contents of 'Buf[]' directly. You need to update 'BufTextLen' accordingly (0 <= BufTextLen < BufSize) and set 'BufDirty'' to true so InputText can update its internal state.
     ImWchar             EventChar;      // Character input                      // Read-write   // [CharFilter] Replace character or set to zero. return 1 is equivalent to setting EventChar=0;
     ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only    // [Completion,History]
     char*               Buf;            // Text buffer                          // Read-write   // [Resize] Can replace pointer / [Completion,History,Always] Only write to pointed data, don't replace the actual pointer!
@@ -1438,7 +1439,8 @@ struct ImGuiInputTextCallbackData
     int                 SelectionStart; //                                      // Read-write   // [Completion,History,Always] == to SelectionEnd when no selection)
     int                 SelectionEnd;   //                                      // Read-write   // [Completion,History,Always]
 
-    // NB: Helper functions for text manipulation. Calling those function loses selection.
+    // Helper functions for text manipulation.
+    // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
     ImGuiInputTextCallbackData();
     IMGUI_API void      DeleteChars(int pos, int bytes_count);
     IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
