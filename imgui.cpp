@@ -9219,7 +9219,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
         SetHoveredID(id);
     }
     if (value_changed)
-        return DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialText.begin(), data_type, data_ptr, NULL);
+        return DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialText.Data, data_type, data_ptr, NULL);
     return false;
 }
 
@@ -10809,9 +10809,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
             // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
             const int prev_len_w = edit_state.CurLenW;
-            edit_state.TextW.resize(buf_size+1);        // wchar count <= UTF-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
-            edit_state.InitialText.resize(buf_size+1); // UTF-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
-            ImStrncpy(edit_state.InitialText.Data, buf, buf_size);
+            const int init_buf_len = (int)strlen(buf);
+            edit_state.TextW.resize(buf_size+1);             // wchar count <= UTF-8 count. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
+            edit_state.InitialText.resize(init_buf_len + 1); // UTF-8. we use +1 to make sure that .Data isn't NULL so it doesn't crash.
+            memcpy(edit_state.InitialText.Data, buf, init_buf_len + 1);
             const char* buf_end = NULL;
             edit_state.CurLenW = ImTextStrFromUtf8(edit_state.TextW.Data, buf_size, buf, NULL, &buf_end);
             edit_state.CurLenA = (int)(buf_end - buf); // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
@@ -11054,10 +11055,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (cancel_edit)
         {
             // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
-            if (is_editable && strncmp(buf, edit_state.InitialText.Data, buf_size) != 0)
+            if (is_editable && strcmp(buf, edit_state.InitialText.Data) != 0)
             {
                 apply_new_text = edit_state.InitialText.Data;
-                apply_new_text_length = buf_size - 1;
+                apply_new_text_length = edit_state.InitialText.Size - 1;
             }
         }
 
