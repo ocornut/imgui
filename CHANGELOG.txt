@@ -54,6 +54,8 @@ Other Changes:
  - Window: Allow menu and popups windows from ignoring the style.WindowMinSize values so short menus/popups are not padded. (#1909)
  - Window: Added global io.OptResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
  - Window: Collapse button shows hovering highlight + clicking and dragging on it allows to drag the window as well. 
+ - Added IsItemEdited() to query if the last item modified its value (or was pressed). This is equivalent to the bool returned by most widgets.
+   It is useful in some situation e.g. using InputText() with ImGuiInputTextFlags_EnterReturnsTrue. (#2034)
  - InputText: Added support for buffer size/capacity changes via the ImGuiInputTextFlags_CallbackResize flag. (#2006, #1443, #1008).
  - InputText: Fixed not tracking the cursor horizontally When modifying the text buffer through a callback.
  - InputText: Fixed minor off-by-one issue when submitting a buffer size smaller than the initial zero-terminated buffer contents.

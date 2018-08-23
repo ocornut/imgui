@@ -1275,7 +1275,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Active, Focused, Hovered & Focused Tests"))
+        if (ImGui::TreeNode("Active, Focused and Hovered Tests"))
         {
             // Display the value of IsItemHovered() and other common item state functions. Note that the flags can be combined.
             // (because BulletText is an item itself and that would affect the output of IsItemHovered() we pass all state in a single call to simplify the code).
@@ -1304,6 +1304,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsItemHovered(_AllowWhenOverlapped) = %d\n"
                 "IsItemHovered(_RectOnly) = %d\n"
                 "IsItemActive() = %d\n"
+                "IsItemEdited() = %d\n"
                 "IsItemDeactivated() = %d\n"
                 "IsItemDeactivatedAfterChange() = %d\n"
                 "IsItemVisible() = %d\n",
@@ -1315,6 +1316,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
                 ImGui::IsItemActive(),
+                ImGui::IsItemEdited(),
                 ImGui::IsItemDeactivated(),
                 ImGui::IsItemDeactivatedAfterChange(),
                 ImGui::IsItemVisible()

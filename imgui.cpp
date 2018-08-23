@@ -5246,6 +5246,12 @@ bool ImGui::IsItemVisible()
     return window->ClipRect.Overlaps(window->DC.LastItemRect);
 }
 
+bool ImGui::IsItemEdited()
+{
+    ImGuiWindow* window = GetCurrentWindowRead();
+    return (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_ValueChanged) != 0;
+}
+
 // Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
 void ImGui::SetItemAllowOverlap()
 {
@@ -11954,6 +11960,7 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
         return false;
 
     // Assume all items have even height (= 1 line of text). If you need items of different or variable sizes you can create a custom version of ListBox() in your code without using the clipper.
+    ImGuiContext& g = *GImGui;
     bool value_changed = false;
     ImGuiListClipper clipper(items_count, GetTextLineHeightWithSpacing()); // We know exactly our line height here so we pass it as a minor optimization, but generally you don't need to.
     while (clipper.Step())
@@ -11975,6 +11982,9 @@ bool ImGui::ListBox(const char* label, int* current_item, bool (*items_getter)(v
             PopID();
         }
     ListBoxFooter();
+    if (value_changed)
+        MarkItemValueChanged(g.CurrentWindow->DC.LastItemId);
+
     return value_changed;
 }
 
@@ -13268,7 +13278,7 @@ void ImGui::EndGroup()
     }
 
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive(), IsItemDeactivated() etc. will be functional on the entire group.
-    // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but put a little more burden on individual widgets.
+    // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but would put a little more burden on individual widgets.
     // (and if you grep for LastItemId you'll notice it is only used in that context.
     if ((group_data.BackupActiveIdIsAlive != g.ActiveId) && (g.ActiveIdIsAlive == g.ActiveId) && g.ActiveId) // && g.ActiveIdWindow->RootWindow == window->RootWindow)
         window->DC.LastItemId = g.ActiveId;
