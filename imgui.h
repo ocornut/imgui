@@ -1227,8 +1227,6 @@ namespace ImGui
     static inline bool  IsPosHoveringAnyWindow(const ImVec2&) { IM_ASSERT(0); return false; } // This was misleading and partly broken. You probably want to use the ImGui::GetIO().WantCaptureMouse flag instead.
     static inline bool  IsMouseHoveringAnyWindow()            { return IsWindowHovered(ImGuiHoveredFlags_AnyWindow); }
     static inline bool  IsMouseHoveringWindow()               { return IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); }
-    // OBSOLETED IN 1.49 (between Apr 2016 and May 2016)
-    static inline bool  CollapsingHeader(const char* label, const char* str_id, bool framed = true, bool default_open = false) { (void)str_id; (void)framed; ImGuiTreeNodeFlags default_open_flags = 1 << 5; return CollapsingHeader(label, (default_open ? default_open_flags : 0)); }
 }
 #endif
 
