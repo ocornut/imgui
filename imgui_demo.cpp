@@ -1306,7 +1306,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsItemActive() = %d\n"
                 "IsItemEdited() = %d\n"
                 "IsItemDeactivated() = %d\n"
-                "IsItemDeactivatedAfterChange() = %d\n"
+                "IsItemDeactivatedEdit() = %d\n"
                 "IsItemVisible() = %d\n",
                 ret,
                 ImGui::IsItemFocused(),
@@ -1318,7 +1318,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::IsItemActive(),
                 ImGui::IsItemEdited(),
                 ImGui::IsItemDeactivated(),
-                ImGui::IsItemDeactivatedAfterChange(),
+                ImGui::IsItemDeactivatedAfterEdit(),
                 ImGui::IsItemVisible()
             );
 
