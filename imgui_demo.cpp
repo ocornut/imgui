@@ -1275,19 +1275,20 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Active, Focused and Hovered Tests"))
+        if (ImGui::TreeNode("Querying Status (Active/Focused/Hovered etc.)"))
         {
             // Display the value of IsItemHovered() and other common item state functions. Note that the flags can be combined.
             // (because BulletText is an item itself and that would affect the output of IsItemHovered() we pass all state in a single call to simplify the code).
             static int item_type = 1;
             static bool b = false;
             static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
-            ImGui::RadioButton("Text", &item_type, 0); ImGui::SameLine();
-            ImGui::RadioButton("Button", &item_type, 1); ImGui::SameLine();
-            ImGui::RadioButton("CheckBox", &item_type, 2); ImGui::SameLine();
-            ImGui::RadioButton("SliderFloat", &item_type, 3); ImGui::SameLine();
-            ImGui::RadioButton("ColorEdit4", &item_type, 4); ImGui::SameLine();
+            ImGui::RadioButton("Text", &item_type, 0);
+            ImGui::RadioButton("Button", &item_type, 1);
+            ImGui::RadioButton("CheckBox", &item_type, 2);
+            ImGui::RadioButton("SliderFloat", &item_type, 3);
+            ImGui::RadioButton("ColorEdit4", &item_type, 4);
             ImGui::RadioButton("ListBox", &item_type, 5);
+            ImGui::Separator();
             bool ret = false;
             if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
             if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
@@ -1307,7 +1308,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsItemEdited() = %d\n"
                 "IsItemDeactivated() = %d\n"
                 "IsItemDeactivatedEdit() = %d\n"
-                "IsItemVisible() = %d\n",
+                "IsItemVisible() = %d\n"
+                "GetItemRectMin() = (%.1f, %.1f)\n"
+                "GetItemRectMax() = (%.1f, %.1f)\n"
+                "GetItemRectSize() = (%.1f, %.1f)",
                 ret,
                 ImGui::IsItemFocused(),
                 ImGui::IsItemHovered(),
@@ -1319,7 +1323,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::IsItemEdited(),
                 ImGui::IsItemDeactivated(),
                 ImGui::IsItemDeactivatedAfterEdit(),
-                ImGui::IsItemVisible()
+                ImGui::IsItemVisible(),
+                ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y,
+                ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y,
+                ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
             );
 
             static bool embed_all_inside_a_child_window = false;
