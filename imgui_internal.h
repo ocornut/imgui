@@ -269,7 +269,7 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_None               = 0,
     ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
     ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1,
-    ImGuiItemStatusFlags_ValueChanged       = 1 << 2    // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
+    ImGuiItemStatusFlags_Edited             = 1 << 2    // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -649,9 +649,9 @@ struct ImGuiContext
     float                   ActiveIdTimer;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
-    bool                    ActiveIdValueChanged;               // Was the value associated to the widget changed over the course of the Active state.
+    bool                    ActiveIdHasBeenEdited;              // Was the value associated to the widget Edited over the course of the Active state.
     bool                    ActiveIdPreviousFrameIsAlive;
-    bool                    ActiveIdPreviousFrameValueChanged;
+    bool                    ActiveIdPreviousFrameHasBeenEdited;
     int                     ActiveIdAllowNavDirFlags;           // Active widget allows using directional navigation (e.g. can activate a button and move away from it)
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
     ImGuiWindow*            ActiveIdWindow;
@@ -796,9 +796,9 @@ struct ImGuiContext
         ActiveIdTimer = 0.0f;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
-        ActiveIdValueChanged = false;
+        ActiveIdHasBeenEdited = false;
         ActiveIdPreviousFrameIsAlive = false;
-        ActiveIdPreviousFrameValueChanged = false;
+        ActiveIdPreviousFrameHasBeenEdited = false;
         ActiveIdAllowNavDirFlags = 0;
         ActiveIdClickOffset = ImVec2(-1,-1);
         ActiveIdWindow = ActiveIdPreviousFrameWindow = NULL;
@@ -1128,7 +1128,7 @@ namespace ImGui
     IMGUI_API ImGuiID       GetHoveredID();
     IMGUI_API void          SetHoveredID(ImGuiID id);
     IMGUI_API void          KeepAliveID(ImGuiID id);
-    IMGUI_API void          MarkItemValueChanged(ImGuiID id);
+    IMGUI_API void          MarkItemEdited(ImGuiID id);
 
     // Basic Helpers for widget code
     IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);

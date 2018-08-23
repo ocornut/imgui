@@ -145,8 +145,9 @@ Other Changes:
    - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
    - Read examples/README.txt for details.
  - Added IsItemDeactivated() to query if the last item was active previously and isn't anymore. Useful for Undo/Redo patterns. (#820, #956, #1875)
- - Added IsItemDeactivatedAfterChange() if the last item was active previously, isn't anymore, and during its active state modified a value. 
-   Note that you may still get false positive (e.g. drag value and while holding return on the same value). (#820, #956, #1875)
+ - Added IsItemDeactivatedAfterChange() [*EDIT* renamed to IsItemDeactivatedAfterEdit() in 1.63) if the last item was active previously, 
+   is not anymore, and during its active state modified a value. Note that you may still get false positive (e.g. drag value and while 
+   holding return on the same value). (#820, #956, #1875)
  - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
  - ColorEdit3, ColorEdit4, ColorButton: Added ImGuiColorEditFlags_NoDragDrop flag to disable ColorEditX as drag target and ColorButton as drag source. (#1826) 
