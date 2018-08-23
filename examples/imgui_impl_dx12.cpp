@@ -51,6 +51,8 @@ struct FrameResources
 static FrameResources*              g_pFrameResources = NULL;
 static UINT                         g_numFramesInFlight = 0;
 static UINT                         g_frameIndex = UINT_MAX;
+static bool                         g_isRendering = false;
+static bool                         g_resetRenderState = false;
 
 struct VERTEX_CONSTANT_BUFFER
 {
@@ -59,7 +61,7 @@ struct VERTEX_CONSTANT_BUFFER
 
 // Render function
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx)
+void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, ID3D12DescriptorHeap* descriptor_heap)
 {
     // FIXME: I'm assuming that this only gets called once per frame!
     // If not, we can't just re-allocate the IB or VB, we'll have to do a proper allocator.
@@ -170,7 +172,6 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
-    ctx->RSSetViewports(1, &vp);
 
     // Bind shader and vertex buffers
     unsigned int stride = sizeof(ImDrawVert);
@@ -180,26 +181,21 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     vbv.BufferLocation = g_pVB->GetGPUVirtualAddress() + offset;
     vbv.SizeInBytes = g_VertexBufferSize * stride;
     vbv.StrideInBytes = stride;
-    ctx->IASetVertexBuffers(0, 1, &vbv);
     D3D12_INDEX_BUFFER_VIEW ibv;
     memset(&ibv, 0, sizeof(D3D12_INDEX_BUFFER_VIEW));
     ibv.BufferLocation = g_pIB->GetGPUVirtualAddress();
     ibv.SizeInBytes = g_IndexBufferSize * sizeof(ImDrawIdx);
     ibv.Format = sizeof(ImDrawIdx) == 2 ? DXGI_FORMAT_R16_UINT : DXGI_FORMAT_R32_UINT;
-    ctx->IASetIndexBuffer(&ibv);
-    ctx->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
-    ctx->SetPipelineState(g_pPipelineState);
-    ctx->SetGraphicsRootSignature(g_pRootSignature);
-    ctx->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
 
     // Setup render state
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
-    ctx->OMSetBlendFactor(blend_factor);
 
     // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
+    g_isRendering = true;
+    g_resetRenderState = true;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -212,6 +208,24 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
             }
             else
             {
+                if (g_resetRenderState)
+                {
+                    g_resetRenderState = false;
+                    ctx->RSSetViewports(1, &vp);
+                    ctx->IASetVertexBuffers(0, 1, &vbv);
+                    ctx->IASetIndexBuffer(&ibv);
+                    ctx->IASetPrimitiveTopology(D3D_PRIMITIVE_TOPOLOGY_TRIANGLELIST);
+                    ctx->SetPipelineState(g_pPipelineState);
+                    ctx->SetGraphicsRootSignature(g_pRootSignature);
+                    ctx->SetGraphicsRoot32BitConstants(0, 16, &vertex_constant_buffer, 0);
+                    ctx->OMSetBlendFactor(blend_factor);
+
+					if (descriptor_heap != NULL)
+					{
+						ctx->SetDescriptorHeaps(1, &descriptor_heap);
+					}
+                }
+
                 const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
                 ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
                 ctx->RSSetScissorRects(1, &r);
@@ -221,6 +235,13 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
         }
         vtx_offset += cmd_list->VtxBuffer.Size;
     }
+    g_isRendering = false;
+}
+
+void ImGui_ImplDX12_ResetRenderStateCallback(const ImDrawList*, const ImDrawCmd*)
+{
+    IM_ASSERT(g_isRendering);
+    g_resetRenderState = true;
 }
 
 static void ImGui_ImplDX12_CreateFontsTexture()

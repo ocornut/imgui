@@ -14,6 +14,7 @@
 
 enum DXGI_FORMAT;
 struct ID3D12Device;
+struct ID3D12DescriptorHeap;
 struct ID3D12GraphicsCommandList;
 struct D3D12_CPU_DESCRIPTOR_HANDLE;
 struct D3D12_GPU_DESCRIPTOR_HANDLE;
@@ -22,12 +23,20 @@ struct D3D12_GPU_DESCRIPTOR_HANDLE;
 // Before calling the render function, caller must prepare cmd_list by resetting it and setting the appropriate
 // render target and descriptor heap that contains font_srv_cpu_desc_handle/font_srv_gpu_desc_handle.
 // font_srv_cpu_desc_handle and font_srv_gpu_desc_handle are handles to a single SRV descriptor to use for the internal font texture.
+// If the descriptor heap is passed into RenderDrawData then it will be set for you and will be set when resetting the render state.
 IMGUI_IMPL_API bool     ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FORMAT rtv_format,
                                             D3D12_CPU_DESCRIPTOR_HANDLE font_srv_cpu_desc_handle, D3D12_GPU_DESCRIPTOR_HANDLE font_srv_gpu_desc_handle);
 IMGUI_IMPL_API void     ImGui_ImplDX12_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplDX12_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* graphics_command_list);
+IMGUI_IMPL_API void     ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandList* graphics_command_list,
+	                                        ID3D12DescriptorHeap* descriptor_heap = NULL);
+
+// This function can be bound after Adding a user callback to restore the render state so imgui can continue rendering
+IMGUI_IMPL_API void     ImGui_ImplDX12_ResetRenderStateCallback(const ImDrawList*, const ImDrawCmd*);
 
 // Use if you want to reset your rendering device without losing ImGui state.
 IMGUI_IMPL_API void     ImGui_ImplDX12_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplDX12_CreateDeviceObjects();
+
+// Unified symbol that can be used across multiple implementations
+#define ImDrawCallback_ResetState ImGui_ImplDX12_ResetRenderStateCallback
