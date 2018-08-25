@@ -37,12 +37,15 @@ Breaking Changes:
 
  - Style: Renamed ImGuiCol_ModalWindowDarkening to ImGuiCol_ModalWindowDimBg for consistency with other features. Kept redirection enum (will obsolete).
  - Changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
- - Removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor `io.ConfigResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
-   The feature is not currently enabled by default because it is not satisfying enough.
+ - Removed per-window ImGuiWindowFlags_ResizeFromAnySide Beta flag in favor `io.ConfigResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
+   The feature is not currently enabled by default because it is not satisfying enough, but will eventually be.
  - InputText: Renamed ImGuiTextEditCallback to ImGuiInputTextCallback, ImGuiTextEditCallbackData to ImGuiInputTextCallbackData for consistency. 
    Kept redirection types (will obsolete). 
  - InputText: Removed ImGuiTextEditCallbackData::ReadOnly since it is a duplication of (ImGuiTextEditCallbackData::Flags & ImGuiInputTextFlags_ReadOnly).
+ - Renamed IsItemDeactivatedAfterChange() to IsItemDeactivatedAfterEdit() for consistency with new IsItemEdited() API. 
+   Kept redirection function (will obsolete soonish as IsItemDeactivatedAfterChange() is very recent).
  - Renamed io.OptCursorBlink to io.ConfigCursorBlink, io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
+-  Removed obsolete redirection functions: CollapsingHeader() variation with 2 bools - marked obsolete in v1.49, May 2016.
 
 Other Changes:
 
@@ -54,6 +57,8 @@ Other Changes:
  - Window: Allow menu and popups windows from ignoring the style.WindowMinSize values so short menus/popups are not padded. (#1909)
  - Window: Added global io.OptResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
  - Window: Collapse button shows hovering highlight + clicking and dragging on it allows to drag the window as well. 
+ - Added IsItemEdited() to query if the last item modified its value (or was pressed). This is equivalent to the bool returned by most widgets.
+   It is useful in some situation e.g. using InputText() with ImGuiInputTextFlags_EnterReturnsTrue. (#2034)
  - InputText: Added support for buffer size/capacity changes via the ImGuiInputTextFlags_CallbackResize flag. (#2006, #1443, #1008).
  - InputText: Fixed not tracking the cursor horizontally When modifying the text buffer through a callback.
  - InputText: Fixed minor off-by-one issue when submitting a buffer size smaller than the initial zero-terminated buffer contents.
@@ -102,6 +107,7 @@ Other Changes:
  - Examples: OpenGL2: Disabling/restoring GL_LIGHTING and GL_COLOR_MATERIAL to increase compatibility with legacy OpenGL applications. (#1996)
  - Examples: DirectX10, DirectX11: Fixed unreleased resources in Init and Shutdown functions. (#1944)
  - Examples: DirectX11: Querying for IDXGIFactory instead of IDXGIFactory1 to increase compatibility. (#1989) [@matt77hias]
+ - Examples: Vulkan: Fixed handling of VkSurfaceCapabilitiesKHR::maxImageCount = 0 case. Tweaked present mode selections. 
  - Examples: Win32, Glfw, SDL: Added support for the ImGuiMouseCursor_Hand cursor.
 
 
@@ -140,8 +146,9 @@ Other Changes:
    - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
    - Read examples/README.txt for details.
  - Added IsItemDeactivated() to query if the last item was active previously and isn't anymore. Useful for Undo/Redo patterns. (#820, #956, #1875)
- - Added IsItemDeactivatedAfterChange() if the last item was active previously, isn't anymore, and during its active state modified a value. 
-   Note that you may still get false positive (e.g. drag value and while holding return on the same value). (#820, #956, #1875)
+ - Added IsItemDeactivatedAfterChange() [*EDIT* renamed to IsItemDeactivatedAfterEdit() in 1.63) if the last item was active previously, 
+   is not anymore, and during its active state modified a value. Note that you may still get false positive (e.g. drag value and while 
+   holding return on the same value). (#820, #956, #1875)
  - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
  - Nav: To keep the navigated item in view we also attempt to scroll the parent window as well as the current window. (#787)
  - ColorEdit3, ColorEdit4, ColorButton: Added ImGuiColorEditFlags_NoDragDrop flag to disable ColorEditX as drag target and ColorButton as drag source. (#1826) 
