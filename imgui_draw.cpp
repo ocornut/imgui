@@ -1409,7 +1409,7 @@ void    ImFontAtlas::ClearInputData()
     for (int i = 0; i < ConfigData.Size; i++)
         if (ConfigData[i].FontData && ConfigData[i].FontDataOwnedByAtlas)
         {
-            ImGui::MemFree(ConfigData[i].FontData);
+            ImGui::MemFree(const_cast<void*>(ConfigData[i].FontData));
             ConfigData[i].FontData = NULL;
         }
 
@@ -1510,9 +1510,10 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         new_font_cfg.DstFont = Fonts.back();
     if (!new_font_cfg.FontDataOwnedByAtlas)
     {
-        new_font_cfg.FontData = ImGui::MemAlloc(new_font_cfg.FontDataSize);
+        void* new_font_data = ImGui::MemAlloc(new_font_cfg.FontDataSize);
+        memcpy(new_font_data, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
+        new_font_cfg.FontData = new_font_data;
         new_font_cfg.FontDataOwnedByAtlas = true;
-        memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
     }
 
     // Invalidate texture
@@ -1577,7 +1578,7 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(const char* filename, float size_pixels,
 }
 
 // NB: Transfer ownership of 'ttf_data' to ImFontAtlas, unless font_cfg_template->FontDataOwnedByAtlas == false. Owned TTF buffer will be deleted after Build().
-ImFont* ImFontAtlas::AddFontFromMemoryTTF(void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
+ImFont* ImFontAtlas::AddFontFromMemoryTTF(const void* ttf_data, int ttf_size, float size_pixels, const ImFontConfig* font_cfg_template, const ImWchar* glyph_ranges)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     ImFontConfig font_cfg = font_cfg_template ? *font_cfg_template : ImFontConfig();
