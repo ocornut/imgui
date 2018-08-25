@@ -391,6 +391,11 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     glfwSetWindowCloseCallback(data->Window, ImGui_ImplGlfw_WindowCloseCallback);
     glfwSetWindowPosCallback(data->Window, ImGui_ImplGlfw_WindowPosCallback);
     glfwSetWindowSizeCallback(data->Window, ImGui_ImplGlfw_WindowSizeCallback);
+    if (g_ClientApi == GlfwClientApi_OpenGL)
+    {
+        glfwMakeContextCurrent(data->Window);
+        glfwSwapInterval(0);
+    }
 }
 
 static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)

@@ -369,7 +369,10 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
     data->WindowOwned = true; 
     if (use_opengl)
+    {
         data->GLContext = SDL_GL_CreateContext(data->Window);
+        SDL_GL_SetSwapInterval(0);
+    }
     if (use_opengl && backup_context)
         SDL_GL_MakeCurrent(data->Window, backup_context);
     viewport->PlatformHandle = (void*)data->Window;
