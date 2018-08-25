@@ -107,6 +107,7 @@ Other Changes:
  - Examples: OpenGL2: Disabling/restoring GL_LIGHTING and GL_COLOR_MATERIAL to increase compatibility with legacy OpenGL applications. (#1996)
  - Examples: DirectX10, DirectX11: Fixed unreleased resources in Init and Shutdown functions. (#1944)
  - Examples: DirectX11: Querying for IDXGIFactory instead of IDXGIFactory1 to increase compatibility. (#1989) [@matt77hias]
+ - Examples: Vulkan: Fixed handling of VkSurfaceCapabilitiesKHR::maxImageCount = 0 case. Tweaked present mode selections. 
  - Examples: Win32, Glfw, SDL: Added support for the ImGuiMouseCursor_Hand cursor.
 
 
