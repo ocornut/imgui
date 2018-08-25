@@ -1383,7 +1383,7 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
 ImFontAtlas::ImFontAtlas()
 {
     Locked = false;
-    Flags = 0x00;
+    Flags = ImFontAtlasFlags_None;
     TexID = NULL;
     TexDesiredWidth = 0;
     TexGlyphPadding = 1;
