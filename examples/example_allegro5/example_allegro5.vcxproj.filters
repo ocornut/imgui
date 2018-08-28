@@ -28,6 +28,9 @@
     <ClCompile Include="imconfig_allegro5.h">
       <Filter>sources</Filter>
     </ClCompile>
+    <ClCompile Include="..\..\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\imconfig.h">
