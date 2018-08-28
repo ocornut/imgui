@@ -15,6 +15,7 @@
 
 #define IMGUI_VK_QUEUED_FRAMES      2
 
+// Please zero-clear before use.
 struct ImGui_ImplVulkan_InitInfo
 {
     VkInstance                      Instance;

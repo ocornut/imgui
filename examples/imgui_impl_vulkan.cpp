@@ -168,7 +168,7 @@ static void check_vk_result(VkResult err)
 static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlagBits usage)
 {
     VkResult err;
-    if (buffer != NULL)
+    if (buffer != VK_NULL_HANDLE)
         vkDestroyBuffer(g_Device, buffer, g_Allocator);
     if (buffer_memory)
         vkFreeMemory(g_Device, buffer_memory, g_Allocator);
@@ -695,12 +695,12 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects()
 
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass)
 {
-    IM_ASSERT(info->Instance != NULL);
-    IM_ASSERT(info->PhysicalDevice != NULL);
-    IM_ASSERT(info->Device != NULL);
-    IM_ASSERT(info->Queue != NULL);
-    IM_ASSERT(info->DescriptorPool != NULL);
-    IM_ASSERT(render_pass != NULL);
+    IM_ASSERT(info->Instance != VK_NULL_HANDLE);
+    IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
+    IM_ASSERT(info->Device != VK_NULL_HANDLE);
+    IM_ASSERT(info->Queue != VK_NULL_HANDLE);
+    IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
+    IM_ASSERT(render_pass != VK_NULL_HANDLE);
 
     g_Instance = info->Instance;
     g_PhysicalDevice = info->PhysicalDevice;
@@ -839,7 +839,7 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
 
 void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator)
 {
-    IM_ASSERT(physical_device != NULL && device != NULL);
+    IM_ASSERT(physical_device != VK_NULL_HANDLE && device != VK_NULL_HANDLE);
     (void)allocator;
 
     // Create Command Buffers
