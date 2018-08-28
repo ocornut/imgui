@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-08-29: OpenGL: Added support for more OpenGL loaders: glew and glad, with comments indicative that any loader can be used.
 //  2018-08-09: OpenGL: Default to OpenGL ES 3 on iOS and Android. GLSL version default to "#version 300 ES".
 //  2018-07-30: OpenGL: Support for GLSL 300 ES and 410 core. Fixes for Emscripten compilation.
 //  2018-07-10: OpenGL: Support for more GLSL versions (based on the GLSL version string). Added error output when shaders fail to compile/link.
@@ -72,18 +73,16 @@
 // OpenGL ES 3
 #include <GLES3/gl3.h>  // Use GL ES 3
 #else
-// OpenGL Regular
-// (About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual functions to be loaded manually. 
-//  Helper libraries are often used for this purpose! Here we are using gl3w.h, which requires a call to gl3wInit(). 
-//  You may use another any other loader/header of your choice, such as glew, glext, glad, glLoadGen, etc.)
+// Regular OpenGL
+// About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually. 
+// Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
+// You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
 #include <GL/glew.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEXT)
-#include <glext.h>
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif

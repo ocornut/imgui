@@ -19,21 +19,28 @@ SOURCES = main.cpp
 SOURCES += ../imgui_impl_glfw.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
-
 UNAME_S := $(shell uname -s)
 
-# Default OpenGL loader: gl3w
+##---------------------------------------------------------------------
+## OPENGL LOADER
+##---------------------------------------------------------------------
+
+## Using OpenGL loader: gl3w [default]
 SOURCES += ../libs/gl3w/GL/gl3w.c
 CXXFLAGS = -I../libs/gl3w
 
-# You can switch to glad by changing the following compilation options,
-# and changing the rule L73 of this Makefile
+## Using OpenGL loader: glew
+## (This assumes a system-wide installation)
+# CXXFLAGS = -lGLEW -DIMGUI_IMPL_OPENGL_LOADER_GLEW
+
+## Using OpenGL loader: glad
+## (You'll also need to change the rule at line ~77 of this Makefile to compile/link glad.c/.o)
 # SOURCES += ../libs/glad/src/glad.c
 # CXXFLAGS = -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
 
-# You can also use glew are you OpenGL loader
-# This assumes a system-wide installation
-# CXXFLAGS = -lGLEW -DIMGUI_IMPL_OPENGL_LOADER_GLEW
+##---------------------------------------------------------------------
+## BUILD FLAGS PER PLATFORM
+##---------------------------------------------------------------------
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
@@ -64,6 +71,9 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    CFLAGS = $(CXXFLAGS)
 endif
 
+##---------------------------------------------------------------------
+## BUILD RULES
+##---------------------------------------------------------------------
 
 %.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
