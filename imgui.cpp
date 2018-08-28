@@ -828,7 +828,7 @@
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
-// Clang warnings with -Weverything
+// Clang/GCC warnings with -Weverything
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wunknown-pragmas"        // warning : unknown warning group '-Wformat-pedantic *'        // not all warnings are known by all clang versions.. so ignoring warnings triggers new warnings on some configuration. great!
 #pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
@@ -878,11 +878,7 @@ static const float NAV_WINDOWING_LIST_APPEAR_DELAY = 0.15f; // Time before the w
 // Forward Declarations
 //-------------------------------------------------------------------------
 
-static bool             IsKeyPressedMap(ImGuiKey key, bool repeat = true);
-
 static void             SetCurrentWindow(ImGuiWindow* window);
-static void             SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
-static void             SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
@@ -918,7 +914,6 @@ static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
-static void             FocusFrontMostActiveWindow(ImGuiWindow* ignore_window);
 
 // Template widget behaviors
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
@@ -1113,10 +1108,6 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 //-----------------------------------------------------------------------------
 // HELPERS
 //-----------------------------------------------------------------------------
-
-#define IM_STATIC_ASSERT(_COND)         typedef char static_assertion_##__line__[(_COND)?1:-1]
-#define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose
-#define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
 
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
 {
@@ -2243,7 +2234,7 @@ static void SetCurrentWindow(ImGuiWindow* window)
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
-static void SetNavID(ImGuiID id, int nav_layer)
+void ImGui::SetNavID(ImGuiID id, int nav_layer)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow);
@@ -2252,7 +2243,7 @@ static void SetNavID(ImGuiID id, int nav_layer)
     g.NavWindow->NavLastIds[nav_layer] = id;
 }
 
-static void SetNavIDWithRectRel(ImGuiID id, int nav_layer, const ImRect& rect_rel)
+void ImGui::SetNavIDWithRectRel(ImGuiID id, int nav_layer, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
     SetNavID(id, nav_layer);
@@ -2586,7 +2577,7 @@ static void NavRestoreLayer(int layer)
     if (layer == 0)
         g.NavWindow = NavRestoreLastChildNavWindow(g.NavWindow);
     if (layer == 0 && g.NavWindow->NavLastIds[0] != 0)
-        SetNavIDWithRectRel(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
+        ImGui::SetNavIDWithRectRel(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
     else
         ImGui::NavInitWindow(g.NavWindow, true);
 }
@@ -2599,7 +2590,7 @@ static inline void NavUpdateAnyRequestFlag()
         IM_ASSERT(g.NavWindow != NULL);
 }
 
-static bool NavMoveRequestButNoResultYet()
+bool ImGui::NavMoveRequestButNoResultYet()
 {
     ImGuiContext& g = *GImGui;
     return g.NavMoveRequest && g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0;
@@ -3056,23 +3047,6 @@ float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
     if (mode == ImGuiInputReadMode_RepeatFast)
         return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.30f);
     return 0.0f;
-}
-
-// Equivalent of IsKeyDown() for NavInputs[]
-static bool IsNavInputDown(ImGuiNavInput n)
-{
-    return GImGui->IO.NavInputs[n] > 0.0f;
-}
-
-// Equivalent of IsKeyPressed() for NavInputs[]
-static bool IsNavInputPressed(ImGuiNavInput n, ImGuiInputReadMode mode)
-{
-    return ImGui::GetNavInputAmount(n, mode) > 0.0f;
-}
-
-static bool IsNavInputPressedAnyOfTwo(ImGuiNavInput n1, ImGuiNavInput n2, ImGuiInputReadMode mode)
-{
-    return (ImGui::GetNavInputAmount(n1, mode) + ImGui::GetNavInputAmount(n2, mode)) > 0.0f;
 }
 
 ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor, float fast_factor)
@@ -4022,7 +3996,7 @@ void ImGui::NewFrame()
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
-        FocusFrontMostActiveWindow(NULL);
+        FocusFrontMostActiveWindowIgnoringOne(NULL);
 
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
@@ -4632,7 +4606,7 @@ void ImGui::LogText(const char* fmt, ...)
 
 // Internal version that takes a position to decide on newline placement and pad items according to their depth.
 // We split text into individual lines to add current tree level padding
-static void LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL)
+void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -5003,12 +4977,6 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     // Expand for touch input
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
     return rect_for_touch.Contains(g.IO.MousePos);
-}
-
-static bool IsKeyPressedMap(ImGuiKey key, bool repeat)
-{
-    const int key_index = GImGui->IO.KeyMap[key];
-    return (key_index >= 0) ? ImGui::IsKeyPressed(key_index, repeat) : false;
 }
 
 int ImGui::GetKeyIndex(ImGuiKey imgui_key)
@@ -5793,13 +5761,7 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     IM_ASSERT(p_backup == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
-enum ImGuiPopupPositionPolicy
-{
-    ImGuiPopupPositionPolicy_Default,
-    ImGuiPopupPositionPolicy_ComboBox
-};
-
-static ImRect FindAllowedExtentRectForWindow(ImGuiWindow*)
+ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow*)
 {
     ImVec2 padding = GImGui->Style.DisplaySafeAreaPadding;
     ImRect r_screen = GetViewportRect();
@@ -5809,7 +5771,7 @@ static ImRect FindAllowedExtentRectForWindow(ImGuiWindow*)
 
 // r_avoid = the rectangle to avoid (e.g. for tooltip it is a rectangle around the mouse cursor which we want to avoid. for popups it's a small point around the cursor.)
 // r_outer = the visible area rectangle, minus safe area padding. If our popup size won't fit because of safe area padding we ignore it.
-static ImVec2 FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy = ImGuiPopupPositionPolicy_Default)
+ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& size, ImGuiDir* last_dir, const ImRect& r_outer, const ImRect& r_avoid, ImGuiPopupPositionPolicy policy)
 {
     ImVec2 base_pos_clamped = ImClamp(ref_pos, r_outer.Min, r_outer.Max - size);
     //GImGui->OverlayDrawList.AddRect(r_avoid.Min, r_avoid.Max, IM_COL32(255,0,0,255));
@@ -5862,11 +5824,11 @@ static ImVec2 FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
     return pos;
 }
 
-static ImVec2 FindBestWindowPosForPopup(ImGuiWindow* window)
+ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
 
-    ImRect r_outer = FindAllowedExtentRectForWindow(window);
+    ImRect r_outer = GetWindowAllowedExtentRect(window);
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
         // Child menus typically request _any_ position within the parent menu item, and then our FindBestWindowPosForPopup() function will move the new menu outside the parent bounds.
@@ -6030,6 +5992,12 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
             size_auto_fit.x += style.ScrollbarSize;
         return size_auto_fit;
     }
+}
+
+ImVec2 ImGui::CalcWindowExpectedSize(ImGuiWindow* window)
+{
+    ImVec2 size_contents = CalcSizeContents(window);
+    return CalcSizeAfterConstraint(window, CalcSizeAutoFit(window, size_contents));
 }
 
 static float GetScrollMaxX(ImGuiWindow* window)
@@ -7049,7 +7017,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         BringWindowToFront(window);
 }
 
-void ImGui::FocusFrontMostActiveWindow(ImGuiWindow* ignore_window)
+void ImGui::FocusFrontMostActiveWindowIgnoringOne(ImGuiWindow* ignore_window)
 {
     ImGuiContext& g = *GImGui;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
@@ -7457,14 +7425,14 @@ ImVec2 ImGui::GetWindowPos()
     return window->Pos;
 }
 
-static void SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
+void ImGui::SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
 {
     window->DC.CursorMaxPos.x += window->Scroll.x; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
     window->Scroll.x = new_scroll_x;
     window->DC.CursorMaxPos.x -= window->Scroll.x;
 }
 
-static void SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
+void ImGui::SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
 {
     window->DC.CursorMaxPos.y += window->Scroll.y; // SizeContents is generally computed based on CursorMaxPos which is affected by scroll position, so we need to apply our change to it.
     window->Scroll.y = new_scroll_y;
@@ -11664,11 +11632,10 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     if (ImGuiWindow* popup_window = FindWindowByName(name))
         if (popup_window->WasActive)
         {
-            ImVec2 size_contents = CalcSizeContents(popup_window);
-            ImVec2 size_expected = CalcSizeAfterConstraint(popup_window, CalcSizeAutoFit(popup_window, size_contents));
+            ImVec2 size_expected = CalcWindowExpectedSize(popup_window);
             if (flags & ImGuiComboFlags_PopupAlignLeft)
                 popup_window->AutoPosLastDirection = ImGuiDir_Left;
-            ImRect r_outer = FindAllowedExtentRectForWindow(popup_window);
+            ImRect r_outer = GetWindowAllowedExtentRect(popup_window);
             ImVec2 pos = FindBestWindowPosForPopupEx(frame_bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, r_outer, frame_bb, ImGuiPopupPositionPolicy_ComboBox);
             SetNextWindowPos(pos);
         }
@@ -12070,7 +12037,7 @@ void ImGui::EndMainMenuBar()
     // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == 0)
-        FocusFrontMostActiveWindow(g.NavWindow);
+        FocusFrontMostActiveWindowIgnoringOne(g.NavWindow);
 
     End();
 }
@@ -12509,7 +12476,7 @@ void ImGui::ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags)
     EndPopup();
 }
 
-static void ColorPickerOptionsPopup(ImGuiColorEditFlags flags, const float* ref_col)
+void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags flags)
 {
     bool allow_opt_picker = !(flags & ImGuiColorEditFlags__PickerMask);
     bool allow_opt_alpha_bar = !(flags & ImGuiColorEditFlags_NoAlpha) && !(flags & ImGuiColorEditFlags_AlphaBar);
@@ -12790,7 +12757,6 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 
     // Context menu: display and store options.
     if (!(flags & ImGuiColorEditFlags_NoOptions))
-        ColorPickerOptionsPopup(flags, col);
 
     // Read stored options
     if (!(flags & ImGuiColorEditFlags__PickerMask))
