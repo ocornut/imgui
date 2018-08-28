@@ -29,3 +29,4 @@ script:
   - make -C examples/example_glfw_opengl2
   - make -C examples/example_glfw_opengl3
   - make -C examples/example_sdl_opengl3
+  - if [ $TRAVIS_OS_NAME == osx ]; then xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos;
