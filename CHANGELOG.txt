@@ -36,7 +36,7 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Style: Renamed ImGuiCol_ModalWindowDarkening to ImGuiCol_ModalWindowDimBg for consistency with other features. Kept redirection enum (will obsolete).
-- Changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
+- Changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecision over time.
 - Removed per-window ImGuiWindowFlags_ResizeFromAnySide Beta flag in favor `io.ConfigResizeWindowsFromEdges=true` to enable the feature globally. (#1495)
   The feature is not currently enabled by default because it is not satisfying enough, but will eventually be.
 - InputText: Renamed ImGuiTextEditCallback to ImGuiInputTextCallback, ImGuiTextEditCallbackData to ImGuiInputTextCallbackData for consistency. 
@@ -55,12 +55,12 @@ Other Changes:
 - Nav: Made CTRL+TAB skip menus + skip the current navigation window if is has the ImGuiWindow_NoNavFocus set. (#787)
   While it was previously possible, you won't be able to CTRL-TAB out and immediately back in a window with the ImGuiWindow_NoNavFocus flag.
 - Window: Allow menu and popups windows from ignoring the style.WindowMinSize values so short menus/popups are not padded. (#1909)
-- Window: Added global io.OptResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
+- Window: Added global io.ConfigResizeWindowsFromEdges option to enable resizing windows from their edges and from the lower-left corner. (#1495)
 - Window: Collapse button shows hovering highlight + clicking and dragging on it allows to drag the window as well. 
 - Added IsItemEdited() to query if the last item modified its value (or was pressed). This is equivalent to the bool returned by most widgets.
   It is useful in some situation e.g. using InputText() with ImGuiInputTextFlags_EnterReturnsTrue. (#2034)
 - InputText: Added support for buffer size/capacity changes via the ImGuiInputTextFlags_CallbackResize flag. (#2006, #1443, #1008).
-- InputText: Fixed not tracking the cursor horizontally When modifying the text buffer through a callback.
+- InputText: Fixed not tracking the cursor horizontally when modifying the text buffer through a callback.
 - InputText: Fixed minor off-by-one issue when submitting a buffer size smaller than the initial zero-terminated buffer contents.
 - InputText: Fixed a few pathological crash cases on single-line InputText widget with multiple millions characters worth of contents. 
   Because the current text drawing function reserve for a worst-case amount of vertices and how we handle horizontal clipping,
@@ -75,7 +75,7 @@ Other Changes:
 - Drag and Drop: Added ImGuiDragDropFlags_SourceAutoExpirePayload flag to force payload to expire if the source stops being submitted. (#1725, #143).
 - IsItemHovered(): Added ImGuiHoveredFlags_AllowWhenDisabled flag to query hovered status on disabled items. (#1940, #211)
 - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
-- ColorEdit4: Fixed a bug when text input or drag and drop leading to unsaturated HSL values would erroneously alter the resulting color. (#2050)
+- ColorEdit4: Fixed a bug when text input or drag and drop leading to unsaturated HSV values would erroneously alter the resulting color. (#2050)
 - Misc: Added optional misc/stl/imgui_stl.h wrapper to use with STL types (e.g. InputText with std::string). (#2006, #1443, #1008)
 - Misc: Added IMGUI_VERSION_NUM for easy compile-time testing. (#2025)
 - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
