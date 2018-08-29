@@ -1,4 +1,4 @@
-// dear imgui, v1.63 WIP
+// dear imgui, v1.63
 // (main code and documentation)
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
