@@ -1,7 +1,7 @@
 // dear imgui, v1.64 WIP
 // (drawing and font code)
 
-// Contains implementation for
+// Index of this file:
 // - Default styles
 // - ImDrawList
 // - ImDrawData
