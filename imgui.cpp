@@ -4965,74 +4965,6 @@ const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
     return text_display_end;
 }
 
-// Pass text data straight to log (without being displayed)
-void ImGui::LogText(const char* fmt, ...)
-{
-    ImGuiContext& g = *GImGui;
-    if (!g.LogEnabled)
-        return;
-
-    va_list args;
-    va_start(args, fmt);
-    if (g.LogFile)
-        vfprintf(g.LogFile, fmt, args);
-    else
-        g.LogClipboard.appendfv(fmt, args);
-    va_end(args);
-}
-
-// Internal version that takes a position to decide on newline placement and pad items according to their depth.
-// We split text into individual lines to add current tree level padding
-void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    if (!text_end)
-        text_end = ImGui::FindRenderedTextEnd(text, text_end);
-
-    const bool log_new_line = ref_pos && (ref_pos->y > window->DC.LogLinePosY + 1);
-    if (ref_pos)
-        window->DC.LogLinePosY = ref_pos->y;
-
-    const char* text_remaining = text;
-    if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
-        g.LogStartDepth = window->DC.TreeDepth;
-    const int tree_depth = (window->DC.TreeDepth - g.LogStartDepth);
-    for (;;)
-    {
-        // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
-        const char* line_end = text_remaining;
-        while (line_end < text_end)
-            if (*line_end == '\n')
-                break;
-            else
-                line_end++;
-        if (line_end >= text_end)
-            line_end = NULL;
-
-        const bool is_first_line = (text == text_remaining);
-        bool is_last_line = false;
-        if (line_end == NULL)
-        {
-            is_last_line = true;
-            line_end = text_end;
-        }
-        if (line_end != NULL && !(is_last_line && (line_end - text_remaining)==0))
-        {
-            const int char_count = (int)(line_end - text_remaining);
-            if (log_new_line || !is_first_line)
-                ImGui::LogText(IM_NEWLINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
-            else
-                ImGui::LogText(" %.*s", char_count, text_remaining);
-        }
-
-        if (is_last_line)
-            break;
-        text_remaining = line_end + 1;
-    }
-}
-
 // Internal ImGui functions to render text
 // RenderText***() functions calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
 void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
@@ -8592,114 +8524,6 @@ void ImGui::AlignTextToFramePadding()
     window->DC.CurrentLineTextBaseOffset = ImMax(window->DC.CurrentLineTextBaseOffset, g.Style.FramePadding.y);
 }
 
-// Start logging ImGui output to TTY
-void ImGui::LogToTTY(int max_depth)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.LogEnabled)
-        return;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    IM_ASSERT(g.LogFile == NULL);
-    g.LogFile = stdout;
-    g.LogEnabled = true;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
-}
-
-// Start logging ImGui output to given file
-void ImGui::LogToFile(int max_depth, const char* filename)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.LogEnabled)
-        return;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    if (!filename)
-    {
-        filename = g.IO.LogFilename;
-        if (!filename)
-            return;
-    }
-
-    IM_ASSERT(g.LogFile == NULL);
-    g.LogFile = ImFileOpen(filename, "ab");
-    if (!g.LogFile)
-    {
-        IM_ASSERT(g.LogFile != NULL); // Consider this an error
-        return;
-    }
-    g.LogEnabled = true;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
-}
-
-// Start logging ImGui output to clipboard
-void ImGui::LogToClipboard(int max_depth)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.LogEnabled)
-        return;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    IM_ASSERT(g.LogFile == NULL);
-    g.LogFile = NULL;
-    g.LogEnabled = true;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
-}
-
-void ImGui::LogFinish()
-{
-    ImGuiContext& g = *GImGui;
-    if (!g.LogEnabled)
-        return;
-
-    LogText(IM_NEWLINE);
-    if (g.LogFile != NULL)
-    {
-        if (g.LogFile == stdout)
-            fflush(g.LogFile);
-        else
-            fclose(g.LogFile);
-        g.LogFile = NULL;
-    }
-    if (g.LogClipboard.size() > 1)
-    {
-        SetClipboardText(g.LogClipboard.begin());
-        g.LogClipboard.clear();
-    }
-    g.LogEnabled = false;
-}
-
-// Helper to display logging buttons
-void ImGui::LogButtons()
-{
-    ImGuiContext& g = *GImGui;
-
-    PushID("LogButtons");
-    const bool log_to_tty = Button("Log To TTY"); SameLine();
-    const bool log_to_file = Button("Log To File"); SameLine();
-    const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
-    PushItemWidth(80.0f);
-    PushAllowKeyboardFocus(false);
-    SliderInt("Depth", &g.LogAutoExpandMaxDepth, 0, 9, NULL);
-    PopAllowKeyboardFocus();
-    PopItemWidth();
-    PopID();
-
-    // Start logging at the end of the function so that the buttons don't appear in the log
-    if (log_to_tty)
-        LogToTTY(g.LogAutoExpandMaxDepth);
-    if (log_to_file)
-        LogToFile(g.LogAutoExpandMaxDepth, g.IO.LogFilename);
-    if (log_to_clipboard)
-        LogToClipboard(g.LogAutoExpandMaxDepth);
-}
-
 void ImGui::PushID(const char* str_id)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
@@ -8784,7 +8608,7 @@ void ImGui::Separator()
     window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
 
     if (g.LogEnabled)
-            LogRenderedText(NULL, IM_NEWLINE "--------------------------------");
+        LogRenderedText(NULL, IM_NEWLINE "--------------------------------");
 
     if (window->DC.ColumnsSet)
     {
@@ -9634,6 +9458,186 @@ void ImGui::EndDragDropTarget()
     IM_ASSERT(g.DragDropActive);
     IM_ASSERT(g.DragDropWithinSourceOrTarget);
     g.DragDropWithinSourceOrTarget = false;
+}
+
+//-----------------------------------------------------------------------------
+// LOGGING
+//-----------------------------------------------------------------------------
+
+// Pass text data straight to log (without being displayed)
+void ImGui::LogText(const char* fmt, ...)
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.LogEnabled)
+        return;
+
+    va_list args;
+    va_start(args, fmt);
+    if (g.LogFile)
+        vfprintf(g.LogFile, fmt, args);
+    else
+        g.LogClipboard.appendfv(fmt, args);
+    va_end(args);
+}
+
+// Internal version that takes a position to decide on newline placement and pad items according to their depth.
+// We split text into individual lines to add current tree level padding
+void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    if (!text_end)
+        text_end = FindRenderedTextEnd(text, text_end);
+
+    const bool log_new_line = ref_pos && (ref_pos->y > window->DC.LogLinePosY + 1);
+    if (ref_pos)
+        window->DC.LogLinePosY = ref_pos->y;
+
+    const char* text_remaining = text;
+    if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
+        g.LogStartDepth = window->DC.TreeDepth;
+    const int tree_depth = (window->DC.TreeDepth - g.LogStartDepth);
+    for (;;)
+    {
+        // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
+        const char* line_end = text_remaining;
+        while (line_end < text_end)
+            if (*line_end == '\n')
+                break;
+            else
+                line_end++;
+        if (line_end >= text_end)
+            line_end = NULL;
+
+        const bool is_first_line = (text == text_remaining);
+        bool is_last_line = false;
+        if (line_end == NULL)
+        {
+            is_last_line = true;
+            line_end = text_end;
+        }
+        if (line_end != NULL && !(is_last_line && (line_end - text_remaining)==0))
+        {
+            const int char_count = (int)(line_end - text_remaining);
+            if (log_new_line || !is_first_line)
+                LogText(IM_NEWLINE "%*s%.*s", tree_depth*4, "", char_count, text_remaining);
+            else
+                LogText(" %.*s", char_count, text_remaining);
+        }
+
+        if (is_last_line)
+            break;
+        text_remaining = line_end + 1;
+    }
+}
+
+// Start logging ImGui output to TTY
+void ImGui::LogToTTY(int max_depth)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.LogEnabled)
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    IM_ASSERT(g.LogFile == NULL);
+    g.LogFile = stdout;
+    g.LogEnabled = true;
+    g.LogStartDepth = window->DC.TreeDepth;
+    if (max_depth >= 0)
+        g.LogAutoExpandMaxDepth = max_depth;
+}
+
+// Start logging ImGui output to given file
+void ImGui::LogToFile(int max_depth, const char* filename)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.LogEnabled)
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    if (!filename)
+    {
+        filename = g.IO.LogFilename;
+        if (!filename)
+            return;
+    }
+
+    IM_ASSERT(g.LogFile == NULL);
+    g.LogFile = ImFileOpen(filename, "ab");
+    if (!g.LogFile)
+    {
+        IM_ASSERT(g.LogFile != NULL); // Consider this an error
+        return;
+    }
+    g.LogEnabled = true;
+    g.LogStartDepth = window->DC.TreeDepth;
+    if (max_depth >= 0)
+        g.LogAutoExpandMaxDepth = max_depth;
+}
+
+// Start logging ImGui output to clipboard
+void ImGui::LogToClipboard(int max_depth)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.LogEnabled)
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    IM_ASSERT(g.LogFile == NULL);
+    g.LogFile = NULL;
+    g.LogEnabled = true;
+    g.LogStartDepth = window->DC.TreeDepth;
+    if (max_depth >= 0)
+        g.LogAutoExpandMaxDepth = max_depth;
+}
+
+void ImGui::LogFinish()
+{
+    ImGuiContext& g = *GImGui;
+    if (!g.LogEnabled)
+        return;
+
+    LogText(IM_NEWLINE);
+    if (g.LogFile != NULL)
+    {
+        if (g.LogFile == stdout)
+            fflush(g.LogFile);
+        else
+            fclose(g.LogFile);
+        g.LogFile = NULL;
+    }
+    if (g.LogClipboard.size() > 1)
+    {
+        SetClipboardText(g.LogClipboard.begin());
+        g.LogClipboard.clear();
+    }
+    g.LogEnabled = false;
+}
+
+// Helper to display logging buttons
+void ImGui::LogButtons()
+{
+    ImGuiContext& g = *GImGui;
+
+    PushID("LogButtons");
+    const bool log_to_tty = Button("Log To TTY"); SameLine();
+    const bool log_to_file = Button("Log To File"); SameLine();
+    const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
+    PushItemWidth(80.0f);
+    PushAllowKeyboardFocus(false);
+    SliderInt("Depth", &g.LogAutoExpandMaxDepth, 0, 9, NULL);
+    PopAllowKeyboardFocus();
+    PopItemWidth();
+    PopID();
+
+    // Start logging at the end of the function so that the buttons don't appear in the log
+    if (log_to_tty)
+        LogToTTY(g.LogAutoExpandMaxDepth);
+    if (log_to_file)
+        LogToFile(g.LogAutoExpandMaxDepth, g.IO.LogFilename);
+    if (log_to_clipboard)
+        LogToClipboard(g.LogAutoExpandMaxDepth);
 }
 
 //-----------------------------------------------------------------------------
