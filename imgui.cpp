@@ -891,6 +891,8 @@ static float            NavUpdatePageUpPageDown(int allowed_dir_flags);
 static inline void      NavUpdateAnyRequestFlag();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
+static void             NavSaveLastChildNavWindow(ImGuiWindow* nav_window);
+static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
@@ -2311,41 +2313,6 @@ void ImGui::ItemSize(const ImVec2& size, float text_offset_y)
 void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
 {
     ItemSize(bb.GetSize(), text_offset_y);
-}
-
-static void NavSaveLastChildNavWindow(ImGuiWindow* child_window)
-{
-    ImGuiWindow* parent_window = child_window;
-    while (parent_window && (parent_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (parent_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
-        parent_window = parent_window->ParentWindow;
-    if (parent_window && parent_window != child_window)
-        parent_window->NavLastChildNavWindow = child_window;
-}
-
-// Call when we are expected to land on Layer 0 after FocusWindow()
-static ImGuiWindow* NavRestoreLastChildNavWindow(ImGuiWindow* window)
-{
-    return window->NavLastChildNavWindow ? window->NavLastChildNavWindow : window;
-}
-
-static void NavRestoreLayer(int layer)
-{
-    ImGuiContext& g = *GImGui;
-    g.NavLayer = layer;
-    if (layer == 0)
-        g.NavWindow = NavRestoreLastChildNavWindow(g.NavWindow);
-    if (layer == 0 && g.NavWindow->NavLastIds[0] != 0)
-        ImGui::SetNavIDWithRectRel(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
-    else
-        ImGui::NavInitWindow(g.NavWindow, true);
-}
-
-static inline void ImGui::NavUpdateAnyRequestFlag()
-{
-    ImGuiContext& g = *GImGui;
-    g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || (IMGUI_DEBUG_NAV_SCORING && g.NavWindow != NULL);
-    if (g.NavAnyRequest)
-        IM_ASSERT(g.NavWindow != NULL);
 }
 
 // Declare item bounding box for clipping and interaction.
@@ -7200,6 +7167,41 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
         if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(+bb_rel.GetWidth()); clip_dir = ImGuiDir_Right; }
         NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
     }
+}
+
+static void ImGui::NavSaveLastChildNavWindow(ImGuiWindow* nav_window)
+{
+    ImGuiWindow* parent_window = nav_window;
+    while (parent_window && (parent_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (parent_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
+        parent_window = parent_window->ParentWindow;
+    if (parent_window && parent_window != nav_window)
+        parent_window->NavLastChildNavWindow = nav_window;
+}
+
+// Call when we are expected to land on Layer 0 after FocusWindow()
+static ImGuiWindow* ImGui::NavRestoreLastChildNavWindow(ImGuiWindow* window)
+{
+    return window->NavLastChildNavWindow ? window->NavLastChildNavWindow : window;
+}
+
+static void NavRestoreLayer(int layer)
+{
+    ImGuiContext& g = *GImGui;
+    g.NavLayer = layer;
+    if (layer == 0)
+        g.NavWindow = ImGui::NavRestoreLastChildNavWindow(g.NavWindow);
+    if (layer == 0 && g.NavWindow->NavLastIds[0] != 0)
+        ImGui::SetNavIDWithRectRel(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
+    else
+        ImGui::NavInitWindow(g.NavWindow, true);
+}
+
+static inline void ImGui::NavUpdateAnyRequestFlag()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || (IMGUI_DEBUG_NAV_SCORING && g.NavWindow != NULL);
+    if (g.NavAnyRequest)
+        IM_ASSERT(g.NavWindow != NULL);
 }
 
 // This needs to be called before we submit any widget (aka in or before Begin)
