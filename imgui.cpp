@@ -2309,168 +2309,6 @@ void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
     ItemSize(bb.GetSize(), text_offset_y);
 }
 
-static ImGuiDir inline NavScoreItemGetQuadrant(float dx, float dy)
-{
-    if (ImFabs(dx) > ImFabs(dy))
-        return (dx > 0.0f) ? ImGuiDir_Right : ImGuiDir_Left;
-    return (dy > 0.0f) ? ImGuiDir_Down : ImGuiDir_Up;
-}
-
-static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
-{
-    if (a1 < b0)
-        return a1 - b0;
-    if (b1 < a0)
-        return a0 - b1;
-    return 0.0f;
-}
-
-static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect)
-{
-    if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
-    {
-        r.Min.y = ImClamp(r.Min.y, clip_rect.Min.y, clip_rect.Max.y);
-        r.Max.y = ImClamp(r.Max.y, clip_rect.Min.y, clip_rect.Max.y);
-    }
-    else
-    {
-        r.Min.x = ImClamp(r.Min.x, clip_rect.Min.x, clip_rect.Max.x);
-        r.Max.x = ImClamp(r.Max.x, clip_rect.Min.x, clip_rect.Max.x);
-    }
-}
-
-// Scoring function for directional navigation. Based on https://gist.github.com/rygorous/6981057
-static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    if (g.NavLayer != window->DC.NavLayerCurrent)
-        return false;
-
-    const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
-    g.NavScoringCount++;
-
-    // When entering through a NavFlattened border, we consider child window items as fully clipped for scoring
-    if (window->ParentWindow == g.NavWindow)
-    {
-        IM_ASSERT((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened);
-        if (!window->ClipRect.Contains(cand))
-            return false;
-        cand.ClipWithFull(window->ClipRect); // This allows the scored item to not overlap other candidates in the parent window
-    }
-
-    // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
-    // For example, this ensure that items in one column are not reached when moving vertically from items in another column.
-    NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window->ClipRect);
-
-    // Compute distance between boxes
-    // FIXME-NAV: Introducing biases for vertical navigation, needs to be removed.
-    float dbx = NavScoreItemDistInterval(cand.Min.x, cand.Max.x, curr.Min.x, curr.Max.x);
-    float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Scale down on Y to keep using box-distance for vertically touching items
-    if (dby != 0.0f && dbx != 0.0f)
-       dbx = (dbx/1000.0f) + ((dbx > 0.0f) ? +1.0f : -1.0f);
-    float dist_box = ImFabs(dbx) + ImFabs(dby);
-
-    // Compute distance between centers (this is off by a factor of 2, but we only compare center distances with each other so it doesn't matter)
-    float dcx = (cand.Min.x + cand.Max.x) - (curr.Min.x + curr.Max.x);
-    float dcy = (cand.Min.y + cand.Max.y) - (curr.Min.y + curr.Max.y);
-    float dist_center = ImFabs(dcx) + ImFabs(dcy); // L1 metric (need this for our connectedness guarantee)
-
-    // Determine which quadrant of 'curr' our candidate item 'cand' lies in based on distance
-    ImGuiDir quadrant;
-    float dax = 0.0f, day = 0.0f, dist_axial = 0.0f;
-    if (dbx != 0.0f || dby != 0.0f)
-    {
-        // For non-overlapping boxes, use distance between boxes
-        dax = dbx;
-        day = dby;
-        dist_axial = dist_box;
-        quadrant = NavScoreItemGetQuadrant(dbx, dby);
-    }
-    else if (dcx != 0.0f || dcy != 0.0f)
-    {
-        // For overlapping boxes with different centers, use distance between centers
-        dax = dcx;
-        day = dcy;
-        dist_axial = dist_center;
-        quadrant = NavScoreItemGetQuadrant(dcx, dcy);
-    }
-    else
-    {
-        // Degenerate case: two overlapping buttons with same center, break ties arbitrarily (note that LastItemId here is really the _previous_ item order, but it doesn't matter)
-        quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiDir_Left : ImGuiDir_Right;
-    }
-
-#if IMGUI_DEBUG_NAV_SCORING
-    char buf[128];
-    if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
-    {
-        ImFormatString(buf, IM_ARRAYSIZE(buf), "dbox (%.2f,%.2f->%.4f)\ndcen (%.2f,%.2f->%.4f)\nd (%.2f,%.2f->%.4f)\nnav %c, quadrant %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
-        ImDrawList* draw_list = ImGui::GetOverlayDrawList();
-        draw_list->AddRect(curr.Min, curr.Max, IM_COL32(255,200,0,100));
-        draw_list->AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
-        draw_list->AddRectFilled(cand.Max-ImVec2(4,4), cand.Max+ImGui::CalcTextSize(buf)+ImVec2(4,4), IM_COL32(40,0,0,150));
-        draw_list->AddText(g.IO.FontDefault, 13.0f, cand.Max, ~0U, buf);
-    }
-    else if (g.IO.KeyCtrl) // Hold to preview score in matching quadrant. Press C to rotate.
-    {
-        if (IsKeyPressedMap(ImGuiKey_C)) { g.NavMoveDirLast = (ImGuiDir)((g.NavMoveDirLast + 1) & 3); g.IO.KeysDownDuration[g.IO.KeyMap[ImGuiKey_C]] = 0.01f; }
-        if (quadrant == g.NavMoveDir)
-        {
-            ImFormatString(buf, IM_ARRAYSIZE(buf), "%.0f/%.0f", dist_box, dist_center);
-            ImDrawList* draw_list = ImGui::GetOverlayDrawList();
-            draw_list->AddRectFilled(cand.Min, cand.Max, IM_COL32(255, 0, 0, 200));
-            draw_list->AddText(g.IO.FontDefault, 13.0f, cand.Min, IM_COL32(255, 255, 255, 255), buf);
-        }
-    }
- #endif
-
-    // Is it in the quadrant we're interesting in moving to?
-    bool new_best = false;
-    if (quadrant == g.NavMoveDir)
-    {
-        // Does it beat the current best candidate?
-        if (dist_box < result->DistBox)
-        {
-            result->DistBox = dist_box;
-            result->DistCenter = dist_center;
-            return true;
-        }
-        if (dist_box == result->DistBox)
-        {
-            // Try using distance between center points to break ties
-            if (dist_center < result->DistCenter)
-            {
-                result->DistCenter = dist_center;
-                new_best = true;
-            }
-            else if (dist_center == result->DistCenter)
-            {
-                // Still tied! we need to be extra-careful to make sure everything gets linked properly. We consistently break ties by symbolically moving "later" items
-                // (with higher index) to the right/downwards by an infinitesimal amount since we the current "best" button already (so it must have a lower index),
-                // this is fairly easy. This rule ensures that all buttons with dx==dy==0 will end up being linked in order of appearance along the x axis.
-                if (((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) ? dby : dbx) < 0.0f) // moving bj to the right/down decreases distance
-                    new_best = true;
-            }
-        }
-    }
-
-    // Axial check: if 'curr' has no link at all in some direction and 'cand' lies roughly in that direction, add a tentative link. This will only be kept if no "real" matches
-    // are found, so it only augments the graph produced by the above method using extra links. (important, since it doesn't guarantee strong connectedness)
-    // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
-    // 2017/09/29: FIXME: This now currently only enabled inside menu bars, ideally we'd disable it everywhere. Menus in particular need to catch failure. For general navigation it feels awkward.
-    // Disabling it may lead to disconnected graphs when nodes are very spaced out on different axis. Perhaps consider offering this as an option?
-    if (result->DistBox == FLT_MAX && dist_axial < result->DistAxial)  // Check axial match
-        if (g.NavLayer == 1 && !(g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
-            if ((g.NavMoveDir == ImGuiDir_Left && dax < 0.0f) || (g.NavMoveDir == ImGuiDir_Right && dax > 0.0f) || (g.NavMoveDir == ImGuiDir_Up && day < 0.0f) || (g.NavMoveDir == ImGuiDir_Down && day > 0.0f))
-            {
-                result->DistAxial = dist_axial;
-                new_best = true;
-            }
-
-    return new_best;
-}
-
 static void NavSaveLastChildNavWindow(ImGuiWindow* child_window)
 {
     ImGuiWindow* parent_window = child_window;
@@ -2517,75 +2355,6 @@ void ImGui::NavMoveRequestCancel()
     ImGuiContext& g = *GImGui;
     g.NavMoveRequest = false;
     NavUpdateAnyRequestFlag();
-}
-
-// We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
-static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    //if (!g.IO.NavActive)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
-    //    return;
-
-    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
-    const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
-
-    // Process Init Request
-    if (g.NavInitRequest && g.NavLayer == window->DC.NavLayerCurrent)
-    {
-        // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
-        if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus) || g.NavInitResultId == 0)
-        {
-            g.NavInitResultId = id;
-            g.NavInitResultRectRel = nav_bb_rel;
-        }
-        if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
-        {
-            g.NavInitRequest = false; // Found a match, clear request
-            NavUpdateAnyRequestFlag();
-        }
-    }
-
-    // Process Move Request (scoring for navigation)
-    // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRectScreen + scoring from a rect wrapped according to current wrapping policy)
-    if ((g.NavId != id || (g.NavMoveRequestFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & ImGuiItemFlags_NoNav))
-    {
-        ImGuiNavMoveResult* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-#if IMGUI_DEBUG_NAV_SCORING
-        // [DEBUG] Score all items in NavWindow at all times
-        if (!g.NavMoveRequest)
-            g.NavMoveDir = g.NavMoveDirLast;
-        bool new_best = NavScoreItem(result, nav_bb) && g.NavMoveRequest;
-#else
-        bool new_best = g.NavMoveRequest && NavScoreItem(result, nav_bb);
-#endif
-        if (new_best)
-        {
-            result->ID = id;
-            result->Window = window;
-            result->RectRel = nav_bb_rel;
-        }
-
-        const float VISIBLE_RATIO = 0.70f;
-        if ((g.NavMoveRequestFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
-            if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
-                if (NavScoreItem(&g.NavMoveResultLocalVisibleSet, nav_bb))
-                {
-                    result = &g.NavMoveResultLocalVisibleSet;
-                    result->ID = id;
-                    result->Window = window;
-                    result->RectRel = nav_bb_rel;
-                }
-    }
-
-    // Update window-relative bounding box of navigated item
-    if (g.NavId == id)
-    {
-        g.NavWindow = window;                                           // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
-        g.NavLayer = window->DC.NavLayerCurrent;
-        g.NavIdIsAlive = true;
-        g.NavIdTabCounter = window->FocusIdxTabCounter;
-        window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
-    }
 }
 
 // Declare item bounding box for clipping and interaction.
@@ -7848,6 +7617,241 @@ void ImGui::Unindent(float indent_w)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.Indent.x -= (indent_w != 0.0f) ? indent_w : g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
+}
+
+//-----------------------------------------------------------------------------
+// NAVIGATION
+//-----------------------------------------------------------------------------
+
+static ImGuiDir inline NavScoreItemGetQuadrant(float dx, float dy)
+{
+    if (ImFabs(dx) > ImFabs(dy))
+        return (dx > 0.0f) ? ImGuiDir_Right : ImGuiDir_Left;
+    return (dy > 0.0f) ? ImGuiDir_Down : ImGuiDir_Up;
+}
+
+static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float b1)
+{
+    if (a1 < b0)
+        return a1 - b0;
+    if (b1 < a0)
+        return a0 - b1;
+    return 0.0f;
+}
+
+static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect)
+{
+    if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
+    {
+        r.Min.y = ImClamp(r.Min.y, clip_rect.Min.y, clip_rect.Max.y);
+        r.Max.y = ImClamp(r.Max.y, clip_rect.Min.y, clip_rect.Max.y);
+    }
+    else
+    {
+        r.Min.x = ImClamp(r.Min.x, clip_rect.Min.x, clip_rect.Max.x);
+        r.Max.x = ImClamp(r.Max.x, clip_rect.Min.x, clip_rect.Max.x);
+    }
+}
+
+// Scoring function for directional navigation. Based on https://gist.github.com/rygorous/6981057
+static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (g.NavLayer != window->DC.NavLayerCurrent)
+        return false;
+
+    const ImRect& curr = g.NavScoringRectScreen; // Current modified source rect (NB: we've applied Max.x = Min.x in NavUpdate() to inhibit the effect of having varied item width)
+    g.NavScoringCount++;
+
+    // When entering through a NavFlattened border, we consider child window items as fully clipped for scoring
+    if (window->ParentWindow == g.NavWindow)
+    {
+        IM_ASSERT((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened);
+        if (!window->ClipRect.Contains(cand))
+            return false;
+        cand.ClipWithFull(window->ClipRect); // This allows the scored item to not overlap other candidates in the parent window
+    }
+
+    // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
+    // For example, this ensure that items in one column are not reached when moving vertically from items in another column.
+    NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window->ClipRect);
+
+    // Compute distance between boxes
+    // FIXME-NAV: Introducing biases for vertical navigation, needs to be removed.
+    float dbx = NavScoreItemDistInterval(cand.Min.x, cand.Max.x, curr.Min.x, curr.Max.x);
+    float dby = NavScoreItemDistInterval(ImLerp(cand.Min.y, cand.Max.y, 0.2f), ImLerp(cand.Min.y, cand.Max.y, 0.8f), ImLerp(curr.Min.y, curr.Max.y, 0.2f), ImLerp(curr.Min.y, curr.Max.y, 0.8f)); // Scale down on Y to keep using box-distance for vertically touching items
+    if (dby != 0.0f && dbx != 0.0f)
+       dbx = (dbx/1000.0f) + ((dbx > 0.0f) ? +1.0f : -1.0f);
+    float dist_box = ImFabs(dbx) + ImFabs(dby);
+
+    // Compute distance between centers (this is off by a factor of 2, but we only compare center distances with each other so it doesn't matter)
+    float dcx = (cand.Min.x + cand.Max.x) - (curr.Min.x + curr.Max.x);
+    float dcy = (cand.Min.y + cand.Max.y) - (curr.Min.y + curr.Max.y);
+    float dist_center = ImFabs(dcx) + ImFabs(dcy); // L1 metric (need this for our connectedness guarantee)
+
+    // Determine which quadrant of 'curr' our candidate item 'cand' lies in based on distance
+    ImGuiDir quadrant;
+    float dax = 0.0f, day = 0.0f, dist_axial = 0.0f;
+    if (dbx != 0.0f || dby != 0.0f)
+    {
+        // For non-overlapping boxes, use distance between boxes
+        dax = dbx;
+        day = dby;
+        dist_axial = dist_box;
+        quadrant = NavScoreItemGetQuadrant(dbx, dby);
+    }
+    else if (dcx != 0.0f || dcy != 0.0f)
+    {
+        // For overlapping boxes with different centers, use distance between centers
+        dax = dcx;
+        day = dcy;
+        dist_axial = dist_center;
+        quadrant = NavScoreItemGetQuadrant(dcx, dcy);
+    }
+    else
+    {
+        // Degenerate case: two overlapping buttons with same center, break ties arbitrarily (note that LastItemId here is really the _previous_ item order, but it doesn't matter)
+        quadrant = (window->DC.LastItemId < g.NavId) ? ImGuiDir_Left : ImGuiDir_Right;
+    }
+
+#if IMGUI_DEBUG_NAV_SCORING
+    char buf[128];
+    if (ImGui::IsMouseHoveringRect(cand.Min, cand.Max))
+    {
+        ImFormatString(buf, IM_ARRAYSIZE(buf), "dbox (%.2f,%.2f->%.4f)\ndcen (%.2f,%.2f->%.4f)\nd (%.2f,%.2f->%.4f)\nnav %c, quadrant %c", dbx, dby, dist_box, dcx, dcy, dist_center, dax, day, dist_axial, "WENS"[g.NavMoveDir], "WENS"[quadrant]);
+        ImDrawList* draw_list = ImGui::GetOverlayDrawList();
+        draw_list->AddRect(curr.Min, curr.Max, IM_COL32(255,200,0,100));
+        draw_list->AddRect(cand.Min, cand.Max, IM_COL32(255,255,0,200));
+        draw_list->AddRectFilled(cand.Max-ImVec2(4,4), cand.Max+ImGui::CalcTextSize(buf)+ImVec2(4,4), IM_COL32(40,0,0,150));
+        draw_list->AddText(g.IO.FontDefault, 13.0f, cand.Max, ~0U, buf);
+    }
+    else if (g.IO.KeyCtrl) // Hold to preview score in matching quadrant. Press C to rotate.
+    {
+        if (IsKeyPressedMap(ImGuiKey_C)) { g.NavMoveDirLast = (ImGuiDir)((g.NavMoveDirLast + 1) & 3); g.IO.KeysDownDuration[g.IO.KeyMap[ImGuiKey_C]] = 0.01f; }
+        if (quadrant == g.NavMoveDir)
+        {
+            ImFormatString(buf, IM_ARRAYSIZE(buf), "%.0f/%.0f", dist_box, dist_center);
+            ImDrawList* draw_list = ImGui::GetOverlayDrawList();
+            draw_list->AddRectFilled(cand.Min, cand.Max, IM_COL32(255, 0, 0, 200));
+            draw_list->AddText(g.IO.FontDefault, 13.0f, cand.Min, IM_COL32(255, 255, 255, 255), buf);
+        }
+    }
+ #endif
+
+    // Is it in the quadrant we're interesting in moving to?
+    bool new_best = false;
+    if (quadrant == g.NavMoveDir)
+    {
+        // Does it beat the current best candidate?
+        if (dist_box < result->DistBox)
+        {
+            result->DistBox = dist_box;
+            result->DistCenter = dist_center;
+            return true;
+        }
+        if (dist_box == result->DistBox)
+        {
+            // Try using distance between center points to break ties
+            if (dist_center < result->DistCenter)
+            {
+                result->DistCenter = dist_center;
+                new_best = true;
+            }
+            else if (dist_center == result->DistCenter)
+            {
+                // Still tied! we need to be extra-careful to make sure everything gets linked properly. We consistently break ties by symbolically moving "later" items
+                // (with higher index) to the right/downwards by an infinitesimal amount since we the current "best" button already (so it must have a lower index),
+                // this is fairly easy. This rule ensures that all buttons with dx==dy==0 will end up being linked in order of appearance along the x axis.
+                if (((g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down) ? dby : dbx) < 0.0f) // moving bj to the right/down decreases distance
+                    new_best = true;
+            }
+        }
+    }
+
+    // Axial check: if 'curr' has no link at all in some direction and 'cand' lies roughly in that direction, add a tentative link. This will only be kept if no "real" matches
+    // are found, so it only augments the graph produced by the above method using extra links. (important, since it doesn't guarantee strong connectedness)
+    // This is just to avoid buttons having no links in a particular direction when there's a suitable neighbor. you get good graphs without this too.
+    // 2017/09/29: FIXME: This now currently only enabled inside menu bars, ideally we'd disable it everywhere. Menus in particular need to catch failure. For general navigation it feels awkward.
+    // Disabling it may lead to disconnected graphs when nodes are very spaced out on different axis. Perhaps consider offering this as an option?
+    if (result->DistBox == FLT_MAX && dist_axial < result->DistAxial)  // Check axial match
+        if (g.NavLayer == 1 && !(g.NavWindow->Flags & ImGuiWindowFlags_ChildMenu))
+            if ((g.NavMoveDir == ImGuiDir_Left && dax < 0.0f) || (g.NavMoveDir == ImGuiDir_Right && dax > 0.0f) || (g.NavMoveDir == ImGuiDir_Up && day < 0.0f) || (g.NavMoveDir == ImGuiDir_Down && day > 0.0f))
+            {
+                result->DistAxial = dist_axial;
+                new_best = true;
+            }
+
+    return new_best;
+}
+
+// We get there when either NavId == id, or when g.NavAnyRequest is set (which is updated by NavUpdateAnyRequestFlag above)
+static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    //if (!g.IO.NavActive)  // [2017/10/06] Removed this possibly redundant test but I am not sure of all the side-effects yet. Some of the feature here will need to work regardless of using a _NoNavInputs flag.
+    //    return;
+
+    const ImGuiItemFlags item_flags = window->DC.ItemFlags;
+    const ImRect nav_bb_rel(nav_bb.Min - window->Pos, nav_bb.Max - window->Pos);
+
+    // Process Init Request
+    if (g.NavInitRequest && g.NavLayer == window->DC.NavLayerCurrent)
+    {
+        // Even if 'ImGuiItemFlags_NoNavDefaultFocus' is on (typically collapse/close button) we record the first ResultId so they can be used as a fallback
+        if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus) || g.NavInitResultId == 0)
+        {
+            g.NavInitResultId = id;
+            g.NavInitResultRectRel = nav_bb_rel;
+        }
+        if (!(item_flags & ImGuiItemFlags_NoNavDefaultFocus))
+        {
+            g.NavInitRequest = false; // Found a match, clear request
+            NavUpdateAnyRequestFlag();
+        }
+    }
+
+    // Process Move Request (scoring for navigation)
+    // FIXME-NAV: Consider policy for double scoring (scoring from NavScoringRectScreen + scoring from a rect wrapped according to current wrapping policy)
+    if ((g.NavId != id || (g.NavMoveRequestFlags & ImGuiNavMoveFlags_AllowCurrentNavId)) && !(item_flags & ImGuiItemFlags_NoNav))
+    {
+        ImGuiNavMoveResult* result = (window == g.NavWindow) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+#if IMGUI_DEBUG_NAV_SCORING
+        // [DEBUG] Score all items in NavWindow at all times
+        if (!g.NavMoveRequest)
+            g.NavMoveDir = g.NavMoveDirLast;
+        bool new_best = NavScoreItem(result, nav_bb) && g.NavMoveRequest;
+#else
+        bool new_best = g.NavMoveRequest && NavScoreItem(result, nav_bb);
+#endif
+        if (new_best)
+        {
+            result->ID = id;
+            result->Window = window;
+            result->RectRel = nav_bb_rel;
+        }
+
+        const float VISIBLE_RATIO = 0.70f;
+        if ((g.NavMoveRequestFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
+            if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
+                if (NavScoreItem(&g.NavMoveResultLocalVisibleSet, nav_bb))
+                {
+                    result = &g.NavMoveResultLocalVisibleSet;
+                    result->ID = id;
+                    result->Window = window;
+                    result->RectRel = nav_bb_rel;
+                }
+    }
+
+    // Update window-relative bounding box of navigated item
+    if (g.NavId == id)
+    {
+        g.NavWindow = window;                                           // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
+        g.NavLayer = window->DC.NavLayerCurrent;
+        g.NavIdIsAlive = true;
+        g.NavIdTabCounter = window->FocusIdxTabCounter;
+        window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
+    }
 }
 
 //-----------------------------------------------------------------------------
