@@ -2703,213 +2703,6 @@ ImDrawListSharedData* ImGui::GetDrawListSharedData()
     return &GImGui->DrawListSharedData;
 }
 
-// This needs to be called before we submit any widget (aka in or before Begin)
-void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(window == g.NavWindow);
-    bool init_for_nav = false;
-    if (!(window->Flags & ImGuiWindowFlags_NoNavInputs))
-        if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
-            init_for_nav = true;
-    if (init_for_nav)
-    {
-        SetNavID(0, g.NavLayer);
-        g.NavInitRequest = true;
-        g.NavInitRequestFromMove = false;
-        g.NavInitResultId = 0;
-        g.NavInitResultRectRel = ImRect();
-        NavUpdateAnyRequestFlag();
-    }
-    else
-    {
-        g.NavId = window->NavLastIds[0];
-    }
-}
-
-static ImVec2 ImGui::NavCalcPreferredRefPos()
-{
-    ImGuiContext& g = *GImGui;
-    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
-    {
-        IM_ASSERT(ImGui::IsMousePosValid()); // This will probably trigger at some point, please share your repro!
-        return ImFloor(g.IO.MousePos);
-    }
-
-    // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item
-    const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
-    ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
-    ImRect visible_rect = g.NavWindow->Viewport->GetRect();
-    return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
-}
-
-static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
-{
-    ImGuiContext& g = *GImGui;
-    for (int i = g.Windows.Size-1; i >= 0; i--)
-        if (g.Windows[i] == window)
-            return i;
-    return -1;
-}
-
-static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir) // FIXME-OPT O(N)
-{
-    ImGuiContext& g = *GImGui;
-    for (int i = i_start; i >= 0 && i < g.Windows.Size && i != i_stop; i += dir)
-        if (ImGui::IsWindowNavFocusable(g.Windows[i]))
-            return g.Windows[i];
-    return NULL;
-}
-
-static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.NavWindowingTarget);
-    if (g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal)
-        return;
-
-    const int i_current = FindWindowIndex(g.NavWindowingTarget);
-    ImGuiWindow* window_target = FindWindowNavFocusable(i_current + focus_change_dir, -INT_MAX, focus_change_dir);
-    if (!window_target)
-        window_target = FindWindowNavFocusable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
-    if (window_target) // Don't reset windowing target if there's a single window in the list
-        g.NavWindowingTarget = g.NavWindowingTargetAnim = window_target;
-    g.NavWindowingToggleLayer = false;
-}
-
-// Window management mode (hold to: change focus/move/resize, tap to: toggle menu layer)
-static void ImGui::NavUpdateWindowing()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* apply_focus_window = NULL;
-    bool apply_toggle_layer = false;
-
-    ImGuiWindow* modal_window = GetFrontMostPopupModal();
-    if (modal_window != NULL)
-    {
-        g.NavWindowingTarget = NULL;
-        return;
-    }
-
-    // Fade out
-    if (g.NavWindowingTargetAnim && g.NavWindowingTarget == NULL)
-    {
-        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha - g.IO.DeltaTime * 10.0f, 0.0f);
-        if (g.DimBgRatio <= 0.0f && g.NavWindowingHighlightAlpha <= 0.0f)
-            g.NavWindowingTargetAnim = NULL;
-    }
-
-    // Start CTRL-TAB or Square+L/R window selection
-    bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
-    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
-    if (start_windowing_with_gamepad || start_windowing_with_keyboard)
-        if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.Windows.Size - 1, -INT_MAX, -1))
-        {
-            g.NavWindowingTarget = g.NavWindowingTargetAnim = window;
-            g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
-            g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
-            g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_NavKeyboard : ImGuiInputSource_NavGamepad;
-        }
-
-    // Gamepad update
-    g.NavWindowingTimer += g.IO.DeltaTime;
-    if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_NavGamepad)
-    {
-        // Highlight only appears after a brief time holding the button, so that a fast tap on PadMenu (to toggle NavLayer) doesn't add visual noise
-        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
-
-        // Select window to focus
-        const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_FocusPrev, ImGuiInputReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_FocusNext, ImGuiInputReadMode_RepeatSlow);
-        if (focus_change_dir != 0)
-        {
-            NavUpdateWindowingHighlightWindow(focus_change_dir);
-            g.NavWindowingHighlightAlpha = 1.0f;
-        }
-
-        // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered front-most)
-        if (!IsNavInputDown(ImGuiNavInput_Menu))
-        {
-            g.NavWindowingToggleLayer &= (g.NavWindowingHighlightAlpha < 1.0f); // Once button was held long enough we don't consider it a tap-to-toggle-layer press anymore.
-            if (g.NavWindowingToggleLayer && g.NavWindow)
-                apply_toggle_layer = true;
-            else if (!g.NavWindowingToggleLayer)
-                apply_focus_window = g.NavWindowingTarget;
-            g.NavWindowingTarget = NULL;
-        }
-    }
-
-    // Keyboard: Focus
-    if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_NavKeyboard)
-    {
-        // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
-        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
-        if (IsKeyPressedMap(ImGuiKey_Tab, true))
-            NavUpdateWindowingHighlightWindow(g.IO.KeyShift ? +1 : -1);
-        if (!g.IO.KeyCtrl)
-            apply_focus_window = g.NavWindowingTarget;
-    }
-
-    // Keyboard: Press and Release ALT to toggle menu layer
-    // FIXME: We lack an explicit IO variable for "is the imgui window focused", so compare mouse validity to detect the common case of back-end clearing releases all keys on ALT-TAB
-    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu_, ImGuiInputReadMode_Released))
-        if (IsMousePosValid(&g.IO.MousePos) == IsMousePosValid(&g.IO.MousePosPrev))
-            apply_toggle_layer = true;
-
-    // Move window
-    if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
-    {
-        ImVec2 move_delta;
-        if (g.NavInputSource == ImGuiInputSource_NavKeyboard && !g.IO.KeyShift)
-            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard, ImGuiInputReadMode_Down);
-        if (g.NavInputSource == ImGuiInputSource_NavGamepad)
-            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
-        if (move_delta.x != 0.0f || move_delta.y != 0.0f)
-        {
-            const float NAV_MOVE_SPEED = 800.0f;
-            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y)); // FIXME: Doesn't code variable framerate very well
-            g.NavWindowingTarget->RootWindow->Pos += move_delta * move_speed;
-            g.NavDisableMouseHover = true;
-            MarkIniSettingsDirty(g.NavWindowingTarget);
-        }
-    }
-
-    // Apply final focus
-    if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
-    {
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = true;
-        apply_focus_window = NavRestoreLastChildNavWindow(apply_focus_window);
-        ClosePopupsOverWindow(apply_focus_window);
-        FocusWindow(apply_focus_window);
-        if (apply_focus_window->NavLastIds[0] == 0)
-            NavInitWindow(apply_focus_window, false);
-
-        // If the window only has a menu layer, select it directly
-        if (apply_focus_window->DC.NavLayerActiveMask == (1 << 1))
-            g.NavLayer = 1;
-    }
-    if (apply_focus_window)
-        g.NavWindowingTarget = NULL;
-
-    // Apply menu/layer toggle
-    if (apply_toggle_layer && g.NavWindow)
-    {
-        // Move to parent menu if necessary
-        ImGuiWindow* new_nav_window = g.NavWindow;
-        while ((new_nav_window->DC.NavLayerActiveMask & (1 << 1)) == 0 && (new_nav_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (new_nav_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
-            new_nav_window = new_nav_window->ParentWindow;
-        if (new_nav_window != g.NavWindow)
-        {
-            ImGuiWindow* old_nav_window = g.NavWindow;
-            FocusWindow(new_nav_window);
-            new_nav_window->NavLastChildNavWindow = old_nav_window;
-        }
-        g.NavDisableHighlight = false;
-        g.NavDisableMouseHover = true;
-        NavRestoreLayer((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0);
-    }
-}
-
 static void SetWindowViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     window->Viewport = viewport;
@@ -8406,6 +8199,46 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
     }
 }
 
+// This needs to be called before we submit any widget (aka in or before Begin)
+void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(window == g.NavWindow);
+    bool init_for_nav = false;
+    if (!(window->Flags & ImGuiWindowFlags_NoNavInputs))
+        if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
+            init_for_nav = true;
+    if (init_for_nav)
+    {
+        SetNavID(0, g.NavLayer);
+        g.NavInitRequest = true;
+        g.NavInitRequestFromMove = false;
+        g.NavInitResultId = 0;
+        g.NavInitResultRectRel = ImRect();
+        NavUpdateAnyRequestFlag();
+    }
+    else
+    {
+        g.NavId = window->NavLastIds[0];
+    }
+}
+
+static ImVec2 ImGui::NavCalcPreferredRefPos()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
+    {
+        IM_ASSERT(ImGui::IsMousePosValid()); // This will probably trigger at some point, please share your repro!
+        return ImFloor(g.IO.MousePos);
+    }
+
+    // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item
+    const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
+    ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
+    ImRect visible_rect = g.NavWindow->Viewport->GetRect();
+    return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
+}
+
 float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
 {
     ImGuiContext& g = *GImGui;
@@ -8826,6 +8659,173 @@ static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
         }
     }
     return 0.0f;
+}
+
+static int FindWindowIndex(ImGuiWindow* window) // FIXME-OPT O(N)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = g.Windows.Size-1; i >= 0; i--)
+        if (g.Windows[i] == window)
+            return i;
+    return -1;
+}
+
+static ImGuiWindow* FindWindowNavFocusable(int i_start, int i_stop, int dir) // FIXME-OPT O(N)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = i_start; i >= 0 && i < g.Windows.Size && i != i_stop; i += dir)
+        if (ImGui::IsWindowNavFocusable(g.Windows[i]))
+            return g.Windows[i];
+    return NULL;
+}
+
+static void NavUpdateWindowingHighlightWindow(int focus_change_dir)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.NavWindowingTarget);
+    if (g.NavWindowingTarget->Flags & ImGuiWindowFlags_Modal)
+        return;
+
+    const int i_current = FindWindowIndex(g.NavWindowingTarget);
+    ImGuiWindow* window_target = FindWindowNavFocusable(i_current + focus_change_dir, -INT_MAX, focus_change_dir);
+    if (!window_target)
+        window_target = FindWindowNavFocusable((focus_change_dir < 0) ? (g.Windows.Size - 1) : 0, i_current, focus_change_dir);
+    if (window_target) // Don't reset windowing target if there's a single window in the list
+        g.NavWindowingTarget = g.NavWindowingTargetAnim = window_target;
+    g.NavWindowingToggleLayer = false;
+}
+
+// Window management mode (hold to: change focus/move/resize, tap to: toggle menu layer)
+static void ImGui::NavUpdateWindowing()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* apply_focus_window = NULL;
+    bool apply_toggle_layer = false;
+
+    ImGuiWindow* modal_window = GetFrontMostPopupModal();
+    if (modal_window != NULL)
+    {
+        g.NavWindowingTarget = NULL;
+        return;
+    }
+
+    // Fade out
+    if (g.NavWindowingTargetAnim && g.NavWindowingTarget == NULL)
+    {
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha - g.IO.DeltaTime * 10.0f, 0.0f);
+        if (g.DimBgRatio <= 0.0f && g.NavWindowingHighlightAlpha <= 0.0f)
+            g.NavWindowingTargetAnim = NULL;
+    }
+
+    // Start CTRL-TAB or Square+L/R window selection
+    bool start_windowing_with_gamepad = !g.NavWindowingTarget && IsNavInputPressed(ImGuiNavInput_Menu, ImGuiInputReadMode_Pressed);
+    bool start_windowing_with_keyboard = !g.NavWindowingTarget && g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab) && (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard);
+    if (start_windowing_with_gamepad || start_windowing_with_keyboard)
+        if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.Windows.Size - 1, -INT_MAX, -1))
+        {
+            g.NavWindowingTarget = g.NavWindowingTargetAnim = window;
+            g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
+            g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
+            g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_NavKeyboard : ImGuiInputSource_NavGamepad;
+        }
+
+    // Gamepad update
+    g.NavWindowingTimer += g.IO.DeltaTime;
+    if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_NavGamepad)
+    {
+        // Highlight only appears after a brief time holding the button, so that a fast tap on PadMenu (to toggle NavLayer) doesn't add visual noise
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f));
+
+        // Select window to focus
+        const int focus_change_dir = (int)IsNavInputPressed(ImGuiNavInput_FocusPrev, ImGuiInputReadMode_RepeatSlow) - (int)IsNavInputPressed(ImGuiNavInput_FocusNext, ImGuiInputReadMode_RepeatSlow);
+        if (focus_change_dir != 0)
+        {
+            NavUpdateWindowingHighlightWindow(focus_change_dir);
+            g.NavWindowingHighlightAlpha = 1.0f;
+        }
+
+        // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered front-most)
+        if (!IsNavInputDown(ImGuiNavInput_Menu))
+        {
+            g.NavWindowingToggleLayer &= (g.NavWindowingHighlightAlpha < 1.0f); // Once button was held long enough we don't consider it a tap-to-toggle-layer press anymore.
+            if (g.NavWindowingToggleLayer && g.NavWindow)
+                apply_toggle_layer = true;
+            else if (!g.NavWindowingToggleLayer)
+                apply_focus_window = g.NavWindowingTarget;
+            g.NavWindowingTarget = NULL;
+        }
+    }
+
+    // Keyboard: Focus
+    if (g.NavWindowingTarget && g.NavInputSource == ImGuiInputSource_NavKeyboard)
+    {
+        // Visuals only appears after a brief time after pressing TAB the first time, so that a fast CTRL+TAB doesn't add visual noise
+        g.NavWindowingHighlightAlpha = ImMax(g.NavWindowingHighlightAlpha, ImSaturate((g.NavWindowingTimer - NAV_WINDOWING_HIGHLIGHT_DELAY) / 0.05f)); // 1.0f
+        if (IsKeyPressedMap(ImGuiKey_Tab, true))
+            NavUpdateWindowingHighlightWindow(g.IO.KeyShift ? +1 : -1);
+        if (!g.IO.KeyCtrl)
+            apply_focus_window = g.NavWindowingTarget;
+    }
+
+    // Keyboard: Press and Release ALT to toggle menu layer
+    // FIXME: We lack an explicit IO variable for "is the imgui window focused", so compare mouse validity to detect the common case of back-end clearing releases all keys on ALT-TAB
+    if ((g.ActiveId == 0 || g.ActiveIdAllowOverlap) && IsNavInputPressed(ImGuiNavInput_KeyMenu_, ImGuiInputReadMode_Released))
+        if (IsMousePosValid(&g.IO.MousePos) == IsMousePosValid(&g.IO.MousePosPrev))
+            apply_toggle_layer = true;
+
+    // Move window
+    if (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoMove))
+    {
+        ImVec2 move_delta;
+        if (g.NavInputSource == ImGuiInputSource_NavKeyboard && !g.IO.KeyShift)
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard, ImGuiInputReadMode_Down);
+        if (g.NavInputSource == ImGuiInputSource_NavGamepad)
+            move_delta = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down);
+        if (move_delta.x != 0.0f || move_delta.y != 0.0f)
+        {
+            const float NAV_MOVE_SPEED = 800.0f;
+            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y)); // FIXME: Doesn't code variable framerate very well
+            g.NavWindowingTarget->RootWindow->Pos += move_delta * move_speed;
+            g.NavDisableMouseHover = true;
+            MarkIniSettingsDirty(g.NavWindowingTarget);
+        }
+    }
+
+    // Apply final focus
+    if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
+    {
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = true;
+        apply_focus_window = NavRestoreLastChildNavWindow(apply_focus_window);
+        ClosePopupsOverWindow(apply_focus_window);
+        FocusWindow(apply_focus_window);
+        if (apply_focus_window->NavLastIds[0] == 0)
+            NavInitWindow(apply_focus_window, false);
+
+        // If the window only has a menu layer, select it directly
+        if (apply_focus_window->DC.NavLayerActiveMask == (1 << 1))
+            g.NavLayer = 1;
+    }
+    if (apply_focus_window)
+        g.NavWindowingTarget = NULL;
+
+    // Apply menu/layer toggle
+    if (apply_toggle_layer && g.NavWindow)
+    {
+        // Move to parent menu if necessary
+        ImGuiWindow* new_nav_window = g.NavWindow;
+        while ((new_nav_window->DC.NavLayerActiveMask & (1 << 1)) == 0 && (new_nav_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (new_nav_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
+            new_nav_window = new_nav_window->ParentWindow;
+        if (new_nav_window != g.NavWindow)
+        {
+            ImGuiWindow* old_nav_window = g.NavWindow;
+            FocusWindow(new_nav_window);
+            new_nav_window->NavLastChildNavWindow = old_nav_window;
+        }
+        g.NavDisableHighlight = false;
+        g.NavDisableMouseHover = true;
+        NavRestoreLayer((g.NavWindow->DC.NavLayerActiveMask & (1 << 1)) ? (g.NavLayer ^ 1) : 0);
+    }
 }
 
 // Window has already passed the IsWindowNavFocusable()
