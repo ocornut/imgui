@@ -894,7 +894,11 @@ static bool             BeginChildEx(const char* name, ImGuiID id, const ImVec2&
 static void             NavUpdate();
 static void             NavUpdateWindowing();
 static void             NavUpdateWindowingList();
+static void             NavUpdateMoveResult();
+static float            NavUpdatePageUpPageDown(int allowed_dir_flags);
+static inline void      NavUpdateAnyRequestFlag();
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
+static ImVec2           NavCalcPreferredRefPos();
 
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
@@ -2362,7 +2366,7 @@ static void NavRestoreLayer(int layer)
         ImGui::NavInitWindow(g.NavWindow, true);
 }
 
-static inline void NavUpdateAnyRequestFlag()
+static inline void ImGui::NavUpdateAnyRequestFlag()
 {
     ImGuiContext& g = *GImGui;
     g.NavAnyRequest = g.NavMoveRequest || g.NavInitRequest || (IMGUI_DEBUG_NAV_SCORING && g.NavWindow != NULL);
@@ -2723,7 +2727,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     }
 }
 
-static ImVec2 NavCalcPreferredRefPos()
+static ImVec2 ImGui::NavCalcPreferredRefPos()
 {
     ImGuiContext& g = *GImGui;
     if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
@@ -3073,44 +3077,7 @@ static void ImGui::NavUpdate()
 
     // Process navigation move request
     if (g.NavMoveRequest && (g.NavMoveResultLocal.ID != 0 || g.NavMoveResultOther.ID != 0))
-    {
-        // Select which result to use
-        ImGuiNavMoveResult* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
-
-        // PageUp/PageDown behavior first jumps to the bottom/top mostly visible item, _otherwise_ use the result from the previous/next page.
-        if (g.NavMoveRequestFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet)
-            if (g.NavMoveResultLocalVisibleSet.ID != 0 && g.NavMoveResultLocalVisibleSet.ID != g.NavId)
-                result = &g.NavMoveResultLocalVisibleSet;
-
-        // Maybe entering a flattened child from the outside? In this case solve the tie using the regular scoring rules.
-        if (result != &g.NavMoveResultOther && g.NavMoveResultOther.ID != 0 && g.NavMoveResultOther.Window->ParentWindow == g.NavWindow)
-            if ((g.NavMoveResultOther.DistBox < result->DistBox) || (g.NavMoveResultOther.DistBox == result->DistBox && g.NavMoveResultOther.DistCenter < result->DistCenter))
-                result = &g.NavMoveResultOther;
-        IM_ASSERT(g.NavWindow && result->Window);
-
-        // Scroll to keep newly navigated item fully into view.
-        if (g.NavLayer == 0)
-        {
-            ImRect rect_abs = ImRect(result->RectRel.Min + result->Window->Pos, result->RectRel.Max + result->Window->Pos);
-            NavScrollToBringItemIntoView(result->Window, rect_abs);
-
-            // Estimate upcoming scroll so we can offset our result position so mouse position can be applied immediately after in NavUpdate()
-            ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(result->Window, false);
-            ImVec2 delta_scroll = result->Window->Scroll - next_scroll;
-            result->RectRel.Translate(delta_scroll);
-
-            // Also scroll parent window to keep us into view if necessary (we could/should technically recurse back the whole the parent hierarchy).
-            if (result->Window->Flags & ImGuiWindowFlags_ChildWindow)
-                NavScrollToBringItemIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
-        }
-
-        // Apply result from previous frame navigation directional move request
-        ClearActiveID();
-        g.NavWindow = result->Window;
-        SetNavIDWithRectRel(result->ID, g.NavLayer, result->RectRel);
-        g.NavJustMovedToId = result->ID;
-        g.NavMoveFromClampedRefRect = false;
-    }
+        NavUpdateMoveResult();
 
     // When a forwarded move request failed, we restore the highlight that we disabled during the forward frame
     if (g.NavMoveRequestForward == ImGuiNavForward_ForwardActive)
@@ -3242,42 +3209,8 @@ static void ImGui::NavUpdate()
 
     // PageUp/PageDown scroll
     float nav_scoring_rect_offset_y = 0.0f;
-    if (nav_keyboard_active && g.NavMoveDir == ImGuiDir_None && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget && g.NavLayer == 0)
-    {
-        ImGuiWindow* window = g.NavWindow;
-        bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && (allowed_dir_flags & (1 << ImGuiDir_Up));
-        bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && (allowed_dir_flags & (1 << ImGuiDir_Down));
-        if ((page_up_held && !page_down_held) || (page_down_held && !page_up_held))
-        {
-            if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
-            {
-                // Fallback manual-scroll when window has no navigable item
-                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                    SetWindowScrollY(window, window->Scroll.y - window->InnerClipRect.GetHeight());
-                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                    SetWindowScrollY(window, window->Scroll.y + window->InnerClipRect.GetHeight());
-            }
-            else
-            {
-                const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
-                const float page_offset_y = ImMax(0.0f, window->InnerClipRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
-                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                {
-                    nav_scoring_rect_offset_y = -page_offset_y;
-                    g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
-                    g.NavMoveClipDir = ImGuiDir_Up;
-                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
-                }
-                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                {
-                    nav_scoring_rect_offset_y = +page_offset_y;
-                    g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
-                    g.NavMoveClipDir = ImGuiDir_Down;
-                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
-                }
-            }
-        }
-    }
+    if (nav_keyboard_active)
+        nav_scoring_rect_offset_y = NavUpdatePageUpPageDown(allowed_dir_flags);
 
     if (g.NavMoveDir != ImGuiDir_None)
     {
@@ -8853,6 +8786,93 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
         if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(+bb_rel.GetWidth()); clip_dir = ImGuiDir_Right; }
         NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
     }
+}
+
+//
+
+static void ImGui::NavUpdateMoveResult()
+{
+    // Select which result to use
+    ImGuiContext& g = *GImGui;
+    ImGuiNavMoveResult* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
+
+    // PageUp/PageDown behavior first jumps to the bottom/top mostly visible item, _otherwise_ use the result from the previous/next page.
+    if (g.NavMoveRequestFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet)
+        if (g.NavMoveResultLocalVisibleSet.ID != 0 && g.NavMoveResultLocalVisibleSet.ID != g.NavId)
+            result = &g.NavMoveResultLocalVisibleSet;
+
+    // Maybe entering a flattened child from the outside? In this case solve the tie using the regular scoring rules.
+    if (result != &g.NavMoveResultOther && g.NavMoveResultOther.ID != 0 && g.NavMoveResultOther.Window->ParentWindow == g.NavWindow)
+        if ((g.NavMoveResultOther.DistBox < result->DistBox) || (g.NavMoveResultOther.DistBox == result->DistBox && g.NavMoveResultOther.DistCenter < result->DistCenter))
+            result = &g.NavMoveResultOther;
+    IM_ASSERT(g.NavWindow && result->Window);
+
+    // Scroll to keep newly navigated item fully into view.
+    if (g.NavLayer == 0)
+    {
+        ImRect rect_abs = ImRect(result->RectRel.Min + result->Window->Pos, result->RectRel.Max + result->Window->Pos);
+        NavScrollToBringItemIntoView(result->Window, rect_abs);
+
+        // Estimate upcoming scroll so we can offset our result position so mouse position can be applied immediately after in NavUpdate()
+        ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(result->Window, false);
+        ImVec2 delta_scroll = result->Window->Scroll - next_scroll;
+        result->RectRel.Translate(delta_scroll);
+
+        // Also scroll parent window to keep us into view if necessary (we could/should technically recurse back the whole the parent hierarchy).
+        if (result->Window->Flags & ImGuiWindowFlags_ChildWindow)
+            NavScrollToBringItemIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
+    }
+
+    // Apply result from previous frame navigation directional move request
+    ClearActiveID();
+    g.NavWindow = result->Window;
+    SetNavIDWithRectRel(result->ID, g.NavLayer, result->RectRel);
+    g.NavJustMovedToId = result->ID;
+    g.NavMoveFromClampedRefRect = false;
+}
+
+static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavMoveDir == ImGuiDir_None && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget && g.NavLayer == 0)
+    {
+        ImGuiWindow* window = g.NavWindow;
+        bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && (allowed_dir_flags & (1 << ImGuiDir_Up));
+        bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && (allowed_dir_flags & (1 << ImGuiDir_Down));
+        if ((page_up_held && !page_down_held) || (page_down_held && !page_up_held))
+        {
+            if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
+            {
+                // Fallback manual-scroll when window has no navigable item
+                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
+                    SetWindowScrollY(window, window->Scroll.y - window->InnerClipRect.GetHeight());
+                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
+                    SetWindowScrollY(window, window->Scroll.y + window->InnerClipRect.GetHeight());
+            }
+            else
+            {
+                const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
+                const float page_offset_y = ImMax(0.0f, window->InnerClipRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
+                float nav_scoring_rect_offset_y = 0.0f;
+                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
+                {
+                    nav_scoring_rect_offset_y = -page_offset_y;
+                    g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
+                    g.NavMoveClipDir = ImGuiDir_Up;
+                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
+                }
+                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
+                {
+                    nav_scoring_rect_offset_y = +page_offset_y;
+                    g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
+                    g.NavMoveClipDir = ImGuiDir_Down;
+                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
+                }
+                return nav_scoring_rect_offset_y;
+            }
+        }
+    }
+    return 0.0f;
 }
 
 //-----------------------------------------------------------------------------
