@@ -4034,112 +4034,6 @@ void ImGui::EndTooltip()
     End();
 }
 
-bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
-{
-    ImGuiContext& g = *GImGui;
-    if (!IsPopupOpen(id))
-    {
-        g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
-        return false;
-    }
-
-    char name[20];
-    if (extra_flags & ImGuiWindowFlags_ChildMenu)
-        ImFormatString(name, IM_ARRAYSIZE(name), "##Menu_%02d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
-    else
-        ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // Not recycling, so we can close/open during the same frame
-
-    bool is_open = Begin(name, NULL, extra_flags | ImGuiWindowFlags_Popup);
-    if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
-        EndPopup();
-
-    return is_open;
-}
-
-bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size) // Early out for performance
-    {
-        g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
-        return false;
-    }
-    return BeginPopupEx(g.CurrentWindow->GetID(str_id), flags|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
-}
-
-bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    const ImGuiID id = window->GetID(name);
-    if (!IsPopupOpen(id))
-    {
-        g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
-        return false;
-    }
-
-    // Center modal windows by default
-    // FIXME: Should test for (PosCond & window->SetWindowPosAllowFlags) with the upcoming window.
-    if (g.NextWindowData.PosCond == 0)
-        SetNextWindowPos(g.IO.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
-
-    bool is_open = Begin(name, p_open, flags | ImGuiWindowFlags_Popup | ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
-    if (!is_open || (p_open && !*p_open)) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
-    {
-        EndPopup();
-        if (is_open)
-            ClosePopup(id);
-        return false;
-    }
-    return is_open;
-}
-
-void ImGui::EndPopup()
-{
-    ImGuiContext& g = *GImGui; (void)g;
-    IM_ASSERT(g.CurrentWindow->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
-    IM_ASSERT(g.CurrentPopupStack.Size > 0);
-
-    // Make all menus and popups wrap around for now, may need to expose that policy.
-    NavMoveRequestTryWrapping(g.CurrentWindow, ImGuiNavMoveFlags_LoopY);
-
-    End();
-}
-
-// This is a helper to handle the simplest case of associating one named popup to one given widget.
-// You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
-// You can pass a NULL str_id to use the identifier of the last item.
-bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
-    IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        OpenPopupEx(id);
-    return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
-}
-
-bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
-{
-    if (!str_id)
-        str_id = "window_context";
-    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
-    if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(id);
-    return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
-}
-
-bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
-{
-    if (!str_id)
-        str_id = "void_context";
-    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
-    if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-        OpenPopupEx(id);
-    return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
-}
-
 static bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -6764,6 +6658,112 @@ void ImGui::CloseCurrentPopup()
     while (popup_idx > 0 && g.OpenPopupStack[popup_idx].Window && (g.OpenPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
         popup_idx--;
     ClosePopupToLevel(popup_idx);
+}
+
+bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (!IsPopupOpen(id))
+    {
+        g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
+        return false;
+    }
+
+    char name[20];
+    if (extra_flags & ImGuiWindowFlags_ChildMenu)
+        ImFormatString(name, IM_ARRAYSIZE(name), "##Menu_%02d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
+    else
+        ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // Not recycling, so we can close/open during the same frame
+
+    bool is_open = Begin(name, NULL, extra_flags | ImGuiWindowFlags_Popup);
+    if (!is_open) // NB: Begin can return false when the popup is completely clipped (e.g. zero size display)
+        EndPopup();
+
+    return is_open;
+}
+
+bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size) // Early out for performance
+    {
+        g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
+        return false;
+    }
+    return BeginPopupEx(g.CurrentWindow->GetID(str_id), flags|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
+}
+
+bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiID id = window->GetID(name);
+    if (!IsPopupOpen(id))
+    {
+        g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
+        return false;
+    }
+
+    // Center modal windows by default
+    // FIXME: Should test for (PosCond & window->SetWindowPosAllowFlags) with the upcoming window.
+    if (g.NextWindowData.PosCond == 0)
+        SetNextWindowPos(g.IO.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+
+    bool is_open = Begin(name, p_open, flags | ImGuiWindowFlags_Popup | ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings);
+    if (!is_open || (p_open && !*p_open)) // NB: is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+    {
+        EndPopup();
+        if (is_open)
+            ClosePopup(id);
+        return false;
+    }
+    return is_open;
+}
+
+void ImGui::EndPopup()
+{
+    ImGuiContext& g = *GImGui; (void)g;
+    IM_ASSERT(g.CurrentWindow->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
+    IM_ASSERT(g.CurrentPopupStack.Size > 0);
+
+    // Make all menus and popups wrap around for now, may need to expose that policy.
+    NavMoveRequestTryWrapping(g.CurrentWindow, ImGuiNavMoveFlags_LoopY);
+
+    End();
+}
+
+// This is a helper to handle the simplest case of associating one named popup to one given widget.
+// You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
+// You can pass a NULL str_id to use the identifier of the last item.
+bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+    IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        OpenPopupEx(id);
+    return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
+}
+
+bool ImGui::BeginPopupContextWindow(const char* str_id, int mouse_button, bool also_over_items)
+{
+    if (!str_id)
+        str_id = "window_context";
+    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
+    if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        if (also_over_items || !IsAnyItemHovered())
+            OpenPopupEx(id);
+    return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
+}
+
+bool ImGui::BeginPopupContextVoid(const char* str_id, int mouse_button)
+{
+    if (!str_id)
+        str_id = "void_context";
+    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
+    if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
+        OpenPopupEx(id);
+    return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
 //-----------------------------------------------------------------------------
