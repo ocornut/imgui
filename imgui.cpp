@@ -2370,19 +2370,6 @@ static inline void NavUpdateAnyRequestFlag()
         IM_ASSERT(g.NavWindow != NULL);
 }
 
-bool ImGui::NavMoveRequestButNoResultYet()
-{
-    ImGuiContext& g = *GImGui;
-    return g.NavMoveRequest && g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0;
-}
-
-void ImGui::NavMoveRequestCancel()
-{
-    ImGuiContext& g = *GImGui;
-    g.NavMoveRequest = false;
-    NavUpdateAnyRequestFlag();
-}
-
 // Declare item bounding box for clipping and interaction.
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
 // declare their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
@@ -5610,53 +5597,6 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     return is_open;
 }
 
-void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const ImRect& bb_rel, ImGuiNavMoveFlags move_flags)
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_None);
-    ImGui::NavMoveRequestCancel();
-    g.NavMoveDir = move_dir;
-    g.NavMoveClipDir = clip_dir;
-    g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
-    g.NavMoveRequestFlags = move_flags;
-    g.NavWindow->NavRectRel[g.NavLayer] = bb_rel;
-}
-
-void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.NavWindow != window || !NavMoveRequestButNoResultYet() || g.NavMoveRequestForward != ImGuiNavForward_None || g.NavLayer != 0)
-        return;
-    IM_ASSERT(move_flags != 0); // No points calling this with no wrapping
-    ImRect bb_rel = window->NavRectRel[0];
-
-    ImGuiDir clip_dir = g.NavMoveDir;
-    if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
-    {
-        bb_rel.Min.x = bb_rel.Max.x = ImMax(window->SizeFull.x, window->SizeContents.x) - window->Scroll.x;
-        if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(-bb_rel.GetHeight()); clip_dir = ImGuiDir_Up; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-    if (g.NavMoveDir == ImGuiDir_Right && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
-    {
-        bb_rel.Min.x = bb_rel.Max.x = -window->Scroll.x;
-        if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(+bb_rel.GetHeight()); clip_dir = ImGuiDir_Down; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-    if (g.NavMoveDir == ImGuiDir_Up && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
-    {
-        bb_rel.Min.y = bb_rel.Max.y = ImMax(window->SizeFull.y, window->SizeContents.y) - window->Scroll.y;
-        if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(-bb_rel.GetWidth()); clip_dir = ImGuiDir_Left; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-    if (g.NavMoveDir == ImGuiDir_Down && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
-    {
-        bb_rel.Min.y = bb_rel.Max.y = -window->Scroll.y;
-        if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(+bb_rel.GetWidth()); clip_dir = ImGuiDir_Right; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-}
-
 void ImGui::EndPopup()
 {
     ImGuiContext& g = *GImGui; (void)g;
@@ -8852,6 +8792,66 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
         g.NavIdIsAlive = true;
         g.NavIdTabCounter = window->FocusIdxTabCounter;
         window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
+    }
+}
+
+bool ImGui::NavMoveRequestButNoResultYet()
+{
+    ImGuiContext& g = *GImGui;
+    return g.NavMoveRequest && g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0;
+}
+
+void ImGui::NavMoveRequestCancel()
+{
+    ImGuiContext& g = *GImGui;
+    g.NavMoveRequest = false;
+    NavUpdateAnyRequestFlag();
+}
+
+void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const ImRect& bb_rel, ImGuiNavMoveFlags move_flags)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.NavMoveRequestForward == ImGuiNavForward_None);
+    ImGui::NavMoveRequestCancel();
+    g.NavMoveDir = move_dir;
+    g.NavMoveClipDir = clip_dir;
+    g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;
+    g.NavMoveRequestFlags = move_flags;
+    g.NavWindow->NavRectRel[g.NavLayer] = bb_rel;
+}
+
+void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.NavWindow != window || !NavMoveRequestButNoResultYet() || g.NavMoveRequestForward != ImGuiNavForward_None || g.NavLayer != 0)
+        return;
+    IM_ASSERT(move_flags != 0); // No points calling this with no wrapping
+    ImRect bb_rel = window->NavRectRel[0];
+
+    ImGuiDir clip_dir = g.NavMoveDir;
+    if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
+    {
+        bb_rel.Min.x = bb_rel.Max.x = ImMax(window->SizeFull.x, window->SizeContents.x) - window->Scroll.x;
+        if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(-bb_rel.GetHeight()); clip_dir = ImGuiDir_Up; }
+        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+    }
+    if (g.NavMoveDir == ImGuiDir_Right && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
+    {
+        bb_rel.Min.x = bb_rel.Max.x = -window->Scroll.x;
+        if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(+bb_rel.GetHeight()); clip_dir = ImGuiDir_Down; }
+        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+    }
+    if (g.NavMoveDir == ImGuiDir_Up && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
+    {
+        bb_rel.Min.y = bb_rel.Max.y = ImMax(window->SizeFull.y, window->SizeContents.y) - window->Scroll.y;
+        if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(-bb_rel.GetWidth()); clip_dir = ImGuiDir_Left; }
+        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+    }
+    if (g.NavMoveDir == ImGuiDir_Down && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
+    {
+        bb_rel.Min.y = bb_rel.Max.y = -window->Scroll.y;
+        if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(+bb_rel.GetWidth()); clip_dir = ImGuiDir_Right; }
+        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
     }
 }
 
