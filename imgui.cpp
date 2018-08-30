@@ -2050,6 +2050,7 @@ bool ImGuiListClipper::Step()
 
 //-----------------------------------------------------------------------------
 // ImGuiWindow
+// (This type has very few helper methods but otherwise is mostly a dumb struct)
 //-----------------------------------------------------------------------------
 
 ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
@@ -2166,7 +2167,8 @@ ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
 }
 
 //-----------------------------------------------------------------------------
-// Internal API exposed in imgui_internal.h
+// MAIN CODE
+// (this category is still too large and badly ordered, needs some tidying up)
 //-----------------------------------------------------------------------------
 
 static void SetCurrentWindow(ImGuiWindow* window)
@@ -4642,71 +4644,6 @@ ImVec2 ImGui::GetItemRectSize()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     return window->DC.LastItemRect.GetSize();
-}
-
-// Not exposed publicly as BeginTooltip() because bool parameters are evil. Let's see if other needs arise first.
-void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip)
-{
-    ImGuiContext& g = *GImGui;
-    char window_name[16];
-    ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip_%02d", g.TooltipOverrideCount);
-    if (override_previous_tooltip)
-        if (ImGuiWindow* window = FindWindowByName(window_name))
-            if (window->Active)
-            {
-                // Hide previous tooltip from being displayed. We can't easily "reset" the content of a window so we create a new one.
-                window->Hidden = true;
-                window->HiddenFramesRegular = 1;
-                ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip_%02d", ++g.TooltipOverrideCount);
-            }
-    ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNav;
-    Begin(window_name, NULL, flags | extra_flags);
-}
-
-void ImGui::SetTooltipV(const char* fmt, va_list args)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.DragDropWithinSourceOrTarget)
-        BeginTooltip();
-    else
-        BeginTooltipEx(0, true);
-    TextV(fmt, args);
-    EndTooltip();
-}
-
-void ImGui::SetTooltip(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    SetTooltipV(fmt, args);
-    va_end(args);
-}
-
-void ImGui::BeginTooltip()
-{
-    ImGuiContext& g = *GImGui;
-    if (g.DragDropWithinSourceOrTarget)
-    {
-        // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
-        // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
-        // Whatever we do we want to call SetNextWindowPos() to enforce a tooltip position and disable clipping the tooltip without our display area, like regular tooltip do.
-        //ImVec2 tooltip_pos = g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding;
-        ImVec2 tooltip_pos = g.IO.MousePos + ImVec2(16 * g.Style.MouseCursorScale, 8 * g.Style.MouseCursorScale);
-        SetNextWindowPos(tooltip_pos);
-        SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
-        //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkboard has issue with transparent colors :(
-        BeginTooltipEx(0, true);
-    }
-    else
-    {
-        BeginTooltipEx(0, false);
-    }
-}
-
-void ImGui::EndTooltip()
-{
-    IM_ASSERT(GetCurrentWindowRead()->Flags & ImGuiWindowFlags_Tooltip);   // Mismatched BeginTooltip()/EndTooltip() calls
-    End();
 }
 
 static bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags)
@@ -7378,6 +7315,75 @@ void ImGui::Unindent(float indent_w)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.Indent.x -= (indent_w != 0.0f) ? indent_w : g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
+}
+
+//-----------------------------------------------------------------------------
+// TOOLTIP
+//-----------------------------------------------------------------------------
+
+void ImGui::BeginTooltip()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.DragDropWithinSourceOrTarget)
+    {
+        // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
+        // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
+        // Whatever we do we want to call SetNextWindowPos() to enforce a tooltip position and disable clipping the tooltip without our display area, like regular tooltip do.
+        //ImVec2 tooltip_pos = g.IO.MousePos - g.ActiveIdClickOffset - g.Style.WindowPadding;
+        ImVec2 tooltip_pos = g.IO.MousePos + ImVec2(16 * g.Style.MouseCursorScale, 8 * g.Style.MouseCursorScale);
+        SetNextWindowPos(tooltip_pos);
+        SetNextWindowBgAlpha(g.Style.Colors[ImGuiCol_PopupBg].w * 0.60f);
+        //PushStyleVar(ImGuiStyleVar_Alpha, g.Style.Alpha * 0.60f); // This would be nice but e.g ColorButton with checkboard has issue with transparent colors :(
+        BeginTooltipEx(0, true);
+    }
+    else
+    {
+        BeginTooltipEx(0, false);
+    }
+}
+
+// Not exposed publicly as BeginTooltip() because bool parameters are evil. Let's see if other needs arise first.
+void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip)
+{
+    ImGuiContext& g = *GImGui;
+    char window_name[16];
+    ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip_%02d", g.TooltipOverrideCount);
+    if (override_previous_tooltip)
+        if (ImGuiWindow* window = FindWindowByName(window_name))
+            if (window->Active)
+            {
+                // Hide previous tooltip from being displayed. We can't easily "reset" the content of a window so we create a new one.
+                window->Hidden = true;
+                window->HiddenFramesRegular = 1;
+                ImFormatString(window_name, IM_ARRAYSIZE(window_name), "##Tooltip_%02d", ++g.TooltipOverrideCount);
+            }
+    ImGuiWindowFlags flags = ImGuiWindowFlags_Tooltip|ImGuiWindowFlags_NoInputs|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize|ImGuiWindowFlags_NoSavedSettings|ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoNav;
+    Begin(window_name, NULL, flags | extra_flags);
+}
+
+void ImGui::EndTooltip()
+{
+    IM_ASSERT(GetCurrentWindowRead()->Flags & ImGuiWindowFlags_Tooltip);   // Mismatched BeginTooltip()/EndTooltip() calls
+    End();
+}
+
+void ImGui::SetTooltipV(const char* fmt, va_list args)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.DragDropWithinSourceOrTarget)
+        BeginTooltip();
+    else
+        BeginTooltipEx(0, true);
+    TextV(fmt, args);
+    EndTooltip();
+}
+
+void ImGui::SetTooltip(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    SetTooltipV(fmt, args);
+    va_end(args);
 }
 
 //-----------------------------------------------------------------------------
