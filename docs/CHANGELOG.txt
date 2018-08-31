@@ -38,8 +38,8 @@ Changes:
 - Moved README, CHANGELOG and TODO files to the docs/ folder.
   If you are updating dear imgui by copying files, take the chance to delete the old files.
 - Added imgui_widgets.cpp file, extracted and moved widgets code out of imgui.cpp into imgui_widgets.cpp.
-  Re-ordered some of the code remaining in imgui.cpp in cleared chunks.
-  NONE OF THE FUNCTIONS HAVE CHANGED. THE CODE IS SEMANTICALLY 100% IDENTICAL, BUT ALL FUNCTIONS WERE MOVED.
+  Re-ordered some of the code remaining in imgui.cpp.
+  NONE OF THE FUNCTIONS HAVE CHANGED. THE CODE IS SEMANTICALLY 100% IDENTICAL, BUT _EVERY_ FUNCTIONS HAS BEEN MOVED.
   Because of this, any local modifications to imgui.cpp will likely conflict when you update.
   If you have any modifications to imgui.cpp, it is suggested that you first update to 1.63, then
   isolate your patches. You can peak at imgui_widgets.cpp from 1.64 to get a sense of what is included in it,

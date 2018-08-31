@@ -1,6 +1,7 @@
----------------------------------------
- README FIRST
----------------------------------------
+-----------------------------------------------------------------------
+ examples/README.txt
+ (This is the README file for the examples/ folder. See docs/ for more documentation)
+-----------------------------------------------------------------------
 
 Dear ImGui is highly portable and only requires a few things to run and render:
 
