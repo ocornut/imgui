@@ -22,6 +22,7 @@ Dear ImGui is self-contained within a few files that you can easily copy and com
 - imgui.h
 - imgui_demo.cpp
 - imgui_draw.cpp
+- imgui_widgets.cpp
 - imgui_internal.h
 - imconfig.h (empty by default, user-editable)
 - stb_rect_pack.h
