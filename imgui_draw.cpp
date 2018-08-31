@@ -1,14 +1,20 @@
-// dear imgui, v1.64 WIP
+// dear imgui, v1.64
 // (drawing and font code)
 
-// Index of this file:
-// - Default styles
-// - ImDrawList
-// - ImDrawData
-// - ImFontAtlas
-// - Internal Render Helpers
-// - ImFont
-// - Default font data
+/*
+Index of this file:
+- Cruft for stb_truetype/stb_rectpack implementation
+- Style functions (default style)
+- ImDrawList
+- ImDrawData
+- ShadeVertsXXX helpers functions
+- ImFontConfig
+- ImFontAtlas
+- ImFont
+- Internal Render Helpers
+- Default font data
+
+*/
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS

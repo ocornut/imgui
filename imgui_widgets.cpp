@@ -1,22 +1,26 @@
-// dear imgui, v1.64 WIP
+// dear imgui, v1.64
 // (widgets code)
 
-// Index of this file:
-// - Widgets: Text, etc.
-// - Widgets: Button, Image, Checkbox, RadioButton, ProgressBar, Bullet, etc.
-// - Widgets: ComboBox
-// - Data Type and Data Formatting Helpers
-// - Widgets: DragScalar, DragFloat, DragInt, etc.
-// - Widgets: SliderScalar, SliderFloat, SliderInt, etc.
-// - Widgets: InputScalar, InputFloat, InputInt, etc.
-// - Widgets: InputText, InputTextMultiline
-// - Widgets: ColorEdit, ColorPicker, ColorButton, etc.
-// - Widgets: TreeNode, TreePush, TreePop, etc.
-// - Widgets: Selectable
-// - Widgets: ListBox
-// - Widgets: PlotLines, PlotHistogram
-// - Widgets: Value
-// - Widgets: MenuItem, BeginMenu, EndMenu, etc.
+/*
+
+Index of this file:
+- Widgets: Text, etc.
+- Widgets: Button, Image, Checkbox, RadioButton, ProgressBar, Bullet, etc.
+- Widgets: ComboBox
+- Data Type and Data Formatting Helpers
+- Widgets: DragScalar, DragFloat, DragInt, etc.
+- Widgets: SliderScalar, SliderFloat, SliderInt, etc.
+- Widgets: InputScalar, InputFloat, InputInt, etc.
+- Widgets: InputText, InputTextMultiline
+- Widgets: ColorEdit, ColorPicker, ColorButton, etc.
+- Widgets: TreeNode, TreePush, TreePop, etc.
+- Widgets: Selectable
+- Widgets: ListBox
+- Widgets: PlotLines, PlotHistogram
+- Widgets: Value
+- Widgets: MenuItem, BeginMenu, EndMenu, etc.
+
+*/
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -95,10 +99,6 @@ template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 static bool             SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb);
 
 }
-
-//-------------------------------------------------------------------------
-// SHARED UTILITIES
-//-------------------------------------------------------------------------
 
 //-------------------------------------------------------------------------
 // WIDGETS: Text

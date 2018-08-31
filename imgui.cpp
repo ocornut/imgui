@@ -1,4 +1,4 @@
-// dear imgui, v1.64 WIP
+// dear imgui, v1.64
 // (main code and documentation)
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
@@ -19,32 +19,58 @@
 
 /*
 
- Index
- - MISSION STATEMENT
- - END-USER GUIDE
- - PROGRAMMER GUIDE (read me!)
-   - Read first
-   - How to update to a newer version of Dear ImGui
-   - Getting started with integrating Dear ImGui in your code/engine
-   - Using gamepad/keyboard navigation controls [BETA]
- - API BREAKING CHANGES (read me when you update!)
- - ISSUES & TODO LIST
- - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
-   - How can I tell whether to dispatch mouse/keyboard to imgui or to my application?
-   - How can I display an image? What is ImTextureID, how does it works?
-   - How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.
-   - How can I use my own math types instead of ImVec2/ImVec4? 
-   - How can I load a different font than the default?
-   - How can I easily use icons in my application?
-   - How can I load multiple fonts?
-   - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
-   - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
-   - I integrated Dear ImGui in my engine and the text or lines are blurry..
-   - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-   - How can I help?
- - ISSUES & TODO-LIST
- - CODE
+Index of this file:
 
+DOCUMENTATION
+- MISSION STATEMENT
+- END-USER GUIDE
+- PROGRAMMER GUIDE (read me!)
+  - Read first
+  - How to update to a newer version of Dear ImGui
+  - Getting started with integrating Dear ImGui in your code/engine
+  - Using gamepad/keyboard navigation controls [BETA]
+- API BREAKING CHANGES (read me when you update!)
+- FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
+  - How can I tell whether to dispatch mouse/keyboard to imgui or to my application?
+  - How can I display an image? What is ImTextureID, how does it works?
+  - How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.
+  - How can I use my own math types instead of ImVec2/ImVec4? 
+  - How can I load a different font than the default?
+  - How can I easily use icons in my application?
+  - How can I load multiple fonts?
+  - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
+  - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
+  - I integrated Dear ImGui in my engine and the text or lines are blurry..
+  - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+  - How can I help?
+
+CODE
+- Forward Declarations
+- Context and Memory Allocators
+- User facing structures (ImGuiStyle, ImGuiIO)
+- Helper/Utilities (ImXXX functions, Color functions)
+- ImGuiStorage
+- ImGuiTextFilter
+- ImGuiTextBuffer
+- ImGuiListClipper
+- Main Code (most of the code! lots of stuff, needs tidying up)
+- Tooltips
+- Popups
+- Navigation
+- Columns
+- Drag and Drop
+- Logging
+- Settings
+- Platform Dependent Helpers
+- Metrics/Debug window
+
+*/
+
+//-----------------------------------------------------------------------------
+// Documentation
+//-----------------------------------------------------------------------------
+
+/*
 
  MISSION STATEMENT
  =================
@@ -483,11 +509,6 @@
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
- ISSUES & TODO-LIST
- ==================
- See TODO.txt
-
-
  FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
  ======================================
 
@@ -887,6 +908,11 @@ static void*            SettingsHandlerWindow_ReadOpen(ImGuiContext*, ImGuiSetti
 static void             SettingsHandlerWindow_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
 static void             SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf);
 
+// Platform Dependents default implementation for IO functions
+static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
+static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
+static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
+
 namespace ImGui
 {
 static bool             BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags);
@@ -919,13 +945,6 @@ static int              FindPlatformMonitorForRect(const ImRect& r);
 }
 
 //-----------------------------------------------------------------------------
-// Platform dependent default implementations
-//-----------------------------------------------------------------------------
-
-static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
-static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
-
-//-----------------------------------------------------------------------------
 // Context and Memory Allocators
 //-----------------------------------------------------------------------------
 
@@ -955,7 +974,7 @@ static void   (*GImAllocatorFreeFunc)(void* ptr, void* user_data) = FreeWrapper;
 static void*    GImAllocatorUserData = NULL;
 
 //-----------------------------------------------------------------------------
-// User facing structures
+// User facing main structures
 //-----------------------------------------------------------------------------
 
 ImGuiStyle::ImGuiStyle()
@@ -1316,7 +1335,7 @@ ImU32 ImHash(const void* data, int data_size, ImU32 seed)
 }
 
 //-----------------------------------------------------------------------------
-// ImText* helpers
+// HELPERS/UTILITIES (ImText* helpers)
 //-----------------------------------------------------------------------------
 
 // Convert UTF-8 to 32-bits character, process single character input.
@@ -2049,10 +2068,11 @@ bool ImGuiListClipper::Step()
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiWindow
-// (This type has very few helper methods but otherwise is mostly a dumb struct)
+// MAIN CODE
+// (this category is still too large and badly ordered, needs some tidying up)
 //-----------------------------------------------------------------------------
 
+// ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
 ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     : DrawListInst(&context->DrawListSharedData)
 {
@@ -2165,11 +2185,6 @@ ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
     ImGui::KeepAliveID(id);
     return id;
 }
-
-//-----------------------------------------------------------------------------
-// MAIN CODE
-// (this category is still too large and badly ordered, needs some tidying up)
-//-----------------------------------------------------------------------------
 
 static void SetCurrentWindow(ImGuiWindow* window)
 {
@@ -7318,7 +7333,7 @@ void ImGui::Unindent(float indent_w)
 }
 
 //-----------------------------------------------------------------------------
-// TOOLTIP
+// TOOLTIPS
 //-----------------------------------------------------------------------------
 
 void ImGui::BeginTooltip()
