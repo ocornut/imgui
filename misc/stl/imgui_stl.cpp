@@ -1,6 +1,10 @@
 // imgui_stl.cpp
-// Wrappers for STL types (std::string, etc.)
+// Wrappers for C++ standard library (STL) types (std::string, etc.)
 // This is also an example of how you may wrap your own similar types.
+
+// Compatibility:
+// - std::string support is only guaranteed to work from C++11. 
+//   If you try to use it pre-C++11, please share your findings (w/ info about compiler/architecture)
 
 #include "imgui.h"
 #include "imgui_stl.h"
