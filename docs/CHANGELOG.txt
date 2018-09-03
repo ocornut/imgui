@@ -32,6 +32,10 @@ HOW TO UPDATE?
  VERSION 1.65 (In Progress)
 -----------------------------------------------------------------------
 
+Other Changes:
+
+- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002). [@jiri]
+
 
 -----------------------------------------------------------------------
  VERSION 1.64 (Released 2018-08-31)
