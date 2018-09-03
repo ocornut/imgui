@@ -8,7 +8,12 @@ The files in this folder are suggested fonts, provided as a convenience.
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
 
-In this document:
+If you have other loading/merging/adding fonts, you can post on the Dear ImGui "Getting Started" forum:
+  https://discourse.dearimgui.org/c/getting-started
+
+---------------------------------------
+ INDEX:
+---------------------------------------
 
 - Readme First / FAQ
 - Using Icons
@@ -30,6 +35,7 @@ In this document:
        u8"hello"
        u8"こんにちは"   // this will be encoded as UTF-8
  - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
+ - Please use the Discourse forum (https://discourse.dearimgui.org) and not the Github issue tracker.
 
 
 ---------------------------------------
@@ -97,13 +103,19 @@ In this document:
    config.GlyphExtraSpacing.x = 1.0f;
    ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 
- If you have very large number of glyphs or multiple fonts:
+ If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API.
+ The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
+ In particular, using a large range such as GetGlyphRangesChineseSimplifiedCommon() is not recommended unless you 
+ set OversampleH/OversampleV to 1 and use a small font size.
+ Mind the fact that some graphics drivers have texture size limitation.
+ If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+ Some solutions:
 
-  - Mind the fact that some graphics drivers have texture size limitation.
-  - Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
-  - Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
-  - You may reduce oversampling, e.g. config.OversampleH = 1, this will largely reduce your textue size.
-  - Reduce glyphs ranges, consider calculating them based on your source data if this is possible.
+  - 1) Reduce glyphs ranges by calculating them from source localization data. You can use ImFont::GlyphRangesBuilder for this purpose,
+    this will be the biggest win. 
+  - 2) You may reduce oversampling, e.g. config.OversampleH = config.OversampleV = 1, this will largely reduce your texture size.
+  - 3) Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
+  - 4) Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
 
  Combine two fonts into one:
 
@@ -175,11 +187,8 @@ In this document:
  The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger. 
 
  Then load the font with:
- 
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
-   
- Or 
- 
+ or: 
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
 
 

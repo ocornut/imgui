@@ -71,7 +71,7 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     if (fseek(f, 0, SEEK_END) || (data_sz = (int)ftell(f)) == -1 || fseek(f, 0, SEEK_SET)) { fclose(f); return false; }
     char* data = new char[data_sz+4];
     if (fread(data, 1, data_sz, f) != (size_t)data_sz) { fclose(f); delete[] data; return false; }
-    memset((void *)(((char*)data) + data_sz), 0, 4);
+    memset((void*)(((char*)data) + data_sz), 0, 4);
     fclose(f);
 
     // Compress

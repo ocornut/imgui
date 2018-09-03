@@ -740,7 +740,7 @@ bool    ImGui::TabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
         int vert_start_idx = draw_list->_VtxCurrentIdx;
         RenderTextClipped(text_clip_bb.Min, text_clip_bb.Max, label, NULL, &label_size, ImVec2(0.0f, 0.0f));
         if (text_clip_bb.GetWidth() < label_size.x)
-            ShadeVertsLinearAlphaGradientForLeftToRightText(draw_list->_VtxWritePtr - (draw_list->_VtxCurrentIdx - vert_start_idx), draw_list->_VtxWritePtr, text_clip_bb.Max.x - text_gradient_extent, text_clip_bb.Max.x);
+            ShadeVertsLinearAlphaGradientForLeftToRightText(draw_list, vert_start_idx, draw_list->_VtxCurrentIdx, text_clip_bb.Max.x - text_gradient_extent, text_clip_bb.Max.x);
     }
 
     // Process close

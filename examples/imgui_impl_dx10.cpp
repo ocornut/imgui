@@ -5,12 +5,12 @@
 //  [X] Renderer: User texture binding. Use 'ID3D10ShaderResourceView*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
-// If you use this binding you'll need to call 4 functions: ImGui_ImplXXXX_Init(), ImGui_ImplXXXX_NewFrame(), ImGui::Render() and ImGui_ImplXXXX_Shutdown().
-// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-07-13: DirectX10: Fixed unreleased resources in Init and Shutdown functions.
 //  2018-06-08: Misc: Extracted imgui_impl_dx10.cpp/.h away from the old combined DX10+Win32 example.
 //  2018-06-08: DirectX10: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
 //  2018-04-09: Misc: Fixed erroneous call to io.Fonts->ClearInputData() + ClearTexData() that was left in DX10 example but removed in 1.47 (Nov 2015) on other back-ends.
@@ -32,11 +32,11 @@ static ID3D10Device*            g_pd3dDevice = NULL;
 static IDXGIFactory*            g_pFactory = NULL;
 static ID3D10Buffer*            g_pVB = NULL;
 static ID3D10Buffer*            g_pIB = NULL;
-static ID3D10Blob *             g_pVertexShaderBlob = NULL;
+static ID3D10Blob*              g_pVertexShaderBlob = NULL;
 static ID3D10VertexShader*      g_pVertexShader = NULL;
 static ID3D10InputLayout*       g_pInputLayout = NULL;
 static ID3D10Buffer*            g_pVertexConstantBuffer = NULL;
-static ID3D10Blob *             g_pPixelShaderBlob = NULL;
+static ID3D10Blob*              g_pPixelShaderBlob = NULL;
 static ID3D10PixelShader*       g_pPixelShader = NULL;
 static ID3D10SamplerState*      g_pFontSampler = NULL;
 static ID3D10ShaderResourceView*g_pFontTextureView = NULL;
@@ -213,7 +213,8 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
                 ctx->RSSetScissorRects(1, &r);
 
                 // Bind texture, Draw
-                ctx->PSSetShaderResources(0, 1, (ID3D10ShaderResourceView**)&pcmd->TextureId);
+                ID3D10ShaderResourceView* texture_srv = (ID3D10ShaderResourceView*)pcmd->TextureId;
+                ctx->PSSetShaderResources(0, 1, &texture_srv);
                 ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
             idx_offset += pcmd->ElemCount;
@@ -279,7 +280,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
     }
 
     // Store our identifier
-    io.Fonts->TexID = (void *)g_pFontTextureView;
+    io.Fonts->TexID = (ImTextureID)g_pFontTextureView;
 
     // Create texture sampler
     {
@@ -466,15 +467,16 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
     IDXGIDevice* pDXGIDevice = NULL;
     IDXGIAdapter* pDXGIAdapter = NULL;
     IDXGIFactory* pFactory = NULL;
-    if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) != S_OK)
-        return false;
-    if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) != S_OK)
-        return false;
-    if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) != S_OK)
-        return false;
 
-    g_pd3dDevice = device;
-    g_pFactory = pFactory;
+    if (device->QueryInterface(IID_PPV_ARGS(&pDXGIDevice)) == S_OK)
+        if (pDXGIDevice->GetParent(IID_PPV_ARGS(&pDXGIAdapter)) == S_OK)
+            if (pDXGIAdapter->GetParent(IID_PPV_ARGS(&pFactory)) == S_OK)
+            {
+                g_pd3dDevice = device;
+                g_pFactory = pFactory;
+            }
+    if (pDXGIDevice) pDXGIDevice->Release();
+    if (pDXGIAdapter) pDXGIAdapter->Release();
 
     return true;
 }
@@ -482,6 +484,7 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 void ImGui_ImplDX10_Shutdown()
 {
     ImGui_ImplDX10_InvalidateDeviceObjects();
+    if (g_pFactory) { g_pFactory->Release(); g_pFactory = NULL; }
     g_pd3dDevice = NULL;
 }
 

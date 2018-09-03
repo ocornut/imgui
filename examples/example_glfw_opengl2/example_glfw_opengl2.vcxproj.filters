@@ -33,6 +33,9 @@
       <Filter>sources</Filter>
 >>>>>>> master:examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj.filters
     </ClCompile>
+    <ClCompile Include="..\..\imgui_widgets.cpp">
+      <Filter>imgui</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\imconfig.h">

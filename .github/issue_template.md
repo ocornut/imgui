@@ -1,11 +1,13 @@
-You may use the Issue Tracker to ask for help and submit bug reports, feature requests or suggestions. 
+IF YOU ARE HAVING AN ISSUE COMPILING/LINKING/RUNNING/DISPLAYING/ADDING FONTS/WIRING INPUTS, please post on the "Getting Started" Discourse forum:
+https://discourse.dearimgui.org/c/getting-started
 
-PLEASE CAREFULLY READ THIS DOCUMENT before doing so:
-[CONTRIBUTING.md](https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md).
+Otherwise, you may use this Issue Tracker to ask for help and submit bug reports, feature requests or suggestions. PLEASE CAREFULLY READ THIS DOCUMENT before submitting any issue:
+https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md
+(Click "Preview" to turn the URL above into a clickable link)
 
-SELECT "PREVIEW CHANGES" TO TURN THE URL ABOVE INTO A CLICKABLE LINK.
+PLEASE MAKE SURE that you have: read the FAQ in imgui.cpp; explored the contents of ShowDemoWindow() including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the CONTRIBUTING.md file linked above.
 
-(Delete everything above this section before submitting your issue. Please read the CONTRIBUTING.md file!)
+(Delete everything above this section before submitting your issue.)
 
 ----
 
@@ -13,9 +15,11 @@ SELECT "PREVIEW CHANGES" TO TURN THE URL ABOVE INTO A CLICKABLE LINK.
 
 XXX
 
-**Back-end file/Renderer/OS:** _(if the question is related to inputs/rendering/build, otherwise delete this section)_
+**Back-end file/Renderer/OS:** _(or specify if you are using a custom engine back-end)_
 
-XXX
+Back-ends: imgui_impl_XXX.cpp + imgui_impl_XXX.cpp
+OS: XXX 
+Compiler: XXX _(if the question is related to building)_
 
 **My Issue/Question:** _(please provide context)_
 
