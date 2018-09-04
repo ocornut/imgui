@@ -252,7 +252,7 @@ void    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
     bool unfocused = false;
 #endif
     const ImU32 col = TabGetColorU32(unfocused ? ImGuiCol_TabUnfocused : ImGuiCol_TabActive);
-    window->DrawList->AddLine(ImVec2(window->Pos.x, window->DC.CursorPos.y - style.ItemSpacing.y), ImVec2(window->Pos.x + window->Size.x, window->DC.CursorPos.y - style.ItemSpacing.y), col, 1.0f);
+    window->DrawList->AddLine(ImVec2(window->DC.CursorPos.x, window->DC.CursorPos.y - style.ItemSpacing.y), ImVec2(window->Pos.x + window->Size.x, window->DC.CursorPos.y - style.ItemSpacing.y), col, 1.0f);
 }
 
 static int TabBarFindClosestVisibleInDirection(ImGuiTabBar* tab_bar, int order, int dir)
