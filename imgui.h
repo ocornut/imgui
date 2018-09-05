@@ -1078,7 +1078,7 @@ struct ImGuiStyle
 struct ImGuiIO
 {
     //------------------------------------------------------------------
-    // Settings (fill once)                 // Default value:
+    // Configuration (fill once)            // Default value:
     //------------------------------------------------------------------
 
     ImGuiConfigFlags   ConfigFlags;         // = 0                  // See ImGuiConfigFlags_ enum. Set by user/application. Gamepad/keyboard navigation options, etc.
@@ -1101,8 +1101,8 @@ struct ImGuiIO
     bool          FontAllowUserScaling;     // = false              // Allow user scaling text of individual window with CTRL+Wheel.
     ImFont*       FontDefault;              // = NULL               // Font to use on NewFrame(). Use NULL to uses Fonts->Fonts[0].
     ImVec2        DisplayFramebufferScale;  // = (1.0f,1.0f)        // For retina display or other situations where window coordinates are different from framebuffer coordinates. User storage only, presently not used by ImGui.
-    ImVec2        DisplayVisibleMin;        // <unset> (0.0f,0.0f)  // If you use DisplaySize as a virtual space larger than your screen, set DisplayVisibleMin/Max to the visible area.
-    ImVec2        DisplayVisibleMax;        // <unset> (0.0f,0.0f)  // If the values are the same, we defaults to Min=(0.0f) and Max=DisplaySize
+    ImVec2        DisplayVisibleMin;        // <unset> (0.0f,0.0f)  // [obsolete] If you use DisplaySize as a virtual space larger than your screen, set DisplayVisibleMin/Max to the visible area.
+    ImVec2        DisplayVisibleMax;        // <unset> (0.0f,0.0f)  // [obsolete: just use io.DisplaySize] If the values are the same, we defaults to Min=(0.0f) and Max=DisplaySize
 
     // Miscellaneous configuration options
     bool          ConfigMacOSXBehaviors;        // = defined(__APPLE__) // OS X style: Text editing cursor movement using Alt instead of Ctrl, Shortcuts using Cmd/Super instead of Ctrl, Line/Text Start and End using Cmd+Arrows instead of Home/End, Double click selects by word instead of selecting whole text, Multi-selection in lists uses Cmd/Super instead of Ctrl (was called io.OptMacOSXBehaviors prior to 1.63)

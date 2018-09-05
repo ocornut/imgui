@@ -35,6 +35,7 @@ HOW TO UPDATE?
 Other Changes:
 
 - Fixed a build issue with non-Cygwin GCC under Windows.
+- Demo: Added a "Configuration" block to make io.ConfigFlags/io.BackendFlags more prominent.
 - Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002). [@jiri]
 
 

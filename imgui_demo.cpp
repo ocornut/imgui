@@ -246,9 +246,83 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))
     {
-        ImGui::TextWrapped("This window is being created by the ShowDemoWindow() function. Please refer to the code in imgui_demo.cpp for reference.\n\n");
+        ImGui::Text("PROGRAMMER GUIDE:");
+        ImGui::BulletText("Please see the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!");
+        ImGui::BulletText("Please see the comments in imgui.cpp.");
+        ImGui::BulletText("Please see the examples/ in application.");
+        ImGui::BulletText("Enable 'io.ConfigFlags |= NavEnableKeyboard' for keyboard controls.");
+        ImGui::BulletText("Enable 'io.ConfigFlags |= NavEnableGamepad' for gamepad controls.");
+        ImGui::Separator();
+
         ImGui::Text("USER GUIDE:");
         ImGui::ShowUserGuide();
+    }
+
+    if (ImGui::CollapsingHeader("Configuration"))
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (ImGui::TreeNode("Configuration##2"))
+        {
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
+            ImGui::SameLine(); ShowHelpMarker("Required back-end to feed in gamepad inputs in io.NavInputs[] and set io.BackendFlags |= ImGuiBackendFlags_HasGamepad.\n\nRead instructions in imgui.cpp for details.");
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
+            ImGui::SameLine(); ShowHelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
+            ImGui::CheckboxFlags("io.ConfigFlags: NoMouse", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouse);
+            if (io.ConfigFlags & ImGuiConfigFlags_NoMouse) // Create a way to restore this flag otherwise we could be stuck completely!
+            {
+                if (fmodf((float)ImGui::GetTime(), 0.40f) < 0.20f)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("<<PRESS SPACE TO DISABLE>>");
+                }
+                if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space)))
+                    io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+            }
+            ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
+            ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
+            ImGui::Checkbox("io.ConfigCursorBlink", &io.ConfigCursorBlink);
+            ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");
+            ImGui::Checkbox("io.ConfigResizeWindowsFromEdges [beta]", &io.ConfigResizeWindowsFromEdges);
+            ImGui::SameLine(); ShowHelpMarker("Enable resizing of windows from their edges and from the lower-left corner.\nThis requires (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors) because it needs mouse cursor feedback.");
+            ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
+            ImGui::SameLine(); ShowHelpMarker("Instruct Dear ImGui to render a mouse cursor for you. Note that a mouse cursor rendered via your application GPU rendering path will feel more laggy than hardware cursor, but will be more in sync with your other visuals.\n\nSome desktop applications may use both kinds of cursors (e.g. enable software cursor only when resizing/dragging something).");
+            ImGui::TreePop();
+            ImGui::Separator();
+        }
+
+        if (ImGui::TreeNode("Backend Flags"))
+        {
+            ImGuiBackendFlags backend_flags = io.BackendFlags; // Make a local copy to avoid modifying the back-end flags.
+            ImGui::CheckboxFlags("io.BackendFlags: HasGamepad", (unsigned int *)&backend_flags, ImGuiBackendFlags_HasGamepad);
+            ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", (unsigned int *)&backend_flags, ImGuiBackendFlags_HasMouseCursors);
+            ImGui::CheckboxFlags("io.BackendFlags: HasSetMousePos", (unsigned int *)&backend_flags, ImGuiBackendFlags_HasSetMousePos);
+            ImGui::TreePop();
+            ImGui::Separator();
+        }
+
+        if (ImGui::TreeNode("Style"))
+        {
+            ImGui::ShowStyleEditor();
+            ImGui::TreePop();
+            ImGui::Separator();
+        }
+
+        if (ImGui::TreeNode("Capture/Logging"))
+        {
+            ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded.");
+            ShowHelpMarker("Try opening any of the contents below in this window and then click one of the \"Log To\" button.");
+            ImGui::LogButtons();
+            ImGui::TextWrapped("You can also call ImGui::LogText() to output directly to the log without a visual output.");
+            if (ImGui::Button("Copy \"Hello, world!\" to clipboard"))
+            {
+                ImGui::LogToClipboard();
+                ImGui::LogText("Hello, world!");
+                ImGui::LogFinish();
+            }
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Window options"))
@@ -261,19 +335,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Checkbox("No collapse", &no_collapse);
         ImGui::Checkbox("No close", &no_close); ImGui::SameLine(150);
         ImGui::Checkbox("No nav", &no_nav);
-
-        if (ImGui::TreeNode("Style"))
-        {
-            ImGui::ShowStyleEditor();
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Capture/Logging"))
-        {
-            ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
-            ImGui::LogButtons();
-            ImGui::TreePop();
-        }
     }
 
     if (ImGui::CollapsingHeader("Widgets"))
@@ -2164,20 +2225,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Text("WantTextInput: %d", io.WantTextInput);
         ImGui::Text("WantSetMousePos: %d", io.WantSetMousePos);
         ImGui::Text("NavActive: %d, NavVisible: %d", io.NavActive, io.NavVisible);
-
-        ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
-        ImGui::SameLine(); ShowHelpMarker("Instruct ImGui to render a mouse cursor for you in software. Note that a mouse cursor rendered via your application GPU rendering path will feel more laggy than hardware cursor, but will be more in sync with your other visuals.\n\nSome desktop applications may use both kinds of cursors (e.g. enable software cursor only when resizing/dragging something).");
-
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
-        ImGui::SameLine(); ShowHelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
-        ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
-        ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
-        ImGui::Checkbox("io.ConfigCursorBlink", &io.ConfigCursorBlink);
-        ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");
-        ImGui::Checkbox("io.ConfigResizeWindowsFromEdges [beta]", &io.ConfigResizeWindowsFromEdges);
-        ImGui::SameLine(); ShowHelpMarker("Enable resizing of windows from their edges and from the lower-left corner. This requires (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors) because it needs mouse cursor feedback.");
 
         if (ImGui::TreeNode("Keyboard, Mouse & Navigation State"))
         {
