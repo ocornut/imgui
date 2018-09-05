@@ -7328,11 +7328,12 @@ static void ImGui::UpdateViewports()
             for (int window_n = 0; window_n < g.Windows.Size; window_n++)
                 if (g.Windows[window_n]->Viewport == viewport)
                     g.Windows[window_n]->Viewport = NULL;
+            if (viewport == g.MouseLastHoveredViewport) 
+                g.MouseLastHoveredViewport = NULL;
             g.Viewports.erase(g.Viewports.Data + n);
 
             // Destroy
-            if (viewport == g.MouseLastHoveredViewport) g.MouseLastHoveredViewport = NULL;
-            IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
+            DestroyPlatformWindow(viewport); // In most circumstances the platform window will already be destroyed here.
             IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
             IM_DELETE(viewport);
             n--;
@@ -7616,13 +7617,7 @@ void ImGui::UpdatePlatformWindows()
         destroy_platform_window |= (viewport->Window && !IsWindowActiveAndVisible(viewport->Window));
         if (destroy_platform_window)
         {
-            if (viewport->CreatedPlatformWindow && g.PlatformIO.Renderer_DestroyWindow)
-                g.PlatformIO.Renderer_DestroyWindow(viewport);
-            if (viewport->CreatedPlatformWindow && g.PlatformIO.Platform_DestroyWindow)
-                g.PlatformIO.Platform_DestroyWindow(viewport);
-            viewport->CreatedPlatformWindow = false;
-            IM_ASSERT(viewport->RendererUserData == NULL);
-            IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
+            DestroyPlatformWindow(viewport);
             continue;
         }
         if (viewport->LastFrameActive < g.FrameCount)
@@ -7782,22 +7777,28 @@ void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* render
     }
 }
 
+void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
+{
+    ImGuiContext& g = *GImGui;
+    if (viewport->CreatedPlatformWindow && g.PlatformIO.Renderer_DestroyWindow)
+        g.PlatformIO.Renderer_DestroyWindow(viewport);
+    if (viewport->CreatedPlatformWindow && g.PlatformIO.Platform_DestroyWindow)
+        g.PlatformIO.Platform_DestroyWindow(viewport);
+    viewport->CreatedPlatformWindow = false;
+    IM_ASSERT(viewport->RendererUserData == NULL);
+    IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
+}
+
 void ImGui::DestroyPlatformWindows()
 {
     // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data 
     // have stored in e.g. PlatformHandle.
-    // It is expected that the back-end stored a flag to remember that it doesn't own the window created for the main viewport, 
-    // and won't destroy the underlying platform/renderer data (e.g. 
+    // It is expected that the back-end stored a flag to remember that it doesn't own the window created for the 
+    // main viewport, and won't destroy the underlying platform/renderer data.
     ImGuiContext& g = *GImGui;
     for (int i = 0; i < g.Viewports.Size; i++)
         if (g.Viewports[i]->CreatedPlatformWindow)
-        {
-            if (g.PlatformIO.Renderer_DestroyWindow)
-                g.PlatformIO.Renderer_DestroyWindow(g.Viewports[i]);
-            if (g.PlatformIO.Platform_DestroyWindow)
-                g.PlatformIO.Platform_DestroyWindow(g.Viewports[i]);
-            g.Viewports[i]->CreatedPlatformWindow = false;
-        }
+            DestroyPlatformWindow(g.Viewports[i]);
 }
 
 //-----------------------------------------------------------------------------

@@ -1199,6 +1199,7 @@ namespace ImGui
     // Viewports
     IMGUI_API ImGuiViewportP*       FindViewportByID(ImGuiID id);
     IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
+    IMGUI_API void                  DestroyPlatformWindow(ImGuiViewportP* viewport);
     IMGUI_API void                  ShowViewportThumbnails();
 
     // Settings
