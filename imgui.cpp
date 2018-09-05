@@ -3852,8 +3852,9 @@ void ImGui::CalcListClipping(int items_count, float items_height, int* out_items
 }
 
 // Find window given position, search front-to-back
-// FIXME: Note that we have an inconsequential lag here: OuterRectClipped is updated in Begin(), so windows moved programatically with SetWindowPos() and not SetNextWindowPos() 
-// will have that rectangle lagging by a frame at the time FindHoveredWindow() is called, aka before the next Begin(). Moving window isn't affected.
+// FIXME: Note that we have an inconsequential lag here: OuterRectClipped is updated in Begin(), so windows moved programatically 
+// with SetWindowPos() and not SetNextWindowPos() will have that rectangle lagging by a frame at the time FindHoveredWindow() is 
+// called, aka before the next Begin(). Moving window isn't affected.
 static void FindHoveredWindow()
 {
     ImGuiContext& g = *GImGui;
@@ -8209,7 +8210,7 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
 static void NavScrollToBringItemIntoView(ImGuiWindow* window, const ImRect& item_rect)
 {
     ImRect window_rect(window->InnerMainRect.Min - ImVec2(1, 1), window->InnerMainRect.Max + ImVec2(1, 1));
-    //GetOverlayDrawList(window)->AddRect(window_rect_rel.Min, window_rect_rel.Max, IM_COL32_WHITE); // [DEBUG]
+    //GetOverlayDrawList(window)->AddRect(window_rect.Min, window_rect.Max, IM_COL32_WHITE); // [DEBUG]
     if (window_rect.Contains(item_rect))
         return;
 
@@ -9700,7 +9701,6 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
             entry_handler->ReadLineFn(&g, entry_handler, entry_data, line);
         }
     }
-
     ImGui::MemFree(buf);
     g.SettingsLoaded = true;
 }

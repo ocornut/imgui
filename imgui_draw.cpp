@@ -2,6 +2,7 @@
 // (drawing and font code)
 
 /*
+
 Index of this file:
 - Cruft for stb_truetype/stb_rectpack implementation
 - Style functions (default style)
