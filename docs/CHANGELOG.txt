@@ -32,9 +32,16 @@ HOW TO UPDATE?
  VERSION 1.65 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Renamed io.OptCursorBlink/io.ConfigCursorBlink to io.ConfigInputTextCursorBlink. (#1427)
+
 Other Changes:
 
+- Nav: Removed the [Beta] tag from various descriptions of the gamepad/keyboard navigation system.
+  Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
 - Fixed a build issue with non-Cygwin GCC under Windows.
+- Demo: Added a "Configuration" block to make io.ConfigFlags/io.BackendFlags more prominent.
 - Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002). [@jiri]
 
 
@@ -75,7 +82,7 @@ Breaking Changes:
 - InputText: Removed ImGuiTextEditCallbackData::ReadOnly since it is a duplication of (ImGuiTextEditCallbackData::Flags & ImGuiInputTextFlags_ReadOnly).
 - Renamed IsItemDeactivatedAfterChange() to IsItemDeactivatedAfterEdit() for consistency with new IsItemEdited() API. 
   Kept redirection function (will obsolete soonish as IsItemDeactivatedAfterChange() is very recent).
-- Renamed io.OptCursorBlink to io.ConfigCursorBlink, io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
+- Renamed io.OptCursorBlink to io.ConfigCursorBlink [-> io.ConfigInputTextCursorBlink in 1.65], io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
 - Removed obsolete redirection functions: CollapsingHeader() variation with 2 bools - marked obsolete in v1.49, May 2016.
 
 Other Changes:
