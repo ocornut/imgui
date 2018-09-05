@@ -32,6 +32,10 @@ HOW TO UPDATE?
  VERSION 1.65 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Renamed io.OptCursorBlink/io.ConfigCursorBlink to io.ConfigInputTextCursorBlink. (#1427)
+
 Other Changes:
 
 - Fixed a build issue with non-Cygwin GCC under Windows.
@@ -76,7 +80,7 @@ Breaking Changes:
 - InputText: Removed ImGuiTextEditCallbackData::ReadOnly since it is a duplication of (ImGuiTextEditCallbackData::Flags & ImGuiInputTextFlags_ReadOnly).
 - Renamed IsItemDeactivatedAfterChange() to IsItemDeactivatedAfterEdit() for consistency with new IsItemEdited() API. 
   Kept redirection function (will obsolete soonish as IsItemDeactivatedAfterChange() is very recent).
-- Renamed io.OptCursorBlink to io.ConfigCursorBlink, io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
+- Renamed io.OptCursorBlink to io.ConfigCursorBlink [-> io.ConfigInputTextCursorBlink in 1.65], io.OptMacOSXBehaviors to io.ConfigMacOSXBehaviors for consistency. (#1427, #473)
 - Removed obsolete redirection functions: CollapsingHeader() variation with 2 bools - marked obsolete in v1.49, May 2016.
 
 Other Changes:
