@@ -3,7 +3,7 @@ dear imgui,
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-_(This library is free but needs your support to sustain its development. There are many desirable features and maintenance ahead. If you are an individual using dear imgui, please consider donating via Patreon or PayPal. If your company is using dear imgui, please consider financial support (e.g. sponsoring a few weeks/months of development. I can invoice for technical support, custom development etc. E-mail: omarcornut at gmail)._
+_(This library is free but needs your support to sustain its development. There are many desirable features and maintenance ahead. If you are an individual using dear imgui, please consider donating via Patreon or PayPal. If your company is using dear imgui, please consider financial support (e.g. sponsoring a few weeks/months of development. I can invoice for technical support, custom development etc. Email: omarcornut at gmail)._
 
 Monthly donations via Patreon:
 <br>[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
@@ -222,41 +222,41 @@ For any other questions, bug reports, requests, feedback, you may post on https:
 Frequently Asked Question (FAQ)
 -------------------------------
 
-<b>Where is the documentation?</b>
+**Where is the documentation?**
 
 - The documentation is at the top of imgui.cpp + effectively imgui.h. 
 - Example code is in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
-<b>Which version should I get?</b>
+**Which version should I get?**
 
 I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported. 
 
-<b>Who uses Dear ImGui?</b>
+**Who uses Dear ImGui?**
 
 See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an (incomplete) list of games/software which are publicly known to use dear imgui. Please add yours if you can!
 
-<b>Why the odd dual naming, "dear imgui" vs "ImGui"?</b>
+**Why the odd dual naming, "dear imgui" vs "ImGui"?**
 
 The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.
 
-<b>How can I tell whether to dispatch mouse/keyboard to imgui or to my application?</b>
-<br><b>How can I display an image? What is ImTextureID, how does it works?</b>
-<br><b>How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.</b>
-<br><b>How can I use my own math types instead of ImVec2/ImVec4?</b>
-<br><b>How can I load a different font than the default?</b>
-<br><b>How can I easily use icons in my application?</b>
-<br><b>How can I load multiple fonts?</b>
-<br><b>How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?</b>
-<br><b>How can I use the drawing facilities without an Dear ImGui window? (using ImDrawList API)</b>
-<br><b>I integrated Dear ImGui in my engine and the text or lines are blurry..</b>
-<br><b>I integrated Dear ImGui in my engine and some elements are disappearing when I move windows around..</b>
-<br><b>How can I help?</b>
+**How can I tell whether to dispatch mouse/keyboard to imgui or to my application?**
+<br>**How can I display an image? What is ImTextureID, how does it works?**
+<br>**How can I have multiple widgets with the same label or without a label? A primer on labels and the ID Stack.**
+<br>**How can I use my own math types instead of ImVec2/ImVec4?**
+<br>**How can I load a different font than the default?**
+<br>**How can I easily use icons in my application?**
+<br>**How can I load multiple fonts?**
+<br>**How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?**
+<br>**How can I use the drawing facilities without an Dear ImGui window? (using ImDrawList API)**
+<br>**I integrated Dear ImGui in my engine and the text or lines are blurry..**
+<br>**I integrated Dear ImGui in my engine and some elements are disappearing when I move windows around..**
+<br>**How can I help?**
 
 See the FAQ in imgui.cpp for answers.
 
-<b>How do you use Dear ImGui on a platform that may not have a mouse or keyboard?</b>
+**How do you use Dear ImGui on a platform that may not have a mouse or keyboard?**
 
 You can control Dear ImGui with a gamepad, see the explanation in imgui.cpp about how to use the navigation feature (short version: map your gamepad inputs into the `io.NavInputs[]` array and set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad`).
 
@@ -264,28 +264,28 @@ You can share your computer mouse seamlessly with your console/tablet/phone usin
 
 For touch inputs, you can increase the hit box of widgets (via the _style.TouchPadding_ setting) to accommodate a little for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing for screen real-estate and precision.
 
-<b>Can you create elaborate/serious tools with Dear ImGui?</b>
+**Can you create elaborate/serious tools with Dear ImGui?**
 
 Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
 Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
 
-<b>Can you reskin the look of Dear ImGui?</b>
+**Can you reskin the look of Dear ImGui?**
 
 You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Below is a screenshot from [LumixEngine](https://github.com/nem0/LumixEngine) with custom colors + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged):
 
 ![LumixEngine](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/lumix-201710-rearranged.png)
 
-<b>Why using C++ (as opposed to C)?</b>
+**Why using C++ (as opposed to C)?**
 
 Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
-There is an reasonably maintained [c-api for ImGui](https://github.com/Extrawurst/cimgui) by Stephan Dilly designed for binding in other languages. I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to other languages.
+There is a [c-api for ImGui (cimgui)](https://github.com/Extrawurst/cimgui) by Stephan Dilly + a newer, [auto-generated cimgui](https://github.com/sonoro1234/cimgui) by sonoro1234. Both are designed for binding other languages. I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to other languages.
 
 Support dear imgui
 ------------------
 
-<b>How can I help financing further development of Dear ImGui?</b>
+**How can I help financing further development of Dear ImGui?**
 
 Your contributions are keeping the library alive. If you are an individual using dear imgui, please consider donating to enable me to spend more time improving the library.
 
@@ -295,7 +295,23 @@ Monthly donations via Patreon:
 One-off donations via PayPal:
 <br>[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=5Q73FPZ9C526U)
 
-If your company uses dear imgui, please consider financial support (e.g. sponsoring a few weeks/months of development. I can invoice for private support, custom development etc. E-mail: omarcornut at gmail). Thanks!
+Ongoing dear imgui development is financially supported on [**Patreon**](http://www.patreon.com/imgui) and by private sponsors.
+If your company uses dear imgui, please consider financial support (e.g. sponsoring a few weeks/months of development. I can also invoice for private support, custom development etc. contact me for details: omarcornut at gmail). Thanks! 
+
+**Platinum-chocolate sponsors**
+- Blizzard Entertainment.
+
+**Double-chocolate sponsors**
+- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner, Artometa, Friendly Shade.
+
+**Salty caramel supporters**
+- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert, Brandon Townsend, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Jeff Roberts.
+
+**Caramel supporters**
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Astrofra, Jonas Lehmann, Steven Kah Hien Wong, Bartosz Bielecki, Oscar Penas, A M, Liam Moynihan.
+
+And all other supporters; THANK YOU!
+(Please contact me if you would like to be added or removed from this list)
 
 Credits
 -------
@@ -309,28 +325,6 @@ Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT li
 Embeds [stb_textedit.h, stb_truetype.h, stb_rectpack.h](https://github.com/nothings/stb/) by Sean Barrett (public domain).
 
 Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Binstock, Mikko Mononen, Emmanuel Briney, Stefan Kamoda, Anton Mikhailov, Matt Willis. And everybody posting feedback, questions and patches on the GitHub.
-
-Ongoing dear imgui development is financially supported on [**Patreon**](http://www.patreon.com/imgui) and by private sponsors.
-
-Double-chocolate sponsors:
-- Blizzard Entertainment
-- Media Molecule
-- Mobigame
-- Insomniac Games
-- Aras Pranckevičius
-- Lizardcube
-- Greggman
-- DotEmu
-- Nadeo
-
-Salty caramel supporters:
-- Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert, Brandon Townsend, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Supercell.
-
-Caramel supporters:
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Jeff Roberts, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Astrofra, Jonas Lehmann, Steven Kah Hien Wong, Bartosz Bielecki.
-
-And other supporters; thanks!
-(Please contact me or PR if you would like to be added or removed from this list)
 
 License
 -------

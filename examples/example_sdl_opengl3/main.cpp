@@ -64,7 +64,7 @@ int main(int, char**)
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
     bool err = glewInit() != GLEW_OK;
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-    bool err = gladLoadGL() != 0;
+    bool err = gladLoadGL() == 0;
 #endif
     if (err)
     {

@@ -28,6 +28,15 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.65 (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Fixed a build issue with non-Cygwin GCC under Windows.
+- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002). [@jiri]
+
 
 -----------------------------------------------------------------------
  VERSION 1.64 (Released 2018-08-31)
