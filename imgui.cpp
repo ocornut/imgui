@@ -53,6 +53,7 @@ CODE
 - ImGuiTextFilter
 - ImGuiTextBuffer
 - ImGuiListClipper
+- Render Helpers
 - Main Code (most of the code! lots of stuff, needs tidying up)
 - Tooltips
 - Popups
@@ -2059,6 +2060,226 @@ bool ImGuiListClipper::Step()
 }
 
 //-----------------------------------------------------------------------------
+// RENDER HELPERS
+// Those [Internal] functions are a terrible mess - their signature and behavior will change.
+// Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
+//-----------------------------------------------------------------------------
+
+const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
+{
+    const char* text_display_end = text;
+    if (!text_end)
+        text_end = (const char*)-1;
+
+    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+        text_display_end++;
+    return text_display_end;
+}
+
+// Internal ImGui functions to render text
+// RenderText***() functions calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
+void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    // Hide anything after a '##' string
+    const char* text_display_end;
+    if (hide_text_after_hash)
+    {
+        text_display_end = FindRenderedTextEnd(text, text_end);
+    }
+    else
+    {
+        if (!text_end)
+            text_end = text + strlen(text); // FIXME-OPT
+        text_display_end = text_end;
+    }
+
+    if (text != text_display_end)
+    {
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
+        if (g.LogEnabled)
+            LogRenderedText(&pos, text, text_display_end);
+    }
+}
+
+void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    if (!text_end)
+        text_end = text + strlen(text); // FIXME-OPT
+
+    if (text != text_end)
+    {
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
+        if (g.LogEnabled)
+            LogRenderedText(&pos, text, text_end);
+    }
+}
+
+// Default clip_rect uses (pos_min,pos_max)
+// Handle clipping on CPU immediately (vs typically let the GPU clip the triangles that are overlapping the clipping rectangle edges)
+void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect)
+{
+    // Hide anything after a '##' string
+    const char* text_display_end = FindRenderedTextEnd(text, text_end);
+    const int text_len = (int)(text_display_end - text);
+    if (text_len == 0)
+        return;
+
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    // Perform CPU side clipping for single clipped element to avoid using scissor state
+    ImVec2 pos = pos_min;
+    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : CalcTextSize(text, text_display_end, false, 0.0f);
+
+    const ImVec2* clip_min = clip_rect ? &clip_rect->Min : &pos_min;
+    const ImVec2* clip_max = clip_rect ? &clip_rect->Max : &pos_max;
+    bool need_clipping = (pos.x + text_size.x >= clip_max->x) || (pos.y + text_size.y >= clip_max->y);
+    if (clip_rect) // If we had no explicit clipping rectangle then pos==clip_min
+        need_clipping |= (pos.x < clip_min->x) || (pos.y < clip_min->y);
+
+    // Align whole block. We should defer that to the better rendering function when we'll have support for individual line alignment.
+    if (align.x > 0.0f) pos.x = ImMax(pos.x, pos.x + (pos_max.x - pos.x - text_size.x) * align.x);
+    if (align.y > 0.0f) pos.y = ImMax(pos.y, pos.y + (pos_max.y - pos.y - text_size.y) * align.y);
+
+    // Render
+    if (need_clipping)
+    {
+        ImVec4 fine_clip_rect(clip_min->x, clip_min->y, clip_max->x, clip_max->y);
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, &fine_clip_rect);
+    }
+    else
+    {
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL);
+    }
+    if (g.LogEnabled)
+        LogRenderedText(&pos, text, text_display_end);
+}
+
+// Render a rectangle shaped with optional rounding and borders
+void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
+    const float border_size = g.Style.FrameBorderSize;
+    if (border && border_size > 0.0f)
+    {
+        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding, ImDrawCornerFlags_All, border_size);
+        window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
+    }
+}
+
+void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    const float border_size = g.Style.FrameBorderSize;
+    if (border_size > 0.0f)
+    {
+        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding, ImDrawCornerFlags_All, border_size);
+        window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
+    }
+}
+
+// Render an arrow aimed to be aligned with text (p_min is a position in the same space text would be positioned). To e.g. denote expanded/collapsed state
+void ImGui::RenderArrow(ImVec2 p_min, ImGuiDir dir, float scale)
+{
+    ImGuiContext& g = *GImGui;
+
+    const float h = g.FontSize * 1.00f;
+    float r = h * 0.40f * scale;
+    ImVec2 center = p_min + ImVec2(h * 0.50f, h * 0.50f * scale);
+
+    ImVec2 a, b, c;
+    switch (dir)
+    {
+    case ImGuiDir_Up:
+    case ImGuiDir_Down:
+        if (dir == ImGuiDir_Up) r = -r;
+        a = ImVec2(+0.000f,+0.750f) * r;
+        b = ImVec2(-0.866f,-0.750f) * r;
+        c = ImVec2(+0.866f,-0.750f) * r;
+        break;
+    case ImGuiDir_Left:
+    case ImGuiDir_Right:
+        if (dir == ImGuiDir_Left) r = -r;
+        a = ImVec2(+0.750f,+0.000f) * r;
+        b = ImVec2(-0.750f,+0.866f) * r;
+        c = ImVec2(-0.750f,-0.866f) * r;
+        break;
+    case ImGuiDir_None:
+    case ImGuiDir_COUNT:
+        IM_ASSERT(0);
+        break;
+    }
+
+    g.CurrentWindow->DrawList->AddTriangleFilled(center + a, center + b, center + c, GetColorU32(ImGuiCol_Text));
+}
+
+void ImGui::RenderBullet(ImVec2 pos)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    window->DrawList->AddCircleFilled(pos, g.FontSize*0.20f, GetColorU32(ImGuiCol_Text), 8);
+}
+
+void ImGui::RenderCheckMark(ImVec2 pos, ImU32 col, float sz)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    float thickness = ImMax(sz / 5.0f, 1.0f);
+    sz -= thickness*0.5f;
+    pos += ImVec2(thickness*0.25f, thickness*0.25f);
+
+    float third = sz / 3.0f;
+    float bx = pos.x + third;
+    float by = pos.y + sz - third*0.5f;
+    window->DrawList->PathLineTo(ImVec2(bx - third, by - third));
+    window->DrawList->PathLineTo(ImVec2(bx, by));
+    window->DrawList->PathLineTo(ImVec2(bx + third*2, by - third*2));
+    window->DrawList->PathStroke(col, false, thickness);
+}
+
+void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    if (id != g.NavId)
+        return;
+    if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysDraw))
+        return;
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window->DC.NavHideHighlightOneFrame)
+        return;
+
+    float rounding = (flags & ImGuiNavHighlightFlags_NoRounding) ? 0.0f : g.Style.FrameRounding;
+    ImRect display_rect = bb;
+    display_rect.ClipWith(window->ClipRect);
+    if (flags & ImGuiNavHighlightFlags_TypeDefault)
+    {
+        const float THICKNESS = 2.0f;
+        const float DISTANCE = 3.0f + THICKNESS * 0.5f;
+        display_rect.Expand(ImVec2(DISTANCE,DISTANCE));
+        bool fully_visible = window->ClipRect.Contains(display_rect);
+        if (!fully_visible)
+            window->DrawList->PushClipRect(display_rect.Min, display_rect.Max);
+        window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), rounding, ImDrawCornerFlags_All, THICKNESS);
+        if (!fully_visible)
+            window->DrawList->PopClipRect();
+    }
+    if (flags & ImGuiNavHighlightFlags_TypeThin)
+    {
+        window->DrawList->AddRect(display_rect.Min, display_rect.Max, GetColorU32(ImGuiCol_NavHighlight), rounding, ~0, 1.0f);
+    }
+}
+
+//-----------------------------------------------------------------------------
 // MAIN CODE
 // (this category is still too large and badly ordered, needs some tidying up)
 //-----------------------------------------------------------------------------
@@ -3380,220 +3601,6 @@ void ImGui::Render()
 #endif
 }
 
-const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
-{
-    const char* text_display_end = text;
-    if (!text_end)
-        text_end = (const char*)-1;
-
-    while (text_display_end < text_end && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
-        text_display_end++;
-    return text_display_end;
-}
-
-// Internal ImGui functions to render text
-// RenderText***() functions calls ImDrawList::AddText() calls ImBitmapFont::RenderText()
-void ImGui::RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    // Hide anything after a '##' string
-    const char* text_display_end;
-    if (hide_text_after_hash)
-    {
-        text_display_end = FindRenderedTextEnd(text, text_end);
-    }
-    else
-    {
-        if (!text_end)
-            text_end = text + strlen(text); // FIXME-OPT
-        text_display_end = text_end;
-    }
-
-    if (text != text_display_end)
-    {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end);
-        if (g.LogEnabled)
-            LogRenderedText(&pos, text, text_display_end);
-    }
-}
-
-void ImGui::RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    if (!text_end)
-        text_end = text + strlen(text); // FIXME-OPT
-
-    if (text != text_end)
-    {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_end, wrap_width);
-        if (g.LogEnabled)
-            LogRenderedText(&pos, text, text_end);
-    }
-}
-
-// Default clip_rect uses (pos_min,pos_max)
-// Handle clipping on CPU immediately (vs typically let the GPU clip the triangles that are overlapping the clipping rectangle edges)
-void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect)
-{
-    // Hide anything after a '##' string
-    const char* text_display_end = FindRenderedTextEnd(text, text_end);
-    const int text_len = (int)(text_display_end - text);
-    if (text_len == 0)
-        return;
-
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    // Perform CPU side clipping for single clipped element to avoid using scissor state
-    ImVec2 pos = pos_min;
-    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : CalcTextSize(text, text_display_end, false, 0.0f);
-
-    const ImVec2* clip_min = clip_rect ? &clip_rect->Min : &pos_min;
-    const ImVec2* clip_max = clip_rect ? &clip_rect->Max : &pos_max;
-    bool need_clipping = (pos.x + text_size.x >= clip_max->x) || (pos.y + text_size.y >= clip_max->y);
-    if (clip_rect) // If we had no explicit clipping rectangle then pos==clip_min
-        need_clipping |= (pos.x < clip_min->x) || (pos.y < clip_min->y);
-
-    // Align whole block. We should defer that to the better rendering function when we'll have support for individual line alignment.
-    if (align.x > 0.0f) pos.x = ImMax(pos.x, pos.x + (pos_max.x - pos.x - text_size.x) * align.x);
-    if (align.y > 0.0f) pos.y = ImMax(pos.y, pos.y + (pos_max.y - pos.y - text_size.y) * align.y);
-
-    // Render
-    if (need_clipping)
-    {
-        ImVec4 fine_clip_rect(clip_min->x, clip_min->y, clip_max->x, clip_max->y);
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, &fine_clip_rect);
-    }
-    else
-    {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text, text_display_end, 0.0f, NULL);
-    }
-    if (g.LogEnabled)
-        LogRenderedText(&pos, text, text_display_end);
-}
-
-// Render a rectangle shaped with optional rounding and borders
-void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    window->DrawList->AddRectFilled(p_min, p_max, fill_col, rounding);
-    const float border_size = g.Style.FrameBorderSize;
-    if (border && border_size > 0.0f)
-    {
-        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding, ImDrawCornerFlags_All, border_size);
-        window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
-    }
-}
-
-void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    const float border_size = g.Style.FrameBorderSize;
-    if (border_size > 0.0f)
-    {
-        window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding, ImDrawCornerFlags_All, border_size);
-        window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
-    }
-}
-
-// Render an arrow aimed to be aligned with text (p_min is a position in the same space text would be positioned). To e.g. denote expanded/collapsed state
-void ImGui::RenderArrow(ImVec2 p_min, ImGuiDir dir, float scale)
-{
-    ImGuiContext& g = *GImGui;
-
-    const float h = g.FontSize * 1.00f;
-    float r = h * 0.40f * scale;
-    ImVec2 center = p_min + ImVec2(h * 0.50f, h * 0.50f * scale);
-
-    ImVec2 a, b, c;
-    switch (dir)
-    {
-    case ImGuiDir_Up:
-    case ImGuiDir_Down:
-        if (dir == ImGuiDir_Up) r = -r;
-        a = ImVec2(+0.000f,+0.750f) * r;
-        b = ImVec2(-0.866f,-0.750f) * r;
-        c = ImVec2(+0.866f,-0.750f) * r;
-        break;
-    case ImGuiDir_Left:
-    case ImGuiDir_Right:
-        if (dir == ImGuiDir_Left) r = -r;
-        a = ImVec2(+0.750f,+0.000f) * r;
-        b = ImVec2(-0.750f,+0.866f) * r;
-        c = ImVec2(-0.750f,-0.866f) * r;
-        break;
-    case ImGuiDir_None:
-    case ImGuiDir_COUNT:
-        IM_ASSERT(0);
-        break;
-    }
-
-    g.CurrentWindow->DrawList->AddTriangleFilled(center + a, center + b, center + c, GetColorU32(ImGuiCol_Text));
-}
-
-void ImGui::RenderBullet(ImVec2 pos)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    window->DrawList->AddCircleFilled(pos, g.FontSize*0.20f, GetColorU32(ImGuiCol_Text), 8);
-}
-
-void ImGui::RenderCheckMark(ImVec2 pos, ImU32 col, float sz)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    float thickness = ImMax(sz / 5.0f, 1.0f);
-    sz -= thickness*0.5f;
-    pos += ImVec2(thickness*0.25f, thickness*0.25f);
-
-    float third = sz / 3.0f;
-    float bx = pos.x + third;
-    float by = pos.y + sz - third*0.5f;
-    window->DrawList->PathLineTo(ImVec2(bx - third, by - third));
-    window->DrawList->PathLineTo(ImVec2(bx, by));
-    window->DrawList->PathLineTo(ImVec2(bx + third*2, by - third*2));
-    window->DrawList->PathStroke(col, false, thickness);
-}
-
-void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags)
-{
-    ImGuiContext& g = *GImGui;
-    if (id != g.NavId)
-        return;
-    if (g.NavDisableHighlight && !(flags & ImGuiNavHighlightFlags_AlwaysDraw))
-        return;
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-    if (window->DC.NavHideHighlightOneFrame)
-        return;
-
-    float rounding = (flags & ImGuiNavHighlightFlags_NoRounding) ? 0.0f : g.Style.FrameRounding;
-    ImRect display_rect = bb;
-    display_rect.ClipWith(window->ClipRect);
-    if (flags & ImGuiNavHighlightFlags_TypeDefault)
-    {
-        const float THICKNESS = 2.0f;
-        const float DISTANCE = 3.0f + THICKNESS * 0.5f;
-        display_rect.Expand(ImVec2(DISTANCE,DISTANCE));
-        bool fully_visible = window->ClipRect.Contains(display_rect);
-        if (!fully_visible)
-            window->DrawList->PushClipRect(display_rect.Min, display_rect.Max);
-        window->DrawList->AddRect(display_rect.Min + ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), display_rect.Max - ImVec2(THICKNESS*0.5f,THICKNESS*0.5f), GetColorU32(ImGuiCol_NavHighlight), rounding, ImDrawCornerFlags_All, THICKNESS);
-        if (!fully_visible)
-            window->DrawList->PopClipRect();
-    }
-    if (flags & ImGuiNavHighlightFlags_TypeThin)
-    {
-        window->DrawList->AddRect(display_rect.Min, display_rect.Max, GetColorU32(ImGuiCol_NavHighlight), rounding, ~0, 1.0f);
-    }
-}
-
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
 // CalcTextSize("") should return ImVec2(0.0f, GImGui->FontSize)
 ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash, float wrap_width)
@@ -4339,7 +4346,7 @@ const ImGuiResizeGripDef resize_grip_def[4] =
     { ImVec2(1,0), ImVec2(-1,+1), 9,12 }, // Upper right
 };
 
-static ImRect GetBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
+static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
 {
     ImRect rect = window->Rect();
     if (thickness == 0.0f) rect.Max -= ImVec2(1,1);
@@ -4403,7 +4410,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
         const float BORDER_SIZE = 5.0f;          // FIXME: Only works _inside_ window because of HoveredWindow check.
         const float BORDER_APPEAR_TIMER = 0.05f; // Reduce visual noise
         bool hovered, held;
-        ImRect border_rect = GetBorderRect(window, border_n, grip_hover_size, BORDER_SIZE);
+        ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_size, BORDER_SIZE);
         ButtonBehavior(border_rect, window->GetID((void*)(intptr_t)(border_n + 4)), &hovered, &held, ImGuiButtonFlags_FlattenChildren);
         if ((hovered && g.HoveredIdTimer > BORDER_APPEAR_TIMER) || held)
         {
@@ -4873,7 +4880,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->DrawList->AddRect(window->Pos, window->Pos + window->Size, GetColorU32(ImGuiCol_Border), window_rounding, ImDrawCornerFlags_All, window_border_size);
             if (border_held != -1)
             {
-                ImRect border = GetBorderRect(window, border_held, grip_draw_size, 0.0f);
+                ImRect border = GetResizeBorderRect(window, border_held, grip_draw_size, 0.0f);
                 window->DrawList->AddLine(border.Min, border.Max, GetColorU32(ImGuiCol_SeparatorActive), ImMax(1.0f, window_border_size));
             }
             if (style.FrameBorderSize > 0 && !(flags & ImGuiWindowFlags_NoTitleBar))
