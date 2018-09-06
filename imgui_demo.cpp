@@ -18,6 +18,27 @@
 // It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
 // This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your functions.
 
+/*
+
+Index of this file:
+
+// [SECTION] Forward Declarations, Helpers
+// [SECTION] Demo Window / ShowDemoWindow()
+// [SECTION] Style Editor / ShowStyleEditor()
+// [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
+// [SECTION] Example App: Debug Console / ShowExampleAppConsole()
+// [SECTION] Example App: Debug Log / ShowExampleAppLog()
+// [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
+// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
+// [SECTION] Example App: Long Text / ShowExampleAppLongText()
+// [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
+// [SECTION] Example App: Constrained Resize / ShowExampleAppConstrainedResize()
+// [SECTION] Example App: Simple Overlay / ShowExampleAppSimpleOverlay()
+// [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
+// [SECTION] Example App: Custom Rendering using ImDrawList API / ShowExampleAppCustomRendering()
+
+*/
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -67,7 +88,7 @@
 #define IM_MAX(_A,_B)       (((_A) >= (_B)) ? (_A) : (_B))
 
 //-----------------------------------------------------------------------------
-// DEMO CODE
+// [SECTION] Forward Declarations, Helpers
 //-----------------------------------------------------------------------------
 
 #if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && defined(IMGUI_DISABLE_TEST_WINDOWS) && !defined(IMGUI_DISABLE_DEMO_WINDOWS)   // Obsolete name since 1.53, TEST->DEMO
@@ -126,6 +147,10 @@ void ImGui::ShowUserGuide()
     ImGui::BulletText("You can apply arithmetic operators +,*,/ on numerical values.\nUse +- to subtract.");
     ImGui::Unindent();
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] Demo Window / ShowDemoWindow()
+//-----------------------------------------------------------------------------
 
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does. You may then search for keywords in the code when you are interested by a specific feature.
@@ -2363,6 +2388,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::End();
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] Style Editor / ShowStyleEditor()
+//-----------------------------------------------------------------------------
+
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
 // Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
@@ -2626,7 +2655,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: MAIN MENU BAR
+// [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a fullscreen menu bar and populating it.
@@ -2719,10 +2748,10 @@ static void ShowExampleMenuFile()
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: CONSOLE
+// [SECTION] Example App: Debug Console / ShowExampleAppConsole()
 //-----------------------------------------------------------------------------
 
-// Demonstrating creating a simple console window, with scrolling, filtering, completion and history.
+// Demonstrate creating a simple console window, with scrolling, filtering, completion and history.
 // For the console example, here we are using a more C++ like approach of declaring a class to hold the data and the functions.
 struct ExampleAppConsole
 {
@@ -3032,7 +3061,7 @@ static void ShowExampleAppConsole(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: LOG
+// [SECTION] Example App: Debug Log / ShowExampleAppLog()
 //-----------------------------------------------------------------------------
 
 // Usage:
@@ -3122,7 +3151,7 @@ static void ShowExampleAppLog(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: SIMPLE LAYOUT
+// [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
 //-----------------------------------------------------------------------------
 
 // Demonstrate create a window with multiple child windows.
@@ -3170,7 +3199,7 @@ static void ShowExampleAppLayout(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: PROPERTY EDITOR
+// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 //-----------------------------------------------------------------------------
 
 // Demonstrate create a simple property editor.
@@ -3243,7 +3272,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: LONG TEXT
+// [SECTION] Example App: Long Text / ShowExampleAppLongText()
 //-----------------------------------------------------------------------------
 
 // Demonstrate/test rendering huge amount of text, and the incidence of clipping.
@@ -3301,7 +3330,7 @@ static void ShowExampleAppLongText(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: AUTO RESIZE
+// [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window which gets auto-resized according to its content.
@@ -3322,7 +3351,7 @@ static void ShowExampleAppAutoResize(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: CONSTRAINED RESIZE
+// [SECTION] Example App: Constrained Resize / ShowExampleAppConstrainedResize()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window with custom resize constraints.
@@ -3373,7 +3402,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: SIMPLE OVERLAY
+// [SECTION] Example App: Simple Overlay / ShowExampleAppSimpleOverlay()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a simple static window with no decoration + a context-menu to choose which corner of the screen to use.
@@ -3409,7 +3438,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: WINDOW TITLES
+// [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
 //-----------------------------------------------------------------------------
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
@@ -3440,7 +3469,7 @@ static void ShowExampleAppWindowTitles(bool*)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: CUSTOM RENDERING
+// [SECTION] Example App: Custom Rendering using ImDrawList API / ShowExampleAppCustomRendering()
 //-----------------------------------------------------------------------------
 
 // Demonstrate using the low-level ImDrawList to draw custom shapes.

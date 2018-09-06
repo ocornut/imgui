@@ -22,12 +22,15 @@
 Index of this file:
 
 DOCUMENTATION
+
 - MISSION STATEMENT
 - END-USER GUIDE
 - PROGRAMMER GUIDE (read me!)
   - Read first
   - How to update to a newer version of Dear ImGui
   - Getting started with integrating Dear ImGui in your code/engine
+  - This is how a simple application may look like (2 variations)
+  - This is how a simple rendering function may look like
   - Using gamepad/keyboard navigation controls
 - API BREAKING CHANGES (read me when you update!)
 - FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
@@ -44,31 +47,35 @@ DOCUMENTATION
   - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
   - How can I help?
 
-CODE
-- Forward Declarations
-- Context and Memory Allocators
-- User facing structures (ImGuiStyle, ImGuiIO)
-- Helper/Utilities (ImXXX functions, Color functions)
-- ImGuiStorage
-- ImGuiTextFilter
-- ImGuiTextBuffer
-- ImGuiListClipper
-- Render Helpers
-- Main Code (most of the code! lots of stuff, needs tidying up)
-- Tooltips
-- Popups
-- Navigation
-- Columns
-- Drag and Drop
-- Logging
-- Settings
-- Platform Dependent Helpers
-- Metrics/Debug window
+CODE 
+(search for "[SECTION]" in the code to find them)
+
+// [SECTION] FORWARD DECLARATIONS
+// [SECTION] CONTEXT AND MEMORY ALLOCATORS
+// [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] MISC HELPER/UTILITIES (Maths, String, Format, Hash, File functions)
+// [SECTION] MISC HELPER/UTILITIES (ImText* functions)
+// [SECTION] MISC HELPER/UTILITIES (Color functions)
+// [SECTION] ImGuiStorage
+// [SECTION] ImGuiTextFilter
+// [SECTION] ImGuiTextBuffer
+// [SECTION] ImGuiListClipper
+// [SECTION] RENDER HELPERS
+// [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
+// [SECTION] TOOLTIPS
+// [SECTION] POPUPS
+// [SECTION] KEYBOARD/GAMEPAD NAVIGATION
+// [SECTION] COLUMNS
+// [SECTION] DRAG AND DROP
+// [SECTION] LOGGING/CAPTURING
+// [SECTION] SETTINGS
+// [SECTION] PLATFORM DEPENDENT HELPERS
+// [SECTION] METRICS/DEBUG WINDOW
 
 */
 
 //-----------------------------------------------------------------------------
-// Documentation
+// DOCUMENTATION
 //-----------------------------------------------------------------------------
 
 /*
@@ -883,7 +890,7 @@ static const float NAV_WINDOWING_HIGHLIGHT_DELAY   = 0.20f; // Time before the h
 static const float NAV_WINDOWING_LIST_APPEAR_DELAY = 0.15f; // Time before the window list starts to appear
 
 //-------------------------------------------------------------------------
-// Forward Declarations
+// [SECTION] FORWARD DECLARATIONS
 //-------------------------------------------------------------------------
 
 static void             SetCurrentWindow(ImGuiWindow* window);
@@ -934,7 +941,7 @@ static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& si
 }
 
 //-----------------------------------------------------------------------------
-// Context and Memory Allocators
+// [SECTION] CONTEXT AND MEMORY ALLOCATORS
 //-----------------------------------------------------------------------------
 
 // Current context pointer. Implicitly used by all ImGui functions. Always assumed to be != NULL.
@@ -963,7 +970,7 @@ static void   (*GImAllocatorFreeFunc)(void* ptr, void* user_data) = FreeWrapper;
 static void*    GImAllocatorUserData = NULL;
 
 //-----------------------------------------------------------------------------
-// User facing main structures
+// [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
 //-----------------------------------------------------------------------------
 
 ImGuiStyle::ImGuiStyle()
@@ -1108,7 +1115,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 }
 
 //-----------------------------------------------------------------------------
-// HELPERS/UTILITIES
+// [SECTION] MISC HELPER/UTILITIES (Maths, String, Format, Hash, File functions)
 //-----------------------------------------------------------------------------
 
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
@@ -1385,7 +1392,7 @@ void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_
 }
 
 //-----------------------------------------------------------------------------
-// HELPERS/UTILITIES (ImText* helpers)
+// [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
 //-----------------------------------------------------------------------------
 
 // Convert UTF-8 to 32-bits character, process single character input.
@@ -1568,7 +1575,8 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
 }
 
 //-----------------------------------------------------------------------------
-// COLOR FUNCTIONS
+// [SECTION] MISC HELPER/UTILTIES (Color functions)
+// Note: The Convert functions are early design which are not consistent with other API.
 //-----------------------------------------------------------------------------
 
 ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
@@ -1675,7 +1683,7 @@ ImU32 ImGui::GetColorU32(ImU32 col)
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiStorage
+// [SECTION] ImGuiStorage
 // Helper: Key->value storage
 //-----------------------------------------------------------------------------
 
@@ -1824,7 +1832,7 @@ void ImGuiStorage::SetAllInt(int v)
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiTextFilter
+// [SECTION] ImGuiTextFilter
 //-----------------------------------------------------------------------------
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
@@ -1928,7 +1936,7 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiTextBuffer
+// [SECTION] ImGuiTextBuffer
 //-----------------------------------------------------------------------------
 
 // On some platform vsnprintf() takes va_list by reference and modifies it.
@@ -1976,7 +1984,8 @@ void ImGuiTextBuffer::appendf(const char* fmt, ...)
 }
 
 //-----------------------------------------------------------------------------
-// ImGuiListClipper
+// [SECTION] ImGuiListClipper
+// This is currently not as flexible/powerful as it should be, needs some rework (see TODO)
 //-----------------------------------------------------------------------------
 
 static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
@@ -2060,8 +2069,8 @@ bool ImGuiListClipper::Step()
 }
 
 //-----------------------------------------------------------------------------
-// RENDER HELPERS
-// Those [Internal] functions are a terrible mess - their signature and behavior will change.
+// [SECTION] RENDER HELPERS
+// Those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
 // Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
 //-----------------------------------------------------------------------------
 
@@ -2280,8 +2289,7 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
 }
 
 //-----------------------------------------------------------------------------
-// MAIN CODE
-// (this category is still too large and badly ordered, needs some tidying up)
+// [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
 //-----------------------------------------------------------------------------
 
 // ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
@@ -2730,8 +2738,6 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
     return ImMax(wrap_pos_x - pos.x, 1.0f);
 }
-
-//-----------------------------------------------------------------------------
 
 void* ImGui::MemAlloc(size_t size)
 {
@@ -6076,7 +6082,6 @@ ImGuiID ImGui::GetID(const void* ptr_id)
     return GImGui->CurrentWindow->GetID(ptr_id);
 }
 
-
 bool ImGui::IsRectVisible(const ImVec2& size)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
@@ -6200,7 +6205,7 @@ void ImGui::Unindent(float indent_w)
 }
 
 //-----------------------------------------------------------------------------
-// TOOLTIPS
+// [SECTION] TOOLTIPS
 //-----------------------------------------------------------------------------
 
 void ImGui::BeginTooltip()
@@ -6269,7 +6274,7 @@ void ImGui::SetTooltip(const char* fmt, ...)
 }
 
 //-----------------------------------------------------------------------------
-// POPUPS
+// [SECTION] POPUPS
 //-----------------------------------------------------------------------------
 
 bool ImGui::IsPopupOpen(ImGuiID id)
@@ -6636,7 +6641,7 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 }
 
 //-----------------------------------------------------------------------------
-// NAVIGATION
+// [SECTION] KEYBOARD/GAMEPAD NAVIGATION
 //-----------------------------------------------------------------------------
 
 ImGuiDir ImGetDirQuadrantFromDelta(float dx, float dy)
@@ -7631,7 +7636,8 @@ void ImGui::NavUpdateWindowingList()
 }
 
 //-----------------------------------------------------------------------------
-// COLUMNS
+// [SECTION] COLUMNS
+// In the current version, Columns are very weak. Needs to be replaced with a more full-featured system.
 //-----------------------------------------------------------------------------
 
 void ImGui::NextColumn()
@@ -7953,7 +7959,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 }
 
 //-----------------------------------------------------------------------------
-// DRAG AND DROP
+// [SECTION] DRAG AND DROP
 //-----------------------------------------------------------------------------
 
 void ImGui::ClearDragDrop()
@@ -8240,7 +8246,7 @@ void ImGui::EndDragDropTarget()
 }
 
 //-----------------------------------------------------------------------------
-// LOGGING
+// [SECTION] LOGGING/CAPTURING
 //-----------------------------------------------------------------------------
 
 // Pass text data straight to log (without being displayed)
@@ -8420,7 +8426,7 @@ void ImGui::LogButtons()
 }
 
 //-----------------------------------------------------------------------------
-// SETTINGS
+// [SECTION] SETTINGS
 //-----------------------------------------------------------------------------
 
 void ImGui::MarkIniSettingsDirty()
@@ -8632,7 +8638,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
 }
 
 //-----------------------------------------------------------------------------
-// PLATFORM DEPENDENT HELPERS
+// [SECTION] PLATFORM DEPENDENT HELPERS
 //-----------------------------------------------------------------------------
 
 #if defined(_WIN32) && !defined(_WINDOWS_) && (!defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS) || !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS))
@@ -8748,7 +8754,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 #endif
 
 //-----------------------------------------------------------------------------
-// METRICS/DEBUG WINDOW
+// [SECTION] METRICS/DEBUG WINDOW
 //-----------------------------------------------------------------------------
 
 void ImGui::ShowMetricsWindow(bool* p_open)
