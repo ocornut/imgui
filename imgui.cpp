@@ -1326,6 +1326,64 @@ ImU32 ImHash(const void* data, int data_size, ImU32 seed)
     return ~crc;
 }
 
+FILE* ImFileOpen(const char* filename, const char* mode)
+{
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
+    // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames. Converting both strings from UTF-8 to wchar format (using a single allocation, because we can)
+    const int filename_wsize = ImTextCountCharsFromUtf8(filename, NULL) + 1;
+    const int mode_wsize = ImTextCountCharsFromUtf8(mode, NULL) + 1;
+    ImVector<ImWchar> buf;
+    buf.resize(filename_wsize + mode_wsize);
+    ImTextStrFromUtf8(&buf[0], filename_wsize, filename, NULL);
+    ImTextStrFromUtf8(&buf[filename_wsize], mode_wsize, mode, NULL);
+    return _wfopen((wchar_t*)&buf[0], (wchar_t*)&buf[filename_wsize]);
+#else
+    return fopen(filename, mode);
+#endif
+}
+
+// Load file content into memory
+// Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
+void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size, int padding_bytes)
+{
+    IM_ASSERT(filename && file_open_mode);
+    if (out_file_size)
+        *out_file_size = 0;
+
+    FILE* f;
+    if ((f = ImFileOpen(filename, file_open_mode)) == NULL)
+        return NULL;
+
+    long file_size_signed;
+    if (fseek(f, 0, SEEK_END) || (file_size_signed = ftell(f)) == -1 || fseek(f, 0, SEEK_SET))
+    {
+        fclose(f);
+        return NULL;
+    }
+
+    size_t file_size = (size_t)file_size_signed;
+    void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
+    if (file_data == NULL)
+    {
+        fclose(f);
+        return NULL;
+    }
+    if (fread(file_data, 1, file_size, f) != file_size)
+    {
+        fclose(f);
+        ImGui::MemFree(file_data);
+        return NULL;
+    }
+    if (padding_bytes > 0)
+        memset((void*)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
+
+    fclose(f);
+    if (out_file_size)
+        *out_file_size = file_size;
+
+    return file_data;
+}
+
 //-----------------------------------------------------------------------------
 // HELPERS/UTILITIES (ImText* helpers)
 //-----------------------------------------------------------------------------
@@ -1507,64 +1565,6 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
             bytes_count += ImTextCountUtf8BytesFromChar(c);
     }
     return bytes_count;
-}
-
-FILE* ImFileOpen(const char* filename, const char* mode)
-{
-#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
-    // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames. Converting both strings from UTF-8 to wchar format (using a single allocation, because we can)
-    const int filename_wsize = ImTextCountCharsFromUtf8(filename, NULL) + 1;
-    const int mode_wsize = ImTextCountCharsFromUtf8(mode, NULL) + 1;
-    ImVector<ImWchar> buf;
-    buf.resize(filename_wsize + mode_wsize);
-    ImTextStrFromUtf8(&buf[0], filename_wsize, filename, NULL);
-    ImTextStrFromUtf8(&buf[filename_wsize], mode_wsize, mode, NULL);
-    return _wfopen((wchar_t*)&buf[0], (wchar_t*)&buf[filename_wsize]);
-#else
-    return fopen(filename, mode);
-#endif
-}
-
-// Load file content into memory
-// Memory allocated with ImGui::MemAlloc(), must be freed by user using ImGui::MemFree()
-void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size, int padding_bytes)
-{
-    IM_ASSERT(filename && file_open_mode);
-    if (out_file_size)
-        *out_file_size = 0;
-
-    FILE* f;
-    if ((f = ImFileOpen(filename, file_open_mode)) == NULL)
-        return NULL;
-
-    long file_size_signed;
-    if (fseek(f, 0, SEEK_END) || (file_size_signed = ftell(f)) == -1 || fseek(f, 0, SEEK_SET))
-    {
-        fclose(f);
-        return NULL;
-    }
-
-    size_t file_size = (size_t)file_size_signed;
-    void* file_data = ImGui::MemAlloc(file_size + padding_bytes);
-    if (file_data == NULL)
-    {
-        fclose(f);
-        return NULL;
-    }
-    if (fread(file_data, 1, file_size, f) != file_size)
-    {
-        fclose(f);
-        ImGui::MemFree(file_data);
-        return NULL;
-    }
-    if (padding_bytes > 0)
-        memset((void*)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
-
-    fclose(f);
-    if (out_file_size)
-        *out_file_size = file_size;
-
-    return file_data;
 }
 
 //-----------------------------------------------------------------------------
