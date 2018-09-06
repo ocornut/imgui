@@ -38,6 +38,7 @@ Breaking Changes:
 
 Other Changes:
 
+- Clarified and improved the source code sectioning in all files (easier to search or browse sections).
 - Nav: Removed the [Beta] tag from various descriptions of the gamepad/keyboard navigation system.
   Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
 - Fixed a build issue with non-Cygwin GCC under Windows.
