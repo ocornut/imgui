@@ -49,6 +49,8 @@ struct ImGuiNextWindowData;         // Storage for SetNexWindow** functions
 struct ImGuiPopupRef;               // Storage for current popup stack
 struct ImGuiSettingsHandler;        // Storage for one type registered in the .ini file
 struct ImGuiStyleMod;               // Stacked style modifier, backup of modified data so we can restore it
+struct ImGuiTabBar;                 // Storage for a tab bar
+struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame)
 struct ImGuiWindowSettings;         // Storage for window settings stored in .ini file (we keep one of those even if the actual window wasn't instanced during this session)
@@ -655,6 +657,16 @@ struct ImGuiNextWindowData
 };
 
 //-----------------------------------------------------------------------------
+// Docking, Tabs
+//-----------------------------------------------------------------------------
+
+struct ImGuiTabBarSortItem
+{
+    int         Index;
+    float       Width;
+};
+
+//-----------------------------------------------------------------------------
 // Main imgui context
 //-----------------------------------------------------------------------------
 
@@ -775,6 +787,11 @@ struct ImGuiContext
     int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly
     unsigned char           DragDropPayloadBufLocal[8];         // Local buffer for small payloads
+
+    // Tab bars
+    ImPool<ImGuiTabBar>     TabBars;
+    ImVector<ImGuiTabBar*>  CurrentTabBar;
+    ImVector<ImGuiTabBarSortItem>   TabSortByWidthBuffer;
 
     // Widget state
     ImGuiInputTextState     InputTextState;
@@ -1124,6 +1141,67 @@ struct ImGuiItemHoveredDataBackup
 };
 
 //-----------------------------------------------------------------------------
+// Tab Bar, Tab Item
+//-----------------------------------------------------------------------------
+
+enum ImGuiTabBarFlagsPrivate_
+{
+    ImGuiTabBarFlags_DockNode                       = 1 << 20,  // Part of a dock node
+    ImGuiTabBarFlags_DockNodeExplicitRoot           = 1 << 21,  // Part of an explicit dock node
+    ImGuiTabBarFlags_IsFocused                      = 1 << 22,
+    ImGuiTabBarFlags_SaveSettings                   = 1 << 23   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
+};
+
+enum ImGuiTabItemFlagsPrivate_
+{
+    ImGuiTabItemFlags_DockedWindow                  = 1 << 20,
+    ImGuiTabItemFlags_Preview                       = 1 << 21
+};
+
+// Storage for one active tab item (sizeof() 32~40 bytes)
+struct ImGuiTabItem
+{
+    ImGuiID             ID;
+    ImGuiTabItemFlags   Flags;
+    ImGuiWindow*        Window;             // When TabItem is part of a DockNode's TabBar, we hold on to a window.
+    int                 LastFrameVisible;
+    int                 LastFrameSelected;  // This allows us to infer an ordered list of the last activated tabs with little maintenance
+    float               Offset;             // Position relative to beginning of tab
+    float               Width;              // Width currently displayed
+    float               WidthContents;      // Width of actual contents, stored during BeginTabItem() call
+
+    ImGuiTabItem()      { ID = Flags = 0; Window = NULL; LastFrameVisible = LastFrameSelected = -1; Offset = Width = WidthContents = 0.0f; }
+};
+
+// Storage for a tab bar (sizeof() 92~96 bytes)
+struct ImGuiTabBar
+{
+    ImVector<ImGuiTabItem> Tabs;
+    ImGuiID             ID;                     // Zero for tab-bars used by docking
+    ImGuiID             SelectedTabId;          // Selected tab
+    ImGuiID             NextSelectedTabId;
+    ImGuiID             VisibleTabId;           // Can occasionally be != SelectedTabId (e.g. when previewing contents for CTRL+TAB preview)
+    ImGuiID             WantFocusTabId;         // Request focus for the window associated to this tab. Used and only honored by DockNode (meaningless for standalone tab bars)
+    int                 CurrFrameVisible;
+    int                 PrevFrameVisible;
+    ImRect              BarRect;
+    float               ContentsHeight;
+    float               OffsetMax;              // Distance from BarRect.Min.x, locked during layout
+    float               OffsetNextTab;          // Distance from BarRect.Min.x, incremented with each BeginTabItem() call, not used if ImGuiTabBarFlags_Reorderable if set.
+    float               ScrollingAnim;
+    float               ScrollingTarget;
+    ImGuiTabBarFlags    Flags;
+    ImGuiID             ReorderRequestTabId;
+    int                 ReorderRequestDir;
+    bool                WantLayout;
+    bool                VisibleTabWasSubmitted;
+    short               LastTabItemIdx;         // For BeginTabItem()/EndTabItem()
+
+    ImGuiTabBar();
+    int                 GetTabOrder(const ImGuiTabItem* tab) const { return Tabs.index_from_pointer(tab); }
+};
+
+//-----------------------------------------------------------------------------
 // Internal API
 // No guarantee of forward compatibility here.
 //-----------------------------------------------------------------------------
@@ -1234,6 +1312,19 @@ namespace ImGui
     IMGUI_API void          EndColumns();                                                             // close columns
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
 
+    // Tab Bars
+    IMGUI_API void          ShowDockingDebug();
+    IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);
+    IMGUI_API ImGuiTabItem* TabBarFindTabByID(ImGuiTabBar* tab_bar, ImGuiID tab_id);
+    IMGUI_API void          TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window);
+    IMGUI_API void          TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id);
+    IMGUI_API void          TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
+    IMGUI_API void          TabBarQueueChangeTabOrder(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, int dir);
+    IMGUI_API bool          TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags, ImGuiWindow* docked_window);
+    IMGUI_API ImVec2        TabItemCalcSize(const char* label, bool has_close_button);
+    IMGUI_API void          TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImU32 col);
+    IMGUI_API bool          TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, const char* label, ImGuiID tab_id, ImGuiID close_button_id);
+
     // Render helpers
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.
     // NB: All position are in absolute pixels coordinates (we are never using window coordinates internally)
@@ -1255,6 +1346,7 @@ namespace ImGui
     IMGUI_API void          RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor = ImGuiMouseCursor_Arrow);
     IMGUI_API void          RenderArrowPointingAt(ImDrawList* draw_list, ImVec2 pos, ImVec2 half_sz, ImGuiDir direction, ImU32 col);
     IMGUI_API void          RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding);
+    IMGUI_API void          RenderPixelEllipsis(ImDrawList* draw_list, ImFont* font, ImVec2 pos, int count, ImU32 col);
 
     // Widgets
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);

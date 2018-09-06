@@ -990,6 +990,7 @@ ImGuiStyle::ImGuiStyle()
     FramePadding            = ImVec2(4,3);      // Padding within a framed rectangle (used by most widgets)
     FrameRounding           = 0.0f;             // Radius of frame corners rounding. Set to 0.0f to have rectangular frames (used by most widgets).
     FrameBorderSize         = 0.0f;             // Thickness of border around frames. Generally set to 0.0f or 1.0f. Other values not well tested.
+    TabBorderSize           = 0.0f;             // Thickness of border around tabs.
     ItemSpacing             = ImVec2(8,4);      // Horizontal and vertical spacing between widgets/lines
     ItemInnerSpacing        = ImVec2(4,4);      // Horizontal and vertical spacing between within elements of a composed widget (e.g. a slider and its label)
     TouchExtraPadding       = ImVec2(0,0);      // Expand reactive bounding box for touch-based system where touch position is not accurate enough. Unfortunately we don't sort widgets so priority on overlap will always be given to the first widget. So don't grow this too much!
@@ -5493,6 +5494,11 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_ResizeGrip: return "ResizeGrip";
     case ImGuiCol_ResizeGripHovered: return "ResizeGripHovered";
     case ImGuiCol_ResizeGripActive: return "ResizeGripActive";
+    case ImGuiCol_Tab: return "Tab";
+    case ImGuiCol_TabHovered: return "TabHovered";
+    case ImGuiCol_TabActive: return "TabActive";
+    case ImGuiCol_TabUnfocused: return "TabUnfocused";
+    case ImGuiCol_TabUnfocusedActive: return "TabUnfocusedActive";
     case ImGuiCol_PlotLines: return "PlotLines";
     case ImGuiCol_PlotLinesHovered: return "PlotLinesHovered";
     case ImGuiCol_PlotHistogram: return "PlotHistogram";
@@ -8797,6 +8803,36 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     struct Funcs
     {
+        static void NodeTabBar(ImGuiTabBar* tab_bar)
+        {
+            // Previous window list
+            char buf[256];
+            char* p = buf;
+            const char* buf_end = buf + IM_ARRAYSIZE(buf);
+            p += ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s", 
+                tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
+            if (tab_bar->Flags & ImGuiTabBarFlags_DockNode)
+            {
+                p += ImFormatString(p, buf_end - p, "  { ");
+                for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
+                    p += ImFormatString(p, buf_end - p, "%s'%s'", tab_n > 0 ? ", " : "", tab_bar->Tabs[tab_n].Window->Name);
+                p += ImFormatString(p, buf_end - p, (tab_bar->Tabs.Size > 3) ? " ... }" : " } ");
+            }
+            if (ImGui::TreeNode(tab_bar, "%s", buf))
+            {
+                for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
+                {
+                    const ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+                    ImGui::PushID(tab);
+                    if (ImGui::SmallButton("<")) { TabBarQueueChangeTabOrder(tab_bar, tab, -1); } ImGui::SameLine(0, 2);
+                    if (ImGui::SmallButton(">")) { TabBarQueueChangeTabOrder(tab_bar, tab, +1); } ImGui::SameLine();
+                    ImGui::Text("%02d%c Tab 0x%08X '%s'", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, tab->Window ? tab->Window->Name : "N/A");
+                    ImGui::PopID();
+                }
+                ImGui::TreePop();
+            }
+        }
+
         static void NodeDrawList(ImGuiWindow* window, ImDrawList* draw_list, const char* label)
         {
             bool node_open = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->_OwnerName ? draw_list->_OwnerName : "", draw_list->VtxBuffer.Size, draw_list->IdxBuffer.Size, draw_list->CmdBuffer.Size);
@@ -8934,6 +8970,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGuiWindow* window = g.OpenPopupStack[i].Window;
             ImGui::BulletText("PopupID: %08x, Window: '%s'%s%s", g.OpenPopupStack[i].PopupId, window ? window->Name : "NULL", window && (window->Flags & ImGuiWindowFlags_ChildWindow) ? " ChildWindow" : "", window && (window->Flags & ImGuiWindowFlags_ChildMenu) ? " ChildMenu" : "");
         }
+        ImGui::TreePop();
+    }
+    if (ImGui::TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.Data.Size))
+    {
+        for (int n = 0; n < g.TabBars.Data.Size; n++)
+            Funcs::NodeTabBar(g.TabBars.GetByIndex(n));
         ImGui::TreePop();
     }
     if (ImGui::TreeNode("Internal state"))

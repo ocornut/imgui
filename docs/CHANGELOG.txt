@@ -30,6 +30,17 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ DOCKING BRANCH (In Progress)
+-----------------------------------------------------------------------
+
+- Added BeginTabBar(), EndTabBar(), BeginTabItem(), EndTabItem(), SetTabItemClosed() API. (#261, #351)
+- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering the ID, 
+  as a convenience to avoid using the ### operator. 
+- Demo: Added Layout->Tabs demo code. (#261, #351)
+- Demo: Added "Documents" example app showcasing possible use for tabs. (#261, #351)
+
+
+-----------------------------------------------------------------------
  VERSION 1.66 (In Progress)
 -----------------------------------------------------------------------
 
