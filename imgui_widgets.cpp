@@ -679,10 +679,16 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
 
+    bool is_dock_menu = (window->DockNodeAsHost && !window->Collapsed);
+    ImVec2 off = is_dock_menu ? ImVec2((float)(int)(-g.Style.ItemInnerSpacing.x * 0.5f) + 0.5f, 0.0f) : ImVec2(0.0f, 0.0f);
     ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     if (hovered || held)
-        window->DrawList->AddCircleFilled(bb.GetCenter() + ImVec2(0.0f, -0.5f), g.FontSize * 0.5f + 1.0f, col, 9);
-    RenderArrow(bb.Min + g.Style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
+        window->DrawList->AddCircleFilled(bb.GetCenter() + off + ImVec2(0,-0.5f), g.FontSize * 0.5f + 1.0f, col, 9);
+
+    if (is_dock_menu)
+        RenderArrowDockMenu(window->DrawList, bb.Min + g.Style.FramePadding, g.FontSize, GetColorU32(ImGuiCol_Text));
+    else
+        RenderArrow(bb.Min + g.Style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
     if (IsItemActive() && IsMouseDragging())
@@ -5429,7 +5435,7 @@ bool ImGui::BeginMainMenuBar()
     SetNextWindowSize(ImVec2(g.IO.DisplaySize.x, g.NextWindowData.MenuBarOffsetMinVal.y + g.FontBaseSize + g.Style.FramePadding.y));
     PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
     PushStyleVar(ImGuiStyleVar_WindowMinSize, ImVec2(0,0));
-    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
+    ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_MenuBar;
     bool is_open = Begin("##MainMenuBar", NULL, window_flags) && BeginMenuBar();
     PopStyleVar(2);
     g.NextWindowData.MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
@@ -5796,10 +5802,10 @@ bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
     ImGuiTabBar* tab_bar = g.TabBars.GetOrAddByKey(id);
     ImRect tab_bar_bb = ImRect(window->DC.CursorPos.x, window->DC.CursorPos.y, window->InnerClipRect.Max.x, window->DC.CursorPos.y + g.FontSize + g.Style.FramePadding.y * 2);
     tab_bar->ID = id;
-    return BeginTabBarEx(tab_bar, tab_bar_bb, flags | ImGuiTabBarFlags_IsFocused);
+    return BeginTabBarEx(tab_bar, tab_bar_bb, flags | ImGuiTabBarFlags_IsFocused, NULL);
 }
 
-bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImGuiTabBarFlags flags)
+bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImGuiTabBarFlags flags, ImGuiDockNode* dock_node)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -5839,10 +5845,18 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     // Draw separator
     const ImU32 col = GetColorU32((flags & ImGuiTabBarFlags_IsFocused) ? ImGuiCol_TabActive : ImGuiCol_Tab);
     const float y = tab_bar->BarRect.Max.y - 1.0f;
-    const float separator_min_x = tab_bar->BarRect.Min.x - ((flags & ImGuiTabBarFlags_DockNodeExplicitRoot) ? 0.0f : window->WindowPadding.x);
-    const float separator_max_x = tab_bar->BarRect.Max.x + ((flags & ImGuiTabBarFlags_DockNodeExplicitRoot) ? 0.0f : window->WindowPadding.x);
-    window->DrawList->AddLine(ImVec2(separator_min_x, y), ImVec2(separator_max_x, y), col, 1.0f);
-
+    if (dock_node != NULL)
+    {
+        const float separator_min_x = dock_node->Pos.x;
+        const float separator_max_x = dock_node->Pos.x + dock_node->Size.x;
+        window->DrawList->AddLine(ImVec2(separator_min_x, y), ImVec2(separator_max_x, y), col, 1.0f);
+    }
+    else
+    {
+        const float separator_min_x = tab_bar->BarRect.Min.x - ((flags & ImGuiTabBarFlags_DockNodeExplicitRoot) ? 0.0f : window->WindowPadding.x);
+        const float separator_max_x = tab_bar->BarRect.Max.x + ((flags & ImGuiTabBarFlags_DockNodeExplicitRoot) ? 0.0f : window->WindowPadding.x);
+        window->DrawList->AddLine(ImVec2(separator_min_x, y), ImVec2(separator_max_x, y), col, 1.0f);
+    }
     return true;
 }
 
@@ -6018,6 +6032,10 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     // Lock in visible tab
     tab_bar->VisibleTabId = tab_bar->SelectedTabId;
     tab_bar->VisibleTabWasSubmitted = false;
+
+    // CTRL+TAB can override visible tab temporarily
+    if (g.NavWindowingTarget != NULL && g.NavWindowingTarget->DockNode && g.NavWindowingTarget->DockNode->TabBar == tab_bar)
+        tab_bar->VisibleTabId = scroll_track_selected_tab_id = g.NavWindowingTarget->ID;
 
     // Update scrolling
     if (scroll_track_selected_tab_id)
@@ -6371,6 +6389,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Click to Select a tab
     ImGuiButtonFlags button_flags = (ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_AllowItemOverlap);
+    if (g.DragDropActive && !g.DragDropPayload.IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW))
+        button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     hovered |= (g.HoveredId == id);
@@ -6426,6 +6446,16 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                         if ((tab_bar->ReorderRequestDir < 0 && tab_bar->GetTabOrder(tab) == 0) || (tab_bar->ReorderRequestDir > 0 && tab_bar->GetTabOrder(tab) == tab_bar->Tabs.Size - 1))
                             undocking_tab = true;
                 }
+            }
+
+            // Undock
+            if (undocking_tab && g.ActiveId == id && IsMouseDragging())
+            {
+                ImGuiDockContext* ctx = g.DockContext;
+                DockContextQueueUndock(ctx, docked_window);
+                g.MovingWindow = docked_window;
+                g.ActiveId = g.MovingWindow->MoveId;
+                g.ActiveIdClickOffset -= g.MovingWindow->Pos - bb.Min;
             }
         }
     }
@@ -6487,6 +6517,16 @@ void    ImGui::SetTabItemClosed(const char* label)
         IM_ASSERT(tab_bar->WantLayout);         // Needs to be called AFTER BeginTabBar() and BEFORE the first call to BeginTabItem()
         ImGuiID tab_id = TabBarCalcTabID(tab_bar, label);
         TabBarRemoveTab(tab_bar, tab_id);
+    }
+    else if (ImGuiWindow* window = FindWindowByName(label))
+    {
+        if (window->DockIsActive)
+            if (ImGuiDockNode* node = window->DockNode)
+            {
+                ImGuiID tab_id = TabBarCalcTabID(node->TabBar, label);
+                TabBarRemoveTab(node->TabBar, tab_id);
+                window->DockTabWantClose = true;
+            }
     }
 }
 

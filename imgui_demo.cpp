@@ -36,6 +36,7 @@ Index of this file:
 // [SECTION] Example App: Simple Overlay / ShowExampleAppSimpleOverlay()
 // [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
 // [SECTION] Example App: Custom Rendering using ImDrawList API / ShowExampleAppCustomRendering()
+// [SECTION] Example App: Docking, DockSpace / ShowExampleAppDockSpace()
 // [SECTION] Example App: Documents Handling / ShowExampleAppDocuments()
 
 */
@@ -99,6 +100,7 @@ Index of this file:
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 // Forward Declarations
+static void ShowExampleAppDockSpace(bool* p_open);
 static void ShowExampleAppDocuments(bool* p_open);
 static void ShowExampleAppMainMenuBar();
 static void ShowExampleAppConsole(bool* p_open);
@@ -159,6 +161,7 @@ void ImGui::ShowUserGuide()
 void ImGui::ShowDemoWindow(bool* p_open)
 {
     // Examples Apps (accessible from the "Examples" menu)
+    static bool show_app_dockspace = false;
     static bool show_app_documents = false;
     static bool show_app_main_menu_bar = false;
     static bool show_app_console = false;
@@ -172,7 +175,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool show_app_window_titles = false;
     static bool show_app_custom_rendering = false;
 
-    if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);
+    if (show_app_dockspace)           ShowExampleAppDockSpace(&show_app_dockspace);     // Process the Docking app first, as explicit DockSpace() needs to be submitted early (read comments near the DockSpace function)
+    if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);     // Process the Document app next, as it may also use a DockSpace()
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_console)             ShowExampleAppConsole(&show_app_console);
     if (show_app_log)                 ShowExampleAppLog(&show_app_log);
@@ -211,6 +215,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_collapse = false;
     static bool no_close = false;
     static bool no_nav = false;
+    static bool no_docking = false;
 
     ImGuiWindowFlags window_flags = 0;
     if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
@@ -220,6 +225,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
     if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
     if (no_nav)       window_flags |= ImGuiWindowFlags_NoNav;
+    if (no_docking)   window_flags |= ImGuiWindowFlags_NoDocking;
     if (no_close)     p_open = NULL; // Don't pass our bool* to Begin
 
     // We specify a default position/size in case there's no data in the .ini file. Typically this isn't required! We only do it to make the Demo applications a little more welcoming.
@@ -260,6 +266,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::MenuItem("Simple overlay", NULL, &show_app_simple_overlay);
             ImGui::MenuItem("Manipulating window titles", NULL, &show_app_window_titles);
             ImGui::MenuItem("Custom rendering", NULL, &show_app_custom_rendering);
+            ImGui::MenuItem("Docking", NULL, &show_app_dockspace);
             ImGui::MenuItem("Documents", NULL, &show_app_documents);
             ImGui::EndMenu();
         }
@@ -312,6 +319,12 @@ void ImGui::ShowDemoWindow(bool* p_open)
             }
             ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
             ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
+
+            ImGui::CheckboxFlags("io.ConfigFlags: DockingEnable", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_DockingEnable);
+            ImGui::SameLine(); ShowHelpMarker("Use SHIFT to dock window into another (or without SHIFT if io.ConfigDockingWithKeyMod == false)");
+
+            ImGui::Checkbox("io.ConfigDockingWithKeyMod", &io.ConfigDockingWithKeyMod);
+            ImGui::SameLine(); ShowHelpMarker("Enable docking when holding Shift only (allows to drop in wider space, reduce visual noise)");
             ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
             ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");
             ImGui::Checkbox("io.ConfigResizeWindowsFromEdges [beta]", &io.ConfigResizeWindowsFromEdges);
@@ -364,7 +377,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Checkbox("No resize", &no_resize); ImGui::SameLine(300);
         ImGui::Checkbox("No collapse", &no_collapse);
         ImGui::Checkbox("No close", &no_close); ImGui::SameLine(150);
-        ImGui::Checkbox("No nav", &no_nav);
+        ImGui::Checkbox("No nav", &no_nav); ImGui::SameLine(300);
+        ImGui::Checkbox("No docking", &no_docking);
     }
 
     if (ImGui::CollapsingHeader("Widgets"))
@@ -1463,6 +1477,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
             // Calling IsItemHovered() after begin returns the hovered status of the title bar. 
             // This is useful in particular if you want to create a context menu (with BeginPopupContextItem) associated to the title bar of a window.
+            // This will also work when docked into a Tab (the Tab replace the Title Bar and guarantee the same properties).
             static bool test_window = false;
             ImGui::Checkbox("Hovered/Active tests after Begin() for title bar testing", &test_window);
             if (test_window)
@@ -1473,6 +1488,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     if (ImGui::MenuItem("Close")) { test_window = false; }
                     ImGui::EndPopup();
                 }
+                //if (IsItemHovered() || IsItemActive()) { printf("[%05d] Hovered %d Active %d\n", GetFrameCount(), IsItemHovered(), IsItemActive()); } // [DEBUG]
                 ImGui::Text(
                     "IsItemHovered() after begin = %d (== is title bar hovered)\n"
                     "IsItemActive() after begin = %d (== is window being clicked/moved)\n",
@@ -3459,6 +3475,8 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
             "Custom: Always Square",
             "Custom: Fixed Steps (100)",
         };
+        if (ImGui::IsWindowDocked())
+            ImGui::Text("Warning: Sizing Constraints won't work if the window is docked!");
         if (ImGui::Button("200x200")) { ImGui::SetWindowSize(ImVec2(200, 200)); } ImGui::SameLine();
         if (ImGui::Button("500x500")) { ImGui::SetWindowSize(ImVec2(500, 500)); } ImGui::SameLine();
         if (ImGui::Button("800x200")) { ImGui::SetWindowSize(ImVec2(800, 200)); }
@@ -3487,7 +3505,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
     if (corner != -1)
         ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, window_pos_pivot);
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
-    if (ImGui::Begin("Example: Simple Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+    if (ImGui::Begin("Example: Simple Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
     {
         ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
         ImGui::Separator();
@@ -3652,6 +3670,72 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
+// [SECTION] Example App: Docking, DockSpace / ShowExampleAppDockSpace()
+//-----------------------------------------------------------------------------
+
+// Demonstrate using DockSpace() to create an explicit docking spacing within an existing window.
+// Note that you already dock windows into each others _without_ a DockSpace() by just holding SHIFT when moving a window.
+// DockSpace() is only useful to construct to a central location for your application.
+void ShowExampleAppDockSpace(bool* p_open)
+{
+    static bool opt_fullscreen_persistant = true;
+    bool opt_fullscreen = opt_fullscreen_persistant;
+
+    // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into.
+    // Because 1) it would be confusing to have two docking targets within each others.
+    //     and 2) we want our main DockSpace to always be visible (never hidden within a tab bar): if the DockSpace disappear its child windows will be orphaned.
+    ImGuiWindowFlags flags = ImGuiWindowFlags_MenuBar;
+    flags |= ImGuiWindowFlags_NoDocking;
+    if (opt_fullscreen)
+    {
+        ImVec2 viewport_pos = ImVec2(0.0f, 0.0f);
+        ImVec2 viewport_size = ImGui::GetIO().DisplaySize;
+        ImGui::SetNextWindowPos(viewport_pos);
+        ImGui::SetNextWindowSize(viewport_size);
+        ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+        flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
+        flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
+    }
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::Begin("Docking Documents Demo", p_open, flags);
+    ImGui::PopStyleVar();
+
+    if (ImGui::BeginMenuBar())
+    {
+        if (ImGui::BeginMenu("Docking"))
+        {
+            if (ImGui::MenuItem("Remove DockSpace", NULL, false, p_open != NULL))
+                *p_open = false;
+            ImGui::EndMenu();
+        }
+        // Disabling fullscreen would allow the window to be moved to the front of other windows, 
+        // which we can't undo at the moment without finer window depth/z control.
+        /*if (ImGui::BeginMenu("Options"))
+        {
+            ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
+            ImGui::EndMenu();
+        }*/
+        ShowHelpMarker(
+            "You can _always_ dock _any_ window into another by holding the SHIFT key while moving a window. Try it now!" "\n"
+            "This demo app has nothing to do with it!" "\n\n"
+            "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to specify a docking spot _within_ another window. This is useful so you can decorate your main application window (e.g. with a menu bar)." "\n\n"
+            "ImGui::DockSpace() comes with one hard constraint: it needs to be submitted _before_ any window which may be docked into it. Therefore, if you use a dock spot as the central point of your application, you'll probably want it to be part of the very first window you are submitting to imgui every frame." "\n\n"
+            "(NB: because of this constraint, the implicit \"Debug\" window can not be docked into an explicit DockSpace(), because that window is submitted as part of the NewFrame() call. An easy workaround is that you can create your own implicit \"Debug##2\" window after calling DockSpace() and leave it in the window stack for anyone to use.)"
+        );
+
+        ImGui::EndMenuBar();
+    }
+
+    //ImGui::PushStyleColor(ImGuiCol_DockingBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+    ImGui::DockSpace("##MyCentralDockSpace");
+    //ImGui::PopStyleColor();
+
+    ImGui::End();
+    if (opt_fullscreen)
+        ImGui::PopStyleVar();
+}
+
+//-----------------------------------------------------------------------------
 // [SECTION] Example App: Documents Handling / ShowExampleAppDocuments()
 //-----------------------------------------------------------------------------
 
@@ -3754,7 +3838,8 @@ void ShowExampleAppDocuments(bool* p_open)
     enum Target
     {
         Target_None,
-        Target_Tab      // Create document as a local tab into a local tab bar
+        Target_Tab,     // Create document as a local tab into a local tab bar
+        Target_Window   // Create document as a regular window
     };
     static Target opt_target = Target_Tab;
     static bool   opt_reorderable = true;
@@ -3802,9 +3887,11 @@ void ShowExampleAppDocuments(bool* p_open)
         ImGui::PopID();
     }
     ImGui::PushItemWidth(ImGui::GetFontSize() * 12);
-    ImGui::Combo("Output", (int*)&opt_target, "None\0TabBar+Tabs\0");
+    ImGui::Combo("Output", (int*)&opt_target, "None\0TabBar+Tabs\0DockSpace+Window\0");
     ImGui::PopItemWidth();
+    bool redock_all = false;
     if (opt_target == Target_Tab)    { ImGui::SameLine(); ImGui::Checkbox("Reorderable Tabs", &opt_reorderable); }
+    if (opt_target == Target_Window) { ImGui::SameLine(); redock_all = ImGui::Button("Redock all"); }
 
     ImGui::Separator();
 
@@ -3847,6 +3934,42 @@ void ShowExampleAppDocuments(bool* p_open)
         }
 
         ImGui::EndTabBar();
+    }
+    else if (opt_target == Target_Window)
+    {
+        NotifyOfDocumentsClosedElsewhere(app);
+
+        // Create a DockSpace where any window can be docked
+        ImGui::DockSpace("##DockSpace");
+        ImGuiID dockspace_id = ImGui::GetID("##DockSpace");
+
+        // Create Windows
+        for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+        {
+            MyDocument* doc = &app.Documents[doc_n];
+            if (!doc->Open)
+                continue;
+
+            // FIXME-DOCK: SetNextWindowDock()
+            //ImGuiID default_dock_id = GetDockspaceRootDocumentDockID();
+            //ImGuiID default_dock_id = GetDockspacePreferedDocumentDockID();
+            ImGui::SetNextWindowDock(dockspace_id, redock_all ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
+            ImGuiWindowFlags window_flags = (doc->Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
+            bool visible = ImGui::Begin(doc->Name, &doc->Open, window_flags);
+
+            // Cancel attempt to close when unsaved add to save queue so we can display a popup.
+            if (!doc->Open && doc->Dirty)
+            {
+                doc->Open = true;
+                doc->DoQueueClose();
+            }
+
+            MyDocument::DisplayContextMenu(doc);
+            if (visible)
+                MyDocument::DisplayContents(doc);
+
+            ImGui::End();
+        }
     }
 
     // Update closing queue
