@@ -1,4 +1,4 @@
-// dear imgui, v1.65 WIP
+// dear imgui, v1.65
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -76,7 +76,7 @@ namespace ImGuiStb
 #define STB_TEXTEDIT_STRING             ImGuiInputTextState
 #define STB_TEXTEDIT_CHARTYPE           ImWchar
 #define STB_TEXTEDIT_GETWIDTH_NEWLINE   -1.0f
-#include "stb_textedit.h"
+#include "imstb_textedit.h"
 
 } // namespace ImGuiStb
 

@@ -28,16 +28,23 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+
 -----------------------------------------------------------------------
- VERSION 1.65 (In Progress)
+ VERSION 1.65 (Released 2018-09-06)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
-- Renamed io.OptCursorBlink/io.ConfigCursorBlink to io.ConfigInputTextCursorBlink. (#1427)
+- Renamed stb_truetype.h to imstb_truetype.h, stb_textedit.h to imstb_textedit.h, and
+  stb_rect_pack.h to imstb_rectpack.h. If you were conveniently using the imgui copy of those
+  STB headers in your project, you will have to update your include paths. (#1718, #2036)
+  The reason for this change is to avoid conflicts for projects that may also be importing
+  their own copy of the STB libraries. Note that imgui's copy of stb_textedit.h is modified.
+- Renamed io.ConfigCursorBlink to io.ConfigInputTextCursorBlink. (#1427)
 
 Other Changes:
 
+- This is a minor release following the 1.64 refactor, with a little more shuffling of code.
 - Clarified and improved the source code sectioning in all files (easier to search or browse sections).
 - Nav: Removed the [Beta] tag from various descriptions of the gamepad/keyboard navigation system.
   Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
