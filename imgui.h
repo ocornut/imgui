@@ -1,4 +1,4 @@
-// dear imgui, v1.65
+// dear imgui, v1.66 WIP
 // (headers)
 
 // See imgui.cpp file for documentation.
@@ -23,8 +23,8 @@
 
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY00 then bounced up to XYY01 when release tagging happens)
-#define IMGUI_VERSION               "1.65"
-#define IMGUI_VERSION_NUM           16501
+#define IMGUI_VERSION               "1.66 WIP"
+#define IMGUI_VERSION_NUM           16600
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
