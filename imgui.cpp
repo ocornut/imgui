@@ -67,6 +67,7 @@ CODE
 // [SECTION] KEYBOARD/GAMEPAD NAVIGATION
 // [SECTION] COLUMNS
 // [SECTION] DRAG AND DROP
+// [SECTION] DOCKING
 // [SECTION] LOGGING/CAPTURING
 // [SECTION] SETTINGS
 // [SECTION] PLATFORM DEPENDENT HELPERS
@@ -8279,6 +8280,90 @@ void ImGui::EndDragDropTarget()
     IM_ASSERT(g.DragDropWithinSourceOrTarget);
     g.DragDropWithinSourceOrTarget = false;
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] DOCKING
+//-----------------------------------------------------------------------------
+// Docking: Internal Types
+// Docking: Forward Declarations
+// Docking: ImGuiDockContext
+// Docking: ImGuiDockContext Docking/Undocking functions
+// Docking: ImGuiDockNode
+// Docking: ImGuiDockNode Tree manipulation functions
+// Docking: Public Functions (Dockspace, SetWindowDock)
+// Docking: Begin/End Functions (called from Begin/End)
+// Docking: Settings
+//-----------------------------------------------------------------------------
+// TODO:
+// A~ document root node resizing behavior incorrect
+// A~ document root node retrieval of ID ?
+// B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
+// A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal tab bar
+// B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
+// B- fix/disable auto-resize grip on split host nodes
+// B~ tidy up tab list popup buttons (see old ImGuiTabBarFlags_NoTabListPopupButton code)
+// B- DockSpace() border issues
+// B- implicit per-viewport dockspace to dock to
+// B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
+// B- tab bar: make selected tab always shows its full title?
+// B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode?
+// B- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
+// B- nav: design interactions so nav controls can dock/undock
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// Docking: Internal Types
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: Forward Declarations
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: ImGuiDockContext
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: ImGuiDockContext Docking/Undocking functions
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: ImGuiDockNode
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: ImGuiDockNode Tree manipulation functions
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: Public Functions (SetWindowDock, Dockspace)
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: Begin/End Functions (called from Begin/End)
+//-----------------------------------------------------------------------------
+
+
+
+//-----------------------------------------------------------------------------
+// Docking: Settings
+//-----------------------------------------------------------------------------
+
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] LOGGING/CAPTURING
