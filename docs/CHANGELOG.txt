@@ -34,7 +34,12 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
-- Renamed io.OptCursorBlink/io.ConfigCursorBlink to io.ConfigInputTextCursorBlink. (#1427)
+- Renamed stb_truetype.h to imstb_truetype.h, stb_textedit.h to imstb_textedit.h, and
+  stb_rect_pack.h to imstb_rectpack.h. If you were conveniently using the imgui copy of those
+  STB headers in your project, you will have to update your include paths. (#1718, #2036)
+  The reason for this change is to avoid conflicts for projects that may also be importing
+  their own copy of the STB libraries. Note that imgui's copy of stb_textedit.h is modified.
+- Renamed io.ConfigCursorBlink to io.ConfigInputTextCursorBlink. (#1427)
 
 Other Changes:
 

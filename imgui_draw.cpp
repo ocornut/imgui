@@ -119,7 +119,7 @@ namespace IMGUI_STB_NAMESPACE
 #ifdef IMGUI_STB_RECT_PACK_FILENAME
 #include IMGUI_STB_RECT_PACK_FILENAME
 #else
-#include "stb_rect_pack.h"
+#include "imstb_rectpack.h"
 #endif
 #endif
 
@@ -142,7 +142,7 @@ namespace IMGUI_STB_NAMESPACE
 #ifdef IMGUI_STB_TRUETYPE_FILENAME
 #include IMGUI_STB_TRUETYPE_FILENAME
 #else
-#include "stb_truetype.h"
+#include "imstb_truetype.h"
 #endif
 #endif
 
