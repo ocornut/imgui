@@ -1257,6 +1257,13 @@ void ImStrTrimBlanks(char* buf)
     buf[p - p_start] = 0;                   // Zero terminate
 }
 
+const char* ImStrSkipBlank(const char* str)
+{
+    while (str[0] == ' ' || str[0] == '\t')
+        str++;
+    return str;
+}
+
 // A) MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size).
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 // B) When buf==NULL vsnprintf() will return the output size.
@@ -3234,6 +3241,7 @@ void ImGui::NewFrame()
     {
         ImGuiWindow* window = g.Windows[i];
         window->WasActive = window->Active;
+        window->BeginCount = 0;
         window->Active = false;
         window->WriteAccessed = false;
     }
@@ -3266,7 +3274,7 @@ void ImGui::Initialize(ImGuiContext* context)
     ini_handler.ReadOpenFn = SettingsHandlerWindow_ReadOpen;
     ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
-    g.SettingsHandlers.push_front(ini_handler);
+    g.SettingsHandlers.push_back(ini_handler);
 
     g.Initialized = true;
 }
@@ -4527,9 +4535,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
     if (first_begin_of_the_frame)
+    {
         window->Flags = (ImGuiWindowFlags)flags;
+        window->BeginOrderWithinParent = 0;
+        window->BeginOrderWithinContext = g.WindowsActiveCount++;
+    }
     else
+    {
         flags = window->Flags;
+    }
 
     // Parent window is latched only on the first call to Begin() of the frame, so further append-calls can be done from a different window stack
     ImGuiWindow* parent_window_in_stack = g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
@@ -4616,9 +4630,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         UpdateWindowParentAndRootLinks(window, flags, parent_window);
 
         window->Active = true;
-        window->BeginOrderWithinParent = 0;
-        window->BeginOrderWithinContext = g.WindowsActiveCount++;
-        window->BeginCount = 0;
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
@@ -8788,6 +8799,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::End();
         return;
     }
+
     static bool show_draw_cmd_clip_rects = true;
     static bool show_window_begin_order = false;
     ImGuiIO& io = ImGui::GetIO();
@@ -8798,7 +8810,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     ImGui::Text("%d allocations", io.MetricsActiveAllocations);
     ImGui::Checkbox("Show clipping rectangles when hovering draw commands", &show_draw_cmd_clip_rects);
     ImGui::Checkbox("Ctrl shows window begin order", &show_window_begin_order);
-
     ImGui::Separator();
 
     struct Funcs
