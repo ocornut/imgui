@@ -1093,7 +1093,7 @@ ImGuiIO::ImGuiIO()
     ConfigMacOSXBehaviors = false;
 #endif
     ConfigInputTextCursorBlink = true;
-    ConfigResizeWindowsFromEdges = false;
+    ConfigResizeWindowsFromEdges = true;
 
     // Settings (User Functions)
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
@@ -9468,16 +9468,20 @@ void ImGui::EndDragDropTarget()
 // TODO:
 // A~ document root node resizing behavior incorrect
 // A~ document root node retrieval of ID ?
+// A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
 // B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
 // A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal tab bar
 // B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
 // B- fix/disable auto-resize grip on split host nodes
 // B~ tidy up tab list popup buttons (see old ImGuiTabBarFlags_NoTabListPopupButton code)
 // B- DockSpace() border issues
+// B- inconsistent clipping/border 1-pixel issue (#2)
+// B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
 // B- implicit per-viewport dockspace to dock to
 // B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
+// B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
 // B- tab bar: make selected tab always shows its full title?
-// B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode?
+// B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
 // B- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
 // B- nav: design interactions so nav controls can dock/undock
 //-----------------------------------------------------------------------------
