@@ -33,6 +33,11 @@ HOW TO UPDATE?
  VERSION 1.66 (In Progress)
 -----------------------------------------------------------------------
 
+Other Changes:
+
+- Fixed calling DestroyContext() always saving .ini data with the current context instead
+  of the supplied context pointer. (#2066)
+  
 
 -----------------------------------------------------------------------
  VERSION 1.65 (Released 2018-09-06)
