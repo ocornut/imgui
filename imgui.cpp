@@ -4187,7 +4187,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             if (ImLengthSqr(settings->Size) > 0.00001f)
                 size = ImFloor(settings->Size);
         }
-    window->Size = window->SizeFull = window->SizeFullAtLastBegin = size;
+    window->Size = window->SizeFull = window->SizeFullAtLastBegin = ImFloor(size);
     window->DC.CursorMaxPos = window->Pos; // So first call to CalcSizeContents() doesn't return crazy values
 
     if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
@@ -5659,7 +5659,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     if (size.x > 0.0f)
     {
         window->AutoFitFramesX = 0;
-        window->SizeFull.x = size.x;
+        window->SizeFull.x = ImFloor(size.x);
     }
     else
     {
@@ -5669,7 +5669,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     if (size.y > 0.0f)
     {
         window->AutoFitFramesY = 0;
-        window->SizeFull.y = size.y;
+        window->SizeFull.y = ImFloor(size.y);
     }
     else
     {
