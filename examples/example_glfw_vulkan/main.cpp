@@ -23,6 +23,7 @@
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
+static uint32_t						g_MinImageCount = 2;
 static VkAllocationCallbacks*       g_Allocator = NULL;
 static VkInstance                   g_Instance = VK_NULL_HANDLE;
 static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
@@ -211,8 +212,8 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
     //printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
-    ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
-    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, width, height);
+    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, width, height, g_MinImageCount);
+	ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
 }
 
 static void CleanupVulkan()
@@ -373,6 +374,7 @@ int main(int, char**)
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
     init_info.CheckVkResultFn = check_vk_result;
+	init_info.QueuedFrames = wd->BackBufferCount;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
     // Load Fonts
@@ -433,11 +435,14 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
-        if (g_ResizeWanted)
-        {
-            ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, g_ResizeWidth, g_ResizeHeight);
-            g_ResizeWanted = false;
-        }
+		if (g_ResizeWanted)
+		{
+			ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, g_ResizeWidth, g_ResizeHeight, g_MinImageCount);
+			ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, &g_WindowData, g_Allocator);
+			ImGui_ImplVulkan_SetQueuedFramesCount(g_WindowData.BackBufferCount);
+			g_WindowData.FrameIndex = 0;
+			g_ResizeWanted = false;
+		}
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
@@ -478,6 +483,28 @@ int main(int, char**)
             ImGui::Text("Hello from another window!");
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
+
+			if (ImGui::Button("Increase"))
+			{
+				g_MinImageCount++;
+				g_ResizeWanted = true;
+			}
+
+			ImGui::SameLine();
+			if (ImGui::Button("Decrease"))
+			{
+				if (g_MinImageCount != 2)
+				{
+					g_MinImageCount--;
+					g_ResizeWanted = true;
+				}
+			}
+
+			ImGui::SameLine();
+			ImGui::Text("Back Buffers: %i", g_MinImageCount);
+
+			ImGui::Text("Frame Index %i", wd->FrameIndex);
+
             ImGui::End();
         }
 
