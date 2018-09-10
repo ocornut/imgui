@@ -9527,23 +9527,32 @@ void ImGui::EndDragDropTarget()
 
 static float IMGUI_DOCK_SPLITTER_SIZE = 4.0f;
 
+enum ImGuiDockRequestType
+{
+    ImGuiDockRequestType_None = 0,
+    ImGuiDockRequestType_Dock,
+    ImGuiDockRequestType_Undock
+};
+
 struct ImGuiDockRequest
 {
-    ImGuiWindow*    WindowDockTarget;           // Destination/Target window to dock into (may be a loose window or a DockNode)
-    ImGuiDockNode*  WindowDockTargetNode;
-    ImGuiWindow*    WindowDockPayload;          // Source/Payload window to dock (may be a loose window or a DockNode)
-    ImGuiDir        WindowDockSplitDir;
-    float           WindowDockSplitRatio;
-    bool            WindowDockSplitOuter;
-    ImGuiWindow*    WindowUndock;
+    ImGuiDockRequestType    Type;
+    ImGuiWindow*            DockTarget;           // Destination/Target window to dock into (may be a loose window or a DockNode)
+    ImGuiDockNode*          DockTargetNode;
+    ImGuiWindow*            DockPayload;          // Source/Payload window to dock (may be a loose window or a DockNode)
+    ImGuiDir                DockSplitDir;
+    float                   DockSplitRatio;
+    bool                    DockSplitOuter;
+    ImGuiWindow*            UndockTarget;
 
     ImGuiDockRequest()
     {
-        WindowDockTarget = WindowDockPayload = WindowUndock = NULL;
-        WindowDockTargetNode = NULL;
-        WindowDockSplitDir = ImGuiDir_None;
-        WindowDockSplitRatio = 0.5f;
-        WindowDockSplitOuter = false;
+        Type = ImGuiDockRequestType_None;
+        DockTarget = DockPayload = UndockTarget = NULL;
+        DockTargetNode = NULL;
+        DockSplitDir = ImGuiDir_None;
+        DockSplitRatio = 0.5f;
+        DockSplitOuter = false;
     }
 };
 
@@ -9669,7 +9678,10 @@ void ImGui::DockContextShutdown(ImGuiContext* imgui_context)
     ImGuiDockContext* ctx = g.DockContext;
     for (int n = 0; n < ctx->Nodes.Data.Size; n++)
         if (ImGuiDockNode* node = (ImGuiDockNode*)ctx->Nodes.Data[n].val_p)
+        {
+            node->ChildNodes[0] = node->ChildNodes[1] = NULL;
             IM_DELETE(node);
+        }
     IM_DELETE(g.DockContext);
     g.DockContext = NULL;
 }
@@ -9712,8 +9724,8 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiDockContext* ctx)
 
     // Process Undocking requests (called from NewFrame before UpdateMovingWindow)
     for (int n = 0; n < ctx->Requests.Size; n++)
-        if (ctx->Requests[n].WindowUndock)
-            DockContextProcessUndock(ctx, ctx->Requests[n].WindowUndock);
+        if (ctx->Requests[n].Type == ImGuiDockRequestType_Undock)
+            DockContextProcessUndock(ctx, ctx->Requests[n].UndockTarget);
 }
 
 void ImGui::DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx)
@@ -9724,7 +9736,7 @@ void ImGui::DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx)
 
     // Process Docking requests
     for (int n = 0; n < ctx->Requests.Size; n++)
-        if (ctx->Requests[n].WindowDockTarget)
+        if (ctx->Requests[n].Type == ImGuiDockRequestType_Dock)
             DockContextProcessDock(ctx, &ctx->Requests[n]);
     ctx->Requests.resize(0);
 
@@ -9893,27 +9905,29 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiDockContext* ctx)
 void ImGui::DockContextQueueDock(ImGuiDockContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer)
 {
     ImGuiDockRequest req;
-    req.WindowDockTarget = target;
-    req.WindowDockTargetNode = target_node;
-    req.WindowDockPayload = payload;
-    req.WindowDockSplitDir = split_dir;
-    req.WindowDockSplitRatio = split_ratio;
-    req.WindowDockSplitOuter = split_outer;
+    req.Type = ImGuiDockRequestType_Dock;
+    req.DockTarget = target;
+    req.DockTargetNode = target_node;
+    req.DockPayload = payload;
+    req.DockSplitDir = split_dir;
+    req.DockSplitRatio = split_ratio;
+    req.DockSplitOuter = split_outer;
     ctx->Requests.push_back(req);
 }
 
 void ImGui::DockContextQueueUndock(ImGuiDockContext* ctx, ImGuiWindow* window)
 {
     ImGuiDockRequest req;
-    req.WindowUndock = window;
+    req.Type = ImGuiDockRequestType_Undock;
+    req.UndockTarget = window;
     ctx->Requests.push_back(req);
 }
 
 void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
 {
-    ImGuiWindow* target_window = req->WindowDockTarget;
-    ImGuiWindow* payload_window = req->WindowDockPayload;
-    ImGuiDockNode* target_node = req->WindowDockTargetNode;
+    ImGuiWindow* target_window = req->DockTarget;
+    ImGuiWindow* payload_window = req->DockPayload;
+    ImGuiDockNode* target_node = req->DockTargetNode;
 
     // Decide which Tab will be selected at the end of the operation (do it before the target/payload swap)
     ImGuiID next_selected_id = 0;
@@ -9941,7 +9955,7 @@ void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
         }
     }
 
-    ImGuiDir split_dir = req->WindowDockSplitDir;
+    ImGuiDir split_dir = req->DockSplitDir;
     if (split_dir == ImGuiDir_None)
     {
         target_node->LastFocusedNodeID = target_node ? target_node->ID : 0;
@@ -9951,7 +9965,7 @@ void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
         // Split into one, one side will be our payload node unless we are dropping a loose window
         const ImGuiAxis split_axis = (split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Right) ? ImGuiAxis_X : ImGuiAxis_Y;
         const int split_inheritor_child_idx = (split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 1 : 0;
-        const float split_ratio = req->WindowDockSplitRatio;
+        const float split_ratio = req->DockSplitRatio;
         if (payload_node)
             DockNodeTreeSplit(ctx, target_node, split_axis, split_inheritor_child_idx, split_ratio, payload_node);
         else
@@ -10056,6 +10070,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 
 ImGuiDockNode::~ImGuiDockNode()
 {
+    IM_ASSERT(ChildNodes[0] == NULL && ChildNodes[1] == NULL);
     IM_DELETE(TabBar);
     TabBar = NULL;
 }
@@ -11267,6 +11282,9 @@ void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockFlags
     node->Flags = dock_flags;
     node->UserTypeIdFilter = user_type_filter;
     node->IsExplicitRoot = true;
+
+    if (node->LastFrameActive == g.FrameCount)
+        return;
 
     const ImVec2 content_avail = GetContentRegionAvail();
     ImVec2 size = ImFloor(size_arg);
