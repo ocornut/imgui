@@ -704,6 +704,7 @@ struct ImGuiNextWindowData
     float                   BgAlphaVal;
     ImGuiID                 ViewportId;
     ImGuiID                 DockId;
+    ImGuiID                 UserTypeId;
     ImVec2                  MenuBarOffsetMinVal;                // This is not exposed publicly, so we don't clear it.
 
     ImGuiNextWindowData()
@@ -716,13 +717,14 @@ struct ImGuiNextWindowData
         SizeCallback = NULL;
         SizeCallbackUserData = NULL;
         BgAlphaVal = FLT_MAX;
-        ViewportId = DockId = 0;
+        ViewportId = DockId = UserTypeId = 0;
         MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
     }
 
     void    Clear()
     {
         PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = ViewportCond = DockCond = 0;
+        UserTypeId = 0;
     }
 };
 
@@ -740,6 +742,8 @@ struct ImGuiTabBarSortItem
 struct ImGuiDockNode
 {
     ImGuiID                 ID;
+    ImGuiID                 UserTypeIdFilter;
+    ImGuiDockFlags          Flags;
     ImGuiDockNode*          ParentNode;
     ImGuiDockNode*          ChildNodes[2];
     ImVector<ImGuiWindow*>  Windows;                // Note: unordered list! Iterate TabBar->Tabs for user-order.
@@ -1200,6 +1204,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiCond               SetWindowDockAllowFlags;            // store acceptable condition flags for SetNextWindowDock() use.
     ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
+    ImGuiID                 UserTypeId;                         // user value set with SetNextWindowUserType(const char*)
 
     ImGuiWindowTempData     DC;                                 // Temporary per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the "DC" variable name.
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
@@ -1457,8 +1462,8 @@ namespace ImGui
     IMGUI_API void          DockContextShutdown(ImGuiContext* imgui_context);
     IMGUI_API void          DockContextOnLoadSettings();
     IMGUI_API void          DockContextRebuild(ImGuiDockContext* ctx);
-    IMGUI_API void          DockContextUpdateUndocking(ImGuiDockContext* ctx);
-    IMGUI_API void          DockContextUpdateDocking(ImGuiDockContext* ctx);
+    IMGUI_API void          DockContextNewFrameUpdateUndocking(ImGuiDockContext* ctx);
+    IMGUI_API void          DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx);
     IMGUI_API void          DockContextQueueUndock(ImGuiDockContext* ctx, ImGuiWindow* window);
     IMGUI_API void          BeginDocked(ImGuiWindow* window, bool* p_open);
     IMGUI_API void          BeginAsDockableDragDropSource(ImGuiWindow* window);

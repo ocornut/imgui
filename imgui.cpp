@@ -2371,6 +2371,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     HiddenFramesRegular = HiddenFramesForResize = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = SetWindowDockAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
+    UserTypeId = 0;
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
@@ -3350,7 +3351,7 @@ void ImGui::NewFrame()
 
     // Undocking
     // (needs to be before UpdateMovingWindow so the window is already offset and following the mouse on the detaching frame)
-    DockContextUpdateUndocking(g.DockContext);
+    DockContextNewFrameUpdateUndocking(g.DockContext);
 
     // Find hovered window
     // (needs to be before UpdateMovingWindow so we fill HoveredWindowUnderMovingWindow on the mouse release frame)
@@ -3404,7 +3405,7 @@ void ImGui::NewFrame()
     ClosePopupsOverWindow(g.NavWindow);
 
     // Docking
-    DockContextUpdateDocking(g.DockContext);
+    DockContextNewFrameUpdateDocking(g.DockContext);
 
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -4954,6 +4955,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
+    window->UserTypeId = g.NextWindowData.UserTypeId;
     if (g.NextWindowData.CollapsedCond)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.FocusCond)
@@ -6318,6 +6320,12 @@ void ImGui::SetNextWindowDock(ImGuiID id, ImGuiCond cond)
     ImGuiContext& g = *GImGui;
     g.NextWindowData.DockCond = cond ? cond : ImGuiCond_Always;
     g.NextWindowData.DockId = id;
+}
+
+void ImGui::SetNextWindowUserType(ImGuiID user_type)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.UserTypeId = user_type;
 }
 
 // In window space (not screen space!)
@@ -9580,7 +9588,6 @@ namespace ImGui
     static void             DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window, ImGuiID save_dock_id);
     static void             DockNodeHideHostWindow(ImGuiDockNode* node);
     static void             DockNodeUpdate(ImGuiDockNode* node);
-    static ImGuiDockNode*   DockNodeUpdateFindOnlyNodeWithWindows(ImGuiDockNode* node);
     static void             DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
     static void             DockNodeUpdateVisibleFlag(ImGuiDockNode* node);
@@ -9656,7 +9663,7 @@ void ImGui::DockContextRebuild(ImGuiDockContext* ctx)
     DockContextBuildAddWindowsToNodes(ctx);
 }
 
-void ImGui::DockContextUpdateUndocking(ImGuiDockContext* ctx)
+void ImGui::DockContextNewFrameUpdateUndocking(ImGuiDockContext* ctx)
 {
     ImGuiContext& g = *GImGui;
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
@@ -9682,7 +9689,7 @@ void ImGui::DockContextUpdateUndocking(ImGuiDockContext* ctx)
             DockContextProcessUndock(ctx, ctx->Requests[n].WindowUndock);
 }
 
-void ImGui::DockContextUpdateDocking(ImGuiDockContext* ctx)
+void ImGui::DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx)
 {
     ImGuiContext& g = *GImGui;
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
@@ -10000,6 +10007,8 @@ void ImGui::DockContextProcessUndock(ImGuiDockContext* ctx, ImGuiWindow* window)
 ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 {
     ID = id;
+    UserTypeIdFilter = 0;
+    Flags = 0;
     ParentNode = ChildNodes[0] = ChildNodes[1] = NULL;
     TabBar = NULL;
     SplitAxis = ImGuiAxis_None;
@@ -10197,28 +10206,20 @@ static void ImGui::DockNodeHideHostWindow(ImGuiDockNode* node)
     }
 }
 
-static void DockNodeUpdateFindOnlyNodeWithWindowsRec(ImGuiDockNode* node, int* p_count, ImGuiDockNode** p_only_node_with_windows)
+static void DockNodeUpdateFindOnlyNodeWithWindowsRec(ImGuiDockNode* node, int* p_count, ImGuiDockNode** p_first_node_with_windows)
 {
     if (node->Windows.Size > 0)
     {
-        if (*p_only_node_with_windows == NULL)
-            *p_only_node_with_windows = node;
+        if (*p_first_node_with_windows == NULL)
+            *p_first_node_with_windows = node;
         (*p_count)++;
     }
     if (*p_count > 1)
         return;
     if (node->ChildNodes[0])
-        DockNodeUpdateFindOnlyNodeWithWindowsRec(node->ChildNodes[0], p_count, p_only_node_with_windows);
+        DockNodeUpdateFindOnlyNodeWithWindowsRec(node->ChildNodes[0], p_count, p_first_node_with_windows);
     if (node->ChildNodes[1])
-        DockNodeUpdateFindOnlyNodeWithWindowsRec(node->ChildNodes[1], p_count, p_only_node_with_windows);
-}
-
-static ImGuiDockNode* ImGui::DockNodeUpdateFindOnlyNodeWithWindows(ImGuiDockNode* node)
-{
-    int count = 0;
-    ImGuiDockNode* only_node_with_windows = NULL;
-    DockNodeUpdateFindOnlyNodeWithWindowsRec(node, &count, &only_node_with_windows);
-    return (count == 1 ? only_node_with_windows : NULL);
+        DockNodeUpdateFindOnlyNodeWithWindowsRec(node->ChildNodes[1], p_count, p_first_node_with_windows);
 }
 
 static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node)
@@ -10280,8 +10281,19 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     if (node->IsRootNode())
     {
         DockNodeUpdateVisibleFlagAndInactiveChilds(node);
-        ImGuiDockNode* only_node_with_windows = node->IsExplicitRoot ? NULL : DockNodeUpdateFindOnlyNodeWithWindows(node);
-        node->OnlyNodeWithWindows = only_node_with_windows;
+
+        // Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar, FIXME-DOCK: Not done yet!)
+        if (!node->IsExplicitRoot)
+        {
+            int count = 0;
+            ImGuiDockNode* first_node_with_windows = NULL;
+            DockNodeUpdateFindOnlyNodeWithWindowsRec(node, &count, &first_node_with_windows);
+            node->OnlyNodeWithWindows = (count == 1 ? first_node_with_windows : NULL);
+
+            // Copy the user type from _any_ of our window so it can be used for proper dock filtering.
+            if (first_node_with_windows)
+                node->UserTypeIdFilter = first_node_with_windows->Windows[0]->UserTypeId;
+        }
     }
 
     // Early out for standalone floating window that are holding on a DockId (with an invisible dock node)
@@ -10640,6 +10652,11 @@ static bool ImGui::DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* 
         ImGuiWindow* payload = root_payload->DockNodeAsHost ? root_payload->DockNodeAsHost->Windows[payload_n] : root_payload;
         if ((host_window->Flags & ImGuiWindowFlags_DockNodeHost) && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
             continue;
+
+        ImGuiID host_user_type_id = host_window->DockNodeAsHost ? host_window->DockNodeAsHost->UserTypeIdFilter : host_window->UserTypeId;
+        if (payload->UserTypeId != host_user_type_id)
+            return false;
+
         return true;
     }
     return false;
@@ -10756,6 +10773,8 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
+    if (host_node && (host_node->Flags & ImGuiDockFlags_NoSplit))
+        data->IsSidesAvailable = false;
     if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsDocumentRoot)
         data->IsSidesAvailable = false;
 
@@ -10870,6 +10889,9 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
             }
         }
     }
+
+    if (host_node && (host_node->Flags & ImGuiDockFlags_NoSplit))
+        return;
 
     // Display drop boxes
     const float overlay_rounding = ImMax(3.0f, g.Style.FrameRounding);
@@ -11189,7 +11211,7 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
     window->DockId = dock_id;
 }
 
-void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg)
+void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockFlags dock_flags, ImGuiID user_type_filter)
 {
     ImGuiContext& g = *GImGui;
     ImGuiDockContext* ctx = g.DockContext;
@@ -11204,6 +11226,8 @@ void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg)
         node = DockContextAddNode(ctx, id);
         node->IsDocumentRoot = true;
     }
+    node->Flags = dock_flags;
+    node->UserTypeIdFilter = user_type_filter;
     node->IsExplicitRoot = true;
 
     const ImVec2 content_avail = GetContentRegionAvail();
@@ -11235,6 +11259,7 @@ void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg)
     host_window->DockNodeAsHost = node;
     host_window->ChildId = window->GetID(title);
     node->HostWindow = host_window;
+    node->OnlyNodeWithWindows = NULL;
 
     IM_ASSERT(node->IsRootNode());
     DockNodeUpdate(node);
@@ -11320,7 +11345,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     window->Flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoResize;
     window->Flags &= ~ImGuiWindowFlags_NoTitleBar;      // Clear the NoTitleBar flag in case the user set it: confusingly enough we need a title bar height so we are correctly offset, but it won't be displayed!
 
-                                                        // Position window
+    // Position window
     SetNextWindowPos(dock_node->Pos);
     SetNextWindowSize(dock_node->Size);
     g.NextWindowData.PosUndock = false;
