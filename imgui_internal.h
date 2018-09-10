@@ -1464,6 +1464,7 @@ namespace ImGui
     IMGUI_API void          DockContextRebuild(ImGuiDockContext* ctx);
     IMGUI_API void          DockContextNewFrameUpdateUndocking(ImGuiDockContext* ctx);
     IMGUI_API void          DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx);
+    IMGUI_API void          DockContextEndFrame(ImGuiDockContext* ctx);
     IMGUI_API void          DockContextQueueUndock(ImGuiDockContext* ctx, ImGuiWindow* window);
     IMGUI_API void          BeginDocked(ImGuiWindow* window, bool* p_open);
     IMGUI_API void          BeginAsDockableDragDropSource(ImGuiWindow* window);

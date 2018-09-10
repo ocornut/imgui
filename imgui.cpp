@@ -3395,6 +3395,7 @@ void ImGui::NewFrame()
     }
 
     // Closing the focused window restore focus to the first active root window in descending z-order
+    // FIXME: Because z-order and nav-order are correlated, this will focus the wrong window if we are part of a hierarchy with NoBringToFrontOnFocus flag.
     if (g.NavWindow && !g.NavWindow->WasActive)
         FocusFrontMostActiveWindowIgnoringOne(NULL);
 
@@ -3673,6 +3674,9 @@ void ImGui::EndFrame()
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
+
+    // Docking
+    DockContextEndFrame(g.DockContext);
 
     // Draw modal whitening background on _other_ viewports than the one the modal or target are on
     ImGuiWindow* modal_window = GetFrontMostPopupModal();
@@ -4862,17 +4866,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
-    if (first_begin_of_the_frame)
-    {
-        window->FlagsPreviousFrame = window->Flags;
-        window->Flags = (ImGuiWindowFlags)flags;
-        window->BeginOrderWithinParent = 0;
-        window->BeginOrderWithinContext = g.WindowsActiveCount++;
-    }
-    else
-    {
-        flags = window->Flags;
-    }
 
     // Update the Appearing flag
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
@@ -4886,6 +4879,20 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     window->Appearing = (window_just_activated_by_user || window_just_appearing_after_hidden_for_resize);
     if (window->Appearing)
         SetWindowConditionAllowFlags(window, ImGuiCond_Appearing, true);
+
+    // Update Flags, LastFrameActive, BeginOrderXXX fields
+    if (first_begin_of_the_frame)
+    {
+        window->FlagsPreviousFrame = window->Flags;
+        window->Flags = (ImGuiWindowFlags)flags;
+        window->LastFrameActive = current_frame;
+        window->BeginOrderWithinParent = 0;
+        window->BeginOrderWithinContext = g.WindowsActiveCount++;
+    }
+    else
+    {
+        flags = window->Flags;
+    }
 
     // Docking
     // (NB: during the frame dock nodes are created, it is possible that (window->DockIsActive == false) even though (window->DockNode->Windows.Size > 1)
@@ -4973,7 +4980,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->Active = true;
         window->HasCloseButton = (p_open != NULL);
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
-        window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
 
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
@@ -7611,6 +7617,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if ((flags & ImGuiWindowFlags_DockNodeHost) && (window->Appearing))
     {
+        // Mark so the dock host can be on its own viewport
         window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForRect(window->Rect());
     }
     if (window->ViewportTrySplit && window->ViewportAllowPlatformMonitorExtend < 0)
@@ -9709,6 +9716,10 @@ void ImGui::DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx)
                 DockNodeUpdate(node);
 }
 
+void ImGui::DockContextEndFrame(ImGuiDockContext* ctx)
+{
+    (void)ctx;
+}
 
 static ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiDockContext* ctx, ImGuiID id)
 {
@@ -9950,7 +9961,7 @@ void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
         if (payload_node != NULL)
         {
             // Transfer full payload node (with 1+ child windows or child nodes)
-            // FIXME-DOCKING: Transition persistent DockId for all non-active windows?
+            // FIXME-DOCK: Transition persistent DockId for all non-active windows?
             if (payload_node->IsParent())
             {
                 if (target_node->Windows.Size > 0)
@@ -10277,6 +10288,7 @@ static void ImGui::DockNodeUpdateVisibleFlag(ImGuiDockNode* node)
 static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(node->LastFrameActive != g.FrameCount);
 
     if (node->IsRootNode())
     {
@@ -10641,6 +10653,18 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     }
 }
 
+static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_window)
+{
+    if ((host_window->Flags & ImGuiWindowFlags_DockNodeHost) && host_window->DockNodeAsHost->IsExplicitRoot && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
+        return false;
+
+    ImGuiID host_user_type_id = host_window->DockNodeAsHost ? host_window->DockNodeAsHost->UserTypeIdFilter : host_window->UserTypeId;
+    if (payload->UserTypeId != host_user_type_id)
+        return false;
+
+    return true;
+}
+
 static bool ImGui::DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* root_payload)
 {
     if (root_payload->DockNodeAsHost && root_payload->DockNodeAsHost->IsParent())
@@ -10650,14 +10674,8 @@ static bool ImGui::DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* 
     for (int payload_n = 0; payload_n < payload_count; payload_n++)
     {
         ImGuiWindow* payload = root_payload->DockNodeAsHost ? root_payload->DockNodeAsHost->Windows[payload_n] : root_payload;
-        if ((host_window->Flags & ImGuiWindowFlags_DockNodeHost) && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
-            continue;
-
-        ImGuiID host_user_type_id = host_window->DockNodeAsHost ? host_window->DockNodeAsHost->UserTypeIdFilter : host_window->UserTypeId;
-        if (payload->UserTypeId != host_user_type_id)
-            return false;
-
-        return true;
+        if (DockNodeIsDropAllowedOne(payload, host_window))
+            return true;
     }
     return false;
 }
@@ -10871,7 +10889,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         {
             // Calculate the tab bounding box for each payload window
             ImGuiWindow* payload = root_payload->DockNodeAsHost ? root_payload->DockNodeAsHost->TabBar->Tabs[payload_n].Window : root_payload;
-            if ((host_window->Flags & ImGuiWindowFlags_DockNodeHost) && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
+            if (!DockNodeIsDropAllowedOne(payload, host_window))
                 continue;
 
             ImVec2 tab_size = TabItemCalcSize(payload->Name, payload->HasCloseButton);
