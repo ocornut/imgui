@@ -54,6 +54,9 @@ HOW TO UPDATE?
  VERSION 1.66 (In Progress)
 -----------------------------------------------------------------------
 
+- Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
+  properly after the main menu bar or last focused window is deactivated.
+  
 
 -----------------------------------------------------------------------
  VERSION 1.65 (Released 2018-09-06)

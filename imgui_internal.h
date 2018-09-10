@@ -799,7 +799,8 @@ struct ImGuiContext
     int                     FrameCountEnded;
     int                     FrameCountPlatformEnded;
     int                     FrameCountRendered;
-    ImVector<ImGuiWindow*>  Windows;
+    ImVector<ImGuiWindow*>  Windows;                            // Windows, sorted in display order, back to front
+    ImVector<ImGuiWindow*>  WindowsFocusOrder;                  // Windows, sorted in focus order, back to front
     ImVector<ImGuiWindow*>  WindowsSortBuffer;
     ImVector<ImGuiWindow*>  CurrentWindowStack;
     ImGuiStorage            WindowsById;
@@ -1362,9 +1363,10 @@ namespace ImGui
     IMGUI_API ImGuiWindow*  FindWindowByID(ImGuiID id);
     IMGUI_API ImGuiWindow*  FindWindowByName(const char* name);
     IMGUI_API void          FocusWindow(ImGuiWindow* window); // FIXME: Rename to SetWindowFocus()
-    IMGUI_API void          FocusFrontMostActiveWindowIgnoringOne(ImGuiWindow* ignore_window);
-    IMGUI_API void          BringWindowToFront(ImGuiWindow* window);
-    IMGUI_API void          BringWindowToBack(ImGuiWindow* window);
+    IMGUI_API void          FocusPreviousWindowIgnoringOne(ImGuiWindow* ignore_window);
+    IMGUI_API void          BringWindowToFocusFront(ImGuiWindow* window);
+    IMGUI_API void          BringWindowToDisplayFront(ImGuiWindow* window);
+    IMGUI_API void          BringWindowToDisplayBack(ImGuiWindow* window);
     IMGUI_API void          UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window);
     IMGUI_API ImVec2        CalcWindowExpectedSize(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
