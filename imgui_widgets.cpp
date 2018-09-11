@@ -1709,10 +1709,10 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 {
     ImGuiContext& g = *GImGui;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
-    const bool has_min_max = (v_min != v_max) && (v_max - v_max < FLT_MAX);
+    const bool has_min_max = (v_min != v_max);
 
     // Default tweak speed
-    if (v_speed == 0.0f && has_min_max)
+    if (v_speed == 0.0f && has_min_max && (v_max - v_min < FLT_MAX))
         v_speed = (float)((v_max - v_min) * g.DragSpeedDefaultRatio);
 
     // Inputs accumulates into g.DragCurrentAccum, which is flushed into the current value as soon as it makes a difference with our precision settings
@@ -1754,7 +1754,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     TYPE v_cur = *v;
     FLOATTYPE v_old_ref_for_accum_remainder = (FLOATTYPE)0.0f;
 
-    const bool is_power = (power != 1.0f && is_decimal && has_min_max);
+    const bool is_power = (power != 1.0f && is_decimal && has_min_max && (v_max - v_min < FLT_MAX));
     if (is_power)
     {
         // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range

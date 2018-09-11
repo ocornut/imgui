@@ -2477,8 +2477,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines); ImGui::SameLine(); ShowHelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
         ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
         ImGui::PushItemWidth(100);
-        ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, NULL, 2.0f);
-        if (style.CurveTessellationTol < 0.0f) style.CurveTessellationTol = 0.10f;
+        ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, "%.2f", 2.0f);
+        if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
         ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f"); // Not exposing zero here so user doesn't "lose" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
         ImGui::PopItemWidth();
         ImGui::TreePop();
