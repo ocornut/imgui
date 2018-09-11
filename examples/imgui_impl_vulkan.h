@@ -27,7 +27,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkQueue                         Queue;
     VkPipelineCache                 PipelineCache;
     VkDescriptorPool                DescriptorPool;
-	int								QueuedFrames;
+    int                             QueuedFrames;
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
 };
