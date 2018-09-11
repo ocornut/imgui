@@ -738,42 +738,42 @@ struct ImGuiTabBarSortItem
     float       Width;
 };
 
-// sizeof() 92~128
+// sizeof() 108~144
 struct ImGuiDockNode
 {
     ImGuiID                 ID;
     ImGuiID                 UserTypeIdFilter;
     ImGuiDockSpaceFlags     Flags;
     ImGuiDockNode*          ParentNode;
-    ImGuiDockNode*          ChildNodes[2];
+    ImGuiDockNode*          ChildNodes[2];          // [Split node only] Child nodes (left/right or top/bottom). Consider switching to an array.
     ImVector<ImGuiWindow*>  Windows;                // Note: unordered list! Iterate TabBar->Tabs for user-order.
     ImGuiTabBar*            TabBar;
-    ImVec2                  Pos, Size;              // Current position, size
-    ImVec2                  LastExplicitSize;       // Last explicit size (overridden when using a splitter affecting the node)
-    int                     SplitAxis;
-    float                   SplitRatio;
+    ImVec2                  Pos, Size;              // Current position, size.
+    ImVec2                  LastExplicitSize;       // [Split node only] Last explicit size (overridden when using a splitter affecting the node)
+    int                     SplitAxis;              // [Split node only] Split axis (X or Y)
+    float                   SplitRatio;             // [Split node only] Split ratio FIXME-DOCK: This can be obsoleted in favor of LastExplicitSize.
 
     ImGuiWindow*            HostWindow;
     ImGuiWindow*            VisibleWindow;
-    ImGuiDockNode*          OnlyNodeWithWindows;    // Root node only, set when there is a single visible node within the hierarchy
-    ImGuiID                 SelectedTabID;
-    int                     LastFrameAlive;
-    int                     LastFrameActive;
-    ImGuiID                 LastFocusedNodeID;
-    ImGuiID                 WantCloseOne;
+    ImGuiDockNode*          OnlyNodeWithWindows;    // [Root node only] Set when there is a single visible node within the hierarchy
+    int                     LastFrameAlive;         // Last frame number the node was updated or kept alive explicitly with DockSpace() + mGuiDockSpaceFlags_KeepAliveOnly
+    int                     LastFrameActive;        // Last frame number the node was updated.
+    ImGuiID                 LastFocusedNodeID;      // [Root node only] Which of our child node (any ancestor in the hierarchy) was last focused.
+    ImGuiID                 SelectedTabID;          // [Tab node only] Which of our tab is selected.
+    ImGuiID                 WantCloseTabID;         // [Tab node only] Set when closing a specific tab.
     bool                    InitFromFirstWindow :1;
     bool                    IsVisible           :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsExplicitRoot      :1; // Mark root node as explicit when created from a DockSpace()
     bool                    IsDocumentRoot      :1;
     bool                    HasCloseButton      :1;
     bool                    HasCollapseButton   :1;
-    bool                    WantCloseAll        :1;
+    bool                    WantCloseAll        :1; // Set when closing all tabs at once.
     bool                    WantLockSizeOnce    :1;
 
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();
     bool                    IsRootNode() const  { return ParentNode == NULL; }
-    bool                    IsParent() const    { return ChildNodes[0] != NULL; }
+    bool                    IsSplitNode() const { return ChildNodes[0] != NULL; }
     bool                    IsEmpty() const     { return ChildNodes[0] == NULL && Windows.Size == 0; }
     ImRect                  Rect() const        { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
 };
