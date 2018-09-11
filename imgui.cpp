@@ -10065,7 +10065,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     OnlyNodeWithWindows = NULL;
     SelectedTabID = 0;
     LastFocusedNodeID = 0;
-    LastFrameActive = -1;
+    LastFrameAlive = LastFrameActive = -1;
     WantCloseOne = 0;
     IsVisible = true;
     InitFromFirstWindow = IsExplicitRoot = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = false;
@@ -10327,6 +10327,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(node->LastFrameActive != g.FrameCount);
+    node->LastFrameAlive = g.FrameCount;
 
     if (node->IsRootNode())
     {
@@ -10829,7 +10830,7 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
-    if (host_node && (host_node->Flags & ImGuiDockFlags_NoSplit))
+    if (host_node && (host_node->Flags & ImGuiDockSpaceFlags_NoSplit))
         data->IsSidesAvailable = false;
     if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsDocumentRoot)
         data->IsSidesAvailable = false;
@@ -10946,7 +10947,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         }
     }
 
-    if (host_node && (host_node->Flags & ImGuiDockFlags_NoSplit))
+    if (host_node && (host_node->Flags & ImGuiDockSpaceFlags_NoSplit))
         return;
 
     // Display drop boxes
@@ -11267,7 +11268,7 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
     window->DockId = dock_id;
 }
 
-void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockFlags dock_flags, ImGuiID user_type_filter)
+void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockSpaceFlags dock_space_flags, ImGuiID user_type_filter)
 {
     ImGuiContext& g = *GImGui;
     ImGuiDockContext* ctx = g.DockContext;
@@ -11282,12 +11283,20 @@ void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockFlags
         node = DockContextAddNode(ctx, id);
         node->IsDocumentRoot = true;
     }
-    node->Flags = dock_flags;
+    node->Flags = dock_space_flags;
     node->UserTypeIdFilter = user_type_filter;
     node->IsExplicitRoot = true;
 
+    // When a Dockspace transitioned form implicit to explicit this may be called a second time
     if (node->LastFrameActive == g.FrameCount)
         return;
+
+    // Keep alive mode, this is allow windows docked into this node so stay docked even if they are not visible
+    if (dock_space_flags & ImGuiDockSpaceFlags_KeepAliveOnly)
+    {
+        node->LastFrameAlive = g.FrameCount;
+        return;
+    }
 
     const ImVec2 content_avail = GetContentRegionAvail();
     ImVec2 size = ImFloor(size_arg);
@@ -11370,13 +11379,16 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     // Undock if our dockspace disappeared
-    if (dock_node->LastFrameActive < g.FrameCount)
+    // Note how we are testing for LastFrameAlive and NOT LastFrameActive. A DockSpace can be maintained alive while being inactive with ImGuiDockSpaceFlags_KeepAliveOnly.
+    if (dock_node->LastFrameAlive < g.FrameCount)
     {
         // If the window has been orphaned (lost its dockspace), transition the docknode to an implicit node processed in DockContextUpdateDocking()
         ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
-        if (root_node->IsExplicitRoot && root_node->LastFrameActive < g.FrameCount)
+        if (root_node->LastFrameAlive < g.FrameCount)
+        {
             root_node->IsExplicitRoot = false;
-        window->DockIsActive = false;
+            window->DockIsActive = false;
+        }
         return;
     }
 
@@ -11396,18 +11408,25 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
     IM_ASSERT(dock_node->HostWindow);
     IM_ASSERT(!dock_node->IsParent());
+
+    // Position window
+    SetNextWindowPos(dock_node->Pos);
+    SetNextWindowSize(dock_node->Size);
+    g.NextWindowData.PosUndock = false; // Cancel implicit undocking of SetNextWindowPos()
+
     window->DockIsActive = true;
+    if (dock_node->Flags & ImGuiDockSpaceFlags_KeepAliveOnly)
+    {
+        window->DockTabIsVisible = false;
+        return;
+    }
+
     window->DockTabIsVisible = (dock_node->TabBar && dock_node->TabBar->VisibleTabId == window->ID);
 
     // Update window flag
     IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) == 0);
     window->Flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoResize;
     window->Flags &= ~ImGuiWindowFlags_NoTitleBar;      // Clear the NoTitleBar flag in case the user set it: confusingly enough we need a title bar height so we are correctly offset, but it won't be displayed!
-
-    // Position window
-    SetNextWindowPos(dock_node->Pos);
-    SetNextWindowSize(dock_node->Size);
-    g.NextWindowData.PosUndock = false;
 
     // Save new dock order only if the tab bar is active
     if (dock_node->TabBar)

@@ -738,12 +738,12 @@ struct ImGuiTabBarSortItem
     float       Width;
 };
 
-// sizeof() 88~124
+// sizeof() 92~128
 struct ImGuiDockNode
 {
     ImGuiID                 ID;
     ImGuiID                 UserTypeIdFilter;
-    ImGuiDockFlags          Flags;
+    ImGuiDockSpaceFlags     Flags;
     ImGuiDockNode*          ParentNode;
     ImGuiDockNode*          ChildNodes[2];
     ImVector<ImGuiWindow*>  Windows;                // Note: unordered list! Iterate TabBar->Tabs for user-order.
@@ -757,6 +757,7 @@ struct ImGuiDockNode
     ImGuiWindow*            VisibleWindow;
     ImGuiDockNode*          OnlyNodeWithWindows;    // Root node only, set when there is a single visible node within the hierarchy
     ImGuiID                 SelectedTabID;
+    int                     LastFrameAlive;
     int                     LastFrameActive;
     ImGuiID                 LastFocusedNodeID;
     ImGuiID                 WantCloseOne;

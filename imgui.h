@@ -111,7 +111,7 @@ typedef int ImGuiColorEditFlags;    // -> enum ImGuiColorEditFlags_  // Flags: f
 typedef int ImGuiColumnsFlags;      // -> enum ImGuiColumnsFlags_    // Flags: for Columns(), BeginColumns()
 typedef int ImGuiConfigFlags;       // -> enum ImGuiConfigFlags_     // Flags: for io.ConfigFlags
 typedef int ImGuiComboFlags;        // -> enum ImGuiComboFlags_      // Flags: for BeginCombo()
-typedef int ImGuiDockFlags;         // -> enum ImGuiDockFlags_       // Flags: for DockSpace()                   
+typedef int ImGuiDockSpaceFlags;    // -> enum ImGuiDockSpaceFlags_  // Flags: for DockSpace()                   
 typedef int ImGuiDragDropFlags;     // -> enum ImGuiDragDropFlags_   // Flags: for *DragDrop*()
 typedef int ImGuiFocusedFlags;      // -> enum ImGuiFocusedFlags_    // Flags: for IsWindowFocused()
 typedef int ImGuiHoveredFlags;      // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
@@ -520,7 +520,7 @@ namespace ImGui
     // Docking 
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
     // Note: you DO NOT need to call DockSpace() to use most Docking facilities! You can hold SHIFT anywhere while moving windows. Use DockSpace() if you need to create an explicit docking space _within_ an existing window. See Docking demo for details)
-    IMGUI_API void          DockSpace(const char* str_id, const ImVec2& size = ImVec2(0, 0), ImGuiDockFlags flags = 0, ImGuiID user_type_filter = 0);
+    IMGUI_API void          DockSpace(const char* str_id, const ImVec2& size = ImVec2(0, 0), ImGuiDockSpaceFlags flags = 0, ImGuiID user_type_filter = 0);
     IMGUI_API void          SetNextWindowUserType(ImGuiID user_type);                           // FIXME-DOCK: set next window user type (docking filters by same user_type)
 
     // Logging/Capture: all text output from interface is captured to tty/file/clipboard. By default, tree nodes are automatically opened during logging.
@@ -782,10 +782,11 @@ enum ImGuiTabItemFlags_
 };
 
 // Flags for ImGui::DockSpace()
-enum ImGuiDockFlags_
+enum ImGuiDockSpaceFlags_
 {
-    ImGuiDockFlags_None                             = 0,
-    ImGuiDockFlags_NoSplit                          = 1 << 0
+    ImGuiDockSpaceFlags_None                        = 0,
+    ImGuiDockSpaceFlags_KeepAliveOnly               = 1 << 0,   // Don't create/display the dockspace but keep it alive. Windows docked into this dockspace won't be undocked.
+    ImGuiDockSpaceFlags_NoSplit                     = 1 << 1    // Disable splitting the dockspace into smaller nodes. Useful e.g. when embedding dockspaces into a main root one.
 };
 
 // Flags for ImGui::IsWindowFocused()
