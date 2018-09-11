@@ -41,6 +41,8 @@ Other Changes:
   accidental alteration of window position. We now round the provided size. (#2067)
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
+- DragFloat: Fixed a situation where dragging with value rounding enabled or with a power curve 
+  erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
   
 
 -----------------------------------------------------------------------
