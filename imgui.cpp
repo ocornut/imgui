@@ -7656,17 +7656,20 @@ void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
         g.PlatformIO.Renderer_DestroyWindow(viewport);
     if (viewport->CreatedPlatformWindow && g.PlatformIO.Platform_DestroyWindow)
         g.PlatformIO.Platform_DestroyWindow(viewport);
-    viewport->CreatedPlatformWindow = false;
     IM_ASSERT(viewport->RendererUserData == NULL);
-    IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
+    IM_ASSERT(viewport->PlatformUserData == NULL);
+    viewport->PlatformHandle = NULL;
+    viewport->RendererUserData = viewport->PlatformHandle = NULL;
+    viewport->CreatedPlatformWindow = false;
 }
 
 void ImGui::DestroyPlatformWindows()
 {
     // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data 
-    // have stored in e.g. PlatformHandle.
-    // It is expected that the back-end stored a flag to remember that it doesn't own the window created for the 
-    // main viewport, and won't destroy the underlying platform/renderer data.
+    // have stored in e.g. PlatformUserData, RendererUserData. It can be convenient for the platform back-end code to
+    // store something in the main viewport, in order for e.g. the mouse handling code to work in a more generic manner.
+    // It is expected that the back-end can handle calls to Renderer_DestroyWindow/Platform_DestroyWindow without
+    // crashing if it doesn't have data stored. 
     ImGuiContext& g = *GImGui;
     for (int i = 0; i < g.Viewports.Size; i++)
         if (g.Viewports[i]->CreatedPlatformWindow)
