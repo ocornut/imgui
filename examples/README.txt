@@ -44,7 +44,7 @@ You can find binaries of some of those example applications at:
  - Dear ImGui has 0 to 1 frame of lag for most behaviors, at 60 FPS your experience should be pleasant.
    However, consider that OS mouse cursors are typically drawn through a specific hardware accelerated path
    and will feel smoother than common GPU rendered contents (including Dear ImGui windows). 
-   You may experiment with the io.MouseDrawCursor flag to request ImGui to draw a mouse cursor itself, 
+   You may experiment with the io.MouseDrawCursor flag to request Dear ImGui to draw a mouse cursor itself, 
    to visualize the lag between a hardware cursor and a software cursor. However, rendering a mouse cursor
    at 60 FPS will feel slow. It might be beneficial to the user experience to switch to a software rendered
    cursor only when an interactive drag is in progress. 
@@ -179,7 +179,7 @@ example_glfw_opengl2/
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
     GLFW + OpenGL2 example (legacy, fixed pipeline).
-    This code is mostly provided as a reference to learn about ImGui integration, because it is shorter.
+    This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended.
@@ -200,7 +200,7 @@ example_sdl_opengl2/
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
-    This code is mostly provided as a reference to learn about ImGui integration, because it is shorter.
+    This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended. 

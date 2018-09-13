@@ -1,4 +1,4 @@
-// ImGui Renderer for: DirectX10
+// dear imgui: Renderer for DirectX10
 // This needs to be used along with a Platform Binding (e.g. Win32)
 
 // Implemented features:

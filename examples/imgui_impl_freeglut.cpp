@@ -1,4 +1,4 @@
-// ImGui Platform Binding for: FreeGLUT
+// dear imgui: Platform Binding for FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
 
 // Issues:

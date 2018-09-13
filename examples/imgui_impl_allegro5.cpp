@@ -1,4 +1,4 @@
-// ImGui Renderer + Platform Binding for: Allegro 5
+// dear imgui: Renderer + Platform Binding for Allegro 5
 // (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:
@@ -74,7 +74,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
     al_set_blender(ALLEGRO_ADD, ALLEGRO_ALPHA, ALLEGRO_INVERSE_ALPHA);
 
     // Setup orthographic projection matrix
-    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
     {
         float L = draw_data->DisplayPos.x;
         float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
@@ -108,7 +108,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
         const int* indices = NULL;
         if (sizeof(ImDrawIdx) == 2)
         {
-            // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices.. You can '#define ImDrawIdx int' in imconfig.h to request ImGui to output 32-bit indices.
+            // FIXME-OPT: Unfortunately Allegro doesn't support 16-bit indices.. You can '#define ImDrawIdx int' in imconfig.h to request Dear ImGui to output 32-bit indices.
             // Otherwise, we convert them from 16-bit to 32-bit at runtime here, which works perfectly but is a little wasteful.
             static ImVector<int> indices_converted;
             indices_converted.resize(cmd_list->IdxBuffer.Size);
