@@ -7274,9 +7274,18 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
     if (viewport && current_window && viewport->Window && (current_window->DockNode || (current_window->Flags & ImGuiWindowFlags_DockNodeHost)))
         if (viewport->LastFrameActive < g.FrameCount && viewport->Window != current_window)
         {
-            //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
-            viewport->Window = current_window;
-            viewport->ID = current_window->ID;
+            // When called from Begin() we don't have access to a proper version of the Hidden flag yet.
+            bool will_be_visible = true;
+            if (current_window->DockIsActive && !current_window->DockTabIsVisible)
+                will_be_visible = false;
+
+            if (will_be_visible)
+            {
+                //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
+                viewport->Window = current_window;
+                viewport->ID = current_window->ID;
+                viewport->LastNameHash = 0;
+            }
         }
 
     if (viewport)
@@ -7710,6 +7719,7 @@ void ImGui::UpdatePlatformWindows()
             g.PlatformIO.Platform_CreateWindow(viewport);
             if (g.PlatformIO.Renderer_CreateWindow != NULL)
                 g.PlatformIO.Renderer_CreateWindow(viewport);
+            viewport->LastNameHash = 0;
             viewport->RendererLastSize = viewport->Size;
             viewport->CreatedPlatformWindow = true;
         }
@@ -10107,7 +10117,6 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window)
     // then we need to hide the first one after the fact otherwise it would be visible as a standalone window for one frame.
     if (node->Windows.Size == 2 && node->HostWindow == NULL && node->Windows[0]->WasActive == false)
     {
-        IM_ASSERT(node->Windows[0]->DockIsActive == false);
         node->Windows[0]->Hidden = true;
         node->Windows[0]->HiddenFramesRegular = 1;
     }
