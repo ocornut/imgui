@@ -11419,8 +11419,15 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         window->DockTabIsVisible = false;
         return;
     }
-
     window->DockTabIsVisible = (dock_node->TabBar && dock_node->TabBar->VisibleTabId == window->ID);
+
+    // When we are about to select this tab (which will only be visible on the _next frame_), flag it with a non-zero HiddenFramesForResize.
+    // This will have the important effect of actually returning true in Begin() and not setting SkipItems, allowing an earlier submission of the window contents.
+    // This is analogous to regular windows being hidden from one frame. It is especially important as nested TabBars would otherwise generate flicker in the form
+    // of one empty frame.
+    // Note that we set HiddenFramesForResize=2 because BeginDocked() is called just before Begin() has a chance to decrement the value. Effectively it'll be a 1 frame thing. 
+    if (!window->DockTabIsVisible && dock_node->TabBar && dock_node->TabBar->NextSelectedTabId == window->ID)
+        window->HiddenFramesForResize = 2;
 
     // Update window flag
     IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) == 0);
@@ -12482,10 +12489,12 @@ void ImGui::ShowDockingDebug()
             {
                 IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
                 IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
-                ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f), LastExplicit (%.0f, %.0f)%s%s", 
-                    node->Pos.x, node->Pos.y, node->Size.x, node->Size.y, 
-                    node->LastExplicitSize.x, node->LastExplicitSize.y,
-                    node->IsExplicitRoot ? ", IsExplicitRoot " : "", node->IsDocumentRoot ? ", IsDocumentRoot " : "");
+                ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f), LastExplicit (%.0f, %.0f)",
+                    node->Pos.x, node->Pos.y, node->Size.x, node->Size.y,
+                    node->LastExplicitSize.x, node->LastExplicitSize.y);
+                ImGui::BulletText("Flags %02X%s%s%s%s",
+                    node->Flags, node->IsExplicitRoot ? ", IsExplicitRoot" : "", node->IsDocumentRoot ? ", IsDocumentRoot" : "",
+                    (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
                 if (node->ChildNodes[0])
                     NodeDockNode(node->ChildNodes[0], "Child[0]");
                 if (node->ChildNodes[1])
