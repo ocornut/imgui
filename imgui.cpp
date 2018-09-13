@@ -10132,7 +10132,7 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     ImGuiDockContext* ctx = g.DockContext;
     IM_ASSERT(window->DockNode == node);
     //IM_ASSERT(window->RootWindow == node->HostWindow);
-    IM_ASSERT(window->LastFrameActive < g.FrameCount);
+    //IM_ASSERT(window->LastFrameActive < g.FrameCount);    // We may call this from Begin()
     IM_ASSERT(save_dock_id == 0 || save_dock_id == node->ID);
 
     window->DockNode = NULL;
@@ -11385,8 +11385,12 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
         if (root_node->LastFrameAlive < g.FrameCount)
         {
-            root_node->IsExplicitRoot = false;
-            window->DockIsActive = false;
+            DockContextProcessUndock(g.DockContext, window);
+        }
+        else
+        {
+            window->DockIsActive = true;
+            window->DockTabIsVisible = false;
         }
         return;
     }
@@ -11414,12 +11418,12 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     g.NextWindowData.PosUndock = false; // Cancel implicit undocking of SetNextWindowPos()
 
     window->DockIsActive = true;
+    window->DockTabIsVisible = false;
     if (dock_node->Flags & ImGuiDockSpaceFlags_KeepAliveOnly)
-    {
-        window->DockTabIsVisible = false;
         return;
-    }
-    window->DockTabIsVisible = (dock_node->TabBar && dock_node->TabBar->VisibleTabId == window->ID);
+
+    if (dock_node->TabBar && dock_node->TabBar->VisibleTabId == window->ID)
+        window->DockTabIsVisible = true;
 
     // When we are about to select this tab (which will only be visible on the _next frame_), flag it with a non-zero HiddenFramesForResize.
     // This will have the important effect of actually returning true in Begin() and not setting SkipItems, allowing an earlier submission of the window contents.
