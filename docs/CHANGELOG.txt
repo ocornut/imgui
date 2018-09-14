@@ -45,6 +45,7 @@ Other Changes:
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
 - DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
+- BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
   
 
 -----------------------------------------------------------------------

@@ -337,7 +337,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
         {
             for (uint32_t codepoint = in_range[0]; codepoint <= in_range[1]; ++codepoint) 
             {
-                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((unsigned short)codepoint))
+                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((ImWchar)codepoint))
                     continue;
 
                 FT_Glyph ft_glyph = NULL;

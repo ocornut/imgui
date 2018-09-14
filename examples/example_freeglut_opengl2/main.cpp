@@ -1,5 +1,5 @@
-// ImGui - standalone example application for FreeGLUT + OpenGL2, using legacy fixed pipeline
-// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// dear imgui: standalone example application for FreeGLUT + OpenGL2, using legacy fixed pipeline
+// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 // (Using GLUT or FreeGLUT is not recommended unless you really miss the 90's)
 
 #include "imgui.h"
@@ -57,7 +57,7 @@ void my_display_code()
 
 void glut_display_func()
 {
-    // Start the ImGui frame
+    // Start the Dear ImGui frame
     ImGui_ImplOpenGL2_NewFrame();
     ImGui_ImplFreeGLUT_NewFrame();
 
@@ -95,7 +95,7 @@ int main(int argc, char** argv)
     // otherwise it is possible to install our own functions and call the imgui_impl_freeglut.h functions ourselves.
     glutDisplayFunc(glut_display_func);
 
-    // Setup ImGui binding
+    // Setup Dear ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls

@@ -1,4 +1,4 @@
-// ImGui Renderer + Platform Binding for: Allegro 5
+// dear imgui: Renderer + Platform Binding for Allegro 5
 // (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:

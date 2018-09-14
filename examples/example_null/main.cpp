@@ -1,4 +1,4 @@
-// ImGui - null/dummy example application (compile and link imgui with no inputs, no outputs)
+// dear imgui: null/dummy example application (compile and link imgui with no inputs, no outputs)
 #include "imgui.h"
 #include <stdio.h>
 

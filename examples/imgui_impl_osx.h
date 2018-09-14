@@ -1,4 +1,4 @@
-// ImGui Platform Binding for: OSX / Cocoa
+// dear imgui: Platform Binding for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
 // [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
 

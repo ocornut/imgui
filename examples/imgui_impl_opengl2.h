@@ -1,4 +1,4 @@
-// ImGui Renderer for: OpenGL2 (legacy OpenGL, fixed pipeline)
+// dear imgui: Renderer for OpenGL2 (legacy OpenGL, fixed pipeline)
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
