@@ -9598,7 +9598,6 @@ struct ImGuiDockNodeSettings
     ImGuiID         ID;
     ImGuiID         ParentID;
     ImGuiID         SelectedTabID;
-    float           SplitRatio;
     char            SplitAxis;
     char            Depth;
     char            IsExplicitRoot;
@@ -9606,7 +9605,7 @@ struct ImGuiDockNodeSettings
     ImVec2ih        Pos;
     ImVec2ih        Size;
     ImVec2ih        LastExplicitSize;
-    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitRatio = 0.0f; SplitAxis = ImGuiAxis_None; Depth = 0; IsExplicitRoot = IsDocumentRoot = 0; }
+    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsExplicitRoot = IsDocumentRoot = 0; }
 };
 
 struct ImGuiDockContext
@@ -9921,7 +9920,6 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiDockContext* ctx, ImGu
             node->ParentNode->ChildNodes[1] = node;
         node->SelectedTabID = node_settings->SelectedTabID;
         node->SplitAxis = node_settings->SplitAxis;
-        node->SplitRatio = node_settings->SplitRatio;
         node->IsExplicitRoot = node_settings->IsExplicitRoot != 0;
         node->IsDocumentRoot = node_settings->IsDocumentRoot != 0;
     }
@@ -10103,7 +10101,6 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     ParentNode = ChildNodes[0] = ChildNodes[1] = NULL;
     TabBar = NULL;
     SplitAxis = ImGuiAxis_None;
-    SplitRatio = 0.5f;
     HostWindow = VisibleWindow = NULL;
     OnlyNodeWithWindows = NULL;
     LastFrameAlive = LastFrameActive = -1;
@@ -10240,7 +10237,6 @@ static void ImGui::DockNodeMoveChildNodes(ImGuiDockNode* dst_node, ImGuiDockNode
     if (dst_node->ChildNodes[1])
         dst_node->ChildNodes[1]->ParentNode = dst_node;
     dst_node->SplitAxis = src_node->SplitAxis;
-    dst_node->SplitRatio = src_node->SplitRatio;
     dst_node->LastExplicitSize = src_node->LastExplicitSize;
     src_node->ChildNodes[0] = src_node->ChildNodes[1] = NULL;
 }
@@ -11034,7 +11030,6 @@ void ImGui::DockNodeTreeSplit(ImGuiDockContext* ctx, ImGuiDockNode* parent_node,
     parent_node->ChildNodes[1] = child_1;
     parent_node->ChildNodes[split_inheritor_child_idx]->VisibleWindow = parent_node->VisibleWindow;
     parent_node->SplitAxis = split_axis;
-    parent_node->SplitRatio = split_ratio;
     parent_node->VisibleWindow = NULL;
 
     float size_avail = (parent_node->Size[split_axis] - IMGUI_DOCK_SPLITTER_SIZE);
@@ -11088,11 +11083,6 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         const ImGuiAxis axis = (ImGuiAxis)node->SplitAxis;
         const float size_avail = ImMax(size[axis] - spacing, 0.0f);
 
-#if 0
-        child_0_size[axis] = ImFloor(size_avail * node->SplitRatio);
-        child_1_size[axis] = size_avail - child_0_size[axis];
-        child_1_pos[axis] += spacing + child_0_size[axis];
-#else
         // Size allocation policy
         // 1) The first 0..WindowMinSize[axis]*2 are allocated evenly to both windows.
         ImGuiContext& g = *GImGui;
@@ -11127,14 +11117,12 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         }
         else
         {
-            // 4) Otherwise distribute according to SplitRatio
-            //float split_ratio = node->SplitRatio;
+            // 4) Otherwise distribute according to the relative ratio of each LastExplicitSize value
             float split_ratio = child_0->LastExplicitSize[axis] / (child_0->LastExplicitSize[axis] + child_1->LastExplicitSize[axis]);
             child_0_size[axis] = ImMax(size_min_each, ImFloor(size_avail * split_ratio + 0.5F));
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
         child_1_pos[axis] += spacing + child_0_size[axis];
-#endif
     }
     if (child_0->IsVisible)
         DockNodeTreeUpdatePosSize(child_0, child_0_pos, child_0_size);
@@ -11225,8 +11213,6 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         {
             if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
             {
-                node->SplitRatio = w1 / (w1 + w2);
-                IM_ASSERT(node->SplitRatio > 0.0f && node->SplitRatio < 1.0f);
                 child_0->Size[axis] = child_0->LastExplicitSize[axis] = w1;
                 child_1->Pos[axis] -= w2 - child_1->Size[axis];
                 child_1->Size[axis] = child_1->LastExplicitSize[axis] = w2;
@@ -11611,7 +11597,6 @@ static void* ImGui::DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHan
 static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* imgui_ctx, ImGuiSettingsHandler*, void*, const char* line)
 {
     char c = 0;
-    float f = 0.0f;
     int x = 0, y = 0;
     int r = 0;
 
@@ -11633,7 +11618,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* imgui_ctx, ImGuiSe
     {
         if (sscanf(line, " LastExplicitSize=%i,%i%n", &x, &y, &r) == 2) { line += r; node.LastExplicitSize = ImVec2ih((short)x, (short)y); }
     }
-    if (sscanf(line, " Split=%c,%f%n", &c, &f, &r) == 2)            { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; node.SplitRatio = f; }
+    if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
     if (sscanf(line, " ExplicitRoot=%d%n", &x, &r) == 1)            { line += r; node.IsExplicitRoot = (x != 0); }
     if (sscanf(line, " DocumentRoot=%d%n", &x, &r) == 1)            { line += r; node.IsDocumentRoot = (x != 0); }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
@@ -11653,7 +11638,6 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* ctx, ImGuiD
     node_settings.ID = node->ID;
     node_settings.ParentID = node->ParentNode ? node->ParentNode->ID : 0;
     node_settings.SelectedTabID = node->SelectedTabID;
-    node_settings.SplitRatio = node->SplitRatio;
     node_settings.SplitAxis = (char)node->SplitAxis;
     node_settings.Depth = (char)depth;
     node_settings.IsExplicitRoot = (char)node->IsExplicitRoot;
@@ -11696,7 +11680,7 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* imgui_ctx, ImGuiSe
         else
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
         if (node_settings->SplitAxis != ImGuiAxis_None)
-            buf->appendf(" Split=%c,%.3f", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y', node_settings->SplitRatio);
+            buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
         if (node_settings->IsExplicitRoot)
             buf->appendf(" ExplicitRoot=%d", node_settings->IsExplicitRoot);
         if (node_settings->IsDocumentRoot)

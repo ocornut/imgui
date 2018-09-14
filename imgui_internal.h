@@ -751,7 +751,6 @@ struct ImGuiDockNode
     ImVec2                  Pos, Size;              // Current position, size.
     ImVec2                  LastExplicitSize;       // [Split node only] Last explicit size (overridden when using a splitter affecting the node)
     int                     SplitAxis;              // [Split node only] Split axis (X or Y)
-    float                   SplitRatio;             // [Split node only] Split ratio FIXME-DOCK: This can be obsoleted in favor of LastExplicitSize.
 
     ImGuiWindow*            HostWindow;
     ImGuiWindow*            VisibleWindow;
