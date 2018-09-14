@@ -7552,7 +7552,7 @@ void ImGui::UpdatePlatformWindows()
         // Show window. On startup ensure platform window don't get focus
         if (is_new_window)
         {
-            if (g.FrameCount < 2)
+            if (g.FrameCount < 3) // Give a few frames for the application to stabilize (nested contents may lead to viewport being created a few frames late)
                 viewport->Flags |= ImGuiViewportFlags_NoFocusOnAppearing;
             g.PlatformIO.Platform_ShowWindow(viewport);
         }
