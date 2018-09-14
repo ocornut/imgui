@@ -3350,7 +3350,7 @@ void ImGui::NewFrame()
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
 
     // Undocking
-    // (needs to be before UpdateMovingWindow so the window is already offset and following the mouse on the detaching frame)
+    // (needs to be before UpdateMouseMovingWindow so the window is already offset and following the mouse on the detaching frame)
     DockContextNewFrameUpdateUndocking(g.DockContext);
 
     // Find hovered window
@@ -9614,9 +9614,8 @@ struct ImGuiDockContext
     ImGuiStorage                    Nodes;                      // Map ID -> ImGuiDockNode*: Active nodes
     ImVector<ImGuiDockRequest>      Requests;
     ImVector<ImGuiDockNodeSettings> SettingsNodes;
-    int                             SettingsMaxDepth;
     bool                            WantFullRebuild;
-    ImGuiDockContext()              { SettingsMaxDepth = 0; WantFullRebuild = false; }
+    ImGuiDockContext()              { WantFullRebuild = false; }
 };
 
 //-----------------------------------------------------------------------------
@@ -9632,10 +9631,10 @@ namespace ImGui
     static void             DockContextQueueDock(ImGuiDockContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer);
     static void             DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req);
     static void             DockContextProcessUndock(ImGuiDockContext* ctx, ImGuiWindow* window);
-    static void             DockContextClearNodes(ImGuiDockContext* ctx, bool clear_references);
-    static void             DockContextGcUnusedNodes(ImGuiDockContext* ctx);
-    static void             DockContextBuildNodesFromSettings(ImGuiDockContext* ctx);
-    static void             DockContextBuildAddWindowsToNodes(ImGuiDockContext* ctx);
+    static void             DockContextGcUnusedSettingsNodes(ImGuiDockContext* ctx);
+    static void             DockContextClearNodes(ImGuiDockContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references);    // Set root_id==0 to clear all
+    static void             DockContextBuildNodesFromSettings(ImGuiDockContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
+    static void             DockContextBuildAddWindowsToNodes(ImGuiDockContext* ctx, ImGuiID root_id);                                  // Use root_id==0 to add all
 
     // ImGuiDockNode
     static void             DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window);
@@ -9666,7 +9665,7 @@ namespace ImGui
     static ImGuiDockNode*   DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos);
 
     // Settings
-    static void             DockSettingsRemoveAllReferencesToNode(ImGuiID node_id);
+    static void             DockSettingsRemoveReferencesToNodes(ImGuiID* node_ids, int node_ids_count);
     static ImGuiDockNodeSettings*   DockSettingsFindNodeSettings(ImGuiDockContext* ctx, ImGuiID node_id);
     static void*            DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
     static void             DockSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
@@ -9675,6 +9674,13 @@ namespace ImGui
 
 //-----------------------------------------------------------------------------
 // Docking: ImGuiDockContext
+//-----------------------------------------------------------------------------
+// The lifetime model is different from the one of regular windows: we always create a ImGuiDockNode for each ImGuiDockNodeSettings,
+// or we always hold the entire docking node tree. Nodes are frequently hidden, e.g. if the window(s) or child nodes they host are not active.
+// At boot time only, we run a simple GC to remove nodes that have no references.
+// Because dock node settings (which are small, contiguous structures) are always mirrored by their corresponding dock nodes (more complete structures),
+// we can also very easily recreate the nodes from scratch given the settings data (this is what  DockContextRebuild() does).
+// This is convenient as docking reconfiguration can be implemented by mostly poking at the simpler setttings data.
 //-----------------------------------------------------------------------------
 
 void ImGui::DockContextInitialize(ImGuiContext* imgui_context)
@@ -9699,10 +9705,7 @@ void ImGui::DockContextShutdown(ImGuiContext* imgui_context)
     ImGuiDockContext* ctx = g.DockContext;
     for (int n = 0; n < ctx->Nodes.Data.Size; n++)
         if (ImGuiDockNode* node = (ImGuiDockNode*)ctx->Nodes.Data[n].val_p)
-        {
-            node->ChildNodes[0] = node->ChildNodes[1] = NULL;
             IM_DELETE(node);
-        }
     IM_DELETE(g.DockContext);
     g.DockContext = NULL;
 }
@@ -9711,25 +9714,29 @@ void ImGui::DockContextOnLoadSettings()
 {
     ImGuiContext& g = *GImGui;
     ImGuiDockContext* ctx = g.DockContext;
-    DockContextGcUnusedNodes(ctx);
-    DockContextBuildNodesFromSettings(ctx);
+    DockContextGcUnusedSettingsNodes(ctx);
+    DockContextBuildNodesFromSettings(ctx, ctx->SettingsNodes.Data, ctx->SettingsNodes.Size);
 }
 
+// This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
 void ImGui::DockContextRebuild(ImGuiDockContext* ctx)
 {
+    //IMGUI_DEBUG_LOG("[docking] full rebuild\n");
     SaveIniSettingsToMemory();
-    DockContextClearNodes(ctx, false);
-    DockContextBuildNodesFromSettings(ctx);
-    DockContextBuildAddWindowsToNodes(ctx);
+    ImGuiID root_id = 0; // Rebuild all
+    DockContextClearNodes(ctx, root_id, false);
+    DockContextBuildNodesFromSettings(ctx, ctx->SettingsNodes.Data, ctx->SettingsNodes.Size);
+    DockContextBuildAddWindowsToNodes(ctx, root_id);
 }
 
+// Docking context update function, called by NewFrame()
 void ImGui::DockContextNewFrameUpdateUndocking(ImGuiDockContext* ctx)
 {
     ImGuiContext& g = *GImGui;
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
     {
         if (ctx->Nodes.Data.Size > 0 || ctx->Requests.Size > 0)
-            DockContextClearNodes(ctx, true);
+            DockContextClearNodes(ctx, 0, true);
         return;
     }
 
@@ -9743,12 +9750,13 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiDockContext* ctx)
         ctx->WantFullRebuild = false;
     }
 
-    // Process Undocking requests (called from NewFrame before UpdateMovingWindow)
+    // Process Undocking requests (we need to process them _before_ the UpdateMouseMovingWindow call in NewFrame)
     for (int n = 0; n < ctx->Requests.Size; n++)
         if (ctx->Requests[n].Type == ImGuiDockRequestType_Undock)
             DockContextProcessUndock(ctx, ctx->Requests[n].UndockTarget);
 }
 
+// Docking context update function, called by NewFrame()
 void ImGui::DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx)
 {
     ImGuiContext& g = *GImGui;
@@ -9769,6 +9777,7 @@ void ImGui::DockContextNewFrameUpdateDocking(ImGuiDockContext* ctx)
                 DockNodeUpdate(node);
 }
 
+// Docking context update function, called by EndFrame()
 void ImGui::DockContextEndFrame(ImGuiDockContext* ctx)
 {
     (void)ctx;
@@ -9784,7 +9793,7 @@ static ImGuiDockNode* ImGui::DockContextAddNode(ImGuiDockContext* ctx, ImGuiID i
     // Generate an ID for the new node (the exact ID value doesn't matter as long as it is not already used) and add the first window.
     if (id == (ImGuiID)-1)
     {
-        // FIXME-OPT: This is very suboptimal, however the node count is small enough not to be a worry.
+        // FIXME-OPT: This is suboptimal, even if the node count is small enough not to be a worry. We could poke in ctx->Nodes to find a suitable ID faster.
         id = 0x0001;
         while (DockContextFindNodeByID(ctx, id) != NULL)
             id++;
@@ -9819,30 +9828,46 @@ static void ImGui::DockContextRemoveNode(ImGuiDockContext* ctx, ImGuiDockNode* n
     }
 }
 
-// Stress/functional test to make sure we can rebuild from scratch without a glitch
-void ImGui::DockContextClearNodes(ImGuiDockContext* ctx, bool clear_references)
+void ImGui::DockContextClearNodes(ImGuiDockContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
 {
     SaveIniSettingsToMemory(NULL);
 
     ImGuiContext& g = *GImGui;
-    for (int n = 0; n < ctx->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)ctx->Nodes.Data[n].val_p)
-            IM_DELETE(node);
-    ctx->Nodes.Clear();
-    ctx->Requests.clear();
+
+    // Clear references in windows
     for (int n = 0; n < g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
-        window->DockNode = window->DockNodeAsHost = NULL;
-        window->DockIsActive = false;
-        if (clear_references)
-            window->DockId = 0;
+        bool want_removal = root_id == 0 || (window->DockNode && DockNodeGetRootNode(window->DockNode)->ID == root_id) || (window->DockNodeAsHost && window->DockNodeAsHost->ID == root_id);
+        if (want_removal)
+        {
+            window->DockNode = window->DockNodeAsHost = NULL;
+            window->DockIsActive = false;
+            if (clear_persistent_docking_references)
+                window->DockId = 0;
+        }
     }
+
+    // Clear nodes
+    for (int n = 0; n < ctx->Nodes.Data.Size; n++)
+        if (ImGuiDockNode* node = (ImGuiDockNode*)ctx->Nodes.Data[n].val_p)
+        {
+            bool want_removal = (root_id == 0 || DockNodeGetRootNode(node)->ID == root_id);
+            if (want_removal)
+            {
+                IM_DELETE(node);
+                ctx->Nodes.Data[n].val_p = NULL;
+            }
+        }
+    if (root_id == 0)
+        ctx->Nodes.Clear();
+    ctx->Requests.clear();
 }
 
-static void ImGui::DockContextGcUnusedNodes(ImGuiDockContext* ctx)
+static void ImGui::DockContextGcUnusedSettingsNodes(ImGuiDockContext* ctx)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.Windows.Size == 0);
 
     // Count reference to dock ids from window settings
     ImGuiStorage ref_count_map;  // Map dock_id -> counter
@@ -9870,19 +9895,19 @@ static void ImGui::DockContextGcUnusedNodes(ImGuiDockContext* ctx)
             remove |= (ref_count == 0 && settings->ParentID == 0 && is_parent_map.GetInt(settings->ID, 0) == 0); // Leaf nodes with 0 window
             if (remove)
             {
-                DockSettingsRemoveAllReferencesToNode(settings->ID);
+                DockSettingsRemoveReferencesToNodes(&settings->ID, 1);
                 settings->ID = 0;
             }
         }
     }
 }
 
-static void ImGui::DockContextBuildNodesFromSettings(ImGuiDockContext* ctx)
+static void ImGui::DockContextBuildNodesFromSettings(ImGuiDockContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count)
 {
     // Build nodes
-    for (int node_n = 0; node_n < ctx->SettingsNodes.Size; node_n++)
+    for (int node_n = 0; node_n < node_settings_count; node_n++)
     {
-        ImGuiDockNodeSettings* node_settings = &ctx->SettingsNodes[node_n];
+        ImGuiDockNodeSettings* node_settings = &node_settings_array[node_n];
         if (node_settings->ID == 0)
             continue;
         ImGuiDockNode* node = DockContextAddNode(ctx, node_settings->ID);
@@ -9902,20 +9927,22 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiDockContext* ctx)
     }
 }
 
-void ImGui::DockContextBuildAddWindowsToNodes(ImGuiDockContext* ctx)
+void ImGui::DockContextBuildAddWindowsToNodes(ImGuiDockContext* ctx, ImGuiID root_id)
 {
-    // Rebuild nodes (they can also lazily rebuild but we'll have a visible glitch during the first frame)
+    // Rebind all windows to nodes (they can also lazily rebind but we'll have a visible glitch during the first frame)
     ImGuiContext& g = *GImGui;
     for (int n = 0; n < g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
         if (window->DockId == 0 || window->LastFrameActive < g.FrameCount - 1)
             continue;
+        if (window->DockNode != NULL)
+            continue;
 
         ImGuiDockNode* dock_node = DockContextFindNodeByID(ctx, window->DockId);
-        if (dock_node == NULL)
-            dock_node = DockContextAddNode(ctx, window->DockId);
-        DockNodeAddWindow(dock_node, window);
+        IM_ASSERT(dock_node != NULL);   // This should have been called after DockContextBuildNodesFromSettings()
+        if (root_id == 0 || DockNodeGetRootNode(dock_node)->ID == root_id)
+            DockNodeAddWindow(dock_node, window);
     }
 }
 
@@ -10089,9 +10116,9 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 
 ImGuiDockNode::~ImGuiDockNode()
 {
-    IM_ASSERT(ChildNodes[0] == NULL && ChildNodes[1] == NULL);
     IM_DELETE(TabBar);
     TabBar = NULL;
+    ChildNodes[0] = ChildNodes[1] = NULL;
 }
 
 int ImGui::DockNodeGetTabOrder(ImGuiWindow* window)
@@ -11546,18 +11573,23 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
 // Docking: Settings
 //-----------------------------------------------------------------------------
 
-static void ImGui::DockSettingsRemoveAllReferencesToNode(ImGuiID node_id)
+// Remove references stored in ImGuiWindowSettings to the given ImGuiDockNodeSettings
+static void ImGui::DockSettingsRemoveReferencesToNodes(ImGuiID* node_ids, int node_ids_count)
 {
     ImGuiContext& g = *GImGui;
+    int found = 0;
     for (int settings_n = 0; settings_n < g.SettingsWindows.Size; settings_n++)     // FIXME-OPT: We could remove this loop by storing the index in the map
     {
         ImGuiWindowSettings* window_settings = &g.SettingsWindows[settings_n];
-        if (window_settings->DockId == node_id)
-        {
-            window_settings->DockId = 0;
-            window_settings->DockOrder = -1;
-            break;
-        }
+        for (int node_n = 0; node_n < node_ids_count; node_n++)
+            if (window_settings->DockId == node_ids[node_n])
+            {
+                window_settings->DockId = 0;
+                window_settings->DockOrder = -1;
+                if (++found < node_ids_count)
+                    break;
+                return;
+            }
     }
 }
 
@@ -11617,6 +11649,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* imgui_ctx, ImGuiSe
 static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* ctx, ImGuiDockNode* node, int depth)
 {
     ImGuiDockNodeSettings node_settings;
+    IM_ASSERT(depth < (1 << (sizeof(node_settings.Depth) << 3)));
     node_settings.ID = node->ID;
     node_settings.ParentID = node->ParentNode ? node->ParentNode->ID : 0;
     node_settings.SelectedTabID = node->SelectedTabID;
@@ -11629,7 +11662,6 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* ctx, ImGuiD
     node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
     node_settings.LastExplicitSize = ImVec2ih((short)node->LastExplicitSize.x, (short)node->LastExplicitSize.y);
     ctx->SettingsNodes.push_back(node_settings);
-    ctx->SettingsMaxDepth = ImMax(ctx->SettingsMaxDepth, depth);
     if (node->ChildNodes[0])
         DockSettingsHandler_DockNodeToSettings(ctx, node->ChildNodes[0], depth + 1);
     if (node->ChildNodes[1])
@@ -11639,21 +11671,25 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* ctx, ImGuiD
 static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
 {
     // Gather settings data
+    // (unlike our windows settings, because nodes are always built we can do a full rewrite of the SettingsNode buffer)
     ImGuiDockContext* ctx = imgui_ctx->DockContext;
     ctx->SettingsNodes.resize(0);
     ctx->SettingsNodes.reserve(ctx->Nodes.Data.Size);
-    ctx->SettingsMaxDepth = 0;
     for (int n = 0; n < ctx->Nodes.Data.Size; n++)
         if (ImGuiDockNode* node = (ImGuiDockNode*)ctx->Nodes.Data[n].val_p)
             if (node->IsRootNode())
                 DockSettingsHandler_DockNodeToSettings(ctx, node, 0);
+
+    int max_depth = 0;
+    for (int node_n = 0; node_n < ctx->SettingsNodes.Size; node_n++)
+        max_depth = ImMax((int)ctx->SettingsNodes[node_n].Depth, max_depth);
 
     // Write to text buffer
     buf->appendf("[%s][Data]\n", handler->TypeName);
     for (int node_n = 0; node_n < ctx->SettingsNodes.Size; node_n++)
     {
         const ImGuiDockNodeSettings* node_settings = &ctx->SettingsNodes[node_n];
-        buf->appendf("%*sDockNode%*s", node_settings->Depth * 2, "", (ImMax(ctx->SettingsMaxDepth,0) - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
+        buf->appendf("%*sDockNode%*s", node_settings->Depth * 2, "", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
         buf->appendf(" ID=0x%08X", node_settings->ID);
         if (node_settings->ParentID)
             buf->appendf(" Parent=0x%08X LastExplicitSize=%d,%d", node_settings->ParentID, node_settings->LastExplicitSize.x, node_settings->LastExplicitSize.y);
@@ -12561,7 +12597,7 @@ void ImGui::ShowDockingDebug()
 
     if (ImGui::TreeNode("Dock nodes"))
     {
-        if (ImGui::SmallButton("Clear settings"))   { DockContextClearNodes(ctx, true); }
+        if (ImGui::SmallButton("Clear settings"))   { DockContextClearNodes(ctx, 0, true); }
         ImGui::SameLine();
         if (ImGui::SmallButton("Rebuild all"))      { ctx->WantFullRebuild = true; }
         for (int n = 0; n < ctx->Nodes.Data.Size; n++)
