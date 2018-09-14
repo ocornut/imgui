@@ -520,7 +520,7 @@ namespace ImGui
     // Docking 
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
     // Note: you DO NOT need to call DockSpace() to use most Docking facilities! You can hold SHIFT anywhere while moving windows. Use DockSpace() if you need to create an explicit docking space _within_ an existing window. See Docking demo for details)
-    IMGUI_API void          DockSpace(const char* str_id, const ImVec2& size = ImVec2(0, 0), ImGuiDockSpaceFlags flags = 0, ImGuiID user_type_filter = 0);
+    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockSpaceFlags flags = 0, ImGuiID user_type_filter = 0);
     IMGUI_API void          SetNextWindowUserType(ImGuiID user_type);                           // FIXME-DOCK: set next window user type (docking filters by same user_type)
 
     // Logging/Capture: all text output from interface is captured to tty/file/clipboard. By default, tree nodes are automatically opened during logging.

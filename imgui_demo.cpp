@@ -3746,7 +3746,8 @@ void ShowExampleAppDockSpace(bool* p_open)
     }
 
     //ImGui::PushStyleColor(ImGuiCol_DockingBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-    ImGui::DockSpace("##MyCentralDockSpace");
+    ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+    ImGui::DockSpace(dockspace_id);
     //ImGui::PopStyleColor();
 
     ImGui::End();
@@ -3959,8 +3960,8 @@ void ShowExampleAppDocuments(bool* p_open)
         NotifyOfDocumentsClosedElsewhere(app);
 
         // Create a DockSpace where any window can be docked
-        ImGui::DockSpace("##DockSpace");
-        ImGuiID dockspace_id = ImGui::GetID("##DockSpace");
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+        ImGui::DockSpace(dockspace_id);
 
         // Create Windows
         for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)

@@ -9717,7 +9717,7 @@ void ImGui::DockContextOnLoadSettings()
     DockContextBuildNodesFromSettings(ctx, ctx->SettingsNodes.Data, ctx->SettingsNodes.Size);
 }
 
-// This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
+// This function also acts as a de-facto test to make sure we can rebuild from scratch without a glitch
 void ImGui::DockContextRebuild(ImGuiDockContext* ctx)
 {
     //IMGUI_DEBUG_LOG("[docking] full rebuild\n");
@@ -11297,13 +11297,12 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
     window->DockId = dock_id;
 }
 
-void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockSpaceFlags dock_space_flags, ImGuiID user_type_filter)
+void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockSpaceFlags dock_space_flags, ImGuiID user_type_filter)
 {
     ImGuiContext& g = *GImGui;
     ImGuiDockContext* ctx = g.DockContext;
 
     ImGuiWindow* window = GetCurrentWindow();
-    ImGuiID id = window->GetID(str_id);
 
     // It is possible that the node has already been claimed by a docked window which appeared before the DockSpace(), so we overwrite IsExplicit again.
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
@@ -11344,7 +11343,7 @@ void ImGui::DockSpace(const char* str_id, const ImVec2& size_arg, ImGuiDockSpace
     window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
 
     char title[256];
-    ImFormatString(title, IM_ARRAYSIZE(title), "%s/%s", window->Name, str_id);
+    ImFormatString(title, IM_ARRAYSIZE(title), "%s/DockSpace_%08X", window->Name, id);
 
     if (node->Windows.Size > 0 || node->IsSplitNode())
         PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0, 0, 0, 0));
