@@ -1,4 +1,5 @@
-// ImGui Renderer + Platform Binding for: Marmalade + IwGx
+// dear imgui: Renderer + Platform Binding for Marmalade + IwGx
+// Marmalade code: Copyright (C) 2015 by Giovanni Zito (this file is part of Dear ImGui)
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
@@ -6,9 +7,6 @@
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
-
-// Copyright (C) 2015 by Giovanni Zito
-// This file is part of ImGui
 
 IMGUI_IMPL_API bool     ImGui_Marmalade_Init(bool install_callbacks);
 IMGUI_IMPL_API void     ImGui_Marmalade_Shutdown();

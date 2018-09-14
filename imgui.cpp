@@ -3459,7 +3459,12 @@ void ImGui::Shutdown(ImGuiContext* context)
 
     // Save settings (unless we haven't attempted to load them: CreateContext/DestroyContext without a call to NewFrame shouldn't save an empty file)
     if (g.SettingsLoaded && g.IO.IniFilename != NULL)
+    {
+        ImGuiContext* backup_context = GImGui;
+        SetCurrentContext(context);
         SaveIniSettingsToDisk(g.IO.IniFilename);
+        SetCurrentContext(backup_context);
+    }
 
     // Destroy platform windows
     ImGuiContext* backup_context = ImGui::GetCurrentContext();
@@ -4487,7 +4492,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             window->DockId = settings->DockId;
             window->DockOrder = settings->DockOrder;
         }
-    window->Size = window->SizeFull = window->SizeFullAtLastBegin = size;
+    window->Size = window->SizeFull = window->SizeFullAtLastBegin = ImFloor(size);
     window->DC.CursorMaxPos = window->Pos; // So first call to CalcSizeContents() doesn't return crazy values
 
     if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
@@ -6189,7 +6194,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     if (size.x > 0.0f)
     {
         window->AutoFitFramesX = 0;
-        window->SizeFull.x = size.x;
+        window->SizeFull.x = ImFloor(size.x);
     }
     else
     {
@@ -6199,7 +6204,7 @@ static void SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond con
     if (size.y > 0.0f)
     {
         window->AutoFitFramesY = 0;
-        window->SizeFull.y = size.y;
+        window->SizeFull.y = ImFloor(size.y);
     }
     else
     {
@@ -7757,7 +7762,7 @@ void ImGui::UpdatePlatformWindows()
         // Show window. On startup ensure platform window don't get focus
         if (is_new_window)
         {
-            if (g.FrameCount < 2)
+            if (g.FrameCount < 3) // Give a few frames for the application to stabilize (nested contents may lead to viewport being created a few frames late)
                 viewport->Flags |= ImGuiViewportFlags_NoFocusOnAppearing;
             g.PlatformIO.Platform_ShowWindow(viewport);
         }
@@ -7861,17 +7866,20 @@ void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
         g.PlatformIO.Renderer_DestroyWindow(viewport);
     if (viewport->CreatedPlatformWindow && g.PlatformIO.Platform_DestroyWindow)
         g.PlatformIO.Platform_DestroyWindow(viewport);
-    viewport->CreatedPlatformWindow = false;
     IM_ASSERT(viewport->RendererUserData == NULL);
-    IM_ASSERT(viewport->PlatformUserData == NULL && viewport->PlatformHandle == NULL);
+    IM_ASSERT(viewport->PlatformUserData == NULL);
+    viewport->PlatformHandle = NULL;
+    viewport->RendererUserData = viewport->PlatformHandle = NULL;
+    viewport->CreatedPlatformWindow = false;
 }
 
 void ImGui::DestroyPlatformWindows()
 {
     // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data 
-    // have stored in e.g. PlatformHandle.
-    // It is expected that the back-end stored a flag to remember that it doesn't own the window created for the 
-    // main viewport, and won't destroy the underlying platform/renderer data.
+    // have stored in e.g. PlatformUserData, RendererUserData. It can be convenient for the platform back-end code to
+    // store something in the main viewport, in order for e.g. the mouse handling code to work in a more generic manner.
+    // It is expected that the back-end can handle calls to Renderer_DestroyWindow/Platform_DestroyWindow without
+    // crashing if it doesn't have data stored. 
     ImGuiContext& g = *GImGui;
     for (int i = 0; i < g.Viewports.Size; i++)
         if (g.Viewports[i]->CreatedPlatformWindow)

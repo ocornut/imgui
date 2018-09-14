@@ -54,8 +54,19 @@ HOW TO UPDATE?
  VERSION 1.66 (In Progress)
 -----------------------------------------------------------------------
 
+Other Changes:
+
+- Fixed calling DestroyContext() always saving .ini data with the current context instead
+  of the supplied context pointer. (#2066)
+- Fixed calling SetNextWindowSize()/SetWindowSize() with non-integer values leading to 
+  accidental alteration of window position. We now round the provided size. (#2067)
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
+- DragFloat: Fixed a situation where dragging with value rounding enabled or with a power curve 
+  erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
+- DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
+- DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
+- BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
   
 
 -----------------------------------------------------------------------
