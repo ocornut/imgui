@@ -25,9 +25,9 @@ Dear ImGui is self-contained within a few files that you can easily copy and com
 - imgui_widgets.cpp
 - imgui_internal.h
 - imconfig.h (empty by default, user-editable)
-- stb_rect_pack.h
-- stb_textedit.h
-- stb_truetype.h
+- imstb_rect_pack.h
+- imstb_textedit.h
+- imstb_truetype.h
 
 No specific build process is required. You can add the .cpp files to your project or #include them from an existing file.
 
