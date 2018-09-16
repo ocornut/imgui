@@ -228,6 +228,12 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
    Copyright (c) 2012, Jonathan Pinhorn
    SIL OPEN FONT LICENSE Version 1.1
 
+ Sweet16.ttf and Sweet16mono.ttf
+   Copyright (c) 2018, Martin Sedlak
+   BSL-1.0 License
+   recommended loading setting in ImGui: Size = 16.0 (both), GlyphExtraSpacing.X = +1 for Sweet16.ttf
+   glyph range: 0x0020, 0x017F (both support Latin Extended A)
+   https://github.com/kmar/Sweet16Font
 
 ---------------------------------------
  LINKS, OTHER FONTS
