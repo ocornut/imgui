@@ -1474,6 +1474,12 @@ namespace ImGui
     IMGUI_API void          SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond);
     IMGUI_API void          ShowDockingDebug();
 
+    IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references = true);
+    IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id);
+    IMGUI_API void          DockBuilderDockWindow(ImGuiContext* ctx, const char* window_name, ImGuiID node_id);
+    IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_dir, ImGuiID* out_id_other);
+    IMGUI_API void          DockBuilderFinish(ImGuiContext* ctx, ImGuiID root_id);
+
     // Drag and Drop
     IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
     IMGUI_API void          ClearDragDrop();
