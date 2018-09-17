@@ -6455,8 +6455,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             // Undock
             if (undocking_tab && g.ActiveId == id && IsMouseDragging())
             {
-                ImGuiDockContext* ctx = g.DockContext;
-                DockContextQueueUndock(ctx, docked_window);
+                DockContextQueueUndock(&g, docked_window);
                 g.MovingWindow = docked_window;
                 g.ActiveId = g.MovingWindow->MoveId;
                 g.ActiveIdClickOffset -= g.MovingWindow->Pos - bb.Min;
