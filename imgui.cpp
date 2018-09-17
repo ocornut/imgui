@@ -9523,6 +9523,7 @@ void ImGui::EndDragDropTarget()
 // Docking: Settings
 //-----------------------------------------------------------------------------
 // TODO:
+// Bug: Fix when SelectedTab doesn't exist.
 // A~ document root node resizing behavior incorrect
 // A~ document root node retrieval of ID ?
 // A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
@@ -10228,8 +10229,12 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window)
     if (node->Windows.Size == 2 && !node->IsExplicitRoot)
         node->InitFromFirstWindow = true;
 
-    if (node->TabBar)
-        node->TabBar->NextSelectedTabId = window->ID;
+    if (node->TabBar == NULL)
+    {
+        node->TabBar = IM_NEW(ImGuiTabBar)();
+        node->TabBar->SelectedTabId = node->TabBar->NextSelectedTabId = node->SelectedTabID;
+    }
+    TabBarAddTab(node->TabBar, window);
 
     DockNodeUpdateVisibleFlag(node);
 
@@ -10252,17 +10257,28 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     UpdateWindowParentAndRootLinks(window, window->Flags & ~ImGuiWindowFlags_ChildWindow, NULL); // Update immediately
     MarkIniSettingsDirty();
 
+    // Remove window
     bool erased = false;
     for (int n = 0; n < node->Windows.Size; n++)
         if (node->Windows[n] == window)
         {
             node->Windows.erase(node->Windows.Data + n);
-            if (node->TabBar)
-                TabBarRemoveTab(node->TabBar, window->ID);
             erased = true;
             break;
         }
     IM_ASSERT(erased);
+
+    // Remove tab and possibly tab bar
+    if (node->TabBar)
+    {
+        TabBarRemoveTab(node->TabBar, window->ID);
+        const int tab_count_threshold_for_tab_bar = node->IsDocumentRoot ? 1 : 2;
+        if (node->Windows.Size < tab_count_threshold_for_tab_bar)
+        {
+            IM_DELETE(node->TabBar);
+            node->TabBar = NULL;
+        }
+    }
 
     if (node->Windows.Size == 0 && !node->IsDocumentRoot && window->DockId != node->ID)
     {
@@ -10270,9 +10286,6 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
         DockContextRemoveNode(&g, node, true);
         return;
     }
-
-    if (node->TabBar)
-        TabBarRemoveTab(node->TabBar, window->ID);
 
     if (node->Windows.Size == 1 && !node->IsDocumentRoot && node->HostWindow)
     {
@@ -10285,13 +10298,6 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
             node->HostWindow->Viewport->ID = node->Windows[0]->ID;
         }
         remaining_window->Collapsed = node->HostWindow->Collapsed;
-    }
-
-    int tab_count_threshold_for_tab_bar = node->IsDocumentRoot ? 1 : 2;
-    if (node->Windows.Size < tab_count_threshold_for_tab_bar && node->TabBar)
-    {
-        IM_DELETE(node->TabBar);
-        node->TabBar = NULL;
     }
 
     // Update visibility immediately is required so the DockNodeUpdateRemoveInactiveChilds() processing can reflect changes up the tree
@@ -10542,6 +10548,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     }
 
     // Update active node (the one whose title bar is highlight) within a node tree
+    if (node->IsSplitNode())
+        IM_ASSERT(node->TabBar == NULL);
     if (!node->IsSplitNode())
         node->LastFocusedNodeID = node->ID;  // This also ensure on our creation frame we will receive the title screen highlight
     else if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
@@ -10624,7 +10632,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
     PushID(node->ID);
     ImGuiTabBar* tab_bar = node->TabBar;
-    bool tab_bar_is_new = (tab_bar == NULL);
+    bool tab_bar_is_recreated = (tab_bar == NULL); // Tab bar are automatically destroyed when a node gets hidden
     if (tab_bar == NULL)
         tab_bar = node->TabBar = IM_NEW(ImGuiTabBar)();
 
@@ -10692,7 +10700,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         ImQsort(tab_bar->Tabs.Data + tabs_count_old, tab_bar->Tabs.Size - tabs_count_old, sizeof(ImGuiTabItem), TabItemComparerByDockOrder);
 
     // Selected newly added tabs, or persistent tab ID if the tab bar was just recreated
-    if (tab_bar_is_new && TabBarFindTabByID(tab_bar, node->SelectedTabID) != NULL)
+    if (tab_bar_is_recreated && TabBarFindTabByID(tab_bar, node->SelectedTabID) != NULL)
         tab_bar->SelectedTabId = tab_bar->NextSelectedTabId = node->SelectedTabID;
     else if (tab_bar->Tabs.Size > tabs_count_old)
         tab_bar->SelectedTabId = tab_bar->NextSelectedTabId = tab_bar->Tabs.back().Window->ID;
