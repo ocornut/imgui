@@ -9526,13 +9526,14 @@ void ImGui::EndDragDropTarget()
 // A~ document root node retrieval of ID ?
 // A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
 // B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
-// A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal tab bar
+// A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal title bar (not a tab bar)
 // B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
-// B- fix/disable auto-resize grip on split host nodes
 // B~ tidy up tab list popup buttons (see old ImGuiTabBarFlags_NoTabListPopupButton code)
 // B- DockSpace() border issues
 // B- inconsistent clipping/border 1-pixel issue (#2)
+// B- fix/disable auto-resize grip on split host nodes (~#2)
 // B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
+// B- drag from collapse button should drag entire dock node
 // B- implicit per-viewport dockspace to dock to
 // B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
 // B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
@@ -9971,6 +9972,7 @@ void ImGui::DockContextQueueUndock(ImGuiDockContext* ctx, ImGuiWindow* window)
 
 void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
 {
+    ImGuiContext& g = *GImGui;
     ImGuiWindow* payload_window = req->DockPayload;
     ImGuiWindow* target_window = req->DockTarget;
     ImGuiDockNode* target_node = req->DockTargetNode;
@@ -9985,6 +9987,8 @@ void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
 
     // FIXME-DOCK: When we are trying to dock an existing single-window node into a loose window, transfer Node ID as well
 
+    if (target_node)
+        IM_ASSERT(target_node->LastFrameAlive < g.FrameCount);
     if (target_node && target_node == target_window->DockNodeAsHost)
         IM_ASSERT(target_node->Windows.Size > 1 || target_node->IsSplitNode() || target_node->IsDocumentRoot);
 
@@ -10080,6 +10084,8 @@ void ImGui::DockContextProcessDock(ImGuiDockContext* ctx, ImGuiDockRequest* req)
 void ImGui::DockContextProcessUndock(ImGuiDockContext* ctx, ImGuiWindow* window)
 {
     (void)ctx;
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(window->LastFrameActive < g.FrameCount);
     if (window->DockNode)
         DockNodeRemoveWindow(window->DockNode, window, 0);
     else
@@ -10984,12 +10990,10 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         }
     }
 
-    if (host_node && (host_node->Flags & ImGuiDockSpaceFlags_NoSplit))
-        return;
-
     // Display drop boxes
     const float overlay_rounding = ImMax(3.0f, g.Style.FrameRounding);
     for (int dir = ImGuiDir_None; dir < ImGuiDir_COUNT; dir++)
+    {
         if (!data->DropRectsDraw[dir + 1].IsInverted())
         {
             ImRect draw_r = data->DropRectsDraw[dir + 1];
@@ -11007,6 +11011,11 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
                     overlay_draw_lists[overlay_n]->AddLine(ImVec2(draw_r_in.Min.x, center.y), ImVec2(draw_r_in.Max.x, center.y), overlay_col_lines);
             }
         }
+        
+        // Stop after ImGuiDir_None
+        if (host_node && (host_node->Flags & ImGuiDockSpaceFlags_NoSplit))
+            return;
+    }
 }
 
 //-----------------------------------------------------------------------------
@@ -11526,7 +11535,7 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
         else
             allow_null_target_node = true; // Dock into a regular window
 
-        const ImRect explicit_target_rect = (target_node && target_node->TabBar) ? target_node->TabBar->BarRect : window->TitleBarRect();
+        const ImRect explicit_target_rect = (target_node && target_node->TabBar) ? target_node->TabBar->BarRect : ImRect(window->Pos, window->Pos + ImVec2(window->Size.x, GetFrameHeight()));
         const bool is_explicit_target = g.IO.ConfigDockingWithKeyMod || IsMouseHoveringRect(explicit_target_rect.Min, explicit_target_rect.Max);
 
         // Preview docking request and find out split direction/ratio
