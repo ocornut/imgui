@@ -79,13 +79,13 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     char* compressed = use_compression ? new char[maxlen] : data;
     int compressed_sz = use_compression ? stb_compress((stb_uchar*)compressed, (stb_uchar*)data, data_sz) : data_sz;
     if (use_compression)
-		memset(compressed + compressed_sz, 0, maxlen - compressed_sz);
+        memset(compressed + compressed_sz, 0, maxlen - compressed_sz);
 
     // Output as Base85 encoded
     FILE* out = stdout;
     fprintf(out, "// File: '%s' (%d bytes)\n", filename, (int)data_sz);
     fprintf(out, "// Exported using binary_to_compressed_c.cpp\n");
-	const char* compressed_str = use_compression ? "compressed_" : "";
+    const char* compressed_str = use_compression ? "compressed_" : "";
     if (use_base85_encoding)
     {
         fprintf(out, "static const char %s_%sdata_base85[%d+1] =\n    \"", symbol, compressed_str, (int)((compressed_sz+3)/4)*5);
@@ -124,7 +124,7 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     // Cleanup
     delete[] data;
     if (use_compression)
-	    delete[] compressed;
+        delete[] compressed;
     return true;
 }
 
@@ -227,7 +227,33 @@ static  stb_uint stb__hashsize = 32768;
 #define stb__hc2(q,h,c,d)   (((h) << 14) + ((h) >> 18) + (q[c] << 7) + q[d])
 #define stb__hc3(q,c,d,e)   ((q[c] << 14) + (q[d] << 7) + q[e])
 
+#define STB__SCRAMBLE(h)   (((h) + ((h) >> 16)) & mask)
+
 static unsigned int stb__running_adler;
+
+static void update_hashes(stb_uchar **chash, stb_uint mask, stb_uchar *q, stb_uchar *to, int len)
+{
+    stb_uint h1,h2,h3,h4, h;
+
+    if (q+len+12 >= to)
+        return;
+
+    to = q + len;
+
+    while (q < to)
+    {
+        h = stb__hc3(q,0, 1, 2); h1 = STB__SCRAMBLE(h);
+        h = stb__hc2(q,h, 3, 4); h2 = STB__SCRAMBLE(h);
+        h = stb__hc2(q,h, 5, 6);
+        h = stb__hc2(q,h, 7, 8); h3 = STB__SCRAMBLE(h);
+        h = stb__hc2(q,h, 9,10);
+        h = stb__hc2(q,h,11,12); h4 = STB__SCRAMBLE(h);
+
+        // because we use a shared hash table, can only update it
+        // _after_ we've probed all of them
+        chash[h1] = chash[h2] = chash[h3] = chash[h4] = q++;
+    }
+}
 
 static int stb_compress_chunk(stb_uchar *history,
     stb_uchar *start,
@@ -242,8 +268,6 @@ static int stb_compress_chunk(stb_uchar *history,
     stb_uint match_max;
     stb_uchar *lit_start = start - *pending_literals;
     stb_uchar *q = start;
-
-#define STB__SCRAMBLE(h)   (((h) + ((h) >> 16)) & mask)
 
     // stop short of the end so we don't scan off the end doing
     // the hashing; this means we won't compress the last few bytes
@@ -291,23 +315,28 @@ static int stb_compress_chunk(stb_uchar *history,
         if (best < 3) { // fast path literals
             ++q;
         } else if (best > 2  &&  best <= 0x80    &&  dist <= 0x100) {
+            update_hashes(chash, mask, q, end, best);
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
             stb_out(0x80 + best-1);
             stb_out(dist-1);
         } else if (best > 5  &&  best <= 0x100   &&  dist <= 0x4000) {
+            update_hashes(chash, mask, q, end, best);
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
             stb_out2(0x4000 + dist-1);       
             stb_out(best-1);
         } else if (best > 7  &&  best <= 0x100   &&  dist <= 0x80000) {
+            update_hashes(chash, mask, q, end, best);
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
             stb_out3(0x180000 + dist-1);     
             stb_out(best-1);
         } else if (best > 8  &&  best <= 0x10000 &&  dist <= 0x80000) {
+            update_hashes(chash, mask, q, end, best);
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
             stb_out3(0x100000 + dist-1);     
             stb_out2(best-1);
         } else if (best > 9                      &&  dist <= 0x1000000) {
             if (best > 65536) best = 65536;
+            update_hashes(chash, mask, q, end, best);
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
             if (best <= 0x100) {
                 stb_out(0x06);
