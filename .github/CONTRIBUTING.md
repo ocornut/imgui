@@ -18,7 +18,7 @@ You may use the Issue Tracker to submit bug reports, feature requests or suggest
 **Guidelines to report an issue or ask a question:**
 - Please provide your imgui version number.
 - Please state if you have made substantial modifications to your copy of imgui. 
-- Try to be explicit with your expectations and what you have tried. What you have in mind or in your code is not obvious to other people.
+- Try to be explicit with your Goals, your Expectations and what you have Tried. What you have in mind or in your code is not obvious to other people. People frequently discuss problems without first mentioning their goal.
 - If you are discussing an assert or a crash, please provide a debugger callstack. Never state "it crashes" without additional information. If you don't know how to use a debugger and retrieve a callstack, learning about it will be useful.
 - Please make sure that your compilation settings have asserts enabled. Calls to IM_ASSERT() are scattered in the code to help catch common issues. By default IM_ASSERT() calls the standard assert() function. To verify that your asserts are enabled, add the line `IM_ASSERT(false);` in your main() function. Your application should display an error message and abort. If your application report an error, it means that your asserts are disabled. Please make sure they are enabled.
 - When discussing issues related to rendering or inputs, please state the OS/back-end/renderer you are using. Please state if you are using a vanilla copy of the example back-ends (imgui_impl_XXX files), or a modified one, or if you built your own.
@@ -27,10 +27,10 @@ You may use the Issue Tracker to submit bug reports, feature requests or suggest
 - When requesting a new feature, please describe the usage context (how you intend to use it, why you need it, etc.).
 
 **Some unfortunate words of warning**
-- If you are or were involved in cheating schemes (e.g. DLL injection) for competitive online multi-player games, please don't post here. We won't answer and you will be blocked. We've had too many of you. Please stop.
+- If you are or were involved in cheating schemes (e.g. DLL injection) for competitive online multi-player games, please don't post here. We won't answer and you will be blocked. We've had too many of you.
 - Due to frequent abuse of this service from aforementioned users, if your GitHub account is anonymous and was created five minutes ago please understand that your post will receive more scrutiny and incomplete questions may be dismissed.
 
-If you have been using dear imgui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fullfill every item to the letter. Those are guidelines and experienced users or members of the community will know what information are useful in a given context.
+If you have been using dear imgui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fullfill every item to the letter. Those are guidelines and experienced users or members of the community will know which information are useful in a given context.
 
 ## How to create an Pull Request
 - When adding a feature, please describe the usage context (how you intend to use it, why you need it, etc.).
