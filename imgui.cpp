@@ -9526,7 +9526,6 @@ void ImGui::EndDragDropTarget()
 // A~ document root node resizing behavior incorrect
 // A~ document root node retrieval of ID ?
 // A- fix when SelectedTab doesn't exist (easy to repro/fix with .ini mod, but would be nice to also find real repro)
-// B- full rebuild make currently highlight title bar flicker (didn't use to)
 // B- full rebuild loses viewport of floating dock nodes
 // B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them
 // A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
@@ -9539,7 +9538,7 @@ void ImGui::EndDragDropTarget()
 // B- fix/disable auto-resize grip on split host nodes (~#2)
 // B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
 // B- drag from collapse button should drag entire dock node
-// B- implicit per-viewport dockspace to dock to
+// B- implicit, invisible per-viewport dockspace to dock to
 // B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
 // B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
 // B- tab bar: make selected tab always shows its full title?
@@ -9661,6 +9660,7 @@ namespace ImGui
     static void             DockNodeCalcSplitRects(ImVec2& pos_old, ImVec2& size_old, ImVec2& pos_new, ImVec2& size_new, ImGuiDir dir, ImVec2 size_new_desired);
     static bool             DockNodeCalcDropRects(const ImRect& parent, ImGuiDir dir, ImRect& out_draw, bool outer_docking);
     static ImGuiDockNode*   DockNodeGetRootNode(ImGuiDockNode* node) { while (node->ParentNode) node = node->ParentNode; return node; }
+    static const char*      DockNodeGetHostWindowTitle(ImGuiDockNode* node, char* buf, int buf_size) { ImFormatString(buf, buf_size, "##DockNode_%02X", node->ID); return buf; }
     static int              DockNodeGetDepth(const ImGuiDockNode* node) { int depth = 0; while (node->ParentNode) { node = node->ParentNode; depth++; } return depth; }
     static int              DockNodeGetTabOrder(ImGuiWindow* window);
 
@@ -9979,6 +9979,11 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         node->SplitAxis = node_settings->SplitAxis;
         node->IsExplicitRoot = node_settings->IsExplicitRoot != 0;
         node->IsDocumentRoot = node_settings->IsDocumentRoot != 0;
+
+        // Bind host window immediately if it already exist (in case of a rebuild)
+        // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
+        char host_window_title[32];
+        node->HostWindow = FindWindowByName(DockNodeGetHostWindowTitle(node, host_window_title, IM_ARRAYSIZE(host_window_title)));
     }
 }
 
@@ -10527,7 +10532,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
             // Begin into the host window
             char window_label[20];
-            ImFormatString(window_label, IM_ARRAYSIZE(window_label), "##DockNode_%02X", node->ID);
+            DockNodeGetHostWindowTitle(node, window_label, IM_ARRAYSIZE(window_label));
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_DockNodeHost;
             window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
             window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse;
@@ -10639,7 +10644,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (tab_bar == NULL)
         tab_bar = node->TabBar = IM_NEW(ImGuiTabBar)();
 
-    // Decide if we should use focused color
+    // Decide if we should use a focused title bar color
     bool is_focused = false;
     ImGuiDockNode* root_node = DockNodeGetRootNode(node);
     if (g.NavWindowingTarget)
@@ -11628,7 +11633,7 @@ void ImGui::BeginAsDockableDragDropSource(ImGuiWindow* window)
     window->DC.LastItemId = window->MoveId;
     window = window->RootWindow;
     IM_ASSERT((window->Flags & ImGuiWindowFlags_NoDocking) == 0);
-    bool is_drag_docking = (g.IO.ConfigDockingWithKeyMod) || (window->Flags & ImGuiWindowFlags_NoTitleBar) || ImRect(0, 0, window->SizeFull.x, window->TitleBarHeight()).Contains(g.ActiveIdClickOffset);
+    bool is_drag_docking = (g.IO.ConfigDockingWithKeyMod) || ImRect(0, 0, window->SizeFull.x, GetFrameHeight()).Contains(g.ActiveIdClickOffset);
     if (is_drag_docking && BeginDragDropSource(ImGuiDragDropFlags_SourceNoPreviewTooltip | ImGuiDragDropFlags_SourceNoHoldToOpenOthers | ImGuiDragDropFlags_SourceAutoExpirePayload))
     {
         SetDragDropPayload(IMGUI_PAYLOAD_TYPE_WINDOW, &window, sizeof(window));
