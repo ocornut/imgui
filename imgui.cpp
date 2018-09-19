@@ -9523,9 +9523,12 @@ void ImGui::EndDragDropTarget()
 // Docking: Settings
 //-----------------------------------------------------------------------------
 // TODO:
-// Bug: Fix when SelectedTab doesn't exist.
 // A~ document root node resizing behavior incorrect
 // A~ document root node retrieval of ID ?
+// A- fix when SelectedTab doesn't exist (easy to repro/fix with .ini mod, but would be nice to also find real repro)
+// B- full rebuild make currently highlight title bar flicker (didn't use to)
+// B- full rebuild loses viewport of floating dock nodes
+// B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them
 // A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
 // B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
 // A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal title bar (not a tab bar)
@@ -9608,7 +9611,7 @@ struct ImGuiDockNodeSettings
     char            IsDocumentRoot;
     ImVec2ih        Pos;
     ImVec2ih        Size;
-    ImVec2ih        LastExplicitSize;
+    ImVec2ih        SizeRef;
     ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsExplicitRoot = IsDocumentRoot = 0; }
 };
 
@@ -9753,7 +9756,7 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
 
 #if 0
     if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C)))
-        ctx->WantFullRebuild = true;
+        dc->WantFullRebuild = true;
 #endif
     if (dc->WantFullRebuild)
     {
@@ -9967,7 +9970,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         node->ParentNode = node_settings->ParentID ? DockContextFindNodeByID(ctx, node_settings->ParentID) : NULL;
         node->Pos = ImVec2(node_settings->Pos.x, node_settings->Pos.y);
         node->Size = ImVec2(node_settings->Size.x, node_settings->Size.y);
-        node->LastExplicitSize = ImVec2(node_settings->LastExplicitSize.x, node_settings->LastExplicitSize.y);
+        node->SizeRef = ImVec2(node_settings->SizeRef.x, node_settings->SizeRef.y);
         if (node->ParentNode && node->ParentNode->ChildNodes[0] == NULL)
             node->ParentNode->ChildNodes[0] = node;
         else if (node->ParentNode && node->ParentNode->ChildNodes[1] == NULL)
@@ -10314,7 +10317,7 @@ static void ImGui::DockNodeMoveChildNodes(ImGuiDockNode* dst_node, ImGuiDockNode
     if (dst_node->ChildNodes[1])
         dst_node->ChildNodes[1]->ParentNode = dst_node;
     dst_node->SplitAxis = src_node->SplitAxis;
-    dst_node->LastExplicitSize = src_node->LastExplicitSize;
+    dst_node->SizeRef = src_node->SizeRef;
     src_node->ChildNodes[0] = src_node->ChildNodes[1] = NULL;
 }
 
@@ -11115,9 +11118,9 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->VisibleWindow = NULL;
 
     float size_avail = (parent_node->Size[split_axis] - IMGUI_DOCK_SPLITTER_SIZE);
-    child_0->LastExplicitSize = child_1->LastExplicitSize = parent_node->Size;
-    child_0->LastExplicitSize[split_axis] = ImMax(g.Style.WindowMinSize[split_axis], ImFloor(size_avail * split_ratio));
-    child_1->LastExplicitSize[split_axis] = ImMax(g.Style.WindowMinSize[split_axis], ImFloor(size_avail - child_0->LastExplicitSize[split_axis]));
+    child_0->SizeRef = child_1->SizeRef = parent_node->Size;
+    child_0->SizeRef[split_axis] = ImMax(g.Style.WindowMinSize[split_axis], ImFloor(size_avail * split_ratio));
+    child_1->SizeRef[split_axis] = ImMax(g.Style.WindowMinSize[split_axis], ImFloor(size_avail - child_0->SizeRef[split_axis]));
 
     DockNodeMoveWindows(parent_node->ChildNodes[split_inheritor_child_idx], parent_node);
     DockNodeTreeUpdatePosSize(parent_node, parent_node->Pos, parent_node->Size);
@@ -11135,7 +11138,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
         IM_ASSERT(parent_node->Windows.Size == 0);
     }
 
-    ImVec2 backup_last_explicit_size = parent_node->LastExplicitSize;
+    ImVec2 backup_last_explicit_size = parent_node->SizeRef;
     DockNodeMoveChildNodes(parent_node, merge_lead_child);
     DockNodeMoveWindows(parent_node, child_0); // Generally only 1 of the 2 child node will have windows
     DockNodeMoveWindows(parent_node, child_1);
@@ -11143,7 +11146,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->InitFromFirstWindow = false;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
     parent_node->IsDocumentRoot = child_0->IsDocumentRoot || child_1->IsDocumentRoot;
-    parent_node->LastExplicitSize = backup_last_explicit_size;
+    parent_node->SizeRef = backup_last_explicit_size;
 
     ctx->DockContext->Nodes.SetVoidPtr(child_0->ID, NULL);
     ctx->DockContext->Nodes.SetVoidPtr(child_1->ID, NULL);
@@ -11179,32 +11182,32 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         if (child_0->WantLockSizeOnce)
         {
             child_0->WantLockSizeOnce = false;
-            child_0_size[axis] = child_0->LastExplicitSize[axis] = child_0->Size[axis];
-            child_1_size[axis] = child_1->LastExplicitSize[axis] = (size_avail - child_0_size[axis]);
+            child_0_size[axis] = child_0->SizeRef[axis] = child_0->Size[axis];
+            child_1_size[axis] = child_1->SizeRef[axis] = (size_avail - child_0_size[axis]);
 
         }
         else if (child_1->WantLockSizeOnce)
         {
             child_1->WantLockSizeOnce = false;
-            child_1_size[axis] = child_1->LastExplicitSize[axis] = child_1->Size[axis];
-            child_0_size[axis] = child_0->LastExplicitSize[axis] = (size_avail - child_1_size[axis]);
+            child_1_size[axis] = child_1->SizeRef[axis] = child_1->Size[axis];
+            child_0_size[axis] = child_0->SizeRef[axis] = (size_avail - child_1_size[axis]);
         }
 
         // 3) If one window is the document root (~ use remaining space, should be made explicit!), use explicit size from the other, and remainder for the document root
-        else if (child_1->IsDocumentRoot && child_0->LastExplicitSize[axis] != 0.0f)
+        else if (child_1->IsDocumentRoot && child_0->SizeRef[axis] != 0.0f)
         {
-            child_0_size[axis] = ImMin(size_avail - size_min_each, child_0->LastExplicitSize[axis]);
+            child_0_size[axis] = ImMin(size_avail - size_min_each, child_0->SizeRef[axis]);
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
-        else if (child_0->IsDocumentRoot && child_1->LastExplicitSize[axis] != 0.0f)
+        else if (child_0->IsDocumentRoot && child_1->SizeRef[axis] != 0.0f)
         {
-            child_1_size[axis] = ImMin(size_avail - size_min_each, child_1->LastExplicitSize[axis]);
+            child_1_size[axis] = ImMin(size_avail - size_min_each, child_1->SizeRef[axis]);
             child_0_size[axis] = (size_avail - child_1_size[axis]);
         }
         else
         {
-            // 4) Otherwise distribute according to the relative ratio of each LastExplicitSize value
-            float split_ratio = child_0->LastExplicitSize[axis] / (child_0->LastExplicitSize[axis] + child_1->LastExplicitSize[axis]);
+            // 4) Otherwise distribute according to the relative ratio of each SizeRef value
+            float split_ratio = child_0->SizeRef[axis] / (child_0->SizeRef[axis] + child_1->SizeRef[axis]);
             child_0_size[axis] = ImMax(size_min_each, ImFloor(size_avail * split_ratio + 0.5F));
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
@@ -11299,9 +11302,9 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         {
             if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
             {
-                child_0->Size[axis] = child_0->LastExplicitSize[axis] = w1;
+                child_0->Size[axis] = child_0->SizeRef[axis] = w1;
                 child_1->Pos[axis] -= w2 - child_1->Size[axis];
-                child_1->Size[axis] = child_1->LastExplicitSize[axis] = w2;
+                child_1->Size[axis] = child_1->SizeRef[axis] = w2;
 
                 // Lock the size of every node that is a sibling of the node we are touching
                 // This might be less desirable if we can merge sibling of a same axis into the same parental level.
@@ -11420,7 +11423,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockSpaceFlags do
         size.y = ImMax(content_avail.y + size.y, 4.0f);
 
     node->Pos = window->DC.CursorPos;
-    node->Size = node->LastExplicitSize = size;
+    node->Size = node->SizeRef = size;
     SetNextWindowPos(node->Pos);
     SetNextWindowSize(node->Size);
     g.NextWindowData.PosUndock = false;
@@ -11756,7 +11759,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     }
     else
     {
-        if (sscanf(line, " LastExplicitSize=%i,%i%n", &x, &y, &r) == 2) { line += r; node.LastExplicitSize = ImVec2ih((short)x, (short)y); }
+        if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
     if (sscanf(line, " ExplicitRoot=%d%n", &x, &r) == 1)            { line += r; node.IsExplicitRoot = (x != 0); }
@@ -11784,7 +11787,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.IsDocumentRoot = (char)node->IsDocumentRoot;
     node_settings.Pos = ImVec2ih((short)node->Pos.x, (short)node->Pos.y);
     node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
-    node_settings.LastExplicitSize = ImVec2ih((short)node->LastExplicitSize.x, (short)node->LastExplicitSize.y);
+    node_settings.SizeRef = ImVec2ih((short)node->SizeRef.x, (short)node->SizeRef.y);
     dc->SettingsNodes.push_back(node_settings);
     if (node->ChildNodes[0])
         DockSettingsHandler_DockNodeToSettings(dc, node->ChildNodes[0], depth + 1);
@@ -11816,7 +11819,7 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         buf->appendf("%*sDockNode%*s", node_settings->Depth * 2, "", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
         buf->appendf(" ID=0x%08X", node_settings->ID);
         if (node_settings->ParentID)
-            buf->appendf(" Parent=0x%08X LastExplicitSize=%d,%d", node_settings->ParentID, node_settings->LastExplicitSize.x, node_settings->LastExplicitSize.y);
+            buf->appendf(" Parent=0x%08X SizeRef=%d,%d", node_settings->ParentID, node_settings->SizeRef.x, node_settings->SizeRef.y);
         else
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
         if (node_settings->SplitAxis != ImGuiAxis_None)
@@ -12674,7 +12677,7 @@ void ImGui::ShowDockingDebug()
                 IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
                 ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f), LastExplicit (%.0f, %.0f)",
                     node->Pos.x, node->Pos.y, node->Size.x, node->Size.y,
-                    node->LastExplicitSize.x, node->LastExplicitSize.y);
+                    node->SizeRef.x, node->SizeRef.y);
                 ImGui::BulletText("Flags %02X%s%s%s%s",
                     node->Flags, node->IsExplicitRoot ? ", IsExplicitRoot" : "", node->IsDocumentRoot ? ", IsDocumentRoot" : "",
                     (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
@@ -12784,7 +12787,7 @@ void ImGui::ShowDockingDebug()
                 ImDrawList* overlay_draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
                 p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsDocumentRoot ? " *DocRoot*" : "");
                 p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
-                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Explicit: (%.0f, %.0f)\n", node->LastExplicitSize.x, node->LastExplicitSize.y);
+                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
                 int depth = DockNodeGetDepth(node);
                 overlay_draw_list->AddRect(node->Pos + ImVec2(3,3) * (float)depth, node->Pos + node->Size - ImVec2(3,3) * (float)depth, IM_COL32(200, 100, 100, 255));
                 ImVec2 pos = node->Pos + ImVec2(3,3) * (float)depth;
