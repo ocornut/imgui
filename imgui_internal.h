@@ -769,6 +769,7 @@ struct ImGuiDockNode
     bool                    HasCollapseButton   :1;
     bool                    WantCloseAll        :1; // Set when closing all tabs at once.
     bool                    WantLockSizeOnce    :1;
+    bool                    WantMouseMove       :1; // After a node extraction we need to transition toward moving the newly created hode window
 
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();
@@ -1468,7 +1469,9 @@ namespace ImGui
     IMGUI_API void          DockContextNewFrameUpdateUndocking(ImGuiContext* ctx);
     IMGUI_API void          DockContextNewFrameUpdateDocking(ImGuiContext* ctx);
     IMGUI_API void          DockContextEndFrame(ImGuiContext* ctx);
-    IMGUI_API void          DockContextQueueUndock(ImGuiContext* ctx, ImGuiWindow* window);
+    IMGUI_API void          DockContextQueueUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
+    IMGUI_API void          DockContextQueueUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
+    inline ImGuiDockNode*   DockNodeGetRootNode(ImGuiDockNode* node) { while (node->ParentNode) node = node->ParentNode; return node; }
     IMGUI_API void          BeginDocked(ImGuiWindow* window, bool* p_open);
     IMGUI_API void          BeginAsDockableDragDropSource(ImGuiWindow* window);
     IMGUI_API void          BeginAsDockableDragDropTarget(ImGuiWindow* window);
@@ -1531,7 +1534,7 @@ namespace ImGui
     // Widgets
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos, float radius);
-    IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos);
+    IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_node);
     IMGUI_API bool          ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size_arg, ImGuiButtonFlags flags);
     IMGUI_API void          Scrollbar(ImGuiLayoutType direction);
     IMGUI_API void          VerticalSeparator();        // Vertical separator, for menu bars (use current line height). Not exposed because it is misleading and it doesn't have an effect on regular layout.

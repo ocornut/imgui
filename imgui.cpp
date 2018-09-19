@@ -5438,7 +5438,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             // Collapse button
             if (!(flags & ImGuiWindowFlags_NoCollapse))
-                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
+                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos, NULL))
                     window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
 
             // Close button
@@ -9537,7 +9537,6 @@ void ImGui::EndDragDropTarget()
 // B- inconsistent clipping/border 1-pixel issue (#2)
 // B- fix/disable auto-resize grip on split host nodes (~#2)
 // B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
-// B- drag from collapse button should drag entire dock node
 // B- implicit, invisible per-viewport dockspace to dock to
 // B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
 // B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
@@ -9570,13 +9569,14 @@ struct ImGuiDockRequest
     ImGuiDir                DockSplitDir;
     float                   DockSplitRatio;
     bool                    DockSplitOuter;
-    ImGuiWindow*            UndockTarget;
+    ImGuiWindow*            UndockTargetWindow;
+    ImGuiDockNode*          UndockTargetNode;
 
     ImGuiDockRequest()
     {
         Type = ImGuiDockRequestType_None;
-        DockTargetWindow = DockPayload = UndockTarget = NULL;
-        DockTargetNode = NULL;
+        DockTargetWindow = DockPayload = UndockTargetWindow = NULL;
+        DockTargetNode = UndockTargetNode = NULL;
         DockSplitDir = ImGuiDir_None;
         DockSplitRatio = 0.5f;
         DockSplitOuter = false;
@@ -9636,7 +9636,8 @@ namespace ImGui
     static void             DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer);
     static void             DockContextQueueNotifyRemovedNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req);
-    static void             DockContextProcessUndock(ImGuiContext* ctx, ImGuiWindow* window);
+    static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
+    static void             DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextGcUnusedSettingsNodes(ImGuiContext* ctx);
     static void             DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references);    // Set root_id==0 to clear all
     static void             DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
@@ -9653,13 +9654,13 @@ namespace ImGui
     static void             DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
     static void             DockNodeUpdateVisibleFlag(ImGuiDockNode* node);
+    static void             DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWindow* window);
     static bool             DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* payload_window);
     static bool             DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* payload_window, ImGuiDockPreviewData* preview_data, bool is_explicit_target, bool is_outer_docking);
     static void             DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* payload_window, const ImGuiDockPreviewData* preview_data);
     static ImRect           DockNodeCalcTabBarRect(const ImGuiDockNode* node);
     static void             DockNodeCalcSplitRects(ImVec2& pos_old, ImVec2& size_old, ImVec2& pos_new, ImVec2& size_new, ImGuiDir dir, ImVec2 size_new_desired);
     static bool             DockNodeCalcDropRects(const ImRect& parent, ImGuiDir dir, ImRect& out_draw, bool outer_docking);
-    static ImGuiDockNode*   DockNodeGetRootNode(ImGuiDockNode* node) { while (node->ParentNode) node = node->ParentNode; return node; }
     static const char*      DockNodeGetHostWindowTitle(ImGuiDockNode* node, char* buf, int buf_size) { ImFormatString(buf, buf_size, "##DockNode_%02X", node->ID); return buf; }
     static int              DockNodeGetDepth(const ImGuiDockNode* node) { int depth = 0; while (node->ParentNode) { node = node->ParentNode; depth++; } return depth; }
     static int              DockNodeGetTabOrder(ImGuiWindow* window);
@@ -9766,8 +9767,13 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
 
     // Process Undocking requests (we need to process them _before_ the UpdateMouseMovingWindow call in NewFrame)
     for (int n = 0; n < dc->Requests.Size; n++)
-        if (dc->Requests[n].Type == ImGuiDockRequestType_Undock)
-            DockContextProcessUndock(ctx, dc->Requests[n].UndockTarget);
+    {
+        ImGuiDockRequest* req = &dc->Requests[n];
+        if (req->Type == ImGuiDockRequestType_Undock && req->UndockTargetWindow)
+            DockContextProcessUndockWindow(ctx, req->UndockTargetWindow);
+        else if (req->Type == ImGuiDockRequestType_Undock && req->UndockTargetNode)
+            DockContextProcessUndockNode(ctx, req->UndockTargetNode);
+    }
 }
 
 // Docking context update function, called by NewFrame()
@@ -9912,7 +9918,7 @@ void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_i
         if (want_removal)
         {
             ImGuiID backup_dock_id = window->DockId;
-            DockContextProcessUndock(ctx, window);
+            DockContextProcessUndockWindow(ctx, window);
             if (!clear_persistent_docking_references)
                 window->DockId = backup_dock_id;
         }
@@ -10023,11 +10029,19 @@ void ImGui::DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDo
     ctx->DockContext->Requests.push_back(req);
 }
 
-void ImGui::DockContextQueueUndock(ImGuiContext* ctx, ImGuiWindow* window)
+void ImGui::DockContextQueueUndockWindow(ImGuiContext* ctx, ImGuiWindow* window)
 {
     ImGuiDockRequest req;
     req.Type = ImGuiDockRequestType_Undock;
-    req.UndockTarget = window;
+    req.UndockTargetWindow = window;
+    ctx->DockContext->Requests.push_back(req);
+}
+
+void ImGui::DockContextQueueUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
+{
+    ImGuiDockRequest req;
+    req.Type = ImGuiDockRequestType_Undock;
+    req.UndockTargetNode = node;
     ctx->DockContext->Requests.push_back(req);
 }
 
@@ -10118,7 +10132,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         if (payload_node != NULL)
         {
             // Transfer full payload node (with 1+ child windows or child nodes)
-            // FIXME-DOCK: Transition persistent DockId for all non-active windows?
+            // FIXME-DOCK: Transition persistent DockId for all non-active windows
             if (payload_node->IsSplitNode())
             {
                 if (target_node->Windows.Size > 0)
@@ -10157,7 +10171,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         target_node->TabBar->NextSelectedTabId = next_selected_id;
 }
 
-void ImGui::DockContextProcessUndock(ImGuiContext* ctx, ImGuiWindow* window)
+void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window)
 {
     (void)ctx;
     if (window->DockNode)
@@ -10167,6 +10181,22 @@ void ImGui::DockContextProcessUndock(ImGuiContext* ctx, ImGuiWindow* window)
     window->Collapsed = false;
     window->DockIsActive = false;
     window->DockTabIsVisible = false;
+}
+
+// Extract a node out by creating a new one.
+// In the case of a root node, a node will have to stay in place, otherwise the node will be hidden (and GC-ed later)
+// (we could handle both cases differently with little benefit)
+void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
+{
+    // FIXME-DOCK: Transition persistent DockId for all non-active windows
+    (void)ctx;
+    IM_ASSERT(!node->IsSplitNode());
+    IM_ASSERT(node->Windows.Size >= 1);
+    ImGuiDockNode* new_node = DockContextAddNode(ctx, (ImGuiID)-1);
+    DockNodeMoveWindows(new_node, node);
+    for (int n = 0; n < new_node->Windows.Size; n++)
+        UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
+    new_node->WantMouseMove = true;
 }
 
 //-----------------------------------------------------------------------------
@@ -10188,7 +10218,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     SelectedTabID = 0;
     WantCloseTabID = 0;
     IsVisible = true;
-    InitFromFirstWindow = IsExplicitRoot = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = false;
+    InitFromFirstWindow = IsExplicitRoot = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
 }
 
 ImGuiDockNode::~ImGuiDockNode()
@@ -10447,6 +10477,16 @@ static void ImGui::DockNodeUpdateVisibleFlag(ImGuiDockNode* node)
     node->IsVisible = is_visible;
 }
 
+static void ImGui::DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(node->WantMouseMove == true);
+    ImVec2 backup_active_click_offset = g.ActiveIdClickOffset;
+    StartMouseMovingWindow(window);
+    node->WantMouseMove = false;
+    g.ActiveIdClickOffset = backup_active_click_offset;
+}
+
 static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
@@ -10488,6 +10528,9 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         node->WantCloseTabID = 0;
         node->HasCloseButton = node->HasCollapseButton = false;
         node->LastFrameActive = g.FrameCount;
+
+        if (node->WantMouseMove)
+            DockNodeStartMouseMovingWindow(node, node->Windows[0]);
         return;
     }
 
@@ -10553,6 +10596,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             node->HostWindow = host_window = node->ParentNode->HostWindow;
         }
         node->InitFromFirstWindow = false;
+        if (node->WantMouseMove && node->HostWindow)
+            DockNodeStartMouseMovingWindow(node, node->HostWindow);
     }
 
     // Update active node (the one whose title bar is highlight) within a node tree
@@ -10681,7 +10726,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     host_window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.WindowBorderSize);
 
     // Collapse button
-    if (CollapseButton(host_window->GetID("#COLLAPSE"), title_bar_rect.Min))
+    if (CollapseButton(host_window->GetID("#COLLAPSE"), title_bar_rect.Min, node))
         OpenPopup("#TabListMenu");
     if (IsItemActive())
         focus_tab_id = tab_bar->SelectedTabId;
@@ -11524,7 +11569,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     g.NextWindowData.PosUndock = false;
     if (want_undock)
     {
-        DockContextProcessUndock(ctx, window);
+        DockContextProcessUndockWindow(ctx, window);
         return;
     }
 
@@ -11538,7 +11583,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
         if (dock_node->IsSplitNode())
         {
-            DockContextProcessUndock(ctx, window);
+            DockContextProcessUndockWindow(ctx, window);
             return;
         }
 
@@ -11560,7 +11605,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
         if (root_node->LastFrameAlive < g.FrameCount)
         {
-            DockContextProcessUndock(ctx, window);
+            DockContextProcessUndockWindow(ctx, window);
         }
         else
         {
@@ -11573,7 +11618,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // Undock if we are submitted earlier than the host window
     if (dock_node->HostWindow && window->BeginOrderWithinContext < dock_node->HostWindow->BeginOrderWithinContext)
     {
-        DockContextProcessUndock(ctx, window);
+        DockContextProcessUndockWindow(ctx, window);
         return;
     }
 

@@ -669,7 +669,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     return pressed;
 }
 
-bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
+bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_node)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -679,20 +679,34 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
 
-    bool is_dock_menu = (window->DockNodeAsHost && !window->Collapsed);
-    ImVec2 off = is_dock_menu ? ImVec2((float)(int)(-g.Style.ItemInnerSpacing.x * 0.5f) + 0.5f, 0.0f) : ImVec2(0.0f, 0.0f);
+    //bool is_dock_menu = (window->DockNodeAsHost && !window->Collapsed);
+    ImVec2 off = dock_node ? ImVec2((float)(int)(-g.Style.ItemInnerSpacing.x * 0.5f) + 0.5f, 0.0f) : ImVec2(0.0f, 0.0f);
     ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
     if (hovered || held)
         window->DrawList->AddCircleFilled(bb.GetCenter() + off + ImVec2(0,-0.5f), g.FontSize * 0.5f + 1.0f, col, 9);
 
-    if (is_dock_menu)
+    if (dock_node)
         RenderArrowDockMenu(window->DrawList, bb.Min + g.Style.FramePadding, g.FontSize, GetColorU32(ImGuiCol_Text));
     else
         RenderArrow(bb.Min + g.Style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
-    if (IsItemActive() && IsMouseDragging())
-        StartMouseMovingWindow(window);
+    if (IsItemActive() && IsMouseDragging(0))
+    {
+        if (dock_node != NULL && DockNodeGetRootNode(dock_node)->OnlyNodeWithWindows != dock_node)
+        {
+            float threshold_base = g.FontSize;
+            float threshold_x = (threshold_base * 2.2f);
+            float threshold_y = (threshold_base * 1.5f);
+            IM_ASSERT(window->DockNodeAsHost != NULL);
+            if (g.IO.MouseDragMaxDistanceAbs[0].x > threshold_x || g.IO.MouseDragMaxDistanceAbs[0].y > threshold_y)
+                DockContextQueueUndockNode(&g, dock_node);
+        }
+        else
+        {
+            StartMouseMovingWindow(window);
+        }
+    }
 
     return pressed;
 }
@@ -6456,7 +6470,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             // Undock
             if (undocking_tab && g.ActiveId == id && IsMouseDragging())
             {
-                DockContextQueueUndock(&g, docked_window);
+                DockContextQueueUndockWindow(&g, docked_window);
                 g.MovingWindow = docked_window;
                 g.ActiveId = g.MovingWindow->MoveId;
                 g.ActiveIdClickOffset -= g.MovingWindow->Pos - bb.Min;
