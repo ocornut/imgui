@@ -743,7 +743,7 @@ struct ImGuiDockNode
 {
     ImGuiID                 ID;
     ImGuiID                 UserTypeIdFilter;
-    ImGuiDockSpaceFlags     Flags;
+    ImGuiDockNodeFlags      Flags;
     ImGuiDockNode*          ParentNode;
     ImGuiDockNode*          ChildNodes[2];          // [Split node only] Child nodes (left/right or top/bottom). Consider switching to an array.
     ImVector<ImGuiWindow*>  Windows;                // Note: unordered list! Iterate TabBar->Tabs for user-order.
@@ -756,20 +756,20 @@ struct ImGuiDockNode
     ImGuiWindow*            HostWindow;
     ImGuiWindow*            VisibleWindow;
     ImGuiDockNode*          OnlyNodeWithWindows;    // [Root node only] Set when there is a single visible node within the hierarchy
-    int                     LastFrameAlive;         // Last frame number the node was updated or kept alive explicitly with DockSpace() + mGuiDockSpaceFlags_KeepAliveOnly
+    int                     LastFrameAlive;         // Last frame number the node was updated or kept alive explicitly with DockSpace() + ImGuiDockNodeFlags_KeepAliveOnly
     int                     LastFrameActive;        // Last frame number the node was updated.
     ImGuiID                 LastFocusedNodeID;      // [Root node only] Which of our child node (any ancestor in the hierarchy) was last focused.
     ImGuiID                 SelectedTabID;          // [Tab node only] Which of our tab is selected.
     ImGuiID                 WantCloseTabID;         // [Tab node only] Set when closing a specific tab.
     bool                    InitFromFirstWindow :1;
     bool                    IsVisible           :1; // Set to false when the node is hidden (usually disabled as it has no active window)
-    bool                    IsExplicitRoot      :1; // Mark root node as explicit when created from a DockSpace()
+    bool                    IsDockSpace         :1; // Root node was created by a DockSpace() call.
     bool                    IsDocumentRoot      :1;
     bool                    HasCloseButton      :1;
     bool                    HasCollapseButton   :1;
     bool                    WantCloseAll        :1; // Set when closing all tabs at once.
     bool                    WantLockSizeOnce    :1;
-    bool                    WantMouseMove       :1; // After a node extraction we need to transition toward moving the newly created hode window
+    bool                    WantMouseMove       :1; // After a node extraction we need to transition toward moving the newly created host window
 
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();

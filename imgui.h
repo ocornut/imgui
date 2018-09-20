@@ -111,7 +111,7 @@ typedef int ImGuiColorEditFlags;    // -> enum ImGuiColorEditFlags_  // Flags: f
 typedef int ImGuiColumnsFlags;      // -> enum ImGuiColumnsFlags_    // Flags: for Columns(), BeginColumns()
 typedef int ImGuiConfigFlags;       // -> enum ImGuiConfigFlags_     // Flags: for io.ConfigFlags
 typedef int ImGuiComboFlags;        // -> enum ImGuiComboFlags_      // Flags: for BeginCombo()
-typedef int ImGuiDockSpaceFlags;    // -> enum ImGuiDockSpaceFlags_  // Flags: for DockSpace()                   
+typedef int ImGuiDockNodeFlags;     // -> enum ImGuiDockNodeFlags_   // Flags: for DockSpace()                   
 typedef int ImGuiDragDropFlags;     // -> enum ImGuiDragDropFlags_   // Flags: for *DragDrop*()
 typedef int ImGuiFocusedFlags;      // -> enum ImGuiFocusedFlags_    // Flags: for IsWindowFocused()
 typedef int ImGuiHoveredFlags;      // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
@@ -517,8 +517,9 @@ namespace ImGui
 
     // Docking 
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
-    // Note: you DO NOT need to call DockSpace() to use most Docking facilities! You can hold SHIFT anywhere while moving windows. Use DockSpace() if you need to create an explicit docking space _within_ an existing window. See Docking demo for details)
-    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockSpaceFlags flags = 0, ImGuiID user_type_filter = 0);
+    // Note: you DO NOT need to call DockSpace() to use most Docking facilities! You can hold SHIFT anywhere while moving windows. 
+    // Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
+    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, ImGuiID user_type_filter = 0);
     IMGUI_API void          SetNextWindowDock(ImGuiID dock_id, ImGuiCond cond = 0);             // set next window dock id (FIXME-DOCK)
     IMGUI_API void          SetNextWindowUserType(ImGuiID user_type);                           // FIXME-DOCK: set next window user type (docking filters by same user_type)
     IMGUI_API bool          IsWindowDocked();                                                   // is current window docked into another window? 
@@ -782,11 +783,11 @@ enum ImGuiTabItemFlags_
 };
 
 // Flags for ImGui::DockSpace()
-enum ImGuiDockSpaceFlags_
+enum ImGuiDockNodeFlags_
 {
-    ImGuiDockSpaceFlags_None                        = 0,
-    ImGuiDockSpaceFlags_KeepAliveOnly               = 1 << 0,   // Don't create/display the dockspace but keep it alive. Windows docked into this dockspace won't be undocked.
-    ImGuiDockSpaceFlags_NoSplit                     = 1 << 1    // Disable splitting the dockspace into smaller nodes. Useful e.g. when embedding dockspaces into a main root one.
+    ImGuiDockNodeFlags_None                         = 0,
+    ImGuiDockNodeFlags_KeepAliveOnly                = 1 << 0,   // Don't display the dockspace node but keep it alive. Windows docked into this dockspace node won't be undocked.
+    ImGuiDockNodeFlags_NoSplit                      = 1 << 1    // Disable splitting the node into smaller nodes. Useful e.g. when embedding dockspaces into a main root one (the root one may have splitting disableed to reduce confusion)
 };
 
 // Flags for ImGui::IsWindowFocused()

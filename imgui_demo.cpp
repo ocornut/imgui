@@ -175,7 +175,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool show_app_window_titles = false;
     static bool show_app_custom_rendering = false;
 
-    if (show_app_dockspace)           ShowExampleAppDockSpace(&show_app_dockspace);     // Process the Docking app first, as explicit DockSpace() needs to be submitted early (read comments near the DockSpace function)
+    if (show_app_dockspace)           ShowExampleAppDockSpace(&show_app_dockspace);     // Process the Docking app first, as explicit DockSpace() nodes needs to be submitted early (read comments near the DockSpace function)
     if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);     // Process the Document app next, as it may also use a DockSpace()
     if (show_app_main_menu_bar)       ShowExampleAppMainMenuBar();
     if (show_app_console)             ShowExampleAppConsole(&show_app_console);
@@ -3692,7 +3692,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 // [SECTION] Example App: Docking, DockSpace / ShowExampleAppDockSpace()
 //-----------------------------------------------------------------------------
 
-// Demonstrate using DockSpace() to create an explicit docking spacing within an existing window.
+// Demonstrate using DockSpace() to create an explicit docking node within an existing window.
 // Note that you already dock windows into each others _without_ a DockSpace() by just holding SHIFT when moving a window.
 // DockSpace() is only useful to construct to a central location for your application.
 void ShowExampleAppDockSpace(bool* p_open)
@@ -3702,7 +3702,7 @@ void ShowExampleAppDockSpace(bool* p_open)
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into.
     // Because 1) it would be confusing to have two docking targets within each others.
-    //     and 2) we want our main DockSpace to always be visible (never hidden within a tab bar): if the DockSpace disappear its child windows will be orphaned.
+    //     and 2) we want our main DockSpace node to always be visible (never hidden within a tab bar): if the DockSpace node disappear its child windows will be orphaned.
     ImGuiWindowFlags flags = ImGuiWindowFlags_MenuBar;
     flags |= ImGuiWindowFlags_NoDocking;
     if (opt_fullscreen)
@@ -3737,9 +3737,9 @@ void ShowExampleAppDockSpace(bool* p_open)
         ShowHelpMarker(
             "You can _always_ dock _any_ window into another by holding the SHIFT key while moving a window. Try it now!" "\n"
             "This demo app has nothing to do with it!" "\n\n"
-            "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to specify a docking spot _within_ another window. This is useful so you can decorate your main application window (e.g. with a menu bar)." "\n\n"
+            "This demo app only demonstrate the use of ImGui::DockSpace() which allows you to manually create a docking node _within_ another window. This is useful so you can decorate your main application window (e.g. with a menu bar)." "\n\n"
             "ImGui::DockSpace() comes with one hard constraint: it needs to be submitted _before_ any window which may be docked into it. Therefore, if you use a dock spot as the central point of your application, you'll probably want it to be part of the very first window you are submitting to imgui every frame." "\n\n"
-            "(NB: because of this constraint, the implicit \"Debug\" window can not be docked into an explicit DockSpace(), because that window is submitted as part of the NewFrame() call. An easy workaround is that you can create your own implicit \"Debug##2\" window after calling DockSpace() and leave it in the window stack for anyone to use.)"
+            "(NB: because of this constraint, the implicit \"Debug\" window can not be docked into an explicit DockSpace() node, because that window is submitted as part of the NewFrame() call. An easy workaround is that you can create your own implicit \"Debug##2\" window after calling DockSpace() and leave it in the window stack for anyone to use.)"
         );
 
         ImGui::EndMenuBar();
@@ -3959,7 +3959,7 @@ void ShowExampleAppDocuments(bool* p_open)
     {
         NotifyOfDocumentsClosedElsewhere(app);
 
-        // Create a DockSpace where any window can be docked
+        // Create a DockSpace node where any window can be docked
         ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
         ImGui::DockSpace(dockspace_id);
 
