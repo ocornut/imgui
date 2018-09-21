@@ -7365,9 +7365,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     ImGuiViewportP* main_viewport = g.Viewports[0];
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
     {
-        window->Viewport = main_viewport;
-        window->ViewportId = main_viewport->ID;
-        window->ViewportOwned = false;
+        SetWindowViewport(window, main_viewport);
         return;
     }
 
@@ -7605,10 +7603,11 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
     for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size && best_monitor_surface < surface_threshold; monitor_n++)
     {
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
-        if (ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize).Contains(rect))
+        const ImRect monitor_rect = ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize);
+        if (monitor_rect.Contains(rect))
             return monitor_n;
         ImRect overlapping_rect = rect;
-        overlapping_rect.ClipWithFull(ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize));
+        overlapping_rect.ClipWithFull(monitor_rect);
         float overlapping_surface = overlapping_rect.GetWidth() * overlapping_rect.GetHeight();
         if (overlapping_surface < best_monitor_surface)
             continue;
@@ -9825,10 +9824,14 @@ void ImGui::ShowViewportThumbnails()
     // We don't display full monitor bounds (we could, but it often looks awkward), instead we display just enough to cover all of our viewports.
     float SCALE = 1.0f / 8.0f;
     ImRect bb_full;
+    //for (int n = 0; n < g.PlatformIO.Monitors.Size; n++)
+    //    bb_full.Add(GetPlatformMonitorMainRect(g.PlatformIO.Monitors[n]));
     for (int n = 0; n < g.Viewports.Size; n++)
         bb_full.Add(g.Viewports[n]->GetRect());
     ImVec2 p = window->DC.CursorPos;
     ImVec2 off = p - bb_full.Min * SCALE;
+    //for (int n = 0; n < g.PlatformIO.Monitors.Size; n++)
+    //    window->DrawList->AddRect(off + g.PlatformIO.Monitors[n].MainPos * SCALE, off + (g.PlatformIO.Monitors[n].MainPos + g.PlatformIO.Monitors[n].MainSize) * SCALE, ImGui::GetColorU32(ImGuiCol_Border));
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
