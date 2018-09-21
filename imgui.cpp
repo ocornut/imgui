@@ -10068,6 +10068,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     if (payload_window)
     {
         payload_node = payload_window->DockNodeAsHost;
+        payload_window->DockNodeAsHost = NULL; // Important to clear this as the node will have its life as a child which might be merged/deleted later.
         if (payload_node && !payload_node->IsSplitNode())
             next_selected_id = payload_node->TabBar->NextSelectedTabId ? payload_node->TabBar->NextSelectedTabId : payload_node->TabBar->SelectedTabId;
         if (payload_node == NULL)
@@ -10168,6 +10169,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     // Update selection immediately
     if (target_node->TabBar)
         target_node->TabBar->NextSelectedTabId = next_selected_id;
+    MarkIniSettingsDirty();
 }
 
 void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window)
@@ -10180,22 +10182,31 @@ void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* windo
     window->Collapsed = false;
     window->DockIsActive = false;
     window->DockTabIsVisible = false;
+    MarkIniSettingsDirty();
 }
 
-// Extract a node out by creating a new one.
-// In the case of a root node, a node will have to stay in place, otherwise the node will be hidden (and GC-ed later)
-// (we could handle both cases differently with little benefit)
 void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 {
-    // FIXME-DOCK: Transition persistent DockId for all non-active windows
     (void)ctx;
     IM_ASSERT(!node->IsSplitNode());
     IM_ASSERT(node->Windows.Size >= 1);
+
     ImGuiDockNode* new_node = DockContextAddNode(ctx, (ImGuiID)-1);
     DockNodeMoveWindows(new_node, node);
     for (int n = 0; n < new_node->Windows.Size; n++)
         UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
     new_node->WantMouseMove = true;
+
+    // In the case of a root node, a node will have to stay in place. Create a new node for this purpose.
+    // Otherwise delete the previous node by merging the other sibling back into the parent node.
+    // FIXME-DOCK: Transition persistent DockId for all non-active windows
+    if (!node->IsRootNode())
+    {
+        IM_ASSERT(node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
+        ImGuiDockNode* lead_sibling = node->ParentNode->ChildNodes[(node->ParentNode->ChildNodes[0] == node) ? 1 : 0];
+        DockNodeTreeMerge(ctx, node->ParentNode, lead_sibling);
+    }
+    MarkIniSettingsDirty();
 }
 
 //-----------------------------------------------------------------------------
@@ -10252,7 +10263,6 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window)
     window->DockId = node->ID;
     window->DockIsActive = (node->Windows.Size > 1);
     window->DockTabWantClose = false;
-    MarkIniSettingsDirty();
 
     // If 2+ windows appeared on the same frame, creating a new DockNode+TabBar from the second window, 
     // then we need to hide the first one after the fact otherwise it would be visible as a standalone window for one frame.
@@ -10292,7 +10302,6 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     window->DockIsActive = window->DockTabWantClose = false;
     window->DockId = save_dock_id;
     UpdateWindowParentAndRootLinks(window, window->Flags & ~ImGuiWindowFlags_ChildWindow, NULL); // Update immediately
-    MarkIniSettingsDirty();
 
     // Remove window
     bool erased = false;
