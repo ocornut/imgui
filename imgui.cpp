@@ -9648,7 +9648,7 @@ namespace ImGui
     static void             DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id);                                  // Use root_id==0 to add all
 
     // ImGuiDockNode
-    static void             DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window);
+    static void             DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, bool add_to_tab_bar);
     static void             DockNodeMoveWindows(ImGuiDockNode* dst_node, ImGuiDockNode* src_node);
     static void             DockNodeMoveChildNodes(ImGuiDockNode* dst_node, ImGuiDockNode* src_node);
     static void             DockNodeApplyPosSizeToWindows(ImGuiDockNode* node);
@@ -10012,7 +10012,7 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id
         ImGuiDockNode* dock_node = DockContextFindNodeByID(ctx, window->DockId);
         IM_ASSERT(dock_node != NULL);   // This should have been called after DockContextBuildNodesFromSettings()
         if (root_id == 0 || DockNodeGetRootNode(dock_node)->ID == root_id)
-            DockNodeAddWindow(dock_node, window);
+            DockNodeAddWindow(dock_node, window, true);
     }
 }
 
@@ -10095,7 +10095,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         target_node->Size = target_window->Size;
         if (target_window->DockNodeAsHost == NULL)
         {
-            DockNodeAddWindow(target_node, target_window);
+            DockNodeAddWindow(target_node, target_window, true);
             target_window->DockIsActive = true;
         }
     }
@@ -10167,7 +10167,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         {
             // Transfer single window
             target_node->VisibleWindow = payload_window;
-            DockNodeAddWindow(target_node, payload_window);
+            DockNodeAddWindow(target_node, payload_window, true);
         }
     }
 
@@ -10196,20 +10196,26 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     IM_ASSERT(!node->IsSplitNode());
     IM_ASSERT(node->Windows.Size >= 1);
 
-    ImGuiDockNode* new_node = DockContextAddNode(ctx, (ImGuiID)-1);
-    DockNodeMoveWindows(new_node, node);
-    for (int n = 0; n < new_node->Windows.Size; n++)
-        UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
-    new_node->WantMouseMove = true;
-
     // In the case of a root node, a node will have to stay in place. Create a new node for this purpose.
     // Otherwise delete the previous node by merging the other sibling back into the parent node.
-    // FIXME-DOCK: Transition persistent DockId for all non-active windows
-    if (!node->IsRootNode())
+    if (node->IsRootNode())
+    {
+        // FIXME-DOCK: Transition persistent DockId for all non-active windows
+        ImGuiDockNode* new_node = DockContextAddNode(ctx, (ImGuiID)-1);
+        DockNodeMoveWindows(new_node, node);
+        for (int n = 0; n < new_node->Windows.Size; n++)
+            UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
+        new_node->WantMouseMove = true;
+    }
+    else
     {
         IM_ASSERT(node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
-        ImGuiDockNode* lead_sibling = node->ParentNode->ChildNodes[(node->ParentNode->ChildNodes[0] == node) ? 1 : 0];
-        DockNodeTreeMerge(ctx, node->ParentNode, lead_sibling);
+        int index_in_parent = (node->ParentNode->ChildNodes[0] == node) ? 0 : 1;
+        node->ParentNode->ChildNodes[index_in_parent] = NULL;
+        DockNodeTreeMerge(ctx, node->ParentNode, node->ParentNode->ChildNodes[index_in_parent ^ 1]);
+        node->ParentNode = NULL;
+        node->InitFromFirstWindow = true;
+        node->WantMouseMove = true;
     }
     MarkIniSettingsDirty();
 }
@@ -10252,7 +10258,7 @@ int ImGui::DockNodeGetTabOrder(ImGuiWindow* window)
     return tab ? tab_bar->GetTabOrder(tab) : -1;
 }
 
-static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window)
+static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, bool add_to_tab_bar)
 {
     ImGuiContext& g = *GImGui; (void)g;
     if (window->DockNode)
@@ -10281,12 +10287,16 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window)
     if (node->Windows.Size == 2 && !node->IsDockSpace)
         node->InitFromFirstWindow = true;
 
-    if (node->TabBar == NULL)
+    // Add to tab bar if requested
+    if (add_to_tab_bar)
     {
-        node->TabBar = IM_NEW(ImGuiTabBar)();
-        node->TabBar->SelectedTabId = node->TabBar->NextSelectedTabId = node->SelectedTabID;
+        if (node->TabBar == NULL)
+        {
+            node->TabBar = IM_NEW(ImGuiTabBar)();
+            node->TabBar->SelectedTabId = node->TabBar->NextSelectedTabId = node->SelectedTabID;
+        }
+        TabBarAddTab(node->TabBar, window);
     }
-    TabBarAddTab(node->TabBar, window);
 
     DockNodeUpdateVisibleFlag(node);
 
@@ -10376,19 +10386,31 @@ static void ImGui::DockNodeMoveWindows(ImGuiDockNode* dst_node, ImGuiDockNode* s
     ImGuiTabBar* src_tab_bar = src_node->TabBar;
     if (src_tab_bar != NULL)
         IM_ASSERT(src_node->Windows.Size == src_node->TabBar->Tabs.Size);
+
+    // If the dst_node is empty we can just move the entire tab bar (to preserve selection, scrolling, etc.)
+    bool move_tab_bar = (src_tab_bar != NULL) && (dst_node->TabBar == NULL);
+    if (move_tab_bar)
+    {
+        dst_node->TabBar = src_node->TabBar;
+        src_node->TabBar = NULL;
+    }
+
     for (int n = 0; n < src_node->Windows.Size; n++)
     {
         ImGuiWindow* window = src_tab_bar ? src_tab_bar->Tabs[n].Window : src_node->Windows[n];
         window->DockNode = NULL;
         window->DockIsActive = false;
-        DockNodeAddWindow(dst_node, window);
+        DockNodeAddWindow(dst_node, window, move_tab_bar ? false : true);
     }
-    if (dst_node->TabBar == NULL)
-        dst_node->TabBar = src_node->TabBar;
-    else
-        IM_DELETE(src_node->TabBar);
-    src_node->TabBar = NULL;
     src_node->Windows.clear();
+
+    if (!move_tab_bar && src_node->TabBar)
+    {
+        if (dst_node->TabBar)
+            dst_node->TabBar->SelectedTabId = src_node->TabBar->SelectedTabId;
+        IM_DELETE(src_node->TabBar);
+        src_node->TabBar = NULL;
+    }
 }
 
 static void ImGui::DockNodeApplyPosSizeToWindows(ImGuiDockNode* node)
@@ -11192,11 +11214,12 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
 
 void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImGuiDockNode* merge_lead_child)
 {
+    // When called from DockContextProcessUndockNode() it is possible that one of the child is NULL.
     ImGuiDockNode* child_0 = parent_node->ChildNodes[0];
     ImGuiDockNode* child_1 = parent_node->ChildNodes[1];
-    IM_ASSERT(child_0 && child_1);
+    IM_ASSERT(child_0 || child_1);
     IM_ASSERT(merge_lead_child == child_0 || merge_lead_child == child_1);
-    if (child_0->Windows.Size > 0 || child_1->Windows.Size > 0)
+    if ((child_0 && child_0->Windows.Size > 0) || (child_1 && child_1->Windows.Size > 0))
     {
         IM_ASSERT(parent_node->TabBar == NULL);
         IM_ASSERT(parent_node->Windows.Size == 0);
@@ -11204,18 +11227,26 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
 
     ImVec2 backup_last_explicit_size = parent_node->SizeRef;
     DockNodeMoveChildNodes(parent_node, merge_lead_child);
-    DockNodeMoveWindows(parent_node, child_0); // Generally only 1 of the 2 child node will have windows
-    DockNodeMoveWindows(parent_node, child_1);
+    if (child_0)
+        DockNodeMoveWindows(parent_node, child_0); // Generally only 1 of the 2 child node will have windows
+    if (child_1)
+        DockNodeMoveWindows(parent_node, child_1);
     DockNodeApplyPosSizeToWindows(parent_node);
     parent_node->InitFromFirstWindow = false;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
-    parent_node->IsDocumentRoot = child_0->IsDocumentRoot || child_1->IsDocumentRoot;
+    parent_node->IsDocumentRoot = (child_0 && child_0->IsDocumentRoot) || (child_1 && child_1->IsDocumentRoot);
     parent_node->SizeRef = backup_last_explicit_size;
 
-    ctx->DockContext->Nodes.SetVoidPtr(child_0->ID, NULL);
-    ctx->DockContext->Nodes.SetVoidPtr(child_1->ID, NULL);
-    IM_DELETE(child_0);
-    IM_DELETE(child_1);
+    if (child_0)
+    {
+        ctx->DockContext->Nodes.SetVoidPtr(child_0->ID, NULL);
+        IM_DELETE(child_0);
+    }
+    if (child_1)
+    {
+        ctx->DockContext->Nodes.SetVoidPtr(child_1->ID, NULL);
+        IM_DELETE(child_1);
+    }
 }
 
 // Update Pos/Size for a node hierarchy (don't affect child Windows yet)
@@ -11613,7 +11644,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
             return;
         }
 
-        DockNodeAddWindow(dock_node, window);
+        DockNodeAddWindow(dock_node, window, true);
         IM_ASSERT(dock_node == window->DockNode);
 
         // Fix an edge case with auto-resizing windows: if they are created on the same frame they are creating their dock node, 
