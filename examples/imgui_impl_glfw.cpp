@@ -45,6 +45,7 @@
 #define GLFW_HAS_WINDOW_ALPHA       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwSetWindowOpacity
 #define GLFW_HAS_PER_MONITOR_DPI    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetMonitorContentScale
 #define GLFW_HAS_VULKAN             (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwCreateWindowSurface
+#define GLFW_HAS_FOCUS_WINDOW       (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwFocusWindow
 
 // Data
 enum GlfwClientApi
@@ -505,8 +506,13 @@ static void ImGui_ImplGlfw_SetWindowTitle(ImGuiViewport* viewport, const char* t
 
 static void ImGui_ImplGlfw_SetWindowFocus(ImGuiViewport* viewport)
 {
+#if GLFW_HAS_FOCUS_WINDOW
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
     glfwFocusWindow(data->Window);
+#else
+    // FIXME: What are the effect of not having this function? At the moment imgui doesn't actually call SetWindowFocus - we set that up ahead, will answer that question later.
+    (void)viewport;
+#endif
 }
 
 static bool ImGui_ImplGlfw_GetWindowFocus(ImGuiViewport* viewport)
