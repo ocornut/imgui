@@ -9525,7 +9525,6 @@ void ImGui::EndDragDropTarget()
 // TODO:
 // A~ document root node resizing behavior incorrect
 // A~ document root node retrieval of ID ?
-// A- fix when SelectedTab doesn't exist (easy to repro/fix with .ini mod, but would be nice to also find real repro)
 // B- full rebuild loses viewport of floating dock nodes
 // B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them
 // A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)

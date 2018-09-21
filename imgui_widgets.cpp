@@ -5966,6 +5966,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     // Compute ideal widths
     float width_total_contents = 0.0f;
     ImGuiTabItem* most_recently_selected_tab = NULL;
+    bool found_selected_tab_id = false;
     for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
     {
         ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
@@ -5973,6 +5974,8 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
 
         if (most_recently_selected_tab == NULL || most_recently_selected_tab->LastFrameSelected < tab->LastFrameSelected)
             most_recently_selected_tab = tab;
+        if (tab->ID == tab_bar->SelectedTabId)
+            found_selected_tab_id = true;
 
         // Refresh tab width immediately if we can (for manual tab bar, WidthContent will lag by one frame which is mostly noticeable when changing style.FramePadding.x)
         // Additionally, when using TabBarAddTab() to manipulate tab bar order we occasionally insert new tabs that don't have a width yet, 
@@ -6043,7 +6046,9 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         if (ImGuiTabItem* tab_to_select = TabBarScrollingButtons(tab_bar)) // NB: Will alter BarRect.Max.x!
             scroll_track_selected_tab_id = tab_bar->SelectedTabId = tab_to_select->ID;
 
-    // If we have lost the selected tab, select the next most recently active one.
+    // If we have lost the selected tab, select the next most recently active one
+    if (found_selected_tab_id == false)
+        tab_bar->SelectedTabId = 0;
     if (tab_bar->SelectedTabId == 0 && tab_bar->NextSelectedTabId == 0 && most_recently_selected_tab != NULL)
         scroll_track_selected_tab_id = tab_bar->SelectedTabId = most_recently_selected_tab->ID;
 
