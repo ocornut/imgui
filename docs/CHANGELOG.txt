@@ -47,6 +47,8 @@ Other Changes:
 - DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
+- ImDrawList: Fixed AddConvexPolyFilled() undefined behavior when passing points_count smaller than 3,
+  in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
 
 
 -----------------------------------------------------------------------
