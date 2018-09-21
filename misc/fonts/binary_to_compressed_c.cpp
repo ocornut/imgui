@@ -249,8 +249,6 @@ static void update_hashes(stb_uchar **chash, stb_uint mask, stb_uchar *q, stb_uc
         h = stb__hc2(q,h, 9,10);
         h = stb__hc2(q,h,11,12); h4 = STB__SCRAMBLE(h);
 
-        // because we use a shared hash table, can only update it
-        // _after_ we've probed all of them
         chash[h1] = chash[h2] = chash[h3] = chash[h4] = q++;
     }
 }
