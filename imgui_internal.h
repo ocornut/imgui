@@ -761,7 +761,8 @@ struct ImGuiDockNode
     ImGuiID                 LastFocusedNodeID;      // [Root node only] Which of our child node (any ancestor in the hierarchy) was last focused.
     ImGuiID                 SelectedTabID;          // [Tab node only] Which of our tab is selected.
     ImGuiID                 WantCloseTabID;         // [Tab node only] Set when closing a specific tab.
-    bool                    InitFromFirstWindow :1;
+    bool                    InitFromFirstWindowPosSize  :1;
+    bool                    InitFromFirstWindowViewport :1;
     bool                    IsVisible           :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsDockSpace         :1; // Root node was created by a DockSpace() call.
     bool                    IsDocumentRoot      :1;

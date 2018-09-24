@@ -9832,7 +9832,7 @@ static ImGuiDockNode* ImGui::DockContextAddNode(ImGuiContext* ctx, ImGuiID id)
     }
     IM_ASSERT(DockContextFindNodeByID(ctx, id) == NULL);
     ImGuiDockNode* node = IM_NEW(ImGuiDockNode)(id);
-    node->InitFromFirstWindow = true;
+    node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = true;
     ctx->DockContext->Nodes.SetVoidPtr(node->ID, node);
     return node;
 }
@@ -10220,8 +10220,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         int index_in_parent = (node->ParentNode->ChildNodes[0] == node) ? 0 : 1;
         node->ParentNode->ChildNodes[index_in_parent] = NULL;
         DockNodeTreeMerge(ctx, node->ParentNode, node->ParentNode->ChildNodes[index_in_parent ^ 1]);
+        node->ParentNode->InitFromFirstWindowViewport = true; // The node that stays in place keeps the viewport, so our newly dragged out node will create a new viewport
         node->ParentNode = NULL;
-        node->InitFromFirstWindow = true;
+        node->InitFromFirstWindowPosSize = true;
         node->WantMouseMove = true;
     }
     MarkIniSettingsDirty();
@@ -10246,7 +10247,8 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     SelectedTabID = 0;
     WantCloseTabID = 0;
     IsVisible = true;
-    InitFromFirstWindow = IsDockSpace = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
+    InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
+    IsDockSpace = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
 }
 
 ImGuiDockNode::~ImGuiDockNode()
@@ -10292,7 +10294,7 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
 
     // When reactivating a node from two loose window, the target window pos/size are authoritative
     if (node->Windows.Size == 2 && !node->IsDockSpace)
-        node->InitFromFirstWindow = true;
+        node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = true;
 
     // Add to tab bar if requested
     if (add_to_tab_bar)
@@ -10358,12 +10360,12 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     if (node->Windows.Size == 1 && !node->IsDocumentRoot && node->HostWindow)
     {
         ImGuiWindow* remaining_window = node->Windows[0];
-        if (node->HostWindow->ViewportOwned)
+        if (node->HostWindow->ViewportOwned && node->IsRootNode())
         {
             // Transfer viewport back to the remaining loose window
             IM_ASSERT(node->HostWindow->Viewport->Window == node->HostWindow);
-            node->HostWindow->Viewport->Window = node->Windows[0];
-            node->HostWindow->Viewport->ID = node->Windows[0]->ID;
+            node->HostWindow->Viewport->Window = remaining_window;
+            node->HostWindow->Viewport->ID = remaining_window->ID;
         }
         remaining_window->Collapsed = node->HostWindow->Collapsed;
     }
@@ -10557,22 +10559,29 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     if (node->IsRootNode() && node->Windows.Size == 1 && !node->IsDockSpace)
     {
         // Floating window pos/size is authoritative
-        node->Pos = node->Windows[0]->Pos;
-        node->Size = node->Windows[0]->SizeFull;
+        ImGuiWindow* single_window = node->Windows[0];
+        node->Pos = single_window->Pos;
+        node->Size = single_window->SizeFull;
 
         // Transfer focus immediately so when we revert to a regular window it is immediately selected
         if (node->HostWindow && g.NavWindow == node->HostWindow)
-            FocusWindow(node->Windows[0]);
+            FocusWindow(single_window);
+        if (node->HostWindow)
+        {
+            single_window->Viewport = node->HostWindow->Viewport;
+            single_window->ViewportId = node->HostWindow->ViewportId;
+            single_window->Viewport->Window = single_window;
+        }
 
         DockNodeHideHostWindow(node);
-        node->InitFromFirstWindow = false;
+        node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = false;
         node->WantCloseAll = false;
         node->WantCloseTabID = 0;
         node->HasCloseButton = node->HasCollapseButton = false;
         node->LastFrameActive = g.FrameCount;
 
         if (node->WantMouseMove)
-            DockNodeStartMouseMovingWindow(node, node->Windows[0]);
+            DockNodeStartMouseMovingWindow(node, single_window);
         return;
     }
 
@@ -10600,12 +10609,11 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
         if (node->IsRootNode() && node->IsVisible)
         {
-            if (node->InitFromFirstWindow && node->Windows.Size > 0)
+            if (node->InitFromFirstWindowPosSize && node->Windows.Size > 0)
             {
                 ImGuiWindow* init_window = node->Windows[0];
                 SetNextWindowPos(init_window->Pos);
                 SetNextWindowSize(init_window->SizeFull);
-                SetNextWindowViewport(init_window->ViewportId);
                 SetNextWindowCollapsed(init_window->Collapsed);
             }
             else if (node->HostWindow == NULL)
@@ -10614,6 +10622,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
                 SetNextWindowPos(node->Pos);
                 SetNextWindowSize(node->Size);
             }
+            if (node->InitFromFirstWindowViewport && node->Windows.Size > 0)
+                SetNextWindowViewport(node->Windows[0]->ViewportId);
 
             // Begin into the host window
             char window_label[20];
@@ -10637,7 +10647,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         {
             node->HostWindow = host_window = node->ParentNode->HostWindow;
         }
-        node->InitFromFirstWindow = false;
+        node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = false;
         if (node->WantMouseMove && node->HostWindow)
             DockNodeStartMouseMovingWindow(node, node->HostWindow);
     }
@@ -11239,7 +11249,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     if (child_1)
         DockNodeMoveWindows(parent_node, child_1);
     DockNodeApplyPosSizeToWindows(parent_node);
-    parent_node->InitFromFirstWindow = false;
+    parent_node->InitFromFirstWindowPosSize = parent_node->InitFromFirstWindowViewport = false;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
     parent_node->IsDocumentRoot = (child_0 && child_0->IsDocumentRoot) || (child_1 && child_1->IsDocumentRoot);
     parent_node->SizeRef = backup_last_explicit_size;
