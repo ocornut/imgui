@@ -1296,7 +1296,7 @@ struct ImGuiItemHoveredDataBackup
 enum ImGuiTabBarFlagsPrivate_
 {
     ImGuiTabBarFlags_DockNode                       = 1 << 20,  // Part of a dock node
-    ImGuiTabBarFlags_DockNodeExplicitRoot           = 1 << 21,  // Part of an explicit dock node
+    ImGuiTabBarFlags_DockNodeIsDockSpace            = 1 << 21,  // Part of an explicit dockspace node node
     ImGuiTabBarFlags_IsFocused                      = 1 << 22,
     ImGuiTabBarFlags_SaveSettings                   = 1 << 23   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
 };
@@ -1472,6 +1472,7 @@ namespace ImGui
     IMGUI_API void          DockContextEndFrame(ImGuiContext* ctx);
     IMGUI_API void          DockContextQueueUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
     IMGUI_API void          DockContextQueueUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
+    IMGUI_API ImGuiDockNode*DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id);
     inline ImGuiDockNode*   DockNodeGetRootNode(ImGuiDockNode* node) { while (node->ParentNode) node = node->ParentNode; return node; }
     IMGUI_API void          BeginDocked(ImGuiWindow* window, bool* p_open);
     IMGUI_API void          BeginAsDockableDragDropSource(ImGuiWindow* window);
@@ -1479,11 +1480,13 @@ namespace ImGui
     IMGUI_API void          SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond);
     IMGUI_API void          ShowDockingDebug();
 
-    IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references = true);
-    IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id);
+    // Docking - Builder function needs to be generally called before the DockSpace() node is submitted.
+    IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_node_id, bool clear_persistent_docking_references = true);
+    IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_node_id);    // Remove all split/hierarchy. All remaining docked windows will be re-docked to the root.
     IMGUI_API void          DockBuilderDockWindow(ImGuiContext* ctx, const char* window_name, ImGuiID node_id);
+    IMGUI_API void          DockBuilderCreateNode(ImGuiContext* ctx, ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags = 0);
     IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_dir, ImGuiID* out_id_other);
-    IMGUI_API void          DockBuilderFinish(ImGuiContext* ctx, ImGuiID root_id);
+    IMGUI_API void          DockBuilderFinish(ImGuiContext* ctx, ImGuiID root_node_id);
 
     // Drag and Drop
     IMGUI_API bool          BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id);
