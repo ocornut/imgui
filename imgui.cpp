@@ -955,7 +955,7 @@ const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbi
 static ImGuiViewportP*  AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const ImVec2& platform_pos, const ImVec2& size, ImGuiViewportFlags flags);
 static void             UpdateViewports();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
-static void             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
+static bool             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
 static void             SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 static bool             GetWindowAlwaysWantOwnViewport(ImGuiWindow* window);
 static int              FindPlatformMonitorForPos(const ImVec2& pos);
@@ -7276,25 +7276,7 @@ ImGuiViewport* ImGui::FindViewportByPlatformHandle(void* platform_handle)
 void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
-
-    // Dock host can steal ownership
-    // (We test for ImGuiWindowFlags_DockNodeHost instead of ->DockNodeAsHost because the later is set after the first call to Begin)
-    if (viewport && current_window && viewport->Window && (current_window->DockNode || (current_window->Flags & ImGuiWindowFlags_DockNodeHost)))
-        if (viewport->LastFrameActive < g.FrameCount && viewport->Window != current_window)
-        {
-            // When called from Begin() we don't have access to a proper version of the Hidden flag yet.
-            bool will_be_visible = true;
-            if (current_window->DockIsActive && !current_window->DockTabIsVisible)
-                will_be_visible = false;
-
-            if (will_be_visible)
-            {
-                //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
-                viewport->Window = current_window;
-                viewport->ID = current_window->ID;
-                viewport->LastNameHash = 0;
-            }
-        }
+    (void)current_window;
 
     if (viewport)
         viewport->LastFrameActive = g.FrameCount;
@@ -7326,17 +7308,17 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
     return false;
 }
 
-static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
+static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
-        return;
+        return false;
     if (!(viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) || window->Viewport == viewport)
-        return;
+        return false;
     if (!viewport->GetRect().Contains(window->Rect()))
-        return;
+        return false;
     if (GetWindowAlwaysWantOwnViewport(window))
-        return;
+        return false;
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
     ImGuiViewportP* old_viewport = window->Viewport;
@@ -7345,6 +7327,7 @@ static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
             if (g.Windows[n]->Viewport == old_viewport)
                 SetWindowViewport(g.Windows[n], viewport);
     SetWindowViewport(window, viewport);
+    return true;
 }
 
 // Scale all windows (position, size). Use when e.g. changing DPI. (This is a lossy operation!)
@@ -7412,6 +7395,7 @@ static void ImGui::UpdateViewports()
             g.Viewports.erase(g.Viewports.Data + n);
 
             // Destroy
+            //IMGUI_DEBUG_LOG("Delete Viewport %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
             DestroyPlatformWindow(viewport); // In most circumstances the platform window will already be destroyed here.
             IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
             IM_DELETE(viewport);
@@ -7535,6 +7519,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport->Size = size;
         viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
         g.Viewports.push_back(viewport);
+        //IMGUI_DEBUG_LOG("Add Viewport %08X (%s)\n", id, window->Name);
 
         if (window && (window->Flags & ImGuiWindowFlags_NoFocusOnAppearing))
             flags |= ImGuiViewportFlags_NoFocusOnAppearing;
@@ -7653,6 +7638,24 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         else
             window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
     }
+    else if (window->Viewport && window != window->Viewport->Window && window->Viewport->Window && !(flags & ImGuiWindowFlags_ChildWindow))
+    {
+        // When called from Begin() we don't have access to a proper version of the Hidden flag yet.
+        const bool will_be_visible = (window->DockIsActive && !window->DockTabIsVisible) ? false : true;
+        if ((window->Flags & ImGuiWindowFlags_DockNodeHost) && window->Viewport->LastFrameActive < g.FrameCount && will_be_visible)
+        {
+            // Steal/transfer ownership
+            //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, window->Name, window->Viewport->ID, window->Viewport->Window->Name);
+            window->Viewport->Window = window;
+            window->Viewport->ID = window->ID;
+            window->Viewport->LastNameHash = 0;
+        }
+        else if (!UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0])) // Merge?
+        {
+            // New viewport
+            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoFocusOnAppearing);
+        }
+    }
     else if ((flags & ImGuiWindowFlags_DockNodeHost) && (window->Appearing))
     {
         // Mark so the dock host can be on its own viewport
@@ -7724,6 +7727,7 @@ void ImGui::UpdatePlatformWindows()
         bool is_new_window = (viewport->CreatedPlatformWindow == false);
         if (is_new_window)
         {
+            //IMGUI_DEBUG_LOG("Create Platform Window %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
             g.PlatformIO.Platform_CreateWindow(viewport);
             if (g.PlatformIO.Renderer_CreateWindow != NULL)
                 g.PlatformIO.Renderer_CreateWindow(viewport);
