@@ -10554,6 +10554,7 @@ static void ImGui::DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWind
     IM_ASSERT(node->WantMouseMove == true);
     ImVec2 backup_active_click_offset = g.ActiveIdClickOffset;
     StartMouseMovingWindow(window);
+    g.MovingWindow = window; // If we are docked into a non moveable root widnow, StartMouseMovingWindow() won't set g.MovingWindow. OVerride that decision.
     node->WantMouseMove = false;
     g.ActiveIdClickOffset = backup_active_click_offset;
 }
@@ -11911,8 +11912,9 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     // "   DockNode ID=0x00000002 Parent=0x00000001 "
     ImGuiDockNodeSettings node;
     line = ImStrSkipBlank(line);
-    if (strncmp(line, "DockNode", 8) != 0) return;
-    line = ImStrSkipBlank(line + strlen("DockNode"));
+    if      (strncmp(line, "DockNode", 8) == 0)  { line = ImStrSkipBlank(line + strlen("DockNode")); }
+    else if (strncmp(line, "DockSpace", 9) == 0) { line = ImStrSkipBlank(line + strlen("DockSpace")); node.IsDockSpace = true; }
+    else return;
     if (sscanf(line, "ID=0x%08X%n",      &node.ID, &r) == 1)        { line += r; } else return;
     if (sscanf(line, " Parent=0x%08X%n", &node.ParentID, &r) == 1)  { line += r; if (node.ParentID == 0) return; }
     if (node.ParentID == 0)
@@ -11925,8 +11927,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
         if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
-    if (sscanf(line, " DockSpace=%d%n", &x, &r) == 1)               { line += r; node.IsDockSpace = (x != 0); }
-    if (sscanf(line, " DocumentRoot=%d%n", &x, &r) == 1)            { line += r; node.IsDocumentRoot = (x != 0); }
+    if (sscanf(line, " DocRoot=%d%n", &x, &r) == 1)                 { line += r; node.IsDocumentRoot = (x != 0); }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
     //if (node.ParentID == 0 && node.SplitAxis == ImGuiAxis_None)
     //    return;
@@ -11980,7 +11981,7 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
     {
         //const int line_start_pos = buf->size();
         const ImGuiDockNodeSettings* node_settings = &dc->SettingsNodes[node_n];
-        buf->appendf("%*sDockNode%*s", node_settings->Depth * 2, "", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
+        buf->appendf("%*s%s%*s", node_settings->Depth * 2, "", node_settings->IsDockSpace ? "DockSpace" : "DockNode ", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
         buf->appendf(" ID=0x%08X", node_settings->ID);
         if (node_settings->ParentID)
             buf->appendf(" Parent=0x%08X SizeRef=%d,%d", node_settings->ParentID, node_settings->SizeRef.x, node_settings->SizeRef.y);
@@ -11988,10 +11989,8 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
         if (node_settings->SplitAxis != ImGuiAxis_None)
             buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
-        if (node_settings->IsDockSpace)
-            buf->appendf(" DockSpace=%d", node_settings->IsDockSpace);
         if (node_settings->IsDocumentRoot)
-            buf->appendf(" DocumentRoot=%d", node_settings->IsDocumentRoot);
+            buf->appendf(" DocRoot=%d", node_settings->IsDocumentRoot);
         if (node_settings->SelectedTabID)
             buf->appendf(" SelectedTab=0x%08X", node_settings->SelectedTabID);
 
