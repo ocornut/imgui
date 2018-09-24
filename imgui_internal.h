@@ -1481,10 +1481,11 @@ namespace ImGui
     IMGUI_API void          ShowDockingDebug();
 
     // Docking - Builder function needs to be generally called before the DockSpace() node is submitted.
+    IMGUI_API void          DockBuilderDockWindow(ImGuiContext* ctx, const char* window_name, ImGuiID node_id);
+    IMGUI_API void          DockBuilderAddNode(ImGuiContext* ctx, ImGuiID node_id, ImVec2 ref_size, ImGuiDockNodeFlags flags = 0);
+    IMGUI_API void          DockBuilderRemoveNode(ImGuiContext* ctx, ImGuiID node_id);
     IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID node_id, bool clear_persistent_docking_references = true);
     IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID node_id);        // Remove all split/hierarchy. All remaining docked windows will be re-docked to the root.
-    IMGUI_API void          DockBuilderDockWindow(ImGuiContext* ctx, const char* window_name, ImGuiID node_id);
-    IMGUI_API void          DockBuilderCreateNode(ImGuiContext* ctx, ImGuiID node_id, ImVec2 ref_size, ImGuiDockNodeFlags flags = 0);
     IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID node_id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_dir, ImGuiID* out_id_other);
     IMGUI_API void          DockBuilderFinish(ImGuiContext* ctx, ImGuiID node_id);
 

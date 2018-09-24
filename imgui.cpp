@@ -9874,94 +9874,6 @@ static int IMGUI_CDECL DockNodeComparerDepthMostFirst(const void* lhs, const voi
     return ImGui::DockNodeGetDepth(b) - ImGui::DockNodeGetDepth(a);
 }
 
-void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id)
-{
-    ImGuiDockContext* dc = ctx->DockContext;
-
-    ImGuiDockNode* root_node = root_id ? DockContextFindNodeByID(ctx, root_id) : NULL;
-    if (root_id && root_node == NULL)
-        return;
-    bool has_document_root = false;
-
-    // Process active windows
-    ImVector<ImGuiDockNode*> nodes_to_remove;
-    for (int n = 0; n < dc->Nodes.Data.Size; n++)
-        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
-        {
-            bool want_removal = (root_id == 0) || (node->ID != root_id && DockNodeGetRootNode(node)->ID == root_id);
-            if (want_removal)
-            {
-                if (node->IsDocumentRoot)
-                    has_document_root = true;
-                if (root_id != 0)
-                    DockContextQueueNotifyRemovedNode(ctx, node);
-                if (root_node)
-                    DockNodeMoveWindows(root_node, node);
-                nodes_to_remove.push_back(node);
-            }
-        }
-
-    // Apply to settings
-    for (int settings_n = 0; settings_n < ctx->SettingsWindows.Size; settings_n++)
-        if (ImGuiID window_settings_dock_id = ctx->SettingsWindows[settings_n].DockId)
-            for (int n = 0; n < nodes_to_remove.Size; n++)
-                if (nodes_to_remove[n]->ID == window_settings_dock_id)
-                {
-                    ctx->SettingsWindows[settings_n].DockId = root_id;
-                    break;
-                }
-
-    // Not really efficient, but easier to destroy a whole hierarchy considering DockContextRemoveNode is attempting to merge nodes
-    if (nodes_to_remove.Size > 1)
-        ImQsort(nodes_to_remove.Data, nodes_to_remove.Size, sizeof(ImGuiDockNode*), DockNodeComparerDepthMostFirst);
-    for (int n = 0; n < nodes_to_remove.Size; n++)
-        DockContextRemoveNode(ctx, nodes_to_remove[n], false);
-
-    if (root_id == 0)
-    {
-        dc->Nodes.Clear();
-        dc->Requests.clear();
-    }
-    else if (has_document_root)
-    {
-        root_node->IsDocumentRoot = true;
-    }
-}
-
-void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
-{
-    // Clear references in settings
-    ImGuiContext& g = *ctx;
-    if (clear_persistent_docking_references)
-    {
-        for (int n = 0; n < g.SettingsWindows.Size; n++)
-        {
-            ImGuiWindowSettings* settings = &g.SettingsWindows[n];
-            bool want_removal = (root_id == 0) || (settings->DockId == root_id);
-            if (!want_removal && settings->DockId != 0)
-                if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, settings->DockId))
-                    if (DockNodeGetRootNode(node)->ID == root_id)
-                        want_removal = true;
-            if (want_removal)
-                settings->DockId = 0;
-        }
-    }
-
-    // Clear references in windows
-    for (int n = 0; n < g.Windows.Size; n++)
-    {
-        ImGuiWindow* window = g.Windows[n];
-        bool want_removal = (root_id == 0) || (window->DockNode && DockNodeGetRootNode(window->DockNode)->ID == root_id) || (window->DockNodeAsHost && window->DockNodeAsHost->ID == root_id);
-        if (want_removal)
-        {
-            ImGuiID backup_dock_id = window->DockId;
-            DockContextProcessUndockWindow(ctx, window);
-            if (!clear_persistent_docking_references)
-                window->DockId = backup_dock_id;
-        }
-    }
-}
-
 static void ImGui::DockContextGcUnusedSettingsNodes(ImGuiContext* ctx)
 {
     ImGuiContext& g = *ctx;
@@ -11488,22 +11400,21 @@ ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
 {
     if (!node->IsVisible)
         return NULL;
-    if (node->IsSplitNode())
-    {
-        if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[0], pos))
-            return hovered_node;
-        if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[1], pos))
-            return hovered_node;
-    }
-    else
-    {
-        ImGuiContext& g = *GImGui;
-        const float dock_spacing = g.Style.ItemInnerSpacing.x;
-        ImRect r(node->Pos, node->Pos + node->Size);
-        r.Expand(dock_spacing * 0.5f);
-        if (r.Contains(pos))
-            return node;
-    }
+
+    ImGuiContext& g = *GImGui;
+    const float dock_spacing = g.Style.ItemInnerSpacing.x;
+    ImRect r(node->Pos, node->Pos + node->Size);
+    r.Expand(dock_spacing * 0.5f);
+    bool inside = r.Contains(pos);
+    if (!inside)
+        return NULL;
+
+    if (!node->IsSplitNode())
+        return node;
+    if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[0], pos))
+        return hovered_node;
+    if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[1], pos))
+        return hovered_node;
     return NULL;
 }
 
@@ -11601,6 +11512,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
 // Docking: Builder Functions
 //-----------------------------------------------------------------------------
 // Very early end-user API to manipulate dock nodes.
+// It is expected that those functions are all called _before_ the dockspace node submission.
 //-----------------------------------------------------------------------------
 
 void ImGui::DockBuilderDockWindow(ImGuiContext*, const char* window_name, ImGuiID node_id)
@@ -11621,13 +11533,112 @@ void ImGui::DockBuilderDockWindow(ImGuiContext*, const char* window_name, ImGuiI
     }
 }
 
-// Ensure a node is created
-void ImGui::DockBuilderCreateNode(ImGuiContext* ctx, ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags)
+void ImGui::DockBuilderAddNode(ImGuiContext* ctx, ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags)
 {
     DockSpace(id, ImVec2(0,0), flags | ImGuiDockNodeFlags_KeepAliveOnly);
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
     node->SizeRef = node->Size = ref_size;
     node->LastFrameAlive = -1;
+}
+
+void ImGui::DockBuilderRemoveNode(ImGuiContext* ctx, ImGuiID node_id)
+{
+    ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_id);
+    if (node == NULL)
+        return;
+    DockBuilderRemoveNodeDockedWindows(ctx, node_id, true);
+    DockBuilderRemoveNodeChildNodes(ctx, node_id);
+    if (node->IsDocumentRoot && node->ParentNode)
+        node->ParentNode->IsDocumentRoot = true;
+    DockContextRemoveNode(ctx, node, true);
+}
+
+void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id)
+{
+    ImGuiDockContext* dc = ctx->DockContext;
+
+    ImGuiDockNode* root_node = root_id ? DockContextFindNodeByID(ctx, root_id) : NULL;
+    if (root_id && root_node == NULL)
+        return;
+    bool has_document_root = false;
+
+    // Process active windows
+    ImVector<ImGuiDockNode*> nodes_to_remove;
+    for (int n = 0; n < dc->Nodes.Data.Size; n++)
+        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        {
+            bool want_removal = (root_id == 0) || (node->ID != root_id && DockNodeGetRootNode(node)->ID == root_id);
+            if (want_removal)
+            {
+                if (node->IsDocumentRoot)
+                    has_document_root = true;
+                if (root_id != 0)
+                    DockContextQueueNotifyRemovedNode(ctx, node);
+                if (root_node)
+                    DockNodeMoveWindows(root_node, node);
+                nodes_to_remove.push_back(node);
+            }
+        }
+
+    // Apply to settings
+    for (int settings_n = 0; settings_n < ctx->SettingsWindows.Size; settings_n++)
+        if (ImGuiID window_settings_dock_id = ctx->SettingsWindows[settings_n].DockId)
+            for (int n = 0; n < nodes_to_remove.Size; n++)
+                if (nodes_to_remove[n]->ID == window_settings_dock_id)
+                {
+                    ctx->SettingsWindows[settings_n].DockId = root_id;
+                    break;
+                }
+
+    // Not really efficient, but easier to destroy a whole hierarchy considering DockContextRemoveNode is attempting to merge nodes
+    if (nodes_to_remove.Size > 1)
+        ImQsort(nodes_to_remove.Data, nodes_to_remove.Size, sizeof(ImGuiDockNode*), DockNodeComparerDepthMostFirst);
+    for (int n = 0; n < nodes_to_remove.Size; n++)
+        DockContextRemoveNode(ctx, nodes_to_remove[n], false);
+
+    if (root_id == 0)
+    {
+        dc->Nodes.Clear();
+        dc->Requests.clear();
+    }
+    else if (has_document_root)
+    {
+        root_node->IsDocumentRoot = true;
+    }
+}
+
+void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
+{
+    // Clear references in settings
+    ImGuiContext& g = *ctx;
+    if (clear_persistent_docking_references)
+    {
+        for (int n = 0; n < g.SettingsWindows.Size; n++)
+        {
+            ImGuiWindowSettings* settings = &g.SettingsWindows[n];
+            bool want_removal = (root_id == 0) || (settings->DockId == root_id);
+            if (!want_removal && settings->DockId != 0)
+                if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, settings->DockId))
+                    if (DockNodeGetRootNode(node)->ID == root_id)
+                        want_removal = true;
+            if (want_removal)
+                settings->DockId = 0;
+        }
+    }
+
+    // Clear references in windows
+    for (int n = 0; n < g.Windows.Size; n++)
+    {
+        ImGuiWindow* window = g.Windows[n];
+        bool want_removal = (root_id == 0) || (window->DockNode && DockNodeGetRootNode(window->DockNode)->ID == root_id) || (window->DockNodeAsHost && window->DockNodeAsHost->ID == root_id);
+        if (want_removal)
+        {
+            ImGuiID backup_dock_id = window->DockId;
+            DockContextProcessUndockWindow(ctx, window);
+            if (!clear_persistent_docking_references)
+                window->DockId = backup_dock_id;
+        }
+    }
 }
 
 ImGuiID ImGui::DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_other)
