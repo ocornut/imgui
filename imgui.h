@@ -1255,7 +1255,7 @@ public:
     inline ImVector()           { Size = Capacity = 0; Data = NULL; }
     inline ~ImVector()          { if (Data) ImGui::MemFree(Data); }
     inline ImVector(const ImVector<T>& src)                     { Size = Capacity = 0; Data = NULL; operator=(src); }
-    inline ImVector& operator=(const ImVector<T>& src)          { clear(); resize(src.Size); memcpy(Data, src.Data, (size_t)Size * sizeof(value_type)); return *this; }
+    inline ImVector<T>& operator=(const ImVector<T>& src)       { clear(); resize(src.Size); memcpy(Data, src.Data, (size_t)Size * sizeof(value_type)); return *this; }
 
     inline bool                 empty() const                   { return Size == 0; }
     inline int                  size() const                    { return Size; }
