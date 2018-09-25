@@ -77,6 +77,7 @@ struct ImColor;                     // Helper functions to create a color that c
 typedef void* ImTextureID;          // User data to identify a texture (this is whatever to you want it to be! read the FAQ about ImTextureID in imgui.cpp)
 #endif
 struct ImGuiContext;                // ImGui context (opaque)
+struct ImGuiDockFamily;             // Docking family for dock filtering
 struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
 struct ImGuiInputTextCallbackData;  // Shared state of InputText() when using custom ImGuiInputTextCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
@@ -519,9 +520,9 @@ namespace ImGui
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
     // Note: you DO NOT need to call DockSpace() to use most Docking facilities! You can hold SHIFT anywhere while moving windows. 
     // Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
-    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, ImGuiID user_type_filter = 0);
+    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, const ImGuiDockFamily* dock_family = NULL);
     IMGUI_API void          SetNextWindowDock(ImGuiID dock_id, ImGuiCond cond = 0);             // set next window dock id (FIXME-DOCK)
-    IMGUI_API void          SetNextWindowUserType(ImGuiID user_type);                           // FIXME-DOCK: set next window user type (docking filters by same user_type)
+    IMGUI_API void          SetNextWindowDockFamily(const ImGuiDockFamily* dock_family);        // FIXME-DOCK: set next window user type (docking filters by same user_type)
     IMGUI_API bool          IsWindowDocked();                                                   // is current window docked into another window? 
 
     // Logging/Capture: all text output from interface is captured to tty/file/clipboard. By default, tree nodes are automatically opened during logging.
@@ -1561,6 +1562,15 @@ struct ImGuiSizeCallbackData
     ImVec2  Pos;            // Read-only.   Window position, for reference.
     ImVec2  CurrentSize;    // Read-only.   Current window size.
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+};
+
+// For SetNextWindowDockFamily() and DockSpace() function
+struct ImGuiDockFamily
+{
+    ImGuiID FamilyId;                   // 0 = unaffiliated
+    bool    CompatibleWithFamilyZero;   // true = can be docked/merged with an unaffiliated window
+
+    ImGuiDockFamily() { FamilyId = 0; CompatibleWithFamilyZero = true; } 
 };
 
 // Data payload for Drag and Drop operations

@@ -2371,7 +2371,6 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     HiddenFramesRegular = HiddenFramesForResize = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = SetWindowDockAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
-    UserTypeId = 0;
 
     LastFrameActive = -1;
     ItemWidthDefault = 0.0f;
@@ -4969,7 +4968,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
-    window->UserTypeId = g.NextWindowData.UserTypeId;
+    window->DockFamily = g.NextWindowData.DockFamily;
     if (g.NextWindowData.CollapsedCond)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.FocusCond)
@@ -6357,10 +6356,10 @@ void ImGui::SetNextWindowDock(ImGuiID id, ImGuiCond cond)
     g.NextWindowData.DockId = id;
 }
 
-void ImGui::SetNextWindowUserType(ImGuiID user_type)
+void ImGui::SetNextWindowDockFamily(const ImGuiDockFamily* family)
 {
     ImGuiContext& g = *GImGui;
-    g.NextWindowData.UserTypeId = user_type;
+    g.NextWindowData.DockFamily = *family;
 }
 
 // In window space (not screen space!)
@@ -10178,19 +10177,19 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 {
     ID = id;
-    UserTypeIdFilter = 0;
     Flags = 0;
     ParentNode = ChildNodes[0] = ChildNodes[1] = NULL;
     TabBar = NULL;
     SplitAxis = ImGuiAxis_None;
+
     HostWindow = VisibleWindow = NULL;
     OnlyNodeWithWindows = NULL;
     LastFrameAlive = LastFrameActive = -1;
     LastFocusedNodeID = 0;
     SelectedTabID = 0;
     WantCloseTabID = 0;
-    IsVisible = true;
     InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
+    IsVisible = true;
     IsDockSpace = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
 }
 
@@ -10493,9 +10492,18 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             DockNodeUpdateFindOnlyNodeWithWindowsRec(node, &count, &first_node_with_windows);
             node->OnlyNodeWithWindows = (count == 1 ? first_node_with_windows : NULL);
 
-            // Copy the user type from _any_ of our window so it can be used for proper dock filtering.
+            // Copy the dock family from of our window so it can be used for proper dock filtering.
+            // When node has mixed windows, prioritize the family with the most constraint (CompatibleWithNeutral = false) as the reference to copy.
             if (first_node_with_windows)
-                node->UserTypeIdFilter = first_node_with_windows->Windows[0]->UserTypeId;
+            {
+                node->DockFamily = first_node_with_windows->Windows[0]->DockFamily;
+                for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
+                    if (first_node_with_windows->Windows[n]->DockFamily.CompatibleWithFamilyZero == false)
+                    {
+                        node->DockFamily = first_node_with_windows->Windows[n]->DockFamily;
+                        break;
+                    }
+            }
         }
     }
 
@@ -10863,9 +10871,16 @@ static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_win
     if ((host_window->Flags & ImGuiWindowFlags_DockNodeHost) && host_window->DockNodeAsHost->IsDockSpace && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
         return false;
 
-    ImGuiID host_user_type_id = host_window->DockNodeAsHost ? host_window->DockNodeAsHost->UserTypeIdFilter : host_window->UserTypeId;
-    if (payload->UserTypeId != host_user_type_id)
+    ImGuiDockFamily* host_family = host_window->DockNodeAsHost ? &host_window->DockNodeAsHost->DockFamily : &host_window->DockFamily;
+    ImGuiDockFamily* payload_family = &payload->DockFamily;
+    if (host_family->FamilyId != payload_family->FamilyId)
+    {
+        if (host_family->FamilyId != 0 && host_family->CompatibleWithFamilyZero && payload_family->FamilyId == 0)
+            return true;
+        if (payload_family->FamilyId != 0 && payload_family->CompatibleWithFamilyZero && host_family->FamilyId == 0)
+            return true;
         return false;
+    }
 
     return true;
 }
@@ -11443,7 +11458,7 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
 
 // Create an explicit dockspace node within an existing window. Also expose dock node flags and creates a DocumentRoot node by default.
 // The DocumentRoot node is always displayed even when empty and shrink/extend according to the requested size of its neighbors.
-void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags dock_space_flags, ImGuiID user_type_filter)
+void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags dock_space_flags, const ImGuiDockFamily* dock_family)
 {
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
@@ -11456,7 +11471,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
         node->IsDocumentRoot = true;
     }
     node->Flags = dock_space_flags;
-    node->UserTypeIdFilter = user_type_filter;
+    node->DockFamily = dock_family ? *dock_family : ImGuiDockFamily();
 
     // When a Dockspace transitioned form implicit to explicit this may be called a second time
     // It is possible that the node has already been claimed by a docked window which appeared before the DockSpace() node, so we overwrite IsDockSpace again.
@@ -12391,6 +12406,7 @@ static void SettingsHandlerWindow_ReadLine(ImGuiContext*, ImGuiSettingsHandler*,
     else if (sscanf(line, "Collapsed=%d", &i) == 1)             { settings->Collapsed = (i != 0); }
     else if (sscanf(line, "DockId=0x%X,%d", &u1, &i) == 2)      { settings->DockId = u1; settings->DockOrder = (short)i; }
     else if (sscanf(line, "DockId=0x%X", &u1) == 1)             { settings->DockId = u1; settings->DockOrder = -1; }
+    else if (sscanf(line, "DockFamilyId=0x%X", &u1) == 1)       { settings->DockFamilyId = u1; }
 }
 
 static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
@@ -12419,6 +12435,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
         settings->ViewportPos = window->ViewportPos;
         IM_ASSERT(window->DockNode == NULL || window->DockNode->ID == window->DockId);
         settings->DockId = window->DockId;
+        settings->DockFamilyId = window->DockFamily.FamilyId;
         settings->DockOrder = window->DockOrder;
         settings->Collapsed = window->Collapsed;
     }
@@ -12449,6 +12466,8 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
                 buf->appendf("DockId=0x%08X\n", settings->DockId);
             else
                 buf->appendf("DockId=0x%08X,%d\n", settings->DockId, settings->DockOrder);
+            if (settings->DockFamilyId != 0)
+                buf->appendf("DockFamilyId=0x%08X\n", settings->DockFamilyId);
         }
         buf->appendf("\n");
     }
