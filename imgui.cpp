@@ -9540,6 +9540,7 @@ void ImGui::EndDragDropTarget()
 // B- full rebuild loses viewport of floating dock nodes
 // B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them
 // A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
+// B- implicit, invisible per-viewport dockspace to dock to.
 // B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
 // A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal title bar (not a tab bar)
 // B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
@@ -9548,13 +9549,15 @@ void ImGui::EndDragDropTarget()
 // B- inconsistent clipping/border 1-pixel issue (#2)
 // B- fix/disable auto-resize grip on split host nodes (~#2)
 // B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
-// B- implicit, invisible per-viewport dockspace to dock to
 // B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
+// B- dpi: look at interaction with the hi-dpi and multi-dpi stuff.
 // B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
 // B- tab bar: make selected tab always shows its full title?
 // B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
 // B- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
 // B- nav: design interactions so nav controls can dock/undock
+// B- dockspace: flag to lock the dock tree and/or sizes
+// C- allow dragging a non-floating dock node by clicking on the title-bar-looking section (not just the collapse/menu button)
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
@@ -9649,6 +9652,7 @@ namespace ImGui
     static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
     static void             DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextGcUnusedSettingsNodes(ImGuiContext* ctx);
+    static ImGuiDockNode*   DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id);
     static void             DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references);    // Set root_id==0 to clear all
     static void             DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
     static void             DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id);                                  // Use root_id==0 to add all
@@ -9814,7 +9818,7 @@ void ImGui::DockContextEndFrame(ImGuiContext* ctx)
     (void)ctx;
 }
 
-ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id)
+static ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id)
 {
     return (ImGuiDockNode*)ctx->DockContext->Nodes.GetVoidPtr(id);
 }
@@ -11531,6 +11535,11 @@ void ImGui::DockBuilderDockWindow(ImGuiContext*, const char* window_name, ImGuiI
             settings = CreateNewWindowSettings(window_name);
         settings->DockId = node_id;
     }
+}
+
+ImGuiDockNode* ImGui::DockBuilderGetNode(ImGuiContext* ctx, ImGuiID node_id)
+{
+    return DockContextFindNodeByID(ctx, node_id);
 }
 
 void ImGui::DockBuilderAddNode(ImGuiContext* ctx, ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags)
