@@ -3973,7 +3973,7 @@ void ShowExampleAppDocuments(bool* p_open)
             // FIXME-DOCK: SetNextWindowDock()
             //ImGuiID default_dock_id = GetDockspaceRootDocumentDockID();
             //ImGuiID default_dock_id = GetDockspacePreferedDocumentDockID();
-            ImGui::SetNextWindowDock(dockspace_id, redock_all ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
+            ImGui::SetNextWindowDockId(dockspace_id, redock_all ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
             ImGuiWindowFlags window_flags = (doc->Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
             bool visible = ImGui::Begin(doc->Name, &doc->Open, window_flags);
 

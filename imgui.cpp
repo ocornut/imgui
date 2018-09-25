@@ -6103,10 +6103,16 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     }
 }
 
+ImGuiID ImGui::GetWindowDockId()
+{
+    ImGuiContext& g = *GImGui;
+    return g.CurrentWindow->DockId;
+}
+
 bool ImGui::IsWindowDocked()
 {
     ImGuiContext& g = *GImGui;
-    return (g.CurrentWindow->DockIsActive);
+    return g.CurrentWindow->DockIsActive;
 }
 
 // Can we focus this window with CTRL+TAB (or PadMenu + PadFocusPrev/PadFocusNext)
@@ -6349,7 +6355,7 @@ void ImGui::SetNextWindowViewport(ImGuiID id)
     g.NextWindowData.ViewportId = id;
 }
 
-void ImGui::SetNextWindowDock(ImGuiID id, ImGuiCond cond)
+void ImGui::SetNextWindowDockId(ImGuiID id, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.DockCond = cond ? cond : ImGuiCond_Always;
