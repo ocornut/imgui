@@ -1568,10 +1568,10 @@ struct ImGuiSizeCallbackData
 // For SetNextWindowDockFamily() and DockSpace() function
 struct ImGuiDockFamily
 {
-    ImGuiID FamilyId;                   // 0 = unaffiliated
+    ImGuiID ID;                         // 0 = unaffiliated
     bool    CompatibleWithFamilyZero;   // true = can be docked/merged with an unaffiliated window
 
-    ImGuiDockFamily() { FamilyId = 0; CompatibleWithFamilyZero = true; } 
+    ImGuiDockFamily() { ID = 0; CompatibleWithFamilyZero = true; } 
 };
 
 // Data payload for Drag and Drop operations

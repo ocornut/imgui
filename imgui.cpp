@@ -9539,31 +9539,6 @@ void ImGui::EndDragDropTarget()
 // Docking: Begin/End Functions (called from Begin/End)
 // Docking: Settings
 //-----------------------------------------------------------------------------
-// TODO:
-// A~ document root node resizing behavior incorrect
-// A~ document root node retrieval of ID ?
-// B- full rebuild loses viewport of floating dock nodes
-// B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them
-// A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
-// B- implicit, invisible per-viewport dockspace to dock to.
-// B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
-// A- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows) should show a normal title bar (not a tab bar)
-// B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
-// B~ tidy up tab list popup buttons (see old ImGuiTabBarFlags_NoTabListPopupButton code)
-// B- DockSpace() border issues
-// B- inconsistent clipping/border 1-pixel issue (#2)
-// B- fix/disable auto-resize grip on split host nodes (~#2)
-// B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
-// B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
-// B- dpi: look at interaction with the hi-dpi and multi-dpi stuff.
-// B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
-// B- tab bar: make selected tab always shows its full title?
-// B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
-// B- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
-// B- nav: design interactions so nav controls can dock/undock
-// B- dockspace: flag to lock the dock tree and/or sizes
-// C- allow dragging a non-floating dock node by clicking on the title-bar-looking section (not just the collapse/menu button)
-//-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // Docking: Internal Types
@@ -9831,7 +9806,7 @@ static ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID 
 static ImGuiDockNode* ImGui::DockContextAddNode(ImGuiContext* ctx, ImGuiID id)
 {
     // Generate an ID for the new node (the exact ID value doesn't matter as long as it is not already used) and add the first window.
-    if (id == (ImGuiID)-1)
+    if (id == 0)
     {
         // FIXME-OPT: This is suboptimal, even if the node count is small enough not to be a worry. We could poke in ctx->Nodes to find a suitable ID faster.
         id = 0x0001;
@@ -10045,7 +10020,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     // Create new node and add existing window to it
     if (target_node == NULL)
     {
-        target_node = DockContextAddNode(ctx, (ImGuiID)-1);
+        target_node = DockContextAddNode(ctx, 0);
         target_node->Pos = target_window->Pos;
         target_node->Size = target_window->Size;
         if (target_window->DockNodeAsHost == NULL)
@@ -10156,7 +10131,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     if (node->IsRootNode())
     {
         // FIXME-DOCK: Transition persistent DockId for all non-active windows
-        ImGuiDockNode* new_node = DockContextAddNode(ctx, (ImGuiID)-1);
+        ImGuiDockNode* new_node = DockContextAddNode(ctx, 0);
         DockNodeMoveWindows(new_node, node);
         for (int n = 0; n < new_node->Windows.Size; n++)
             UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
@@ -10879,11 +10854,11 @@ static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_win
 
     ImGuiDockFamily* host_family = host_window->DockNodeAsHost ? &host_window->DockNodeAsHost->DockFamily : &host_window->DockFamily;
     ImGuiDockFamily* payload_family = &payload->DockFamily;
-    if (host_family->FamilyId != payload_family->FamilyId)
+    if (host_family->ID != payload_family->ID)
     {
-        if (host_family->FamilyId != 0 && host_family->CompatibleWithFamilyZero && payload_family->FamilyId == 0)
+        if (host_family->ID != 0 && host_family->CompatibleWithFamilyZero && payload_family->ID == 0)
             return true;
-        if (payload_family->FamilyId != 0 && payload_family->CompatibleWithFamilyZero && host_family->FamilyId == 0)
+        if (payload_family->ID != 0 && payload_family->CompatibleWithFamilyZero && host_family->ID == 0)
             return true;
         return false;
     }
@@ -11170,10 +11145,10 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
 {
     IM_ASSERT(split_axis != ImGuiAxis_None);
 
-    ImGuiDockNode* child_0 = (new_node && split_inheritor_child_idx != 0) ? new_node : DockContextAddNode(ctx, (ImGuiID)-1);
+    ImGuiDockNode* child_0 = (new_node && split_inheritor_child_idx != 0) ? new_node : DockContextAddNode(ctx, 0);
     child_0->ParentNode = parent_node;
 
-    ImGuiDockNode* child_1 = (new_node && split_inheritor_child_idx != 1) ? new_node : DockContextAddNode(ctx, (ImGuiID)-1);
+    ImGuiDockNode* child_1 = (new_node && split_inheritor_child_idx != 1) ? new_node : DockContextAddNode(ctx, 0);
     child_1->ParentNode = parent_node;
 
     ImGuiDockNode* child_inheritor = (split_inheritor_child_idx == 0) ? child_0 : child_1;
@@ -11970,8 +11945,6 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
     if (sscanf(line, " DocRoot=%d%n", &x, &r) == 1)                 { line += r; node.IsDocumentRoot = (x != 0); }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
-    //if (node.ParentID == 0 && node.SplitAxis == ImGuiAxis_None)
-    //    return;
     ImGuiDockContext* dc = ctx->DockContext;
     if (node.ParentID != 0)
         if (ImGuiDockNodeSettings* parent_settings = DockSettingsFindNodeSettings(ctx, node.ParentID))
@@ -12035,7 +12008,8 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         if (node_settings->SelectedTabID)
             buf->appendf(" SelectedTab=0x%08X", node_settings->SelectedTabID);
 
-#if 0   // [DEBUG] Include comments in the .ini file to ease debugging
+#if 0
+        // [DEBUG] Include comments in the .ini file to ease debugging
         if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_settings->ID))
         {
             buf->appendf("%*s", ImMax(2, (line_start_pos + 90) - buf->size()), "");        // Align everything
@@ -12441,7 +12415,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
         settings->ViewportPos = window->ViewportPos;
         IM_ASSERT(window->DockNode == NULL || window->DockNode->ID == window->DockId);
         settings->DockId = window->DockId;
-        settings->DockFamilyId = window->DockFamily.FamilyId;
+        settings->DockFamilyId = window->DockFamily.ID;
         settings->DockOrder = window->DockOrder;
         settings->Collapsed = window->Collapsed;
     }
