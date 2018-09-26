@@ -822,6 +822,9 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
 void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_count, ImU32 col)
 {
+    if (points_count < 3)
+        return;
+
     const ImVec2 uv = _Data->TexUvWhitePixel;
 
     if (Flags & ImDrawListFlags_AntiAliasedFill)

@@ -1,15 +1,18 @@
 
-The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer) that is used by default.
-We embed the font in source code so you can use Dear ImGui without any file system access.
+The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
+a 13 pixels high, pixel-perfect font used by default.
+We embed it font in source code so you can use Dear ImGui without any file system access.
+
 You may also load external .TTF/.OTF files. 
 The files in this folder are suggested fonts, provided as a convenience.
-(Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
+(Note: .OTF support in imstb_truetype.h currently doesn't appear to load every font)
 
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
 
 If you have other loading/merging/adding fonts, you can post on the Dear ImGui "Getting Started" forum:
   https://discourse.dearimgui.org/c/getting-started
+
 
 ---------------------------------------
  INDEX:
@@ -35,7 +38,7 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
        u8"hello"
        u8"こんにちは"   // this will be encoded as UTF-8
  - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
- - Please use the Discourse forum (https://discourse.dearimgui.org) and not the Github issue tracker.
+ - Please use the Discourse forum (https://discourse.dearimgui.org) and not the Github issue tracker for basic font loading questions.
 
 
 ---------------------------------------
@@ -68,7 +71,11 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
    io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 
    // Usage, e.g.
-   ImGui::Button(ICON_FA_SEARCH " Search");                     // C string literals can be concatenated at compilation time, this is the same as "A" "B" becoming "AB"
+   ImGui::Button(ICON_FA_SEARCH " Search");
+   // C string _literals_ can be concatenated at compilation time, e.g. "hello" " world"
+   // ICON_FA_SEARCH is defined as a string literal so this is the same as "A" "B" becoming "AB" 
+
+   // Usage, e.g.
    ImGui::Text("%s among %d items", ICON_FA_SEARCH, count);
    
  See Links below for other icons fonts and related tools.
@@ -124,12 +131,13 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
 
    // Add character ranges and merge into the previous font
    // The ranges array is not copied by the AddFont* functions and is used lazily
-   // so ensure it is available for duration of font usage
-   static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // will not be copied by AddFont* so keep in scope.
+   // so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
+   static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // Will not be copied by AddFont* so keep in scope.
    ImFontConfig config;
    config.MergeMode = true;
    io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese());
    io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 18.0f, &config, icons_ranges);
+   io.Fonts->Build();
 
  Add a fourth parameter to bake specific font ranges only:
 
@@ -153,12 +161,15 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
  FREETYPE RASTERIZER, SMALL FONT SIZES
 ---------------------------------------
 
- Dear Imgui uses stb_truetype.h to rasterize fonts (with optional oversampling).
- This technique and implementation are not ideal for fonts rendered at _small sizes_, which may appear a little blurry.
+ Dear ImGui uses imstb_truetype.h to rasterize fonts (with optional oversampling).
+ This technique and its implementation are not ideal for fonts rendered at _small sizes_, which may appear a 
+ little blurry or hard to read. 
+
  There is an implementation of the ImFontAtlas builder using FreeType that you can use in the misc/freetype/ folder.
 
  FreeType supports auto-hinting which tends to improve the readability of small fonts.
- Note that this code currently creates textures that are unoptimally too large (could be fixed with some work)
+ Note that this code currently creates textures that are unoptimally too large (could be fixed with some work).
+ Also note that correct sRGB space blending will have an important effect on your font rendering quality.
 
 
 ---------------------------------------
@@ -174,7 +185,9 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
    builder.AddChar(0x7262);                               // Add a specific character
    builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
    builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
+
    io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
+   io.Fonts->Build();                                     // Build the atlas while 'ranges' is still in scope and not deleted.
 
 
 ---------------------------------------
@@ -241,6 +254,10 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
 
  (Icons) IcoMoon - Custom Icon font builder
    https://icomoon.io/app
+
+ (Pixel perfect) Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A)
+   https://github.com/kmar/Sweet16Font
+   Also include .inl file to use directly in dear imgui.
 
  (Regular) Open Sans Fonts
    https://fonts.google.com/specimen/Open+Sans
