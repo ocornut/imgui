@@ -867,8 +867,9 @@ CODE
 #include <stdint.h>     // intptr_t
 #endif
 
-#define IMGUI_DEBUG_NAV_SCORING     0
-#define IMGUI_DEBUG_NAV_RECTS       0
+#define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Display last moving direction matches when holding CTRL
+#define IMGUI_DEBUG_NAV_RECTS       0   // Display the reference navigation rectangle for each window
+#define IMGUI_DEBUG_DOCKING_INI     0   // Save additional comments in .ini file (makes saving slower)
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -9631,7 +9632,7 @@ namespace ImGui
     static void             DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req);
     static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
     static void             DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
-    static void             DockContextGcUnusedSettingsNodes(ImGuiContext* ctx);
+    static void             DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx);
     static ImGuiDockNode*   DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id);
     static void             DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references);    // Set root_id==0 to clear all
     static void             DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
@@ -9715,7 +9716,7 @@ void ImGui::DockContextShutdown(ImGuiContext* ctx)
 void ImGui::DockContextOnLoadSettings(ImGuiContext* ctx)
 {
     ImGuiDockContext* dc = ctx->DockContext;
-    DockContextGcUnusedSettingsNodes(ctx);
+    DockContextPruneUnusedSettingsNodes(ctx);
     DockContextBuildNodesFromSettings(ctx, dc->SettingsNodes.Data, dc->SettingsNodes.Size);
 }
 
@@ -9725,7 +9726,7 @@ void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear
     DockBuilderRemoveNodeChildNodes(ctx, root_id);
 }
 
-// This function also acts as a de-facto test to make sure we can rebuild from scratch without a glitch
+// This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
 void ImGui::DockContextRebuild(ImGuiContext* ctx)
 {
     //IMGUI_DEBUG_LOG("[docking] full rebuild\n");
@@ -9858,7 +9859,8 @@ static int IMGUI_CDECL DockNodeComparerDepthMostFirst(const void* lhs, const voi
     return ImGui::DockNodeGetDepth(b) - ImGui::DockNodeGetDepth(a);
 }
 
-static void ImGui::DockContextGcUnusedSettingsNodes(ImGuiContext* ctx)
+// Garbage collect unused nodes (run once at init time)
+static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
 {
     ImGuiContext& g = *ctx;
     ImGuiDockContext* dc = ctx->DockContext;
@@ -11678,6 +11680,47 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir spli
     return id_at_dir;
 }
 
+static ImGuiDockNode* DockBuilderCloneNodeForFork(ImGuiContext* ctx, ImGuiDockNode* src_node, ImGuiID dst_node_id_if_known, ImVector<ImGuiID>* out_node_remap_pairs)
+{
+    ImGuiDockNode* dst_node = ImGui::DockContextAddNode(ctx, dst_node_id_if_known);
+    dst_node->Flags = src_node->Flags;
+    dst_node->Pos = src_node->Pos;
+    dst_node->Size = src_node->Size;
+    dst_node->SizeRef = src_node->SizeRef;
+    dst_node->SplitAxis = src_node->SplitAxis;
+    dst_node->IsDockSpace = src_node->IsDockSpace;
+    dst_node->IsDocumentRoot = src_node->IsDocumentRoot;
+
+    out_node_remap_pairs->push_back(src_node->ID);
+    out_node_remap_pairs->push_back(dst_node->ID);
+
+    for (int child_n = 0; child_n < IM_ARRAYSIZE(src_node->ChildNodes); child_n++)
+        if (src_node->ChildNodes[child_n])
+        {
+            dst_node->ChildNodes[child_n] = DockBuilderCloneNodeForFork(ctx, src_node->ChildNodes[child_n], 0, out_node_remap_pairs);
+            dst_node->ChildNodes[child_n]->ParentNode = dst_node;
+        }
+
+    //IMGUI_DEBUG_LOG("Fork node %08X -> %08X (%d childs)\n", src_node->ID, dst_node->ID, dst_node->IsSplitNode() ? 2 : 0);
+    return dst_node;
+}
+
+void ImGui::DockBuilderForkNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs)
+{
+    IM_ASSERT(src_node_id != 0);
+    IM_ASSERT(dst_node_id != 0);
+    IM_ASSERT(out_node_remap_pairs != NULL);
+
+    ImGuiDockNode* src_node = DockContextFindNodeByID(ctx, src_node_id);
+    IM_ASSERT(src_node != NULL);
+
+    out_node_remap_pairs->clear();
+    DockBuilderRemoveNode(ctx, dst_node_id);
+    DockBuilderCloneNodeForFork(ctx, src_node, dst_node_id, out_node_remap_pairs);
+
+    IM_ASSERT((out_node_remap_pairs->Size % 2) == 0);
+}
+
 void ImGui::DockBuilderFinish(ImGuiContext* ctx, ImGuiID root_id)
 {
     DockContextBuildAddWindowsToNodes(ctx, root_id);
@@ -11993,7 +12036,9 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
     buf->appendf("[%s][Data]\n", handler->TypeName);
     for (int node_n = 0; node_n < dc->SettingsNodes.Size; node_n++)
     {
-        //const int line_start_pos = buf->size();
+#if IMGUI_DEBUG_DOCKING_INI
+        const int line_start_pos = buf->size();
+#endif
         const ImGuiDockNodeSettings* node_settings = &dc->SettingsNodes[node_n];
         buf->appendf("%*s%s%*s", node_settings->Depth * 2, "", node_settings->IsDockSpace ? "DockSpace" : "DockNode ", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
         buf->appendf(" ID=0x%08X", node_settings->ID);
@@ -12008,14 +12053,13 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         if (node_settings->SelectedTabID)
             buf->appendf(" SelectedTab=0x%08X", node_settings->SelectedTabID);
 
-#if 0
+#if IMGUI_DEBUG_DOCKING_INI
         // [DEBUG] Include comments in the .ini file to ease debugging
         if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_settings->ID))
         {
             buf->appendf("%*s", ImMax(2, (line_start_pos + 90) - buf->size()), "");        // Align everything
             if (node->IsDockSpace && node->HostWindow && node->HostWindow->ParentWindow)
                 buf->appendf(" ; in '%s'", node->HostWindow->ParentWindow->Name);
-
             int contains_window = 0;
             for (int window_n = 0; window_n < ctx->SettingsWindows.Size; window_n++)
                 if (ctx->SettingsWindows[window_n].DockId == node_settings->ID)

@@ -1565,13 +1565,14 @@ struct ImGuiSizeCallbackData
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
 
-// For SetNextWindowDockFamily() and DockSpace() function
+// [BETA] For SetNextWindowDockFamily() and DockSpace() function
 struct ImGuiDockFamily
 {
     ImGuiID ID;                         // 0 = unaffiliated
     bool    CompatibleWithFamilyZero;   // true = can be docked/merged with an unaffiliated window
 
-    ImGuiDockFamily() { ID = 0; CompatibleWithFamilyZero = true; } 
+    ImGuiDockFamily()                                                    { ID = 0; CompatibleWithFamilyZero = true; } 
+    ImGuiDockFamily(ImGuiID id, bool compatible_with_family_zero = true) { ID = id; CompatibleWithFamilyZero = compatible_with_family_zero; }
 };
 
 // Data payload for Drag and Drop operations

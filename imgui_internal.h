@@ -1488,7 +1488,7 @@ namespace ImGui
     IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID node_id, bool clear_persistent_docking_references = true);
     IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID node_id);        // Remove all split/hierarchy. All remaining docked windows will be re-docked to the root.
     IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID node_id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_dir, ImGuiID* out_id_other);
-    //IMGUI_API void        DockBuilderForkNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID new_node_id);
+    IMGUI_API void          DockBuilderForkNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs);
     IMGUI_API void          DockBuilderFinish(ImGuiContext* ctx, ImGuiID node_id);
 
     // Drag and Drop
