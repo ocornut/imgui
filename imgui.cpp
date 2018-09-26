@@ -9866,36 +9866,52 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     ImGuiDockContext* dc = ctx->DockContext;
     IM_ASSERT(g.Windows.Size == 0);
 
-    // Count reference to dock ids from window settings
-    ImGuiStorage ref_count_map;  // Map dock_id -> counter
-    ref_count_map.Data.reserve(dc->SettingsNodes.Size);
-    for (int settings_n = 0; settings_n < g.SettingsWindows.Size; settings_n++)
-        if (g.SettingsWindows[settings_n].DockId != 0)
-            (*ref_count_map.GetIntRef(g.SettingsWindows[settings_n].DockId, 0))++;
+    struct NodeData
+    {
+        int CountWindows, CountChildWindows, CountChildNodes;
+        ImGuiID RootID;
+        NodeData() { CountWindows = CountChildWindows = CountChildNodes = 0; RootID = 0; }
+    };
+    ImPool<NodeData> pool;
+    pool.Reserve(dc->SettingsNodes.Size);
 
-    // Mark nodes that are parents
-    ImGuiStorage is_parent_map;
-    is_parent_map.Data.reserve(dc->SettingsNodes.Size);
-    for (int settings_n = 0; settings_n < dc->SettingsNodes.Size; settings_n++)
-        if (dc->SettingsNodes[settings_n].ParentID)
-            is_parent_map.SetInt(dc->SettingsNodes[settings_n].ParentID, 1);
-
-    // If a root node has only 1 reference in window settings we clear it
-    // FIXME-DOCK: We should be able to merge unused nodes as well.
+    // Count child nodes and compute RootID
     for (int settings_n = 0; settings_n < dc->SettingsNodes.Size; settings_n++)
     {
         ImGuiDockNodeSettings* settings = &dc->SettingsNodes[settings_n];
-        int ref_count = ref_count_map.GetInt(settings->ID, 0);
-        if (ref_count <= 1)
-        {
-            bool remove = false;
-            remove |= (ref_count == 1 && settings->ParentID == 0 && !settings->IsDocumentRoot);                  // Root node with only 1 window
-            remove |= (ref_count == 0 && settings->ParentID == 0 && is_parent_map.GetInt(settings->ID, 0) == 0); // Leaf nodes with 0 window
-            if (remove)
+        NodeData* parent_data = settings->ParentID ? pool.GetByKey(settings->ParentID) : 0;
+        pool.GetOrAddByKey(settings->ID)->RootID = parent_data ? parent_data->RootID : settings->ID;
+        if (settings->ParentID)
+            pool.GetOrAddByKey(settings->ParentID)->CountChildNodes++;
+    }
+
+    // Count reference to dock ids from window settings
+    for (int settings_n = 0; settings_n < g.SettingsWindows.Size; settings_n++)
+        if (ImGuiID dock_id = g.SettingsWindows[settings_n].DockId)
+            if (NodeData* data = pool.GetByKey(dock_id))
             {
-                DockSettingsRemoveReferencesToNodes(&settings->ID, 1);
-                settings->ID = 0;
+                NodeData* data_root = (data->RootID == dock_id) ? data : pool.GetByKey(data->RootID);
+                data->CountWindows++;
+                data_root->CountChildWindows++;
             }
+
+    // Prune
+    for (int settings_n = 0; settings_n < dc->SettingsNodes.Size; settings_n++)
+    {
+        ImGuiDockNodeSettings* settings = &dc->SettingsNodes[settings_n];
+        NodeData* data = pool.GetByKey(settings->ID);
+        if (data->CountWindows > 1)
+            continue;
+        NodeData* data_root = (data->RootID == settings->ID) ? data : pool.GetByKey(data->RootID);
+
+        bool remove = false;
+        remove |= (data->CountWindows == 1 && settings->ParentID == 0 && data->CountChildNodes == 0 && !settings->IsDocumentRoot);  // Floating root node with only 1 window
+        remove |= (data->CountWindows == 0 && settings->ParentID == 0 && data->CountChildNodes == 0); // Leaf nodes with 0 window
+        remove |= (data_root->CountChildWindows == 0);
+        if (remove)
+        {
+            DockSettingsRemoveReferencesToNodes(&settings->ID, 1);
+            settings->ID = 0;
         }
     }
 }
@@ -11953,6 +11969,7 @@ static void ImGui::DockSettingsRemoveReferencesToNodes(ImGuiID* node_ids, int no
 
 static ImGuiDockNodeSettings*   ImGui::DockSettingsFindNodeSettings(ImGuiContext* ctx, ImGuiID id)
 {
+    // FIXME-OPT
     ImGuiDockContext* dc = ctx->DockContext;
     for (int n = 0; n < dc->SettingsNodes.Size; n++)
         if (dc->SettingsNodes[n].ID == id)

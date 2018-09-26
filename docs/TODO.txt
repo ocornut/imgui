@@ -125,6 +125,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  
  - dock: A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete)
  - dock: A- implicit, invisible per-viewport dockspace to dock to.
+ - dock: B: when docking outer, perform size locking on neighbors nodes the same way we do it with splitters, so other nodes are not resized
  - dock: B~ document root node resizing behavior incorrect
  - dock: B~ document root node retrieval of ID ?
  - dock: B- full rebuild loses viewport of floating dock nodes
