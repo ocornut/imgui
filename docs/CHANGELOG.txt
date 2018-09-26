@@ -54,6 +54,10 @@ HOW TO UPDATE?
  VERSION 1.66 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Renamed SetScrollHere() to SetScrollHereY(). Kept redirection function (will obsolete).
+
 Other Changes:
 
 - Fixed calling DestroyContext() always saving .ini data with the current context instead
@@ -66,8 +70,14 @@ Other Changes:
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
 - DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
+- BeginChild(): Fixed BeginChild(const char*, ...) variation erroneously not applying the ID stack
+  to the provided string to uniquely identify the child window. This was undoing an intentional change
+  introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
-  
+- ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
+- ImDrawList: Fixed AddConvexPolyFilled() undefined behavior when passing points_count smaller than 3,
+  in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
+
 
 -----------------------------------------------------------------------
  VERSION 1.65 (Released 2018-09-06)
@@ -385,6 +395,9 @@ Breaking Changes:
 - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered style colors as the closing cross uses regular button colors now.
 - Renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
 - Removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it should be easy to replicate on your side (you can find the code in 1.53).
+- [EDITED] Window: BeginChild() with an explicit name doesn't include the hash within the internal window name. (#1698)
+  This change was erroneously introduced, undoing the change done for #894, #713, and not documented properly in the original 
+  1.60 release Changelog. It was fixed on 2018-09-28 (1.66) and I wrote this paragraph the same day.
 
 Other Changes:
 
@@ -593,7 +606,6 @@ Other Changes:
 - Window: Using the ImGuiWindowFlags_NoScrollWithMouse flag on a child window forwards the mouse wheel event to the parent window, unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set. (#1380, #1502)
 - Window: Active Modal window always set the WantCaptureKeyboard flag. (#744)
 - Window: Moving window doesn't use accumulating MouseDelta so straying out of imgui boundaries keeps moved imgui window at the same cursor-relative position.
-- Window: BeginChild() which an explicit name doesn't include the hash within the internal window name. (#1698)
 - IsWindowFocused(): Added ImGuiFocusedFlags_ChildWindows flag to include child windows in the focused test. (#1382).
 - IsWindowFocused(): Added ImGuiFocusedFlags_RootWindow flag to start focused test from the root (top-most) window. Obsolete IsRootWindowFocused(). (#1382)
 - IsWindowHovered(): Added ImGuiHoveredFlags_ChildWindows flag to include child windows in the hovered test. (#1382).
