@@ -1511,10 +1511,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 {
                     ImGui::Text("%04d: scrollable region", i);
                     if (goto_line && line == i)
-                        ImGui::SetScrollHere();
+                        ImGui::SetScrollHereY();
                 }
                 if (goto_line && line >= 100)
-                    ImGui::SetScrollHere();
+                    ImGui::SetScrollHereY();
                 ImGui::EndChild();
             }
 
@@ -1773,7 +1773,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         if (ImGui::TreeNode("Scrolling"))
         {
-            ImGui::TextWrapped("(Use SetScrollHere() or SetScrollFromPosY() to scroll to a given position.)");
+            ImGui::TextWrapped("(Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given position.)");
             static bool track = true;
             static int track_line = 50, scroll_to_px = 200;
             ImGui::Checkbox("Track", &track);
@@ -1797,7 +1797,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     if (track && line == track_line)
                     {
                         ImGui::TextColored(ImColor(255,255,0), "Line %d", line);
-                        ImGui::SetScrollHere(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+                        ImGui::SetScrollHereY(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
                     }
                     else
                     {
@@ -2892,7 +2892,7 @@ struct ExampleAppConsole
         if (copy_to_clipboard)
             ImGui::LogFinish();
         if (ScrollToBottom)
-            ImGui::SetScrollHere(1.0f);
+            ImGui::SetScrollHereY(1.0f);
         ScrollToBottom = false;
         ImGui::PopStyleVar();
         ImGui::EndChild();
@@ -3134,7 +3134,7 @@ struct ExampleAppLog
         }
 
         if (ScrollToBottom)
-            ImGui::SetScrollHere(1.0f);
+            ImGui::SetScrollHereY(1.0f);
         ScrollToBottom = false;
         ImGui::EndChild();
         ImGui::End();

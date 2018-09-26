@@ -33,6 +33,10 @@ HOW TO UPDATE?
  VERSION 1.66 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Renamed SetScrollHere() to SetScrollHereY(). Kept redirection function (will obsolete).
+
 Other Changes:
 
 - Fixed calling DestroyContext() always saving .ini data with the current context instead
