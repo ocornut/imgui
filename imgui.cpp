@@ -10229,7 +10229,7 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
             node->TabBar = IM_NEW(ImGuiTabBar)();
             node->TabBar->SelectedTabId = node->TabBar->NextSelectedTabId = node->SelectedTabID;
         }
-        TabBarAddTab(node->TabBar, window);
+        TabBarAddTab(node->TabBar, window, ImGuiTabItemFlags_Unsorted);
     }
 
     DockNodeUpdateVisibleFlag(node);
@@ -10729,15 +10729,22 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 tab_bar->SelectedTabId = focused_id;
     }
 
-    // Submit tabs order
-    // If multiple tabs are appearing on the same frame, we add them ahead sorted based on their persistent DockOrder value
-    int tabs_count_old = tab_bar->Tabs.Size;
+    // Submit new tabs
+    const int tabs_count_old = tab_bar->Tabs.Size;
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
         if (TabBarFindTabByID(tab_bar, node->Windows[window_n]->ID) == NULL)
-            TabBarAddTab(tab_bar, node->Windows[window_n]);
-    //printf("[%05d] Sorting %d new appearing tabs\n", g.FrameCount, tab_bar->Tabs.Size - tabs_count_old);
-    if (tab_bar->Tabs.Size > tabs_count_old + 1)
-        ImQsort(tab_bar->Tabs.Data + tabs_count_old, tab_bar->Tabs.Size - tabs_count_old, sizeof(ImGuiTabItem), TabItemComparerByDockOrder);
+            TabBarAddTab(tab_bar, node->Windows[window_n], ImGuiTabItemFlags_Unsorted);
+
+    // If multiple tabs are appearing on the same frame, sort them based on their persistent DockOrder value
+    int tabs_unsorted_start = tab_bar->Tabs.Size;
+    for (int tab_n = tab_bar->Tabs.Size - 1; tab_n >= 0 && (tab_bar->Tabs[tab_n].Flags & ImGuiTabItemFlags_Unsorted); tab_n--)
+    {
+        tab_bar->Tabs[tab_n].Flags &= ~ImGuiTabItemFlags_Unsorted;
+        tabs_unsorted_start = tab_n;
+    }
+    //printf("[%05d] Sorting %d new appearing tabs\n", g.FrameCount, tab_bar->Tabs.Size - tabs_unsorted_start);
+    if (tab_bar->Tabs.Size > tabs_unsorted_start + 1)
+        ImQsort(tab_bar->Tabs.Data + tabs_unsorted_start, tab_bar->Tabs.Size - tabs_unsorted_start, sizeof(ImGuiTabItem), TabItemComparerByDockOrder);
 
     // Selected newly added tabs, or persistent tab ID if the tab bar was just recreated
     if (tab_bar_is_recreated && TabBarFindTabByID(tab_bar, node->SelectedTabID) != NULL)

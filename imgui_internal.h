@@ -1304,8 +1304,9 @@ enum ImGuiTabBarFlagsPrivate_
 
 enum ImGuiTabItemFlagsPrivate_
 {
-    ImGuiTabItemFlags_DockedWindow                  = 1 << 20,
-    ImGuiTabItemFlags_Preview                       = 1 << 21
+    ImGuiTabItemFlags_DockedWindow                  = 1 << 20,  // [Docking]
+    ImGuiTabItemFlags_Unsorted                      = 1 << 22,  // [Docking] Trailing tabs with the _Unsorted flag will be sorted based on the DockOrder of their Window.
+    ImGuiTabItemFlags_Preview                       = 1 << 21   // [Docking] Display tab shape for docking preview (height is adjusted slightly to compensate for the yet missing tab bar)
 };
 
 // Storage for one active tab item (sizeof() 32~40 bytes)
@@ -1504,7 +1505,7 @@ namespace ImGui
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags, ImGuiDockNode* dock_node);
     IMGUI_API ImGuiTabItem* TabBarFindTabByID(ImGuiTabBar* tab_bar, ImGuiID tab_id);
-    IMGUI_API void          TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window);
+    IMGUI_API void          TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window, ImGuiTabItemFlags tab_flags = ImGuiTabItemFlags_None);
     IMGUI_API void          TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id);
     IMGUI_API void          TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
     IMGUI_API void          TabBarQueueChangeTabOrder(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, int dir);

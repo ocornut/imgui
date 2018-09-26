@@ -6106,22 +6106,20 @@ ImGuiTabItem* ImGui::TabBarFindTabByID(ImGuiTabBar* tab_bar, ImGuiID tab_id)
 
 // The purpose of this call is to register tab in advance so we can control their order at the time they appear. 
 // Otherwise calling this is unnecessary as tabs are appending as needed by the BeginTabItem() function.
-void ImGui::TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window)
+void ImGui::TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window, ImGuiTabItemFlags tab_flags)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(TabBarFindTabByID(tab_bar, window->ID) == NULL);
-    IM_ASSERT(g.CurrentTabBar.empty());        // Can't work while the tab bar is active as our tab doesn't have an X offset yet
+    IM_ASSERT(g.CurrentTabBar.empty());                     // Can't work while the tab bar is active as our tab doesn't have an X offset yet
 
     ImGuiTabItem new_tab;
     new_tab.ID = window->ID;
-    new_tab.LastFrameVisible = tab_bar->CurrFrameVisible;   // Required so BeginTabBar doesn't ditch the tab
+    new_tab.Flags = tab_flags;
+    new_tab.LastFrameVisible = tab_bar->CurrFrameVisible;   // Required so BeginTabBar() doesn't ditch the tab
     if (new_tab.LastFrameVisible == -1)
         new_tab.LastFrameVisible = g.FrameCount - 1;
     new_tab.Window = window;                                // Required so tab bar layout can compute the tab width before tab submission
-    if (tab_bar->Tabs.empty())
-        tab_bar->Tabs.push_back(new_tab);
-    else 
-        tab_bar->Tabs.insert(tab_bar->Tabs.Data + tab_bar->Tabs.Size, new_tab);
+    tab_bar->Tabs.push_back(new_tab);
 }
 
 // The *TabId fields be already set by the docking system _before_ the actual TabItem was created, so we clear them regardless.
