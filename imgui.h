@@ -1456,7 +1456,7 @@ struct ImGuiInputTextCallbackData
 
     // Helper functions for text manipulation.
     // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
-    ImGuiInputTextCallbackData();
+    IMGUI_API ImGuiInputTextCallbackData();
     IMGUI_API void      DeleteChars(int pos, int bytes_count);
     IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
     bool                HasSelection() const { return SelectionStart != SelectionEnd; }
