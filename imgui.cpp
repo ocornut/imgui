@@ -8473,7 +8473,7 @@ void ImGui::MarkIniSettingsDirty(ImGuiWindow* window)
             g.SettingsDirtyTimer = g.IO.IniSavingRate;
 }
 
-static ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
+ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
 {
     ImGuiContext& g = *GImGui;
     g.SettingsWindows.push_back(ImGuiWindowSettings());
