@@ -11703,7 +11703,7 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir spli
     return id_at_dir;
 }
 
-static ImGuiDockNode* DockBuilderCloneNodeForFork(ImGuiContext* ctx, ImGuiDockNode* src_node, ImGuiID dst_node_id_if_known, ImVector<ImGuiID>* out_node_remap_pairs)
+static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiContext* ctx, ImGuiDockNode* src_node, ImGuiID dst_node_id_if_known, ImVector<ImGuiID>* out_node_remap_pairs)
 {
     ImGuiDockNode* dst_node = ImGui::DockContextAddNode(ctx, dst_node_id_if_known);
     dst_node->Flags = src_node->Flags;
@@ -11720,7 +11720,7 @@ static ImGuiDockNode* DockBuilderCloneNodeForFork(ImGuiContext* ctx, ImGuiDockNo
     for (int child_n = 0; child_n < IM_ARRAYSIZE(src_node->ChildNodes); child_n++)
         if (src_node->ChildNodes[child_n])
         {
-            dst_node->ChildNodes[child_n] = DockBuilderCloneNodeForFork(ctx, src_node->ChildNodes[child_n], 0, out_node_remap_pairs);
+            dst_node->ChildNodes[child_n] = DockBuilderCopyNodeRec(ctx, src_node->ChildNodes[child_n], 0, out_node_remap_pairs);
             dst_node->ChildNodes[child_n]->ParentNode = dst_node;
         }
 
@@ -11728,7 +11728,7 @@ static ImGuiDockNode* DockBuilderCloneNodeForFork(ImGuiContext* ctx, ImGuiDockNo
     return dst_node;
 }
 
-void ImGui::DockBuilderForkNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs)
+void ImGui::DockBuilderCopyNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs)
 {
     IM_ASSERT(src_node_id != 0);
     IM_ASSERT(dst_node_id != 0);
@@ -11739,13 +11739,117 @@ void ImGui::DockBuilderForkNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID 
 
     out_node_remap_pairs->clear();
     DockBuilderRemoveNode(ctx, dst_node_id);
-    DockBuilderCloneNodeForFork(ctx, src_node, dst_node_id, out_node_remap_pairs);
+    DockBuilderCopyNodeRec(ctx, src_node, dst_node_id, out_node_remap_pairs);
 
     IM_ASSERT((out_node_remap_pairs->Size % 2) == 0);
 }
 
+void ImGui::DockBuilderCopyWindowSettings(ImGuiContext* ctx, const char* src_name, const char* dst_name)
+{
+    (void)ctx;
+    ImGuiWindow* src_window = FindWindowByName(src_name);
+    if (src_window == NULL)
+        return;
+    if (ImGuiWindow* dst_window = FindWindowByName(dst_name))
+    {
+        dst_window->Pos = src_window->Pos;
+        dst_window->Size = src_window->Size;
+        dst_window->SizeFull = src_window->SizeFull;
+        dst_window->Collapsed = src_window->Collapsed;
+    }
+    else if (ImGuiWindowSettings* dst_settings = FindOrCreateWindowSettings(dst_name))
+    {
+        if (src_window->ViewportId != 0 && src_window->ViewportId != IMGUI_VIEWPORT_DEFAULT_ID)
+        {
+            dst_settings->ViewportPos = src_window->Pos;
+            dst_settings->ViewportId = src_window->ViewportId;
+            dst_settings->Pos = ImVec2(0.0f, 0.0f);
+        }
+        else
+        {
+            dst_settings->Pos = src_window->Pos;
+        }
+        dst_settings->Size = src_window->SizeFull;
+        dst_settings->Collapsed = src_window->Collapsed;
+    }
+}
+
+// FIXME: Will probably want to change this signature, in particular how the window remapping pairs are passed.
+void ImGui::DockBuilderCopyDockspace(ImGuiContext* ctx, ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id, ImVector<const char*>* in_window_remap_pairs)
+{
+    IM_ASSERT(src_dockspace_id != 0);
+    IM_ASSERT(dst_dockspace_id != 0);
+    IM_ASSERT(in_window_remap_pairs != NULL);
+    IM_ASSERT((in_window_remap_pairs->Size % 2) == 0);
+
+    // Duplicate entire dock
+    // FIXME: When overwriting dst_dockspace_id, windows that aren't part of our dockspace family but that are docked in a same node will be split apart,
+    // whereas we could attempt to at least keep them together in a new, same floating node.
+    ImVector<ImGuiID> node_remap_pairs;
+    ImGui::DockBuilderCopyNode(ctx, src_dockspace_id, dst_dockspace_id, &node_remap_pairs);
+
+    // Attempt to transition all the upcoming windows associated to dst_dockspace_id into the newly created hierarchy of dock nodes
+    // (The windows associated to src_dockspace_id are staying in place)
+    ImVector<ImGuiID> src_windows;
+    for (int remap_window_n = 0; remap_window_n < in_window_remap_pairs->Size; remap_window_n += 2)
+    {
+        const char* src_window_name = (*in_window_remap_pairs)[remap_window_n];
+        const char* dst_window_name = (*in_window_remap_pairs)[remap_window_n + 1];
+        ImGuiID src_window_id = ImHash(src_window_name, 0);
+        src_windows.push_back(src_window_id);
+
+        // Search in the remapping tables
+        ImGuiID src_dock_id = 0;
+        if (ImGuiWindow* src_window = FindWindowByID(src_window_id))
+            src_dock_id = src_window->DockId;
+        else if (ImGuiWindowSettings* src_window_settings = FindWindowSettings(src_window_id))
+            src_dock_id = src_window_settings->DockId;
+        ImGuiID dst_dock_id = 0;
+        for (int dock_remap_n = 0; dock_remap_n < node_remap_pairs.Size; dock_remap_n += 2)
+            if (node_remap_pairs[dock_remap_n] == src_dock_id)
+            {
+                dst_dock_id = node_remap_pairs[dock_remap_n + 1];
+                //node_remap_pairs[dock_remap_n] = node_remap_pairs[dock_remap_n + 1] = 0; // Clear
+                break;
+            }
+
+        if (dst_dock_id != 0)
+        {
+            // Docked windows gets redocked into the new node hierarchy. 
+            IMGUI_DEBUG_LOG("Remap window '%s' %08X -> %08X\n", dst_window_name, src_dock_id, dst_dock_id);
+            ImGui::DockBuilderDockWindow(ctx, dst_window_name, dst_dock_id);
+        }
+        else
+        {
+            // Floating windows gets their settings transferred (regardless of whether the new window already exist or not)
+            // When this is leading to a Copy and not a Move, we would get two overlapping floating windows. Could we possibly dock them together?
+            ImGui::DockBuilderCopyWindowSettings(ctx, src_window_name, dst_window_name);
+        }
+    }
+
+    // Anything else in the source nodes of 'node_remap_pairs' are windows that were docked in src_dockspace_id but are not owned by it (unaffiliated windows, e.g. "ImGui Demo")
+    // Find those windows and move to them to the cloned dock node. This may be optional?
+    for (int dock_remap_n = 0; dock_remap_n < node_remap_pairs.Size; dock_remap_n += 2)
+        if (ImGuiID src_dock_id = node_remap_pairs[dock_remap_n])
+        {
+            ImGuiID dst_dock_id = node_remap_pairs[dock_remap_n + 1];
+            ImGuiDockNode* dock_node = ImGui::DockBuilderGetNode(ctx, src_dock_id);
+            for (int window_n = 0; window_n < dock_node->Windows.Size; window_n++)
+            {
+                ImGuiWindow* window = dock_node->Windows[window_n];
+                if (src_windows.contains(window->ID))
+                    continue;
+
+                // Docked windows gets redocked into the new node hierarchy. 
+                IMGUI_DEBUG_LOG("Remap window '%s' %08X -> %08X\n", window->Name, src_dock_id, dst_dock_id);
+                ImGui::DockBuilderDockWindow(ctx, window->Name, dst_dock_id);
+            }
+        }
+}
+
 void ImGui::DockBuilderFinish(ImGuiContext* ctx, ImGuiID root_id)
 {
+    //DockContextRebuild(ctx);
     DockContextBuildAddWindowsToNodes(ctx, root_id);
 }
 
@@ -12081,7 +12185,7 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         // [DEBUG] Include comments in the .ini file to ease debugging
         if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_settings->ID))
         {
-            buf->appendf("%*s", ImMax(2, (line_start_pos + 90) - buf->size()), "");        // Align everything
+            buf->appendf("%*s", ImMax(2, (line_start_pos + 92) - buf->size()), "");        // Align everything
             if (node->IsDockSpace && node->HostWindow && node->HostWindow->ParentWindow)
                 buf->appendf(" ; in '%s'", node->HostWindow->ParentWindow->Name);
             int contains_window = 0;
