@@ -5700,6 +5700,10 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     if (!window)
         return;
 
+    // Select in dock node
+    if (window->DockNode && window->DockNode->TabBar)
+        window->DockNode->TabBar->SelectedTabId = window->ID;
+
     // Move the root window to the top of the pile
     if (window->RootWindow)
         window = window->RootWindow;
@@ -10122,8 +10126,8 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     }
 
     // Update selection immediately
-    if (target_node->TabBar)
-        target_node->TabBar->NextSelectedTabId = next_selected_id;
+    if (ImGuiTabBar* tab_bar = target_node->TabBar)
+        tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = next_selected_id;
     MarkIniSettingsDirty();
 }
 
@@ -10492,6 +10496,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             ImGuiDockNode* first_node_with_windows = NULL;
             DockNodeUpdateFindOnlyNodeWithWindowsRec(node, &count, &first_node_with_windows);
             node->OnlyNodeWithWindows = (count == 1 ? first_node_with_windows : NULL);
+            if (node->LastFocusedNodeID == 0 && first_node_with_windows != NULL)
+                node->LastFocusedNodeID = first_node_with_windows->ID;
 
             // Copy the dock family from of our window so it can be used for proper dock filtering.
             // When node has mixed windows, prioritize the family with the most constraint (CompatibleWithNeutral = false) as the reference to copy.
@@ -10586,6 +10592,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             char window_label[20];
             DockNodeGetHostWindowTitle(node, window_label, IM_ARRAYSIZE(window_label));
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_DockNodeHost;
+            //window_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
             window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
             window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse;
 
@@ -10612,10 +10619,14 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     // Update active node (the one whose title bar is highlight) within a node tree
     if (node->IsSplitNode())
         IM_ASSERT(node->TabBar == NULL);
-    if (!node->IsSplitNode())
-        node->LastFocusedNodeID = node->ID;  // This also ensure on our creation frame we will receive the title screen highlight
-    else if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
-        node->LastFocusedNodeID = g.NavWindow->RootWindowDockStop->DockNode->ID;
+    if (node->IsRootNode())
+    {
+        //if (!node->IsSplitNode())
+        //    node->LastFocusedNodeID = node->ID;  // This also ensure on our creation frame we will receive the title screen highlight
+        //else
+        if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
+            node->LastFocusedNodeID = g.NavWindow->RootWindowDockStop->DockNode->ID;
+    }
 
     // Draw and populate Tab Bar
     if (host_window && node->Windows.Size > 0)
@@ -10718,7 +10729,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                 ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
                 IM_ASSERT(tab->Window != NULL);
                 if (Selectable(tab->Window->Name, tab->ID == tab_bar->SelectedTabId))
-                    tab_bar->NextSelectedTabId = tab->ID;
+                    tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = tab->ID;
                 SameLine();
                 Text("   ");
             }
@@ -10739,16 +10750,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         OpenPopup("#TabListMenu");
     if (IsItemActive())
         focus_tab_id = tab_bar->SelectedTabId;
-
-    // Create tab bar and setup initial selection
-    if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode == node)
-    {
-        //printf("[%05d] tab bar create focus '%s'\n", g.FrameCount, window_focused->Name);
-        ImGuiID focused_id = g.NavWindow->RootWindowDockStop->ID;
-        if (focused_id != tab_bar->SelectedTabId)
-            if (focused_id != tab_bar->NextSelectedTabId || (tab_bar->NextSelectedTabId == 0 && focused_id != tab_bar->SelectedTabId))
-                tab_bar->SelectedTabId = focused_id;
-    }
 
     // Submit new tabs
     const int tabs_count_old = tab_bar->Tabs.Size;
@@ -10846,8 +10847,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     }
 
     // When clicked on a tab we requested focus to the docked child
-    // Since we are processing this on the frame after the click, make sure focus hasn't already been taken by someone else.
-    if (node->TabBar->WantFocusTabId && g.NavWindow && g.NavWindow->RootWindow == host_window)
+    if (tab_bar->WantFocusTabId)
         focus_tab_id = tab_bar->WantFocusTabId;
 
     // When clicking on the title bar outside of tabs, we still focus the selected tab for that node
@@ -10857,6 +10857,10 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, focus_tab_id))
             StartMouseMovingWindow(tab->Window);
     }
+
+    // Forward focus from host node to selected window
+    if (is_focused && g.NavWindow == host_window && !g.NavWindowingTarget)
+        focus_tab_id = tab_bar->SelectedTabId;
 
     // Apply navigation focus
     if (focus_tab_id != 0)
@@ -12022,7 +12026,7 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
         ImGuiDockNode* target_node = NULL;
         if (window->DockNodeAsHost)
             target_node = DockNodeTreeFindNodeByPos(window->DockNodeAsHost, g.IO.MousePos);
-        else if (window->DockNode && window->DockIsActive)
+        else if (window->DockNode) // && window->DockIsActive)
             target_node = window->DockNode;
         else
             allow_null_target_node = true; // Dock into a regular window

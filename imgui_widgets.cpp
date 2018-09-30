@@ -5934,7 +5934,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     tab_bar->WantFocusTabId = 0;
     if (tab_bar->NextSelectedTabId)
     {
-        tab_bar->SelectedTabId = tab_bar->WantFocusTabId = tab_bar->NextSelectedTabId;
+        tab_bar->SelectedTabId = tab_bar->NextSelectedTabId;
         tab_bar->NextSelectedTabId = 0;
         scroll_track_selected_tab_id = tab_bar->SelectedTabId;
     }
@@ -6419,7 +6419,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     hovered |= (g.HoveredId == id);
     if (pressed || ((flags & ImGuiTabItemFlags_SetSelected) && !tab_contents_visible)) // SetSelected can only be passed on explicit tab bar, so we don't need to set WantFocusTabId
-        tab_bar->NextSelectedTabId = id;
+        tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = id;
 
     // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs to be hovered)
     if (!held)
