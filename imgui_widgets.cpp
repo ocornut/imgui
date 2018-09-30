@@ -6571,7 +6571,7 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
     ImGuiContext& g = *GImGui;
     const float width = bb.GetWidth();
     IM_ASSERT(width > 0.0f);
-    const float rounding = ImMax(0.0f, ImMin(g.FontSize * 0.35f, width * 0.5f - 1.0f)); // FIXME-DOCK: g.Style.TabRounding?
+    const float rounding = ImMax(0.0f, ImMin(g.Style.TabRounding, width * 0.5f - 1.0f));
     float y1 = bb.Min.y + 1.0f;
     float y2 = bb.Max.y + ((flags & ImGuiTabItemFlags_Preview) ? 0.0f : -1.0f);
     draw_list->PathLineTo(ImVec2(bb.Min.x, y2));
