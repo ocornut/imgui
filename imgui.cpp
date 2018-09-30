@@ -10150,9 +10150,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     IM_ASSERT(!node->IsSplitNode());
     IM_ASSERT(node->Windows.Size >= 1);
 
-    // In the case of a root node, a node will have to stay in place. Create a new node for this purpose.
+    // In the case of a root node or document root, the node will have to stay in place. Create a new node to receive the payload.
     // Otherwise delete the previous node by merging the other sibling back into the parent node.
-    if (node->IsRootNode())
+    if (node->IsRootNode() || node->IsDocumentRoot)
     {
         // FIXME-DOCK: Transition persistent DockId for all non-active windows
         ImGuiDockNode* new_node = DockContextAddNode(ctx, 0);
