@@ -524,11 +524,12 @@ namespace ImGui
 
     // Docking 
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
-    // Note: you DO NOT need to call DockSpace() to use most Docking facilities! You can hold SHIFT anywhere while moving windows. 
+    // Note: you DO NOT need to call DockSpace() to use most Docking facilities! 
+    // To dock windows: hold SHIFT anywhere while moving windows (if io.ConfigDockingWithKeyMod == true) or drag windows from their title bar (if io.ConfigDockingWithKeyMod = false)
     // Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
     IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, const ImGuiDockFamily* dock_family = NULL);
     IMGUI_API void          SetNextWindowDockId(ImGuiID dock_id, ImGuiCond cond = 0);           // set next window dock id (FIXME-DOCK)
-    IMGUI_API void          SetNextWindowDockFamily(const ImGuiDockFamily* dock_family);        // FIXME-DOCK: set next window user type (docking filters by same user_type)
+    IMGUI_API void          SetNextWindowDockFamily(const ImGuiDockFamily* dock_family);        // set next window user type (docking filters by same user_type)
     IMGUI_API ImGuiID       GetWindowDockId();
     IMGUI_API bool          IsWindowDocked();                                                   // is current window docked into another window? 
 

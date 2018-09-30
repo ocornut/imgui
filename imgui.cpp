@@ -11475,6 +11475,8 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
     ImGuiWindow* window = GetCurrentWindow();
+    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
+        return;
 
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
     if (!node)

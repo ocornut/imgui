@@ -129,6 +129,16 @@ static void ShowHelpMarker(const char* desc)
     }
 }
 
+static void ShowDockingDisabledMessage()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    ImGui::Text("ERROR: Docking is not enabled! See Demo > Configuration.");
+    ImGui::Text("Set io.ConfigFlags |= ImGuiConfigFlags_DockingEnable in your code, or ");
+    ImGui::SameLine(0.0f, 0.0f);
+    if (ImGui::SmallButton("click here"))
+        io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;
+}
+
 // Helper to display basic user controls.
 void ImGui::ShowUserGuide()
 {
@@ -3752,10 +3762,18 @@ void ShowExampleAppDockSpace(bool* p_open)
         ImGui::EndMenuBar();
     }
 
-    //ImGui::PushStyleColor(ImGuiCol_DockingBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
-    ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
-    ImGui::DockSpace(dockspace_id);
-    //ImGui::PopStyleColor();
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        //ImGui::PushStyleColor(ImGuiCol_DockingBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
+        ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+        ImGui::DockSpace(dockspace_id);
+        //ImGui::PopStyleColor();
+    }
+    else
+    {
+        ShowDockingDisabledMessage();
+    }
 
     ImGui::End();
     if (opt_fullscreen)
@@ -3964,38 +3982,45 @@ void ShowExampleAppDocuments(bool* p_open)
     }
     else if (opt_target == Target_Window)
     {
-        NotifyOfDocumentsClosedElsewhere(app);
-
-        // Create a DockSpace node where any window can be docked
-        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
-        ImGui::DockSpace(dockspace_id);
-
-        // Create Windows
-        for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable)
         {
-            MyDocument* doc = &app.Documents[doc_n];
-            if (!doc->Open)
-                continue;
+            NotifyOfDocumentsClosedElsewhere(app);
+            
+            // Create a DockSpace node where any window can be docked
+            ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
+            ImGui::DockSpace(dockspace_id);
 
-            // FIXME-DOCK: SetNextWindowDock()
-            //ImGuiID default_dock_id = GetDockspaceRootDocumentDockID();
-            //ImGuiID default_dock_id = GetDockspacePreferedDocumentDockID();
-            ImGui::SetNextWindowDockId(dockspace_id, redock_all ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
-            ImGuiWindowFlags window_flags = (doc->Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
-            bool visible = ImGui::Begin(doc->Name, &doc->Open, window_flags);
-
-            // Cancel attempt to close when unsaved add to save queue so we can display a popup.
-            if (!doc->Open && doc->Dirty)
+            // Create Windows
+            for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
             {
-                doc->Open = true;
-                doc->DoQueueClose();
+                MyDocument* doc = &app.Documents[doc_n];
+                if (!doc->Open)
+                    continue;
+
+                // FIXME-DOCK: SetNextWindowDock()
+                //ImGuiID default_dock_id = GetDockspaceRootDocumentDockID();
+                //ImGuiID default_dock_id = GetDockspacePreferedDocumentDockID();
+                ImGui::SetNextWindowDockId(dockspace_id, redock_all ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
+                ImGuiWindowFlags window_flags = (doc->Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
+                bool visible = ImGui::Begin(doc->Name, &doc->Open, window_flags);
+
+                // Cancel attempt to close when unsaved add to save queue so we can display a popup.
+                if (!doc->Open && doc->Dirty)
+                {
+                    doc->Open = true;
+                    doc->DoQueueClose();
+                }
+
+                MyDocument::DisplayContextMenu(doc);
+                if (visible)
+                    MyDocument::DisplayContents(doc);
+
+                ImGui::End();
             }
-
-            MyDocument::DisplayContextMenu(doc);
-            if (visible)
-                MyDocument::DisplayContents(doc);
-
-            ImGui::End();
+        }
+        else
+        {
+            ShowDockingDisabledMessage();
         }
     }
 
