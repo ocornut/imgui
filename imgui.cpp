@@ -7381,6 +7381,7 @@ static void ImGui::UpdateViewports()
     // Update main viewport with current platform position and size
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
+    IM_ASSERT(main_viewport->Window == NULL);
     ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
     if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
         main_viewport_platform_pos = g.PlatformIO.Platform_GetWindowPos(main_viewport);
@@ -10524,7 +10525,11 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         {
             single_window->Viewport = node->HostWindow->Viewport;
             single_window->ViewportId = node->HostWindow->ViewportId;
-            single_window->Viewport->Window = single_window;
+            if (node->HostWindow->ViewportOwned)
+            {
+                single_window->Viewport->Window = single_window;
+                single_window->ViewportOwned = true;
+            }
         }
 
         DockNodeHideHostWindow(node);

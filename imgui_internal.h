@@ -657,7 +657,7 @@ struct ImGuiViewportP : public ImGuiViewport
     float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
     float               LastAlpha;
     int                 PlatformMonitor;
-    ImGuiWindow*        Window;
+    ImGuiWindow*        Window;                   // Set when the viewport is owned by a window
     ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
