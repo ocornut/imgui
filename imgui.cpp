@@ -9634,11 +9634,11 @@ namespace ImGui
     static void             DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer);
     static void             DockContextQueueNotifyRemovedNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req);
-    static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
+    static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window, bool clear_persistent_docking_ref = true);
     static void             DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx);
     static ImGuiDockNode*   DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id);
-    static void             DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references);    // Set root_id==0 to clear all
+    static void             DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_refs);    // Set root_id==0 to clear all
     static void             DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
     static void             DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id);                                  // Use root_id==0 to add all
 
@@ -10129,11 +10129,11 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     MarkIniSettingsDirty();
 }
 
-void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window)
+void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window, bool clear_persistent_docking_ref)
 {
     (void)ctx;
     if (window->DockNode)
-        DockNodeRemoveWindow(window->DockNode, window, 0);
+        DockNodeRemoveWindow(window->DockNode, window, clear_persistent_docking_ref ? 0 : window->DockId);
     else
         window->DockId = 0;
     window->Collapsed = false;
@@ -11671,10 +11671,10 @@ void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_i
         bool want_removal = (root_id == 0) || (window->DockNode && DockNodeGetRootNode(window->DockNode)->ID == root_id) || (window->DockNodeAsHost && window->DockNodeAsHost->ID == root_id);
         if (want_removal)
         {
-            ImGuiID backup_dock_id = window->DockId;
-            DockContextProcessUndockWindow(ctx, window);
+            const ImGuiID backup_dock_id = window->DockId;
+            DockContextProcessUndockWindow(ctx, window, clear_persistent_docking_references);
             if (!clear_persistent_docking_references)
-                window->DockId = backup_dock_id;
+                IM_ASSERT(window->DockId == backup_dock_id);
         }
     }
 }
