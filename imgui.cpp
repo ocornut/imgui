@@ -4826,8 +4826,9 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     window->RootWindow = window->RootWindowDockStop = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
     if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
         window->RootWindow = parent_window->RootWindow;
-    if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip) && !window->DockIsActive)
-        window->RootWindowDockStop = parent_window->RootWindowDockStop;
+    if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+        if (!window->DockIsActive && !(parent_window->Flags & ImGuiWindowFlags_DockNodeHost))
+            window->RootWindowDockStop = parent_window->RootWindowDockStop;
     if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
         window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
     while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
@@ -9945,7 +9946,8 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         // Bind host window immediately if it already exist (in case of a rebuild)
         // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
         char host_window_title[32];
-        node->HostWindow = FindWindowByName(DockNodeGetHostWindowTitle(node, host_window_title, IM_ARRAYSIZE(host_window_title)));
+        ImGuiDockNode* root_node = DockNodeGetRootNode(node);
+        node->HostWindow = FindWindowByName(DockNodeGetHostWindowTitle(root_node, host_window_title, IM_ARRAYSIZE(host_window_title)));
     }
 }
 
@@ -10048,16 +10050,13 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         if (target_window->DockNodeAsHost == NULL)
         {
             DockNodeAddWindow(target_node, target_window, true);
+            target_node->TabBar->Tabs[0].Flags &= ~ImGuiTabItemFlags_Unsorted;
             target_window->DockIsActive = true;
         }
     }
 
     ImGuiDir split_dir = req->DockSplitDir;
-    if (split_dir == ImGuiDir_None)
-    {
-        target_node->LastFocusedNodeID = target_node ? target_node->ID : 0;
-    }
-    else
+    if (split_dir != ImGuiDir_None)
     {
         // Split into one, one side will be our payload node unless we are dropping a loose window
         const ImGuiAxis split_axis = (split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Right) ? ImGuiAxis_X : ImGuiAxis_Y;
@@ -10066,7 +10065,6 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         DockNodeTreeSplit(ctx, target_node, split_axis, split_inheritor_child_idx, split_ratio, payload_node);  // payload_node may be NULL here!
         ImGuiDockNode* inheritor_node = target_node->ChildNodes[split_inheritor_child_idx];
         ImGuiDockNode* new_node = target_node->ChildNodes[split_inheritor_child_idx ^ 1];
-        target_node->LastFocusedNodeID = new_node->ID;
         new_node->HostWindow = target_node->HostWindow;
         if (target_node)
         {
@@ -10083,7 +10081,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         {
             target_node->TabBar = IM_NEW(ImGuiTabBar)();
             for (int n = 0; n < target_node->Windows.Size; n++)
-                TabBarAddTab(target_node->TabBar, target_node->Windows[n]);
+                TabBarAddTab(target_node->TabBar, target_node->Windows[n], ImGuiTabItemFlags_None);
         }
 
         if (payload_node != NULL)
@@ -10102,7 +10100,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                     if (visible_node->TabBar)
                         IM_ASSERT(visible_node->TabBar->Tabs.Size > 0);
                     for (int n = 0; n < visible_node->Windows.Size; n++)
-                        TabBarAddTab(target_node->TabBar, visible_node->Windows[n]);
+                        TabBarAddTab(target_node->TabBar, visible_node->Windows[n], ImGuiTabItemFlags_None);
                     DockNodeMoveWindows(target_node, visible_node);
                     DockNodeMoveWindows(visible_node, target_node);
                 }
@@ -10743,7 +10741,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         focus_tab_id = tab_bar->SelectedTabId;
 
     // Create tab bar and setup initial selection
-    ImRect tab_bar_rect = DockNodeCalcTabBarRect(node);
     if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode == node)
     {
         //printf("[%05d] tab bar create focus '%s'\n", g.FrameCount, window_focused->Name);
@@ -10777,12 +10774,13 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         tab_bar->SelectedTabId = tab_bar->NextSelectedTabId = tab_bar->Tabs.back().Window->ID;
 
     // Begin tab bar
+    const ImRect tab_bar_rect = DockNodeCalcTabBarRect(node);
     ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_NoTabListPopupButton;// | ImGuiTabBarFlags_NoTabListScrollingButtons);
     tab_bar_flags |= ImGuiTabBarFlags_SaveSettings;
     tab_bar_flags |= ImGuiTabBarFlags_DockNode | (node->IsDockSpace ? ImGuiTabBarFlags_DockNodeIsDockSpace : 0);
     if (!host_window->Collapsed && is_focused)
         tab_bar_flags |= ImGuiTabBarFlags_IsFocused;
-    BeginTabBarEx(node->TabBar, tab_bar_rect, tab_bar_flags, node);
+    BeginTabBarEx(tab_bar, tab_bar_rect, tab_bar_flags, node);
     //host_window->DrawList->AddRect(tab_bar_rect.Min, tab_bar_rect.Max, IM_COL32(255,0,255,255));
 
     // Submit actual tabs
@@ -10823,7 +10821,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             root_node->VisibleWindow = node->VisibleWindow;
 
     // Close button (after VisibleWindow was updated)
-    // Note that VisibleWindow may have been overrided by CTRL+Tabbing, so VisibleWindow->ID may be != from node->TabBar->SelectedTabId
+    // Note that VisibleWindow may have been overrided by CTRL+Tabbing, so VisibleWindow->ID may be != from tab_bar->SelectedTabId
     if (node->VisibleWindow)
     {
         if (!node->VisibleWindow->HasCloseButton)
@@ -10856,13 +10854,13 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (g.HoveredWindow == host_window && g.HoveredId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && IsMouseClicked(0))
     {
         focus_tab_id = tab_bar->SelectedTabId;
-        if (ImGuiTabItem* tab = TabBarFindTabByID(node->TabBar, focus_tab_id))
+        if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, focus_tab_id))
             StartMouseMovingWindow(tab->Window);
     }
 
     // Apply navigation focus
     if (focus_tab_id != 0)
-        if (ImGuiTabItem* tab = TabBarFindTabByID(node->TabBar, focus_tab_id))
+        if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, focus_tab_id))
         {
             FocusWindow(tab->Window);
             NavInitWindow(tab->Window, false);
@@ -11115,7 +11113,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         else if (!(host_window->Flags & ImGuiWindowFlags_DockNodeHost))
             tab_pos.x += g.Style.ItemInnerSpacing.x + TabItemCalcSize(host_window->Name, host_window->HasCloseButton).x; // Account for slight offset which will be added when changing from title bar to tab bar
 
-                                                                                                                         // Draw tab shape/label preview (payload may be a loose window or a host window carrying multiple tabbed windows)
+        // Draw tab shape/label preview (payload may be a loose window or a host window carrying multiple tabbed windows)
         if (root_payload->DockNodeAsHost)
             IM_ASSERT(root_payload->DockNodeAsHost->Windows.Size == root_payload->DockNodeAsHost->TabBar->Tabs.Size);
         const int payload_count = root_payload->DockNodeAsHost ? root_payload->DockNodeAsHost->TabBar->Tabs.Size : 1;
