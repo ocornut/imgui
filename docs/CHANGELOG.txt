@@ -54,6 +54,7 @@ Other Changes:
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
+- Drag and Drop: Added GetDragDropPayload() to peek directly into the payload (if any) from anywhere. (#143)
 - ImDrawList: Fixed AddConvexPolyFilled() undefined behavior when passing points_count smaller than 3,
   in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
 
