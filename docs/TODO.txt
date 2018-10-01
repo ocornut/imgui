@@ -148,6 +148,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: B- reintroduce collapsing a floating dock node. also collapsing a docked dock node!
  - dock: B- allow dragging a non-floating dock node by clicking on the title-bar-looking section (not just the collapse/menu button)
  - dock: C- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
+ - dock: C- after a dock/undock, the Scrollbar Status update in Begin() should use an updated e.g. size_y_for_scrollbars to avoid a 1 frame scrollbar flicker.
 
  - tabs: re-ordering, close buttons, context menu, persistent order (#261, #351)
 

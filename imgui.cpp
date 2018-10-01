@@ -3819,7 +3819,8 @@ void ImGui::EndFrame()
         AddWindowToSortBuffer(&g.WindowsSortBuffer, window);
     }
 
-    IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
+    // This usually assert if there is a mismatch between the ImGuiWindowFlags_ChildWindow / ParentWindow values and DC.ChildWindows[] in parents, aka we've done something wrong.
+    IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);
     g.Windows.swap(g.WindowsSortBuffer);
     g.IO.MetricsActiveWindows = g.WindowsActiveCount;
 
@@ -9677,6 +9678,7 @@ namespace ImGui
     static ImGuiDockNode*   DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos);
 
     // Settings
+    static void             DockSettingsMoveDockReferencesInInactiveWindow(ImGuiID old_dock_id, ImGuiID new_dock_id);
     static void             DockSettingsRemoveReferencesToNodes(ImGuiID* node_ids, int node_ids_count);
     static ImGuiDockNodeSettings*   DockSettingsFindNodeSettings(ImGuiContext* ctx, ImGuiID node_id);
     static void*            DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
@@ -9951,7 +9953,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
 
         // Bind host window immediately if it already exist (in case of a rebuild)
         // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
-        char host_window_title[32];
+        char host_window_title[20];
         ImGuiDockNode* root_node = DockNodeGetRootNode(node);
         node->HostWindow = FindWindowByName(DockNodeGetHostWindowTitle(root_node, host_window_title, IM_ARRAYSIZE(host_window_title)));
     }
@@ -10090,25 +10092,24 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                 TabBarAddTab(target_node->TabBar, target_node->Windows[n], ImGuiTabItemFlags_None);
         }
 
+        const ImGuiID payload_node_id = payload_node ? payload_node->ID : payload_window->DockId;
         if (payload_node != NULL)
         {
             // Transfer full payload node (with 1+ child windows or child nodes)
-            // FIXME-DOCK: Transition persistent DockId for all non-active windows
             if (payload_node->IsSplitNode())
             {
                 if (target_node->Windows.Size > 0)
                 {
                     // We can dock into a node that already has windows _only_ if our payload is a node tree with a single visible node.
                     // In this situation, we move the windows of the target node into the currently visible node of the payload.
-                    // This allows us to preserve some of the underlying settings nicely.
-                    IM_ASSERT(payload_node->OnlyNodeWithWindows != NULL);
+                    // This allows us to preserve some of the underlying dock tree settings nicely.
+                    IM_ASSERT(payload_node->OnlyNodeWithWindows != NULL); // The docking should have been blocked by DockNodePreviewDockCalc() early on and never submitted.
                     ImGuiDockNode* visible_node = payload_node->OnlyNodeWithWindows;
                     if (visible_node->TabBar)
                         IM_ASSERT(visible_node->TabBar->Tabs.Size > 0);
-                    for (int n = 0; n < visible_node->Windows.Size; n++)
-                        TabBarAddTab(target_node->TabBar, visible_node->Windows[n], ImGuiTabItemFlags_None);
                     DockNodeMoveWindows(target_node, visible_node);
                     DockNodeMoveWindows(visible_node, target_node);
+                    DockSettingsMoveDockReferencesInInactiveWindow(target_node->ID, visible_node->ID);
                 }
                 IM_ASSERT(target_node->Windows.Size == 0);
                 DockNodeMoveChildNodes(target_node, payload_node);
@@ -10116,6 +10117,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
             else
             {
                 DockNodeMoveWindows(target_node, payload_node);
+                DockSettingsMoveDockReferencesInInactiveWindow(payload_node_id, target_node->ID);
             }
             DockContextRemoveNode(ctx, payload_node, true);
         }
@@ -10124,6 +10126,8 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
             // Transfer single window
             target_node->VisibleWindow = payload_window;
             DockNodeAddWindow(target_node, payload_window, true);
+            if (payload_node_id != 0)
+                DockSettingsMoveDockReferencesInInactiveWindow(payload_node_id, target_node->ID);
         }
     }
 
@@ -10156,9 +10160,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     // Otherwise delete the previous node by merging the other sibling back into the parent node.
     if (node->IsRootNode() || node->IsDocumentRoot)
     {
-        // FIXME-DOCK: Transition persistent DockId for all non-active windows
         ImGuiDockNode* new_node = DockContextAddNode(ctx, 0);
         DockNodeMoveWindows(new_node, node);
+        DockSettingsMoveDockReferencesInInactiveWindow(node->ID, new_node->ID);
         for (int n = 0; n < new_node->Windows.Size; n++)
             UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
         new_node->WantMouseMove = true;
@@ -10516,25 +10520,28 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         }
     }
 
-    // Early out for standalone floating window that are holding on a DockId (with an invisible dock node)
-    if (node->IsRootNode() && node->Windows.Size == 1 && !node->IsDockSpace)
+    // Early out for hidden root dock nodes (when all DockId references are in inactive windows, or there is only 1 floating window holding on the DockId)
+    if (node->IsRootNode() && !node->IsSplitNode() && node->Windows.Size <= 1 && !node->IsDockSpace)
     {
-        // Floating window pos/size is authoritative
-        ImGuiWindow* single_window = node->Windows[0];
-        node->Pos = single_window->Pos;
-        node->Size = single_window->SizeFull;
-
-        // Transfer focus immediately so when we revert to a regular window it is immediately selected
-        if (node->HostWindow && g.NavWindow == node->HostWindow)
-            FocusWindow(single_window);
-        if (node->HostWindow)
+        if (node->Windows.Size == 1)
         {
-            single_window->Viewport = node->HostWindow->Viewport;
-            single_window->ViewportId = node->HostWindow->ViewportId;
-            if (node->HostWindow->ViewportOwned)
+            // Floating window pos/size is authoritative
+            ImGuiWindow* single_window = node->Windows[0];
+            node->Pos = single_window->Pos;
+            node->Size = single_window->SizeFull;
+
+            // Transfer focus immediately so when we revert to a regular window it is immediately selected
+            if (node->HostWindow && g.NavWindow == node->HostWindow)
+                FocusWindow(single_window);
+            if (node->HostWindow)
             {
-                single_window->Viewport->Window = single_window;
-                single_window->ViewportOwned = true;
+                single_window->Viewport = node->HostWindow->Viewport;
+                single_window->ViewportId = node->HostWindow->ViewportId;
+                if (node->HostWindow->ViewportOwned)
+                {
+                    single_window->Viewport->Window = single_window;
+                    single_window->ViewportOwned = true;
+                }
             }
         }
 
@@ -10545,8 +10552,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         node->HasCloseButton = node->HasCollapseButton = false;
         node->LastFrameActive = g.FrameCount;
 
-        if (node->WantMouseMove)
-            DockNodeStartMouseMovingWindow(node, single_window);
+        if (node->WantMouseMove && node->Windows.Size == 1)
+            DockNodeStartMouseMovingWindow(node, node->Windows[0]);
         return;
     }
 
@@ -11222,9 +11229,15 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     ImVec2 backup_last_explicit_size = parent_node->SizeRef;
     DockNodeMoveChildNodes(parent_node, merge_lead_child);
     if (child_0)
+    {
         DockNodeMoveWindows(parent_node, child_0); // Generally only 1 of the 2 child node will have windows
+        DockSettingsMoveDockReferencesInInactiveWindow(child_0->ID, parent_node->ID);
+    }
     if (child_1)
+    {
         DockNodeMoveWindows(parent_node, child_1);
+        DockSettingsMoveDockReferencesInInactiveWindow(child_1->ID, parent_node->ID);
+    }
     DockNodeApplyPosSizeToWindows(parent_node);
     parent_node->InitFromFirstWindowPosSize = parent_node->InitFromFirstWindowViewport = false;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
@@ -12064,6 +12077,23 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
 //-----------------------------------------------------------------------------
 // Docking: Settings
 //-----------------------------------------------------------------------------
+
+static void ImGui::DockSettingsMoveDockReferencesInInactiveWindow(ImGuiID old_dock_id, ImGuiID new_dock_id)
+{
+    ImGuiContext& g = *GImGui;
+    for (int window_n = 0; window_n < g.Windows.Size; window_n++)
+    {
+        ImGuiWindow* window = g.Windows[window_n];
+        if (window->DockId == old_dock_id && window->DockNode == NULL)
+            window->DockId = new_dock_id;
+    }
+    for (int settings_n = 0; settings_n < g.SettingsWindows.Size; settings_n++)     // FIXME-OPT: We could remove this loop by storing the index in the map
+    {
+        ImGuiWindowSettings* window_settings = &g.SettingsWindows[settings_n];
+        if (window_settings->DockId == old_dock_id)
+            window_settings->DockId = new_dock_id;
+    }
+}
 
 // Remove references stored in ImGuiWindowSettings to the given ImGuiDockNodeSettings
 static void ImGui::DockSettingsRemoveReferencesToNodes(ImGuiID* node_ids, int node_ids_count)
