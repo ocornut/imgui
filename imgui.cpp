@@ -9868,6 +9868,14 @@ static int IMGUI_CDECL DockNodeComparerDepthMostFirst(const void* lhs, const voi
     return ImGui::DockNodeGetDepth(b) - ImGui::DockNodeGetDepth(a);
 }
 
+// Pre C++0x doesn't allow us to use a local type (without linkage) as template parameter, so we moved this here.
+struct ImGuiDockContextPruneNodeData
+{
+    int CountWindows, CountChildWindows, CountChildNodes;
+    ImGuiID RootID;
+    ImGuiDockContextPruneNodeData() { CountWindows = CountChildWindows = CountChildNodes = 0; RootID = 0; }
+};
+
 // Garbage collect unused nodes (run once at init time)
 static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
 {
@@ -9875,20 +9883,14 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     ImGuiDockContext* dc = ctx->DockContext;
     IM_ASSERT(g.Windows.Size == 0);
 
-    struct NodeData
-    {
-        int CountWindows, CountChildWindows, CountChildNodes;
-        ImGuiID RootID;
-        NodeData() { CountWindows = CountChildWindows = CountChildNodes = 0; RootID = 0; }
-    };
-    ImPool<NodeData> pool;
+    ImPool<ImGuiDockContextPruneNodeData> pool;
     pool.Reserve(dc->SettingsNodes.Size);
 
     // Count child nodes and compute RootID
     for (int settings_n = 0; settings_n < dc->SettingsNodes.Size; settings_n++)
     {
         ImGuiDockNodeSettings* settings = &dc->SettingsNodes[settings_n];
-        NodeData* parent_data = settings->ParentID ? pool.GetByKey(settings->ParentID) : 0;
+        ImGuiDockContextPruneNodeData* parent_data = settings->ParentID ? pool.GetByKey(settings->ParentID) : 0;
         pool.GetOrAddByKey(settings->ID)->RootID = parent_data ? parent_data->RootID : settings->ID;
         if (settings->ParentID)
             pool.GetOrAddByKey(settings->ParentID)->CountChildNodes++;
@@ -9897,9 +9899,9 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     // Count reference to dock ids from window settings
     for (int settings_n = 0; settings_n < g.SettingsWindows.Size; settings_n++)
         if (ImGuiID dock_id = g.SettingsWindows[settings_n].DockId)
-            if (NodeData* data = pool.GetByKey(dock_id))
+            if (ImGuiDockContextPruneNodeData* data = pool.GetByKey(dock_id))
             {
-                NodeData* data_root = (data->RootID == dock_id) ? data : pool.GetByKey(data->RootID);
+                ImGuiDockContextPruneNodeData* data_root = (data->RootID == dock_id) ? data : pool.GetByKey(data->RootID);
                 data->CountWindows++;
                 data_root->CountChildWindows++;
             }
@@ -9908,10 +9910,10 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     for (int settings_n = 0; settings_n < dc->SettingsNodes.Size; settings_n++)
     {
         ImGuiDockNodeSettings* settings = &dc->SettingsNodes[settings_n];
-        NodeData* data = pool.GetByKey(settings->ID);
+        ImGuiDockContextPruneNodeData* data = pool.GetByKey(settings->ID);
         if (data->CountWindows > 1)
             continue;
-        NodeData* data_root = (data->RootID == settings->ID) ? data : pool.GetByKey(data->RootID);
+        ImGuiDockContextPruneNodeData* data_root = (data->RootID == settings->ID) ? data : pool.GetByKey(data->RootID);
 
         bool remove = false;
         remove |= (data->CountWindows == 1 && settings->ParentID == 0 && data->CountChildNodes == 0 && !settings->IsDocumentRoot);  // Floating root node with only 1 window
