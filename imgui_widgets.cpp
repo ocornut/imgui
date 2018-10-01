@@ -6455,10 +6455,10 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
             bool undocking_tab = (g.DragDropActive && g.DragDropPayload.SourceId == id);
             if (!undocking_tab && held)// && (drag_delta.x != 0.0f || drag_delta.y != 0.0f))
             {
-                //if (!g.IO.ConfigDockingWithKeyMod || g.IO.KeyShift)
+                //if (!g.IO.ConfigDockingWithShift || g.IO.KeyShift)
                 {
                     float threshold_base = g.FontSize;
-                    //float threshold_base = g.IO.ConfigDockingWithKeyMod ? g.FontSize * 0.5f : g.FontSize;
+                    //float threshold_base = g.IO.ConfigDockingWithShift ? g.FontSize * 0.5f : g.FontSize;
                     float threshold_x = (threshold_base * 2.2f);
                     float threshold_y = (threshold_base * 1.5f) + ImClamp((ImFabs(g.IO.MouseDragMaxDistanceAbs[0].x) - threshold_base * 2.0f) * 0.20f, 0.0f, threshold_base * 4.0f);
                     //GetOverlayDrawList(window)->AddRect(ImVec2(bb.Min.x - threshold_x, bb.Min.y - threshold_y), ImVec2(bb.Max.x + threshold_x, bb.Max.y + threshold_y), IM_COL32_WHITE); // [DEBUG]

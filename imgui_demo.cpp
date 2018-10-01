@@ -334,7 +334,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
 
             ImGui::CheckboxFlags("io.ConfigFlags: DockingEnable", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_DockingEnable);
-            ImGui::SameLine(); ShowHelpMarker("Use SHIFT to dock window into another (or without SHIFT if io.ConfigDockingWithKeyMod == false)");
+            ImGui::SameLine(); ShowHelpMarker("Use SHIFT to dock window into another (or without SHIFT if io.ConfigDockingWithShift == false)");
 
             ImGui::CheckboxFlags("io.ConfigFlags: ViewportsEnable", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_ViewportsEnable);
             ImGui::SameLine(); ShowHelpMarker("Toggling this at runtime is normally unsupported (it will offset your windows).");
@@ -343,7 +343,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::CheckboxFlags("io.ConfigFlags: ViewportsNoMerge", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_ViewportsNoMerge);
             ImGui::SameLine(); ShowHelpMarker("All floating windows will always create their own viewport and platform window.");
 
-            ImGui::Checkbox("io.ConfigDockingWithKeyMod", &io.ConfigDockingWithKeyMod);
+            ImGui::Checkbox("io.ConfigDockingWithShift", &io.ConfigDockingWithShift);
             ImGui::SameLine(); ShowHelpMarker("Enable docking when holding Shift only (allows to drop in wider space, reduce visual noise)");
             ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
             ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");

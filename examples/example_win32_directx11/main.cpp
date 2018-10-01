@@ -142,7 +142,7 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;     // FIXME-DPI: THIS CURRENTLY DOESN'T WORK AS EXPECTED. DON'T USE IN USER APP!
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports; // FIXME-DPI
     io.ConfigResizeWindowsFromEdges = true;
-    io.ConfigDockingWithKeyMod = true;
+    io.ConfigDockingWithShift = true;
 
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX11_Init(g_pd3dDevice, g_pd3dDeviceContext);
