@@ -10092,7 +10092,6 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                 TabBarAddTab(target_node->TabBar, target_node->Windows[n], ImGuiTabItemFlags_None);
         }
 
-        const ImGuiID payload_node_id = payload_node ? payload_node->ID : payload_window->DockId;
         if (payload_node != NULL)
         {
             // Transfer full payload node (with 1+ child windows or child nodes)
@@ -10116,18 +10115,20 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
             }
             else
             {
+                const ImGuiID payload_dock_id = payload_node->ID;
                 DockNodeMoveWindows(target_node, payload_node);
-                DockSettingsMoveDockReferencesInInactiveWindow(payload_node_id, target_node->ID);
+                DockSettingsMoveDockReferencesInInactiveWindow(payload_dock_id, target_node->ID);
             }
             DockContextRemoveNode(ctx, payload_node, true);
         }
         else if (payload_window)
         {
             // Transfer single window
+            const ImGuiID payload_dock_id = payload_window->DockId;
             target_node->VisibleWindow = payload_window;
             DockNodeAddWindow(target_node, payload_window, true);
-            if (payload_node_id != 0)
-                DockSettingsMoveDockReferencesInInactiveWindow(payload_node_id, target_node->ID);
+            if (payload_dock_id != 0)
+                DockSettingsMoveDockReferencesInInactiveWindow(payload_dock_id, target_node->ID);
         }
     }
 
