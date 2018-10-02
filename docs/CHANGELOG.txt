@@ -49,6 +49,9 @@ Other Changes:
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
 - DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
+- Window: Resizing from edges (with io.ConfigResizeWindowsFromEdges Beta flag) extends the hit region
+  of root floating windows outside the window, making it easier to resize windows. Resize grips are also
+  extended accordingly so there are no discontinuity when hovering between borders and corners. (#1495, #822)
 - BeginChild(): Fixed BeginChild(const char*, ...) variation erroneously not applying the ID stack
   to the provided string to uniquely identify the child window. This was undoing an intentional change
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
