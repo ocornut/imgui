@@ -767,7 +767,7 @@ struct ImGuiDockNode
     bool                    InitFromFirstWindowViewport :1;
     bool                    IsVisible           :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsDockSpace         :1; // Root node was created by a DockSpace() call.
-    bool                    IsDocumentRoot      :1;
+    bool                    IsCentralNode       :1;
     bool                    HasCloseButton      :1;
     bool                    HasCollapseButton   :1;
     bool                    WantCloseAll        :1; // Set when closing all tabs at once.

@@ -3760,8 +3760,8 @@ void ShowExampleAppDockSpace(bool* p_open)
 
             if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
                 dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
-            if (ImGui::MenuItem("Flag: NoDockingInsideDocRootNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInsideDocRootNode) != 0))
-                dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInsideDocRootNode;
+            if (ImGui::MenuItem("Flag: NoDockingInsideCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInsideCentralNode) != 0))
+                dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInsideCentralNode;
 
             // Disabling fullscreen would allow the window to be moved to the front of other windows, 
             // which we can't undo at the moment without finer window depth/z control.

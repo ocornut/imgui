@@ -9635,11 +9635,11 @@ struct ImGuiDockNodeSettings
     char            SplitAxis;
     char            Depth;
     char            IsDockSpace;
-    char            IsDocumentRoot;
+    char            IsCentralNode;
     ImVec2ih        Pos;
     ImVec2ih        Size;
     ImVec2ih        SizeRef;
-    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsDockSpace = IsDocumentRoot = 0; }
+    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsDockSpace = IsCentralNode = 0; }
 };
 
 struct ImGuiDockContext
@@ -9941,7 +9941,7 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
         ImGuiDockContextPruneNodeData* data_root = (data->RootID == settings->ID) ? data : pool.GetByKey(data->RootID);
 
         bool remove = false;
-        remove |= (data->CountWindows == 1 && settings->ParentID == 0 && data->CountChildNodes == 0 && !settings->IsDocumentRoot);  // Floating root node with only 1 window
+        remove |= (data->CountWindows == 1 && settings->ParentID == 0 && data->CountChildNodes == 0 && !settings->IsCentralNode);  // Floating root node with only 1 window
         remove |= (data->CountWindows == 0 && settings->ParentID == 0 && data->CountChildNodes == 0); // Leaf nodes with 0 window
         remove |= (data_root->CountChildWindows == 0);
         if (remove)
@@ -9972,7 +9972,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         node->SelectedTabID = node_settings->SelectedTabID;
         node->SplitAxis = node_settings->SplitAxis;
         node->IsDockSpace = node_settings->IsDockSpace != 0;
-        node->IsDocumentRoot = node_settings->IsDocumentRoot != 0;
+        node->IsCentralNode = node_settings->IsCentralNode != 0;
 
         // Bind host window immediately if it already exist (in case of a rebuild)
         // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
@@ -10070,7 +10070,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     if (target_node)
         IM_ASSERT(target_node->LastFrameAlive < g.FrameCount);
     if (target_node && target_window && target_node == target_window->DockNodeAsHost)
-        IM_ASSERT(target_node->Windows.Size > 1 || target_node->IsSplitNode() || target_node->IsDocumentRoot);
+        IM_ASSERT(target_node->Windows.Size > 1 || target_node->IsSplitNode() || target_node->IsCentralNode);
 
     // Create new node and add existing window to it
     if (target_node == NULL)
@@ -10099,8 +10099,8 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         new_node->HostWindow = target_node->HostWindow;
         if (target_node)
         {
-            inheritor_node->IsDocumentRoot = target_node->IsDocumentRoot;
-            target_node->IsDocumentRoot = false;
+            inheritor_node->IsCentralNode = target_node->IsCentralNode;
+            target_node->IsCentralNode = false;
         }
         target_node = new_node;
     }
@@ -10180,9 +10180,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     IM_ASSERT(node->IsLeafNode());
     IM_ASSERT(node->Windows.Size >= 1);
 
-    // In the case of a root node or document root, the node will have to stay in place. Create a new node to receive the payload.
+    // In the case of a root node or central node, the node will have to stay in place. Create a new node to receive the payload.
     // Otherwise delete the previous node by merging the other sibling back into the parent node.
-    if (node->IsRootNode() || node->IsDocumentRoot)
+    if (node->IsRootNode() || node->IsCentralNode)
     {
         ImGuiDockNode* new_node = DockContextAddNode(ctx, 0);
         DockNodeMoveWindows(new_node, node);
@@ -10225,7 +10225,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     WantCloseTabID = 0;
     InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
     IsVisible = true;
-    IsDockSpace = IsDocumentRoot = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
+    IsDockSpace = IsCentralNode = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
 }
 
 ImGuiDockNode::~ImGuiDockNode()
@@ -10319,7 +10319,7 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
     if (node->TabBar)
     {
         TabBarRemoveTab(node->TabBar, window->ID);
-        const int tab_count_threshold_for_tab_bar = node->IsDocumentRoot ? 1 : 2;
+        const int tab_count_threshold_for_tab_bar = node->IsCentralNode ? 1 : 2;
         if (node->Windows.Size < tab_count_threshold_for_tab_bar)
         {
             IM_DELETE(node->TabBar);
@@ -10327,14 +10327,14 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
         }
     }
 
-    if (node->Windows.Size == 0 && !node->IsDocumentRoot && window->DockId != node->ID)
+    if (node->Windows.Size == 0 && !node->IsCentralNode && window->DockId != node->ID)
     {
         // Automatic dock node delete themselves if they are not holding at least one tab
         DockContextRemoveNode(&g, node, true);
         return;
     }
 
-    if (node->Windows.Size == 1 && !node->IsDocumentRoot && node->HostWindow)
+    if (node->Windows.Size == 1 && !node->IsCentralNode && node->HostWindow)
     {
         ImGuiWindow* remaining_window = node->Windows[0];
         if (node->HostWindow->ViewportOwned && node->IsRootNode())
@@ -10479,7 +10479,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         if (!remove)
             continue;
         window->DockTabWantClose = false;
-        if (node->Windows.Size == 1 && !node->IsDocumentRoot)
+        if (node->Windows.Size == 1 && !node->IsCentralNode)
         {
             DockNodeHideHostWindow(node);
             DockNodeRemoveWindow(node, window, node->ID); // Will delete the node so it'll be invalid on return
@@ -10495,7 +10495,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
 static void ImGui::DockNodeUpdateVisibleFlag(ImGuiDockNode* node)
 {
     // Update visibility flag
-    bool is_visible = (node->ParentNode == 0) ? node->IsDockSpace : node->IsDocumentRoot;
+    bool is_visible = (node->ParentNode == 0) ? node->IsDockSpace : node->IsCentralNode;
     is_visible |= (node->Windows.Size > 0);
     is_visible |= (node->ChildNodes[0] && node->ChildNodes[0]->IsVisible);
     is_visible |= (node->ChildNodes[1] && node->ChildNodes[1]->IsVisible);
@@ -10523,7 +10523,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     {
         DockNodeUpdateVisibleFlagAndInactiveChilds(node);
 
-        // Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar, FIXME-DOCK: Not done yet!)
+        // Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
         if (!node->IsDockSpace)
         {
             int count = 0;
@@ -10657,9 +10657,14 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     if (node->IsSplitNode())
         IM_ASSERT(node->TabBar == NULL);
     if (node->IsRootNode())
-    {
         if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
             node->LastFocusedNodeID = g.NavWindow->RootWindowDockStop->DockNode->ID;
+
+    // Update position/size, process and draw resizing splitters
+    if (node->IsRootNode() && host_window)
+    {
+        DockNodeTreeUpdatePosSize(node, host_window->Pos, host_window->Size);
+        DockNodeTreeUpdateSplitter(node);
     }
 
     // Draw and populate Tab Bar
@@ -10682,20 +10687,16 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (node->Windows.Size == 0 && !node->IsSplitNode())
             host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
 
-        // Drop target
+        // Draw drop target
         if (node->IsRootNode() && (g.MovingWindow == NULL || g.MovingWindow->RootWindow != host_window))
             BeginAsDockableDragDropTarget(host_window);
     }
+
     node->LastFrameActive = g.FrameCount;
 
-    // Update pos/size and recurse into children
+    // Recurse into children
     if (host_window)
     {
-        if (node->IsRootNode())
-        {
-            DockNodeTreeUpdatePosSize(node, host_window->Pos, host_window->Size);
-            DockNodeTreeUpdateSplitter(node);
-        }
         if (node->ChildNodes[0])
             DockNodeUpdate(node->ChildNodes[0]);
         if (node->ChildNodes[1])
@@ -11059,13 +11060,13 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
     data->IsCenterAvailable = !is_outer_docking;
     if (src_is_visibly_splitted && (!host_node || !host_node->IsEmpty()))
         data->IsCenterAvailable = false;
-    if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoDockingInsideDocRootNode) && host_node->IsDocumentRoot)
+    if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoDockingInsideCentralNode) && host_node->IsCentralNode)
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
     if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit))
         data->IsSidesAvailable = false;
-    if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsDocumentRoot)
+    if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsCentralNode)
         data->IsSidesAvailable = false;
 
     // Calculate drop shapes geometry for allowed splitting directions
@@ -11268,7 +11269,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     DockNodeApplyPosSizeToWindows(parent_node);
     parent_node->InitFromFirstWindowPosSize = parent_node->InitFromFirstWindowViewport = false;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
-    parent_node->IsDocumentRoot = (child_0 && child_0->IsDocumentRoot) || (child_1 && child_1->IsDocumentRoot);
+    parent_node->IsCentralNode = (child_0 && child_0->IsCentralNode) || (child_1 && child_1->IsCentralNode);
     parent_node->SizeRef = backup_last_explicit_size;
 
     if (child_0)
@@ -11322,13 +11323,13 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
             child_0_size[axis] = child_0->SizeRef[axis] = (size_avail - child_1_size[axis]);
         }
 
-        // 3) If one window is the document root (~ use remaining space, should be made explicit!), use explicit size from the other, and remainder for the document root
-        else if (child_1->IsDocumentRoot && child_0->SizeRef[axis] != 0.0f)
+        // 3) If one window is the central node (~ use remaining space, should be made explicit!), use explicit size from the other, and remainder for the central node
+        else if (child_1->IsCentralNode && child_0->SizeRef[axis] != 0.0f)
         {
             child_0_size[axis] = ImMin(size_avail - size_min_each, child_0->SizeRef[axis]);
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
-        else if (child_0->IsDocumentRoot && child_1->SizeRef[axis] != 0.0f)
+        else if (child_0->IsCentralNode && child_1->SizeRef[axis] != 0.0f)
         {
             child_1_size[axis] = ImMin(size_avail - size_min_each, child_1->SizeRef[axis]);
             child_0_size[axis] = (size_avail - child_1_size[axis]);
@@ -11375,6 +11376,7 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
     if (child_0->IsVisible && child_1->IsVisible)
     {
         // Extend hovering range past the displayed border
+        // FIXME-DOCKING: This is not working as expected.
         float HOVER_EXTEND = 4.0f;
 
         // Use a short delay before highlighting the splitter (and changing the mouse cursor) in order for regular mouse movement to not highlight many splitters
@@ -11514,9 +11516,9 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
     window->DockId = dock_id;
 }
 
-// Create an explicit dockspace node within an existing window. Also expose dock node flags and creates a DocumentRoot node by default.
-// The DocumentRoot node is always displayed even when empty and shrink/extend according to the requested size of its neighbors.
-void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags dock_space_flags, const ImGuiDockFamily* dock_family)
+// Create an explicit dockspace node within an existing window. Also expose dock node flags and creates a CentralNode by default.
+// The Central Node is always displayed even when empty and shrink/extend according to the requested size of its neighbors.
+void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags dockspace_flags, const ImGuiDockFamily* dock_family)
 {
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
@@ -11528,14 +11530,14 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
     if (!node)
     {
         node = DockContextAddNode(ctx, id);
-        node->IsDocumentRoot = true;
+        node->IsCentralNode = true;
     }
-    node->Flags = dock_space_flags;
+    node->Flags = dockspace_flags;
     node->DockFamily = dock_family ? *dock_family : ImGuiDockFamily();
 
     // When a Dockspace transitioned form implicit to explicit this may be called a second time
     // It is possible that the node has already been claimed by a docked window which appeared before the DockSpace() node, so we overwrite IsDockSpace again.
-    if (node->LastFrameActive == g.FrameCount && !(dock_space_flags & ImGuiDockNodeFlags_KeepAliveOnly))
+    if (node->LastFrameActive == g.FrameCount && !(dockspace_flags & ImGuiDockNodeFlags_KeepAliveOnly))
     {
         IM_ASSERT(node->IsDockSpace == false && "Cannot call DockSpace() twice a frame with the same ID");
         node->IsDockSpace = true;
@@ -11544,7 +11546,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
     node->IsDockSpace = true;
 
     // Keep alive mode, this is allow windows docked into this node so stay docked even if they are not visible
-    if (dock_space_flags & ImGuiDockNodeFlags_KeepAliveOnly)
+    if (dockspace_flags & ImGuiDockNodeFlags_KeepAliveOnly)
     {
         node->LastFrameAlive = g.FrameCount;
         return;
@@ -11633,8 +11635,8 @@ void ImGui::DockBuilderRemoveNode(ImGuiContext* ctx, ImGuiID node_id)
         return;
     DockBuilderRemoveNodeDockedWindows(ctx, node_id, true);
     DockBuilderRemoveNodeChildNodes(ctx, node_id);
-    if (node->IsDocumentRoot && node->ParentNode)
-        node->ParentNode->IsDocumentRoot = true;
+    if (node->IsCentralNode && node->ParentNode)
+        node->ParentNode->IsCentralNode = true;
     DockContextRemoveNode(ctx, node, true);
 }
 
@@ -11655,7 +11657,7 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id)
             bool want_removal = (root_id == 0) || (node->ID != root_id && DockNodeGetRootNode(node)->ID == root_id);
             if (want_removal)
             {
-                if (node->IsDocumentRoot)
+                if (node->IsCentralNode)
                     has_document_root = true;
                 if (root_id != 0)
                     DockContextQueueNotifyRemovedNode(ctx, node);
@@ -11688,7 +11690,7 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id)
     }
     else if (has_document_root)
     {
-        root_node->IsDocumentRoot = true;
+        root_node->IsCentralNode = true;
     }
 }
 
@@ -11767,7 +11769,7 @@ static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiContext* ctx, ImGuiDockNode* s
     dst_node->SizeRef = src_node->SizeRef;
     dst_node->SplitAxis = src_node->SplitAxis;
     dst_node->IsDockSpace = src_node->IsDockSpace;
-    dst_node->IsDocumentRoot = src_node->IsDocumentRoot;
+    dst_node->IsCentralNode = src_node->IsCentralNode;
 
     out_node_remap_pairs->push_back(src_node->ID);
     out_node_remap_pairs->push_back(dst_node->ID);
@@ -11952,8 +11954,8 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         g.NextWindowData.PosUndock = false;
     }
 
-    // Undock if the ImGuiDockNodeFlags_NoDockingInDocRootNode got set
-    if (dock_node->IsDocumentRoot && (dock_node->Flags & ImGuiDockNodeFlags_NoDockingInsideDocRootNode))
+    // Undock if the ImGuiDockNodeFlags_NoDockingInCentralNode got set
+    if (dock_node->IsCentralNode && (dock_node->Flags & ImGuiDockNodeFlags_NoDockingInsideCentralNode))
     {
         DockContextProcessUndockWindow(ctx, window);
         return;
@@ -12091,7 +12093,7 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
         {
             ImGuiDockPreviewData split_inner, split_outer;
             ImGuiDockPreviewData* split_data = &split_inner;
-            if (target_node && (target_node->ParentNode || target_node->IsDocumentRoot))
+            if (target_node && (target_node->ParentNode || target_node->IsCentralNode))
                 if (ImGuiDockNode* root_node = DockNodeGetRootNode(target_node))
                     if (DockNodePreviewDockCalc(window, root_node, payload_window, &split_outer, is_explicit_target, true))
                         split_data = &split_outer;
@@ -12193,7 +12195,10 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
         if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
-    if (sscanf(line, " DocRoot=%d%n", &x, &r) == 1)                 { line += r; node.IsDocumentRoot = (x != 0); }
+#if 1 // FIXME-DOCK FIXME-LEGACY
+    if (sscanf(line, " DocRoot=%d%n", &x, &r) == 1)                 { line += r; node.IsCentralNode = (x != 0); }
+#endif
+    if (sscanf(line, " CentralNode=%d%n", &x, &r) == 1)             { line += r; node.IsCentralNode = (x != 0); }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
     ImGuiDockContext* dc = ctx->DockContext;
     if (node.ParentID != 0)
@@ -12212,7 +12217,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.SplitAxis = node->IsSplitNode() ? (char)node->SplitAxis : ImGuiAxis_None;
     node_settings.Depth = (char)depth;
     node_settings.IsDockSpace = (char)node->IsDockSpace;
-    node_settings.IsDocumentRoot = (char)node->IsDocumentRoot;
+    node_settings.IsCentralNode = (char)node->IsCentralNode;
     node_settings.Pos = ImVec2ih((short)node->Pos.x, (short)node->Pos.y);
     node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
     node_settings.SizeRef = ImVec2ih((short)node->SizeRef.x, (short)node->SizeRef.y);
@@ -12255,8 +12260,8 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
         if (node_settings->SplitAxis != ImGuiAxis_None)
             buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
-        if (node_settings->IsDocumentRoot)
-            buf->appendf(" DocRoot=%d", node_settings->IsDocumentRoot);
+        if (node_settings->IsCentralNode)
+            buf->appendf(" CentralNode=%d", node_settings->IsCentralNode);
         if (node_settings->SelectedTabID)
             buf->appendf(" SelectedTab=0x%08X", node_settings->SelectedTabID);
 
@@ -13131,7 +13136,7 @@ void ImGui::ShowDockingDebug()
                     node->Pos.x, node->Pos.y, node->Size.x, node->Size.y,
                     node->SizeRef.x, node->SizeRef.y);
                 ImGui::BulletText("Flags %02X%s%s%s%s",
-                    node->Flags, node->IsDockSpace ? ", IsDockSpace" : "", node->IsDocumentRoot ? ", IsDocumentRoot" : "",
+                    node->Flags, node->IsDockSpace ? ", IsDockSpace" : "", node->IsCentralNode ? ", IsCentralNode" : "",
                     (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
                 if (node->ChildNodes[0])
                     NodeDockNode(node->ChildNodes[0], "Child[0]");
@@ -13237,7 +13242,7 @@ void ImGui::ShowDockingDebug()
                 char buf[64] = "";
                 char* p = buf;
                 ImDrawList* overlay_draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
-                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsDocumentRoot ? " *DocRoot*" : "");
+                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsCentralNode ? " *CentralNode*" : "");
                 p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
                 p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
                 int depth = DockNodeGetDepth(node);

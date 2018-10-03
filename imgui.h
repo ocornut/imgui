@@ -798,7 +798,7 @@ enum ImGuiDockNodeFlags_
     ImGuiDockNodeFlags_None                         = 0,
     ImGuiDockNodeFlags_KeepAliveOnly                = 1 << 0,   // Don't display the dockspace node but keep it alive. Windows docked into this dockspace node won't be undocked.
     ImGuiDockNodeFlags_NoSplit                      = 1 << 1,   // Disable splitting the node into smaller nodes. Useful e.g. when embedding dockspaces into a main root one (the root one may have splitting disabled to reduce confusion)
-    ImGuiDockNodeFlags_NoDockingInsideDocRootNode   = 1 << 2    // Disable docking inside the DocumentRoot node. Useful if it is kept empty and invisible.
+    ImGuiDockNodeFlags_NoDockingInsideCentralNode   = 1 << 2    // Disable docking inside the central node (which can stay empty). Useful if it is kept empty and invisible.
 };
 
 // Flags for ImGui::IsWindowFocused()
@@ -1016,7 +1016,7 @@ enum ImGuiCol_
     ImGuiCol_TabUnfocused,
     ImGuiCol_TabUnfocusedActive,
     ImGuiCol_DockingPreview,
-    ImGuiCol_DockingEmptyBg,        // Background color for empty node (e.g. DocRoot node with no window docked into it)
+    ImGuiCol_DockingEmptyBg,        // Background color for empty node (e.g. CentralNode with no window docked into it)
     ImGuiCol_PlotLines,
     ImGuiCol_PlotLinesHovered,
     ImGuiCol_PlotHistogram,

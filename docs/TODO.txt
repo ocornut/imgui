@@ -126,8 +126,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete). this is mostly working but the DockBuilderXXX api are not exposed/finished.
  - dock: A- implicit, invisible per-viewport dockspace to dock to.
  - dock: B: when docking outer, perform size locking on neighbors nodes the same way we do it with splitters, so other nodes are not resized.
- - dock: B~ document root node resizing behavior incorrect.
- - dock: B~ document root node retrieval of ID ?
+ - dock: B~ central node resizing behavior incorrect.
+ - dock: B~ central node ID retrieval API?
  - dock: B- debug full rebuild loses viewport of floating dock nodes.
  - dock: B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them (doesn't affect the user nor request platform windows to be created, but unnecessary)
  - dock: B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
