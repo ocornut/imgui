@@ -33,25 +33,27 @@ HOW TO UPDATE?
  DOCKING BRANCH (In Progress)
 -----------------------------------------------------------------------
 
-- Added ImGuiConfigFlags_DockingEnable flag to enable Docking. [BETA]
-  Set with `io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;`.
-- Added BeginTabBar(), EndTabBar(), BeginTabItem(), EndTabItem(), SetTabItemClosed() API. (#261, #351)
-- Added ImGuiTabBarFlags flags for BeginTabBar().
-- Added ImGuiTabItemFlags flags for BeginTabItem().
-- Added DockSpace() API. (#351)
-- Added ImGuiDockNodeFlags flags for DockSpace().
-- Added SetNextWindowDock(), SetNextWindowDockFamily() API. (#351)
-- Added GetWindowDockId(), IsWindowDocked() API. (#351)
-- Added ImGuiWindowFlags_NoDocking window flag to disable the possibility for a window to be docked.
-  Popup, Menu and Child windows always have the ImGuiWindowFlags_NoDocking flag set. (#351)
-- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering the ID, 
-  as a convenience to avoid using the ### operator. 
-- Added io.ConfigDockingWithShift option to configure docking mode.
-- Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors. (#351)
-- Style: Added ImGuiCol_Tab, ImGuiCol_TabHovered, ImGuiCol_TabActive, ImGuiCol_TabUnfocused, ImGuiCol_TabUnfocusedActive colors. (#261, #351)
-- Demo: Added Layout->Tabs demo code. (#261, #351)
-- Demo: Added "Documents" example app showcasing possible use for tabs. (#261, #351)
-- Demo: Added "DockSpace" example app showcasing use of explicit dockspace nodes. (#351)
+- Added Docking system: [BETA] (#2109, #351)
+  - Added ImGuiConfigFlags_DockingEnable flag to enable Docking.
+    Set with `io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;`.
+  - Added DockSpace() API.
+  - Added ImGuiDockNodeFlags flags for DockSpace().
+  - Added SetNextWindowDock(), SetNextWindowDockFamily() API.
+  - Added GetWindowDockId(), IsWindowDocked() API.
+  - Added ImGuiWindowFlags_NoDocking window flag to disable the possibility for a window to be docked.
+    Popup, Menu and Child windows always have the ImGuiWindowFlags_NoDocking flag set.
+  - Added io.ConfigDockingWithShift option to configure docking mode.
+  - Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors.
+  - Demo: Added "DockSpace" example app showcasing use of explicit dockspace nodes.
+- Added Tab Bar/Tabs widgets: (#261, #351)
+  - Added BeginTabBar(), EndTabBar(), BeginTabItem(), EndTabItem(), SetTabItemClosed() API.
+  - Added ImGuiTabBarFlags flags for BeginTabBar().
+  - Added ImGuiTabItemFlags flags for BeginTabItem().
+  - Style: Added ImGuiCol_Tab, ImGuiCol_TabHovered, ImGuiCol_TabActive, ImGuiCol_TabUnfocused, ImGuiCol_TabUnfocusedActive colors.
+  - Demo: Added Layout->Tabs demo code.
+  - Demo: Added "Documents" example app showcasing possible use for tabs.
+- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering 
+  the ID, as a convenience to avoid using the ### operator. 
 
 
 -----------------------------------------------------------------------

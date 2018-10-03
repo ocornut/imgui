@@ -918,6 +918,7 @@ static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond);
 static void             SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond);
 static void             SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond);
+static void             SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size);
 static void             FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
 static void             CheckStacksSize(ImGuiWindow* window, bool write);
@@ -4002,6 +4003,15 @@ static void FindHoveredWindow()
             bb.Expand(padding_for_resize_from_edges);
         if (!bb.Contains(g.IO.MousePos))
             continue;
+
+        if (window->HitTestHoleSize.x != 0)
+        {
+            // FIXME: Consider generalizing hit-testing override (with more generic data, callback, etc.) (#1512)
+            ImRect hole_bb((float)(window->HitTestHoleOffset.x), (float)(window->HitTestHoleOffset.y),
+                (float)(window->HitTestHoleOffset.x + window->HitTestHoleSize.x), (float)(window->HitTestHoleOffset.y + window->HitTestHoleSize.y));
+            if (hole_bb.Contains(g.IO.MousePos - window->Pos))
+                continue;
+        }
         
         if (hovered_window == NULL)
             hovered_window = window;
@@ -5501,6 +5511,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
         }
 
+        // Clear hit test shape every frame
+        window->HitTestHoleSize.x = window->HitTestHoleSize.y = 0;
+
         // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
         window->OuterRectClipped = window->Rect();
         if (window->DockIsActive)
@@ -6269,6 +6282,13 @@ static void SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond co
 
     // Set
     window->Collapsed = collapsed;
+}
+
+static void SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size)
+{
+    IM_ASSERT(window->HitTestHoleSize.x == 0);     // We don't support multiple holes/hit test filters
+    window->HitTestHoleSize = ImVec2ih((short)size.x, (short)size.y);
+    window->HitTestHoleOffset = ImVec2ih((short)(pos.x - window->Pos.x), (short)(pos.y - window->Pos.y));
 }
 
 void ImGui::SetWindowCollapsed(bool collapsed, ImGuiCond cond)
@@ -10430,20 +10450,35 @@ static void ImGui::DockNodeHideHostWindow(ImGuiDockNode* node)
     }
 }
 
-static void DockNodeUpdateFindOnlyNodeWithWindowsRec(ImGuiDockNode* node, int* p_count, ImGuiDockNode** p_first_node_with_windows)
+struct ImGuiDockNodeUpdateScanResults
+{
+    ImGuiDockNode*  CentralNode;
+    ImGuiDockNode*  FirstNodeWithWindows;
+    int             CountNodesWithWindows;
+    ImGuiDockFamily DockFamilyForMerges;
+
+    ImGuiDockNodeUpdateScanResults() { CentralNode = FirstNodeWithWindows = NULL; CountNodesWithWindows = 0; }
+};
+
+static void DockNodeUpdateScanRec(ImGuiDockNode* node, ImGuiDockNodeUpdateScanResults* results)
 {
     if (node->Windows.Size > 0)
     {
-        if (*p_first_node_with_windows == NULL)
-            *p_first_node_with_windows = node;
-        (*p_count)++;
+        if (results->FirstNodeWithWindows == NULL)
+            results->FirstNodeWithWindows = node;
+        results->CountNodesWithWindows++;
     }
-    if (*p_count > 1)
+    if (node->IsCentralNode)
+    {
+        IM_ASSERT(results->CentralNode == NULL); // Should be only one
+        results->CentralNode = node;
+    }
+    if (results->CountNodesWithWindows > 1 && results->CentralNode != NULL)
         return;
     if (node->ChildNodes[0])
-        DockNodeUpdateFindOnlyNodeWithWindowsRec(node->ChildNodes[0], p_count, p_first_node_with_windows);
+        DockNodeUpdateScanRec(node->ChildNodes[0], results);
     if (node->ChildNodes[1])
-        DockNodeUpdateFindOnlyNodeWithWindowsRec(node->ChildNodes[1], p_count, p_first_node_with_windows);
+        DockNodeUpdateScanRec(node->ChildNodes[1], results);
 }
 
 static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node)
@@ -10519,32 +10554,31 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     IM_ASSERT(node->LastFrameActive != g.FrameCount);
     node->LastFrameAlive = g.FrameCount;
 
+    ImGuiDockNode* central_node = NULL;
     if (node->IsRootNode())
     {
         DockNodeUpdateVisibleFlagAndInactiveChilds(node);
 
         // Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
-        if (!node->IsDockSpace)
-        {
-            int count = 0;
-            ImGuiDockNode* first_node_with_windows = NULL;
-            DockNodeUpdateFindOnlyNodeWithWindowsRec(node, &count, &first_node_with_windows);
-            node->OnlyNodeWithWindows = (count == 1 ? first_node_with_windows : NULL);
-            if (node->LastFocusedNodeID == 0 && first_node_with_windows != NULL)
-                node->LastFocusedNodeID = first_node_with_windows->ID;
+        ImGuiDockNodeUpdateScanResults results;
+        DockNodeUpdateScanRec(node, &results);
+        node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1 ? results.FirstNodeWithWindows : NULL);
+        if (node->LastFocusedNodeID == 0 && results.FirstNodeWithWindows != NULL)
+            node->LastFocusedNodeID = results.FirstNodeWithWindows->ID;
+        central_node = results.CentralNode;
 
-            // Copy the dock family from of our window so it can be used for proper dock filtering.
-            // When node has mixed windows, prioritize the family with the most constraint (CompatibleWithNeutral = false) as the reference to copy.
-            if (first_node_with_windows)
-            {
-                node->DockFamily = first_node_with_windows->Windows[0]->DockFamily;
-                for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
-                    if (first_node_with_windows->Windows[n]->DockFamily.CompatibleWithFamilyZero == false)
-                    {
-                        node->DockFamily = first_node_with_windows->Windows[n]->DockFamily;
-                        break;
-                    }
-            }
+        // Copy the dock family from of our window so it can be used for proper dock filtering.
+        // When node has mixed windows, prioritize the family with the most constraint (CompatibleWithNeutral = false) as the reference to copy.
+        // FIXME-DOCK: We don't recurse properly, this code could be reworked to work from DockNodeUpdateScanRec.
+        if (ImGuiDockNode* first_node_with_windows = results.FirstNodeWithWindows)
+        {
+            node->DockFamily = first_node_with_windows->Windows[0]->DockFamily;
+            for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
+                if (first_node_with_windows->Windows[n]->DockFamily.CompatibleWithFamilyZero == false)
+                {
+                    node->DockFamily = first_node_with_windows->Windows[n]->DockFamily;
+                    break;
+                }
         }
     }
 
@@ -10660,11 +10694,55 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
             node->LastFocusedNodeID = g.NavWindow->RootWindowDockStop->DockNode->ID;
 
+    // We need to draw a background if requested by ImGuiDockNodeFlags_RenderWindowBg, but we will only know the correct pos/size after
+    // processing the resizing splitters. So we are using the DrawList channel splitting facility to submit drawing primitives out of order!
+    const bool render_dockspace_bg = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_RenderWindowBg) != 0;
+    if (render_dockspace_bg)
+    {
+        host_window->DrawList->ChannelsSplit(2);
+        host_window->DrawList->ChannelsSetCurrent(1);
+    }
+
+    // Register a hit-test hole in the window unless we are currently dragging a window that is compatible our dockspace
+    bool central_node_hole = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruInEmptyNodes) != 0 && central_node != NULL && central_node->IsEmpty();
+    bool central_node_hole_register_hit_test_hole = central_node_hole;
+    if (central_node_hole)
+        if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
+            if (payload->IsDataType(IMGUI_PAYLOAD_TYPE_WINDOW) && DockNodeIsDropAllowed(host_window, *(ImGuiWindow**)payload->Data))
+                central_node_hole_register_hit_test_hole = false;
+    if (central_node_hole_register_hit_test_hole)
+    {
+        // Add a little padding to match the "resize from edges" behavior and allow grabbing the splitter easily.
+        IM_ASSERT(node->IsDockSpace); // We cannot pass this flag without the DockSpace() api. Testing this because we also setup the hole in host_window->ParentNode
+        ImRect central_hole(central_node->Pos, central_node->Pos + central_node->Size);
+        central_hole.Expand(ImVec2(-RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, -RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS));
+        if (central_node_hole && !central_hole.IsInverted())
+        {
+            SetWindowHitTestHole(host_window, central_hole.Min, central_hole.Max - central_hole.Min);
+            SetWindowHitTestHole(host_window->ParentWindow, central_hole.Min, central_hole.Max - central_hole.Min);
+        }
+    }
+
     // Update position/size, process and draw resizing splitters
     if (node->IsRootNode() && host_window)
     {
         DockNodeTreeUpdatePosSize(node, host_window->Pos, host_window->Size);
         DockNodeTreeUpdateSplitter(node);
+    }
+
+    // Draw empty node background (currently can only be the Central Node)
+    if (host_window && node->IsEmpty() && node->IsVisible && !(node->Flags & ImGuiDockNodeFlags_PassthruInEmptyNodes))
+        host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
+
+    // Draw whole dockspace background if ImGuiDockNodeFlags_RenderWindowBg if set.
+    if (render_dockspace_bg && node->IsVisible)
+    {
+        host_window->DrawList->ChannelsSetCurrent(0);
+        if (central_node_hole)
+            RenderRectFilledWithHole(host_window->DrawList, node->Rect(), central_node->Rect(), GetColorU32(ImGuiCol_WindowBg), 0.0f);
+        else
+            host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_WindowBg), 0.0f);
+        host_window->DrawList->ChannelsMerge();
     }
 
     // Draw and populate Tab Bar
@@ -10681,16 +10759,11 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (node->Windows.Size > 0)
             node->SelectedTabID = node->Windows[0]->ID;
     }
-    if (host_window && node->IsVisible)
-    {
-        // Background for empty nodes
-        if (node->Windows.Size == 0 && !node->IsSplitNode())
-            host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
 
-        // Draw drop target
+    // Draw payload drop target
+    if (host_window && node->IsVisible)
         if (node->IsRootNode() && (g.MovingWindow == NULL || g.MovingWindow->RootWindow != host_window))
             BeginAsDockableDragDropTarget(host_window);
-    }
 
     node->LastFrameActive = g.FrameCount;
 
@@ -11060,7 +11133,7 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
     data->IsCenterAvailable = !is_outer_docking;
     if (src_is_visibly_splitted && (!host_node || !host_node->IsEmpty()))
         data->IsCenterAvailable = false;
-    if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoDockingInsideCentralNode) && host_node->IsCentralNode)
+    if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoDockingInCentralNode) && host_node->IsCentralNode)
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
@@ -11568,11 +11641,9 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
 
     if (node->Windows.Size > 0 || node->IsSplitNode())
         PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0, 0, 0, 0));
-    if (dockspace_flags & ImGuiDockNodeFlags_NoOuterBorder)
-        PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
+    PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
     Begin(title, NULL, window_flags);
-    if (dockspace_flags & ImGuiDockNodeFlags_NoOuterBorder)
-        PopStyleVar();
+    PopStyleVar();
     if (node->Windows.Size > 0 || node->IsSplitNode())
         PopStyleColor();
 
@@ -11953,7 +12024,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     // Undock if the ImGuiDockNodeFlags_NoDockingInCentralNode got set
-    if (dock_node->IsCentralNode && (dock_node->Flags & ImGuiDockNodeFlags_NoDockingInsideCentralNode))
+    if (dock_node->IsCentralNode && (dock_node->Flags & ImGuiDockNodeFlags_NoDockingInCentralNode))
     {
         DockContextProcessUndockWindow(ctx, window);
         return;
