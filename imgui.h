@@ -1015,7 +1015,7 @@ enum ImGuiCol_
     ImGuiCol_TabUnfocused,
     ImGuiCol_TabUnfocusedActive,
     ImGuiCol_DockingPreview,
-    ImGuiCol_DockingBg,             // Empty node
+    ImGuiCol_DockingEmptyBg,        // Background color for empty node (e.g. DocRoot node with no window docked into it)
     ImGuiCol_PlotLines,
     ImGuiCol_PlotLinesHovered,
     ImGuiCol_PlotHistogram,

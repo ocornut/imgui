@@ -3765,10 +3765,8 @@ void ShowExampleAppDockSpace(bool* p_open)
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
     {
-        //ImGui::PushStyleColor(ImGuiCol_DockingBg, ImVec4(0.2f, 0.2f, 0.2f, 1.0f));
         ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
         ImGui::DockSpace(dockspace_id);
-        //ImGui::PopStyleColor();
     }
     else
     {

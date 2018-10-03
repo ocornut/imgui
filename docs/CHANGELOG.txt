@@ -47,7 +47,7 @@ HOW TO UPDATE?
 - Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering the ID, 
   as a convenience to avoid using the ### operator. 
 - Added io.ConfigDockingWithShift option to configure docking mode.
-- Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingBg colors. (#351)
+- Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors. (#351)
 - Style: Added ImGuiCol_Tab, ImGuiCol_TabHovered, ImGuiCol_TabActive, ImGuiCol_TabUnfocused, ImGuiCol_TabUnfocusedActive colors. (#261, #351)
 - Demo: Added Layout->Tabs demo code. (#261, #351)
 - Demo: Added "Documents" example app showcasing possible use for tabs. (#261, #351)

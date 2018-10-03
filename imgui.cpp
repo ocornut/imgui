@@ -6040,7 +6040,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_TabUnfocused: return "TabUnfocused";
     case ImGuiCol_TabUnfocusedActive: return "TabUnfocusedActive";
     case ImGuiCol_DockingPreview: return "DockingPreview";
-    case ImGuiCol_DockingBg: return "DockingBg";
+    case ImGuiCol_DockingEmptyBg: return "DockingEmptyBg";
     case ImGuiCol_PlotLines: return "PlotLines";
     case ImGuiCol_PlotLinesHovered: return "PlotLinesHovered";
     case ImGuiCol_PlotHistogram: return "PlotHistogram";
@@ -10059,7 +10059,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     {
         payload_node = payload_window->DockNodeAsHost;
         payload_window->DockNodeAsHost = NULL; // Important to clear this as the node will have its life as a child which might be merged/deleted later.
-        if (payload_node && !payload_node->IsSplitNode())
+        if (payload_node && payload_node->IsLeafNode())
             next_selected_id = payload_node->TabBar->NextSelectedTabId ? payload_node->TabBar->NextSelectedTabId : payload_node->TabBar->SelectedTabId;
         if (payload_node == NULL)
             next_selected_id = payload_window->ID;
@@ -10177,7 +10177,7 @@ void ImGui::DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* windo
 void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 {
     (void)ctx;
-    IM_ASSERT(!node->IsSplitNode());
+    IM_ASSERT(node->IsLeafNode());
     IM_ASSERT(node->Windows.Size >= 1);
 
     // In the case of a root node or document root, the node will have to stay in place. Create a new node to receive the payload.
@@ -10545,7 +10545,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     }
 
     // Early out for hidden root dock nodes (when all DockId references are in inactive windows, or there is only 1 floating window holding on the DockId)
-    if (node->IsRootNode() && !node->IsSplitNode() && node->Windows.Size <= 1 && !node->IsDockSpace)
+    if (node->IsRootNode() && node->IsLeafNode() && node->Windows.Size <= 1 && !node->IsDockSpace)
     {
         if (node->Windows.Size == 1)
         {
@@ -10649,14 +10649,11 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             DockNodeStartMouseMovingWindow(node, node->HostWindow);
     }
 
-    // Update active node (the one whose title bar is highlight) within a node tree
+    // Update focused node (the one whose title bar is highlight) within a node tree
     if (node->IsSplitNode())
         IM_ASSERT(node->TabBar == NULL);
     if (node->IsRootNode())
     {
-        //if (!node->IsSplitNode())
-        //    node->LastFocusedNodeID = node->ID;  // This also ensure on our creation frame we will receive the title screen highlight
-        //else
         if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
             node->LastFocusedNodeID = g.NavWindow->RootWindowDockStop->DockNode->ID;
     }
@@ -10679,7 +10676,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     {
         // Background for empty nodes
         if (node->Windows.Size == 0 && !node->IsSplitNode())
-            host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingBg));
+            host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
 
         // Drop target
         if (node->IsRootNode() && (g.MovingWindow == NULL || g.MovingWindow->RootWindow != host_window))
@@ -11285,7 +11282,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
 {
     node->Pos = pos;
     node->Size = size;
-    if (!node->IsSplitNode())
+    if (node->IsLeafNode())
         return;
 
     ImGuiDockNode* child_0 = node->ChildNodes[0];
@@ -11347,7 +11344,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
 
 static void DockNodeTreeUpdateSplitterFindTouchingNode(ImGuiDockNode* node, ImGuiAxis axis, int side, ImVector<ImGuiDockNode*>* touching_nodes)
 {
-    if (!node->IsSplitNode())
+    if (node->IsLeafNode())
     {
         touching_nodes->push_back(node);
         return;
@@ -11362,7 +11359,7 @@ static void DockNodeTreeUpdateSplitterFindTouchingNode(ImGuiDockNode* node, ImGu
 
 void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
 {
-    if (!node->IsSplitNode())
+    if (node->IsLeafNode())
         return;
 
     ImGuiContext& g = *GImGui;
@@ -11483,7 +11480,7 @@ ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
     if (!inside)
         return NULL;
 
-    if (!node->IsSplitNode())
+    if (node->IsLeafNode())
         return node;
     if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[0], pos))
         return hovered_node;
@@ -11562,6 +11559,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
 
     ImGuiWindowFlags window_flags = ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_DockNodeHost;
     window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoTitleBar;
+    window_flags |= ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse;
 
     char title[256];
     ImFormatString(title, IM_ARRAYSIZE(title), "%s/DockSpace_%08X", window->Name, id);
@@ -11733,7 +11731,7 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir spli
         return 0;
     }
 
-    IM_ASSERT(!node->IsSplitNode());    // Already Split
+    IM_ASSERT(!node->IsSplitNode()); // Assert if already Split
 
     ImGuiDockRequest req;
     req.Type = ImGuiDockRequestType_Split;
@@ -11981,7 +11979,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     IM_ASSERT(dock_node->HostWindow);
-    IM_ASSERT(!dock_node->IsSplitNode());
+    IM_ASSERT(dock_node->IsLeafNode());
 
     // Position window
     SetNextWindowPos(dock_node->Pos);
