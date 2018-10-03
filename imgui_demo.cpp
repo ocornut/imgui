@@ -3732,25 +3732,42 @@ void ShowExampleAppDockSpace(bool* p_open)
         flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove;
         flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     }
+
+    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("DockSpace Demo", p_open, flags);
     ImGui::PopStyleVar();
 
+    // Dockspace
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
+    {
+        ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+    }
+    else
+    {
+        ShowDockingDisabledMessage();
+    }
+
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Docking"))
+        if (ImGui::BeginMenu("Options"))
         {
             if (ImGui::MenuItem("Remove DockSpace", NULL, false, p_open != NULL))
                 *p_open = false;
+            ImGui::Separator();
+
+            if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
+                dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
+            if (ImGui::MenuItem("Flag: NoDockingInsideDocRootNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInsideDocRootNode) != 0))
+                dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInsideDocRootNode;
+
+            // Disabling fullscreen would allow the window to be moved to the front of other windows, 
+            // which we can't undo at the moment without finer window depth/z control.
+            //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
             ImGui::EndMenu();
         }
-        // Disabling fullscreen would allow the window to be moved to the front of other windows, 
-        // which we can't undo at the moment without finer window depth/z control.
-        /*if (ImGui::BeginMenu("Options"))
-        {
-            ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
-            ImGui::EndMenu();
-        }*/
         ShowHelpMarker(
             "You can _always_ dock _any_ window into another by holding the SHIFT key while moving a window. Try it now!" "\n"
             "This demo app has nothing to do with it!" "\n\n"
@@ -3760,17 +3777,6 @@ void ShowExampleAppDockSpace(bool* p_open)
         );
 
         ImGui::EndMenuBar();
-    }
-
-    ImGuiIO& io = ImGui::GetIO();
-    if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
-    {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
-        ImGui::DockSpace(dockspace_id);
-    }
-    else
-    {
-        ShowDockingDisabledMessage();
     }
 
     ImGui::End();

@@ -10452,6 +10452,10 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
 
     IM_ASSERT(node->ParentNode == NULL || node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
 
+    // Inherit flags
+    if (node->ParentNode)
+        node->Flags = node->ParentNode->Flags;
+
     // Recurse into children
     // There is the possibility that one of our child becoming empty will delete itself and moving its sibling contents into 'node'.
     // If 'node->ChildNode[0]' delete itself, then 'node->ChildNode[1]->Windows' will be moved into 'node'
@@ -11054,6 +11058,8 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
     const bool src_is_visibly_splitted = root_payload->DockNodeAsHost && root_payload->DockNodeAsHost->IsSplitNode() && (root_payload->DockNodeAsHost->OnlyNodeWithWindows == NULL);
     data->IsCenterAvailable = !is_outer_docking;
     if (src_is_visibly_splitted && (!host_node || !host_node->IsEmpty()))
+        data->IsCenterAvailable = false;
+    if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoDockingInsideDocRootNode) && host_node->IsDocumentRoot)
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
@@ -11944,6 +11950,13 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         SetNextWindowPos(window->Pos);
         SetNextWindowSize(window->SizeFull);
         g.NextWindowData.PosUndock = false;
+    }
+
+    // Undock if the ImGuiDockNodeFlags_NoDockingInDocRootNode got set
+    if (dock_node->IsDocumentRoot && (dock_node->Flags & ImGuiDockNodeFlags_NoDockingInsideDocRootNode))
+    {
+        DockContextProcessUndockWindow(ctx, window);
+        return;
     }
 
     // Undock if our dockspace node disappeared
