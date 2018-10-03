@@ -798,7 +798,8 @@ enum ImGuiDockNodeFlags_
     ImGuiDockNodeFlags_None                         = 0,
     ImGuiDockNodeFlags_KeepAliveOnly                = 1 << 0,   // Don't display the dockspace node but keep it alive. Windows docked into this dockspace node won't be undocked.
     ImGuiDockNodeFlags_NoSplit                      = 1 << 1,   // Disable splitting the node into smaller nodes. Useful e.g. when embedding dockspaces into a main root one (the root one may have splitting disabled to reduce confusion)
-    ImGuiDockNodeFlags_NoDockingInsideCentralNode   = 1 << 2    // Disable docking inside the central node (which can stay empty). Useful if it is kept empty and invisible.
+    ImGuiDockNodeFlags_NoOuterBorder                = 1 << 2,   // Disable outer border on a DockSpace() node.
+    ImGuiDockNodeFlags_NoDockingInsideCentralNode   = 1 << 3    // Disable docking inside the central node (which can stay empty). Useful if it is kept empty and invisible.
 };
 
 // Flags for ImGui::IsWindowFocused()

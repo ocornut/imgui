@@ -9578,7 +9578,7 @@ void ImGui::EndDragDropTarget()
 // Docking: Internal Types
 //-----------------------------------------------------------------------------
 
-static float IMGUI_DOCK_SPLITTER_SIZE = 4.0f;
+static float IMGUI_DOCK_SPLITTER_SIZE = 2.0f;
 
 enum ImGuiDockRequestType
 {
@@ -11375,13 +11375,6 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
     ImGuiDockNode* child_1 = node->ChildNodes[1];
     if (child_0->IsVisible && child_1->IsVisible)
     {
-        // Extend hovering range past the displayed border
-        // FIXME-DOCKING: This is not working as expected.
-        float HOVER_EXTEND = 4.0f;
-
-        // Use a short delay before highlighting the splitter (and changing the mouse cursor) in order for regular mouse movement to not highlight many splitters
-        float HOVER_VISIBILITY_DELAY = 0.040f;
-
         // Bounding box of the splitter cover the space between both nodes (w = Spacing, h = Size[xy^1] for when splitting horizontally)
         const ImGuiAxis axis = (ImGuiAxis)node->SplitAxis;
         IM_ASSERT(axis != ImGuiAxis_None);
@@ -11390,12 +11383,12 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         bb.Max = child_1->Pos;
         bb.Min[axis] += child_0->Size[axis];
         bb.Max[axis ^ 1] += child_1->Size[axis ^ 1];
-        //GetOverlayDrawList(g.CurrentWindow->Viewport)->AddRect(bb.Min, bb.Max, IM_COL32(255,0,255,255));
+        //if (g.IO.KeyCtrl) GetOverlayDrawList(g.CurrentWindow->Viewport)->AddRect(bb.Min, bb.Max, IM_COL32(255,0,255,255));
 
         float w1 = child_0->Size[axis];
         float w2 = child_1->Size[axis];
-        bb.Min[axis] += 1; // Display a little inward so highlight doesn't connect with nearby tabs on the neighbor node.
-        bb.Max[axis] -= 1;
+        //bb.Min[axis] += 1; // Display a little inward so highlight doesn't connect with nearby tabs on the neighbor node.
+        //bb.Max[axis] -= 1;
         PushID(node->ID);
 
         // Gather list of nodes that are touching the splitter line. Find resizing limits based on those nodes.
@@ -11427,9 +11420,10 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
             */
         }
 
+        // Use a short delay before highlighting the splitter (and changing the mouse cursor) in order for regular mouse movement to not highlight many splitters
         float min_size_0 = resize_limits[0] - child_0->Pos[axis];
         float min_size_1 = child_1->Pos[axis] + child_1->Size[axis] - resize_limits[1];
-        if (SplitterBehavior(bb, GetID("##Splitter"), axis, &w1, &w2, min_size_0, min_size_1, HOVER_EXTEND, HOVER_VISIBILITY_DELAY))
+        if (SplitterBehavior(bb, GetID("##Splitter"), axis, &w1, &w2, min_size_0, min_size_1, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER))
         {
             if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
             {
@@ -11574,7 +11568,11 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
 
     if (node->Windows.Size > 0 || node->IsSplitNode())
         PushStyleColor(ImGuiCol_ChildBg, IM_COL32(0, 0, 0, 0));
+    if (dockspace_flags & ImGuiDockNodeFlags_NoOuterBorder)
+        PushStyleVar(ImGuiStyleVar_ChildBorderSize, 0.0f);
     Begin(title, NULL, window_flags);
+    if (dockspace_flags & ImGuiDockNodeFlags_NoOuterBorder)
+        PopStyleVar();
     if (node->Windows.Size > 0 || node->IsSplitNode())
         PopStyleColor();
 

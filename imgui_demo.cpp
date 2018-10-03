@@ -3735,15 +3735,16 @@ void ShowExampleAppDockSpace(bool* p_open)
 
     static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
     ImGui::Begin("DockSpace Demo", p_open, flags);
-    ImGui::PopStyleVar();
+    ImGui::PopStyleVar(2);
 
     // Dockspace
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
     {
         ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags | ImGuiDockNodeFlags_NoOuterBorder);
     }
     else
     {
@@ -3758,14 +3759,15 @@ void ShowExampleAppDockSpace(bool* p_open)
                 *p_open = false;
             ImGui::Separator();
 
+            // Disabling fullscreen would allow the window to be moved to the front of other windows, 
+            // which we can't undo at the moment without finer window depth/z control.
+            //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
+
             if (ImGui::MenuItem("Flag: NoSplit", "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))
                 dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
             if (ImGui::MenuItem("Flag: NoDockingInsideCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInsideCentralNode) != 0))
                 dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInsideCentralNode;
 
-            // Disabling fullscreen would allow the window to be moved to the front of other windows, 
-            // which we can't undo at the moment without finer window depth/z control.
-            //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
             ImGui::EndMenu();
         }
         ShowHelpMarker(
