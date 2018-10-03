@@ -392,7 +392,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
-    if ((flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window)
+    const bool flatten_hovered_children = (flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window->RootWindow;
+    if (flatten_hovered_children)
         g.HoveredWindow = window;
 
     bool pressed = false;
@@ -415,7 +416,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
         }
 
-    if ((flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window)
+    if (flatten_hovered_children)
         g.HoveredWindow = backup_hovered_window;
 
     // AllowOverlap mode (rarely used) requires previous frame HoveredId to be null or to match. This allows using patterns where a later submitted widget overlaps a previous one.
