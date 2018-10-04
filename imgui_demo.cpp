@@ -1,4 +1,4 @@
-// dear imgui, v1.63 WIP
+// dear imgui, v1.66 WIP
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating ImGui into their code base:
@@ -18,6 +18,27 @@
 // It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
 // This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your functions.
 
+/*
+
+Index of this file:
+
+// [SECTION] Forward Declarations, Helpers
+// [SECTION] Demo Window / ShowDemoWindow()
+// [SECTION] Style Editor / ShowStyleEditor()
+// [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
+// [SECTION] Example App: Debug Console / ShowExampleAppConsole()
+// [SECTION] Example App: Debug Log / ShowExampleAppLog()
+// [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
+// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
+// [SECTION] Example App: Long Text / ShowExampleAppLongText()
+// [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
+// [SECTION] Example App: Constrained Resize / ShowExampleAppConstrainedResize()
+// [SECTION] Example App: Simple Overlay / ShowExampleAppSimpleOverlay()
+// [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
+// [SECTION] Example App: Custom Rendering using ImDrawList API / ShowExampleAppCustomRendering()
+
+*/
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -36,7 +57,6 @@
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#define snprintf  _snprintf
 #define vsnprintf _vsnprintf
 #endif
 #ifdef __clang__
@@ -68,7 +88,7 @@
 #define IM_MAX(_A,_B)       (((_A) >= (_B)) ? (_A) : (_B))
 
 //-----------------------------------------------------------------------------
-// DEMO CODE
+// [SECTION] Forward Declarations, Helpers
 //-----------------------------------------------------------------------------
 
 #if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && defined(IMGUI_DISABLE_TEST_WINDOWS) && !defined(IMGUI_DISABLE_DEMO_WINDOWS)   // Obsolete name since 1.53, TEST->DEMO
@@ -128,6 +148,10 @@ void ImGui::ShowUserGuide()
     ImGui::Unindent();
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] Demo Window / ShowDemoWindow()
+//-----------------------------------------------------------------------------
+
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does. You may then search for keywords in the code when you are interested by a specific feature.
 void ImGui::ShowDemoWindow(bool* p_open)
@@ -183,16 +207,18 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_collapse = false;
     static bool no_close = false;
     static bool no_nav = false;
-
+    static bool no_bring_to_front = false;
+    
     ImGuiWindowFlags window_flags = 0;
-    if (no_titlebar)  window_flags |= ImGuiWindowFlags_NoTitleBar;
-    if (no_scrollbar) window_flags |= ImGuiWindowFlags_NoScrollbar;
-    if (!no_menu)     window_flags |= ImGuiWindowFlags_MenuBar;
-    if (no_move)      window_flags |= ImGuiWindowFlags_NoMove;
-    if (no_resize)    window_flags |= ImGuiWindowFlags_NoResize;
-    if (no_collapse)  window_flags |= ImGuiWindowFlags_NoCollapse;
-    if (no_nav)       window_flags |= ImGuiWindowFlags_NoNav;
-    if (no_close)     p_open = NULL; // Don't pass our bool* to Begin
+    if (no_titlebar)        window_flags |= ImGuiWindowFlags_NoTitleBar;
+    if (no_scrollbar)       window_flags |= ImGuiWindowFlags_NoScrollbar;
+    if (!no_menu)           window_flags |= ImGuiWindowFlags_MenuBar;
+    if (no_move)            window_flags |= ImGuiWindowFlags_NoMove;
+    if (no_resize)          window_flags |= ImGuiWindowFlags_NoResize;
+    if (no_collapse)        window_flags |= ImGuiWindowFlags_NoCollapse;
+    if (no_nav)             window_flags |= ImGuiWindowFlags_NoNav;
+    if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
+    if (no_close)           p_open = NULL; // Don't pass our bool* to Begin
 
     // We specify a default position/size in case there's no data in the .ini file. Typically this isn't required! We only do it to make the Demo applications a little more welcoming.
     ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
@@ -247,9 +273,83 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::Spacing();
     if (ImGui::CollapsingHeader("Help"))
     {
-        ImGui::TextWrapped("This window is being created by the ShowDemoWindow() function. Please refer to the code in imgui_demo.cpp for reference.\n\n");
+        ImGui::Text("PROGRAMMER GUIDE:");
+        ImGui::BulletText("Please see the ShowDemoWindow() code in imgui_demo.cpp. <- you are here!");
+        ImGui::BulletText("Please see the comments in imgui.cpp.");
+        ImGui::BulletText("Please see the examples/ in application.");
+        ImGui::BulletText("Enable 'io.ConfigFlags |= NavEnableKeyboard' for keyboard controls.");
+        ImGui::BulletText("Enable 'io.ConfigFlags |= NavEnableGamepad' for gamepad controls.");
+        ImGui::Separator();
+
         ImGui::Text("USER GUIDE:");
         ImGui::ShowUserGuide();
+    }
+
+    if (ImGui::CollapsingHeader("Configuration"))
+    {
+        ImGuiIO& io = ImGui::GetIO();
+
+        if (ImGui::TreeNode("Configuration##2"))
+        {
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
+            ImGui::SameLine(); ShowHelpMarker("Required back-end to feed in gamepad inputs in io.NavInputs[] and set io.BackendFlags |= ImGuiBackendFlags_HasGamepad.\n\nRead instructions in imgui.cpp for details.");
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
+            ImGui::SameLine(); ShowHelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
+            ImGui::CheckboxFlags("io.ConfigFlags: NoMouse", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouse);
+            if (io.ConfigFlags & ImGuiConfigFlags_NoMouse) // Create a way to restore this flag otherwise we could be stuck completely!
+            {
+                if (fmodf((float)ImGui::GetTime(), 0.40f) < 0.20f)
+                {
+                    ImGui::SameLine();
+                    ImGui::Text("<<PRESS SPACE TO DISABLE>>");
+                }
+                if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_Space)))
+                    io.ConfigFlags &= ~ImGuiConfigFlags_NoMouse;
+            }
+            ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
+            ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
+            ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
+            ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");
+            ImGui::Checkbox("io.ConfigResizeWindowsFromEdges [beta]", &io.ConfigResizeWindowsFromEdges);
+            ImGui::SameLine(); ShowHelpMarker("Enable resizing of windows from their edges and from the lower-left corner.\nThis requires (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors) because it needs mouse cursor feedback.");
+            ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
+            ImGui::SameLine(); ShowHelpMarker("Instruct Dear ImGui to render a mouse cursor for you. Note that a mouse cursor rendered via your application GPU rendering path will feel more laggy than hardware cursor, but will be more in sync with your other visuals.\n\nSome desktop applications may use both kinds of cursors (e.g. enable software cursor only when resizing/dragging something).");
+            ImGui::TreePop();
+            ImGui::Separator();
+        }
+
+        if (ImGui::TreeNode("Backend Flags"))
+        {
+            ImGuiBackendFlags backend_flags = io.BackendFlags; // Make a local copy to avoid modifying the back-end flags.
+            ImGui::CheckboxFlags("io.BackendFlags: HasGamepad", (unsigned int *)&backend_flags, ImGuiBackendFlags_HasGamepad);
+            ImGui::CheckboxFlags("io.BackendFlags: HasMouseCursors", (unsigned int *)&backend_flags, ImGuiBackendFlags_HasMouseCursors);
+            ImGui::CheckboxFlags("io.BackendFlags: HasSetMousePos", (unsigned int *)&backend_flags, ImGuiBackendFlags_HasSetMousePos);
+            ImGui::TreePop();
+            ImGui::Separator();
+        }
+
+        if (ImGui::TreeNode("Style"))
+        {
+            ImGui::ShowStyleEditor();
+            ImGui::TreePop();
+            ImGui::Separator();
+        }
+
+        if (ImGui::TreeNode("Capture/Logging"))
+        {
+            ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded.");
+            ShowHelpMarker("Try opening any of the contents below in this window and then click one of the \"Log To\" button.");
+            ImGui::LogButtons();
+            ImGui::TextWrapped("You can also call ImGui::LogText() to output directly to the log without a visual output.");
+            if (ImGui::Button("Copy \"Hello, world!\" to clipboard"))
+            {
+                ImGui::LogToClipboard();
+                ImGui::LogText("Hello, world!");
+                ImGui::LogFinish();
+            }
+            ImGui::TreePop();
+        }
     }
 
     if (ImGui::CollapsingHeader("Window options"))
@@ -261,20 +361,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Checkbox("No resize", &no_resize); ImGui::SameLine(300);
         ImGui::Checkbox("No collapse", &no_collapse);
         ImGui::Checkbox("No close", &no_close); ImGui::SameLine(150);
-        ImGui::Checkbox("No nav", &no_nav);
-
-        if (ImGui::TreeNode("Style"))
-        {
-            ImGui::ShowStyleEditor();
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Capture/Logging"))
-        {
-            ImGui::TextWrapped("The logging API redirects all text output so you can easily capture the content of a window or a block. Tree nodes can be automatically expanded. You can also call ImGui::LogText() to output directly to the log without a visual output.");
-            ImGui::LogButtons();
-            ImGui::TreePop();
-        }
+        ImGui::Checkbox("No nav", &no_nav); ImGui::SameLine(300);
+        ImGui::Checkbox("No bring to front", &no_bring_to_front);
     }
 
     if (ImGui::CollapsingHeader("Widgets"))
@@ -301,7 +389,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // Color buttons, demonstrate using PushID() to add unique identifier in the ID stack, and changing style.
             for (int i = 0; i < 7; i++)
             {
-                if (i > 0) ImGui::SameLine();
+                if (i > 0) 
+                    ImGui::SameLine();
                 ImGui::PushID(i);
                 ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(i/7.0f, 0.6f, 0.6f));
                 ImGui::PushStyleColor(ImGuiCol_ButtonHovered, (ImVec4)ImColor::HSV(i/7.0f, 0.7f, 0.7f));
@@ -311,7 +400,12 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::PopID();
             }
 
-            // Arrow buttons
+            // Use AlignTextToFramePadding() to align text baseline to the baseline of framed elements (otherwise a Text+SameLine+Button sequence will have the text a little too high by default)
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Hold to repeat:");
+            ImGui::SameLine();
+
+            // Arrow buttons with Repeater
             static int counter = 0;
             float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
             ImGui::PushButtonRepeat(true);
@@ -354,7 +448,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 static char str0[128] = "Hello, world!";
                 static int i0 = 123;
                 ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
-                ImGui::SameLine(); ShowHelpMarker("Hold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n");
+                ImGui::SameLine(); ShowHelpMarker("USER:\nHold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n\nPROGRAMMER:\nYou can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputText() to a dynamic string type. See misc/stl/imgui_stl.h for an example (this is not demonstrated in imgui_demo.cpp).");
 
                 ImGui::InputInt("input int", &i0);
                 ImGui::SameLine(); ShowHelpMarker("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
@@ -774,7 +868,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             static char buf3[64] = ""; ImGui::InputText("hexadecimal", buf3, 64, ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase);
             static char buf4[64] = ""; ImGui::InputText("uppercase", buf4, 64, ImGuiInputTextFlags_CharsUppercase);
             static char buf5[64] = ""; ImGui::InputText("no blank", buf5, 64, ImGuiInputTextFlags_CharsNoBlank);
-            struct TextFilters { static int FilterImGuiLetters(ImGuiTextEditCallbackData* data) { if (data->EventChar < 256 && strchr("imgui", (char)data->EventChar)) return 0; return 1; } };
+            struct TextFilters { static int FilterImGuiLetters(ImGuiInputTextCallbackData* data) { if (data->EventChar < 256 && strchr("imgui", (char)data->EventChar)) return 0; return 1; } };
             static char buf6[64] = ""; ImGui::InputText("\"imgui\" letters", buf6, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters);
 
             ImGui::Text("Password input");
@@ -801,10 +895,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "label:\n"
                 "\tlock cmpxchg8b eax\n";
 
-            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+            ShowHelpMarker("You can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputTextMultiline() to a dynamic string type. See misc/stl/imgui_stl.h for an example. (This is not demonstrated in imgui_demo.cpp)");
             ImGui::Checkbox("Read-only", &read_only);
-            ImGui::PopStyleVar();
-            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 16), ImGuiInputTextFlags_AllowTabInput | (read_only ? ImGuiInputTextFlags_ReadOnly : 0));
+            ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput | (read_only ? ImGuiInputTextFlags_ReadOnly : 0);
+            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 16), flags);
             ImGui::TreePop();
         }
 
@@ -1022,14 +1116,25 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         if (ImGui::TreeNode("Data Types"))
         {
-            // The DragScalar, InputScalar, SliderScalar functions allow manipulating most common data types: signed/unsigned int/long long and float/double
-            // To avoid polluting the public API with all possible combinations, we use the ImGuiDataType enum to pass the type, and argument-by-values are turned into argument-by-address.
+            // The DragScalar/InputScalar/SliderScalar functions allow various data types: signed/unsigned int/long long and float/double
+            // To avoid polluting the public API with all possible combinations, we use the ImGuiDataType enum to pass the type, 
+            // and passing all arguments by address. 
             // This is the reason the test code below creates local variables to hold "zero" "one" etc. for each types.
-            // In practice, if you frequently use a given type that is not covered by the normal API entry points, you may want to wrap it yourself inside a 1 line function
-            // which can take typed values argument instead of void*, and then pass their address to the generic function. For example:
-            //   bool SliderU64(const char *label, u64* value, u64 min = 0, u64 max = 0, const char* format = "%lld") { return SliderScalar(label, ImGuiDataType_U64, value, &min, &max, format); }
-            // Below are helper variables we can take the address of to work-around this:
+            // In practice, if you frequently use a given type that is not covered by the normal API entry points, you can wrap it 
+            // yourself inside a 1 line function which can take typed argument as value instead of void*, and then pass their address 
+            // to the generic function. For example:
+            //   bool MySliderU64(const char *label, u64* value, u64 min = 0, u64 max = 0, const char* format = "%lld") 
+            //   { 
+            //      return SliderScalar(label, ImGuiDataType_U64, value, &min, &max, format); 
+            //   }
+
+            // Limits (as helper variables that we can take the address of)
             // Note that the SliderScalar function has a maximum usable range of half the natural type maximum, hence the /2 below.
+            #ifndef LLONG_MIN
+            ImS64 LLONG_MIN = -9223372036854775807LL - 1;
+            ImS64 LLONG_MAX = 9223372036854775807LL;
+            ImU64 ULLONG_MAX = (2ULL * 9223372036854775807LL + 1);
+            #endif
             const ImS32   s32_zero = 0,   s32_one = 1,   s32_fifty = 50, s32_min = INT_MIN/2,   s32_max = INT_MAX/2,    s32_hi_a = INT_MAX/2 - 100,    s32_hi_b = INT_MAX/2;
             const ImU32   u32_zero = 0,   u32_one = 1,   u32_fifty = 50, u32_min = 0,           u32_max = UINT_MAX/2,   u32_hi_a = UINT_MAX/2 - 100,   u32_hi_b = UINT_MAX/2;
             const ImS64   s64_zero = 0,   s64_one = 1,   s64_fifty = 50, s64_min = LLONG_MIN/2, s64_max = LLONG_MAX/2,  s64_hi_a = LLONG_MAX/2 - 100,  s64_hi_b = LLONG_MAX/2;
@@ -1265,19 +1370,20 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("Active, Focused, Hovered & Focused Tests"))
+        if (ImGui::TreeNode("Querying Status (Active/Focused/Hovered etc.)"))
         {
             // Display the value of IsItemHovered() and other common item state functions. Note that the flags can be combined.
             // (because BulletText is an item itself and that would affect the output of IsItemHovered() we pass all state in a single call to simplify the code).
             static int item_type = 1;
             static bool b = false;
             static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
-            ImGui::RadioButton("Text", &item_type, 0); ImGui::SameLine();
-            ImGui::RadioButton("Button", &item_type, 1); ImGui::SameLine();
-            ImGui::RadioButton("CheckBox", &item_type, 2); ImGui::SameLine();
-            ImGui::RadioButton("SliderFloat", &item_type, 3); ImGui::SameLine();
-            ImGui::RadioButton("ColorEdit4", &item_type, 4); ImGui::SameLine();
+            ImGui::RadioButton("Text", &item_type, 0);
+            ImGui::RadioButton("Button", &item_type, 1);
+            ImGui::RadioButton("CheckBox", &item_type, 2);
+            ImGui::RadioButton("SliderFloat", &item_type, 3);
+            ImGui::RadioButton("ColorEdit4", &item_type, 4);
             ImGui::RadioButton("ListBox", &item_type, 5);
+            ImGui::Separator();
             bool ret = false;
             if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
             if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
@@ -1294,9 +1400,13 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 "IsItemHovered(_AllowWhenOverlapped) = %d\n"
                 "IsItemHovered(_RectOnly) = %d\n"
                 "IsItemActive() = %d\n"
+                "IsItemEdited() = %d\n"
                 "IsItemDeactivated() = %d\n"
-                "IsItemDeactivatedAfterChange() = %d\n"
-                "IsItemVisible() = %d\n",
+                "IsItemDeactivatedEdit() = %d\n"
+                "IsItemVisible() = %d\n"
+                "GetItemRectMin() = (%.1f, %.1f)\n"
+                "GetItemRectMax() = (%.1f, %.1f)\n"
+                "GetItemRectSize() = (%.1f, %.1f)",
                 ret,
                 ImGui::IsItemFocused(),
                 ImGui::IsItemHovered(),
@@ -1305,9 +1415,13 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 ImGui::IsItemHovered(ImGuiHoveredFlags_AllowWhenOverlapped),
                 ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
                 ImGui::IsItemActive(),
+                ImGui::IsItemEdited(),
                 ImGui::IsItemDeactivated(),
-                ImGui::IsItemDeactivatedAfterChange(),
-                ImGui::IsItemVisible()
+                ImGui::IsItemDeactivatedAfterEdit(),
+                ImGui::IsItemVisible(),
+                ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y,
+                ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y,
+                ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y
             );
 
             static bool embed_all_inside_a_child_window = false;
@@ -1397,10 +1511,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 {
                     ImGui::Text("%04d: scrollable region", i);
                     if (goto_line && line == i)
-                        ImGui::SetScrollHere();
+                        ImGui::SetScrollHereY();
                 }
                 if (goto_line && line >= 100)
-                    ImGui::SetScrollHere();
+                    ImGui::SetScrollHereY();
                 ImGui::EndChild();
             }
 
@@ -1659,7 +1773,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
         if (ImGui::TreeNode("Scrolling"))
         {
-            ImGui::TextWrapped("(Use SetScrollHere() or SetScrollFromPosY() to scroll to a given position.)");
+            ImGui::TextWrapped("(Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given position.)");
             static bool track = true;
             static int track_line = 50, scroll_to_px = 200;
             ImGui::Checkbox("Track", &track);
@@ -1683,7 +1797,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                     if (track && line == track_line)
                     {
                         ImGui::TextColored(ImColor(255,255,0), "Line %d", line);
-                        ImGui::SetScrollHere(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
+                        ImGui::SetScrollHereY(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
                     }
                     else
                     {
@@ -2146,16 +2260,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Text("WantSetMousePos: %d", io.WantSetMousePos);
         ImGui::Text("NavActive: %d, NavVisible: %d", io.NavActive, io.NavVisible);
 
-        ImGui::Checkbox("io.MouseDrawCursor", &io.MouseDrawCursor);
-        ImGui::SameLine(); ShowHelpMarker("Instruct ImGui to render a mouse cursor for you in software. Note that a mouse cursor rendered via your application GPU rendering path will feel more laggy than hardware cursor, but will be more in sync with your other visuals.\n\nSome desktop applications may use both kinds of cursors (e.g. enable software cursor only when resizing/dragging something).");
-
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard [beta]", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
-        ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
-        ImGui::SameLine(); ShowHelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
-        ImGui::CheckboxFlags("io.ConfigFlags: NoMouseCursorChange", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_NoMouseCursorChange);
-        ImGui::SameLine(); ShowHelpMarker("Instruct back-end to not alter mouse cursor shape and visibility.");
-
         if (ImGui::TreeNode("Keyboard, Mouse & Navigation State"))
         {
             if (ImGui::IsMousePosValid())
@@ -2293,6 +2397,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::End();
 }
 
+//-----------------------------------------------------------------------------
+// [SECTION] Style Editor / ShowStyleEditor()
+//-----------------------------------------------------------------------------
+
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
 // Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
 bool ImGui::ShowStyleSelector(const char* label)
@@ -2376,8 +2484,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines); ImGui::SameLine(); ShowHelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
         ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
         ImGui::PushItemWidth(100);
-        ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, NULL, 2.0f);
-        if (style.CurveTessellationTol < 0.0f) style.CurveTessellationTol = 0.10f;
+        ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, FLT_MAX, "%.2f", 2.0f);
+        if (style.CurveTessellationTol < 0.10f) style.CurveTessellationTol = 0.10f;
         ImGui::DragFloat("Global Alpha", &style.Alpha, 0.005f, 0.20f, 1.0f, "%.2f"); // Not exposing zero here so user doesn't "lose" the UI (zero alpha clips all widgets). But application code could have a toggle to switch between zero and non-zero.
         ImGui::PopItemWidth();
         ImGui::TreePop();
@@ -2557,7 +2665,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: MAIN MENU BAR
+// [SECTION] Example App: Main Menu Bar / ShowExampleAppMainMenuBar()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a fullscreen menu bar and populating it.
@@ -2650,10 +2758,10 @@ static void ShowExampleMenuFile()
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: CONSOLE
+// [SECTION] Example App: Debug Console / ShowExampleAppConsole()
 //-----------------------------------------------------------------------------
 
-// Demonstrating creating a simple console window, with scrolling, filtering, completion and history.
+// Demonstrate creating a simple console window, with scrolling, filtering, completion and history.
 // For the console example, here we are using a more C++ like approach of declaring a class to hold the data and the functions.
 struct ExampleAppConsole
 {
@@ -2785,7 +2893,7 @@ struct ExampleAppConsole
         if (copy_to_clipboard)
             ImGui::LogFinish();
         if (ScrollToBottom)
-            ImGui::SetScrollHere(1.0f);
+            ImGui::SetScrollHereY(1.0f);
         ScrollToBottom = false;
         ImGui::PopStyleVar();
         ImGui::EndChild();
@@ -2795,14 +2903,15 @@ struct ExampleAppConsole
         bool reclaim_focus = false;
         if (ImGui::InputText("Input", InputBuf, IM_ARRAYSIZE(InputBuf), ImGuiInputTextFlags_EnterReturnsTrue|ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_CallbackHistory, &TextEditCallbackStub, (void*)this))
         {
-            Strtrim(InputBuf);
-            if (InputBuf[0])
-                ExecCommand(InputBuf);
-            strcpy(InputBuf, "");
+            char* s = InputBuf;
+            Strtrim(s);
+            if (s[0])
+                ExecCommand(s);
+            strcpy(s, "");
             reclaim_focus = true;
         }
 
-        // Demonstrate keeping focus on the input box
+        // Auto-focus on window apparition
         ImGui::SetItemDefaultFocus();
         if (reclaim_focus)
             ImGui::SetKeyboardFocusHere(-1); // Auto focus previous widget
@@ -2848,13 +2957,13 @@ struct ExampleAppConsole
         }
     }
 
-    static int TextEditCallbackStub(ImGuiTextEditCallbackData* data) // In C++11 you are better off using lambdas for this sort of forwarding callbacks
+    static int TextEditCallbackStub(ImGuiInputTextCallbackData* data) // In C++11 you are better off using lambdas for this sort of forwarding callbacks
     {
         ExampleAppConsole* console = (ExampleAppConsole*)data->UserData;
         return console->TextEditCallback(data);
     }
 
-    int     TextEditCallback(ImGuiTextEditCallbackData* data)
+    int     TextEditCallback(ImGuiInputTextCallbackData* data)
     {
         //AddLog("cursor: %d, selection: %d-%d", data->CursorPos, data->SelectionStart, data->SelectionEnd);
         switch (data->EventFlag)
@@ -2945,8 +3054,9 @@ struct ExampleAppConsole
                 // A better implementation would preserve the data on the current input line along with cursor position.
                 if (prev_history_pos != HistoryPos)
                 {
-                    data->CursorPos = data->SelectionStart = data->SelectionEnd = data->BufTextLen = (int)snprintf(data->Buf, (size_t)data->BufSize, "%s", (HistoryPos >= 0) ? History[HistoryPos] : "");
-                    data->BufDirty = true;
+                    const char* history_str = (HistoryPos >= 0) ? History[HistoryPos] : "";
+                    data->DeleteChars(0, data->BufTextLen);
+                    data->InsertChars(0, history_str);
                 }
             }
         }
@@ -2961,7 +3071,7 @@ static void ShowExampleAppConsole(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: LOG
+// [SECTION] Example App: Debug Log / ShowExampleAppLog()
 //-----------------------------------------------------------------------------
 
 // Usage:
@@ -3025,7 +3135,7 @@ struct ExampleAppLog
         }
 
         if (ScrollToBottom)
-            ImGui::SetScrollHere(1.0f);
+            ImGui::SetScrollHereY(1.0f);
         ScrollToBottom = false;
         ImGui::EndChild();
         ImGui::End();
@@ -3051,7 +3161,7 @@ static void ShowExampleAppLog(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: SIMPLE LAYOUT
+// [SECTION] Example App: Simple Layout / ShowExampleAppLayout()
 //-----------------------------------------------------------------------------
 
 // Demonstrate create a window with multiple child windows.
@@ -3099,7 +3209,7 @@ static void ShowExampleAppLayout(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: PROPERTY EDITOR
+// [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 //-----------------------------------------------------------------------------
 
 // Demonstrate create a simple property editor.
@@ -3172,7 +3282,7 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: LONG TEXT
+// [SECTION] Example App: Long Text / ShowExampleAppLongText()
 //-----------------------------------------------------------------------------
 
 // Demonstrate/test rendering huge amount of text, and the incidence of clipping.
@@ -3230,7 +3340,7 @@ static void ShowExampleAppLongText(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: AUTO RESIZE
+// [SECTION] Example App: Auto Resize / ShowExampleAppAutoResize()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window which gets auto-resized according to its content.
@@ -3251,7 +3361,7 @@ static void ShowExampleAppAutoResize(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: CONSTRAINED RESIZE
+// [SECTION] Example App: Constrained Resize / ShowExampleAppConstrainedResize()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a window with custom resize constraints.
@@ -3302,7 +3412,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: SIMPLE OVERLAY
+// [SECTION] Example App: Simple Overlay / ShowExampleAppSimpleOverlay()
 //-----------------------------------------------------------------------------
 
 // Demonstrate creating a simple static window with no decoration + a context-menu to choose which corner of the screen to use.
@@ -3338,7 +3448,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: WINDOW TITLES
+// [SECTION] Example App: Manipulating Window Titles / ShowExampleAppWindowTitles()
 //-----------------------------------------------------------------------------
 
 // Demonstrate using "##" and "###" in identifiers to manipulate ID generation.
@@ -3369,7 +3479,7 @@ static void ShowExampleAppWindowTitles(bool*)
 }
 
 //-----------------------------------------------------------------------------
-// EXAMPLE APP CODE: CUSTOM RENDERING
+// [SECTION] Example App: Custom Rendering using ImDrawList API / ShowExampleAppCustomRendering()
 //-----------------------------------------------------------------------------
 
 // Demonstrate using the low-level ImDrawList to draw custom shapes.

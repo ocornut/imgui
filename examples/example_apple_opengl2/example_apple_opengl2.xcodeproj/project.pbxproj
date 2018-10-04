@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07A82EDB213941D00078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82EDA213941D00078D120 /* imgui_widgets.cpp */; };
 		4080A99820B02D340036BA46 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 4080A98A20B02CD90036BA46 /* main.mm */; };
 		4080A9A220B034280036BA46 /* imgui_impl_opengl2.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4080A99E20B034280036BA46 /* imgui_impl_opengl2.cpp */; };
 		4080A9AD20B0343C0036BA46 /* imgui_demo.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 4080A9A620B0343C0036BA46 /* imgui_demo.cpp */; };
@@ -30,6 +31,7 @@
 /* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
+		07A82EDA213941D00078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
 		4080A96B20B029B00036BA46 /* example_osx_opengl2 */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.executable"; includeInIndex = 0; path = example_osx_opengl2; sourceTree = BUILT_PRODUCTS_DIR; };
 		4080A98A20B02CD90036BA46 /* main.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; path = main.mm; sourceTree = SOURCE_ROOT; };
 		4080A99E20B034280036BA46 /* imgui_impl_opengl2.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_impl_opengl2.cpp; path = ../imgui_impl_opengl2.cpp; sourceTree = "<group>"; };
@@ -66,11 +68,12 @@
 			isa = PBXGroup;
 			children = (
 				4080A9AC20B0343C0036BA46 /* imconfig.h */,
+				4080A9A720B0343C0036BA46 /* imgui.cpp */,
+				4080A9A820B0343C0036BA46 /* imgui.h */,
+				07A82EDA213941D00078D120 /* imgui_widgets.cpp */,
 				4080A9A620B0343C0036BA46 /* imgui_demo.cpp */,
 				4080A9AA20B0343C0036BA46 /* imgui_draw.cpp */,
 				4080A9A520B0343C0036BA46 /* imgui_internal.h */,
-				4080A9A720B0343C0036BA46 /* imgui.cpp */,
-				4080A9A820B0343C0036BA46 /* imgui.h */,
 				4080A9A920B0343C0036BA46 /* stb_rect_pack.h */,
 				4080A9AB20B0343C0036BA46 /* stb_textedit.h */,
 				4080A9A420B0343C0036BA46 /* stb_truetype.h */,
@@ -135,7 +138,7 @@
 					};
 				};
 			};
-			buildConfigurationList = 4080A96620B029B00036BA46 /* Build configuration list for PBXProject "example_osx_opengl2" */;
+			buildConfigurationList = 4080A96620B029B00036BA46 /* Build configuration list for PBXProject "example_apple_opengl2" */;
 			compatibilityVersion = "Xcode 9.3";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
@@ -163,6 +166,7 @@
 				4080A9A220B034280036BA46 /* imgui_impl_opengl2.cpp in Sources */,
 				4080A9B020B0347A0036BA46 /* imgui_impl_osx.mm in Sources */,
 				4080A9AE20B0343C0036BA46 /* imgui.cpp in Sources */,
+				07A82EDB213941D00078D120 /* imgui_widgets.cpp in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -301,7 +305,7 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		4080A96620B029B00036BA46 /* Build configuration list for PBXProject "example_osx_opengl2" */ = {
+		4080A96620B029B00036BA46 /* Build configuration list for PBXProject "example_apple_opengl2" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				4080A97020B029B00036BA46 /* Debug */,

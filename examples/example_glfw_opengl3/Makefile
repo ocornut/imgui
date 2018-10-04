@@ -17,18 +17,36 @@
 EXE = example_glfw_opengl3
 SOURCES = main.cpp
 SOURCES += ../imgui_impl_glfw.cpp ../imgui_impl_opengl3.cpp
-SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp
-SOURCES += ../libs/gl3w/GL/gl3w.c
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
-
 UNAME_S := $(shell uname -s)
 
+##---------------------------------------------------------------------
+## OPENGL LOADER
+##---------------------------------------------------------------------
+
+## Using OpenGL loader: gl3w [default]
+SOURCES += ../libs/gl3w/GL/gl3w.c
+CXXFLAGS = -I../libs/gl3w
+
+## Using OpenGL loader: glew
+## (This assumes a system-wide installation)
+# CXXFLAGS = -lGLEW -DIMGUI_IMPL_OPENGL_LOADER_GLEW
+
+## Using OpenGL loader: glad
+## (You'll also need to change the rule at line ~77 of this Makefile to compile/link glad.c/.o)
+# SOURCES += ../libs/glad/src/glad.c
+# CXXFLAGS = -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
+
+##---------------------------------------------------------------------
+## BUILD FLAGS PER PLATFORM
+##---------------------------------------------------------------------
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	LIBS = -lGL `pkg-config --static --libs glfw3`
 
-	CXXFLAGS = -I../ -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+	CXXFLAGS += -I../ -I../../  `pkg-config --cflags glfw3`
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -39,7 +57,7 @@ ifeq ($(UNAME_S), Darwin) #APPLE
 	#LIBS += -L/usr/local/lib -lglfw3
 	LIBS += -L/usr/local/lib -lglfw
 
-	CXXFLAGS = -I../ -I../../ -I../libs/gl3w -I/usr/local/include
+	CXXFLAGS += -I../ -I../../ -I/usr/local/include
 	CXXFLAGS += -Wall -Wformat
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -48,11 +66,14 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    ECHO_MESSAGE = "Windows"
    LIBS = -lglfw3 -lgdi32 -lopengl32 -limm32
 
-   CXXFLAGS = -I../ -I../../ -I../libs/gl3w `pkg-config --cflags glfw3`
+   CXXFLAGS += -I../ -I../../ `pkg-config --cflags glfw3`
    CXXFLAGS += -Wall -Wformat
    CFLAGS = $(CXXFLAGS)
 endif
 
+##---------------------------------------------------------------------
+## BUILD RULES
+##---------------------------------------------------------------------
 
 %.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
@@ -64,6 +85,7 @@ endif
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:../libs/gl3w/GL/%.c
+# %.o:../libs/glad/src/%.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 all: $(EXE)

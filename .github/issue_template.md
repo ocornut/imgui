@@ -1,11 +1,13 @@
-You may use the Issue Tracker to ask for help and submit bug reports, feature requests or suggestions. 
+(Click "Preview" to turn any http URL into a clickable link)
 
-PLEASE CAREFULLY READ THIS DOCUMENT before doing so:
-[CONTRIBUTING.md](https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md).
+1. IF YOU ARE HAVING AN ISSUE COMPILING/LINKING/RUNNING/DISPLAYING/ADDING FONTS/WIRING INPUTS, please post on the "Getting Started" Discourse forum:
+https://discourse.dearimgui.org/c/getting-started
 
-SELECT "PREVIEW CHANGES" TO TURN THE URL ABOVE INTO A CLICKABLE LINK.
+2. You may use this Issue Tracker to ask for help and submit bug reports, feature requests or suggestions that don't fit in any category of (1). PLEASE CAREFULLY READ THE CONTRIBUTING DOCUMENT before submitting any issue: https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md
 
-(Delete everything above this section before submitting your issue. Please read the CONTRIBUTING.md file!)
+3. PLEASE MAKE SURE that you have: read the FAQ in imgui.cpp; explored the contents of ShowDemoWindow() including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the CONTRIBUTING.md file linked above.
+
+4. Delete points 1-4 and PLEASE FILL THE TEMPLATE BELOW before submitting your issue. 
 
 ----
 
@@ -20,6 +22,8 @@ OS: XXX
 Compiler: XXX _(if the question is related to building)_
 
 **My Issue/Question:** _(please provide context)_
+
+XXX
 
 **Standalone, minimal, complete and verifiable example:** _(see CONTRIBUTING.md)_
 ```

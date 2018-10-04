@@ -1,4 +1,4 @@
-// ImGui Renderer for: Metal
+// dear imgui: Renderer for Metal
 // This needs to be used along with a Platform Binding (e.g. OSX)
 
 // Implemented features:

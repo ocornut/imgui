@@ -1,4 +1,4 @@
-// ImGui Renderer for: Metal
+// dear imgui: Renderer for Metal
 // This needs to be used along with a Platform Binding (e.g. OSX)
 
 // Implemented features:
@@ -98,7 +98,7 @@ bool ImGui_ImplMetal_CreateFontsTexture(id<MTLDevice> device)
     [g_sharedMetalContext makeFontTextureWithDevice:device];
     
     ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture;
+    io.Fonts->TexID = (__bridge void *)g_sharedMetalContext.fontTexture; // ImTextureID == void*
 
     return (g_sharedMetalContext.fontTexture != nil);
 }
@@ -408,7 +408,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     [commandEncoder setDepthStencilState:g_sharedMetalContext.depthStencilState];
     
     // Setup viewport, orthographic projection matrix
-    // Our visible imgui space lies from draw_data->DisplayPps (top left) to
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to
     // draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     MTLViewport viewport = 
     {   

@@ -1,4 +1,4 @@
-// ImGui Renderer for: DirectX10
+// dear imgui: Renderer for DirectX10
 // This needs to be used along with a Platform Binding (e.g. Win32)
 
 // Implemented features:
@@ -32,11 +32,11 @@ static ID3D10Device*            g_pd3dDevice = NULL;
 static IDXGIFactory*            g_pFactory = NULL;
 static ID3D10Buffer*            g_pVB = NULL;
 static ID3D10Buffer*            g_pIB = NULL;
-static ID3D10Blob *             g_pVertexShaderBlob = NULL;
+static ID3D10Blob*              g_pVertexShaderBlob = NULL;
 static ID3D10VertexShader*      g_pVertexShader = NULL;
 static ID3D10InputLayout*       g_pInputLayout = NULL;
 static ID3D10Buffer*            g_pVertexConstantBuffer = NULL;
-static ID3D10Blob *             g_pPixelShaderBlob = NULL;
+static ID3D10Blob*              g_pPixelShaderBlob = NULL;
 static ID3D10PixelShader*       g_pPixelShader = NULL;
 static ID3D10SamplerState*      g_pFontSampler = NULL;
 static ID3D10ShaderResourceView*g_pFontTextureView = NULL;
@@ -213,7 +213,8 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
                 ctx->RSSetScissorRects(1, &r);
 
                 // Bind texture, Draw
-                ctx->PSSetShaderResources(0, 1, (ID3D10ShaderResourceView**)&pcmd->TextureId);
+                ID3D10ShaderResourceView* texture_srv = (ID3D10ShaderResourceView*)pcmd->TextureId;
+                ctx->PSSetShaderResources(0, 1, &texture_srv);
                 ctx->DrawIndexed(pcmd->ElemCount, idx_offset, vtx_offset);
             }
             idx_offset += pcmd->ElemCount;
@@ -279,7 +280,7 @@ static void ImGui_ImplDX10_CreateFontsTexture()
     }
 
     // Store our identifier
-    io.Fonts->TexID = (void *)g_pFontTextureView;
+    io.Fonts->TexID = (ImTextureID)g_pFontTextureView;
 
     // Create texture sampler
     {

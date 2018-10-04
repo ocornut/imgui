@@ -1,14 +1,22 @@
 
-The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer) that is used by default.
-We embed the font in source code so you can use Dear ImGui without any file system access.
+The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
+a 13 pixels high, pixel-perfect font used by default.
+We embed it font in source code so you can use Dear ImGui without any file system access.
+
 You may also load external .TTF/.OTF files. 
 The files in this folder are suggested fonts, provided as a convenience.
-(Note: .OTF support in stb_truetype.h currently doesn't appear to load every font)
+(Note: .OTF support in imstb_truetype.h currently doesn't appear to load every font)
 
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
 
-In this document:
+If you have other loading/merging/adding fonts, you can post on the Dear ImGui "Getting Started" forum:
+  https://discourse.dearimgui.org/c/getting-started
+
+
+---------------------------------------
+ INDEX:
+---------------------------------------
 
 - Readme First / FAQ
 - Using Icons
@@ -30,6 +38,7 @@ In this document:
        u8"hello"
        u8"こんにちは"   // this will be encoded as UTF-8
  - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
+ - Please use the Discourse forum (https://discourse.dearimgui.org) and not the Github issue tracker for basic font loading questions.
 
 
 ---------------------------------------
@@ -62,7 +71,11 @@ In this document:
    io.Fonts->AddFontFromFileTTF("fonts/fontawesome-webfont.ttf", 13.0f, &config, icon_ranges);
 
    // Usage, e.g.
-   ImGui::Button(ICON_FA_SEARCH " Search");                     // C string literals can be concatenated at compilation time, this is the same as "A" "B" becoming "AB"
+   ImGui::Button(ICON_FA_SEARCH " Search");
+   // C string _literals_ can be concatenated at compilation time, e.g. "hello" " world"
+   // ICON_FA_SEARCH is defined as a string literal so this is the same as "A" "B" becoming "AB" 
+
+   // Usage, e.g.
    ImGui::Text("%s among %d items", ICON_FA_SEARCH, count);
    
  See Links below for other icons fonts and related tools.
@@ -97,13 +110,19 @@ In this document:
    config.GlyphExtraSpacing.x = 1.0f;
    ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 
- If you have very large number of glyphs or multiple fonts:
+ If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API.
+ The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
+ In particular, using a large range such as GetGlyphRangesChineseSimplifiedCommon() is not recommended unless you 
+ set OversampleH/OversampleV to 1 and use a small font size.
+ Mind the fact that some graphics drivers have texture size limitation.
+ If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
+ Some solutions:
 
-  - Mind the fact that some graphics drivers have texture size limitation.
-  - Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
-  - Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
-  - You may reduce oversampling, e.g. config.OversampleH = 1, this will largely reduce your textue size.
-  - Reduce glyphs ranges, consider calculating them based on your source data if this is possible.
+  - 1) Reduce glyphs ranges by calculating them from source localization data. You can use ImFont::GlyphRangesBuilder for this purpose,
+    this will be the biggest win. 
+  - 2) You may reduce oversampling, e.g. config.OversampleH = config.OversampleV = 1, this will largely reduce your texture size.
+  - 3) Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
+  - 4) Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
 
  Combine two fonts into one:
 
@@ -112,12 +131,13 @@ In this document:
 
    // Add character ranges and merge into the previous font
    // The ranges array is not copied by the AddFont* functions and is used lazily
-   // so ensure it is available for duration of font usage
-   static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // will not be copied by AddFont* so keep in scope.
+   // so ensure it is available at the time of building or calling GetTexDataAsRGBA32().
+   static const ImWchar icons_ranges[] = { 0xf000, 0xf3ff, 0 }; // Will not be copied by AddFont* so keep in scope.
    ImFontConfig config;
    config.MergeMode = true;
    io.Fonts->AddFontFromFileTTF("DroidSans.ttf", 18.0f, &config, io.Fonts->GetGlyphRangesJapanese());
    io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 18.0f, &config, icons_ranges);
+   io.Fonts->Build();
 
  Add a fourth parameter to bake specific font ranges only:
 
@@ -141,12 +161,15 @@ In this document:
  FREETYPE RASTERIZER, SMALL FONT SIZES
 ---------------------------------------
 
- Dear Imgui uses stb_truetype.h to rasterize fonts (with optional oversampling).
- This technique and implementation are not ideal for fonts rendered at _small sizes_, which may appear a little blurry.
+ Dear ImGui uses imstb_truetype.h to rasterize fonts (with optional oversampling).
+ This technique and its implementation are not ideal for fonts rendered at _small sizes_, which may appear a 
+ little blurry or hard to read. 
+
  There is an implementation of the ImFontAtlas builder using FreeType that you can use in the misc/freetype/ folder.
 
  FreeType supports auto-hinting which tends to improve the readability of small fonts.
- Note that this code currently creates textures that are unoptimally too large (could be fixed with some work)
+ Note that this code currently creates textures that are unoptimally too large (could be fixed with some work).
+ Also note that correct sRGB space blending will have an important effect on your font rendering quality.
 
 
 ---------------------------------------
@@ -162,7 +185,9 @@ In this document:
    builder.AddChar(0x7262);                               // Add a specific character
    builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
    builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
+
    io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
+   io.Fonts->Build();                                     // Build the atlas while 'ranges' is still in scope and not deleted.
 
 
 ---------------------------------------
@@ -175,11 +200,8 @@ In this document:
  The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger. 
 
  Then load the font with:
- 
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
-   
- Or 
- 
+ or: 
    ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
 
 
@@ -232,6 +254,10 @@ In this document:
 
  (Icons) IcoMoon - Custom Icon font builder
    https://icomoon.io/app
+
+ (Pixel perfect) Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A)
+   https://github.com/kmar/Sweet16Font
+   Also include .inl file to use directly in dear imgui.
 
  (Regular) Open Sans Fonts
    https://fonts.google.com/specimen/Open+Sans

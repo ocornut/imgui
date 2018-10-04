@@ -1,4 +1,4 @@
-// ImGui Renderer for: Vulkan
+// dear imgui: Renderer for Vulkan
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Missing features:
@@ -8,10 +8,14 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification. 
+// IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
+
 #include <vulkan/vulkan.h>
 
-#define IMGUI_VK_QUEUED_FRAMES 2
+#define IMGUI_VK_QUEUED_FRAMES      2
 
+// Please zero-clear before use.
 struct ImGui_ImplVulkan_InitInfo
 {
     VkInstance                      Instance;
@@ -25,24 +29,31 @@ struct ImGui_ImplVulkan_InitInfo
     void                            (*CheckVkResultFn)(VkResult err);
 };
 
+// Called by user code
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
-
-// Called by Init/NewFrame/Shutdown
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
+
+// Called by ImGui_ImplVulkan_Init() might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
+
 
 //-------------------------------------------------------------------------
-// Miscellaneous Vulkan Helpers
-// Generally we try to NOT provide any kind of superfluous high-level helpers in the examples. 
-// But for the upcoming multi-viewport feature, the Vulkan will need this code anyway, so we decided to shared it and use it in the examples' main.cpp
-// If your application/engine already has code to create all that data (swap chain, render pass, frame buffers, etc.) you can ignore all of this.
+// Internal / Miscellaneous Vulkan Helpers
 //-------------------------------------------------------------------------
-// NB: Those functions do NOT use any of the state used/affected by the regular ImGui_ImplVulkan_XXX functions.
+// You probably do NOT need to use or care about those functions. 
+// Those functions only exist because:
+//   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
+//   2) the upcoming multi-viewport feature will need them internally.
+// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings, 
+// but it is too much code to duplicate everywhere so we exceptionally expose them.
+// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+// You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
+// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
 struct ImGui_ImplVulkanH_FrameData;
@@ -55,9 +66,10 @@ IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhys
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
+// Helper structure to hold the data needed by one rendering frame
 struct ImGui_ImplVulkanH_FrameData
 {
-    uint32_t            BackbufferIndex;    // keep track of recently rendered swapchain frame indices
+    uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
     VkFence             Fence;
@@ -67,6 +79,7 @@ struct ImGui_ImplVulkanH_FrameData
     IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
 };
 
+// Helper structure to hold the data needed by one rendering context into one OS window
 struct ImGui_ImplVulkanH_WindowData
 {
     int                 Width;

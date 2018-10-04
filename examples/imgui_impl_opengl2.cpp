@@ -1,4 +1,4 @@
-// ImGui Renderer for: OpenGL2 (legacy OpenGL, fixed pipeline)
+// dear imgui: Renderer for OpenGL2 (legacy OpenGL, fixed pipeline)
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
@@ -18,6 +18,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2018-08-03: OpenGL: Disabling/restoring GL_LIGHTING and GL_COLOR_MATERIAL to increase compatibility with legacy OpenGL applications.
 //  2018-06-08: Misc: Extracted imgui_impl_opengl2.cpp/.h away from the old combined GLFW/SDL+OpenGL2 examples.
 //  2018-06-08: OpenGL: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_ImplGlfwGL2_RenderDrawData() in the .h file so you can call it yourself.
@@ -90,6 +91,8 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
+    glDisable(GL_LIGHTING);
+    glDisable(GL_COLOR_MATERIAL);
     glEnable(GL_SCISSOR_TEST);
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -99,7 +102,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
 
     // Setup viewport, orthographic projection matrix
-    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     glViewport(0, 0, (GLsizei)fb_width, (GLsizei)fb_height);
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -179,7 +182,7 @@ bool ImGui_ImplOpenGL2_CreateFontsTexture()
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA, GL_UNSIGNED_BYTE, pixels);
 
     // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)g_FontTexture;
+    io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontTexture;
 
     // Restore state
     glBindTexture(GL_TEXTURE_2D, last_texture);

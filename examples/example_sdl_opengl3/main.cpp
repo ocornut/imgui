@@ -1,5 +1,5 @@
-// ImGui - standalone example application for SDL2 + OpenGL
-// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// dear imgui: standalone example application for SDL2 + OpenGL
+// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
 
@@ -9,10 +9,18 @@
 #include <stdio.h>
 #include <SDL.h>
 
-#include <GL/gl3w.h>    // This example is using gl3w to access OpenGL functions. You may use another OpenGL loader/header such as: glew, glext, glad, glLoadGen, etc.
-//#include <glew.h>
-//#include <glext.h>
-//#include <glad/glad.h>
+// About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually. 
+// Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
+// You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+#include <GL/gl3w.h>    // Initialize with gl3wInit()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+#include <GL/glew.h>    // Initialize with glewInit()
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+#include <glad/glad.h>  // Initialize with gladLoadGL()
+#else
+#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#endif
 
 int main(int, char**)
 {
@@ -49,7 +57,20 @@ int main(int, char**)
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_SetSwapInterval(1); // Enable vsync
-    gl3wInit();
+
+    // Initialize OpenGL loader
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+    bool err = gl3wInit() != 0;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+    bool err = glewInit() != GLEW_OK;
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+    bool err = gladLoadGL() == 0;
+#endif
+    if (err)
+    {
+        fprintf(stderr, "Failed to initialize OpenGL loader!\n");
+        return 1;
+    }
 
     // Setup Dear ImGui binding
     IMGUI_CHECKVERSION();

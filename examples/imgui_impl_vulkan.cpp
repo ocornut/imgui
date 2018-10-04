@@ -1,4 +1,4 @@
-// ImGui Renderer for: Vulkan
+// dear imgui: Renderer for Vulkan
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Missing features:
@@ -8,8 +8,12 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+// The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification. 
+// IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
+
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-08-25: Vulkan: Fixed mishandled VkSurfaceCapabilitiesKHR::maxImageCount=0 case.
 //  2018-06-22: Inverted the parameters to ImGui_ImplVulkan_RenderDrawData() to be consistent with other bindings.
 //  2018-06-08: Misc: Extracted imgui_impl_vulkan.cpp/.h away from the old combined GLFW+Vulkan example.
 //  2018-06-08: Vulkan: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
@@ -164,7 +168,7 @@ static void check_vk_result(VkResult err)
 static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory, VkDeviceSize& p_buffer_size, size_t new_size, VkBufferUsageFlagBits usage)
 {
     VkResult err;
-    if (buffer != NULL)
+    if (buffer != VK_NULL_HANDLE)
         vkDestroyBuffer(g_Device, buffer, g_Allocator);
     if (buffer_memory)
         vkFreeMemory(g_Device, buffer_memory, g_Allocator);
@@ -214,8 +218,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     // Upload Vertex and index Data:
     {
-        ImDrawVert* vtx_dst;
-        ImDrawIdx* idx_dst;
+        ImDrawVert* vtx_dst = NULL;
+        ImDrawIdx* idx_dst = NULL;
         err = vkMapMemory(g_Device, fd->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
         check_vk_result(err);
         err = vkMapMemory(g_Device, fd->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst));
@@ -269,7 +273,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     }
 
     // Setup scale and translation:
-    // Our visible imgui space lies from draw_data->DisplayPps (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
     {
         float scale[2];
         scale[0] = 2.0f / draw_data->DisplaySize.x;
@@ -461,7 +465,7 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
     }
 
     // Store our identifier
-    io.Fonts->TexID = (void *)(intptr_t)g_FontImage;
+    io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontImage;
 
     return true;
 }
@@ -691,12 +695,12 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects()
 
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass)
 {
-    IM_ASSERT(info->Instance != NULL);
-    IM_ASSERT(info->PhysicalDevice != NULL);
-    IM_ASSERT(info->Device != NULL);
-    IM_ASSERT(info->Queue != NULL);
-    IM_ASSERT(info->DescriptorPool != NULL);
-    IM_ASSERT(render_pass != NULL);
+    IM_ASSERT(info->Instance != VK_NULL_HANDLE);
+    IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
+    IM_ASSERT(info->Device != VK_NULL_HANDLE);
+    IM_ASSERT(info->Queue != VK_NULL_HANDLE);
+    IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
+    IM_ASSERT(render_pass != VK_NULL_HANDLE);
 
     g_Instance = info->Instance;
     g_PhysicalDevice = info->PhysicalDevice;
@@ -723,8 +727,19 @@ void ImGui_ImplVulkan_NewFrame()
 {
 }
 
+
 //-------------------------------------------------------------------------
-// Miscellaneous Vulkan Helpers
+// Internal / Miscellaneous Vulkan Helpers
+//-------------------------------------------------------------------------
+// You probably do NOT need to use or care about those functions. 
+// Those functions only exist because:
+//   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
+//   2) the upcoming multi-viewport feature will need them internally.
+// Generally we avoid exposing any kind of superfluous high-level helpers in the bindings, 
+// but it is too much code to duplicate everywhere so we exceptionally expose them.
+// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+// You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
+// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
 #include <stdlib.h> // malloc
@@ -811,6 +826,9 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
     ImVector<VkPresentModeKHR> avail_modes;
     avail_modes.resize((int)avail_count);
     vkGetPhysicalDeviceSurfacePresentModesKHR(physical_device, surface, &avail_count, avail_modes.Data);
+    //for (uint32_t avail_i = 0; avail_i < avail_count; avail_i++)
+    //    printf("[vulkan] avail_modes[%d] = %d\n", avail_i, avail_modes[avail_i]);
+
     for (int request_i = 0; request_i < request_modes_count; request_i++)
         for (uint32_t avail_i = 0; avail_i < avail_count; avail_i++)
             if (request_modes[request_i] == avail_modes[avail_i])
@@ -821,7 +839,7 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
 
 void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator)
 {
-    IM_ASSERT(physical_device != NULL && device != NULL);
+    IM_ASSERT(physical_device != VK_NULL_HANDLE && device != VK_NULL_HANDLE);
     (void)allocator;
 
     // Create Command Buffers
@@ -920,9 +938,9 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice 
         VkSurfaceCapabilitiesKHR cap;
         err = vkGetPhysicalDeviceSurfaceCapabilitiesKHR(physical_device, wd->Surface, &cap);
         check_vk_result(err);
-		if (info.minImageCount < cap.minImageCount)
+        if (info.minImageCount < cap.minImageCount)
 			info.minImageCount = cap.minImageCount;
-		else if (info.minImageCount > cap.maxImageCount)
+		else if (cap.maxImageCount != 0 && info.minImageCount > cap.maxImageCount)
 			info.minImageCount = cap.maxImageCount;
 
         if (cap.currentExtent.width == 0xffffffff)

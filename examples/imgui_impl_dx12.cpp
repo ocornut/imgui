@@ -1,4 +1,4 @@
-// ImGui Renderer for: DirectX12
+// dear imgui: Renderer for DirectX12
 // This needs to be used along with a Platform Binding (e.g. Win32)
 
 // Implemented features:
@@ -365,7 +365,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
 
     // Store our identifier
     static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->TexID = (void *)g_hFontSrvGpuDescHandle.ptr;
+    io.Fonts->TexID = (ImTextureID)g_hFontSrvGpuDescHandle.ptr;
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()

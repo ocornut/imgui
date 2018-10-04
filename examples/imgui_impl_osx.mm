@@ -1,4 +1,4 @@
-// ImGui Platform Binding for: OSX / Cocoa
+// dear imgui: Platform Binding for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
 // [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
 
@@ -188,7 +188,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         {
             int c = [str characterAtIndex:i];
             if (c < 0xF700 && !io.KeyCtrl)
-                io.AddInputCharacter(c);
+                io.AddInputCharacter((unsigned short)c);
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);

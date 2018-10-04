@@ -1,4 +1,4 @@
-// ImGui Platform Binding for: SDL2
+// dear imgui: Platform Binding for SDL2
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 // (Info: SDL2 is a cross-platform general purpose library for handling windows, inputs, graphics context creation, etc.)
 
@@ -8,6 +8,7 @@
 //  [X] Platform: Keyboard arrays indexed using SDL_SCANCODE_* codes, e.g. ImGui::IsKeyPressed(SDL_SCANCODE_SPACE).
 // Missing features:
 //  [ ] Platform: SDL2 handling of IME under Windows appears to be broken and it explicitly disable the regular Windows IME. You can restore Windows IME by compiling SDL with SDL_DISABLE_WINDOWS_IME.
+//  [ ] Platform: Gamepad support (need to use SDL_GameController API to fill the io.NavInputs[] value when ImGuiConfigFlags_NavEnableGamepad is set).
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -15,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-08-01: Inputs: Workaround for Emscripten which doesn't seem to handle focus related calls.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
 //  2018-06-08: Misc: Extracted imgui_impl_sdl.cpp/.h away from the old combined SDL2+OpenGL/Vulkan examples.
 //  2018-06-08: Misc: ImGui_ImplSDL2_InitForOpenGL() now takes a SDL_GLContext parameter. 
@@ -214,7 +216,7 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     io.MouseDown[2] = g_MousePressed[2] || (mouse_buttons & SDL_BUTTON(SDL_BUTTON_MIDDLE)) != 0;
     g_MousePressed[0] = g_MousePressed[1] = g_MousePressed[2] = false;
 
-#if SDL_HAS_CAPTURE_MOUSE
+#if SDL_HAS_CAPTURE_MOUSE && !defined(__EMSCRIPTEN__)
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     if (g_Window == focused_window)
     {

@@ -7,6 +7,8 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
+		07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
 		8307E7CC20E9F9C900473790 /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7CB20E9F9C900473790 /* ViewController.mm */; };
 		8307E7CF20E9F9C900473790 /* Main.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 8307E7CD20E9F9C900473790 /* Main.storyboard */; };
 		8307E7DE20E9F9C900473790 /* AppDelegate.m in Sources */ = {isa = PBXBuildFile; fileRef = 8307E7DD20E9F9C900473790 /* AppDelegate.m */; };
@@ -37,6 +39,8 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		07A82ED62139413C0078D120 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = ../../imgui_internal.h; sourceTree = "<group>"; };
+		07A82ED72139413C0078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
 		8307E7BB20E9F9C700473790 /* Renderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
 		8307E7BC20E9F9C700473790 /* Renderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Renderer.mm; sourceTree = "<group>"; };
 		8307E7C420E9F9C900473790 /* example_apple_metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_apple_metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -169,10 +173,12 @@
 			isa = PBXGroup;
 			children = (
 				83BBEA0420EB54E700295997 /* imconfig.h */,
+				83BBEA0320EB54E700295997 /* imgui.cpp */,
 				83BBEA0020EB54E700295997 /* imgui.h */,
 				83BBEA0220EB54E700295997 /* imgui_demo.cpp */,
 				83BBEA0120EB54E700295997 /* imgui_draw.cpp */,
-				83BBEA0320EB54E700295997 /* imgui.cpp */,
+				07A82ED62139413C0078D120 /* imgui_internal.h */,
+				07A82ED72139413C0078D120 /* imgui_widgets.cpp */,
 			);
 			name = imgui;
 			sourceTree = "<group>";
@@ -283,6 +289,7 @@
 				83BBEA0920EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0720EB54E700295997 /* imgui_demo.cpp in Sources */,
 				83BBE9FE20EB54D800295997 /* imgui_impl_metal.mm in Sources */,
+				07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
 				83BBE9DE20EB3FFC00295997 /* main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -294,6 +301,7 @@
 				83BBE9E020EB42D000295997 /* ViewController.mm in Sources */,
 				8307E7E920E9F9C900473790 /* Renderer.mm in Sources */,
 				83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
+				07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */,
 				8307E7E720E9F9C900473790 /* main.m in Sources */,
 				83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,

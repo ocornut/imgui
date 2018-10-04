@@ -1,10 +1,10 @@
-// ImGui Platform Binding for: GLFW
+// dear imgui: Platform Binding for GLFW
 // This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan..)
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
-//  [X] Platform: Gamepad navigation mapping. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
+//  [X] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 //  [x] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: 3 cursors types are missing from GLFW.
 //  [X] Platform: Keyboard arrays indexed using GLFW_KEY_* codes, e.g. ImGui::IsKeyPressed(GLFW_KEY_SPACE).
 
@@ -14,6 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-08-01: Inputs: Workaround for Emscripten which doesn't seem to handle focus related calls.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
 //  2018-06-08: Misc: Extracted imgui_impl_glfw.cpp/.h away from the old combined GLFW+OpenGL/Vulkan examples.
 //  2018-03-20: Misc: Setup io.BackendFlags ImGuiBackendFlags_HasMouseCursors flag + honor ImGuiConfigFlags_NoMouseCursorChange flag.
@@ -199,7 +200,12 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
     // Update mouse position
     const ImVec2 mouse_pos_backup = io.MousePos;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
-    if (glfwGetWindowAttrib(g_Window, GLFW_FOCUSED))
+#ifdef __EMSCRIPTEN__
+    const bool focused = true; // Emscripten
+#else
+    const bool focused = glfwGetWindowAttrib(g_Window, GLFW_FOCUSED) != 0;
+#endif
+    if (focused)
     {
         if (io.WantSetMousePos)
         {

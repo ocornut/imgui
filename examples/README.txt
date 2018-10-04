@@ -1,6 +1,7 @@
----------------------------------------
- README FIRST
----------------------------------------
+-----------------------------------------------------------------------
+ examples/README.txt
+ (This is the README file for the examples/ folder. See docs/ for more documentation)
+-----------------------------------------------------------------------
 
 Dear ImGui is highly portable and only requires a few things to run and render:
 
@@ -43,7 +44,7 @@ You can find binaries of some of those example applications at:
  - Dear ImGui has 0 to 1 frame of lag for most behaviors, at 60 FPS your experience should be pleasant.
    However, consider that OS mouse cursors are typically drawn through a specific hardware accelerated path
    and will feel smoother than common GPU rendered contents (including Dear ImGui windows). 
-   You may experiment with the io.MouseDrawCursor flag to request ImGui to draw a mouse cursor itself, 
+   You may experiment with the io.MouseDrawCursor flag to request Dear ImGui to draw a mouse cursor itself, 
    to visualize the lag between a hardware cursor and a software cursor. However, rendering a mouse cursor
    at 60 FPS will feel slow. It might be beneficial to the user experience to switch to a software rendered
    cursor only when an interactive drag is in progress. 
@@ -111,7 +112,7 @@ List of Renderer Bindings in this repository:
     imgui_impl_dx12.cpp       ; DirectX12
     imgui_impl_metal.mm       ; Metal (with ObjC)
     imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
-    imgui_impl_opengl3.cpp    ; OpenGL3 (modern programmable pipeline)
+    imgui_impl_opengl3.cpp    ; OpenGL3, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
     imgui_impl_vulkan.cpp     ; Vulkan
 
 List of high-level Frameworks Bindings in this repository: (combine Platform + Renderer)
@@ -178,14 +179,14 @@ example_glfw_opengl2/
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
     GLFW + OpenGL2 example (legacy, fixed pipeline).
-    This code is mostly provided as a reference to learn about ImGui integration, because it is shorter.
+    This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended.
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
 
 example_glfw_opengl3/
-    GLFW (Win32, Mac, Linux) + OpenGL3+ example (programmable pipeline, binding modern functions with GL3W).
+    GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (programmable pipeline, binding modern functions with GL3W).
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp
@@ -199,14 +200,14 @@ example_sdl_opengl2/
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
-    This code is mostly provided as a reference to learn about ImGui integration, because it is shorter.
+    This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended. 
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
 
 example_sdl_opengl3/
-    SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+ example.
+    SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example.
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
