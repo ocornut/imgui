@@ -11,29 +11,55 @@ puts <<EOT
 
 EOT
 
-$current_match = nil
-$class_name = nil
-$pop_body = nil
+class WrapperClass
+  attr_reader :name, :class_name, :state_var
 
-def close_class
-  pop_body = case $current_match[:name]
-             when 'Begin' then 'if (IsOpen) ImGui::End();'
-             when /^Tree/ then 'if (IsOpen) ImGui::TreePop();'
-             when /^PushID$/ then 'ImGui::PopID();'
-             else fail "Don't know what pop body to use"
-             end
+  def initialize(m)
+    @name = m[:name]
 
-  puts "#{INDENT}~#{$class_name}() { #{pop_body} }"
+    @state_var = nil
+    case m[:name]
+    when 'Begin'
+      @class_name = 'ImWindow'
+      @state_var = 'IsExpanded'
+    else
+      @class_name = "Im#{m[:name]}"
+      @state_var = 'IsOpen' if m[:type] == 'bool'
+    end
 
-  if $current_match[:type] == 'bool'
-    puts
-    puts "#{INDENT}operator bool() { return IsOpen; }"
+    puts <<EOT
+class #{@class_name}
+{
+public:
+EOT
+    if @state_var
+      puts "#{INDENT}#{m[:type]} #{@state_var};"
+      puts
+    end
   end
 
-  puts "};"
+  def close
+    print "#{INDENT}~#{@class_name}() { "
+    print case @name
+          when 'Begin' then 'ImGui::End();'
+          when /^Tree/ then "if (#{@state_var}) ImGui::TreePop();"
+          when /^PushID$/ then 'ImGui::PopID();'
+          else fail "Don't know what pop body to use"
+          end
+    puts " }"
+
+    if @state_var
+      puts
+      puts "#{INDENT}operator bool() { return #{@state_var}; }"
+    end
+
+    puts "};"
+  end
 end
 
-header_file = File.open("imgui.h")
+current_class = nil
+
+header_file = File.open("../../imgui.h")
 header_file.each_line do |line|
   line.match(/^\s*IMGUI_API\s+(?<type>[\w\s]+\w)\s+(?<name>\w*)\((?<args>[^)]+)\)(?<attrs>[^;]*);(?<rest>.*)$/) do |m|
     next unless m[:name].match(/^(Begin|Push|Open|Tree|Column)/)
@@ -55,34 +81,20 @@ header_file.each_line do |line|
 
     fail "Return value #{m[:type]} is not bool or void" unless %w{bool void}.include?(m[:type])
 
-    if !$current_match || $current_match[:name] != m[:name]
-      if $current_match
-        close_class
+    if !current_class || current_class.name != m[:name]
+      if current_class
+        current_class.close
         puts
       end
 
-      $current_match = m
-      $class_name = case m[:name]
-                    when 'Begin' then 'ImWindow'
-                    else "Im#{m[:name]}"
-                    end
-
-      puts <<EOT
-class #{$class_name}
-{
-public:
-EOT
-      if m[:type] == 'bool'
-        puts "#{INDENT}#{m[:type]} IsOpen;"
-        puts
-      end
+      current_class = WrapperClass.new(m)
     end
 
     attrs = m[:attrs].gsub(/IM_FMT(ARGS|LIST)\(\d+\)/) do |a|
       a.sub(/\d+/) { |index| (index.to_i + 1).to_s }
     end
 
-    print "#{INDENT}#{$class_name}(#{m[:args]})#{attrs} { "
+    print "#{INDENT}#{current_class.class_name}(#{m[:args]})#{attrs} { "
 
     use_varargs = false
     if argnames.last == '...'
@@ -91,7 +103,7 @@ EOT
       print "va_list ap; va_start(ap, fmt); "
     end
 
-    print "IsOpen = " if m[:type] == 'bool'
+    print "#{current_class.state_var} = " if current_class.state_var
 
     print "ImGui::#{m[:name]}"
     print 'V' if use_varargs
@@ -102,5 +114,5 @@ EOT
   end
 end
 
-close_class if $current_match
+current_class.close if current_class
 

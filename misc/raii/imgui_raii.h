@@ -5,12 +5,12 @@
 class ImWindow
 {
 public:
-    bool IsOpen;
+    bool IsExpanded;
 
-    ImWindow(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::Begin(name, p_open, flags); }
-    ~ImWindow() { if (IsOpen) ImGui::End(); }
+    ImWindow(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsExpanded = ImGui::Begin(name, p_open, flags); }
+    ~ImWindow() { ImGui::End(); }
 
-    operator bool() { return IsOpen; }
+    operator bool() { return IsExpanded; }
 };
 
 class ImPushID
