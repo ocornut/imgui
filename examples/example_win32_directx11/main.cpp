@@ -78,11 +78,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
         {
-            ImGui_ImplDX11_InvalidateDeviceObjects();
             CleanupRenderTarget();
             g_pSwapChain->ResizeBuffers(0, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam), DXGI_FORMAT_UNKNOWN, 0);
             CreateRenderTarget();
-            ImGui_ImplDX11_CreateDeviceObjects();
         }
         return 0;
     case WM_SYSCOMMAND:
