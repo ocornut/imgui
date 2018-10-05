@@ -9776,8 +9776,9 @@ void ImGui::DockContextOnLoadSettings(ImGuiContext* ctx)
 
 void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
 {
-    DockBuilderRemoveNodeDockedWindows(ctx, root_id, clear_persistent_docking_references);
-    DockBuilderRemoveNodeChildNodes(ctx, root_id);
+    IM_ASSERT(ctx == GImGui);
+    DockBuilderRemoveNodeDockedWindows(root_id, clear_persistent_docking_references);
+    DockBuilderRemoveNodeChildNodes(root_id);
 }
 
 // This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
@@ -11666,7 +11667,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
 // It is expected that those functions are all called _before_ the dockspace node submission.
 //-----------------------------------------------------------------------------
 
-void ImGui::DockBuilderDockWindow(ImGuiContext*, const char* window_name, ImGuiID node_id)
+void ImGui::DockBuilderDockWindow(const char* window_name, ImGuiID node_id)
 {
     ImGuiID window_id = ImHash(window_name, 0);
     if (ImGuiWindow* window = FindWindowByID(window_id))
@@ -11684,33 +11685,37 @@ void ImGui::DockBuilderDockWindow(ImGuiContext*, const char* window_name, ImGuiI
     }
 }
 
-ImGuiDockNode* ImGui::DockBuilderGetNode(ImGuiContext* ctx, ImGuiID node_id)
+ImGuiDockNode* ImGui::DockBuilderGetNode(ImGuiID node_id)
 {
+    ImGuiContext* ctx = GImGui;
     return DockContextFindNodeByID(ctx, node_id);
 }
 
-void ImGui::DockBuilderAddNode(ImGuiContext* ctx, ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags)
+void ImGui::DockBuilderAddNode(ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags)
 {
+    ImGuiContext* ctx = GImGui;
     DockSpace(id, ImVec2(0,0), flags | ImGuiDockNodeFlags_KeepAliveOnly);
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
     node->SizeRef = node->Size = ref_size;
     node->LastFrameAlive = -1;
 }
 
-void ImGui::DockBuilderRemoveNode(ImGuiContext* ctx, ImGuiID node_id)
+void ImGui::DockBuilderRemoveNode(ImGuiID node_id)
 {
+    ImGuiContext* ctx = GImGui;
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_id);
     if (node == NULL)
         return;
-    DockBuilderRemoveNodeDockedWindows(ctx, node_id, true);
-    DockBuilderRemoveNodeChildNodes(ctx, node_id);
+    DockBuilderRemoveNodeDockedWindows(node_id, true);
+    DockBuilderRemoveNodeChildNodes(node_id);
     if (node->IsCentralNode && node->ParentNode)
         node->ParentNode->IsCentralNode = true;
     DockContextRemoveNode(ctx, node, true);
 }
 
-void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id)
+void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
 {
+    ImGuiContext* ctx = GImGui;
     ImGuiDockContext* dc = ctx->DockContext;
 
     ImGuiDockNode* root_node = root_id ? DockContextFindNodeByID(ctx, root_id) : NULL;
@@ -11763,9 +11768,10 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiContext* ctx, ImGuiID root_id)
     }
 }
 
-void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
+void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiID root_id, bool clear_persistent_docking_references)
 {
     // Clear references in settings
+    ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
     if (clear_persistent_docking_references)
     {
@@ -11797,8 +11803,9 @@ void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiContext* ctx, ImGuiID root_i
     }
 }
 
-ImGuiID ImGui::DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_other)
+ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_other)
 {
+    ImGuiContext* ctx = GImGui;
     IM_ASSERT(split_dir != ImGuiDir_None);
 
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
@@ -11829,8 +11836,9 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiContext* ctx, ImGuiID id, ImGuiDir spli
     return id_at_dir;
 }
 
-static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiContext* ctx, ImGuiDockNode* src_node, ImGuiID dst_node_id_if_known, ImVector<ImGuiID>* out_node_remap_pairs)
+static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiDockNode* src_node, ImGuiID dst_node_id_if_known, ImVector<ImGuiID>* out_node_remap_pairs)
 {
+    ImGuiContext* ctx = GImGui;
     ImGuiDockNode* dst_node = ImGui::DockContextAddNode(ctx, dst_node_id_if_known);
     dst_node->Flags = src_node->Flags;
     dst_node->Pos = src_node->Pos;
@@ -11846,7 +11854,7 @@ static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiContext* ctx, ImGuiDockNode* s
     for (int child_n = 0; child_n < IM_ARRAYSIZE(src_node->ChildNodes); child_n++)
         if (src_node->ChildNodes[child_n])
         {
-            dst_node->ChildNodes[child_n] = DockBuilderCopyNodeRec(ctx, src_node->ChildNodes[child_n], 0, out_node_remap_pairs);
+            dst_node->ChildNodes[child_n] = DockBuilderCopyNodeRec(src_node->ChildNodes[child_n], 0, out_node_remap_pairs);
             dst_node->ChildNodes[child_n]->ParentNode = dst_node;
         }
 
@@ -11854,8 +11862,9 @@ static ImGuiDockNode* DockBuilderCopyNodeRec(ImGuiContext* ctx, ImGuiDockNode* s
     return dst_node;
 }
 
-void ImGui::DockBuilderCopyNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs)
+void ImGui::DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs)
 {
+    ImGuiContext* ctx = GImGui;
     IM_ASSERT(src_node_id != 0);
     IM_ASSERT(dst_node_id != 0);
     IM_ASSERT(out_node_remap_pairs != NULL);
@@ -11864,15 +11873,14 @@ void ImGui::DockBuilderCopyNode(ImGuiContext* ctx, ImGuiID src_node_id, ImGuiID 
     IM_ASSERT(src_node != NULL);
 
     out_node_remap_pairs->clear();
-    DockBuilderRemoveNode(ctx, dst_node_id);
-    DockBuilderCopyNodeRec(ctx, src_node, dst_node_id, out_node_remap_pairs);
+    DockBuilderRemoveNode(dst_node_id);
+    DockBuilderCopyNodeRec(src_node, dst_node_id, out_node_remap_pairs);
 
     IM_ASSERT((out_node_remap_pairs->Size % 2) == 0);
 }
 
-void ImGui::DockBuilderCopyWindowSettings(ImGuiContext* ctx, const char* src_name, const char* dst_name)
+void ImGui::DockBuilderCopyWindowSettings(const char* src_name, const char* dst_name)
 {
-    (void)ctx;
     ImGuiWindow* src_window = FindWindowByName(src_name);
     if (src_window == NULL)
         return;
@@ -11901,7 +11909,7 @@ void ImGui::DockBuilderCopyWindowSettings(ImGuiContext* ctx, const char* src_nam
 }
 
 // FIXME: Will probably want to change this signature, in particular how the window remapping pairs are passed.
-void ImGui::DockBuilderCopyDockspace(ImGuiContext* ctx, ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id, ImVector<const char*>* in_window_remap_pairs)
+void ImGui::DockBuilderCopyDockspace(ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id, ImVector<const char*>* in_window_remap_pairs)
 {
     IM_ASSERT(src_dockspace_id != 0);
     IM_ASSERT(dst_dockspace_id != 0);
@@ -11912,7 +11920,7 @@ void ImGui::DockBuilderCopyDockspace(ImGuiContext* ctx, ImGuiID src_dockspace_id
     // FIXME: When overwriting dst_dockspace_id, windows that aren't part of our dockspace family but that are docked in a same node will be split apart,
     // whereas we could attempt to at least keep them together in a new, same floating node.
     ImVector<ImGuiID> node_remap_pairs;
-    ImGui::DockBuilderCopyNode(ctx, src_dockspace_id, dst_dockspace_id, &node_remap_pairs);
+    DockBuilderCopyNode(src_dockspace_id, dst_dockspace_id, &node_remap_pairs);
 
     // Attempt to transition all the upcoming windows associated to dst_dockspace_id into the newly created hierarchy of dock nodes
     // (The windows associated to src_dockspace_id are staying in place)
@@ -11942,14 +11950,14 @@ void ImGui::DockBuilderCopyDockspace(ImGuiContext* ctx, ImGuiID src_dockspace_id
         if (dst_dock_id != 0)
         {
             // Docked windows gets redocked into the new node hierarchy. 
-            IMGUI_DEBUG_LOG("Remap window '%s' %08X -> %08X\n", dst_window_name, src_dock_id, dst_dock_id);
-            ImGui::DockBuilderDockWindow(ctx, dst_window_name, dst_dock_id);
+            //IMGUI_DEBUG_LOG("Remap window '%s' %08X -> %08X\n", dst_window_name, src_dock_id, dst_dock_id);
+            DockBuilderDockWindow(dst_window_name, dst_dock_id);
         }
         else
         {
             // Floating windows gets their settings transferred (regardless of whether the new window already exist or not)
             // When this is leading to a Copy and not a Move, we would get two overlapping floating windows. Could we possibly dock them together?
-            ImGui::DockBuilderCopyWindowSettings(ctx, src_window_name, dst_window_name);
+            DockBuilderCopyWindowSettings(src_window_name, dst_window_name);
         }
     }
 
@@ -11959,7 +11967,7 @@ void ImGui::DockBuilderCopyDockspace(ImGuiContext* ctx, ImGuiID src_dockspace_id
         if (ImGuiID src_dock_id = node_remap_pairs[dock_remap_n])
         {
             ImGuiID dst_dock_id = node_remap_pairs[dock_remap_n + 1];
-            ImGuiDockNode* dock_node = ImGui::DockBuilderGetNode(ctx, src_dock_id);
+            ImGuiDockNode* dock_node = DockBuilderGetNode(src_dock_id);
             for (int window_n = 0; window_n < dock_node->Windows.Size; window_n++)
             {
                 ImGuiWindow* window = dock_node->Windows[window_n];
@@ -11967,14 +11975,15 @@ void ImGui::DockBuilderCopyDockspace(ImGuiContext* ctx, ImGuiID src_dockspace_id
                     continue;
 
                 // Docked windows gets redocked into the new node hierarchy. 
-                IMGUI_DEBUG_LOG("Remap window '%s' %08X -> %08X\n", window->Name, src_dock_id, dst_dock_id);
-                ImGui::DockBuilderDockWindow(ctx, window->Name, dst_dock_id);
+                //IMGUI_DEBUG_LOG("Remap window '%s' %08X -> %08X\n", window->Name, src_dock_id, dst_dock_id);
+                DockBuilderDockWindow(window->Name, dst_dock_id);
             }
         }
 }
 
-void ImGui::DockBuilderFinish(ImGuiContext* ctx, ImGuiID root_id)
+void ImGui::DockBuilderFinish(ImGuiID root_id)
 {
+    ImGuiContext* ctx = GImGui;
     //DockContextRebuild(ctx);
     DockContextBuildAddWindowsToNodes(ctx, root_id);
 }
