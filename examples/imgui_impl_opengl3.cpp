@@ -330,7 +330,7 @@ static bool CheckProgram(GLuint handle, const char* desc)
     GLint status = 0, log_length = 0;
     glGetProgramiv(handle, GL_LINK_STATUS, &status);
     glGetProgramiv(handle, GL_INFO_LOG_LENGTH, &log_length);
-    if (status == GL_FALSE)
+    if ((GLboolean)status == GL_FALSE)
         fprintf(stderr, "ERROR: ImGui_ImplOpenGL3_CreateDeviceObjects: failed to link %s!\n", desc);
     if (log_length > 0)
     {
@@ -339,7 +339,7 @@ static bool CheckProgram(GLuint handle, const char* desc)
         glGetProgramInfoLog(handle, log_length, NULL, (GLchar*)buf.begin());
         fprintf(stderr, "%s\n", buf.begin());
     }
-    return status == GL_TRUE;
+    return (GLboolean)status == GL_TRUE;
 }
 
 bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
