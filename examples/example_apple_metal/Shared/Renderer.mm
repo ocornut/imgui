@@ -3,10 +3,10 @@
 #import <Metal/Metal.h>
 
 #include "imgui.h"
-#include "imgui_impl_metal.h"
+#include "impl/imgui_impl_metal.h"
 
 #if TARGET_OS_OSX
-#include "imgui_impl_osx.h"
+#include "impl/imgui_impl_osx.h"
 #endif
 
 @interface Renderer ()

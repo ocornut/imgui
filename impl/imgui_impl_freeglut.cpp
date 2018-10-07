@@ -13,7 +13,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-03-22: Added FreeGLUT Platform binding.
 
-#include "imgui.h"
+#include "../imgui.h"
 #include "imgui_impl_freeglut.h"
 #include <GL/freeglut.h>
 

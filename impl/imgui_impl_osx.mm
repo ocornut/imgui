@@ -6,7 +6,7 @@
 // [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 // [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
 
-#include "imgui.h"
+#include "../imgui.h"
 #include "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
 
