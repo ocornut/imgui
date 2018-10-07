@@ -2,8 +2,8 @@
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include "imgui.h"
-#include "imgui_impl_sdl.h"
-#include "imgui_impl_vulkan.h"
+#include "impl/imgui_impl_sdl.h"
+#include "impl/imgui_impl_vulkan.h"
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #include <SDL.h>

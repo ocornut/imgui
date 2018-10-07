@@ -12,7 +12,7 @@
 // (minor and older changes stripped away, please see git history for details)
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
-#include "imgui.h"
+#include "../imgui.h"
 #include "imgui_impl_metal.h"
 
 #import <Metal/Metal.h>

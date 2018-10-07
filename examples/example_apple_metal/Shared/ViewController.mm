@@ -4,7 +4,7 @@
 #include "imgui.h"
 
 #if TARGET_OS_OSX
-#include "imgui_impl_osx.h"
+#include "impl/imgui_impl_osx.h"
 #endif
 
 @interface ViewController ()
