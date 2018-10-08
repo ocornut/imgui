@@ -801,9 +801,7 @@ enum ImGuiDockNodeFlags_
     //ImGuiDockNodeFlags_NoCentralNode              = 1 << 2,   // Disable Central Node (the node which can stay empty)
     //ImGuiDockNodeFlags_NoOuterBorder              = 1 << 3,   // Disable outer border on a DockSpace() node.
     ImGuiDockNodeFlags_NoDockingInCentralNode       = 1 << 4,   // Disable docking inside the Central Node, which will be always kept empty.
-    ImGuiDockNodeFlags_PassthruInEmptyNodes         = 1 << 5,   // When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background.
-    ImGuiDockNodeFlags_RenderWindowBg               = 1 << 6,   // DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node (when empty). Meaning the host window should properly use SetNextWindowBgAlpha(0.0f) + ImGuiDockNodeFlags_NoOuterBorder prior to Begin() when using this.
-    ImGuiDockNodeFlags_PassthruDockspace            = ImGuiDockNodeFlags_NoDockingInCentralNode | ImGuiDockNodeFlags_RenderWindowBg | ImGuiDockNodeFlags_PassthruInEmptyNodes
+    ImGuiDockNodeFlags_PassthruDockspace            = 1 << 5    // 1) DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node when empty. Meaning the host window should probably use SetNextWindowBgAlpha(0.0f) prior to Begin() when using this. 2) When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background.
 };
 
 // Flags for ImGui::IsWindowFocused()
