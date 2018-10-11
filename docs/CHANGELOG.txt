@@ -56,6 +56,8 @@ Other Changes:
 - BeginChild(): Fixed BeginChild(const char*, ...) variation erroneously not applying the ID stack
   to the provided string to uniquely identify the child window. This was undoing an intentional change
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
+- TextUnformatted(): Fixed a case where large-text path would read bytes past the text_end marker depending
+  on the position of new lines in the buffer (it wasn't affecting the output but still not the right thing to do!) 
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
 - Drag and Drop: Added GetDragDropPayload() to peek directly into the payload (if any) from anywhere. (#143)
