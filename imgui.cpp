@@ -4766,15 +4766,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window = CreateNewWindow(name, size_on_first_use, flags);
     }
 
-    // Update stored window name when it changes (which can only happen with the "###" operator).
-    // Only if it is meant to be displayed to the end user in a different place than the title bar (which already always display the 'name' parameter)
-    bool window_title_visible_elsewhere = (window->Viewport && window->Viewport->Window == window);
-    if (!window_just_created && window_title_visible_elsewhere && strcmp(name, window->Name) != 0)
-    {
-        IM_DELETE(window->Name);
-        window->Name = ImStrdup(name);
-    }
-
     // Automatically disable manual moving/resizing when NoInputs is set
     if (flags & ImGuiWindowFlags_NoInputs)
         flags |= ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoResize;
@@ -4885,6 +4876,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
+
+        // Update stored window name when it changes (which can only happen with the "###" operator).
+        // The title bar always display the 'name' parameter, so we only update storage if the title is displayed to the end-user in a different place.
+        bool window_title_visible_elsewhere = (window->Viewport && window->Viewport->Window == window);
+        if (!window_just_created && window_title_visible_elsewhere && strcmp(name, window->Name) != 0)
+        {
+            IM_DELETE(window->Name);
+            window->Name = ImStrdup(name);
+        }
 
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
 
