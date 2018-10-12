@@ -2669,9 +2669,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (y + line_height < clip_rect.y && !word_wrap_enabled)
         while (y + line_height < clip_rect.y && s < text_end)
         {
-            s = (const char*)memchr(s, '\n', text_end - s) + 1;
-            if (s == NULL)
-                s = text_end;
+            s = (const char*)memchr(s, '\n', text_end - s);
+            s = s ? s + 1 : text_end;
             y += line_height;
         }
 
@@ -2683,7 +2682,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float y_end = y;
         while (y_end < clip_rect.w && s_end < text_end)
         {
-            s_end = (const char*)memchr(s_end, '\n', text_end - s_end) + 1;
+            s_end = (const char*)memchr(s_end, '\n', text_end - s_end);
+            s = s ? s + 1 : text_end;
             y_end += line_height;
         }
         text_end = s_end;

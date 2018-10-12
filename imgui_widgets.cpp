@@ -3714,7 +3714,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     break;
                 if (rect_pos.y < clip_rect.y)
                 {
-                    p = (const ImWchar*)wmemchr((const wchar_t*)p, '\n', text_selected_end - p) + 1;
+                    p = (const ImWchar*)wmemchr((const wchar_t*)p, '\n', text_selected_end - p);
+                    p = p ? p + 1 : text_selected_end;
                 }
                 else
                 {
