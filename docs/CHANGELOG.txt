@@ -59,7 +59,7 @@ Other Changes:
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
 - TextUnformatted(): Fixed a case where large-text path would read bytes past the text_end marker depending
   on the position of new lines in the buffer (it wasn't affecting the output but still not the right thing to do!) 
-- InputTextMultiline(), RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
+- RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
 - Drag and Drop: Added GetDragDropPayload() to peek directly into the payload (if any) from anywhere. (#143)

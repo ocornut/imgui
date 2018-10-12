@@ -36,7 +36,6 @@ Index of this file:
 #include "imgui_internal.h"
 
 #include <ctype.h>      // toupper, isprint
-#include <wchar.h>      // wmemchr
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
 #else
@@ -3618,12 +3617,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
             searches_remaining += is_multiline ? 1 : 0;
             int line_count = 0;
-            for (const ImWchar* s = text_begin; (s = (const ImWchar*)wcschr((const wchar_t*)s, (wchar_t)'\n')) != NULL; s++)
-            {
-                line_count++;
-                if (searches_result_line_number[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
-                if (searches_result_line_number[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
-            }
+            //for (const ImWchar* s = text_begin; (s = (const ImWchar*)wcschr((const wchar_t*)s, (wchar_t)'\n')) != NULL; s++)  // FIXME-OPT: Could use this when wchar_t are 16-bits
+            for (const ImWchar* s = text_begin; *s != 0; s++)
+                if (*s == '\n')
+                {
+                    line_count++;
+                    if (searches_result_line_number[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
+                    if (searches_result_line_number[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
+                }
             line_count++;
             if (searches_result_line_number[0] == -1) searches_result_line_number[0] = line_count;
             if (searches_result_line_number[1] == -1) searches_result_line_number[1] = line_count;
@@ -3691,8 +3692,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     break;
                 if (rect_pos.y < clip_rect.y)
                 {
-                    p = (const ImWchar*)wmemchr((const wchar_t*)p, '\n', text_selected_end - p);
-                    p = p ? p + 1 : text_selected_end;
+                    //p = (const ImWchar*)wmemchr((const wchar_t*)p, '\n', text_selected_end - p);  // FIXME-OPT: Could use this when wchar_t are 16-bits
+                    //p = p ? p + 1 : text_selected_end;
+                    while (p < text_selected_end)
+                        if (*p++ == '\n')
+                            break;
                 }
                 else
                 {
