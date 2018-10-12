@@ -3,7 +3,7 @@ dear imgui,
 [![Build Status](https://travis-ci.org/ocornut/imgui.svg?branch=master)](https://travis-ci.org/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-_(This library is free but needs your support to sustain its development. There are many desirable features and maintenance ahead. If you are an individual using dear imgui, please consider donating via Patreon or PayPal. If your company is using dear imgui, please consider financial support (e.g. sponsoring a few weeks/months of development. I can invoice for technical support, custom development etc. Email: omarcornut at gmail)._
+_(This library is free but needs your support to sustain its development. There are many desirable features and maintenance ahead. If you are an individual using dear imgui, please consider donating via Patreon or PayPal. If your company is using dear imgui, please consider financial support (e.g. sponsoring a few weeks/months of development). I can invoice for technical support, custom development etc. Email: omarcornut at gmail)._
 
 Monthly donations via Patreon:
 <br>[![Patreon](https://cloud.githubusercontent.com/assets/8225057/5990484/70413560-a9ab-11e4-8942-1a63607c0b00.png)](http://www.patreon.com/imgui)
@@ -97,7 +97,7 @@ Demo Binaries
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20180512.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20180512.zip) (Windows binaries, Dear ImGui 1.61 WIP built 2018/05/12, 5 executables)
+- [imgui-demo-binaries-20181008.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20181008.zip) (Windows binaries, Dear ImGui 1.66 WIP built 2018/10/08, master branch, 5 executables)
 
 The demo applications are unfortunately not yet DPI aware so expect some blurriness on a 4K screen. For DPI awareness you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
@@ -109,7 +109,7 @@ Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/
 _NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
 Languages: (third-party bindings)
-- C: [cimgui](https://github.com/Extrawurst/cimgui) or [sonoro1234's cimgui](https://github.com/sonoro1234/cimgui) (more recent update), also see [#1879](https://github.com/ocornut/imgui/issues/1879)
+- C: [cimgui](https://github.com/cimgui/cimgui) (new 2018 auto-generated version!)
 - C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
 - ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
 - D: [DerelictImgui](https://github.com/Extrawurst/DerelictImgui)
@@ -133,7 +133,7 @@ Frameworks:
 - Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
 - Unmerged PR: ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
-- Cocos2d-x: [imguix](https://github.com/c0i/imguix), [issue #551](https://github.com/ocornut/imgui/issues/551)
+- Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
 - Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
 - GML/GameMakerStudio2: [ImGuiGML](https://marketplace.yoyogames.com/assets/6221/imguigml)
 - Irrlicht: [IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
@@ -152,10 +152,10 @@ For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Binding
 
 Roadmap
 -------
-Some of the goals for 2018 are:
+Some of the goals for 2018-2019 are:
 - Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
+- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109))
 - Finish work on viewports and multiple OS windows management. (see [#1542](https://github.com/ocornut/imgui/issues/1542))
-- Finish work on docking, tabs. (see [#351](https://github.com/ocornut/imgui/issues/351#issuecomment-346865709))
 - Make Columns better. (they are currently pretty terrible!)
 - Make the examples look better, improve styles, improve font support, make the examples hi-DPI aware.
 
@@ -210,7 +210,7 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 - [Nicolas Guillemot's CppCon'16 flash-talk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
 - [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
 
-See the [Wiki](https://github.com/ocornut/imgui/wiki) and [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to different languages and frameworks.
+See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to different languages and frameworks.
 
 Support Forums
 --------------
@@ -228,10 +228,13 @@ Frequently Asked Question (FAQ)
 - Example code is in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. It covers most features of ImGui so you can read the code and call the function itself to see its output. 
 - Standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder. 
 - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
+- Your programming IDE is your friend, find the type or function declaration to find comments associated to it. 
 
 **Which version should I get?**
 
 I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported. 
+
+You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issues/1542) and [Docking](https://github.com/ocornut/imgui/issues/2109) branches. Even though they are marked beta, several projects are using them and they are kept in sync with master regularly.
 
 **Who uses Dear ImGui?**
 
@@ -280,7 +283,7 @@ You can alter the look of the interface to some degree: changing colors, sizes, 
 
 Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
-There is a [c-api for ImGui (cimgui)](https://github.com/Extrawurst/cimgui) by Stephan Dilly + a newer, [auto-generated cimgui](https://github.com/sonoro1234/cimgui) by sonoro1234. Both are designed for binding other languages. I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to other languages.
+There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. This is designed for binding other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to other languages.
 
 Support dear imgui
 ------------------
@@ -302,13 +305,13 @@ If your company uses dear imgui, please consider financial support (e.g. sponsor
 - Blizzard Entertainment.
 
 **Double-chocolate sponsors**
-- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner, Artometa, Friendly Shade.
+- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner, Friendly Shade.
 
 **Salty caramel supporters**
 - Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert, Brandon Townsend, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Jeff Roberts.
 
 **Caramel supporters**
-- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Astrofra, Jonas Lehmann, Steven Kah Hien Wong, Bartosz Bielecki, Oscar Penas, A M, Liam Moynihan.
+- Michel Courtine, César Leblic, Dale Kim, Alex Evans, Rui Figueira, Paul Patrashcu, Jerome Lanquetot, Ctrl Alt Ninja, Paul Fleming, Neil Henning, Stephan Dilly, Neil Blakey-Milner, Aleksei, NeiloGD, Justin Paver, FiniteSol, Vincent Pancaldi, James Billot, Robin Hübner, furrtek, Eric, Simon Barratt, Game Atelier, Julian Bosch, Simon Lundmark, Vincent Hamm, Farhan Wali, Matt Reyer, Colin Riley, Victor Martins, Josh Simmons, Garrett Hoofman, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Kit framework, Josh Faust, Martin Donlon, Quinton, Felix, Andrew Belt, Codecat, Cort Stratton, Claudio Canepa, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Roger Clark, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Miloš Tošić, Jonas Bernemann, Johan Andersson, Nathan Hartman, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Felipe Alfonso, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Edsel Malasig, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Astrofra, Jonas Lehmann, Steven Kah Hien Wong, Bartosz Bielecki, Oscar Penas, A M, Liam Moynihan, Artometa.
 
 And all other supporters; THANK YOU!
 (Please contact me if you would like to be added or removed from this list)

@@ -1,4 +1,4 @@
-// imgui_stl.cpp
+// imgui_stdlib.cpp
 // Wrappers for C++ standard library (STL) types (std::string, etc.)
 // This is also an example of how you may wrap your own similar types.
 
@@ -6,8 +6,11 @@
 // - std::string support is only guaranteed to work from C++11. 
 //   If you try to use it pre-C++11, please share your findings (w/ info about compiler/architecture)
 
+// Changelog:
+// - v0.10: Initial version. Added InputText() / InputTextMultiline() calls with std::string
+
 #include "imgui.h"
-#include "imgui_stl.h"
+#include "imgui_stdlib.h"
 
 struct InputTextCallback_UserData
 {
@@ -22,6 +25,7 @@ static int InputTextCallback(ImGuiInputTextCallbackData* data)
     if (data->EventFlag == ImGuiInputTextFlags_CallbackResize)
     {
         // Resize string callback
+        // If for some reason we refuse the new length (BufTextLen) and/or capacity (BufSize) we need to set them back to what we want.
         std::string* str = user_data->Str;
         IM_ASSERT(data->Buf == str->c_str());
         str->resize(data->BufTextLen);
