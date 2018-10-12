@@ -1,4 +1,4 @@
-// imgui_stl.h
+// imgui_stdlib.h
 // Wrappers for C++ standard library (STL) types (std::string, etc.)
 // This is also an example of how you may wrap your own similar types.
 

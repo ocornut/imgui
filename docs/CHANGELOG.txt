@@ -36,6 +36,7 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Renamed SetScrollHere() to SetScrollHereY(). Kept redirection function (will obsolete).
+- Renamed misc/stl/imgui_stl.* to misc/cpp/imgui_stdlib.* in prevision for other C++ helper files. (#2035, #2096)
 
 Other Changes:
 
@@ -162,6 +163,7 @@ Other Changes:
 - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
 - ColorEdit4: Fixed a bug when text input or drag and drop leading to unsaturated HSV values would erroneously alter the resulting color. (#2050)
 - Misc: Added optional misc/stl/imgui_stl.h wrapper to use with STL types (e.g. InputText with std::string). (#2006, #1443, #1008)
+  [*EDIT* renamed to misc/std/imgui_stdlib.h in 1.66]
 - Misc: Added IMGUI_VERSION_NUM for easy compile-time testing. (#2025)
 - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
 - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
@@ -233,7 +235,7 @@ Other Changes:
   - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
   - Read examples/README.txt for details.
 - Added IsItemDeactivated() to query if the last item was active previously and isn't anymore. Useful for Undo/Redo patterns. (#820, #956, #1875)
-- Added IsItemDeactivatedAfterChange() [*EDIT* renamed to IsItemDeactivatedAfterEdit() in 1.63) if the last item was active previously, 
+- Added IsItemDeactivatedAfterChange() [*EDIT* renamed to IsItemDeactivatedAfterEdit() in 1.63] if the last item was active previously, 
   is not anymore, and during its active state modified a value. Note that you may still get false positive (e.g. drag value and while 
   holding return on the same value). (#820, #956, #1875)
 - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
