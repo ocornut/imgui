@@ -138,7 +138,7 @@ bool ImGui_ImplSDL2_ProcessEvent(SDL_Event* event)
     return false;
 }
 
-static bool    ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
+static bool ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
 {
     g_Window = window;
 
