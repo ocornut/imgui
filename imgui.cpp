@@ -850,6 +850,7 @@ CODE
 
 #include <ctype.h>      // toupper, isprint
 #include <stdio.h>      // vsnprintf, sscanf, printf
+#include <wchar.h>      // wcslen
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
 #else
@@ -1210,9 +1211,7 @@ const char* ImStrchrRange(const char* str, const char* str_end, char c)
 
 int ImStrlenW(const ImWchar* str)
 {
-    int n = 0;
-    while (*str++) n++;
-    return n;
+    return (int)wcslen((const wchar_t*)str);
 }
 
 // Find end-of-line. Return pointer will point to either first \n, either str_end.
