@@ -857,13 +857,14 @@ CODE
 #include <stdint.h>     // intptr_t
 #endif
 
+// Debug options
 #define IMGUI_DEBUG_NAV_SCORING     0
 #define IMGUI_DEBUG_NAV_RECTS       0
 
 // Visual Studio warnings
 #ifdef _MSC_VER
-#pragma warning (disable: 4127) // condition expression is constant
-#pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
+#pragma warning (disable: 4127)     // condition expression is constant
+#pragma warning (disable: 4996)     // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
 
 // Clang/GCC warnings with -Weverything
@@ -948,6 +949,14 @@ static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
 }
+
+// Test engine hooks (imgui-test)
+//#define IMGUI_ENABLE_TEST_ENGINE_HOOKS
+#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
+extern void             ImGuiTestEngineHook_PreNewFrame();
+extern void             ImGuiTestEngineHook_PostNewFrame();
+extern void             ImGuiTestEngineHook_ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg);
+#endif
 
 //-----------------------------------------------------------------------------
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
@@ -2587,6 +2596,10 @@ void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
 // declare their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
 bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 {
+#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
+    ImGuiTestEngineHook_ItemAdd(bb, id, nav_bb_arg);
+#endif
+
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
@@ -3100,6 +3113,10 @@ void ImGui::NewFrame()
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
     ImGuiContext& g = *GImGui;
 
+#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
+    ImGuiTestEngineHook_PreNewFrame();
+#endif
+
     // Check user data
     // (We pass an error message in the assert expression to make it visible to programmers who are not using a debugger, as most assert handlers display their argument)
     IM_ASSERT(g.Initialized);
@@ -3265,6 +3282,10 @@ void ImGui::NewFrame()
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
+    ImGuiTestEngineHook_PostNewFrame();
+#endif
 }
 
 void ImGui::Initialize(ImGuiContext* context)
