@@ -150,7 +150,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: C- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
  - dock: C- after a dock/undock, the Scrollbar Status update in Begin() should use an updated e.g. size_y_for_scrollbars to avoid a 1 frame scrollbar flicker.
 
- - tabs: re-ordering, close buttons, context menu, persistent order (#261, #351)
+ - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
+ - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
 
  - ext: stl-ish friendly extension (imgui_stl.h) that has wrapper for std::string, std::vector etc.
 

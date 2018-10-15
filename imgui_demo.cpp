@@ -1721,23 +1721,25 @@ void ImGui::ShowDemoWindow(bool* p_open)
             if (ImGui::TreeNode("Basic"))
             {
                 ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_None;
-                ImGui::BeginTabBar("MyTabBar", tab_bar_flags);
-                if (ImGui::BeginTabItem("Avocado"))
+                if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
                 {
-                    ImGui::Text("This is the Avocado tab!\nblah blah blah blah blah");
-                    ImGui::EndTabItem();
+                    if (ImGui::BeginTabItem("Avocado"))
+                    {
+                        ImGui::Text("This is the Avocado tab!\nblah blah blah blah blah");
+                        ImGui::EndTabItem();
+                    }
+                    if (ImGui::BeginTabItem("Broccoli"))
+                    {
+                        ImGui::Text("This is the Broccoli tab!\nblah blah blah blah blah");
+                        ImGui::EndTabItem();
+                    }
+                    if (ImGui::BeginTabItem("Cucumber"))
+                    {
+                        ImGui::Text("This is the Cucumber tab!\nblah blah blah blah blah");
+                        ImGui::EndTabItem();
+                    }
+                    ImGui::EndTabBar();
                 }
-                if (ImGui::BeginTabItem("Broccoli"))
-                {
-                    ImGui::Text("This is the Broccoli tab!\nblah blah blah blah blah");
-                    ImGui::EndTabItem();
-                }
-                if (ImGui::BeginTabItem("Cucumber"))
-                {
-                    ImGui::Text("This is the Cucumber tab!\nblah blah blah blah blah");
-                    ImGui::EndTabItem();
-                }
-                ImGui::EndTabBar();
                 ImGui::Separator();
                 ImGui::TreePop();
             }
@@ -1766,16 +1768,18 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 }
 
                 // Passing a bool* to BeginTabItem() is similar to passing one to Begin(): the underlying bool will be set to false when the tab is closed.
-                ImGui::BeginTabBar("MyTabBar", tab_bar_flags);
-                for (int n = 0; n < IM_ARRAYSIZE(opened); n++)
-                    if (opened[n] && ImGui::BeginTabItem(names[n], &opened[n]))
-                    {
-                        ImGui::Text("This is the %s tab!", names[n]);
-                        if (n & 1)
-                            ImGui::Text("I am an odd tab.");
-                        ImGui::EndTabItem();
-                    }
-                ImGui::EndTabBar();
+                if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
+                {
+                    for (int n = 0; n < IM_ARRAYSIZE(opened); n++)
+                        if (opened[n] && ImGui::BeginTabItem(names[n], &opened[n]))
+                        {
+                            ImGui::Text("This is the %s tab!", names[n]);
+                            if (n & 1)
+                                ImGui::Text("I am an odd tab.");
+                            ImGui::EndTabItem();
+                        }
+                    ImGui::EndTabBar();
+                }
                 ImGui::Separator();
                 ImGui::TreePop();
             }
@@ -3952,41 +3956,42 @@ void ShowExampleAppDocuments(bool* p_open)
     if (opt_target == Target_Tab)
     {
         ImGuiTabBarFlags tab_bar_flags = (opt_fitting_flags) | (opt_reorderable ? ImGuiTabBarFlags_Reorderable : 0);
-        ImGui::BeginTabBar("##tabs", tab_bar_flags);
-
-        if (opt_reorderable)
-            NotifyOfDocumentsClosedElsewhere(app);
-
-        // [DEBUG] Stress tests
-        //if ((ImGui::GetFrameCount() % 30) == 0) docs[1].Open ^= 1;            // [DEBUG] Automatically show/hide a tab. Test various interactions e.g. dragging with this on.
-        //if (ImGui::GetIO().KeyCtrl) ImGui::SetTabItemSelected(docs[1].Name);  // [DEBUG] Test SetTabItemSelected(), probably not very useful as-is anyway..
-
-        // Submit Tabs
-        for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
+        if (ImGui::BeginTabBar("##tabs", tab_bar_flags))
         {
-            MyDocument* doc = &app.Documents[doc_n];
-            if (!doc->Open)
-                continue;
+            if (opt_reorderable)
+                NotifyOfDocumentsClosedElsewhere(app);
 
-            ImGuiTabItemFlags tab_flags = (doc->Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
-            bool visible = ImGui::BeginTabItem(doc->Name, &doc->Open, tab_flags);
+            // [DEBUG] Stress tests
+            //if ((ImGui::GetFrameCount() % 30) == 0) docs[1].Open ^= 1;            // [DEBUG] Automatically show/hide a tab. Test various interactions e.g. dragging with this on.
+            //if (ImGui::GetIO().KeyCtrl) ImGui::SetTabItemSelected(docs[1].Name);  // [DEBUG] Test SetTabItemSelected(), probably not very useful as-is anyway..
 
-            // Cancel attempt to close when unsaved add to save queue so we can display a popup.
-            if (!doc->Open && doc->Dirty)
+            // Submit Tabs
+            for (int doc_n = 0; doc_n < app.Documents.Size; doc_n++)
             {
-                doc->Open = true;
-                doc->DoQueueClose();
+                MyDocument* doc = &app.Documents[doc_n];
+                if (!doc->Open)
+                    continue;
+
+                ImGuiTabItemFlags tab_flags = (doc->Dirty ? ImGuiTabItemFlags_UnsavedDocument : 0);
+                bool visible = ImGui::BeginTabItem(doc->Name, &doc->Open, tab_flags);
+
+                // Cancel attempt to close when unsaved add to save queue so we can display a popup.
+                if (!doc->Open && doc->Dirty)
+                {
+                    doc->Open = true;
+                    doc->DoQueueClose();
+                }
+
+                MyDocument::DisplayContextMenu(doc);
+                if (visible)
+                {
+                    MyDocument::DisplayContents(doc);
+                    ImGui::EndTabItem();
+                }
             }
 
-            MyDocument::DisplayContextMenu(doc);
-            if (visible)
-            {
-                MyDocument::DisplayContents(doc);
-                ImGui::EndTabItem();
-            }
+            ImGui::EndTabBar();
         }
-
-        ImGui::EndTabBar();
     }
     else if (opt_target == Target_Window)
     {
