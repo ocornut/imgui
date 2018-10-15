@@ -2919,10 +2919,11 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
-ImDrawList* ImGui::GetOverlayDrawList(ImGuiViewportP* viewport)
+ImDrawList* ImGui::GetOverlayDrawList(ImGuiViewport* viewport_public)
 {
     // Create the draw list on demand, because it is not frequently used for all viewports
     ImGuiContext& g = *GImGui;
+    ImGuiViewportP* viewport = (ImGuiViewportP*)viewport_public;
     if (viewport->OverlayDrawList == NULL)
     {
         viewport->OverlayDrawList = IM_NEW(ImDrawList)(&g.DrawListSharedData);
