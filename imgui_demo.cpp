@@ -207,6 +207,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_collapse = false;
     static bool no_close = false;
     static bool no_nav = false;
+    static bool no_background = false;
     static bool no_bring_to_front = false;
     
     ImGuiWindowFlags window_flags = 0;
@@ -217,6 +218,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     if (no_resize)          window_flags |= ImGuiWindowFlags_NoResize;
     if (no_collapse)        window_flags |= ImGuiWindowFlags_NoCollapse;
     if (no_nav)             window_flags |= ImGuiWindowFlags_NoNav;
+    if (no_background)      window_flags |= ImGuiWindowFlags_NoBackground;
     if (no_bring_to_front)  window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus;
     if (no_close)           p_open = NULL; // Don't pass our bool* to Begin
 
@@ -362,6 +364,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Checkbox("No collapse", &no_collapse);
         ImGui::Checkbox("No close", &no_close); ImGui::SameLine(150);
         ImGui::Checkbox("No nav", &no_nav); ImGui::SameLine(300);
+        ImGui::Checkbox("No background", &no_background);
         ImGui::Checkbox("No bring to front", &no_bring_to_front);
     }
 
