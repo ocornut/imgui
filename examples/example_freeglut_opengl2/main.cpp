@@ -98,7 +98,8 @@ int main(int argc, char** argv)
     // Setup Dear ImGui binding
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
 
     ImGui_ImplFreeGLUT_Init();
     ImGui_ImplFreeGLUT_InstallFuncs();

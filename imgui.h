@@ -27,6 +27,8 @@
 #define IMGUI_VERSION_NUM           16600
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 #define IMGUI_HAS_VIEWPORT          1 // Viewport WIP branch
+#define IMGUI_HAS_DOCK              1 // Docking WIP branch
+#define IMGUI_HAS_TABS              1 // Docking WIP branch
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
 // IMGUI_API is used for core imgui functions, IMGUI_IMPL_API is used for the default bindings files (imgui_impl_xxx.h)
@@ -75,6 +77,7 @@ struct ImColor;                     // Helper functions to create a color that c
 typedef void* ImTextureID;          // User data to identify a texture (this is whatever to you want it to be! read the FAQ about ImTextureID in imgui.cpp)
 #endif
 struct ImGuiContext;                // ImGui context (opaque)
+struct ImGuiDockFamily;             // Docking family for dock filtering
 struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
 struct ImGuiInputTextCallbackData;  // Shared state of InputText() when using custom ImGuiInputTextCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
@@ -109,11 +112,14 @@ typedef int ImGuiColorEditFlags;    // -> enum ImGuiColorEditFlags_  // Flags: f
 typedef int ImGuiColumnsFlags;      // -> enum ImGuiColumnsFlags_    // Flags: for Columns(), BeginColumns()
 typedef int ImGuiConfigFlags;       // -> enum ImGuiConfigFlags_     // Flags: for io.ConfigFlags
 typedef int ImGuiComboFlags;        // -> enum ImGuiComboFlags_      // Flags: for BeginCombo()
+typedef int ImGuiDockNodeFlags;     // -> enum ImGuiDockNodeFlags_   // Flags: for DockSpace()                   
 typedef int ImGuiDragDropFlags;     // -> enum ImGuiDragDropFlags_   // Flags: for *DragDrop*()
 typedef int ImGuiFocusedFlags;      // -> enum ImGuiFocusedFlags_    // Flags: for IsWindowFocused()
 typedef int ImGuiHoveredFlags;      // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
 typedef int ImGuiInputTextFlags;    // -> enum ImGuiInputTextFlags_  // Flags: for InputText*()
 typedef int ImGuiSelectableFlags;   // -> enum ImGuiSelectableFlags_ // Flags: for Selectable()
+typedef int ImGuiTabBarFlags;       // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
+typedef int ImGuiTabItemFlags;      // -> enum ImGuiTabItemFlags_    // Flags: for BeginTabItem()
 typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: for TreeNode*(),CollapsingHeader()
 typedef int ImGuiViewportFlags;     // -> enum ImGuiViewportFlags_   // Flags: for ImGuiViewport
 typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin*()
@@ -508,6 +514,25 @@ namespace ImGui
     IMGUI_API void          SetColumnOffset(int column_index, float offset_x);                  // set position of column line (in pixels, from the left side of the contents region). pass -1 to use current column
     IMGUI_API int           GetColumnsCount();
 
+    // Tabs
+    // Note: Tabs are automatically created by the docking system. Use this to create tab bars/tabs yourself without docking being involved.
+    IMGUI_API bool          BeginTabBar(const char* str_id, ImGuiTabBarFlags flags = 0);        // create and append into a TabBar
+    IMGUI_API void          EndTabBar();
+    IMGUI_API bool          BeginTabItem(const char* label, bool* p_open = NULL, ImGuiTabItemFlags flags = 0);// create a Tab. Returns true if the Tab is selected.
+    IMGUI_API void          EndTabItem();                                                       // only call EndTabItem() if BeginTabItem() returns true!
+    IMGUI_API void          SetTabItemClosed(const char* tab_or_docked_window_label);           // notify TabBar or Docking system of a closed tab/window ahead (useful to reduce visual flicker on reorderable tab bars). For tab-bar: call after BeginTabBar() and before Tab submissions. Otherwise call with a window name.
+
+    // Docking 
+    // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
+    // Note: you DO NOT need to call DockSpace() to use most Docking facilities! 
+    // To dock windows: hold SHIFT anywhere while moving windows (if io.ConfigDockingWithShift == true) or drag windows from their title bar (if io.ConfigDockingWithShift = false)
+    // Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
+    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, const ImGuiDockFamily* dock_family = NULL);
+    IMGUI_API void          SetNextWindowDockId(ImGuiID dock_id, ImGuiCond cond = 0);           // set next window dock id (FIXME-DOCK)
+    IMGUI_API void          SetNextWindowDockFamily(const ImGuiDockFamily* dock_family);        // set next window user type (docking filters by same user_type)
+    IMGUI_API ImGuiID       GetWindowDockId();
+    IMGUI_API bool          IsWindowDocked();                                                   // is current window docked into another window? 
+
     // Logging/Capture: all text output from interface is captured to tty/file/clipboard. By default, tree nodes are automatically opened during logging.
     IMGUI_API void          LogToTTY(int max_depth = -1);                                       // start logging to tty
     IMGUI_API void          LogToFile(int max_depth = -1, const char* filename = NULL);         // start logging to file
@@ -651,6 +676,8 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_NoNavInputs            = 1 << 18,  // No gamepad/keyboard navigation within the window
     ImGuiWindowFlags_NoNavFocus             = 1 << 19,  // No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
     ImGuiWindowFlags_NoNav                  = ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
+    ImGuiWindowFlags_UnsavedDocument        = 1 << 20,  // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. When used in a tab/docking context, tab is selected on closure and closure is deferred by one frame to allow code to cancel the closure (with a confirmation popup, etc.) without flicker.
+    ImGuiWindowFlags_NoDocking              = 1 << 21,  // Disable docking of this window
 
     // [Internal]
     ImGuiWindowFlags_NavFlattened           = 1 << 23,  // [BETA] Allow gamepad/keyboard navigation to cross over parent border to this child (only use on child that have no scrolling!)
@@ -658,7 +685,8 @@ enum ImGuiWindowFlags_
     ImGuiWindowFlags_Tooltip                = 1 << 25,  // Don't use! For internal use by BeginTooltip()
     ImGuiWindowFlags_Popup                  = 1 << 26,  // Don't use! For internal use by BeginPopup()
     ImGuiWindowFlags_Modal                  = 1 << 27,  // Don't use! For internal use by BeginPopupModal()
-    ImGuiWindowFlags_ChildMenu              = 1 << 28   // Don't use! For internal use by BeginMenu()
+    ImGuiWindowFlags_ChildMenu              = 1 << 28,  // Don't use! For internal use by BeginMenu()
+    ImGuiWindowFlags_DockNodeHost           = 1 << 29   // Don't use! For internal use by Begin()/NewFrame()
 
     // [Obsolete]
     //ImGuiWindowFlags_ShowBorders          = 1 << 7,   // --> Set style.FrameBorderSize=1.0f / style.WindowBorderSize=1.0f to enable borders around windows and items
@@ -740,6 +768,43 @@ enum ImGuiComboFlags_
     ImGuiComboFlags_NoArrowButton           = 1 << 5,   // Display on the preview box without the square arrow button
     ImGuiComboFlags_NoPreview               = 1 << 6,   // Display only a square arrow button
     ImGuiComboFlags_HeightMask_             = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest
+};
+
+// Flags for ImGui::BeginTabBar()
+enum ImGuiTabBarFlags_
+{
+    ImGuiTabBarFlags_None                           = 0,
+    ImGuiTabBarFlags_Reorderable                    = 1 << 0,   // Allow manually dragging tabs to re-order them + New tabs are appended at the end of list
+    ImGuiTabBarFlags_AutoSelectNewTabs              = 1 << 1,   // Automatically select new tabs when they appear
+    ImGuiTabBarFlags_NoCloseWithMiddleMouseButton   = 1 << 2,   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
+    ImGuiTabBarFlags_NoTabListPopupButton           = 1 << 3,
+    ImGuiTabBarFlags_NoTabListScrollingButtons      = 1 << 4,
+    ImGuiTabBarFlags_FittingPolicyResizeDown        = 1 << 5,   // Resize tabs when they don't fit
+    ImGuiTabBarFlags_FittingPolicyScroll            = 1 << 6,   // Add scroll buttons when tabs don't fit
+    ImGuiTabBarFlags_FittingPolicyMask_             = ImGuiTabBarFlags_FittingPolicyResizeDown | ImGuiTabBarFlags_FittingPolicyScroll,
+    ImGuiTabBarFlags_FittingPolicyDefault_          = ImGuiTabBarFlags_FittingPolicyResizeDown
+};  
+
+// Flags for ImGui::BeginTabItem()
+enum ImGuiTabItemFlags_
+{
+    ImGuiTabItemFlags_None                          = 0,
+    ImGuiTabItemFlags_UnsavedDocument               = 1 << 0,   // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. Also: tab is selected on closure and closure is deferred by one frame to allow code to undo it without flicker.
+    ImGuiTabItemFlags_SetSelected                   = 1 << 1,   // Trigger flag to programatically make the tab selected when calling BeginTabItem()
+    ImGuiTabItemFlags_NoCloseWithMiddleMouseButton  = 1 << 2,   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
+    ImGuiTabItemFlags_NoPushId                      = 1 << 3    // Don't call PushID(tab->ID)/PopID() on BeginTabItem()/EndTabItem()
+};
+
+// Flags for ImGui::DockSpace()
+enum ImGuiDockNodeFlags_
+{
+    ImGuiDockNodeFlags_None                         = 0,
+    ImGuiDockNodeFlags_KeepAliveOnly                = 1 << 0,   // Don't display the dockspace node but keep it alive. Windows docked into this dockspace node won't be undocked.
+    ImGuiDockNodeFlags_NoSplit                      = 1 << 1,   // Disable splitting the node into smaller nodes. Useful e.g. when embedding dockspaces into a main root one (the root one may have splitting disabled to reduce confusion)
+    //ImGuiDockNodeFlags_NoCentralNode              = 1 << 2,   // Disable Central Node (the node which can stay empty)
+    //ImGuiDockNodeFlags_NoOuterBorder              = 1 << 3,   // Disable outer border on a DockSpace() node.
+    ImGuiDockNodeFlags_NoDockingInCentralNode       = 1 << 4,   // Disable docking inside the Central Node, which will be always kept empty.
+    ImGuiDockNodeFlags_PassthruDockspace            = 1 << 5    // 1) DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node when empty. Meaning the host window should probably use SetNextWindowBgAlpha(0.0f) prior to Begin() when using this. 2) When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background.
 };
 
 // Flags for ImGui::IsWindowFocused()
@@ -887,6 +952,9 @@ enum ImGuiConfigFlags_
     ImGuiConfigFlags_NoMouse                = 1 << 4,   // Instruct imgui to clear mouse position/buttons in NewFrame(). This allows ignoring the mouse information set by the back-end.
     ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Instruct back-end to not alter mouse cursor shape and visibility. Use if the back-end cursor changes are interfering with yours and you don't want to use SetMouseCursor() to change mouse cursor. You may want to honor requests from imgui by reading GetMouseCursor() yourself instead.
 
+    // [BETA] Docking
+    ImGuiConfigFlags_DockingEnable          = 1 << 6,   // Docking enable flags. Use SHIFT to dock window into another (or without SHIFT if io.ConfigDockingWithShift = false).
+
     // [BETA] Viewports
     ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
     ImGuiConfigFlags_ViewportsNoTaskBarIcon = 1 << 11,  // Disable task bars icons for all secondary viewports (will set ImGuiViewportFlags_NoTaskBarIcon on them)
@@ -910,7 +978,7 @@ enum ImGuiBackendFlags_
     // [BETA] Viewports
     ImGuiBackendFlags_PlatformHasViewports  = 1 << 10,  // Back-end Platform supports multiple viewports.
     ImGuiBackendFlags_HasMouseHoveredViewport=1 << 11,  // Back-end Platform supports setting io.MouseHoveredViewport to the viewport directly under the mouse _IGNORING_ viewports with the ImGuiViewportFlags_NoInputs flag and _REGARDLESS_ of whether another viewport is focused and may be capturing the mouse. This information is _NOT EASY_ to provide correctly with most high-level engines! Don't set this without studying how the examples/ back-end handle it!
-    ImGuiBackendFlags_RendererHasViewports  = 1 << 12,  // Back-end Renderer supports multiple viewports.
+    ImGuiBackendFlags_RendererHasViewports  = 1 << 12   // Back-end Renderer supports multiple viewports.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -949,6 +1017,13 @@ enum ImGuiCol_
     ImGuiCol_ResizeGrip,
     ImGuiCol_ResizeGripHovered,
     ImGuiCol_ResizeGripActive,
+    ImGuiCol_Tab,
+    ImGuiCol_TabHovered,
+    ImGuiCol_TabActive,
+    ImGuiCol_TabUnfocused,
+    ImGuiCol_TabUnfocusedActive,
+    ImGuiCol_DockingPreview,
+    ImGuiCol_DockingEmptyBg,        // Background color for empty node (e.g. CentralNode with no window docked into it)
     ImGuiCol_PlotLines,
     ImGuiCol_PlotLinesHovered,
     ImGuiCol_PlotHistogram,
@@ -996,6 +1071,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_ScrollbarRounding,   // float     ScrollbarRounding
     ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
     ImGuiStyleVar_GrabRounding,        // float     GrabRounding
+    ImGuiStyleVar_TabRounding,         // float     TabRounding
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_COUNT
 
@@ -1101,6 +1177,8 @@ struct ImGuiStyle
     float       ScrollbarRounding;          // Radius of grab corners for scrollbar.
     float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar.
     float       GrabRounding;               // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
+    float       TabRounding;                // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
+    float       TabBorderSize;              // Thickness of border around tabs. 
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f,0.5f) for horizontally+vertically centered.
     ImVec2      DisplayWindowPadding;       // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
     ImVec2      DisplaySafeAreaPadding;     // If you cannot see the edges of your screen (e.g. on a TV) increase the safe area padding. Apply to popups/tooltips as well regular windows. NB: Prefer configuring your TV sets correctly!
@@ -1145,9 +1223,10 @@ struct ImGuiIO
 
     // Miscellaneous configuration options
     bool          MouseDrawCursor;              // = false          // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor). Cannot be easily renamed to 'io.ConfigXXX' because this is frequently used by back-end implementations.
+    bool          ConfigDockingWithShift;       // = false          // Enable docking with holding Shift key (reduce visual noise, allows dropping in wider space)
     bool          ConfigMacOSXBehaviors;        // = defined(__APPLE__) // OS X style: Text editing cursor movement using Alt instead of Ctrl, Shortcuts using Cmd/Super instead of Ctrl, Line/Text Start and End using Cmd+Arrows instead of Home/End, Double click selects by word instead of selecting whole text, Multi-selection in lists uses Cmd/Super instead of Ctrl (was called io.OptMacOSXBehaviors prior to 1.63)
     bool          ConfigInputTextCursorBlink;   // = true           // Set to false to disable blinking cursor, for users who consider it distracting. (was called: io.OptCursorBlink prior to 1.63)
-    bool          ConfigResizeWindowsFromEdges; // = false          // [BETA] Enable resizing of windows from their edges and from the lower-left corner. This requires (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors) because it needs mouse cursor feedback. (This used to be the ImGuiWindowFlags_ResizeFromAnySide flag)
+    bool          ConfigResizeWindowsFromEdges; // = true           // [BETA] Enable resizing of windows from their edges and from the lower-left corner. This requires (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors) because it needs mouse cursor feedback. (This used to be the ImGuiWindowFlags_ResizeFromAnySide flag)
 
     //------------------------------------------------------------------
     // Settings (User Functions)
@@ -1509,6 +1588,16 @@ struct ImGuiSizeCallbackData
     ImVec2  Pos;            // Read-only.   Window position, for reference.
     ImVec2  CurrentSize;    // Read-only.   Current window size.
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+};
+
+// [BETA] For SetNextWindowDockFamily() and DockSpace() function
+struct ImGuiDockFamily
+{
+    ImGuiID ID;                         // 0 = unaffiliated
+    bool    CompatibleWithFamilyZero;   // true = can be docked/merged with an unaffiliated window
+
+    ImGuiDockFamily()                                                    { ID = 0; CompatibleWithFamilyZero = true; } 
+    ImGuiDockFamily(ImGuiID id, bool compatible_with_family_zero = true) { ID = id; CompatibleWithFamilyZero = compatible_with_family_zero; }
 };
 
 // Data payload for Drag and Drop operations
