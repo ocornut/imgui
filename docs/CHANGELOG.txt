@@ -53,6 +53,12 @@ Other Changes:
 - Window: Resizing from edges (with io.ConfigResizeWindowsFromEdges Beta flag) extends the hit region
   of root floating windows outside the window, making it easier to resize windows. Resize grips are also
   extended accordingly so there are no discontinuity when hovering between borders and corners. (#1495, #822)
+- Window: Added ImGuiWindowFlags_NoBackground flag to avoid rendering window background. This is mostly to allow
+  the creation of new flag combinations, as we could already use SetNextWindowBgAlpha(0.0f). (#1660) [@biojppm, @ocornut]
+- Window: Added ImGuiWindowFlags_NoDecoration helper flag which is essentially NoTitleBar+NoResize+NoScrollbar+NoCollapse.
+- Window: Added ImGuiWindowFlags_NoMouseInputs which is basically the old ImGuiWindowFlags_NoInputs (essentially
+  we have renamed ImGuiWindowFlags_NoInputs to ImGuiWindowFlags_NoMouseInputs). Made the new ImGuiWindowFlags_NoInputs
+  encompass both NoMouseInputs+NoNav, which is consistent with its description. (#1660, #787)
 - Window, Inputs: Fixed resizing from edges when io.MousePos is not pixel-rounded by rounding mouse position input. (#2110)
 - BeginChild(): Fixed BeginChild(const char*, ...) variation erroneously not applying the ID stack
   to the provided string to uniquely identify the child window. This was undoing an intentional change
