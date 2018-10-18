@@ -1388,7 +1388,6 @@ namespace ImGui
 
     IMGUI_API void          SetCurrentFont(ImFont* font);
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
-    IMGUI_API ImDrawList*   GetOverlayDrawList(ImGuiViewportP* viewport);
     inline ImDrawList*      GetOverlayDrawList(ImGuiWindow* window) { return GetOverlayDrawList(window->Viewport); }
 
     // Init
