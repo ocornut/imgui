@@ -5066,7 +5066,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             {
                 // Late create viewport, based on the assumption that with our calculations, the DPI will be known ahead (same as the DPI of the selection done in UpdateSelectWindowViewport)
                 //ImGuiViewport* old_viewport = window->Viewport;
-                ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoFocusOnAppearing | ((window->Flags & ImGuiWindowFlags_NoInputs) ? ImGuiViewportFlags_NoInputs : 0);
+                ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoFocusOnAppearing;
+                if ((window->Flags & ImGuiWindowFlags_NoMouseInputs) && (window->Flags & ImGuiWindowFlags_NoNavInputs))
+                    viewport_flags |= ImGuiViewportFlags_NoInputs;
                 window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, viewport_flags);
 
                 // FIXME-DPI
