@@ -10,6 +10,11 @@ struct ImWindow
     ~ImWindow() { ImGui::End(); }
 
     operator bool() { return IsExpanded; }
+
+    ImWindow(ImWindow &&) = delete;
+    ImWindow &operator=(ImWindow &&) = delete;
+    ImWindow(const ImWindow &) = delete;
+    ImWindow &operator=(ImWindow &) = delete;
 };
 
 struct ImPushID
@@ -19,6 +24,11 @@ struct ImPushID
     ImPushID(const void* ptr_id) { ImGui::PushID(ptr_id); }
     ImPushID(int int_id) { ImGui::PushID(int_id); }
     ~ImPushID() { ImGui::PopID(); }
+
+    ImPushID(ImPushID &&) = delete;
+    ImPushID &operator=(ImPushID &&) = delete;
+    ImPushID(const ImPushID &) = delete;
+    ImPushID &operator=(ImPushID &) = delete;
 };
 
 struct ImTreeNode
@@ -31,6 +41,11 @@ struct ImTreeNode
     ~ImTreeNode() { if (IsOpen) ImGui::TreePop(); }
 
     operator bool() { return IsOpen; }
+
+    ImTreeNode(ImTreeNode &&) = delete;
+    ImTreeNode &operator=(ImTreeNode &&) = delete;
+    ImTreeNode(const ImTreeNode &) = delete;
+    ImTreeNode &operator=(ImTreeNode &) = delete;
 };
 
 struct ImTreeNodeV
@@ -42,6 +57,11 @@ struct ImTreeNodeV
     ~ImTreeNodeV() { if (IsOpen) ImGui::TreePop(); }
 
     operator bool() { return IsOpen; }
+
+    ImTreeNodeV(ImTreeNodeV &&) = delete;
+    ImTreeNodeV &operator=(ImTreeNodeV &&) = delete;
+    ImTreeNodeV(const ImTreeNodeV &) = delete;
+    ImTreeNodeV &operator=(ImTreeNodeV &) = delete;
 };
 
 struct ImTreeNodeEx
@@ -54,6 +74,11 @@ struct ImTreeNodeEx
     ~ImTreeNodeEx() { if (IsOpen) ImGui::TreePop(); }
 
     operator bool() { return IsOpen; }
+
+    ImTreeNodeEx(ImTreeNodeEx &&) = delete;
+    ImTreeNodeEx &operator=(ImTreeNodeEx &&) = delete;
+    ImTreeNodeEx(const ImTreeNodeEx &) = delete;
+    ImTreeNodeEx &operator=(ImTreeNodeEx &) = delete;
 };
 
 struct ImTreeNodeExV
@@ -65,4 +90,9 @@ struct ImTreeNodeExV
     ~ImTreeNodeExV() { if (IsOpen) ImGui::TreePop(); }
 
     operator bool() { return IsOpen; }
+
+    ImTreeNodeExV(ImTreeNodeExV &&) = delete;
+    ImTreeNodeExV &operator=(ImTreeNodeExV &&) = delete;
+    ImTreeNodeExV(const ImTreeNodeExV &) = delete;
+    ImTreeNodeExV &operator=(ImTreeNodeExV &) = delete;
 };

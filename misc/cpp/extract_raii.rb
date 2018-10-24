@@ -52,7 +52,12 @@ EOT
       puts "#{INDENT}operator bool() { return #{@state_var}; }"
     end
 
-    puts "};"
+    puts
+    puts "#{INDENT}#{@class_name}(#{@class_name} &&) = delete;"
+    puts "#{INDENT}#{@class_name} &operator=(#{@class_name} &&) = delete;"
+    puts "#{INDENT}#{@class_name}(const #{@class_name} &) = delete;"
+    puts "#{INDENT}#{@class_name} &operator=(#{@class_name} &) = delete;"
+    puts '};'
   end
 end
 
