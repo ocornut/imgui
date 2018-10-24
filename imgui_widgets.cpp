@@ -133,8 +133,9 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
     {
         // Long text!
         // Perform manual coarse clipping to optimize for long multi-line text
-        // From this point we will only compute the width of lines that are visible. Optimization only available when word-wrapping is disabled.
-        // We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
+        // - From this point we will only compute the width of lines that are visible. Optimization only available when word-wrapping is disabled.
+        // - We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
+        // - We use memchr(), pay attention that well optimized versions of those str/mem functions are much faster than a casually written loop.
         const char* line = text;
         const float line_height = GetTextLineHeight();
         const ImRect clip_rect = window->ClipRect;
@@ -153,7 +154,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                     int lines_skipped = 0;
                     while (line < text_end && lines_skipped < lines_skippable)
                     {
-                        const char* line_end = strchr(line, '\n');
+                        const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                         if (!line_end)
                             line_end = text_end;
                         line = line_end + 1;
@@ -169,15 +170,15 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 ImRect line_rect(pos, pos + ImVec2(FLT_MAX, line_height));
                 while (line < text_end)
                 {
-                    const char* line_end = strchr(line, '\n');
                     if (IsClippedEx(line_rect, 0, false))
                         break;
 
+                    const char* line_end = (const char*)memchr(line, '\n', text_end - line);
+                    if (!line_end)
+                        line_end = text_end;
                     const ImVec2 line_size = CalcTextSize(line, line_end, false);
                     text_size.x = ImMax(text_size.x, line_size.x);
                     RenderText(pos, line, line_end, false);
-                    if (!line_end)
-                        line_end = text_end;
                     line = line_end + 1;
                     line_rect.Min.y += line_height;
                     line_rect.Max.y += line_height;
@@ -188,7 +189,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 int lines_skipped = 0;
                 while (line < text_end)
                 {
-                    const char* line_end = strchr(line, '\n');
+                    const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                     if (!line_end)
                         line_end = text_end;
                     line = line_end + 1;
@@ -2905,7 +2906,7 @@ static void STB_TEXTEDIT_DELETECHARS(STB_TEXTEDIT_STRING* obj, int pos, int n)
     obj->CurLenA -= ImTextCountUtf8BytesFromStr(dst, dst + n);
     obj->CurLenW -= n;
 
-    // Offset remaining text
+    // Offset remaining text (FIXME-OPT: Use memmove)
     const ImWchar* src = obj->TextW.Data + pos + n;
     while (ImWchar c = *src++)
         *dst++ = c;
@@ -3093,7 +3094,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 //   This is so we can easily call InputText() on static arrays using ARRAYSIZE() and to match 
 //   Note that in std::string world, capacity() would omit 1 byte used by the zero-terminator.
 // - When active, hold on a privately held copy of the text (and apply back to 'buf'). So changing 'buf' while the InputText is active has no effect.
-// - If you want to use ImGui::InputText() with std::string, see misc/stl/imgui_stl.h
+// - If you want to use ImGui::InputText() with std::string, see misc/cpp/imgui_stdlib.h
 // (FIXME: Rather messy function partly because we are doing UTF8 > u16 > UTF8 conversions on the go to more easily handle stb_textedit calls. Ideally we should stay in UTF-8 all the time. See https://github.com/nothings/stb/issues/188)
 bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* callback_user_data)
 {
@@ -3403,7 +3404,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             {
                 // Filter pasted buffer
                 const int clipboard_len = (int)strlen(clipboard);
-                ImWchar* clipboard_filtered = (ImWchar*)ImGui::MemAlloc((clipboard_len+1) * sizeof(ImWchar));
+                ImWchar* clipboard_filtered = (ImWchar*)MemAlloc((clipboard_len+1) * sizeof(ImWchar));
                 int clipboard_filtered_len = 0;
                 for (const char* s = clipboard; *s; )
                 {
@@ -3421,7 +3422,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
                     edit_state.CursorFollow = true;
                 }
-                ImGui::MemFree(clipboard_filtered);
+                MemFree(clipboard_filtered);
             }
         }
     }
@@ -3616,6 +3617,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // In multi-line mode, we never exit the loop until all lines are counted, so add one extra to the searches_remaining counter.
             searches_remaining += is_multiline ? 1 : 0;
             int line_count = 0;
+            //for (const ImWchar* s = text_begin; (s = (const ImWchar*)wcschr((const wchar_t*)s, (wchar_t)'\n')) != NULL; s++)  // FIXME-OPT: Could use this when wchar_t are 16-bits
             for (const ImWchar* s = text_begin; *s != 0; s++)
                 if (*s == '\n')
                 {
@@ -3690,6 +3692,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     break;
                 if (rect_pos.y < clip_rect.y)
                 {
+                    //p = (const ImWchar*)wmemchr((const wchar_t*)p, '\n', text_selected_end - p);  // FIXME-OPT: Could use this when wchar_t are 16-bits
+                    //p = p ? p + 1 : text_selected_end;
                     while (p < text_selected_end)
                         if (*p++ == '\n')
                             break;
@@ -4528,38 +4532,38 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
 {
     bool allow_opt_picker = !(flags & ImGuiColorEditFlags__PickerMask);
     bool allow_opt_alpha_bar = !(flags & ImGuiColorEditFlags_NoAlpha) && !(flags & ImGuiColorEditFlags_AlphaBar);
-    if ((!allow_opt_picker && !allow_opt_alpha_bar) || !ImGui::BeginPopup("context"))
+    if ((!allow_opt_picker && !allow_opt_alpha_bar) || !BeginPopup("context"))
         return;
     ImGuiContext& g = *GImGui;
     if (allow_opt_picker)
     {
-        ImVec2 picker_size(g.FontSize * 8, ImMax(g.FontSize * 8 - (ImGui::GetFrameHeight() + g.Style.ItemInnerSpacing.x), 1.0f)); // FIXME: Picker size copied from main picker function
-        ImGui::PushItemWidth(picker_size.x);
+        ImVec2 picker_size(g.FontSize * 8, ImMax(g.FontSize * 8 - (GetFrameHeight() + g.Style.ItemInnerSpacing.x), 1.0f)); // FIXME: Picker size copied from main picker function
+        PushItemWidth(picker_size.x);
         for (int picker_type = 0; picker_type < 2; picker_type++)
         {
             // Draw small/thumbnail version of each picker type (over an invisible button for selection)
-            if (picker_type > 0) ImGui::Separator();
-            ImGui::PushID(picker_type);
+            if (picker_type > 0) Separator();
+            PushID(picker_type);
             ImGuiColorEditFlags picker_flags = ImGuiColorEditFlags_NoInputs|ImGuiColorEditFlags_NoOptions|ImGuiColorEditFlags_NoLabel|ImGuiColorEditFlags_NoSidePreview|(flags & ImGuiColorEditFlags_NoAlpha);
             if (picker_type == 0) picker_flags |= ImGuiColorEditFlags_PickerHueBar;
             if (picker_type == 1) picker_flags |= ImGuiColorEditFlags_PickerHueWheel;
-            ImVec2 backup_pos = ImGui::GetCursorScreenPos();
-            if (ImGui::Selectable("##selectable", false, 0, picker_size)) // By default, Selectable() is closing popup
+            ImVec2 backup_pos = GetCursorScreenPos();
+            if (Selectable("##selectable", false, 0, picker_size)) // By default, Selectable() is closing popup
                 g.ColorEditOptions = (g.ColorEditOptions & ~ImGuiColorEditFlags__PickerMask) | (picker_flags & ImGuiColorEditFlags__PickerMask);
-            ImGui::SetCursorScreenPos(backup_pos);
+            SetCursorScreenPos(backup_pos);
             ImVec4 dummy_ref_col;
             memcpy(&dummy_ref_col.x, ref_col, sizeof(float) * (picker_flags & ImGuiColorEditFlags_NoAlpha ? 3 : 4));
-            ImGui::ColorPicker4("##dummypicker", &dummy_ref_col.x, picker_flags);
-            ImGui::PopID();
+            ColorPicker4("##dummypicker", &dummy_ref_col.x, picker_flags);
+            PopID();
         }
-        ImGui::PopItemWidth();
+        PopItemWidth();
     }
     if (allow_opt_alpha_bar)
     {
-        if (allow_opt_picker) ImGui::Separator();
-        ImGui::CheckboxFlags("Alpha Bar", (unsigned int*)&g.ColorEditOptions, ImGuiColorEditFlags_AlphaBar);
+        if (allow_opt_picker) Separator();
+        CheckboxFlags("Alpha Bar", (unsigned int*)&g.ColorEditOptions, ImGuiColorEditFlags_AlphaBar);
     }
-    ImGui::EndPopup();
+    EndPopup();
 }
 
 //-------------------------------------------------------------------------

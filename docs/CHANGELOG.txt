@@ -36,6 +36,7 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Renamed SetScrollHere() to SetScrollHereY(). Kept redirection function (will obsolete).
+- Renamed misc/stl/imgui_stl.* to misc/cpp/imgui_stdlib.* in prevision for other C++ helper files. (#2035, #2096)
 
 Other Changes:
 
@@ -52,15 +53,27 @@ Other Changes:
 - Window: Resizing from edges (with io.ConfigResizeWindowsFromEdges Beta flag) extends the hit region
   of root floating windows outside the window, making it easier to resize windows. Resize grips are also
   extended accordingly so there are no discontinuity when hovering between borders and corners. (#1495, #822)
+- Window: Added ImGuiWindowFlags_NoBackground flag to avoid rendering window background. This is mostly to allow
+  the creation of new flag combinations, as we could already use SetNextWindowBgAlpha(0.0f). (#1660) [@biojppm, @ocornut]
+- Window: Added ImGuiWindowFlags_NoDecoration helper flag which is essentially NoTitleBar+NoResize+NoScrollbar+NoCollapse.
+- Window: Added ImGuiWindowFlags_NoMouseInputs which is basically the old ImGuiWindowFlags_NoInputs (essentially
+  we have renamed ImGuiWindowFlags_NoInputs to ImGuiWindowFlags_NoMouseInputs). Made the new ImGuiWindowFlags_NoInputs
+  encompass both NoMouseInputs+NoNav, which is consistent with its description. (#1660, #787)
 - Window, Inputs: Fixed resizing from edges when io.MousePos is not pixel-rounded by rounding mouse position input. (#2110)
 - BeginChild(): Fixed BeginChild(const char*, ...) variation erroneously not applying the ID stack
   to the provided string to uniquely identify the child window. This was undoing an intentional change
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
+- TextUnformatted(): Fixed a case where large-text path would read bytes past the text_end marker depending
+  on the position of new lines in the buffer (it wasn't affecting the output but still not the right thing to do!) 
+- RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
 - Drag and Drop: Added GetDragDropPayload() to peek directly into the payload (if any) from anywhere. (#143)
+- ImGuiTextBuffer: Avoid heap allocation when empty.
 - ImDrawList: Fixed AddConvexPolyFilled() undefined behavior when passing points_count smaller than 3,
   in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
+- Examples: DirectX10, DirectX11: Removed seemingly unnecessary calls to invalidate and recreate device objects
+  in the WM_SIZE handler. (#2088) [@ice1000]
 
 
 -----------------------------------------------------------------------
@@ -84,7 +97,7 @@ Other Changes:
   Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
 - Fixed a build issue with non-Cygwin GCC under Windows.
 - Demo: Added a "Configuration" block to make io.ConfigFlags/io.BackendFlags more prominent.
-- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002). [@jiri]
+- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
 
 
 -----------------------------------------------------------------------
@@ -157,6 +170,7 @@ Other Changes:
 - Selectable: Added ImGuiSelectableFlags_Disabled flag in the public API. (#211)
 - ColorEdit4: Fixed a bug when text input or drag and drop leading to unsaturated HSV values would erroneously alter the resulting color. (#2050)
 - Misc: Added optional misc/stl/imgui_stl.h wrapper to use with STL types (e.g. InputText with std::string). (#2006, #1443, #1008)
+  [*EDIT* renamed to misc/std/imgui_stdlib.h in 1.66]
 - Misc: Added IMGUI_VERSION_NUM for easy compile-time testing. (#2025)
 - Misc: Added ImGuiMouseCursor_Hand cursor enum + corresponding software cursor. (#1913, 1914) [@aiekick, @ocornut] 
 - Misc: Tweaked software mouse cursor offset to match the offset of the corresponding Windows 10 cursors.
@@ -228,7 +242,7 @@ Other Changes:
   - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
   - Read examples/README.txt for details.
 - Added IsItemDeactivated() to query if the last item was active previously and isn't anymore. Useful for Undo/Redo patterns. (#820, #956, #1875)
-- Added IsItemDeactivatedAfterChange() [*EDIT* renamed to IsItemDeactivatedAfterEdit() in 1.63) if the last item was active previously, 
+- Added IsItemDeactivatedAfterChange() [*EDIT* renamed to IsItemDeactivatedAfterEdit() in 1.63] if the last item was active previously, 
   is not anymore, and during its active state modified a value. Note that you may still get false positive (e.g. drag value and while 
   holding return on the same value). (#820, #956, #1875)
 - Nav: Added support for PageUp/PageDown (explorer-style: first aim at bottom/top most item, when scroll a page worth of contents). (#787)
