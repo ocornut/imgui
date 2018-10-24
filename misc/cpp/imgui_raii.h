@@ -2,9 +2,8 @@
 
 #pragma once
 
-class ImWindow
+struct ImWindow
 {
-public:
     bool IsExpanded;
 
     ImWindow(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsExpanded = ImGui::Begin(name, p_open, flags); }
@@ -13,9 +12,8 @@ public:
     operator bool() { return IsExpanded; }
 };
 
-class ImPushID
+struct ImPushID
 {
-public:
     ImPushID(const char* str_id) { ImGui::PushID(str_id); }
     ImPushID(const char* str_id_begin, const char* str_id_end) { ImGui::PushID(str_id_begin, str_id_end); }
     ImPushID(const void* ptr_id) { ImGui::PushID(ptr_id); }
@@ -23,9 +21,8 @@ public:
     ~ImPushID() { ImGui::PopID(); }
 };
 
-class ImTreeNode
+struct ImTreeNode
 {
-public:
     bool IsOpen;
 
     ImTreeNode(const char* label) { IsOpen = ImGui::TreeNode(label); }
@@ -36,9 +33,8 @@ public:
     operator bool() { return IsOpen; }
 };
 
-class ImTreeNodeV
+struct ImTreeNodeV
 {
-public:
     bool IsOpen;
 
     ImTreeNodeV(const char* str_id, const char* fmt, va_list args) IM_FMTLIST(3) { IsOpen = ImGui::TreeNodeV(str_id, fmt, args); }
@@ -48,9 +44,8 @@ public:
     operator bool() { return IsOpen; }
 };
 
-class ImTreeNodeEx
+struct ImTreeNodeEx
 {
-public:
     bool IsOpen;
 
     ImTreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0) { IsOpen = ImGui::TreeNodeEx(label, flags); }
@@ -61,9 +56,8 @@ public:
     operator bool() { return IsOpen; }
 };
 
-class ImTreeNodeExV
+struct ImTreeNodeExV
 {
-public:
     bool IsOpen;
 
     ImTreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, args); }

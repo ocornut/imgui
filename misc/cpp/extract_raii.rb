@@ -28,9 +28,8 @@ class WrapperClass
     end
 
     puts <<EOT
-class #{@class_name}
+struct #{@class_name}
 {
-public:
 EOT
     if @state_var
       puts "#{INDENT}#{m[:type]} #{@state_var};"
