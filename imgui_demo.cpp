@@ -155,6 +155,13 @@ void ImGui::ShowUserGuide()
 // [SECTION] Demo Window / ShowDemoWindow()
 //-----------------------------------------------------------------------------
 
+// We split the contents of the big ShowDemoWindow() function into smaller functions (because the link time of very large functions grow non-linearly)
+static void ShowDemoWindowWidgets();
+static void ShowDemoWindowLayout();
+static void ShowDemoWindowPopups();
+static void ShowDemoWindowColumns();
+static void ShowDemoWindowMisc();
+
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does. You may then search for keywords in the code when you are interested by a specific feature.
 void ImGui::ShowDemoWindow(bool* p_open)
@@ -212,7 +219,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool no_nav = false;
     static bool no_background = false;
     static bool no_bring_to_front = false;
-    
+
     ImGuiWindowFlags window_flags = 0;
     if (no_titlebar)        window_flags |= ImGuiWindowFlags_NoTitleBar;
     if (no_scrollbar)       window_flags |= ImGuiWindowFlags_NoScrollbar;
@@ -371,6 +378,19 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::Checkbox("No bring to front", &no_bring_to_front);
     }
 
+    // All demo contents
+    ShowDemoWindowWidgets();
+    ShowDemoWindowLayout();
+    ShowDemoWindowPopups();
+    ShowDemoWindowColumns();
+    ShowDemoWindowMisc();
+
+    // End of ShowDemoWindow()
+    ImGui::End();
+}
+
+static void ShowDemoWindowWidgets()
+{
     if (ImGui::CollapsingHeader("Widgets"))
     {
         if (ImGui::TreeNode("Basic"))
@@ -601,13 +621,13 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Checkbox("Enable extra group", &closable_group);
             if (ImGui::CollapsingHeader("Header"))
             {
-                ImGui::Text("IsItemHovered: %d", IsItemHovered());
+                ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
                 for (int i = 0; i < 5; i++)
                     ImGui::Text("Some content %d", i);
             }
             if (ImGui::CollapsingHeader("Header with a close button", &closable_group))
             {
-                ImGui::Text("IsItemHovered: %d", IsItemHovered());
+                ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
                 for (int i = 0; i < 5; i++)
                     ImGui::Text("More content %d", i);
             }
@@ -1049,11 +1069,11 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
                     if (ImGui::BeginDragDropTarget())
                     {
-                        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))
                             memcpy((float*)&saved_palette[n], payload->Data, sizeof(float) * 3);
-                        if (const ImGuiPayload* payload = AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
+                        if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F))
                             memcpy((float*)&saved_palette[n], payload->Data, sizeof(float) * 4);
-                        EndDragDropTarget();
+                        ImGui::EndDragDropTarget();
                     }
 
                     ImGui::PopID();
@@ -1469,7 +1489,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Text("This is another child window for testing with the _ChildWindows flag.");
             ImGui::EndChild();
             if (embed_all_inside_a_child_window)
-                EndChild();
+                ImGui::EndChild();
 
             // Calling IsItemHovered() after begin returns the hovered status of the title bar. 
             // This is useful in particular if you want to create a context menu (with BeginPopupContextItem) associated to the title bar of a window.
@@ -1493,7 +1513,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
     }
+}
 
+static void ShowDemoWindowLayout()
+{
     if (ImGui::CollapsingHeader("Layout"))
     {
         if (ImGui::TreeNode("Child regions"))
@@ -1529,7 +1552,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             // Child 2: rounded border
             {
                 ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-                ImGui::BeginChild("Child2", ImVec2(0,300), true, (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0) | (disable_menu ? 0 : ImGuiWindowFlags_MenuBar));
+                ImGui::BeginChild("Child2", ImVec2(0, 300), true, (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0) | (disable_menu ? 0 : ImGuiWindowFlags_MenuBar));
                 if (!disable_menu && ImGui::BeginMenuBar())
                 {
                     if (ImGui::BeginMenu("Menu"))
@@ -1623,21 +1646,21 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(300); ImGui::SmallButton("x=300");
 
             // Checkbox
-            static bool c1=false,c2=false,c3=false,c4=false;
+            static bool c1 = false, c2 = false, c3 = false, c4 = false;
             ImGui::Checkbox("My", &c1); ImGui::SameLine();
             ImGui::Checkbox("Tailor", &c2); ImGui::SameLine();
             ImGui::Checkbox("Is", &c3); ImGui::SameLine();
             ImGui::Checkbox("Rich", &c4);
 
             // Various
-            static float f0=1.0f, f1=2.0f, f2=3.0f;
+            static float f0 = 1.0f, f1 = 2.0f, f2 = 3.0f;
             ImGui::PushItemWidth(80);
             const char* items[] = { "AAAA", "BBBB", "CCCC", "DDDD" };
             static int item = -1;
             ImGui::Combo("Combo", &item, items, IM_ARRAYSIZE(items)); ImGui::SameLine();
-            ImGui::SliderFloat("X", &f0, 0.0f,5.0f); ImGui::SameLine();
-            ImGui::SliderFloat("Y", &f1, 0.0f,5.0f); ImGui::SameLine();
-            ImGui::SliderFloat("Z", &f2, 0.0f,5.0f);
+            ImGui::SliderFloat("X", &f0, 0.0f, 5.0f); ImGui::SameLine();
+            ImGui::SliderFloat("Y", &f1, 0.0f, 5.0f); ImGui::SameLine();
+            ImGui::SliderFloat("Z", &f2, 0.0f, 5.0f);
             ImGui::PopItemWidth();
 
             ImGui::PushItemWidth(80);
@@ -1654,7 +1677,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::PopItemWidth();
 
             // Dummy
-            ImVec2 button_sz(40,40);
+            ImVec2 button_sz(40, 40);
             ImGui::Button("A", button_sz); ImGui::SameLine();
             ImGui::Dummy(button_sz); ImGui::SameLine();
             ImGui::Button("B", button_sz);
@@ -1703,9 +1726,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
             const float values[5] = { 0.5f, 0.20f, 0.80f, 0.60f, 0.25f };
             ImGui::PlotHistogram("##values", values, IM_ARRAYSIZE(values), 0, NULL, 0.0f, 1.0f, size);
 
-            ImGui::Button("ACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f,size.y));
+            ImGui::Button("ACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f, size.y));
             ImGui::SameLine();
-            ImGui::Button("REACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f,size.y));
+            ImGui::Button("REACTION", ImVec2((size.x - ImGui::GetStyle().ItemSpacing.x)*0.5f, size.y));
             ImGui::EndGroup();
             ImGui::SameLine();
 
@@ -1802,7 +1825,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 {
                     if (track && line == track_line)
                     {
-                        ImGui::TextColored(ImColor(255,255,0), "Line %d", line);
+                        ImGui::TextColored(ImVec4(1,1,0,1), "Line %d", line);
                         ImGui::SetScrollHereY(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
                     }
                     else
@@ -1826,7 +1849,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SliderInt("Lines", &lines, 1, 15);
             ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2.0f, 1.0f));
-            ImGui::BeginChild("scrolling", ImVec2(0, ImGui::GetFrameHeightWithSpacing()*7 + 30), true, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGui::BeginChild("scrolling", ImVec2(0, ImGui::GetFrameHeightWithSpacing() * 7 + 30), true, ImGuiWindowFlags_HorizontalScrollbar);
             for (int line = 0; line < lines; line++)
             {
                 // Display random stuff (for the sake of this trivial demo we are using basic Button+SameLine. If you want to create your own time line for a real application you may be better off
@@ -1872,15 +1895,18 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::DragFloat2("size", (float*)&size, 0.5f, 0.0f, 200.0f, "%.0f");
             ImGui::TextWrapped("(Click and drag)");
             ImVec2 pos = ImGui::GetCursorScreenPos();
-            ImVec4 clip_rect(pos.x, pos.y, pos.x+size.x, pos.y+size.y);
+            ImVec4 clip_rect(pos.x, pos.y, pos.x + size.x, pos.y + size.y);
             ImGui::InvisibleButton("##dummy", size);
             if (ImGui::IsItemActive() && ImGui::IsMouseDragging()) { offset.x += ImGui::GetIO().MouseDelta.x; offset.y += ImGui::GetIO().MouseDelta.y; }
-            ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x+size.x,pos.y+size.y), IM_COL32(90,90,120,255));
-            ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize()*2.0f, ImVec2(pos.x+offset.x,pos.y+offset.y), IM_COL32(255,255,255,255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
+            ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(90, 90, 120, 255));
+            ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize()*2.0f, ImVec2(pos.x + offset.x, pos.y + offset.y), IM_COL32(255, 255, 255, 255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
             ImGui::TreePop();
         }
     }
+}
 
+static void ShowDemoWindowPopups()
+{
     if (ImGui::CollapsingHeader("Popups & Modal windows"))
     {
         // Popups are windows with a few special properties:
@@ -1889,7 +1915,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         // - Their visibility state (~bool) is held internally by imgui instead of being held by the programmer as we are used to with regular Begin() calls.
         // (*) One can use IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) to bypass it and detect hovering even when normally blocked by a popup.
         // Those three properties are intimately connected. The library needs to hold their visibility state because it can close popups at any time.
-        
+
         // Typical use for regular windows:
         //   bool my_tool_is_active = false; if (ImGui::Button("Open")) my_tool_is_active = true; [...] if (my_tool_is_active) Begin("My Tool", &my_tool_is_active) { [...] } End();
         // Typical use for popups:
@@ -2026,14 +2052,14 @@ void ImGui::ShowDemoWindow(bool* p_open)
                 //ImGui::Combo("Combo", &dummy_i, "Delete\0Delete harder\0");
 
                 static bool dont_ask_me_next_time = false;
-                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0,0));
+                ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
                 ImGui::Checkbox("Don't ask me next time", &dont_ask_me_next_time);
                 ImGui::PopStyleVar();
 
-                if (ImGui::Button("OK", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                if (ImGui::Button("OK", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
                 ImGui::SetItemDefaultFocus();
                 ImGui::SameLine();
-                if (ImGui::Button("Cancel", ImVec2(120,0))) { ImGui::CloseCurrentPopup(); }
+                if (ImGui::Button("Cancel", ImVec2(120, 0))) { ImGui::CloseCurrentPopup(); }
                 ImGui::EndPopup();
             }
 
@@ -2084,7 +2110,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
     }
+}
 
+static void ShowDemoWindowColumns()
+{
     if (ImGui::CollapsingHeader("Columns"))
     {
         ImGui::PushID("Columns");
@@ -2151,7 +2180,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::Text("An extra line here.");
             ImGui::NextColumn();
 
-                ImGui::Text("Sailor");
+            ImGui::Text("Sailor");
             ImGui::Button("Corniflower");
             static float bar = 1.0f;
             ImGui::InputFloat("blue", &bar, 0.05f, 0, "%.3f");
@@ -2264,7 +2293,10 @@ void ImGui::ShowDemoWindow(bool* p_open)
         }
         ImGui::PopID();
     }
+}
 
+static void ShowDemoWindowMisc()
+{
     if (ImGui::CollapsingHeader("Filtering"))
     {
         static ImGuiTextFilter filter;
@@ -2422,9 +2454,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::TreePop();
         }
     }
-
-    // End of ShowDemoWindow()
-    ImGui::End();
 }
 
 //-----------------------------------------------------------------------------
