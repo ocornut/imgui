@@ -3768,7 +3768,7 @@ void ShowExampleAppDockSpace(bool* p_open)
 
     // When using ImGuiDockNodeFlags_PassthruDockspace, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
     if (opt_flags & ImGuiDockNodeFlags_PassthruDockspace)
-        ImGui::SetNextWindowBgAlpha(0.0f);
+        window_flags |= ImGuiWindowFlags_NoBackground;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
     ImGui::Begin("DockSpace Demo", p_open, window_flags);
