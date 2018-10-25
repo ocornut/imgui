@@ -77,6 +77,7 @@ Other Changes:
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
 - DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
+- SliderAngle: Added optional format argument to alter precision or localize the string. (#2150) [@podsvirov]
 - Window: Resizing from edges (with io.ConfigResizeWindowsFromEdges Beta flag) extends the hit region
   of root floating windows outside the window, making it easier to resize windows. Resize grips are also
   extended accordingly so there are no discontinuity when hovering between borders and corners. (#1495, #822)
@@ -95,6 +96,7 @@ Other Changes:
 - RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
+- Demo: Split the contents of ShowDemoWindow() into smaller functions as it appears to speed up link time with VS. (#2152)
 - Drag and Drop: Added GetDragDropPayload() to peek directly into the payload (if any) from anywhere. (#143)
 - ImGuiTextBuffer: Avoid heap allocation when empty.
 - ImDrawList: Fixed AddConvexPolyFilled() undefined behavior when passing points_count smaller than 3,
