@@ -215,7 +215,7 @@ See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [B
 Support Forums
 --------------
 
-If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forum: https://discourse.dearimgui.org/c/getting-started.
+If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forum: https://discourse.dearimgui.org.
 
 For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues.
 
