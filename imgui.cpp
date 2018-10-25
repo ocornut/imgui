@@ -2511,7 +2511,7 @@ void ImGui::SetHoveredID(ImGuiID id)
     g.HoveredId = id;
     g.HoveredIdAllowOverlap = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
-        g.HoveredIdTimer = 0.0f;
+        g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
 }
 
 ImGuiID ImGui::GetHoveredID()
@@ -3191,8 +3191,12 @@ void ImGui::NewFrame()
     // Clear reference to active widget if the widget isn't alive anymore
     if (!g.HoveredIdPreviousFrame)
         g.HoveredIdTimer = 0.0f;
+    if (!g.HoveredIdPreviousFrame || (g.HoveredId && g.ActiveId == g.HoveredId))
+        g.HoveredIdNotActiveTimer = 0.0f;
     if (g.HoveredId)
         g.HoveredIdTimer += g.IO.DeltaTime;
+    if (g.HoveredId && g.ActiveId != g.HoveredId)
+        g.HoveredIdNotActiveTimer += g.IO.DeltaTime;
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;

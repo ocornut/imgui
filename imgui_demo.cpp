@@ -1,22 +1,25 @@
 // dear imgui, v1.66 WIP
 // (demo code)
 
-// Message to the person tempted to delete this file when integrating ImGui into their code base:
-// Don't do it! Do NOT remove this file from your project! It is useful reference code that you and other users will want to refer to.
+// Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
+// Do NOT remove this file from your project! Think again! It is the most useful reference code that you and other coders
+// will want to refer to and call. Have the ImGui::ShowDemoWindow() function wired in an always-available debug menu of 
+// your game/app! Removing this file from your project is hindering access to documentation for everyone in your team, 
+// likely leading you to poorer usage of the library.
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowDemoWindow().
-// During development, you can call ImGui::ShowDemoWindow() in your code to learn about various features of ImGui. Have it wired in a debug menu!
-// Removing this file from your project is hindering access to documentation for everyone in your team, likely leading you to poorer usage of the library.
-// Note that you can #define IMGUI_DISABLE_DEMO_WINDOWS in imconfig.h for the same effect.
-// If you want to link core ImGui in your final builds but not those demo windows, #define IMGUI_DISABLE_DEMO_WINDOWS in imconfig.h and those functions will be empty.
-// In other situation, when you have ImGui available you probably want this to be available for reference and execution.
+// If you want to link core Dear ImGui in your shipped builds but want an easy guarantee that the demo will not be linked, 
+// you can setup your imconfig.h with #define IMGUI_DISABLE_DEMO_WINDOWS and those functions will be empty.
+// In other situation, whenever you have Dear ImGui available you probably want this to be available for reference.
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
 
-// Message to beginner C/C++ programmers about the meaning of the 'static' keyword: in this demo code, we frequently we use 'static' variables inside functions.
-// A static variable persist across calls, so it is essentially like a global variable but declared inside the scope of the function.
-// We do this as a way to gather code and data in the same place, just to make the demo code faster to read, faster to write, and use less code.
-// It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant or used in threads.
-// This might be a pattern you occasionally want to use in your code, but most of the real data you would be editing is likely to be stored outside your functions.
+// Message to beginner C/C++ programmers about the meaning of the 'static' keyword: 
+// In this demo code, we frequently we use 'static' variables inside functions. A static variable persist across calls, so it is 
+// essentially like a global variable but declared inside the scope of the function. We do this as a way to gather code and data 
+// in the same place, to make the demo source code faster to read, faster to write, and smaller in size.
+// It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant
+// or used in threads. This might be a pattern you will want to use in your code, but most of the real data you would be editing is 
+// likely going to be stored outside your functions.
 
 /*
 
