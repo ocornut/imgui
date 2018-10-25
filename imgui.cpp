@@ -10755,7 +10755,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         host_window->DrawList->ChannelsSetCurrent(1);
     }
 
-    // Register a hit-test hole in the window unless we are currently dragging a window that is compatible our dockspace
+    // Register a hit-test hole in the window unless we are currently dragging a window that is compatible with our dockspace
     bool central_node_hole = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruDockspace) != 0 && central_node != NULL && central_node->IsEmpty();
     bool central_node_hole_register_hit_test_hole = central_node_hole;
     if (central_node_hole)
@@ -11011,11 +11011,14 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         focus_tab_id = tab_bar->WantFocusTabId;
 
     // When clicking on the title bar outside of tabs, we still focus the selected tab for that node
-    if (g.HoveredWindow == host_window && g.HoveredId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max) && IsMouseClicked(0))
+    if (g.HoveredWindow == host_window && g.HoveredId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))
     {
-        focus_tab_id = tab_bar->SelectedTabId;
-        if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, focus_tab_id))
-            StartMouseMovingWindow(tab->Window);
+        if (IsMouseClicked(0))
+        {
+            focus_tab_id = tab_bar->SelectedTabId;
+            if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, focus_tab_id))
+                StartMouseMovingWindow(tab->Window);
+        }
     }
 
     // Forward focus from host node to selected window
@@ -11224,8 +11227,8 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
     {
         ImGuiDir split_dir = data->SplitDir;
         ImGuiAxis split_axis = (split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Right) ? ImGuiAxis_X : ImGuiAxis_Y;
-        ImVec2 pos_old = data->FutureNode.Pos, pos_new;
-        ImVec2 size_old = data->FutureNode.Size, size_new;
+        ImVec2 pos_new, pos_old = data->FutureNode.Pos;
+        ImVec2 size_new, size_old = data->FutureNode.Size;
         DockNodeCalcSplitRects(pos_old, size_old, pos_new, size_new, split_dir, root_payload->Size);
 
         // Calculate split ratio so we can pass it down the docking request
@@ -11510,8 +11513,6 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         bb.Max[axis ^ 1] += child_1->Size[axis ^ 1];
         //if (g.IO.KeyCtrl) GetOverlayDrawList(g.CurrentWindow->Viewport)->AddRect(bb.Min, bb.Max, IM_COL32(255,0,255,255));
 
-        float w1 = child_0->Size[axis];
-        float w2 = child_1->Size[axis];
         //bb.Min[axis] += 1; // Display a little inward so highlight doesn't connect with nearby tabs on the neighbor node.
         //bb.Max[axis] -= 1;
         PushID(node->ID);
@@ -11546,15 +11547,17 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         }
 
         // Use a short delay before highlighting the splitter (and changing the mouse cursor) in order for regular mouse movement to not highlight many splitters
+        float cur_size_0 = child_0->Size[axis];
+        float cur_size_1 = child_1->Size[axis];
         float min_size_0 = resize_limits[0] - child_0->Pos[axis];
         float min_size_1 = child_1->Pos[axis] + child_1->Size[axis] - resize_limits[1];
-        if (SplitterBehavior(bb, GetID("##Splitter"), axis, &w1, &w2, min_size_0, min_size_1, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER))
+        if (SplitterBehavior(bb, GetID("##Splitter"), axis, &cur_size_0, &cur_size_1, min_size_0, min_size_1, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER))
         {
             if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
             {
-                child_0->Size[axis] = child_0->SizeRef[axis] = w1;
-                child_1->Pos[axis] -= w2 - child_1->Size[axis];
-                child_1->Size[axis] = child_1->SizeRef[axis] = w2;
+                child_0->Size[axis] = child_0->SizeRef[axis] = cur_size_0;
+                child_1->Pos[axis] -= cur_size_1 - child_1->Size[axis];
+                child_1->Size[axis] = child_1->SizeRef[axis] = cur_size_1;
 
                 // Lock the size of every node that is a sibling of the node we are touching
                 // This might be less desirable if we can merge sibling of a same axis into the same parental level.
@@ -11617,7 +11620,7 @@ ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
 }
 
 //-----------------------------------------------------------------------------
-// Docking: Public Functions (SetWindowDock, DockSpace)
+// Docking: Public Functions (SetWindowDock, DockSpace, DockSpaceOverViewport)
 //-----------------------------------------------------------------------------
 
 void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
@@ -12170,6 +12173,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     if (dock_node->Flags & ImGuiDockNodeFlags_KeepAliveOnly)
         return;
 
+    // When the window is selected we mark it as visible.
     if (dock_node->TabBar && dock_node->TabBar->VisibleTabId == window->ID)
         window->DockTabIsVisible = true;
 
@@ -12359,9 +12363,6 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
         if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
-#if 1 // FIXME-DOCK FIXME-LEGACY
-    if (sscanf(line, " DocRoot=%d%n", &x, &r) == 1)                 { line += r; node.IsCentralNode = (x != 0); }
-#endif
     if (sscanf(line, " CentralNode=%d%n", &x, &r) == 1)             { line += r; node.IsCentralNode = (x != 0); }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
     ImGuiDockContext* dc = ctx->DockContext;
@@ -13286,9 +13287,8 @@ void ImGui::ShowDockingDebug()
             {
                 IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
                 IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
-                ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f), LastExplicit (%.0f, %.0f)",
-                    node->Pos.x, node->Pos.y, node->Size.x, node->Size.y,
-                    node->SizeRef.x, node->SizeRef.y);
+                ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f) Ref (%.0f, %.0f)",
+                    node->Pos.x, node->Pos.y, node->Size.x, node->Size.y, node->SizeRef.x, node->SizeRef.y);
                 ImGui::BulletText("Flags %02X%s%s%s%s",
                     node->Flags, node->IsDockSpace ? ", IsDockSpace" : "", node->IsCentralNode ? ", IsCentralNode" : "",
                     (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
