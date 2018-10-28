@@ -132,7 +132,7 @@ static void ImGui_ImplWin32_UpdateMousePos()
     // Set mouse position
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     POINT pos;
-    if (::GetActiveWindow() == g_hWnd && ::GetCursorPos(&pos))
+    if (::GetForegroundWindow() == g_hWnd && ::GetCursorPos(&pos))
         if (::ScreenToClient(g_hWnd, &pos))
             io.MousePos = ImVec2((float)pos.x, (float)pos.y);
 }
