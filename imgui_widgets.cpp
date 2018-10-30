@@ -1241,7 +1241,7 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
 
 
 //-------------------------------------------------------------------------
-// [SECTION] Widgets: Combo Box
+// [SECTION] Widgets: ComboBox
 //-------------------------------------------------------------------------
 // - BeginCombo()
 // - EndCombo()
@@ -1882,7 +1882,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
+    {
+        FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
+    }
 
     // Actual drag behavior
     ItemSize(total_bb, style.FramePadding.y);
@@ -2313,7 +2316,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
+    {
+        FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
+    }
 
     ItemSize(total_bb, style.FramePadding.y);
 
@@ -2584,8 +2590,8 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
     return (precision == INT_MAX) ? default_precision : precision;
 }
 
-// Create text input in place of a slider (when CTRL+Clicking on slider)
-// FIXME: Logic is messy and confusing.
+// Create text input in place of an active drag/slider (used when doing a CTRL+Click on drag/slider widgets)
+// FIXME: Logic is awkward and confusing. This should be reworked to facilitate using in other situations.
 bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
     ImGuiContext& g = *GImGui;
@@ -2594,9 +2600,8 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id
     SetActiveID(g.ScalarAsInputTextId, window);
-    g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
     SetHoveredID(0);
-    FocusableItemUnregister(window);
+    g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
 
     char fmt_buf[32];
     char data_buf[32];

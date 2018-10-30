@@ -76,6 +76,7 @@ Other Changes:
   in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
 - Examples: DirectX10, DirectX11: Removed seemingly unnecessary calls to invalidate and recreate device objects
   in the WM_SIZE handler. (#2088) [@ice1000]
+- Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
 
 
 -----------------------------------------------------------------------
@@ -99,7 +100,7 @@ Other Changes:
   Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
 - Fixed a build issue with non-Cygwin GCC under Windows.
 - Demo: Added a "Configuration" block to make io.ConfigFlags/io.BackendFlags more prominent.
-- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
+- Examples: OpenGL3+SDL2: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
 
 
 -----------------------------------------------------------------------
