@@ -677,7 +677,7 @@ static void ShowDemoWindowWidgets()
     {
         static bool closable_group = true;
         ImGui::Checkbox("Show 2nd header", &closable_group);
-        if (ImGui::CollapsingHeader("Header"))
+        if (ImGui::CollapsingHeader("Header", ImGuiTreeNodeFlags_None))
         {
             ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
             for (int i = 0; i < 5; i++)
@@ -689,6 +689,10 @@ static void ShowDemoWindowWidgets()
             for (int i = 0; i < 5; i++)
                 ImGui::Text("More content %d", i);
         }
+        /*
+        if (ImGui::CollapsingHeader("Header with a bullet", ImGuiTreeNodeFlags_Bullet))
+            ImGui::Text("IsItemHovered: %d", ImGui::IsItemHovered());
+        */
         ImGui::TreePop();
     }
 
@@ -696,6 +700,11 @@ static void ShowDemoWindowWidgets()
     {
         ImGui::BulletText("Bullet point 1");
         ImGui::BulletText("Bullet point 2\nOn multiple lines");
+        if (ImGui::TreeNode("Tree node"))
+        {
+            ImGui::BulletText("Another bullet point");
+            ImGui::TreePop();
+        }
         ImGui::Bullet(); ImGui::Text("Bullet point 3 (two calls)");
         ImGui::Bullet(); ImGui::SmallButton("Button");
         ImGui::TreePop();

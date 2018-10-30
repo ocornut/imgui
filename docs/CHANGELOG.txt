@@ -59,6 +59,8 @@ Other Changes:
   and then we will be able to make this the default.)
 - TreeNode: Added ImGuiTreeNodeFlags_SpanFullWidth flag. This extends the hit-box to both the left-most and
   right-most edge of the working area, bypassing indentation.
+- CollapsingHeader: Added support for ImGuiTreeNodeFlags_Bullet and ImGuiTreeNodeFlags_Leaf on framed nodes,
+  mostly for consistency. (#2159, #2160) [@goran-w]
 - Selectable: Added ImGuiSelectableFlags_AllowItemOverlap flag in public api (was previously internal only).
 - Style: Allow style.WindowMenuButtonPosition to be set to ImGuiDir_None to hide the collapse button. (#2634, #2639)
 - Font: Better ellipsis drawing implementation. Instead of drawing three pixel-ey dots (which was glaringly
