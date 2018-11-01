@@ -8,6 +8,8 @@
 // Missing features:
 //  [ ] Platform: Gamepad support (best leaving it to user application to fill io.NavInputs[] with gamepad inputs from their source of choice).
 
+#pragma once
+
 IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
 IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
