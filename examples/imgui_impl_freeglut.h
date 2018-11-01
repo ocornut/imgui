@@ -9,6 +9,8 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+#pragma once
+
 IMGUI_IMPL_API bool     ImGui_ImplFreeGLUT_Init();
 IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_InstallFuncs();
 IMGUI_IMPL_API void     ImGui_ImplFreeGLUT_Shutdown();
