@@ -538,9 +538,14 @@ static bool ImGui_ImplWin32_GetWindowFocus(ImGuiViewport* viewport)
 
 static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* title)
 {
+    // ::SetWindowTextA() doesn't properly handle UTF-8 so we explicitely convert our string.
     ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
     IM_ASSERT(data->Hwnd != 0);
-    ::SetWindowTextA(data->Hwnd, title);
+    int n = ::MultiByteToWideChar(CP_UTF8, 0, title, -1, NULL, 0);
+    ImVector<wchar_t> title_w;
+    title_w.resize(n);
+    ::MultiByteToWideChar(CP_UTF8, 0, title, -1, title_w.Data, n);
+    ::SetWindowTextW(data->Hwnd, title_w.Data);
 }
 
 static void ImGui_ImplWin32_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
