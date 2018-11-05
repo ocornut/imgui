@@ -66,6 +66,8 @@ Other Changes:
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
 - TextUnformatted(): Fixed a case where large-text path would read bytes past the text_end marker depending
   on the position of new lines in the buffer (it wasn't affecting the output but still not the right thing to do!) 
+- ListBox(): Fixed frame sizing when items_count==1 unnecessarily showing a scrollbar. (#2173) [@luk1337, @ocornut]  
+- ListBox(): Tweaked frame sizing so list boxes will look more consistent when FramePadding is far from ItemSpacing. 
 - RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
