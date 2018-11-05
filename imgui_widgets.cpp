@@ -1240,7 +1240,7 @@ bool ImGui::SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float
 }
 
 //-------------------------------------------------------------------------
-// [SECTION] Widgets: Combo Box
+// [SECTION] Widgets: ComboBox
 //-------------------------------------------------------------------------
 // - BeginCombo()
 // - EndCombo()
@@ -1881,7 +1881,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
+    {
+        FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
+    }
 
     // Actual drag behavior
     ItemSize(total_bb, style.FramePadding.y);
@@ -2312,7 +2315,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         }
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
+    {
+        FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
+    }
 
     ItemSize(total_bb, style.FramePadding.y);
 
@@ -2583,8 +2589,8 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
     return (precision == INT_MAX) ? default_precision : precision;
 }
 
-// Create text input in place of a slider (when CTRL+Clicking on slider)
-// FIXME: Logic is messy and confusing.
+// Create text input in place of an active drag/slider (used when doing a CTRL+Click on drag/slider widgets)
+// FIXME: Logic is awkward and confusing. This should be reworked to facilitate using in other situations.
 bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
     ImGuiContext& g = *GImGui;
@@ -2593,9 +2599,8 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     // Our replacement widget will override the focus ID (registered previously to allow for a TAB focus to happen)
     // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id
     SetActiveID(g.ScalarAsInputTextId, window);
-    g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
     SetHoveredID(0);
-    FocusableItemUnregister(window);
+    g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
 
     char fmt_buf[32];
     char data_buf[32];
@@ -4969,7 +4974,7 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
 // - Selectable()
 //-------------------------------------------------------------------------
 
-// Tip: pass an empty label (e.g. "##dummy") then you can use the space to draw other text or image.
+// Tip: pass a non-visible label (e.g. "##dummy") then you can use the space to draw other text or image.
 // But you need to make sure the ID is unique, e.g. enclose calls in PushID/PopID or use ##unique_id.
 bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags flags, const ImVec2& size_arg)
 {
@@ -5080,9 +5085,9 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 // - ListBoxFooter()
 //-------------------------------------------------------------------------
 
-// FIXME: Rename to BeginListBox()
+// FIXME: In principle this function should be called BeginListBox(). We should rename it after re-evaluating if we want to keep the same signature.
 // Helper to calculate the size of a listbox and display a label on the right.
-// Tip: To have a list filling the entire window width, PushItemWidth(-1) and pass an empty label "##empty"
+// Tip: To have a list filling the entire window width, PushItemWidth(-1) and pass an non-visible label e.g. "##empty"
 bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5108,24 +5113,26 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     return true;
 }
 
-// FIXME: Rename to BeginListBox()
+// FIXME: In principle this function should be called EndListBox(). We should rename it after re-evaluating if we want to keep the same signature.
 bool ImGui::ListBoxHeader(const char* label, int items_count, int height_in_items)
 {
-    // Size default to hold ~7 items. Fractional number of items helps seeing that we can scroll down/up without looking at scrollbar.
-    // We don't add +0.40f if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.
+    // Size default to hold ~7.25 items.
+    // We add +25% worth of item height to allow the user to see at a glance if there are more items up/down, without looking at the scrollbar.
+    // We don't add this extra bit if items_count <= height_in_items. It is slightly dodgy, because it means a dynamic list of items will make the widget resize occasionally when it crosses that size.
     // I am expecting that someone will come and complain about this behavior in a remote future, then we can advise on a better solution.
     if (height_in_items < 0)
         height_in_items = ImMin(items_count, 7);
-    float height_in_items_f = height_in_items < items_count ? (height_in_items + 0.40f) : (height_in_items + 0.00f);
+    const ImGuiStyle& style = GetStyle();
+    float height_in_items_f = (height_in_items < items_count) ? (height_in_items + 0.25f) : (height_in_items + 0.00f);
 
     // We include ItemSpacing.y so that a list sized for the exact number of items doesn't make a scrollbar appears. We could also enforce that by passing a flag to BeginChild().
     ImVec2 size;
     size.x = 0.0f;
-    size.y = GetTextLineHeightWithSpacing() * height_in_items_f + GetStyle().ItemSpacing.y;
+    size.y = GetTextLineHeightWithSpacing() * height_in_items_f + style.FramePadding.y * 2.0f;
     return ListBoxHeader(label, size);
 }
 
-// FIXME: Rename to EndListBox()
+// FIXME: In principle this function should be called EndListBox(). We should rename it after re-evaluating if we want to keep the same signature.
 void ImGui::ListBoxFooter()
 {
     ImGuiWindow* parent_window = GetCurrentWindow()->ParentWindow;

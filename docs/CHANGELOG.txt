@@ -66,6 +66,8 @@ Other Changes:
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
 - TextUnformatted(): Fixed a case where large-text path would read bytes past the text_end marker depending
   on the position of new lines in the buffer (it wasn't affecting the output but still not the right thing to do!) 
+- ListBox(): Fixed frame sizing when items_count==1 unnecessarily showing a scrollbar. (#2173) [@luk1337, @ocornut]  
+- ListBox(): Tweaked frame sizing so list boxes will look more consistent when FramePadding is far from ItemSpacing. 
 - RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
@@ -76,6 +78,7 @@ Other Changes:
   in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
 - Examples: DirectX10, DirectX11: Removed seemingly unnecessary calls to invalidate and recreate device objects
   in the WM_SIZE handler. (#2088) [@ice1000]
+- Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
 
 
 -----------------------------------------------------------------------
@@ -99,7 +102,7 @@ Other Changes:
   Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
 - Fixed a build issue with non-Cygwin GCC under Windows.
 - Demo: Added a "Configuration" block to make io.ConfigFlags/io.BackendFlags more prominent.
-- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
+- Examples: OpenGL3+SDL2: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
 
 
 -----------------------------------------------------------------------

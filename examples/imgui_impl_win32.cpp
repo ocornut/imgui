@@ -387,7 +387,7 @@ float ImGui_ImplWin32_GetDpiScaleForRect(int x1, int y1, int x2, int y2)
 // IME (Input Method Editor) basic support for e.g. Asian language users
 //--------------------------------------------------------------------------------------------------------
 
-#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS) && !defined(__GNUC__)
 #define HAS_WIN32_IME   1
 #include <imm.h>
 #ifdef _MSC_VER

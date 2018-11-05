@@ -10,6 +10,8 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+#pragma once
+
 enum DXGI_FORMAT;
 struct ID3D12Device;
 struct ID3D12GraphicsCommandList;
