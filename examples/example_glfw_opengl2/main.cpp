@@ -44,7 +44,6 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
     // Setup Platform/Renderer bindings
-    // If you have already installed GLFW callbacks in your app, call ImGui_ImplGlfw_InitForOpenGL() with install_callbacks=false and call them yourself.
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplOpenGL2_Init();
 

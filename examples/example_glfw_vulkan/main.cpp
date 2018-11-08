@@ -358,7 +358,6 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
     // Setup Platform/Renderer bindings
-    // If you have already installed GLFW callbacks in your app, call ImGui_ImplGlfw_InitForVulkan() with install_callbacks=false and call the functions yourself.
     ImGui_ImplGlfw_InitForVulkan(window, true);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
