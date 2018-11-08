@@ -102,14 +102,6 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow*, unsigned int c)
         io.AddInputCharacter((unsigned short)c);
 }
 
-void ImGui_ImplGlfw_InstallCallbacks(GLFWwindow* window)
-{
-    glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
-    glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
-    glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
-    glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
-}
-
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
     g_Window = window;
@@ -160,7 +152,12 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_MouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
     
     if (install_callbacks)
-        ImGui_ImplGlfw_InstallCallbacks(window);
+    {
+        glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+        glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+        glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
+        glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+    }
 
     g_ClientApi = client_api;
     return true;

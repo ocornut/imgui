@@ -25,9 +25,10 @@ IMGUI_IMPL_API bool     ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool in
 IMGUI_IMPL_API void     ImGui_ImplGlfw_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplGlfw_NewFrame();
 
-// GLFW callbacks (installed by default if you enable 'install_callbacks' during initialization)
-// Provided here if you want to chain callbacks.
-// You can also handle inputs yourself and use those as a reference.
+// GLFW callbacks are installed by default if you call the InitXXX function with 'install_callbacks=true'.
+// If you already have GLFW callbacks installed by your application, call the InitXXX function with install_callbacks=false,
+// then call the functions yourselves from your own GLFW callbacks. 
+// You may also handle inputs yourself and use those as a reference.
 IMGUI_IMPL_API void     ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods);
 IMGUI_IMPL_API void     ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset);
 IMGUI_IMPL_API void     ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);

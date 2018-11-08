@@ -95,16 +95,17 @@ int main(int argc, char** argv)
     // otherwise it is possible to install our own functions and call the imgui_impl_freeglut.h functions ourselves.
     glutDisplayFunc(glut_display_func);
 
-    // Setup Dear ImGui binding
+    // Setup Dear ImGui context
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
+    // Setup Platform/Renderer bindings
     ImGui_ImplFreeGLUT_Init();
     ImGui_ImplFreeGLUT_InstallFuncs();
     ImGui_ImplOpenGL2_Init();
 
-    // Setup style
+    // Setup Style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
