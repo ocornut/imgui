@@ -5,10 +5,12 @@ $VERBOSE = 2
 INDENT = ' ' * 4
 
 puts <<EOT
-#include "imgui.h"
-
 #pragma once
 
+#include "imgui.h"
+
+namespace ImScoped
+{
 EOT
 
 class WrapperClass
@@ -20,25 +22,25 @@ class WrapperClass
     @state_var = nil
     case m[:name]
     when 'Begin'
-      @class_name = 'ImWindow'
-      @state_var = 'IsExpanded'
+      @class_name = 'Window'
+      @state_var = 'IsContentVisible'
     else
-      @class_name = "Im#{m[:name]}"
+      @class_name = m[:name]
       @state_var = 'IsOpen' if m[:type] == 'bool'
     end
 
     puts <<EOT
-struct #{@class_name}
-{
+#{INDENT}struct #{@class_name}
+#{INDENT}{
 EOT
     if @state_var
-      puts "#{INDENT}#{m[:type]} #{@state_var};"
+      puts "#{INDENT * 2}#{m[:type]} #{@state_var};"
       puts
     end
   end
 
   def close
-    print "#{INDENT}~#{@class_name}() { "
+    print "#{INDENT * 2}~#{@class_name}() { "
     print case @name
           when 'Begin' then 'ImGui::End();'
           when /^Tree/ then "if (#{@state_var}) ImGui::TreePop();"
@@ -49,15 +51,15 @@ EOT
 
     if @state_var
       puts
-      puts "#{INDENT}operator bool() { return #{@state_var}; }"
+      puts "#{INDENT * 2}operator bool() { return #{@state_var}; }"
     end
 
     puts
-    puts "#{INDENT}#{@class_name}(#{@class_name} &&) = delete;"
-    puts "#{INDENT}#{@class_name} &operator=(#{@class_name} &&) = delete;"
-    puts "#{INDENT}#{@class_name}(const #{@class_name} &) = delete;"
-    puts "#{INDENT}#{@class_name} &operator=(#{@class_name} &) = delete;"
-    puts '};'
+    puts "#{INDENT * 2}#{@class_name}(#{@class_name} &&) = delete;"
+    puts "#{INDENT * 2}#{@class_name} &operator=(#{@class_name} &&) = delete;"
+    puts "#{INDENT * 2}#{@class_name}(const #{@class_name} &) = delete;"
+    puts "#{INDENT * 2}#{@class_name} &operator=(#{@class_name} &) = delete;"
+    puts "#{INDENT}};"
   end
 end
 
@@ -98,7 +100,7 @@ header_file.each_line do |line|
       a.sub(/\d+/) { |index| (index.to_i + 1).to_s }
     end
 
-    print "#{INDENT}#{current_class.class_name}(#{m[:args]})#{attrs} { "
+    print "#{INDENT * 2}#{current_class.class_name}(#{m[:args]})#{attrs} { "
 
     use_varargs = false
     if argnames.last == '...'
@@ -120,3 +122,7 @@ end
 
 current_class.close if current_class
 
+puts <<EOT
+
+} // namespace ImScoped
+EOT

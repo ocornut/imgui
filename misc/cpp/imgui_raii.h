@@ -1,98 +1,102 @@
-#include "imgui.h"
-
 #pragma once
 
-struct ImWindow
+#include "imgui.h"
+
+namespace ImScoped
 {
-    bool IsExpanded;
+    struct Window
+    {
+        bool IsContentVisible;
 
-    ImWindow(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsExpanded = ImGui::Begin(name, p_open, flags); }
-    ~ImWindow() { ImGui::End(); }
+        Window(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::Begin(name, p_open, flags); }
+        ~Window() { ImGui::End(); }
 
-    operator bool() { return IsExpanded; }
+        operator bool() { return IsContentVisible; }
 
-    ImWindow(ImWindow &&) = delete;
-    ImWindow &operator=(ImWindow &&) = delete;
-    ImWindow(const ImWindow &) = delete;
-    ImWindow &operator=(ImWindow &) = delete;
-};
+        Window(Window &&) = delete;
+        Window &operator=(Window &&) = delete;
+        Window(const Window &) = delete;
+        Window &operator=(Window &) = delete;
+    };
 
-struct ImPushID
-{
-    ImPushID(const char* str_id) { ImGui::PushID(str_id); }
-    ImPushID(const char* str_id_begin, const char* str_id_end) { ImGui::PushID(str_id_begin, str_id_end); }
-    ImPushID(const void* ptr_id) { ImGui::PushID(ptr_id); }
-    ImPushID(int int_id) { ImGui::PushID(int_id); }
-    ~ImPushID() { ImGui::PopID(); }
+    struct PushID
+    {
+        PushID(const char* str_id) { ImGui::PushID(str_id); }
+        PushID(const char* str_id_begin, const char* str_id_end) { ImGui::PushID(str_id_begin, str_id_end); }
+        PushID(const void* ptr_id) { ImGui::PushID(ptr_id); }
+        PushID(int int_id) { ImGui::PushID(int_id); }
+        ~PushID() { ImGui::PopID(); }
 
-    ImPushID(ImPushID &&) = delete;
-    ImPushID &operator=(ImPushID &&) = delete;
-    ImPushID(const ImPushID &) = delete;
-    ImPushID &operator=(ImPushID &) = delete;
-};
+        PushID(PushID &&) = delete;
+        PushID &operator=(PushID &&) = delete;
+        PushID(const PushID &) = delete;
+        PushID &operator=(PushID &) = delete;
+    };
 
-struct ImTreeNode
-{
-    bool IsOpen;
+    struct TreeNode
+    {
+        bool IsOpen;
 
-    ImTreeNode(const char* label) { IsOpen = ImGui::TreeNode(label); }
-    ImTreeNode(const char* str_id, const char* fmt, ...) IM_FMTARGS(3) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeV(str_id, fmt, ap); va_end(ap); }
-    ImTreeNode(const void* ptr_id, const char* fmt, ...) IM_FMTARGS(3) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeV(ptr_id, fmt, ap); va_end(ap); }
-    ~ImTreeNode() { if (IsOpen) ImGui::TreePop(); }
+        TreeNode(const char* label) { IsOpen = ImGui::TreeNode(label); }
+        TreeNode(const char* str_id, const char* fmt, ...) IM_FMTARGS(3) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeV(str_id, fmt, ap); va_end(ap); }
+        TreeNode(const void* ptr_id, const char* fmt, ...) IM_FMTARGS(3) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeV(ptr_id, fmt, ap); va_end(ap); }
+        ~TreeNode() { if (IsOpen) ImGui::TreePop(); }
 
-    operator bool() { return IsOpen; }
+        operator bool() { return IsOpen; }
 
-    ImTreeNode(ImTreeNode &&) = delete;
-    ImTreeNode &operator=(ImTreeNode &&) = delete;
-    ImTreeNode(const ImTreeNode &) = delete;
-    ImTreeNode &operator=(ImTreeNode &) = delete;
-};
+        TreeNode(TreeNode &&) = delete;
+        TreeNode &operator=(TreeNode &&) = delete;
+        TreeNode(const TreeNode &) = delete;
+        TreeNode &operator=(TreeNode &) = delete;
+    };
 
-struct ImTreeNodeV
-{
-    bool IsOpen;
+    struct TreeNodeV
+    {
+        bool IsOpen;
 
-    ImTreeNodeV(const char* str_id, const char* fmt, va_list args) IM_FMTLIST(3) { IsOpen = ImGui::TreeNodeV(str_id, fmt, args); }
-    ImTreeNodeV(const void* ptr_id, const char* fmt, va_list args) IM_FMTLIST(3) { IsOpen = ImGui::TreeNodeV(ptr_id, fmt, args); }
-    ~ImTreeNodeV() { if (IsOpen) ImGui::TreePop(); }
+        TreeNodeV(const char* str_id, const char* fmt, va_list args) IM_FMTLIST(3) { IsOpen = ImGui::TreeNodeV(str_id, fmt, args); }
+        TreeNodeV(const void* ptr_id, const char* fmt, va_list args) IM_FMTLIST(3) { IsOpen = ImGui::TreeNodeV(ptr_id, fmt, args); }
+        ~TreeNodeV() { if (IsOpen) ImGui::TreePop(); }
 
-    operator bool() { return IsOpen; }
+        operator bool() { return IsOpen; }
 
-    ImTreeNodeV(ImTreeNodeV &&) = delete;
-    ImTreeNodeV &operator=(ImTreeNodeV &&) = delete;
-    ImTreeNodeV(const ImTreeNodeV &) = delete;
-    ImTreeNodeV &operator=(ImTreeNodeV &) = delete;
-};
+        TreeNodeV(TreeNodeV &&) = delete;
+        TreeNodeV &operator=(TreeNodeV &&) = delete;
+        TreeNodeV(const TreeNodeV &) = delete;
+        TreeNodeV &operator=(TreeNodeV &) = delete;
+    };
 
-struct ImTreeNodeEx
-{
-    bool IsOpen;
+    struct TreeNodeEx
+    {
+        bool IsOpen;
 
-    ImTreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0) { IsOpen = ImGui::TreeNodeEx(label, flags); }
-    ImTreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, ap); va_end(ap); }
-    ImTreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, ap); va_end(ap); }
-    ~ImTreeNodeEx() { if (IsOpen) ImGui::TreePop(); }
+        TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0) { IsOpen = ImGui::TreeNodeEx(label, flags); }
+        TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, ap); va_end(ap); }
+        TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, ap); va_end(ap); }
+        ~TreeNodeEx() { if (IsOpen) ImGui::TreePop(); }
 
-    operator bool() { return IsOpen; }
+        operator bool() { return IsOpen; }
 
-    ImTreeNodeEx(ImTreeNodeEx &&) = delete;
-    ImTreeNodeEx &operator=(ImTreeNodeEx &&) = delete;
-    ImTreeNodeEx(const ImTreeNodeEx &) = delete;
-    ImTreeNodeEx &operator=(ImTreeNodeEx &) = delete;
-};
+        TreeNodeEx(TreeNodeEx &&) = delete;
+        TreeNodeEx &operator=(TreeNodeEx &&) = delete;
+        TreeNodeEx(const TreeNodeEx &) = delete;
+        TreeNodeEx &operator=(TreeNodeEx &) = delete;
+    };
 
-struct ImTreeNodeExV
-{
-    bool IsOpen;
+    struct TreeNodeExV
+    {
+        bool IsOpen;
 
-    ImTreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, args); }
-    ImTreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, args); }
-    ~ImTreeNodeExV() { if (IsOpen) ImGui::TreePop(); }
+        TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, args); }
+        TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, args); }
+        ~TreeNodeExV() { if (IsOpen) ImGui::TreePop(); }
 
-    operator bool() { return IsOpen; }
+        operator bool() { return IsOpen; }
 
-    ImTreeNodeExV(ImTreeNodeExV &&) = delete;
-    ImTreeNodeExV &operator=(ImTreeNodeExV &&) = delete;
-    ImTreeNodeExV(const ImTreeNodeExV &) = delete;
-    ImTreeNodeExV &operator=(ImTreeNodeExV &) = delete;
-};
+        TreeNodeExV(TreeNodeExV &&) = delete;
+        TreeNodeExV &operator=(TreeNodeExV &&) = delete;
+        TreeNodeExV(const TreeNodeExV &) = delete;
+        TreeNodeExV &operator=(TreeNodeExV &) = delete;
+    };
+
+} // namespace ImScoped
