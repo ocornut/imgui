@@ -19,18 +19,128 @@ namespace ImScoped
         Window &operator=(Window &) = delete;
     };
 
-    struct PushID
+    struct Child
     {
-        PushID(const char* str_id) { ImGui::PushID(str_id); }
-        PushID(const char* str_id_begin, const char* str_id_end) { ImGui::PushID(str_id_begin, str_id_end); }
-        PushID(const void* ptr_id) { ImGui::PushID(ptr_id); }
-        PushID(int int_id) { ImGui::PushID(int_id); }
-        ~PushID() { ImGui::PopID(); }
+        bool IsContentVisible;
 
-        PushID(PushID &&) = delete;
-        PushID &operator=(PushID &&) = delete;
-        PushID(const PushID &) = delete;
-        PushID &operator=(PushID &) = delete;
+        Child(const char* str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(str_id, size, 0); }
+        Child(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(id, size, 0); }
+        ~Child() { ImGui::EndChild(); }
+
+        operator bool() { return IsContentVisible; }
+
+        Child(Child &&) = delete;
+        Child &operator=(Child &&) = delete;
+        Child(const Child &) = delete;
+        Child &operator=(Child &) = delete;
+    };
+
+    struct Font
+    {
+        Font(ImFont* font) { ImGui::PushFont(font); }
+        ~Font() { ImGui::PopFont(); }
+
+        Font(Font &&) = delete;
+        Font &operator=(Font &&) = delete;
+        Font(const Font &) = delete;
+        Font &operator=(Font &) = delete;
+    };
+
+    struct StyleColor
+    {
+        StyleColor(ImGuiCol idx, ImU32 col) { ImGui::PushStyleColor(idx, col); }
+        StyleColor(ImGuiCol idx, const ImVec4& col) { ImGui::PushStyleColor(idx, col); }
+        ~StyleColor() { ImGui::PopStyleColor(); }
+
+        StyleColor(StyleColor &&) = delete;
+        StyleColor &operator=(StyleColor &&) = delete;
+        StyleColor(const StyleColor &) = delete;
+        StyleColor &operator=(StyleColor &) = delete;
+    };
+
+    struct StyleVar
+    {
+        StyleVar(ImGuiStyleVar idx, float val) { ImGui::PushStyleVar(idx, val); }
+        StyleVar(ImGuiStyleVar idx, const ImVec2& val) { ImGui::PushStyleVar(idx, val); }
+        ~StyleVar() { ImGui::PopStyleVar(); }
+
+        StyleVar(StyleVar &&) = delete;
+        StyleVar &operator=(StyleVar &&) = delete;
+        StyleVar(const StyleVar &) = delete;
+        StyleVar &operator=(StyleVar &) = delete;
+    };
+
+    struct ItemWidth
+    {
+        ItemWidth(float item_width) { ImGui::PushItemWidth(item_width); }
+        ~ItemWidth() { ImGui::PopItemWidth(); }
+
+        ItemWidth(ItemWidth &&) = delete;
+        ItemWidth &operator=(ItemWidth &&) = delete;
+        ItemWidth(const ItemWidth &) = delete;
+        ItemWidth &operator=(ItemWidth &) = delete;
+    };
+
+    struct TextWrapPos
+    {
+        TextWrapPos(float wrap_pos_x = 0.0f) { ImGui::PushTextWrapPos(wrap_pos_x); }
+        ~TextWrapPos() { ImGui::PopTextWrapPos(); }
+
+        TextWrapPos(TextWrapPos &&) = delete;
+        TextWrapPos &operator=(TextWrapPos &&) = delete;
+        TextWrapPos(const TextWrapPos &) = delete;
+        TextWrapPos &operator=(TextWrapPos &) = delete;
+    };
+
+    struct AllowKeyboardFocus
+    {
+        AllowKeyboardFocus(bool allow_keyboard_focus) { ImGui::PushAllowKeyboardFocus(allow_keyboard_focus); }
+        ~AllowKeyboardFocus() { ImGui::PopAllowKeyboardFocus(); }
+
+        AllowKeyboardFocus(AllowKeyboardFocus &&) = delete;
+        AllowKeyboardFocus &operator=(AllowKeyboardFocus &&) = delete;
+        AllowKeyboardFocus(const AllowKeyboardFocus &) = delete;
+        AllowKeyboardFocus &operator=(AllowKeyboardFocus &) = delete;
+    };
+
+    struct ButtonRepeat
+    {
+        ButtonRepeat(bool repeat) { ImGui::PushButtonRepeat(repeat); }
+        ~ButtonRepeat() { ImGui::PopButtonRepeat(); }
+
+        ButtonRepeat(ButtonRepeat &&) = delete;
+        ButtonRepeat &operator=(ButtonRepeat &&) = delete;
+        ButtonRepeat(const ButtonRepeat &) = delete;
+        ButtonRepeat &operator=(ButtonRepeat &) = delete;
+    };
+
+    struct ID
+    {
+        ID(const char* str_id) { ImGui::PushID(str_id); }
+        ID(const char* str_id_begin, const char* str_id_end) { ImGui::PushID(str_id_begin, str_id_end); }
+        ID(const void* ptr_id) { ImGui::PushID(ptr_id); }
+        ID(int int_id) { ImGui::PushID(int_id); }
+        ~ID() { ImGui::PopID(); }
+
+        ID(ID &&) = delete;
+        ID &operator=(ID &&) = delete;
+        ID(const ID &) = delete;
+        ID &operator=(ID &) = delete;
+    };
+
+    struct Combo
+    {
+        bool IsOpen;
+
+        Combo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0) { IsOpen = ImGui::BeginCombo(label, preview_value, flags); }
+        ~Combo() { if (IsOpen) ImGui::EndCombo(); }
+
+        operator bool() { return IsOpen; }
+
+        Combo(Combo &&) = delete;
+        Combo &operator=(Combo &&) = delete;
+        Combo(const Combo &) = delete;
+        Combo &operator=(Combo &) = delete;
     };
 
     struct TreeNode
@@ -97,6 +207,149 @@ namespace ImScoped
         TreeNodeExV &operator=(TreeNodeExV &&) = delete;
         TreeNodeExV(const TreeNodeExV &) = delete;
         TreeNodeExV &operator=(TreeNodeExV &) = delete;
+    };
+
+    struct TreePush
+    {
+        TreePush(const char* str_id) { ImGui::TreePush(str_id); }
+        TreePush(const void* ptr_id = NULL) { ImGui::TreePush(ptr_id); }
+        ~TreePush() { ImGui::TreePop(); }
+
+        TreePush(TreePush &&) = delete;
+        TreePush &operator=(TreePush &&) = delete;
+        TreePush(const TreePush &) = delete;
+        TreePush &operator=(TreePush &) = delete;
+    };
+
+    struct Menu
+    {
+        bool IsOpen;
+
+        Menu(const char* label, bool enabled = true) { IsOpen = ImGui::BeginMenu(label, enabled); }
+        ~Menu() { if (IsOpen) ImGui::EndMenu(); }
+
+        operator bool() { return IsOpen; }
+
+        Menu(Menu &&) = delete;
+        Menu &operator=(Menu &&) = delete;
+        Menu(const Menu &) = delete;
+        Menu &operator=(Menu &) = delete;
+    };
+
+    struct Popup
+    {
+        bool IsOpen;
+
+        Popup(const char* str_id, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::BeginPopup(str_id, flags); }
+        ~Popup() { if (IsOpen) ImGui::EndPopup(); }
+
+        operator bool() { return IsOpen; }
+
+        Popup(Popup &&) = delete;
+        Popup &operator=(Popup &&) = delete;
+        Popup(const Popup &) = delete;
+        Popup &operator=(Popup &) = delete;
+    };
+
+    struct PopupContextItem
+    {
+        bool IsOpen;
+
+        PopupContextItem(const char* str_id = NULL, int mouse_button = 1) { IsOpen = ImGui::BeginPopupContextItem(str_id, mouse_button); }
+        ~PopupContextItem() { if (IsOpen) ImGui::EndPopup(); }
+
+        operator bool() { return IsOpen; }
+
+        PopupContextItem(PopupContextItem &&) = delete;
+        PopupContextItem &operator=(PopupContextItem &&) = delete;
+        PopupContextItem(const PopupContextItem &) = delete;
+        PopupContextItem &operator=(PopupContextItem &) = delete;
+    };
+
+    struct PopupContextWindow
+    {
+        bool IsOpen;
+
+        PopupContextWindow(const char* str_id = NULL, int mouse_button = 1, bool also_over_items = true) { IsOpen = ImGui::BeginPopupContextWindow(str_id, mouse_button, also_over_items); }
+        ~PopupContextWindow() { if (IsOpen) ImGui::EndPopup(); }
+
+        operator bool() { return IsOpen; }
+
+        PopupContextWindow(PopupContextWindow &&) = delete;
+        PopupContextWindow &operator=(PopupContextWindow &&) = delete;
+        PopupContextWindow(const PopupContextWindow &) = delete;
+        PopupContextWindow &operator=(PopupContextWindow &) = delete;
+    };
+
+    struct PopupContextVoid
+    {
+        bool IsOpen;
+
+        PopupContextVoid(const char* str_id = NULL, int mouse_button = 1) { IsOpen = ImGui::BeginPopupContextVoid(str_id, mouse_button); }
+        ~PopupContextVoid() { if (IsOpen) ImGui::EndPopup(); }
+
+        operator bool() { return IsOpen; }
+
+        PopupContextVoid(PopupContextVoid &&) = delete;
+        PopupContextVoid &operator=(PopupContextVoid &&) = delete;
+        PopupContextVoid(const PopupContextVoid &) = delete;
+        PopupContextVoid &operator=(PopupContextVoid &) = delete;
+    };
+
+    struct PopupModal
+    {
+        bool IsOpen;
+
+        PopupModal(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::BeginPopupModal(name, p_open, flags); }
+        ~PopupModal() { if (IsOpen) ImGui::EndPopup(); }
+
+        operator bool() { return IsOpen; }
+
+        PopupModal(PopupModal &&) = delete;
+        PopupModal &operator=(PopupModal &&) = delete;
+        PopupModal(const PopupModal &) = delete;
+        PopupModal &operator=(PopupModal &) = delete;
+    };
+
+    struct DragDropSource
+    {
+        bool IsOpen;
+
+        DragDropSource(ImGuiDragDropFlags flags = 0) { IsOpen = ImGui::BeginDragDropSource(flags); }
+        ~DragDropSource() { if (IsOpen) ImGui::EndDragDropSource(); }
+
+        operator bool() { return IsOpen; }
+
+        DragDropSource(DragDropSource &&) = delete;
+        DragDropSource &operator=(DragDropSource &&) = delete;
+        DragDropSource(const DragDropSource &) = delete;
+        DragDropSource &operator=(DragDropSource &) = delete;
+    };
+
+    struct ClipRect
+    {
+        ClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect) { ImGui::PushClipRect(clip_rect_min, clip_rect_max, intersect_with_current_clip_rect); }
+        ~ClipRect() { ImGui::PopClipRect(); }
+
+        ClipRect(ClipRect &&) = delete;
+        ClipRect &operator=(ClipRect &&) = delete;
+        ClipRect(const ClipRect &) = delete;
+        ClipRect &operator=(ClipRect &) = delete;
+    };
+
+    struct ChildFrame
+    {
+        bool IsOpen;
+
+        ChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::BeginChildFrame(id, size, flags); }
+        ~ChildFrame() { ImGui::EndChildFrame(); }
+
+        operator bool() { return IsOpen; }
+
+        ChildFrame(ChildFrame &&) = delete;
+        ChildFrame &operator=(ChildFrame &&) = delete;
+        ChildFrame(const ChildFrame &) = delete;
+        ChildFrame &operator=(ChildFrame &) = delete;
     };
 
 } // namespace ImScoped

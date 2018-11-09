@@ -19,15 +19,23 @@ class WrapperClass
   def initialize(m)
     @name = m[:name]
 
-    @state_var = nil
-    case m[:name]
-    when 'Begin'
-      @class_name = 'Window'
-      @state_var = 'IsContentVisible'
-    else
-      @class_name = m[:name]
-      @state_var = 'IsOpen' if m[:type] == 'bool'
-    end
+    @class_name = case @name
+                  when 'Begin'
+                    'Window'
+                  when /^Begin(.*)$/
+                    $1
+                  when /^Push(.*)$/
+                    $1
+                  else
+                    m[:name]
+                  end
+
+    @state_var = case @name
+                 when 'Begin', 'BeginChild'
+                   'IsContentVisible'
+                 else
+                   'IsOpen' if m[:type] == 'bool'
+                 end
 
     puts <<EOT
 #{INDENT}struct #{@class_name}
@@ -43,9 +51,14 @@ EOT
     print "#{INDENT * 2}~#{@class_name}() { "
     print case @name
           when 'Begin' then 'ImGui::End();'
-          when /^Tree/ then "if (#{@state_var}) ImGui::TreePop();"
-          when /^PushID$/ then 'ImGui::PopID();'
-          else fail "Don't know what pop body to use"
+          when 'BeginChild' then 'ImGui::EndChild();'
+          when 'BeginChildFrame' then 'ImGui::EndChildFrame();'
+          when /^BeginPopup/ then "if (#{@state_var}) ImGui::EndPopup();"
+          when /^Begin(.*)/ then "if (#{@state_var}) ImGui::End#{$1}();"
+          when /^TreeNode/ then "if (#{@state_var}) ImGui::TreePop();"
+          when 'TreePush' then 'ImGui::TreePop();'
+          when /^Push(.*)/ then "ImGui::Pop#{$1}();"
+          else fail "Don't know what pop body to use for #{@name}"
           end
     puts " }"
 
@@ -67,9 +80,10 @@ current_class = nil
 
 header_file = File.open("../../imgui.h")
 header_file.each_line do |line|
+  break if line.match(/^}\s*\/\/\s*namespace ImGui$/i)
+
   line.match(/^\s*IMGUI_API\s+(?<type>[\w\s]+\w)\s+(?<name>\w*)\((?<args>[^)]+)\)(?<attrs>[^;]*);(?<rest>.*)$/) do |m|
-    next unless m[:name].match(/^(Begin|Push|Open|Tree|Column)/)
-    next unless m[:name].match(/^TreeNode|PushID|Begin$/)
+    next unless m[:name].match(/^(Begin|Push|Tree)/)
 
     argnames = m[:args].split(/,\s*/).map do |arg|
       arg = arg.split(/\s*=\s*/, 2).first
