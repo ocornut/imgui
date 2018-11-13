@@ -11018,10 +11018,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         }
     }
 
-    // When clicked on a tab we requested focus to the docked child
-    if (tab_bar->WantFocusTabId)
-        focus_tab_id = tab_bar->WantFocusTabId;
-
     // When clicking on the title bar outside of tabs, we still focus the selected tab for that node
     if (g.HoveredWindow == host_window && g.HoveredId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))
     {
@@ -11036,6 +11032,11 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     // Forward focus from host node to selected window
     if (is_focused && g.NavWindow == host_window && !g.NavWindowingTarget)
         focus_tab_id = tab_bar->SelectedTabId;
+
+    // When clicked on a tab we requested focus to the docked child
+    // This overrides the value set by "forward focus from host node to selected window".
+    if (tab_bar->WantFocusTabId)
+        focus_tab_id = tab_bar->WantFocusTabId;
 
     // Apply navigation focus
     if (focus_tab_id != 0)
