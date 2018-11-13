@@ -79,6 +79,7 @@ Other Changes:
 - Examples: DirectX10, DirectX11: Removed seemingly unnecessary calls to invalidate and recreate device objects
   in the WM_SIZE handler. (#2088) [@ice1000]
 - Examples: GLFW: User previously installed GLFW callbacks are now saved and chain-called by the default callbacks. (#1759)
+- Examples: OpenGL3: Added support for GL 4.5's glClipControl(GL_UPPER_LEFT). (#2186)
 - Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
 - Examples: OpenGL3+GLFW/SDL: Made main.cpp compile with IMGUI_IMPL_OPENGL_LOADER_CUSTOM (may be missing init). (#2178) [@doug-moen]
 
