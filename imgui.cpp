@@ -3027,7 +3027,8 @@ void ImGui::UpdateMouseMovingWindow()
         {
             // Try to merge the window back into the main viewport. 
             // This works because MouseViewport should be != MovingWindow->Viewport on release (as per code in UpdateViewports)
-            UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseViewport);
+            if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+                UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseViewport);
 
             // Restore the mouse viewport so that we don't hover the viewport _under_ the moved window during the frame we released the mouse button.
             if (!IsDragDropPayloadBeingAccepted())
@@ -5220,7 +5221,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Pos = FindBestWindowPosForPopup(window);
 
         if (window->ViewportAllowPlatformMonitorExtend >= 0 && !window->ViewportOwned)
-        {
             if (!window->Viewport->GetRect().Contains(window->Rect()))
             {
                 // Late create viewport, based on the assumption that with our calculations, the DPI will be known ahead (same as the DPI of the selection done in UpdateSelectWindowViewport)
@@ -5236,7 +5236,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->FontDpiScale = (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts) ? window->Viewport->DpiScale : 1.0f;
                 SetCurrentWindow(window);
             }
-        }
 
         // Synchronize viewport --> window in case the platform window has been moved or resized from the OS/WM
         if (window->ViewportOwned)
@@ -7423,8 +7422,6 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
-        return false;
     if (!(viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) || window->Viewport == viewport)
         return false;
     if (!viewport->GetRect().Contains(window->Rect()))
@@ -7740,10 +7737,10 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
 
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
     // We need to take account of the possibility that mouse may become invalid.
-    const bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
     if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
     {
         ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.CurrentPopupStack.back().OpenMousePos;
+        bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
         bool mouse_valid = IsMousePosValid(&mouse_ref);
         if ((window->Appearing || (flags & ImGuiWindowFlags_Tooltip)) && (!use_mouse_ref || mouse_valid))
             window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
