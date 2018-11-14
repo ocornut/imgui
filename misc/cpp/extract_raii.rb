@@ -70,7 +70,7 @@ EOT
 
     if @state_var
       puts
-      puts "#{INDENT * 2}operator bool() { return #{@state_var}; }"
+      puts "#{INDENT * 2}explicit operator bool() const { return #{@state_var}; }"
     end
 
     puts

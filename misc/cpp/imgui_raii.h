@@ -17,7 +17,7 @@ namespace ImScoped
         Window(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::Begin(name, p_open, flags); }
         ~Window() { ImGui::End(); }
 
-        operator bool() { return IsContentVisible; }
+        explicit operator bool() const { return IsContentVisible; }
 
         IMGUI_DELETE_MOVE_COPY(Window);
     };
@@ -30,7 +30,7 @@ namespace ImScoped
         Child(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(id, size, 0); }
         ~Child() { ImGui::EndChild(); }
 
-        operator bool() { return IsContentVisible; }
+        explicit operator bool() const { return IsContentVisible; }
 
         IMGUI_DELETE_MOVE_COPY(Child);
     };
@@ -111,7 +111,7 @@ namespace ImScoped
         Combo(const char* label, const char* preview_value, ImGuiComboFlags flags = 0) { IsOpen = ImGui::BeginCombo(label, preview_value, flags); }
         ~Combo() { if (IsOpen) ImGui::EndCombo(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(Combo);
     };
@@ -125,7 +125,7 @@ namespace ImScoped
         TreeNode(const void* ptr_id, const char* fmt, ...) IM_FMTARGS(3) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeV(ptr_id, fmt, ap); va_end(ap); }
         ~TreeNode() { if (IsOpen) ImGui::TreePop(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(TreeNode);
     };
@@ -138,7 +138,7 @@ namespace ImScoped
         TreeNodeV(const void* ptr_id, const char* fmt, va_list args) IM_FMTLIST(3) { IsOpen = ImGui::TreeNodeV(ptr_id, fmt, args); }
         ~TreeNodeV() { if (IsOpen) ImGui::TreePop(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(TreeNodeV);
     };
@@ -152,7 +152,7 @@ namespace ImScoped
         TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, ap); va_end(ap); }
         ~TreeNodeEx() { if (IsOpen) ImGui::TreePop(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(TreeNodeEx);
     };
@@ -165,7 +165,7 @@ namespace ImScoped
         TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, args); }
         ~TreeNodeExV() { if (IsOpen) ImGui::TreePop(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(TreeNodeExV);
     };
@@ -186,7 +186,7 @@ namespace ImScoped
         Menu(const char* label, bool enabled = true) { IsOpen = ImGui::BeginMenu(label, enabled); }
         ~Menu() { if (IsOpen) ImGui::EndMenu(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(Menu);
     };
@@ -198,7 +198,7 @@ namespace ImScoped
         Popup(const char* str_id, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::BeginPopup(str_id, flags); }
         ~Popup() { if (IsOpen) ImGui::EndPopup(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(Popup);
     };
@@ -210,7 +210,7 @@ namespace ImScoped
         PopupContextItem(const char* str_id = NULL, int mouse_button = 1) { IsOpen = ImGui::BeginPopupContextItem(str_id, mouse_button); }
         ~PopupContextItem() { if (IsOpen) ImGui::EndPopup(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(PopupContextItem);
     };
@@ -222,7 +222,7 @@ namespace ImScoped
         PopupContextWindow(const char* str_id = NULL, int mouse_button = 1, bool also_over_items = true) { IsOpen = ImGui::BeginPopupContextWindow(str_id, mouse_button, also_over_items); }
         ~PopupContextWindow() { if (IsOpen) ImGui::EndPopup(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(PopupContextWindow);
     };
@@ -234,7 +234,7 @@ namespace ImScoped
         PopupContextVoid(const char* str_id = NULL, int mouse_button = 1) { IsOpen = ImGui::BeginPopupContextVoid(str_id, mouse_button); }
         ~PopupContextVoid() { if (IsOpen) ImGui::EndPopup(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(PopupContextVoid);
     };
@@ -246,7 +246,7 @@ namespace ImScoped
         PopupModal(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::BeginPopupModal(name, p_open, flags); }
         ~PopupModal() { if (IsOpen) ImGui::EndPopup(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(PopupModal);
     };
@@ -258,7 +258,7 @@ namespace ImScoped
         DragDropSource(ImGuiDragDropFlags flags = 0) { IsOpen = ImGui::BeginDragDropSource(flags); }
         ~DragDropSource() { if (IsOpen) ImGui::EndDragDropSource(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(DragDropSource);
     };
@@ -278,7 +278,7 @@ namespace ImScoped
         ChildFrame(ImGuiID id, const ImVec2& size, ImGuiWindowFlags flags = 0) { IsOpen = ImGui::BeginChildFrame(id, size, flags); }
         ~ChildFrame() { ImGui::EndChildFrame(); }
 
-        operator bool() { return IsOpen; }
+        explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(ChildFrame);
     };
