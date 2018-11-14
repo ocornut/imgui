@@ -26,8 +26,8 @@ namespace ImScoped
     {
         bool IsContentVisible;
 
-        Child(const char* str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(str_id, size, 0); }
-        Child(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(id, size, 0); }
+        Child(const char* str_id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(str_id, size, border, flags); }
+        Child(ImGuiID id, const ImVec2& size = ImVec2(0,0), bool border = false, ImGuiWindowFlags flags = 0) { IsContentVisible = ImGui::BeginChild(id, size, border, flags); }
         ~Child() { ImGui::EndChild(); }
 
         explicit operator bool() const { return IsContentVisible; }
@@ -91,6 +91,14 @@ namespace ImScoped
         ~ButtonRepeat() { ImGui::PopButtonRepeat(); }
 
         IMGUI_DELETE_MOVE_COPY(ButtonRepeat);
+    };
+
+    struct Group
+    {
+        Group() { ImGui::BeginGroup(); }
+        ~Group() { if () ImGui::EndGroup(); }
+
+        IMGUI_DELETE_MOVE_COPY(Group);
     };
 
     struct ID
@@ -170,13 +178,28 @@ namespace ImScoped
         IMGUI_DELETE_MOVE_COPY(TreeNodeExV);
     };
 
-    struct TreePush
+    struct MainMenuBar
     {
-        TreePush(const char* str_id) { ImGui::TreePush(str_id); }
-        TreePush(const void* ptr_id = NULL) { ImGui::TreePush(ptr_id); }
-        ~TreePush() { ImGui::TreePop(); }
+        bool IsOpen;
 
-        IMGUI_DELETE_MOVE_COPY(TreePush);
+        MainMenuBar() { IsOpen = ImGui::BeginMainMenuBar(); }
+        ~MainMenuBar() { if (IsOpen) ImGui::EndMainMenuBar(); }
+
+        explicit operator bool() const { return IsOpen; }
+
+        IMGUI_DELETE_MOVE_COPY(MainMenuBar);
+    };
+
+    struct MenuBar
+    {
+        bool IsOpen;
+
+        MenuBar() { IsOpen = ImGui::BeginMenuBar(); }
+        ~MenuBar() { if (IsOpen) ImGui::EndMenuBar(); }
+
+        explicit operator bool() const { return IsOpen; }
+
+        IMGUI_DELETE_MOVE_COPY(MenuBar);
     };
 
     struct Menu
@@ -189,6 +212,14 @@ namespace ImScoped
         explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(Menu);
+    };
+
+    struct Tooltip
+    {
+        Tooltip() { ImGui::BeginTooltip(); }
+        ~Tooltip() { if () ImGui::EndTooltip(); }
+
+        IMGUI_DELETE_MOVE_COPY(Tooltip);
     };
 
     struct Popup
@@ -261,6 +292,18 @@ namespace ImScoped
         explicit operator bool() const { return IsOpen; }
 
         IMGUI_DELETE_MOVE_COPY(DragDropSource);
+    };
+
+    struct DragDropTarget
+    {
+        bool IsOpen;
+
+        DragDropTarget() { IsOpen = ImGui::BeginDragDropTarget(); }
+        ~DragDropTarget() { if (IsOpen) ImGui::EndDragDropTarget(); }
+
+        explicit operator bool() const { return IsOpen; }
+
+        IMGUI_DELETE_MOVE_COPY(DragDropTarget);
     };
 
     struct ClipRect
