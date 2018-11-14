@@ -11,6 +11,12 @@ puts <<EOT
 
 namespace ImScoped
 {
+#{INDENT}#define IMGUI_DELETE_MOVE_COPY(Base)#{INDENT}                         \\
+#{INDENT}#{INDENT}Base(Base&&) = delete;                /* Move not allowed */ \\
+#{INDENT}#{INDENT}Base &operator=(Base&&) = delete;     /* "" */               \\
+#{INDENT}#{INDENT}Base(const Base&) = delete;           /* Copy not allowed */ \\
+#{INDENT}#{INDENT}Base& operator=(const Base&) = delete /* "" */
+
 EOT
 
 class WrapperClass
@@ -68,10 +74,7 @@ EOT
     end
 
     puts
-    puts "#{INDENT * 2}#{@class_name}(#{@class_name} &&) = delete;"
-    puts "#{INDENT * 2}#{@class_name} &operator=(#{@class_name} &&) = delete;"
-    puts "#{INDENT * 2}#{@class_name}(const #{@class_name} &) = delete;"
-    puts "#{INDENT * 2}#{@class_name} &operator=(#{@class_name} &) = delete;"
+    puts "#{INDENT * 2}IMGUI_DELETE_MOVE_COPY(#{@class_name});"
     puts "#{INDENT}};"
   end
 end
@@ -137,6 +140,8 @@ end
 current_class.close if current_class
 
 puts <<EOT
+
+#{INDENT}#undef IMGUI_DELETE_MOVE_COPY
 
 } // namespace ImScoped
 EOT

@@ -4,6 +4,12 @@
 
 namespace ImScoped
 {
+    #define IMGUI_DELETE_MOVE_COPY(Base)                             \
+        Base(Base&&) = delete;                /* Move not allowed */ \
+        Base &operator=(Base&&) = delete;     /* "" */               \
+        Base(const Base&) = delete;           /* Copy not allowed */ \
+        Base& operator=(const Base&) = delete /* "" */
+
     struct Window
     {
         bool IsContentVisible;
@@ -13,10 +19,7 @@ namespace ImScoped
 
         operator bool() { return IsContentVisible; }
 
-        Window(Window &&) = delete;
-        Window &operator=(Window &&) = delete;
-        Window(const Window &) = delete;
-        Window &operator=(Window &) = delete;
+        IMGUI_DELETE_MOVE_COPY(Window);
     };
 
     struct Child
@@ -29,10 +32,7 @@ namespace ImScoped
 
         operator bool() { return IsContentVisible; }
 
-        Child(Child &&) = delete;
-        Child &operator=(Child &&) = delete;
-        Child(const Child &) = delete;
-        Child &operator=(Child &) = delete;
+        IMGUI_DELETE_MOVE_COPY(Child);
     };
 
     struct Font
@@ -40,10 +40,7 @@ namespace ImScoped
         Font(ImFont* font) { ImGui::PushFont(font); }
         ~Font() { ImGui::PopFont(); }
 
-        Font(Font &&) = delete;
-        Font &operator=(Font &&) = delete;
-        Font(const Font &) = delete;
-        Font &operator=(Font &) = delete;
+        IMGUI_DELETE_MOVE_COPY(Font);
     };
 
     struct StyleColor
@@ -52,10 +49,7 @@ namespace ImScoped
         StyleColor(ImGuiCol idx, const ImVec4& col) { ImGui::PushStyleColor(idx, col); }
         ~StyleColor() { ImGui::PopStyleColor(); }
 
-        StyleColor(StyleColor &&) = delete;
-        StyleColor &operator=(StyleColor &&) = delete;
-        StyleColor(const StyleColor &) = delete;
-        StyleColor &operator=(StyleColor &) = delete;
+        IMGUI_DELETE_MOVE_COPY(StyleColor);
     };
 
     struct StyleVar
@@ -64,10 +58,7 @@ namespace ImScoped
         StyleVar(ImGuiStyleVar idx, const ImVec2& val) { ImGui::PushStyleVar(idx, val); }
         ~StyleVar() { ImGui::PopStyleVar(); }
 
-        StyleVar(StyleVar &&) = delete;
-        StyleVar &operator=(StyleVar &&) = delete;
-        StyleVar(const StyleVar &) = delete;
-        StyleVar &operator=(StyleVar &) = delete;
+        IMGUI_DELETE_MOVE_COPY(StyleVar);
     };
 
     struct ItemWidth
@@ -75,10 +66,7 @@ namespace ImScoped
         ItemWidth(float item_width) { ImGui::PushItemWidth(item_width); }
         ~ItemWidth() { ImGui::PopItemWidth(); }
 
-        ItemWidth(ItemWidth &&) = delete;
-        ItemWidth &operator=(ItemWidth &&) = delete;
-        ItemWidth(const ItemWidth &) = delete;
-        ItemWidth &operator=(ItemWidth &) = delete;
+        IMGUI_DELETE_MOVE_COPY(ItemWidth);
     };
 
     struct TextWrapPos
@@ -86,10 +74,7 @@ namespace ImScoped
         TextWrapPos(float wrap_pos_x = 0.0f) { ImGui::PushTextWrapPos(wrap_pos_x); }
         ~TextWrapPos() { ImGui::PopTextWrapPos(); }
 
-        TextWrapPos(TextWrapPos &&) = delete;
-        TextWrapPos &operator=(TextWrapPos &&) = delete;
-        TextWrapPos(const TextWrapPos &) = delete;
-        TextWrapPos &operator=(TextWrapPos &) = delete;
+        IMGUI_DELETE_MOVE_COPY(TextWrapPos);
     };
 
     struct AllowKeyboardFocus
@@ -97,10 +82,7 @@ namespace ImScoped
         AllowKeyboardFocus(bool allow_keyboard_focus) { ImGui::PushAllowKeyboardFocus(allow_keyboard_focus); }
         ~AllowKeyboardFocus() { ImGui::PopAllowKeyboardFocus(); }
 
-        AllowKeyboardFocus(AllowKeyboardFocus &&) = delete;
-        AllowKeyboardFocus &operator=(AllowKeyboardFocus &&) = delete;
-        AllowKeyboardFocus(const AllowKeyboardFocus &) = delete;
-        AllowKeyboardFocus &operator=(AllowKeyboardFocus &) = delete;
+        IMGUI_DELETE_MOVE_COPY(AllowKeyboardFocus);
     };
 
     struct ButtonRepeat
@@ -108,10 +90,7 @@ namespace ImScoped
         ButtonRepeat(bool repeat) { ImGui::PushButtonRepeat(repeat); }
         ~ButtonRepeat() { ImGui::PopButtonRepeat(); }
 
-        ButtonRepeat(ButtonRepeat &&) = delete;
-        ButtonRepeat &operator=(ButtonRepeat &&) = delete;
-        ButtonRepeat(const ButtonRepeat &) = delete;
-        ButtonRepeat &operator=(ButtonRepeat &) = delete;
+        IMGUI_DELETE_MOVE_COPY(ButtonRepeat);
     };
 
     struct ID
@@ -122,10 +101,7 @@ namespace ImScoped
         ID(int int_id) { ImGui::PushID(int_id); }
         ~ID() { ImGui::PopID(); }
 
-        ID(ID &&) = delete;
-        ID &operator=(ID &&) = delete;
-        ID(const ID &) = delete;
-        ID &operator=(ID &) = delete;
+        IMGUI_DELETE_MOVE_COPY(ID);
     };
 
     struct Combo
@@ -137,10 +113,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        Combo(Combo &&) = delete;
-        Combo &operator=(Combo &&) = delete;
-        Combo(const Combo &) = delete;
-        Combo &operator=(Combo &) = delete;
+        IMGUI_DELETE_MOVE_COPY(Combo);
     };
 
     struct TreeNode
@@ -154,10 +127,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        TreeNode(TreeNode &&) = delete;
-        TreeNode &operator=(TreeNode &&) = delete;
-        TreeNode(const TreeNode &) = delete;
-        TreeNode &operator=(TreeNode &) = delete;
+        IMGUI_DELETE_MOVE_COPY(TreeNode);
     };
 
     struct TreeNodeV
@@ -170,10 +140,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        TreeNodeV(TreeNodeV &&) = delete;
-        TreeNodeV &operator=(TreeNodeV &&) = delete;
-        TreeNodeV(const TreeNodeV &) = delete;
-        TreeNodeV &operator=(TreeNodeV &) = delete;
+        IMGUI_DELETE_MOVE_COPY(TreeNodeV);
     };
 
     struct TreeNodeEx
@@ -187,10 +154,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        TreeNodeEx(TreeNodeEx &&) = delete;
-        TreeNodeEx &operator=(TreeNodeEx &&) = delete;
-        TreeNodeEx(const TreeNodeEx &) = delete;
-        TreeNodeEx &operator=(TreeNodeEx &) = delete;
+        IMGUI_DELETE_MOVE_COPY(TreeNodeEx);
     };
 
     struct TreeNodeExV
@@ -203,10 +167,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        TreeNodeExV(TreeNodeExV &&) = delete;
-        TreeNodeExV &operator=(TreeNodeExV &&) = delete;
-        TreeNodeExV(const TreeNodeExV &) = delete;
-        TreeNodeExV &operator=(TreeNodeExV &) = delete;
+        IMGUI_DELETE_MOVE_COPY(TreeNodeExV);
     };
 
     struct TreePush
@@ -215,10 +176,7 @@ namespace ImScoped
         TreePush(const void* ptr_id = NULL) { ImGui::TreePush(ptr_id); }
         ~TreePush() { ImGui::TreePop(); }
 
-        TreePush(TreePush &&) = delete;
-        TreePush &operator=(TreePush &&) = delete;
-        TreePush(const TreePush &) = delete;
-        TreePush &operator=(TreePush &) = delete;
+        IMGUI_DELETE_MOVE_COPY(TreePush);
     };
 
     struct Menu
@@ -230,10 +188,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        Menu(Menu &&) = delete;
-        Menu &operator=(Menu &&) = delete;
-        Menu(const Menu &) = delete;
-        Menu &operator=(Menu &) = delete;
+        IMGUI_DELETE_MOVE_COPY(Menu);
     };
 
     struct Popup
@@ -245,10 +200,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        Popup(Popup &&) = delete;
-        Popup &operator=(Popup &&) = delete;
-        Popup(const Popup &) = delete;
-        Popup &operator=(Popup &) = delete;
+        IMGUI_DELETE_MOVE_COPY(Popup);
     };
 
     struct PopupContextItem
@@ -260,10 +212,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        PopupContextItem(PopupContextItem &&) = delete;
-        PopupContextItem &operator=(PopupContextItem &&) = delete;
-        PopupContextItem(const PopupContextItem &) = delete;
-        PopupContextItem &operator=(PopupContextItem &) = delete;
+        IMGUI_DELETE_MOVE_COPY(PopupContextItem);
     };
 
     struct PopupContextWindow
@@ -275,10 +224,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        PopupContextWindow(PopupContextWindow &&) = delete;
-        PopupContextWindow &operator=(PopupContextWindow &&) = delete;
-        PopupContextWindow(const PopupContextWindow &) = delete;
-        PopupContextWindow &operator=(PopupContextWindow &) = delete;
+        IMGUI_DELETE_MOVE_COPY(PopupContextWindow);
     };
 
     struct PopupContextVoid
@@ -290,10 +236,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        PopupContextVoid(PopupContextVoid &&) = delete;
-        PopupContextVoid &operator=(PopupContextVoid &&) = delete;
-        PopupContextVoid(const PopupContextVoid &) = delete;
-        PopupContextVoid &operator=(PopupContextVoid &) = delete;
+        IMGUI_DELETE_MOVE_COPY(PopupContextVoid);
     };
 
     struct PopupModal
@@ -305,10 +248,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        PopupModal(PopupModal &&) = delete;
-        PopupModal &operator=(PopupModal &&) = delete;
-        PopupModal(const PopupModal &) = delete;
-        PopupModal &operator=(PopupModal &) = delete;
+        IMGUI_DELETE_MOVE_COPY(PopupModal);
     };
 
     struct DragDropSource
@@ -320,10 +260,7 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        DragDropSource(DragDropSource &&) = delete;
-        DragDropSource &operator=(DragDropSource &&) = delete;
-        DragDropSource(const DragDropSource &) = delete;
-        DragDropSource &operator=(DragDropSource &) = delete;
+        IMGUI_DELETE_MOVE_COPY(DragDropSource);
     };
 
     struct ClipRect
@@ -331,10 +268,7 @@ namespace ImScoped
         ClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect) { ImGui::PushClipRect(clip_rect_min, clip_rect_max, intersect_with_current_clip_rect); }
         ~ClipRect() { ImGui::PopClipRect(); }
 
-        ClipRect(ClipRect &&) = delete;
-        ClipRect &operator=(ClipRect &&) = delete;
-        ClipRect(const ClipRect &) = delete;
-        ClipRect &operator=(ClipRect &) = delete;
+        IMGUI_DELETE_MOVE_COPY(ClipRect);
     };
 
     struct ChildFrame
@@ -346,10 +280,9 @@ namespace ImScoped
 
         operator bool() { return IsOpen; }
 
-        ChildFrame(ChildFrame &&) = delete;
-        ChildFrame &operator=(ChildFrame &&) = delete;
-        ChildFrame(const ChildFrame &) = delete;
-        ChildFrame &operator=(ChildFrame &) = delete;
+        IMGUI_DELETE_MOVE_COPY(ChildFrame);
     };
+
+    #undef IMGUI_DELETE_MOVE_COPY
 
 } // namespace ImScoped
