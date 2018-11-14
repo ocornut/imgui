@@ -96,7 +96,7 @@ namespace ImScoped
     struct Group
     {
         Group() { ImGui::BeginGroup(); }
-        ~Group() { if () ImGui::EndGroup(); }
+        ~Group() { ImGui::EndGroup(); }
 
         IMGUI_DELETE_MOVE_COPY(Group);
     };
@@ -217,7 +217,7 @@ namespace ImScoped
     struct Tooltip
     {
         Tooltip() { ImGui::BeginTooltip(); }
-        ~Tooltip() { if () ImGui::EndTooltip(); }
+        ~Tooltip() { ImGui::EndTooltip(); }
 
         IMGUI_DELETE_MOVE_COPY(Tooltip);
     };

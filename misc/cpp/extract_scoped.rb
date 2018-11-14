@@ -60,7 +60,10 @@ EOT
           when 'BeginChild' then 'ImGui::EndChild();'
           when 'BeginChildFrame' then 'ImGui::EndChildFrame();'
           when /^BeginPopup/ then "if (#{@state_var}) ImGui::EndPopup();"
-          when /^Begin(.*)/ then "if (#{@state_var}) ImGui::End#{$1}();"
+          when /^Begin(.*)/
+            body = "ImGui::End#{$1}();"
+            body = "if (#{@state_var}) " + body if @state_var
+            body
           when /^TreeNode/ then "if (#{@state_var}) ImGui::TreePop();"
           when 'TreePush' then 'ImGui::TreePop();'
           when /^Push(.*)/ then "ImGui::Pop#{$1}();"
