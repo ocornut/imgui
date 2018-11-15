@@ -687,8 +687,9 @@ struct ImGuiContext
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
     float                   LastActiveIdTimer;                  // Store the last non-zero ActiveId timer since the beginning of activation, useful for animation.
+    ImVec2                  LastValidMousePos;
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actually window that is moved is generally MovingWindow->RootWindow.
-    ImVector<ImGuiColorMod>   ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
+    ImVector<ImGuiColorMod> ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
     ImVector<ImGuiPopupRef> OpenPopupStack;                     // Which popups are open (persistent)
@@ -833,6 +834,7 @@ struct ImGuiContext
         ActiveIdSource = ImGuiInputSource_None;
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
+        LastValidMousePos = ImVec2(0.0f, 0.0f);
         MovingWindow = NULL;
         NextTreeNodeOpenVal = false;
         NextTreeNodeOpenCond = 0;

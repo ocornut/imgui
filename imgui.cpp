@@ -2966,7 +2966,7 @@ static void ImGui::UpdateMouseInputs()
 
     // Round mouse position to avoid spreading non-rounded position (e.g. UpdateManualResize doesn't support them well)
     if (IsMousePosValid(&g.IO.MousePos))
-        g.IO.MousePos = ImFloor(g.IO.MousePos);
+        g.IO.MousePos = g.LastValidMousePos = ImFloor(g.IO.MousePos);
 
     // If mouse just appeared or disappeared (usually denoted by -FLT_MAX components) we cancel out movement in MouseDelta
     if (IsMousePosValid(&g.IO.MousePos) && IsMousePosValid(&g.IO.MousePosPrev))
@@ -6415,8 +6415,8 @@ void ImGui::OpenPopupEx(ImGuiID id)
     popup_ref.ParentWindow = parent_window;
     popup_ref.OpenFrameCount = g.FrameCount;
     popup_ref.OpenParentId = parent_window->IDStack.back();
-    popup_ref.OpenMousePos = g.IO.MousePos;
     popup_ref.OpenPopupPos = NavCalcPreferredRefPos();
+    popup_ref.OpenMousePos = IsMousePosValid(&g.IO.MousePos) ? g.IO.MousePos : popup_ref.OpenPopupPos;
 
     //printf("[%05d] OpenPopupEx(0x%08X)\n", g.FrameCount, id);
     if (g.OpenPopupStack.Size < current_stack_size + 1)
@@ -7093,13 +7093,20 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
 {
     ImGuiContext& g = *GImGui;
     if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
-        return ImFloor(g.IO.MousePos);
-
-    // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item
-    const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
-    ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x*4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
-    ImRect visible_rect = GetViewportRect();
-    return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
+    {
+        // Mouse (we need a fallback in case the mouse becomes invalid after being used)
+        if (IsMousePosValid(&g.IO.MousePos))
+            return g.IO.MousePos;
+        return g.LastValidMousePos;
+    }
+    else
+    {
+        // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item.
+        const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
+        ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x * 4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
+        ImRect visible_rect = GetViewportRect();
+        return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
+    }
 }
 
 float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
