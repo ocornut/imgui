@@ -46,6 +46,7 @@ Other Changes:
   accidental alteration of window position. We now round the provided size. (#2067)
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
+- Nav: Fixed an assert in certain circumstance (mostly when using popups) when mouse positions stop being valid. (#2168)
 - DragFloat: Fixed a situation where dragging with value rounding enabled or with a power curve 
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
@@ -79,6 +80,7 @@ Other Changes:
 - Examples: DirectX10, DirectX11: Removed seemingly unnecessary calls to invalidate and recreate device objects
   in the WM_SIZE handler. (#2088) [@ice1000]
 - Examples: GLFW: User previously installed GLFW callbacks are now saved and chain-called by the default callbacks. (#1759)
+- Examples: OpenGL3: Added support for GL 4.5's glClipControl(GL_UPPER_LEFT). (#2186)
 - Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
 - Examples: OpenGL3+GLFW/SDL: Made main.cpp compile with IMGUI_IMPL_OPENGL_LOADER_CUSTOM (may be missing init). (#2178) [@doug-moen]
 
