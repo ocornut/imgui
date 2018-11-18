@@ -155,9 +155,9 @@ namespace ImScoped
     {
         bool IsOpen;
 
-        TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0) { IsOpen = ImGui::TreeNodeEx(label, flags); }
-        TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, ap); va_end(ap); }
-        TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, ap); va_end(ap); }
+        TreeNodeEx(const char* label, ImGuiTreeNodeFlags flags = 0) { IM_ASSERT(!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen)); IsOpen = ImGui::TreeNodeEx(label, flags); }
+        TreeNodeEx(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IM_ASSERT(!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen)); IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, ap); va_end(ap); }
+        TreeNodeEx(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, ...) IM_FMTARGS(4) { va_list ap; va_start(ap, fmt); IM_ASSERT(!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen)); IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, ap); va_end(ap); }
         ~TreeNodeEx() { if (IsOpen) ImGui::TreePop(); }
 
         explicit operator bool() const { return IsOpen; }
@@ -169,8 +169,8 @@ namespace ImScoped
     {
         bool IsOpen;
 
-        TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, args); }
-        TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, args); }
+        TreeNodeExV(const char* str_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IM_ASSERT(!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen)); IsOpen = ImGui::TreeNodeExV(str_id, flags, fmt, args); }
+        TreeNodeExV(const void* ptr_id, ImGuiTreeNodeFlags flags, const char* fmt, va_list args) IM_FMTLIST(4) { IM_ASSERT(!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen)); IsOpen = ImGui::TreeNodeExV(ptr_id, flags, fmt, args); }
         ~TreeNodeExV() { if (IsOpen) ImGui::TreePop(); }
 
         explicit operator bool() const { return IsOpen; }

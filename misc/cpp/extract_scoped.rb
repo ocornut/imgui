@@ -216,18 +216,22 @@ header_file.each_line do |line|
   end.join('')
 
   args = m[:args].map { |argparts| argparts.join('') }.join(',')
-  print "#{INDENT * 2}#{current_class.class_name}(#{args})#{attrs} { "
+  print "#{INDENT * 2}#{current_class.class_name}(#{args})#{attrs} {"
 
   use_varargs = false
   if m[:argnames].last == '...'
     m[:argnames][-1] = 'ap'
     use_varargs = true
-    print "va_list ap; va_start(ap, fmt); "
+    print " va_list ap; va_start(ap, fmt);"
   end
 
-  print "#{current_class.state_var} = " if current_class.state_var
+  if m[:name] =~ /^TreeNodeEx/ && m[:argnames].include?('flags')
+    print " IM_ASSERT(!(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen));"
+  end
 
-  print "ImGui::#{m[:name]}"
+  print " #{current_class.state_var} =" if current_class.state_var
+
+  print " ImGui::#{m[:name]}"
   print 'V' if use_varargs
   print "(#{m[:argnames].join(', ')}); "
   print 'va_end(ap); ' if use_varargs
