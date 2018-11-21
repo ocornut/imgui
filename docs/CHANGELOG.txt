@@ -85,6 +85,7 @@ Other Changes:
 - Examples: OpenGL3: Added support for GL 4.5's glClipControl(GL_UPPER_LEFT). (#2186)
 - Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
 - Examples: OpenGL3+GLFW/SDL: Made main.cpp compile with IMGUI_IMPL_OPENGL_LOADER_CUSTOM (may be missing init). (#2178) [@doug-moen]
+- Examples: SDL2+Vulkan: Fixed application shutdown which could deadlock on Linux + Xorg. (#2181) [@eRabbit0]
 
 
 -----------------------------------------------------------------------

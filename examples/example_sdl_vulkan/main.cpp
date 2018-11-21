@@ -480,8 +480,9 @@ int main(int, char**)
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    SDL_DestroyWindow(window);
     CleanupVulkan();
+
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;
