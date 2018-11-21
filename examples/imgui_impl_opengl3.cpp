@@ -165,8 +165,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
     bool clip_origin_lower_left = true;
 #ifdef GL_CLIP_ORIGIN
-    GLenum last_clip_origin; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
-    clip_origin_lower_left = (last_clip_origin == GL_LOWER_LEFT);
+    GLenum last_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
+    if (last_clip_origin == GL_UPPER_LEFT)
+        clip_origin_lower_left = false;
 #endif
 
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
