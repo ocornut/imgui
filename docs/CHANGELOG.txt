@@ -47,6 +47,8 @@ Other Changes:
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
 - Nav: Fixed an assert in certain circumstance (mostly when using popups) when mouse positions stop being valid. (#2168)
+- Nav: Fixed explicit directional input not re-highlighting current nav item if there is a single item in the window
+  and highlight has been previously disabled by the mouse. (#787)
 - DragFloat: Fixed a situation where dragging with value rounding enabled or with a power curve 
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)

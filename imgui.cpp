@@ -7242,7 +7242,7 @@ static void ImGui::NavUpdate()
     g.NavJustMovedToId = 0;
 
     // Process navigation move request
-    if (g.NavMoveRequest && (g.NavMoveResultLocal.ID != 0 || g.NavMoveResultOther.ID != 0))
+    if (g.NavMoveRequest)
         NavUpdateMoveResult();
 
     // When a forwarded move request failed, we restore the highlight that we disabled during the forward frame
@@ -7457,10 +7457,22 @@ static void ImGui::NavUpdate()
 #endif
 }
 
+// Apply result from previous frame navigation directional move request
 static void ImGui::NavUpdateMoveResult()
 {
-    // Select which result to use
     ImGuiContext& g = *GImGui;
+    if (g.NavMoveResultLocal.ID == 0 && g.NavMoveResultOther.ID == 0)
+    {
+        // In a situation when there is no results but NavId != 0, re-enable the Navigation highlight (because g.NavId is not considered as a possible result)
+        if (g.NavId != 0)
+        {
+            g.NavDisableHighlight = false;
+            g.NavDisableMouseHover = true;
+        }
+        return;
+    }
+
+    // Select which result to use
     ImGuiNavMoveResult* result = (g.NavMoveResultLocal.ID != 0) ? &g.NavMoveResultLocal : &g.NavMoveResultOther;
 
     // PageUp/PageDown behavior first jumps to the bottom/top mostly visible item, _otherwise_ use the result from the previous/next page.
@@ -7490,7 +7502,6 @@ static void ImGui::NavUpdateMoveResult()
             NavScrollToBringItemIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
     }
 
-    // Apply result from previous frame navigation directional move request
     ClearActiveID();
     g.NavWindow = result->Window;
     SetNavIDWithRectRel(result->ID, g.NavLayer, result->RectRel);
