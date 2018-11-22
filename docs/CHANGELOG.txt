@@ -30,7 +30,7 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.66 (In Progress)
+ VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -40,10 +40,10 @@ Breaking Changes:
 
 Other Changes:
 
-- Fixed calling DestroyContext() always saving .ini data with the current context instead
-  of the supplied context pointer. (#2066)
 - Fixed calling SetNextWindowSize()/SetWindowSize() with non-integer values leading to 
   accidental alteration of window position. We now round the provided size. (#2067)
+- Fixed calling DestroyContext() always saving .ini data with the current context instead
+  of the supplied context pointer. (#2066)
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
 - Nav: Fixed an assert in certain circumstance (mostly when using popups) when mouse positions stop being valid. (#2168)
