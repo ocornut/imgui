@@ -2369,7 +2369,6 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     ScrollbarSizes = ImVec2(0.0f, 0.0f);
     ScrollbarX = ScrollbarY = false;
     ViewportOwned = false;
-    ViewportTryMerge = ViewportTrySplit = false;
     Active = WasActive = false;
     WriteAccessed = false;
     Collapsed = false;
@@ -4762,10 +4761,6 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     if (size_target.x != FLT_MAX && (size_target.x != window->SizeFull.x || size_target.y != window->SizeFull.y))
     {
         window->SizeFull = size_target;
-        if (window->ViewportOwned)
-            window->ViewportTryMerge = true;
-        else
-            window->ViewportTrySplit = true;
         MarkIniSettingsDirty(window);
     }
     if (pos_target.x != FLT_MAX)
@@ -5082,10 +5077,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             {
                 // Late create viewport, based on the assumption that with our calculations, the DPI will be known ahead (same as the DPI of the selection done in UpdateSelectWindowViewport)
                 //ImGuiViewport* old_viewport = window->Viewport;
-                ImGuiViewportFlags viewport_flags = ImGuiViewportFlags_NoFocusOnAppearing;
-                if ((window->Flags & ImGuiWindowFlags_NoMouseInputs) && (window->Flags & ImGuiWindowFlags_NoNavInputs))
-                    viewport_flags |= ImGuiViewportFlags_NoInputs;
-                window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, viewport_flags);
+                window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoFocusOnAppearing);
 
                 // FIXME-DPI
                 //IM_ASSERT(old_viewport->DpiScale == window->Viewport->DpiScale); // FIXME-DPI: Something went wrong
@@ -5098,15 +5090,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (window->ViewportOwned)
         {
             if (window->Viewport->PlatformRequestMove)
-            {
                 window->Pos = window->Viewport->Pos;
-                window->ViewportTryMerge = true;
-            }
             if (window->Viewport->PlatformRequestResize)
-            {
                 window->Size = window->SizeFull = window->Viewport->Size;
-                window->ViewportTryMerge = true;
-            }
 
             // We also tell the back-end that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
             window->Viewport->Flags |= ImGuiViewportFlags_NoRendererClear;
@@ -5127,7 +5113,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 {
                     // Fallback for "lost" window (e.g. a monitor disconnected): we move the window back over the main viewport
                     SetWindowPos(window, g.Viewports[0]->Pos + style.DisplayWindowPadding, ImGuiCond_Always);
-                    window->ViewportTryMerge = true;
                 }
                 else
                 {
@@ -7385,10 +7370,21 @@ static void ImGui::UpdateViewports()
     IM_ASSERT(g.MouseViewport != NULL);
 }
 
+// FIXME: We should ideally refactor the system to call this everyframe (we currently don't)
 ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const ImVec2& pos, const ImVec2& size, ImGuiViewportFlags flags)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
+
+    if (window != NULL)
+    {
+        if (g.MovingWindow && g.MovingWindow->RootWindow == window)
+            flags |= ImGuiViewportFlags_NoInputs | ImGuiViewportFlags_NoFocusOnAppearing;
+        if ((window->Flags & ImGuiWindowFlags_NoMouseInputs) && (window->Flags & ImGuiWindowFlags_NoNavInputs))
+            flags |= ImGuiViewportFlags_NoInputs;
+        if (window->Flags & ImGuiWindowFlags_NoFocusOnAppearing)
+            flags |= ImGuiViewportFlags_NoFocusOnAppearing;
+    }
 
     ImGuiViewportP* viewport = (ImGuiViewportP*)FindViewportByID(id);
     if (viewport)
@@ -7406,9 +7402,6 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport->Size = size;
         viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
         g.Viewports.push_back(viewport);
-
-        if (window && (window->Flags & ImGuiWindowFlags_NoFocusOnAppearing))
-            flags |= ImGuiViewportFlags_NoFocusOnAppearing;
 
         // We normally setup for all viewports in NewFrame() but here need to handle the mid-frame creation of a new viewport.
         // We need to extend the fullscreen clip rect so the OverlayDrawList clip is correct for that the first frame
@@ -7447,12 +7440,9 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         return;
     }
 
-    // Merge into host viewports (after moving, resizing)
-    if (window->ViewportOwned && window->ViewportTryMerge && g.ActiveId == 0)
-    {
+    // Merge into host viewport
+    if (window->ViewportOwned && g.ActiveId == 0)
         UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0]);
-        window->ViewportTryMerge = false;
-    }
     window->ViewportOwned = false;
 
     // Appearing popups reset their viewport so they can inherit again
@@ -7492,22 +7482,14 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     {
         window->Viewport = g.MouseViewport;
     }
-    else if (g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
-    {
-        // Transition to our own viewport when leaving our host boundaries + set the NoInputs flag (will be cleared in UpdateMouseMovingWindow() when releasing mouse)
-        // If we are already in our own viewport, if need to set the NoInputs flag.
-        // If we have no viewport (which happens when detaching a docked node) immediately create one.
-        // We test for 'window->Viewport->Window == window' instead of 'window->ViewportOwned' because ViewportOwned is not valid during this function.
-        bool has_viewport = (window->Viewport != NULL);
-        bool own_viewport = has_viewport && (window->Viewport->Window == window);
-        bool leave_host_viewport = has_viewport && !own_viewport && !window->Viewport->GetRect().Contains(window->Rect());
-        bool move_from_own_viewport = has_viewport && own_viewport && !(window->Viewport->Flags & ImGuiViewportFlags_NoInputs);
-        if (!has_viewport || leave_host_viewport || move_from_own_viewport)
-            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoInputs);
-    }
     else if (GetWindowAlwaysWantOwnViewport(window))
     {
         window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
+    }
+    else if (g.MovingWindow && g.MovingWindow->RootWindow == window && IsMousePosValid())
+    {
+        if (window->Viewport != NULL && window->Viewport->Window == window)
+            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
     }
 
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
@@ -7522,13 +7504,13 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         else
             window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
     }
-    if (window->ViewportTrySplit && window->ViewportAllowPlatformMonitorExtend < 0)
-        window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
-    window->ViewportTrySplit = false;
 
     // Fallback to default viewport
     if (window->Viewport == NULL)
         window->Viewport = main_viewport;
+
+    if (window->ViewportAllowPlatformMonitorExtend < 0)
+        window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
 
     // Update flags
     window->ViewportOwned = (window == window->Viewport->Window);

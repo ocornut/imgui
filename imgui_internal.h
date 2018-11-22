@@ -1074,8 +1074,6 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ScrollbarSizes;                     // Size taken by scrollbars on each axis
     bool                    ScrollbarX, ScrollbarY;
     bool                    ViewportOwned;
-    bool                    ViewportTryMerge;                   // Request attempt to merge into a host viewport and destroy our owned viewport
-    bool                    ViewportTrySplit;                   // Request attempt to split out of a host viewport and create our owned viewport
     bool                    Active;                             // Set to true on Begin(), unless Collapsed
     bool                    WasActive;
     bool                    WriteAccessed;                      // Set to true when any widget access the current window
