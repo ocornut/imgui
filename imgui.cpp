@@ -7435,6 +7435,8 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
             if (g.Windows[n]->Viewport == old_viewport)
                 SetWindowViewport(g.Windows[n], viewport);
     SetWindowViewport(window, viewport);
+    BringWindowToDisplayFront(window);
+
     return true;
 }
 
@@ -7748,7 +7750,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else if (window->Viewport && window != window->Viewport->Window && window->Viewport->Window && !(flags & ImGuiWindowFlags_ChildWindow))
     {
-        // When called from Begin() we don't have access to a proper version of the Hidden flag yet.
+        // When called from Begin() we don't have access to a proper version of the Hidden flag yet, so we replicate this code.
         const bool will_be_visible = (window->DockIsActive && !window->DockTabIsVisible) ? false : true;
         if ((window->Flags & ImGuiWindowFlags_DockNodeHost) && window->Viewport->LastFrameActive < g.FrameCount && will_be_visible)
         {
