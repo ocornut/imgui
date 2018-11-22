@@ -3459,7 +3459,6 @@ void ImGui::Initialize(ImGuiContext* context)
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     viewport->Idx = 0;
-    viewport->CreatedPlatformWindow = true;     // Set this flag so DestroyPlatformWindows() gives a chance for backend to receive DestroyWindow calls for the main viewport.
     g.Viewports.push_back(viewport);
     g.PlatformIO.MainViewport = g.Viewports[0]; // Make it accessible in public-facing GetPlatformIO() immediately (before the first call to EndFrame)
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
@@ -7645,11 +7644,12 @@ void ImGui::UpdatePlatformWindows()
     }
 
     // Update our implicit z-order knowledge of platform windows, which is used when the back-end cannot provide io.MouseHoveredViewport.
+    // When setting Platform_GetWindowFocus, it is expected that the platform back-end can handle calls without crashing if it doesn't have data stored. 
     if (g.PlatformIO.Platform_GetWindowFocus != NULL)
     {
         ImGuiViewportP* focused_viewport = NULL;
         for (int i = 0; i < g.Viewports.Size && focused_viewport == NULL; i++)
-            if (g.Viewports[i]->PlatformUserData != NULL || g.Viewports[i]->PlatformHandle != NULL || g.Viewports[i]->CreatedPlatformWindow)
+            if (g.Viewports[i]->PlatformUserData != NULL || g.Viewports[i]->PlatformHandle != NULL)
                 if (g.PlatformIO.Platform_GetWindowFocus(g.Viewports[i]))
                     focused_viewport = g.Viewports[i];
         if (focused_viewport && g.PlatformLastFocusedViewport != focused_viewport->ID)
@@ -7732,9 +7732,9 @@ void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* render
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
-    if (viewport->CreatedPlatformWindow && g.PlatformIO.Renderer_DestroyWindow)
+    if (g.PlatformIO.Renderer_DestroyWindow)
         g.PlatformIO.Renderer_DestroyWindow(viewport);
-    if (viewport->CreatedPlatformWindow && g.PlatformIO.Platform_DestroyWindow)
+    if (g.PlatformIO.Platform_DestroyWindow)
         g.PlatformIO.Platform_DestroyWindow(viewport);
     IM_ASSERT(viewport->RendererUserData == NULL);
     IM_ASSERT(viewport->PlatformUserData == NULL);
@@ -7745,15 +7745,15 @@ void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
 
 void ImGui::DestroyPlatformWindows()
 {
-    // We call the destroy window on the main viewport (index 0) to give a chance to the back-end to clear any data 
-    // have stored in e.g. PlatformUserData, RendererUserData. It can be convenient for the platform back-end code to
-    // store something in the main viewport, in order for e.g. the mouse handling code to work in a more generic manner.
+    // We call the destroy window on every viewport (including the main viewport, index 0) to give a chance to the back-end 
+    // to clear any data they may have stored in e.g. PlatformUserData, RendererUserData. 
+    // It is convenient for the platform back-end code to store something in the main viewport, in order for e.g. the mouse handling 
+    // code to operator a consistent manner.
     // It is expected that the back-end can handle calls to Renderer_DestroyWindow/Platform_DestroyWindow without
     // crashing if it doesn't have data stored. 
     ImGuiContext& g = *GImGui;
     for (int i = 0; i < g.Viewports.Size; i++)
-        if (g.Viewports[i]->CreatedPlatformWindow)
-            DestroyPlatformWindow(g.Viewports[i]);
+        DestroyPlatformWindow(g.Viewports[i]);
 }
 
 //-----------------------------------------------------------------------------
