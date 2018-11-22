@@ -1,6 +1,6 @@
 
 misc/cpp/
-  InputText() wrappers for C++ standard library (STL) types (std::string, etc.).
+  InputText() wrappers for C++ standard library (STL) type: std::string.
   This is also an example of how you may wrap your own similar types.
 
 misc/fonts/

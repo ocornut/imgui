@@ -30,7 +30,7 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.66 (In Progress)
+ VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -40,13 +40,15 @@ Breaking Changes:
 
 Other Changes:
 
-- Fixed calling DestroyContext() always saving .ini data with the current context instead
-  of the supplied context pointer. (#2066)
 - Fixed calling SetNextWindowSize()/SetWindowSize() with non-integer values leading to 
   accidental alteration of window position. We now round the provided size. (#2067)
+- Fixed calling DestroyContext() always saving .ini data with the current context instead
+  of the supplied context pointer. (#2066)
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
 - Nav: Fixed an assert in certain circumstance (mostly when using popups) when mouse positions stop being valid. (#2168)
+- Nav: Fixed explicit directional input not re-highlighting current nav item if there is a single item in the window
+  and highlight has been previously disabled by the mouse. (#787)
 - DragFloat: Fixed a situation where dragging with value rounding enabled or with a power curve 
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
@@ -83,6 +85,7 @@ Other Changes:
 - Examples: OpenGL3: Added support for GL 4.5's glClipControl(GL_UPPER_LEFT). (#2186)
 - Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
 - Examples: OpenGL3+GLFW/SDL: Made main.cpp compile with IMGUI_IMPL_OPENGL_LOADER_CUSTOM (may be missing init). (#2178) [@doug-moen]
+- Examples: SDL2+Vulkan: Fixed application shutdown which could deadlock on Linux + Xorg. (#2181) [@eRabbit0]
 
 
 -----------------------------------------------------------------------
