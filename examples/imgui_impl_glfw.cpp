@@ -409,6 +409,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, share_window);
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
+    glfwSetWindowPos(data->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 
     // Install callbacks for secondary viewports
     glfwSetMouseButtonCallback(data->Window, ImGui_ImplGlfw_MouseButtonCallback);

@@ -7280,9 +7280,9 @@ static void ImGui::UpdateViewports()
             // Apply Position and Size (from Platform Window to ImGui) if requested. 
             // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
             if (viewport->PlatformRequestMove)
-                viewport->Pos = g.PlatformIO.Platform_GetWindowPos(viewport);
+                viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
             if (viewport->PlatformRequestResize)
-                viewport->Size = g.PlatformIO.Platform_GetWindowSize(viewport);
+                viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
 
             // Translate imgui windows when a Host Viewport has been moved
             ImVec2 delta = viewport->Pos - viewport->LastPos;
@@ -7576,18 +7576,21 @@ void ImGui::UpdatePlatformWindows()
             g.PlatformIO.Platform_CreateWindow(viewport);
             if (g.PlatformIO.Renderer_CreateWindow != NULL)
                 g.PlatformIO.Renderer_CreateWindow(viewport);
-            viewport->RendererLastSize = viewport->Size;
+            viewport->LastNameHash = 0;
+            viewport->LastPlatformPos = viewport->LastPlatformSize = ImVec2(FLT_MAX, FLT_MAX); // By clearing those we'll enforce a call to Platform_SetWindowPos/Platform_SetWindowSize before Platform_ShowWindow
+            viewport->LastRendererSize = viewport->Size;
             viewport->CreatedPlatformWindow = true;
         }
 
         // Apply Position and Size (from ImGui to Platform/Renderer back-ends)
-        if (!viewport->PlatformRequestMove)
+        if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !viewport->PlatformRequestMove)
             g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos);
-        if (!viewport->PlatformRequestResize)
+        if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !viewport->PlatformRequestResize)
             g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size);
-        if (g.PlatformIO.Renderer_SetWindowSize && (viewport->RendererLastSize.x != viewport->Size.x || viewport->RendererLastSize.y != viewport->Size.y))
+        if ((viewport->LastRendererSize.x != viewport->Size.x || viewport->LastRendererSize.y != viewport->Size.y) && g.PlatformIO.Renderer_SetWindowSize)
             g.PlatformIO.Renderer_SetWindowSize(viewport, viewport->Size);
-        viewport->RendererLastSize = viewport->Size;
+        viewport->LastPlatformPos = viewport->Pos;
+        viewport->LastPlatformSize = viewport->LastRendererSize = viewport->Size;
 
         // Update title bar (if it changed)
         if (ImGuiWindow* window_for_title = viewport->Window)
