@@ -959,6 +959,7 @@ enum ImGuiConfigFlags_
 
     // [BETA] Docking
     ImGuiConfigFlags_DockingEnable          = 1 << 6,   // Docking enable flags. Use SHIFT to dock window into another (or without SHIFT if io.ConfigDockingWithShift = false).
+    ImGuiConfigFlags_DockingNoSplit         = 1 << 7,   // Simplified docking mode: disable window splitting, so docking is limited to merging multiple windows together into tab-bars.
 
     // [BETA] Viewports
     ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)

@@ -9857,6 +9857,16 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
             DockContextClearNodes(ctx, 0, true);
         return;
     }
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_DockingNoSplit)
+    {
+        for (int n = 0; n < dc->Nodes.Data.Size; n++)
+            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+                if (node->IsRootNode() && node->IsSplitNode())
+                {
+                    DockBuilderRemoveNodeChildNodes(node->ID);
+                    //dc->WantFullRebuild = true;
+                }
+    }
 
 #if 0
     if (ImGui::IsKeyPressed(ImGui::GetKeyIndex(ImGuiKey_C)))
@@ -11195,7 +11205,7 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
-    if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit))
+    if ((host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit)) || (g.IO.ConfigFlags & ImGuiConfigFlags_DockingNoSplit))
         data->IsSidesAvailable = false;
     if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsCentralNode)
         data->IsSidesAvailable = false;
@@ -11335,7 +11345,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         }
         
         // Stop after ImGuiDir_None
-        if (host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit))
+        if ((host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit)) || (g.IO.ConfigFlags & ImGuiConfigFlags_DockingNoSplit))
             return;
     }
 }
@@ -11832,6 +11842,10 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
                 nodes_to_remove.push_back(node);
             }
         }
+
+    // DockNodeMoveWindows->DockNodeAddWindow will normally set those when reaching two windows (which is only adequate during interactive merge)
+    // Make sure we don't lose our current pos/size. (FIXME-DOCK: Consider tidying up that code in DockNodeAddWindow instead)
+    root_node->InitFromFirstWindowPosSize = false;
 
     // Apply to settings
     for (int settings_n = 0; settings_n < ctx->SettingsWindows.Size; settings_n++)
