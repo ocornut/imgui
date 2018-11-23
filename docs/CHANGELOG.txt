@@ -37,6 +37,8 @@ Breaking Changes:
 
 Other Changes:
 
+- Examples: SDL: changed the signature of ImGui_ImplSDL2_ProcessEvent() to use a const SDL_Event*. (#2187)
+
 
 -----------------------------------------------------------------------
  VERSION 1.66 (Released 2018-11-22)
