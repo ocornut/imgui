@@ -548,6 +548,12 @@ static bool ImGui_ImplGlfw_GetWindowFocus(ImGuiViewport* viewport)
     return glfwGetWindowAttrib(data->Window, GLFW_FOCUSED) != 0;
 }
 
+static bool ImGui_ImplGlfw_GetWindowMinimized(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
+    return glfwGetWindowAttrib(data->Window, GLFW_ICONIFIED) != 0;
+}
+
 #if GLFW_HAS_WINDOW_ALPHA
 static void ImGui_ImplGlfw_SetWindowAlpha(ImGuiViewport* viewport, float alpha)
 {
@@ -668,6 +674,7 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     platform_io.Platform_GetWindowSize = ImGui_ImplGlfw_GetWindowSize;
     platform_io.Platform_SetWindowFocus = ImGui_ImplGlfw_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplGlfw_GetWindowFocus;
+    platform_io.Platform_GetWindowMinimized = ImGui_ImplGlfw_GetWindowMinimized;
     platform_io.Platform_SetWindowTitle = ImGui_ImplGlfw_SetWindowTitle;
     platform_io.Platform_RenderWindow = ImGui_ImplGlfw_RenderWindow;
     platform_io.Platform_SwapBuffers = ImGui_ImplGlfw_SwapBuffers;

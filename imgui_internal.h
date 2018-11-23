@@ -607,6 +607,7 @@ struct ImGuiViewportP : public ImGuiViewport
     float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
     float               LastAlpha;
     int                 PlatformMonitor;
+    bool                PlatformIsMinimized;
     ImGuiWindow*        Window;
     ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
@@ -615,7 +616,7 @@ struct ImGuiViewportP : public ImGuiViewport
     ImVec2              LastPlatformSize;
     ImVec2              LastRendererSize;
 
-    ImGuiViewportP()         { Idx = -1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; CreatedPlatformWindow = false; Alpha = LastAlpha = 1.0f; PlatformMonitor = INT_MIN; Window = NULL; OverlayDrawList = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
+    ImGuiViewportP()         { Idx = -1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; CreatedPlatformWindow = false; Alpha = LastAlpha = 1.0f; PlatformMonitor = INT_MIN; PlatformIsMinimized = false; Window = NULL; OverlayDrawList = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
     ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     ImVec2  GetCenter() const{ return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }

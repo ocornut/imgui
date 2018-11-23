@@ -10,6 +10,7 @@
 // Missing features:
 //  [ ] Platform: SDL2 handling of IME under Windows appears to be broken and it explicitly disable the regular Windows IME. You can restore Windows IME by compiling SDL with SDL_DISABLE_WINDOWS_IME.
 //  [ ] Platform: Gamepad support (need to use SDL_GameController API to fill the io.NavInputs[] value when ImGuiConfigFlags_NavEnableGamepad is set).
+//  [ ] Platform: Multi-viewport + Minimized windows seems to break mouse wheel events (at least under Windows).
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -472,6 +473,12 @@ static bool ImGui_ImplSDL2_GetWindowFocus(ImGuiViewport* viewport)
     return (SDL_GetWindowFlags(data->Window) & SDL_WINDOW_INPUT_FOCUS) != 0;
 }
 
+static bool ImGui_ImplSDL2_GetWindowMinimized(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
+    return (SDL_GetWindowFlags(data->Window) & SDL_WINDOW_MINIMIZED) != 0;
+}
+
 static void ImGui_ImplSDL2_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataSDL2* data = (ImGuiViewportDataSDL2*)viewport->PlatformUserData;
@@ -543,6 +550,7 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
     platform_io.Platform_GetWindowSize = ImGui_ImplSDL2_GetWindowSize;
     platform_io.Platform_SetWindowFocus = ImGui_ImplSDL2_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplSDL2_GetWindowFocus;
+    platform_io.Platform_GetWindowMinimized = ImGui_ImplSDL2_GetWindowMinimized;
     platform_io.Platform_SetWindowTitle = ImGui_ImplSDL2_SetWindowTitle;
     platform_io.Platform_RenderWindow = ImGui_ImplSDL2_RenderWindow;
     platform_io.Platform_SwapBuffers = ImGui_ImplSDL2_SwapBuffers;

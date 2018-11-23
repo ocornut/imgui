@@ -2047,6 +2047,7 @@ struct ImGuiPlatformIO
     ImVec2  (*Platform_GetWindowSize)(ImGuiViewport* vp);
     void    (*Platform_SetWindowFocus)(ImGuiViewport* vp);                  // Move window to front and set input focus
     bool    (*Platform_GetWindowFocus)(ImGuiViewport* vp);
+    bool    (*Platform_GetWindowMinimized)(ImGuiViewport* vp);
     void    (*Platform_SetWindowTitle)(ImGuiViewport* vp, const char* title);
     void    (*Platform_SetWindowAlpha)(ImGuiViewport* vp, float alpha);     // (Optional) Setup window transparency
     void    (*Platform_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Setup for render (platform side)
