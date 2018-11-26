@@ -671,6 +671,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
     return pressed;
 }
 
+// The Collapse button also functions as a Dock Menu button.
 bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_node)
 {
     ImGuiContext& g = *GImGui;
@@ -695,7 +696,14 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_no
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
     if (IsItemActive() && IsMouseDragging(0))
     {
-        if (dock_node != NULL && DockNodeGetRootNode(dock_node)->OnlyNodeWithWindows != dock_node)
+        bool can_extract_dock_node = false;
+        if (dock_node != NULL)
+        {
+            ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
+            if (root_node->OnlyNodeWithWindows != dock_node || (root_node->CentralNode != NULL))
+                can_extract_dock_node = true;
+        }
+        if (can_extract_dock_node)
         {
             float threshold_base = g.FontSize;
             float threshold_x = (threshold_base * 2.2f);

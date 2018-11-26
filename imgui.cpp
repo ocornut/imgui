@@ -10350,7 +10350,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     SplitAxis = ImGuiAxis_None;
 
     HostWindow = VisibleWindow = NULL;
-    OnlyNodeWithWindows = NULL;
+    CentralNode = OnlyNodeWithWindows = NULL;
     LastFrameAlive = LastFrameActive = -1;
     LastFocusedNodeID = 0;
     SelectedTabID = 0;
@@ -10674,7 +10674,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     IM_ASSERT(node->LastFrameActive != g.FrameCount);
     node->LastFrameAlive = g.FrameCount;
 
-    ImGuiDockNode* central_node = NULL;
+    node->CentralNode = node->OnlyNodeWithWindows = NULL;
     if (node->IsRootNode())
     {
         DockNodeUpdateVisibleFlagAndInactiveChilds(node);
@@ -10682,10 +10682,10 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         // Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
         ImGuiDockNodeUpdateScanResults results;
         DockNodeUpdateScanRec(node, &results);
-        node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1 ? results.FirstNodeWithWindows : NULL);
+        node->CentralNode = results.CentralNode;
+        node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1) ? results.FirstNodeWithWindows : NULL;
         if (node->LastFocusedNodeID == 0 && results.FirstNodeWithWindows != NULL)
             node->LastFocusedNodeID = results.FirstNodeWithWindows->ID;
-        central_node = results.CentralNode;
 
         // Copy the dock family from of our window so it can be used for proper dock filtering.
         // When node has mixed windows, prioritize the family with the most constraint (CompatibleWithNeutral = false) as the reference to copy.
@@ -10825,7 +10825,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     }
 
     // Register a hit-test hole in the window unless we are currently dragging a window that is compatible with our dockspace
-    bool central_node_hole = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruDockspace) != 0 && central_node != NULL && central_node->IsEmpty();
+    const ImGuiDockNode* central_node = node->CentralNode;
+    const bool central_node_hole = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruDockspace) != 0 && central_node != NULL && central_node->IsEmpty();
     bool central_node_hole_register_hit_test_hole = central_node_hole;
     if (central_node_hole)
         if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
