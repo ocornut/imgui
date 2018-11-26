@@ -969,7 +969,7 @@ const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbi
 static ImGuiViewportP*  AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const ImVec2& platform_pos, const ImVec2& size, ImGuiViewportFlags flags);
 static void             UpdateViewports();
 static void             UpdateSelectWindowViewport(ImGuiWindow* window);
-static void             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
+static bool             UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* host_viewport);
 static void             SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* viewport);
 static bool             GetWindowAlwaysWantOwnViewport(ImGuiWindow* window);
 static int              FindPlatformMonitorForPos(const ImVec2& pos);
@@ -7182,15 +7182,25 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
     return false;
 }
 
-static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
+static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
     if (!(viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) || window->Viewport == viewport || viewport->PlatformIsMinimized)
-        return;
+        return false;
     if (!viewport->GetRect().Contains(window->Rect()))
-        return;
+        return false;
     if (GetWindowAlwaysWantOwnViewport(window))
-        return;
+        return false;
+
+    for (int n = 0; n < g.Windows.Size; n++)
+    {
+        ImGuiWindow* window_behind = g.Windows[n];
+        if (window_behind == window)
+            break;
+        if (window_behind->WasActive && window_behind->ViewportOwned && !(window_behind->Flags & ImGuiWindowFlags_ChildWindow))
+            if (window_behind->Viewport->GetRect().Overlaps(window->Rect()))
+                return false;
+    }
 
     // Move to the existing viewport, Move child/hosted windows as well (FIXME-OPT: iterate child)
     ImGuiViewportP* old_viewport = window->Viewport;
@@ -7200,6 +7210,8 @@ static void ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
                 SetWindowViewport(g.Windows[n], viewport);
     SetWindowViewport(window, viewport);
     BringWindowToDisplayFront(window);
+
+    return true;
 }
 
 // Scale all windows (position, size). Use when e.g. changing DPI. (This is a lossy operation!)
@@ -7262,7 +7274,10 @@ static void ImGui::UpdateViewports()
             // Clear references to this viewport in windows (window->ViewportId becomes the master data)
             for (int window_n = 0; window_n < g.Windows.Size; window_n++)
                 if (g.Windows[window_n]->Viewport == viewport)
+                {
                     g.Windows[window_n]->Viewport = NULL;
+                    g.Windows[window_n]->ViewportOwned = false;
+                }
             if (viewport == g.MouseLastHoveredViewport) 
                 g.MouseLastHoveredViewport = NULL;
             g.Viewports.erase(g.Viewports.Data + n);
@@ -7447,8 +7462,9 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
 
     // Merge into host viewport
+    bool try_to_merge_into_host_viewport = false;
     if (window->ViewportOwned && g.ActiveId == 0)
-        UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0]);
+        try_to_merge_into_host_viewport = true;
     window->ViewportOwned = false;
 
     // Appearing popups reset their viewport so they can inherit again
@@ -7479,7 +7495,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         window->Viewport = FindViewportByID(g.NextWindowData.ViewportId);
         window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved yet.
     }
-    else if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_ChildMenu))
+    else if ((flags & ImGuiWindowFlags_ChildWindow) || (flags & ImGuiWindowFlags_ChildMenu))
     {
         // Always inherit viewport from parent window
         window->Viewport = window->ParentWindow->Viewport;
@@ -7496,6 +7512,11 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     {
         if (window->Viewport != NULL && window->Viewport->Window == window)
             window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
+    }
+    else
+    {
+        if (try_to_merge_into_host_viewport)
+            UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0]);
     }
 
     // Fallback to default viewport
