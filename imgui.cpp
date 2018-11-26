@@ -11618,82 +11618,90 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         bb.Max[axis ^ 1] += child_1->Size[axis ^ 1];
         //if (g.IO.KeyCtrl) GetOverlayDrawList(g.CurrentWindow->Viewport)->AddRect(bb.Min, bb.Max, IM_COL32(255,0,255,255));
 
-        //bb.Min[axis] += 1; // Display a little inward so highlight doesn't connect with nearby tabs on the neighbor node.
-        //bb.Max[axis] -= 1;
-        PushID(node->ID);
-
-        // Gather list of nodes that are touching the splitter line. Find resizing limits based on those nodes.
-        ImVector<ImGuiDockNode*> touching_nodes[2];
-        float min_size = g.Style.WindowMinSize[axis];
-        float resize_limits[2];
-        resize_limits[0] = node->ChildNodes[0]->Pos[axis] + min_size;
-        resize_limits[1] = node->ChildNodes[1]->Pos[axis] + node->ChildNodes[1]->Size[axis] - min_size;
-
-        ImGuiID splitter_id = GetID("##Splitter");
-        if (g.ActiveId == splitter_id)
+        if (node->Flags & ImGuiDockNodeFlags_NoResize)
         {
-            // Only process when splitter is active
-            DockNodeTreeUpdateSplitterFindTouchingNode(child_0, axis, 1, &touching_nodes[0]);
-            DockNodeTreeUpdateSplitterFindTouchingNode(child_1, axis, 0, &touching_nodes[1]);
-            for (int touching_node_n = 0; touching_node_n < touching_nodes[0].Size; touching_node_n++)
-                resize_limits[0] = ImMax(resize_limits[0], touching_nodes[0][touching_node_n]->Rect().Min[axis] + min_size);
-            for (int touching_node_n = 0; touching_node_n < touching_nodes[1].Size; touching_node_n++)
-                resize_limits[1] = ImMin(resize_limits[1], touching_nodes[1][touching_node_n]->Rect().Max[axis] - min_size);
-
-            /*
-            // [DEBUG] Render limits
-            ImDrawList* draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
-            for (int n = 0; n < 2; n++)
-            if (axis == ImGuiAxis_X)
-            draw_list->AddLine(ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y), ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y + node->ChildNodes[n]->Size.y), IM_COL32(255, 0, 255, 255), 3.0f);
-            else
-            draw_list->AddLine(ImVec2(node->ChildNodes[n]->Pos.x, resize_limits[n]), ImVec2(node->ChildNodes[n]->Pos.x + node->ChildNodes[n]->Size.x, resize_limits[n]), IM_COL32(255, 0, 255, 255), 3.0f);
-            */
+            ImGuiWindow* window = g.CurrentWindow;
+            window->DrawList->AddRectFilled(bb.Min, bb.Max, GetColorU32(ImGuiCol_Separator), g.Style.FrameRounding);
         }
-
-        // Use a short delay before highlighting the splitter (and changing the mouse cursor) in order for regular mouse movement to not highlight many splitters
-        float cur_size_0 = child_0->Size[axis];
-        float cur_size_1 = child_1->Size[axis];
-        float min_size_0 = resize_limits[0] - child_0->Pos[axis];
-        float min_size_1 = child_1->Pos[axis] + child_1->Size[axis] - resize_limits[1];
-        if (SplitterBehavior(bb, GetID("##Splitter"), axis, &cur_size_0, &cur_size_1, min_size_0, min_size_1, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER))
+        else
         {
-            if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
-            {
-                child_0->Size[axis] = child_0->SizeRef[axis] = cur_size_0;
-                child_1->Pos[axis] -= cur_size_1 - child_1->Size[axis];
-                child_1->Size[axis] = child_1->SizeRef[axis] = cur_size_1;
+            //bb.Min[axis] += 1; // Display a little inward so highlight doesn't connect with nearby tabs on the neighbor node.
+            //bb.Max[axis] -= 1;
+            PushID(node->ID);
 
-                // Lock the size of every node that is a sibling of the node we are touching
-                // This might be less desirable if we can merge sibling of a same axis into the same parental level.
+            // Gather list of nodes that are touching the splitter line. Find resizing limits based on those nodes.
+            ImVector<ImGuiDockNode*> touching_nodes[2];
+            float min_size = g.Style.WindowMinSize[axis];
+            float resize_limits[2];
+            resize_limits[0] = node->ChildNodes[0]->Pos[axis] + min_size;
+            resize_limits[1] = node->ChildNodes[1]->Pos[axis] + node->ChildNodes[1]->Size[axis] - min_size;
+
+            ImGuiID splitter_id = GetID("##Splitter");
+            if (g.ActiveId == splitter_id)
+            {
+                // Only process when splitter is active
+                DockNodeTreeUpdateSplitterFindTouchingNode(child_0, axis, 1, &touching_nodes[0]);
+                DockNodeTreeUpdateSplitterFindTouchingNode(child_1, axis, 0, &touching_nodes[1]);
+                for (int touching_node_n = 0; touching_node_n < touching_nodes[0].Size; touching_node_n++)
+                    resize_limits[0] = ImMax(resize_limits[0], touching_nodes[0][touching_node_n]->Rect().Min[axis] + min_size);
+                for (int touching_node_n = 0; touching_node_n < touching_nodes[1].Size; touching_node_n++)
+                    resize_limits[1] = ImMin(resize_limits[1], touching_nodes[1][touching_node_n]->Rect().Max[axis] - min_size);
+
+                /*
+                // [DEBUG] Render limits
+                ImDrawList* draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
+                for (int n = 0; n < 2; n++)
+                if (axis == ImGuiAxis_X)
+                draw_list->AddLine(ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y), ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y + node->ChildNodes[n]->Size.y), IM_COL32(255, 0, 255, 255), 3.0f);
+                else
+                draw_list->AddLine(ImVec2(node->ChildNodes[n]->Pos.x, resize_limits[n]), ImVec2(node->ChildNodes[n]->Pos.x + node->ChildNodes[n]->Size.x, resize_limits[n]), IM_COL32(255, 0, 255, 255), 3.0f);
+                */
+            }
+
+            // Use a short delay before highlighting the splitter (and changing the mouse cursor) in order for regular mouse movement to not highlight many splitters
+            float cur_size_0 = child_0->Size[axis];
+            float cur_size_1 = child_1->Size[axis];
+            float min_size_0 = resize_limits[0] - child_0->Pos[axis];
+            float min_size_1 = child_1->Pos[axis] + child_1->Size[axis] - resize_limits[1];
+            if (SplitterBehavior(bb, GetID("##Splitter"), axis, &cur_size_0, &cur_size_1, min_size_0, min_size_1, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER))
+            {
+                if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
+                {
+                    child_0->Size[axis] = child_0->SizeRef[axis] = cur_size_0;
+                    child_1->Pos[axis] -= cur_size_1 - child_1->Size[axis];
+                    child_1->Size[axis] = child_1->SizeRef[axis] = cur_size_1;
+
+                    // Lock the size of every node that is a sibling of the node we are touching
+                    // This might be less desirable if we can merge sibling of a same axis into the same parental level.
 #if 1
-                for (int side_n = 0; side_n < 2; side_n++)
-                    for (int touching_node_n = 0; touching_node_n < touching_nodes[side_n].Size; touching_node_n++)
-                    {
-                        ImGuiDockNode* touching_node = touching_nodes[side_n][touching_node_n];
-                        //ImDrawList* draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
-                        //draw_list->AddRect(touching_node->Pos, touching_node->Pos + touching_node->Size, IM_COL32(255, 128, 0, 255));
-                        while (touching_node->ParentNode != node)
+                    for (int side_n = 0; side_n < 2; side_n++)
+                        for (int touching_node_n = 0; touching_node_n < touching_nodes[side_n].Size; touching_node_n++)
                         {
-                            if (touching_node->ParentNode->SplitAxis == axis)
+                            ImGuiDockNode* touching_node = touching_nodes[side_n][touching_node_n];
+                            //ImDrawList* draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
+                            //draw_list->AddRect(touching_node->Pos, touching_node->Pos + touching_node->Size, IM_COL32(255, 128, 0, 255));
+                            while (touching_node->ParentNode != node)
                             {
-                                // Mark other node so its size will be preserved during the upcoming call to DockNodeTreeUpdatePosSize().
-                                ImGuiDockNode* node_to_preserve = touching_node->ParentNode->ChildNodes[side_n];
-                                node_to_preserve->WantLockSizeOnce = true;
-                                //draw_list->AddRect(touching_node->Pos, touching_node->Rect().Max, IM_COL32(255, 0, 0, 255));
-                                //draw_list->AddRectFilled(node_to_preserve->Pos, node_to_preserve->Rect().Max, IM_COL32(0, 255, 0, 100));
+                                if (touching_node->ParentNode->SplitAxis == axis)
+                                {
+                                    // Mark other node so its size will be preserved during the upcoming call to DockNodeTreeUpdatePosSize().
+                                    ImGuiDockNode* node_to_preserve = touching_node->ParentNode->ChildNodes[side_n];
+                                    node_to_preserve->WantLockSizeOnce = true;
+                                    //draw_list->AddRect(touching_node->Pos, touching_node->Rect().Max, IM_COL32(255, 0, 0, 255));
+                                    //draw_list->AddRectFilled(node_to_preserve->Pos, node_to_preserve->Rect().Max, IM_COL32(0, 255, 0, 100));
+                                }
+                                touching_node = touching_node->ParentNode;
                             }
-                            touching_node = touching_node->ParentNode;
                         }
-                    }
 #endif
 
-                DockNodeTreeUpdatePosSize(child_0, child_0->Pos, child_0->Size);
-                DockNodeTreeUpdatePosSize(child_1, child_1->Pos, child_1->Size);
-                MarkIniSettingsDirty();
+                    DockNodeTreeUpdatePosSize(child_0, child_0->Pos, child_0->Size);
+                    DockNodeTreeUpdatePosSize(child_1, child_1->Pos, child_1->Size);
+                    MarkIniSettingsDirty();
+                }
             }
+            PopID();
         }
-        PopID();
     }
 
     if (child_0->IsVisible)
