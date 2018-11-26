@@ -536,6 +536,13 @@ static bool ImGui_ImplWin32_GetWindowFocus(ImGuiViewport* viewport)
     return ::GetActiveWindow() == data->Hwnd;
 }
 
+static bool ImGui_ImplWin32_GetWindowMinimized(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
+    IM_ASSERT(data->Hwnd != 0);
+    return ::IsIconic(data->Hwnd) != 0;
+}
+
 static void ImGui_ImplWin32_SetWindowTitle(ImGuiViewport* viewport, const char* title)
 {
     // ::SetWindowTextA() doesn't properly handle UTF-8 so we explicitely convert our string.
@@ -683,6 +690,7 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_GetWindowSize = ImGui_ImplWin32_GetWindowSize;
     platform_io.Platform_SetWindowFocus = ImGui_ImplWin32_SetWindowFocus;
     platform_io.Platform_GetWindowFocus = ImGui_ImplWin32_GetWindowFocus;
+    platform_io.Platform_GetWindowMinimized = ImGui_ImplWin32_GetWindowMinimized;
     platform_io.Platform_SetWindowTitle = ImGui_ImplWin32_SetWindowTitle;
     platform_io.Platform_SetWindowAlpha = ImGui_ImplWin32_SetWindowAlpha;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale;

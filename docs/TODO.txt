@@ -306,14 +306,18 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - examples: move ImGui::NewFrame() out of the backend _NewFrame() ?
  - viewport: make it possible to have no main/hosting viewport
+ - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
+   on a custom e.g. Win32 bindings. It prevents newly dragged-out viewports from taking the focus, which makes ALT+F4 more ambiguous.
+ - viewport: not focusing newly undocked viewport means clicking back on previous one doesn't bring OS window to front.
  - viewport: with platform decoration enabled, platform may force constraint (e.g. minimum size)
  - viewport: use getfocus/setfocus api to synchronize imgui<>platform focus better (e.g imgui-side ctrl-tab can focus os window, OS initial setup and alt-tab can focus imgui window etc.)
  - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
- - viewport: vulkan renderer implementation. 
+ - viewport: implicit Debug window can hog a zombie viewport (harmless, noisy?)
  - viewport: need to clarify how to use GetMousePos() from a user point of view.
  - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport. 
  - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set
  - platform: sdl: no refresh of monitor/display (SDL doesn't seem to have an event for it).
+ - platform: sdl: multi-viewport + minimized window seems to break mouse wheel events (at least under Win32).
 
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
