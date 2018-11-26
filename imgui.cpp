@@ -12354,6 +12354,8 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
                     if (DockNodePreviewDockCalc(window, root_node, payload_window, &split_outer, is_explicit_target, true))
                         split_data = &split_outer;
             DockNodePreviewDockCalc(window, target_node, payload_window, &split_inner, is_explicit_target, false);
+            if (split_data == &split_outer)
+                split_inner.IsDropAllowed = false;
 
             // Draw inner then outer, so that previewed tab (in inner data) will be behind the outer drop boxes
             DockNodePreviewDockRender(window, target_node, payload_window, &split_inner);
