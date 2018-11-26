@@ -7498,6 +7498,10 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
             window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
     }
 
+    // Fallback to default viewport
+    if (window->Viewport == NULL)
+        window->Viewport = main_viewport;
+
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
     // We need to take account of the possibility that mouse may become invalid.
     if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
@@ -7507,15 +7511,8 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         bool mouse_valid = IsMousePosValid(&mouse_ref);
         if ((window->Appearing || (flags & ImGuiWindowFlags_Tooltip)) && (!use_mouse_ref || mouse_valid))
             window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
-        else
-            window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
     }
-
-    // Fallback to default viewport
-    if (window->Viewport == NULL)
-        window->Viewport = main_viewport;
-
-    if (window->ViewportAllowPlatformMonitorExtend < 0)
+    if (window->ViewportAllowPlatformMonitorExtend < 0 && (flags & ImGuiWindowFlags_ChildWindow) == 0)
         window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
 
     // Update flags
