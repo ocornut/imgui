@@ -5399,14 +5399,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Docking: Unhide tab bar
             if (window->DockNode && window->DockNode->IsHiddenTabBar)
             {
-                float unhide_sz_draw = ImFloor(g.FontSize * 0.65f);
+                float unhide_sz_draw = ImFloor(g.FontSize * 0.70f);
                 float unhide_sz_hit = ImFloor(g.FontSize * 0.55f);
                 ImVec2 p = window->DockNode->Pos;
                 ImRect r(p, p + ImVec2(unhide_sz_hit, unhide_sz_hit));
                 bool hovered, held;
                 if (ButtonBehavior(r, window->GetID("#UNHIDE"), &hovered, &held, ImGuiButtonFlags_FlattenChildren))
                     window->DockNode->WantHiddenTabBarToggle = true;
-                const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+                // FIXME-DOCK: Ideally we'd use ImGuiCol_TitleBgActive/ImGuiCol_TitleBg here, but neither is guaranteed to be visible enough at this sort of size..
+                ImU32 col = GetColorU32(((held && hovered) || (window->DockNode->IsFocused && !hovered)) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
                 window->DrawList->AddTriangleFilled(p, p + ImVec2(unhide_sz_draw, 0.0f), p + ImVec2(0.0f, unhide_sz_draw), col);
             }
 
@@ -10336,7 +10337,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     WantCloseTabID = 0;
     InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
     IsVisible = true;
-    IsDockSpace = IsCentralNode = IsHiddenTabBar = HasCloseButton = HasCollapseButton = false;
+    IsFocused = IsDockSpace = IsCentralNode = IsHiddenTabBar = HasCloseButton = HasCollapseButton = false;
     WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarToggle = false;
 }
 
@@ -10856,6 +10857,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     {
         node->WantCloseAll = false;
         node->WantCloseTabID = 0;
+        node->IsFocused = false;
         if (node->Windows.Size > 0)
             node->SelectedTabID = node->Windows[0]->ID;
     }
@@ -10914,6 +10916,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (node->IsHiddenTabBar)
     {
         node->VisibleWindow = (node->Windows.Size > 0) ? node->Windows[0] : NULL;
+        node->IsFocused = is_focused;
 
         // Notify root of visible window (used to display title in OS task bar)
         if (node->VisibleWindow)
@@ -10972,6 +10975,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     ImGuiID focus_tab_id = 0;
 
     // Title bar
+    node->IsFocused = is_focused;
     ImRect title_bar_rect = ImRect(node->Pos, node->Pos + ImVec2(node->Size.x, g.FontSize + style.FramePadding.y * 2.0f));
     ImU32 title_bar_col = GetColorU32(host_window->Collapsed ? ImGuiCol_TitleBgCollapsed : is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
     host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, ImDrawCornerFlags_Top);
