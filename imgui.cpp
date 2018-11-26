@@ -5396,6 +5396,20 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
             }
 
+            // Docking: Unhide tab bar
+            if (window->DockNode && window->DockNode->IsHiddenTabBar)
+            {
+                float unhide_sz_draw = ImFloor(g.FontSize * 0.65f);
+                float unhide_sz_hit = ImFloor(g.FontSize * 0.55f);
+                ImVec2 p = window->DockNode->Pos;
+                ImRect r(p, p + ImVec2(unhide_sz_hit, unhide_sz_hit));
+                bool hovered, held;
+                if (ButtonBehavior(r, window->GetID("#UNHIDE"), &hovered, &held, ImGuiButtonFlags_FlattenChildren))
+                    window->DockNode->WantHiddenTabBarToggle = true;
+                const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+                window->DrawList->AddTriangleFilled(p, p + ImVec2(unhide_sz_draw, 0.0f), p + ImVec2(0.0f, unhide_sz_draw), col);
+            }
+
             // Scrollbars
             if (window->ScrollbarX)
                 Scrollbar(ImGuiLayoutType_Horizontal);
@@ -9719,10 +9733,11 @@ struct ImGuiDockNodeSettings
     char            Depth;
     char            IsDockSpace;
     char            IsCentralNode;
+    char            IsHiddenTabBar;
     ImVec2ih        Pos;
     ImVec2ih        Size;
     ImVec2ih        SizeRef;
-    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsDockSpace = IsCentralNode = 0; }
+    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsDockSpace = IsCentralNode = IsHiddenTabBar = 0; }
 };
 
 struct ImGuiDockContext
@@ -10067,6 +10082,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         node->SplitAxis = node_settings->SplitAxis;
         node->IsDockSpace = node_settings->IsDockSpace != 0;
         node->IsCentralNode = node_settings->IsCentralNode != 0;
+        node->IsHiddenTabBar = node_settings->IsHiddenTabBar != 0;
 
         // Bind host window immediately if it already exist (in case of a rebuild)
         // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
@@ -10194,10 +10210,12 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         if (target_node)
         {
             inheritor_node->IsCentralNode = target_node->IsCentralNode;
+            inheritor_node->IsHiddenTabBar = target_node->IsHiddenTabBar;
             target_node->IsCentralNode = false;
         }
         target_node = new_node;
     }
+    target_node->IsHiddenTabBar = false;
 
     if (target_node != payload_node)
     {
@@ -10318,7 +10336,8 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     WantCloseTabID = 0;
     InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
     IsVisible = true;
-    IsDockSpace = IsCentralNode = HasCloseButton = HasCollapseButton = WantCloseAll = WantLockSizeOnce = WantMouseMove = false;
+    IsDockSpace = IsCentralNode = IsHiddenTabBar = HasCloseButton = HasCollapseButton = false;
+    WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarToggle = false;
 }
 
 ImGuiDockNode::~ImGuiDockNode()
@@ -10596,6 +10615,13 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         DockNodeRemoveWindow(node, window, node->ID);
         window_n--;
     }
+
+    // Apply toggles at a single point of the frame (here!)
+    if (node->Windows.Size > 1)
+        node->IsHiddenTabBar = false;
+    else if (node->WantHiddenTabBarToggle)
+        node->IsHiddenTabBar ^= 1;
+    node->WantHiddenTabBarToggle = false;
 
     DockNodeUpdateVisibleFlag(node);
 }
@@ -10876,6 +10902,30 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     node->WantCloseAll = false;
     node->WantCloseTabID = 0;
 
+    // Decide if we should use a focused title bar color
+    bool is_focused = false;
+    ImGuiDockNode* root_node = DockNodeGetRootNode(node);
+    if (g.NavWindowingTarget)
+        is_focused = (g.NavWindowingTarget->DockNode == node);
+    else if (g.NavWindow && g.NavWindow->RootWindowForTitleBarHighlight == host_window->RootWindow && root_node->LastFocusedNodeID == node->ID)
+        is_focused = true;
+
+    // Hidden tab bar will show a triangle on the upper-left (in Begin)
+    if (node->IsHiddenTabBar)
+    {
+        node->VisibleWindow = (node->Windows.Size > 0) ? node->Windows[0] : NULL;
+
+        // Notify root of visible window (used to display title in OS task bar)
+        if (node->VisibleWindow)
+        {
+            if (is_focused || root_node->VisibleWindow == NULL)
+                root_node->VisibleWindow = node->VisibleWindow;
+            if (node->TabBar)
+                node->TabBar->VisibleTabId = node->VisibleWindow->ID;
+        }
+        return;
+    }
+
     // Move ourselves to the Menu layer (so we can be accessed by tapping Alt) + undo SkipItems flag in order to draw over the title bar even if the window is collapsed
     bool backup_skip_item = host_window->SkipItems;
     if (!node->IsDockSpace)
@@ -10891,14 +10941,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (tab_bar == NULL)
         tab_bar = node->TabBar = IM_NEW(ImGuiTabBar)();
 
-    // Decide if we should use a focused title bar color
-    bool is_focused = false;
-    ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-    if (g.NavWindowingTarget)
-        is_focused = (g.NavWindowingTarget->DockNode == node);
-    else if (g.NavWindow && g.NavWindow->RootWindowForTitleBarHighlight == host_window->RootWindow && root_node->LastFocusedNodeID == node->ID)
-        is_focused = true;
-
     // Collapse button changes shape and display a list
     if (IsPopupOpen("#TabListMenu"))
     {
@@ -10906,14 +10948,22 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         if (BeginPopup("#TabListMenu"))
         {
             is_focused = true;
-            for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
+            if (tab_bar->Tabs.Size == 1)
             {
-                ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
-                IM_ASSERT(tab->Window != NULL);
-                if (Selectable(tab->Window->Name, tab->ID == tab_bar->SelectedTabId))
-                    tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = tab->ID;
-                SameLine();
-                Text("   ");
+                if (MenuItem("Hide tab bar", NULL, node->IsHiddenTabBar))
+                    node->WantHiddenTabBarToggle = true;
+            }
+            else
+            {
+                for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
+                {
+                    ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+                    IM_ASSERT(tab->Window != NULL);
+                    if (Selectable(tab->Window->Name, tab->ID == tab_bar->SelectedTabId))
+                        tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = tab->ID;
+                    SameLine();
+                    Text("   ");
+                }
             }
             EndPopup();
         }
@@ -11301,9 +11351,16 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         ImRect tab_bar_rect = DockNodeCalcTabBarRect(&data->FutureNode);
         ImVec2 tab_pos = tab_bar_rect.Min;
         if (host_node && host_node->TabBar)
-            tab_pos.x += host_node->TabBar->OffsetMax + g.Style.ItemInnerSpacing.x; // We don't use OffsetNewTab because when using non-persistent-order tab bar it is incremented with each Tab submission.
+        {
+            if (!host_node->IsHiddenTabBar)
+                tab_pos.x += host_node->TabBar->OffsetMax + g.Style.ItemInnerSpacing.x; // We don't use OffsetNewTab because when using non-persistent-order tab bar it is incremented with each Tab submission.
+            else
+                tab_pos.x += g.Style.ItemInnerSpacing.x + TabItemCalcSize(host_node->Windows[0]->Name, host_node->Windows[0]->HasCloseButton).x;
+        }
         else if (!(host_window->Flags & ImGuiWindowFlags_DockNodeHost))
+        {
             tab_pos.x += g.Style.ItemInnerSpacing.x + TabItemCalcSize(host_window->Name, host_window->HasCloseButton).x; // Account for slight offset which will be added when changing from title bar to tab bar
+        }
 
         // Draw tab shape/label preview (payload may be a loose window or a host window carrying multiple tabbed windows)
         if (root_payload->DockNodeAsHost)
@@ -11421,6 +11478,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->InitFromFirstWindowPosSize = parent_node->InitFromFirstWindowViewport = false;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
     parent_node->IsCentralNode = (child_0 && child_0->IsCentralNode) || (child_1 && child_1->IsCentralNode);
+    parent_node->IsHiddenTabBar = merge_lead_child->IsHiddenTabBar;
     parent_node->SizeRef = backup_last_explicit_size;
 
     if (child_0)
@@ -12215,7 +12273,10 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // Update window flag
     IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) == 0);
     window->Flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoResize;
-    window->Flags &= ~ImGuiWindowFlags_NoTitleBar;      // Clear the NoTitleBar flag in case the user set it: confusingly enough we need a title bar height so we are correctly offset, but it won't be displayed!
+    if (dock_node->IsHiddenTabBar)
+        window->Flags |= ImGuiWindowFlags_NoTitleBar;
+    else
+        window->Flags &= ~ImGuiWindowFlags_NoTitleBar;      // Clear the NoTitleBar flag in case the user set it: confusingly enough we need a title bar height so we are correctly offset, but it won't be displayed!
 
     // Save new dock order only if the tab bar is active
     if (dock_node->TabBar)
@@ -12391,6 +12452,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
     if (sscanf(line, " CentralNode=%d%n", &x, &r) == 1)             { line += r; node.IsCentralNode = (x != 0); }
+    if (sscanf(line, " HiddenTabBar=%d%n", &x, &r) == 1)            { line += r; node.IsHiddenTabBar = (x != 0); }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
     ImGuiDockContext* dc = ctx->DockContext;
     if (node.ParentID != 0)
@@ -12410,6 +12472,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.Depth = (char)depth;
     node_settings.IsDockSpace = (char)node->IsDockSpace;
     node_settings.IsCentralNode = (char)node->IsCentralNode;
+    node_settings.IsHiddenTabBar = (char)node->IsHiddenTabBar;
     node_settings.Pos = ImVec2ih((short)node->Pos.x, (short)node->Pos.y);
     node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
     node_settings.SizeRef = ImVec2ih((short)node->SizeRef.x, (short)node->SizeRef.y);
@@ -12457,7 +12520,9 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         if (node_settings->SplitAxis != ImGuiAxis_None)
             buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
         if (node_settings->IsCentralNode)
-            buf->appendf(" CentralNode=%d", node_settings->IsCentralNode);
+            buf->appendf(" CentralNode=1");
+        if (node_settings->IsHiddenTabBar)
+            buf->appendf(" HiddenTabBar=1");
         if (node_settings->SelectedTabID)
             buf->appendf(" SelectedTab=0x%08X", node_settings->SelectedTabID);
 
@@ -13317,7 +13382,7 @@ void ImGui::ShowDockingDebug()
                 IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
                 ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f) Ref (%.0f, %.0f)",
                     node->Pos.x, node->Pos.y, node->Size.x, node->Size.y, node->SizeRef.x, node->SizeRef.y);
-                ImGui::BulletText("Flags %02X%s%s%s%s",
+                ImGui::BulletText("Flags 0x%02X%s%s%s%s",
                     node->Flags, node->IsDockSpace ? ", IsDockSpace" : "", node->IsCentralNode ? ", IsCentralNode" : "",
                     (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
                 if (node->ChildNodes[0])
