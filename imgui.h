@@ -891,6 +891,7 @@ enum ImGuiConfigFlags_
     ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Instruct back-end to not alter mouse cursor shape and visibility. Use if the back-end cursor changes are interfering with yours and you don't want to use SetMouseCursor() to change mouse cursor. You may want to honor requests from imgui by reading GetMouseCursor() yourself instead.
 
     // [BETA] Viewports
+    // When using viewports it is recommended that your default value for ImGuiCol_WindowBg is opaque (Alpha=1.0) so transition to a viewport won't be noticeable.
     ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
     ImGuiConfigFlags_ViewportsNoTaskBarIcon = 1 << 11,  // Disable task bars icons for all secondary viewports (will set ImGuiViewportFlags_NoTaskBarIcon on them)
     ImGuiConfigFlags_ViewportsNoMerge       = 1 << 12,  // All floating windows will always create their own viewport and platform window.
