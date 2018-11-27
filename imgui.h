@@ -976,7 +976,7 @@ enum ImGuiStyleVar_
 #endif
 };
 
-// Enumeration for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
+// Flags for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
 enum ImGuiColorEditFlags_
 {
     ImGuiColorEditFlags_None            = 0,
@@ -1031,7 +1031,7 @@ enum ImGuiMouseCursor_
 #endif
 };
 
-// Condition for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
+// Enumateration representation a Condition for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
 // Important: Treat as a regular enum! Do NOT combine multiple values using binary operators! All the functions above treat 0 as a shortcut to ImGuiCond_Always.
 enum ImGuiCond_
 {
@@ -1209,6 +1209,73 @@ struct ImGuiIO
     IMGUI_API   ImGuiIO();
 };
 
+// Shared state of InputText(), passed as an argument to your callback when a ImGuiInputTextFlags_Callback* flag is used.
+// The callback function should return 0 by default.
+// Callbacks (follow a flag name and see comments in ImGuiInputTextFlags_ declarations for more details)
+// - ImGuiInputTextFlags_CallbackCompletion:  Callback on pressing TAB
+// - ImGuiInputTextFlags_CallbackHistory:     Callback on pressing Up/Down arrows
+// - ImGuiInputTextFlags_CallbackAlways:      Callback on each iteration
+// - ImGuiInputTextFlags_CallbackCharFilter:  Callback on character inputs to replace or discard them. Modify 'EventChar' to replace or discard, or return 1 in callback to discard.
+// - ImGuiInputTextFlags_CallbackResize:      Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow. 
+struct ImGuiInputTextCallbackData
+{
+    ImGuiInputTextFlags EventFlag;      // One ImGuiInputTextFlags_Callback*    // Read-only
+    ImGuiInputTextFlags Flags;          // What user passed to InputText()      // Read-only
+    void*               UserData;       // What user passed to InputText()      // Read-only
+
+    // Arguments for the different callback events
+    // - To modify the text buffer in a callback, prefer using the InsertChars() / DeleteChars() function. InsertChars() will take care of calling the resize callback if necessary.
+    // - If you know your edits are not going to resize the underlying buffer allocation, you may modify the contents of 'Buf[]' directly. You need to update 'BufTextLen' accordingly (0 <= BufTextLen < BufSize) and set 'BufDirty'' to true so InputText can update its internal state.
+    ImWchar             EventChar;      // Character input                      // Read-write   // [CharFilter] Replace character with another one, or set to zero to drop. return 1 is equivalent to setting EventChar=0;
+    ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only    // [Completion,History]
+    char*               Buf;            // Text buffer                          // Read-write   // [Resize] Can replace pointer / [Completion,History,Always] Only write to pointed data, don't replace the actual pointer!
+    int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: string.length()
+    int                 BufSize;        // Buffer size (in bytes) = capacity+1  // Read-only    // [Resize,Completion,History,Always] Include zero-terminator storage. In C land == ARRAYSIZE(my_char_array), in C++ land: string.capacity()+1
+    bool                BufDirty;       // Set if you modify Buf/BufTextLen!    // Write        // [Completion,History,Always]
+    int                 CursorPos;      //                                      // Read-write   // [Completion,History,Always]
+    int                 SelectionStart; //                                      // Read-write   // [Completion,History,Always] == to SelectionEnd when no selection)
+    int                 SelectionEnd;   //                                      // Read-write   // [Completion,History,Always]
+
+    // Helper functions for text manipulation.
+    // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
+    IMGUI_API ImGuiInputTextCallbackData();
+    IMGUI_API void      DeleteChars(int pos, int bytes_count);
+    IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
+    bool                HasSelection() const { return SelectionStart != SelectionEnd; }
+};
+
+// Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
+// NB: For basic min/max size constraint on each axis you don't need to use the callback! The SetNextWindowSizeConstraints() parameters are enough.
+struct ImGuiSizeCallbackData
+{
+    void*   UserData;       // Read-only.   What user passed to SetNextWindowSizeConstraints()
+    ImVec2  Pos;            // Read-only.   Window position, for reference.
+    ImVec2  CurrentSize;    // Read-only.   Current window size.
+    ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
+};
+
+// Data payload for Drag and Drop operations
+struct ImGuiPayload
+{
+    // Members
+    void*           Data;               // Data (copied and owned by dear imgui)
+    int             DataSize;           // Data size
+
+    // [Internal]
+    ImGuiID         SourceId;           // Source item id
+    ImGuiID         SourceParentId;     // Source parent id (if available)
+    int             DataFrameCount;     // Data timestamp
+    char            DataType[32+1];     // Data type tag (short user-supplied string, 32 characters max)
+    bool            Preview;            // Set when AcceptDragDropPayload() was called and mouse has been hovering the target item (nb: handle overlapping drag targets)
+    bool            Delivery;           // Set when AcceptDragDropPayload() was called and mouse button is released over the target item.
+
+    ImGuiPayload()  { Clear(); }
+    void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
+    bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    bool IsPreview() const                  { return Preview; }
+    bool IsDelivery() const                 { return Delivery; }
+};
+
 //-----------------------------------------------------------------------------
 // Obsolete functions (Will be removed! Read 'API BREAKING CHANGES' section in imgui.cpp for details)
 //-----------------------------------------------------------------------------
@@ -1246,6 +1313,8 @@ namespace ImGui
     static inline bool  IsMouseHoveringAnyWindow()            { return IsWindowHovered(ImGuiHoveredFlags_AnyWindow); }
     static inline bool  IsMouseHoveringWindow()               { return IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem); }
 }
+typedef ImGuiInputTextCallback      ImGuiTextEditCallback;      // [OBSOLETE 1.63+] Made the names consistent
+typedef ImGuiInputTextCallbackData  ImGuiTextEditCallbackData;
 #endif
 
 //-----------------------------------------------------------------------------
@@ -1436,78 +1505,6 @@ struct ImGuiStorage
 
     // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
     IMGUI_API void      BuildSortByKey();
-};
-
-// Shared state of InputText(), passed as an argument to your callback when a ImGuiInputTextFlags_Callback* flag is used.
-// The callback function should return 0 by default.
-// Callbacks (follow a flag name and see comments in ImGuiInputTextFlags_ declarations for more details)
-// - ImGuiInputTextFlags_CallbackCompletion:  Callback on pressing TAB
-// - ImGuiInputTextFlags_CallbackHistory:     Callback on pressing Up/Down arrows
-// - ImGuiInputTextFlags_CallbackAlways:      Callback on each iteration
-// - ImGuiInputTextFlags_CallbackCharFilter:  Callback on character inputs to replace or discard them. Modify 'EventChar' to replace or discard, or return 1 in callback to discard.
-// - ImGuiInputTextFlags_CallbackResize:      Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow. 
-struct ImGuiInputTextCallbackData
-{
-    ImGuiInputTextFlags EventFlag;      // One ImGuiInputTextFlags_Callback*    // Read-only
-    ImGuiInputTextFlags Flags;          // What user passed to InputText()      // Read-only
-    void*               UserData;       // What user passed to InputText()      // Read-only
-
-    // Arguments for the different callback events
-    // - To modify the text buffer in a callback, prefer using the InsertChars() / DeleteChars() function. InsertChars() will take care of calling the resize callback if necessary.
-    // - If you know your edits are not going to resize the underlying buffer allocation, you may modify the contents of 'Buf[]' directly. You need to update 'BufTextLen' accordingly (0 <= BufTextLen < BufSize) and set 'BufDirty'' to true so InputText can update its internal state.
-    ImWchar             EventChar;      // Character input                      // Read-write   // [CharFilter] Replace character with another one, or set to zero to drop. return 1 is equivalent to setting EventChar=0;
-    ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only    // [Completion,History]
-    char*               Buf;            // Text buffer                          // Read-write   // [Resize] Can replace pointer / [Completion,History,Always] Only write to pointed data, don't replace the actual pointer!
-    int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: string.length()
-    int                 BufSize;        // Buffer size (in bytes) = capacity+1  // Read-only    // [Resize,Completion,History,Always] Include zero-terminator storage. In C land == ARRAYSIZE(my_char_array), in C++ land: string.capacity()+1
-    bool                BufDirty;       // Set if you modify Buf/BufTextLen!    // Write        // [Completion,History,Always]
-    int                 CursorPos;      //                                      // Read-write   // [Completion,History,Always]
-    int                 SelectionStart; //                                      // Read-write   // [Completion,History,Always] == to SelectionEnd when no selection)
-    int                 SelectionEnd;   //                                      // Read-write   // [Completion,History,Always]
-
-    // Helper functions for text manipulation.
-    // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
-    IMGUI_API ImGuiInputTextCallbackData();
-    IMGUI_API void      DeleteChars(int pos, int bytes_count);
-    IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
-    bool                HasSelection() const { return SelectionStart != SelectionEnd; }
-};
-
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-typedef ImGuiInputTextCallback      ImGuiTextEditCallback;      // [OBSOLETE 1.63+] Made the names consistent
-typedef ImGuiInputTextCallbackData  ImGuiTextEditCallbackData;
-#endif
-
-// Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
-// NB: For basic min/max size constraint on each axis you don't need to use the callback! The SetNextWindowSizeConstraints() parameters are enough.
-struct ImGuiSizeCallbackData
-{
-    void*   UserData;       // Read-only.   What user passed to SetNextWindowSizeConstraints()
-    ImVec2  Pos;            // Read-only.   Window position, for reference.
-    ImVec2  CurrentSize;    // Read-only.   Current window size.
-    ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
-};
-
-// Data payload for Drag and Drop operations
-struct ImGuiPayload
-{
-    // Members
-    void*           Data;               // Data (copied and owned by dear imgui)
-    int             DataSize;           // Data size
-
-    // [Internal]
-    ImGuiID         SourceId;           // Source item id
-    ImGuiID         SourceParentId;     // Source parent id (if available)
-    int             DataFrameCount;     // Data timestamp
-    char            DataType[32+1];     // Data type tag (short user-supplied string, 32 characters max)
-    bool            Preview;            // Set when AcceptDragDropPayload() was called and mouse has been hovering the target item (nb: handle overlapping drag targets)
-    bool            Delivery;           // Set when AcceptDragDropPayload() was called and mouse button is released over the target item.
-
-    ImGuiPayload()  { Clear(); }
-    void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
-    bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
-    bool IsPreview() const                  { return Preview; }
-    bool IsDelivery() const                 { return Delivery; }
 };
 
 // Helpers macros to generate 32-bits encoded colors
