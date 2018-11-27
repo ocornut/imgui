@@ -6,15 +6,36 @@
 // Read 'Programmer guide' in imgui.cpp for notes on how to setup ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 
+/*
+
+Index of this file:
+// Header mess
+// Forward declarations and basic types
+// ImGui API (Dear ImGui end-user API)
+// Flags & Enumerations
+// ImGuiStyle
+// ImGuiIO
+// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
+// Obsolete functions
+// Helpers (ImVector, ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
+// Draw List API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListFlags, ImDrawList, ImDrawData)
+// Font API (ImFontConfig, ImFontGlyph, ImFontAtlasFlags, ImFontAtlas, ImFont)
+
+*/
+
 #pragma once
 
-// Configuration file (edit imconfig.h or define IMGUI_USER_CONFIG to set your own filename)
+// Configuration file (edit imconfig.h or define IMGUI_USER_CONFIG to your own filename)
 #ifdef IMGUI_USER_CONFIG
 #include IMGUI_USER_CONFIG
 #endif
 #if !defined(IMGUI_DISABLE_INCLUDE_IMCONFIG_H) || defined(IMGUI_INCLUDE_IMCONFIG_H)
 #include "imconfig.h"
 #endif
+
+//-----------------------------------------------------------------------------
+// Header mess
+//-----------------------------------------------------------------------------
 
 #include <float.h>                  // FLT_MAX
 #include <stdarg.h>                 // va_list
@@ -36,7 +57,7 @@
 #define IMGUI_IMPL_API              IMGUI_API
 #endif
 
-// Helpers
+// Helper Macros
 #ifndef IM_ASSERT
 #include <assert.h>
 #define IM_ASSERT(_EXPR)            assert(_EXPR)                               // You can override the default assert handler by editing imconfig.h
@@ -51,6 +72,7 @@
 #define IM_ARRAYSIZE(_ARR)          ((int)(sizeof(_ARR)/sizeof(*_ARR)))         // Size of a static C-style array. Don't use on pointers!
 #define IM_OFFSETOF(_TYPE,_MEMBER)  ((size_t)&(((_TYPE*)0)->_MEMBER))           // Offset of _MEMBER within _TYPE. Standardized as offsetof() in modern C++.
 
+// Warnings
 #if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wold-style-cast"
@@ -59,7 +81,10 @@
 #pragma GCC diagnostic ignored "-Wclass-memaccess"
 #endif
 
-// Forward declarations
+//-----------------------------------------------------------------------------
+// Forward declarations and basic types
+//-----------------------------------------------------------------------------
+
 struct ImDrawChannel;               // Temporary storage for outputting drawing commands out of order, used by ImDrawList::ChannelsSplit()
 struct ImDrawCmd;                   // A single draw command within a parent ImDrawList (generally maps to 1 GPU draw call)
 struct ImDrawData;                  // All draw command lists required to render the frame
@@ -153,8 +178,11 @@ struct ImVec4
 #endif
 };
 
-// Dear ImGui end-user API
-// (In a namespace so you can add extra functions in your own separate file. Please don't modify imgui.cpp/.h!)
+//-----------------------------------------------------------------------------
+// ImGui: Dear ImGui end-user API
+// (Inside a namespace so you can add extra functions in your own separate file. Please don't modify imgui.cpp/.h!)
+//-----------------------------------------------------------------------------
+
 namespace ImGui
 {
     // Context creation and access
@@ -609,6 +637,10 @@ namespace ImGui
 
 } // namespace ImGui
 
+//-----------------------------------------------------------------------------
+// Flags & Enumerations
+//-----------------------------------------------------------------------------
+
 // Flags for ImGui::Begin()
 enum ImGuiWindowFlags_
 {
@@ -1031,7 +1063,8 @@ enum ImGuiMouseCursor_
 #endif
 };
 
-// Enumateration representation a Condition for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
+// Enumateration for ImGui::SetWindow***(), SetNextWindow***(), SetNextTreeNode***() functions
+// Represent a condition.
 // Important: Treat as a regular enum! Do NOT combine multiple values using binary operators! All the functions above treat 0 as a shortcut to ImGuiCond_Always.
 enum ImGuiCond_
 {
@@ -1046,8 +1079,13 @@ enum ImGuiCond_
 #endif
 };
 
+//-----------------------------------------------------------------------------
+// ImGuiStyle
 // You may modify the ImGui::GetStyle() main instance during initialization and before NewFrame().
-// During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values, and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
+// During the frame, use ImGui::PushStyleVar(ImGuiStyleVar_XXXX)/PopStyleVar() to alter the main style values, 
+// and ImGui::PushStyleColor(ImGuiCol_XXX)/PopStyleColor() for colors.
+//-----------------------------------------------------------------------------
+
 struct ImGuiStyle
 {
     float       Alpha;                      // Global alpha applies to everything in ImGui.
@@ -1085,8 +1123,12 @@ struct ImGuiStyle
     IMGUI_API void ScaleAllSizes(float scale_factor);
 };
 
-// This is where your app communicate with Dear ImGui. Access via ImGui::GetIO().
-// Read 'Programmer guide' section in .cpp file for general usage.
+//-----------------------------------------------------------------------------
+// ImGuiIO
+// Communicate most settings and inputs/outputs to Dear ImGui using this structure. 
+// Access via ImGui::GetIO(). Read 'Programmer guide' section in .cpp file for general usage.
+//-----------------------------------------------------------------------------
+
 struct ImGuiIO
 {
     //------------------------------------------------------------------
@@ -1209,6 +1251,10 @@ struct ImGuiIO
     IMGUI_API   ImGuiIO();
 };
 
+//-----------------------------------------------------------------------------
+// Misc data structures
+//-----------------------------------------------------------------------------
+
 // Shared state of InputText(), passed as an argument to your callback when a ImGuiInputTextFlags_Callback* flag is used.
 // The callback function should return 0 by default.
 // Callbacks (follow a flag name and see comments in ImGuiInputTextFlags_ declarations for more details)
@@ -1254,7 +1300,7 @@ struct ImGuiSizeCallbackData
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
 
-// Data payload for Drag and Drop operations
+// Data payload for Drag and Drop operations: AcceptDragDropPayload(), GetDragDropPayload()
 struct ImGuiPayload
 {
     // Members
@@ -1578,7 +1624,7 @@ struct ImColor
 };
 
 //-----------------------------------------------------------------------------
-// Draw List
+// Draw List API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListFlags, ImDrawList, ImDrawData)
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
 
@@ -1763,6 +1809,10 @@ struct ImDrawData
     IMGUI_API void  DeIndexAllBuffers();                // Helper to convert all buffers from indexed to non-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
     IMGUI_API void  ScaleClipRects(const ImVec2& sc);   // Helper to scale the ClipRect field of each ImDrawCmd. Use if your final output buffer is at a different scale than ImGui expects, or if there is a difference between your window resolution and framebuffer resolution.
 };
+
+//-----------------------------------------------------------------------------
+// Font API (ImFontConfig, ImFontGlyph, ImFontAtlasFlags, ImFontAtlas, ImFont)
+//-----------------------------------------------------------------------------
 
 struct ImFontConfig
 {
