@@ -1085,8 +1085,8 @@ ImGuiIO::ImGuiIO()
     memset(this, 0, sizeof(*this));
 
     // Settings
-    ConfigFlags = 0x00;
-    BackendFlags = 0x00;
+    ConfigFlags = ImGuiConfigFlags_None;
+    BackendFlags = ImGuiBackendFlags_None;
     DisplaySize = ImVec2(-1.0f, -1.0f);
     DeltaTime = 1.0f/60.0f;
     IniSavingRate = 5.0f;
