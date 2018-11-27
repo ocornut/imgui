@@ -3000,7 +3000,7 @@ void ImGui::UpdateMouseMovingWindow()
         {
             // Try to merge the window back into the main viewport. 
             // This works because MouseViewport should be != MovingWindow->Viewport on release (as per code in UpdateViewports)
-            if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+            if (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable)
                 UpdateTryMergeWindowIntoHostViewport(moving_window, g.MouseViewport);
 
             // Restore the mouse viewport so that we don't hover the viewport _under_ the moved window during the frame we released the mouse button.
@@ -3303,6 +3303,7 @@ void ImGui::NewFrame()
     g.FrameCount += 1;
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
+    g.ConfigFlagsForFrame = g.IO.ConfigFlags;
 
     UpdateViewports();
 
@@ -3778,6 +3779,7 @@ void ImGui::EndFrame()
     for (int i = 0; i < g.Viewports.Size; i++)
     {
         ImGuiViewportP* viewport = g.Viewports[i];
+        viewport->LastPos = viewport->Pos;
         if (viewport->LastFrameActive < g.FrameCount || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f)
             continue;
         if (viewport->Window && !IsWindowActiveAndVisible(viewport->Window))
@@ -7175,7 +7177,7 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 {
     // Tooltips and menus are not automatically forced into their own viewport when the NoMerge flag is set, however the multiplication of viewports makes them more likely to protude and create their own.
     ImGuiContext& g = *GImGui;
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge) && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge) && (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         //if (window->DockStatus == ImGuiDockStatus_Floating)
             if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip)) == 0)
                 return true;
@@ -7257,7 +7259,7 @@ static void ImGui::UpdateViewports()
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+    if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         main_viewport_platform_pos = g.PlatformIO.Platform_GetWindowPos(main_viewport);
     AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, g.IO.DisplaySize, ImGuiViewportFlags_CanHostOtherWindows);
 
@@ -7290,7 +7292,7 @@ static void ImGui::UpdateViewports()
             continue;
         }
 
-        if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+        if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         {
             if (g.PlatformIO.Platform_GetWindowMinimized && (n == 0 || viewport->CreatedPlatformWindow))
                 viewport->PlatformIsMinimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
@@ -7305,16 +7307,17 @@ static void ImGui::UpdateViewports()
                     viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
             }
 
-            // Translate imgui windows when a Host Viewport has been moved
-            ImVec2 delta = viewport->Pos - viewport->LastPos;
-            if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) && (delta.x != 0.0f || delta.y != 0.0f))
-                for (int window_n = 0; window_n < g.Windows.Size; window_n++)
-                    if (g.Windows[window_n]->Viewport == viewport)
-                        TranslateWindow(g.Windows[window_n], delta);
-
             // Update monitor (we'll use this info to clamp windows and save windows lost in a removed monitor)
             viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
         }
+
+        // Translate imgui windows when a Host Viewport has been moved
+        // (This additionally keeps windows at the same place when ImGuiConfigFlags_ViewportsEnable is toggled!)
+        ImVec2 viewport_delta = viewport->Pos - viewport->LastPos;
+        if ((viewport->Flags & ImGuiViewportFlags_CanHostOtherWindows) && (viewport_delta.x != 0.0f || viewport_delta.y != 0.0f))
+            for (int window_n = 0; window_n < g.Windows.Size; window_n++)
+                if (g.Windows[window_n]->Viewport == viewport || (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable) == 0)
+                    TranslateWindow(g.Windows[window_n], viewport_delta);
 
         // Update DPI scale
         float new_dpi_scale;
@@ -7339,7 +7342,7 @@ static void ImGui::UpdateViewports()
         viewport->DpiScale = new_dpi_scale;
     }
 
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+    if (!(g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
     {
         g.MouseViewport = main_viewport;
         return;
@@ -7455,7 +7458,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
 
     // Restore main viewport if multi-viewport is not supported by the back-end
     ImGuiViewportP* main_viewport = g.Viewports[0];
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+    if (!(g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
     {
         SetWindowViewport(window, main_viewport);
         return;
@@ -7559,8 +7562,7 @@ void ImGui::UpdatePlatformWindows()
     IM_ASSERT(g.FrameCountEnded == g.FrameCount && "Forgot to call Render() or EndFrame() before UpdatePlatformWindows()?");
     IM_ASSERT(g.FrameCountPlatformEnded < g.FrameCount);
     g.FrameCountPlatformEnded = g.FrameCount;
-    g.Viewports[0]->LastPos = g.Viewports[0]->Pos;
-    if (!(g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable))
+    if (!(g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         return;
 
     // Create/resize/destroy platform windows to match each active viewport.
@@ -7568,7 +7570,6 @@ void ImGui::UpdatePlatformWindows()
     for (int i = 1; i < g.Viewports.Size; i++)
     {
         ImGuiViewportP* viewport = g.Viewports[i];
-        viewport->LastPos = viewport->Pos;
 
         // Destroy platform window if the viewport hasn't been submitted or if it is hosting a hidden window (the implicit Debug window will be registered its viewport then be disabled)
         bool destroy_platform_window = false;
