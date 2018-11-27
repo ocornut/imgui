@@ -133,7 +133,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: B- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows != NULL) should show a normal title bar (not a tab bar)
  - dock: B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
  - dock: B~ tidy up tab list popup buttons features (available with manual tab-bar, see ImGuiTabBarFlags_NoTabListPopupButton code, not used by docking nodes)
- - dock: B- DockSpace() border issues
+ - dock: B- SetNextWindowDockId(0) with a second Begin() in the frame will asserts
  - dock: B- inconsistent clipping/border 1-pixel issue (#2)
  - dock: B- fix/disable auto-resize grip on split host nodes (~#2)
  - dock: B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)

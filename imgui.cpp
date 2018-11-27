@@ -10351,7 +10351,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 
     HostWindow = VisibleWindow = NULL;
     CentralNode = OnlyNodeWithWindows = NULL;
-    LastFrameAlive = LastFrameActive = -1;
+    LastFrameAlive = LastFrameActive = LastFrameFocused = -1;
     LastFocusedNodeID = 0;
     SelectedTabID = 0;
     WantCloseTabID = 0;
@@ -10565,10 +10565,10 @@ static void ImGui::DockNodeHideHostWindow(ImGuiDockNode* node)
 
 struct ImGuiDockNodeUpdateScanResults
 {
-    ImGuiDockNode*  CentralNode;
-    ImGuiDockNode*  FirstNodeWithWindows;
-    int             CountNodesWithWindows;
-    ImGuiDockFamily DockFamilyForMerges;
+    ImGuiDockNode*      CentralNode;
+    ImGuiDockNode*      FirstNodeWithWindows;
+    int                 CountNodesWithWindows;
+    //ImGuiDockFamily   DockFamilyForMerges;
 
     ImGuiDockNodeUpdateScanResults() { CentralNode = FirstNodeWithWindows = NULL; CountNodesWithWindows = 0; }
 };
@@ -10594,6 +10594,8 @@ static void DockNodeUpdateScanRec(ImGuiDockNode* node, ImGuiDockNodeUpdateScanRe
         DockNodeUpdateScanRec(node->ChildNodes[1], results);
 }
 
+// - Remove inactive windows/nodes.
+// - Update visibility flag.
 static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
@@ -10679,7 +10681,9 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     {
         DockNodeUpdateVisibleFlagAndInactiveChilds(node);
 
-        // Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
+        // FIXME-DOCK: Merge this scan into the one above.
+        // - Setup central node pointers
+        // - Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
         ImGuiDockNodeUpdateScanResults results;
         DockNodeUpdateScanRec(node, &results);
         node->CentralNode = results.CentralNode;
@@ -10756,7 +10760,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         node->HasCollapseButton = (node->Windows.Size > 0);
         for (int window_n = 0; window_n < node->Windows.Size; window_n++)
         {
-            // FIXME: Setting DockIsActive here means that for single active window in a leaf node, DockIsActive will be cleared until the next Begin() call.
+            // FIXME-DOCK: Setting DockIsActive here means that for single active window in a leaf node, DockIsActive will be cleared until the next Begin() call.
             ImGuiWindow* window = node->Windows[window_n];
             window->DockIsActive = (node->Windows.Size > 1);
             node->HasCloseButton |= window->HasCloseButton;
@@ -10938,6 +10942,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     {
         node->VisibleWindow = (node->Windows.Size > 0) ? node->Windows[0] : NULL;
         node->IsFocused = is_focused;
+        if (is_focused)
+            node->LastFrameFocused = g.FrameCount;
 
         // Notify root of visible window (used to display title in OS task bar)
         if (node->VisibleWindow)
@@ -10997,6 +11003,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
     // Title bar
     node->IsFocused = is_focused;
+    if (is_focused)
+        node->LastFrameFocused = g.FrameCount;
     ImRect title_bar_rect = ImRect(node->Pos, node->Pos + ImVec2(node->Size.x, g.FontSize + style.FramePadding.y * 2.0f));
     ImU32 title_bar_col = GetColorU32(host_window->Collapsed ? ImGuiCol_TitleBgCollapsed : is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
     host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, ImDrawCornerFlags_Top);
@@ -11850,15 +11858,15 @@ ImGuiID ImGui::DockSpaceOverViewport(ImGuiViewport* viewport, ImGuiDockNodeFlags
     char label[32];
     ImFormatString(label, IM_ARRAYSIZE(label), "DockspaceViewport_%08X", viewport->ID);
 
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    ImGui::Begin(label, NULL, host_window_flags);
-    ImGui::PopStyleVar(3);
+    PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+    PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+    PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
+    Begin(label, NULL, host_window_flags);
+    PopStyleVar(3);
 
-    ImGuiID dockspace_id = ImGui::GetID("Dockspace");
-    ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags, dock_family);
-    ImGui::End();
+    ImGuiID dockspace_id = GetID("Dockspace");
+    DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags, dock_family);
+    End();
 
     return dockspace_id;
 }

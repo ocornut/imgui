@@ -752,19 +752,19 @@ struct ImGuiTabBarSortItem
     float       Width;
 };
 
-// sizeof() 108~144
+// sizeof() 116~160
 struct ImGuiDockNode
 {
     ImGuiID                 ID;
     ImGuiDockNodeFlags      Flags;
     ImGuiDockNode*          ParentNode;
-    ImGuiDockNode*          ChildNodes[2];          // [Split node only] Child nodes (left/right or top/bottom). Consider switching to an array.
-    ImVector<ImGuiWindow*>  Windows;                // Note: unordered list! Iterate TabBar->Tabs for user-order.
+    ImGuiDockNode*          ChildNodes[2];              // [Split node only] Child nodes (left/right or top/bottom). Consider switching to an array.
+    ImVector<ImGuiWindow*>  Windows;                    // Note: unordered list! Iterate TabBar->Tabs for user-order.
     ImGuiTabBar*            TabBar;
-    ImVec2                  Pos;                    // Current position
-    ImVec2                  Size;                   // Current size
-    ImVec2                  SizeRef;                // [Split node only] Last explicitly written-to size (overridden when using a splitter affecting the node), used to calculate Size.
-    int                     SplitAxis;              // [Split node only] Split axis (X or Y)
+    ImVec2                  Pos;                        // Current position
+    ImVec2                  Size;                       // Current size
+    ImVec2                  SizeRef;                    // [Split node only] Last explicitly written-to size (overridden when using a splitter affecting the node), used to calculate Size.
+    int                     SplitAxis;                  // [Split node only] Split axis (X or Y)
     ImGuiDockFamily         DockFamily;
 
     ImGuiWindow*            HostWindow;
@@ -773,6 +773,7 @@ struct ImGuiDockNode
     ImGuiDockNode*          OnlyNodeWithWindows;        // [Root node only] Set when there is a single visible node within the hierarchy.
     int                     LastFrameAlive;             // Last frame number the node was updated or kept alive explicitly with DockSpace() + ImGuiDockNodeFlags_KeepAliveOnly
     int                     LastFrameActive;            // Last frame number the node was updated.
+    int                     LastFrameFocused;           // Last frame number the node was focused.
     ImGuiID                 LastFocusedNodeID;          // [Root node only] Which of our child node (any ancestor in the hierarchy) was last focused.
     ImGuiID                 SelectedTabID;              // [Tab node only] Which of our tab is selected.
     ImGuiID                 WantCloseTabID;             // [Tab node only] Set when closing a specific tab.
@@ -1274,9 +1275,9 @@ struct IMGUI_API ImGuiWindow
     ImGuiItemStatusFlags    DockTabItemStatusFlags;
     ImRect                  DockTabItemRect;
     short                   DockOrder;                          // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
-    bool                    DockIsActive;                       // =~ (DockNode != NULL) && (DockNode->Windows.Size > 1)
-    bool                    DockTabIsVisible;                   // Is the window visible this frame? =~ is the corresponding tab selected?
-    bool                    DockTabWantClose;
+    bool                    DockIsActive        :1;             // =~ (DockNode != NULL) && (DockNode->Windows.Size > 1)
+    bool                    DockTabIsVisible    :1;             // Is the window visible this frame? =~ is the corresponding tab selected?
+    bool                    DockTabWantClose    :1;
 
 public:
     ImGuiWindow(ImGuiContext* context, const char* name);
