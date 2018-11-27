@@ -20,6 +20,7 @@ Index of this file:
 // Helpers (ImVector, ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
 // Draw List API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListFlags, ImDrawList, ImDrawData)
 // Font API (ImFontConfig, ImFontGlyph, ImFontAtlasFlags, ImFontAtlas, ImFont)
+// Platform interface for multi-viewport support (ImGuiPlatformMonitor, ImGuiPlatformIO, ImGuiViewport)
 
 */
 
@@ -2066,7 +2067,7 @@ struct ImFont
 //-----------------------------------------------------------------------------
 
 // (Optional) Represent the bounds of each connected monitor/display
-// Dear ImGui only uses this to clamp the position of popups and tooltips so they don't straddle multiple monitors
+// Dear ImGui only uses this to clamp the position of popups and tooltips so they don't straddle multiple monitors.
 struct ImGuiPlatformMonitor
 {
     ImVec2  MainPos, MainSize;  // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
@@ -2075,12 +2076,16 @@ struct ImGuiPlatformMonitor
     ImGuiPlatformMonitor() { MainPos = MainSize = WorkPos = WorkSize = ImVec2(0,0); DpiScale = 1.0f; }
 };
 
-// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled. Access via ImGui::GetPlatformIO().
-// This is designed so we can mix and match two imgui_impl_xxxx files, one for the Platform (~window handling), one for Renderer.
-// Custom engine back-ends will often provide both Platform and Renderer interfaces and thus may not need to use all functions.
-// Platform functions are typically called before their Renderer counterpart, apart from Destroy which are called the other way.
-// RenderPlatformWindowsDefault() basically iterate secondary viewports and call Platform+Renderer's RenderWindow then Platform+Renderer's SwapBuffers,
-// You may skip using RenderPlatformWindowsDefault() and call your draw/swap functions yourself if you need specific behavior for your multi-window rendering.
+// (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled. 
+// Access via ImGui::GetPlatformIO(). This is designed so we can mix and match two imgui_impl_xxxx files, one for 
+// the Platform (~window handling), one for Renderer. Custom engine back-ends will often provide both Platform 
+// and Renderer interfaces and thus may not need to use all functions.
+// Platform functions are typically called before their Renderer counterpart, 
+// apart from Destroy which are called the other way. 
+// RenderPlatformWindowsDefault() is that helper that iterate secondary viewports and call, in this order:
+//  Platform_RenderWindow(), Renderer_RenderWindow(), Platform_SwapBuffers(), Renderer_SwapBuffers()
+// You may skip using RenderPlatformWindowsDefault() and call your draw/swap functions yourself if you need
+// specific behavior for your multi-window rendering.
 struct ImGuiPlatformIO
 {
     //------------------------------------------------------------------
@@ -2124,11 +2129,10 @@ struct ImGuiPlatformIO
     // List of viewports (the list is updated by calling ImGui::EndFrame or ImGui::Render)
     ImGuiViewport*                  MainViewport;                           // Guaranteed to be == Viewports[0]
     ImVector<ImGuiViewport*>        Viewports;                              // Main viewports, followed by all secondary viewports. 
-
     ImGuiPlatformIO()               { memset(this, 0, sizeof(*this)); }     // Zero clear
 };
 
-// Flags stored in ImGuiViewport::Flags, giving indications to the platform back-ends
+// Flags stored in ImGuiViewport::Flags, giving indications to the platform back-ends.
 enum ImGuiViewportFlags_
 {
     ImGuiViewportFlags_None                     = 0,
@@ -2150,7 +2154,7 @@ struct ImGuiViewport
     float               DpiScale;               // 1.0f = 96 DPI = No extra scale
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
 
-    void*               PlatformUserData;       // void* to hold custom data structure for the platform (e.g. windowing info, render context)
+    void*               PlatformUserData;       // void* to hold custom data structure for the OS / platform (e.g. windowing info, render context)
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. suggested to use natural platform handle such as HWND, GlfwWindow*, SDL_Window*)
     bool                PlatformRequestClose;   // Platform window requested closure (e.g. window was moved by the OS / host window manager, e.g. pressing ALT-F4)
     bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved by the OS / host window manager, authoritative position will be OS window position)
