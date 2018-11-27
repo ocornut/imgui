@@ -11970,7 +11970,8 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
 
     // DockNodeMoveWindows->DockNodeAddWindow will normally set those when reaching two windows (which is only adequate during interactive merge)
     // Make sure we don't lose our current pos/size. (FIXME-DOCK: Consider tidying up that code in DockNodeAddWindow instead)
-    root_node->InitFromFirstWindowPosSize = false;
+    if (root_node)
+        root_node->InitFromFirstWindowPosSize = false;
 
     // Apply to settings
     for (int settings_n = 0; settings_n < ctx->SettingsWindows.Size; settings_n++)
