@@ -11752,9 +11752,25 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
         return;
     window->SetWindowDockAllowFlags &= ~(ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing);
 
-    // Set
     if (window->DockId == dock_id)
         return;
+
+    // If the user attempt to set a dock id that is a split node, we'll dig within to find a suitable docking spot
+    ImGuiContext* ctx = GImGui;
+    if (ImGuiDockNode* new_node = DockContextFindNodeByID(ctx, dock_id))
+        if (new_node->IsSplitNode())
+        {
+            // Policy: Find central node or latest focused node. We first move back to our root node.
+            new_node = DockNodeGetRootNode(new_node);
+            if (new_node->CentralNode)
+                dock_id = new_node->CentralNode->ID;
+            else
+                dock_id = new_node->LastFocusedNodeID;
+        }
+
+    if (window->DockId == dock_id)
+        return;
+
     if (window->DockNode)
         DockNodeRemoveWindow(window->DockNode, window, 0);
     window->DockId = dock_id;
@@ -12228,14 +12244,17 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     if (window->DockId != 0 && dock_node == NULL)
     {
         dock_node = DockContextFindNodeByID(ctx, window->DockId);
-        if (dock_node == NULL)
-            dock_node = DockContextAddNode(ctx, window->DockId);
-
-        if (dock_node->IsSplitNode())
+        
+        // We should not be docking into a split node (SetWindowDock should avoid this)
+        if (dock_node && dock_node->IsSplitNode())
         {
             DockContextProcessUndockWindow(ctx, window);
             return;
         }
+
+        // Create node
+        if (dock_node == NULL)
+            dock_node = DockContextAddNode(ctx, window->DockId);
 
         DockNodeAddWindow(dock_node, window, true);
         IM_ASSERT(dock_node == window->DockNode);
