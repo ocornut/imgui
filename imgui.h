@@ -1507,6 +1507,36 @@ struct ImGuiStorage
     IMGUI_API void      BuildSortByKey();
 };
 
+// Helper: Manually clip large list of items.
+// If you are submitting lots of evenly spaced items and you have a random access to the list, you can perform coarse clipping based on visibility to save yourself from processing those items at all.
+// The clipper calculates the range of visible items and advance the cursor to compensate for the non-visible items we have skipped.
+// ImGui already clip items based on their bounds but it needs to measure text size to do so. Coarse clipping before submission makes this cost and your own data fetching/submission cost null.
+// Usage:
+//     ImGuiListClipper clipper(1000);  // we have 1000 elements, evenly spaced.
+//     while (clipper.Step())
+//         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+//             ImGui::Text("line number %d", i);
+// - Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height (step skipped if we passed a known height as second arg to constructor).
+// - Step 1: the clipper infer height from first element, calculate the actual range of elements to display, and position the cursor before the first element.
+// - (Step 2: dummy step only required if an explicit items_height was passed to constructor or Begin() and user call Step(). Does nothing and switch to Step 3.)
+// - Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd), advance the cursor to the end of the list and then returns 'false' to end the loop.
+struct ImGuiListClipper
+{
+    float   StartPosY;
+    float   ItemsHeight;
+    int     ItemsCount, StepNo, DisplayStart, DisplayEnd;
+
+    // items_count:  Use -1 to ignore (you can call Begin later). Use INT_MAX if you don't know how many items you have (in which case the cursor won't be advanced in the final step).
+    // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetFrameHeightWithSpacing().
+    // If you don't specify an items_height, you NEED to call Step(). If you specify items_height you may call the old Begin()/End() api directly, but prefer calling Step().
+    ImGuiListClipper(int items_count = -1, float items_height = -1.0f)  { Begin(items_count, items_height); } // NB: Begin() initialize every fields (as we allow user to call Begin/End multiple times on a same instance if they want).
+    ~ImGuiListClipper()                                                 { IM_ASSERT(ItemsCount == -1); }      // Assert if user forgot to call End() or Step() until false.
+
+    IMGUI_API bool Step();                                              // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
+    IMGUI_API void Begin(int items_count, float items_height = -1.0f);  // Automatically called by constructor if you passed 'items_count' or by Step() in Step 1.
+    IMGUI_API void End();                                               // Automatically called on the last call of Step() that returns false.
+};
+
 // Helpers macros to generate 32-bits encoded colors
 #ifdef IMGUI_USE_BGRA_PACKED_COLOR
 #define IM_COL32_R_SHIFT    16
@@ -1545,36 +1575,6 @@ struct ImColor
     // FIXME-OBSOLETE: May need to obsolete/cleanup those helpers.
     inline void    SetHSV(float h, float s, float v, float a = 1.0f){ ImGui::ColorConvertHSVtoRGB(h, s, v, Value.x, Value.y, Value.z); Value.w = a; }
     static ImColor HSV(float h, float s, float v, float a = 1.0f)   { float r,g,b; ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b); return ImColor(r,g,b,a); }
-};
-
-// Helper: Manually clip large list of items.
-// If you are submitting lots of evenly spaced items and you have a random access to the list, you can perform coarse clipping based on visibility to save yourself from processing those items at all.
-// The clipper calculates the range of visible items and advance the cursor to compensate for the non-visible items we have skipped.
-// ImGui already clip items based on their bounds but it needs to measure text size to do so. Coarse clipping before submission makes this cost and your own data fetching/submission cost null.
-// Usage:
-//     ImGuiListClipper clipper(1000);  // we have 1000 elements, evenly spaced.
-//     while (clipper.Step())
-//         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
-//             ImGui::Text("line number %d", i);
-// - Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height (step skipped if we passed a known height as second arg to constructor).
-// - Step 1: the clipper infer height from first element, calculate the actual range of elements to display, and position the cursor before the first element.
-// - (Step 2: dummy step only required if an explicit items_height was passed to constructor or Begin() and user call Step(). Does nothing and switch to Step 3.)
-// - Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd), advance the cursor to the end of the list and then returns 'false' to end the loop.
-struct ImGuiListClipper
-{
-    float   StartPosY;
-    float   ItemsHeight;
-    int     ItemsCount, StepNo, DisplayStart, DisplayEnd;
-
-    // items_count:  Use -1 to ignore (you can call Begin later). Use INT_MAX if you don't know how many items you have (in which case the cursor won't be advanced in the final step).
-    // items_height: Use -1.0f to be calculated automatically on first step. Otherwise pass in the distance between your items, typically GetTextLineHeightWithSpacing() or GetFrameHeightWithSpacing().
-    // If you don't specify an items_height, you NEED to call Step(). If you specify items_height you may call the old Begin()/End() api directly, but prefer calling Step().
-    ImGuiListClipper(int items_count = -1, float items_height = -1.0f)  { Begin(items_count, items_height); } // NB: Begin() initialize every fields (as we allow user to call Begin/End multiple times on a same instance if they want).
-    ~ImGuiListClipper()                                                 { IM_ASSERT(ItemsCount == -1); }      // Assert if user forgot to call End() or Step() until false.
-
-    IMGUI_API bool Step();                                              // Call until it returns false. The DisplayStart/DisplayEnd fields will be set and you can process/draw those items.
-    IMGUI_API void Begin(int items_count, float items_height = -1.0f);  // Automatically called by constructor if you passed 'items_count' or by Step() in Step 1.
-    IMGUI_API void End();                                               // Automatically called on the last call of Step() that returns false.
 };
 
 //-----------------------------------------------------------------------------
