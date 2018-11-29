@@ -5290,7 +5290,7 @@ void ImGui::FocusPreviousWindowIgnoringOne(ImGuiWindow* ignore_window)
     for (int i = g.WindowsFocusOrder.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* window = g.WindowsFocusOrder[i];
-        if (window != ignore_window && window->WasActive && !(window->Flags & ImGuiWindowFlags_ChildWindow))
+        if (window != ignore_window && window->WasActive && !(window->Flags & ImGuiWindowFlags_ChildWindow) && !(window->Flags & ImGuiWindowFlags_NoNavFocus))
         {
             ImGuiWindow* focus_window = NavRestoreLastChildNavWindow(window);
             FocusWindow(focus_window);
