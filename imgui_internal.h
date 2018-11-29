@@ -848,7 +848,7 @@ struct ImGuiContext
 
     // Platform support
     ImVec2                  PlatformImePos, PlatformImeLastPos; // Cursor position request & last passed to the OS Input Method Editor
-    ImGuiViewport*          PlatformImePosViewport;
+    ImGuiViewportP*         PlatformImePosViewport;
 
     // Settings
     bool                           SettingsLoaded;

@@ -3681,7 +3681,7 @@ void ImGui::EndFrame()
     IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()");
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
-    if (g.PlatformIO.Platform_SetImeInputPos && g.PlatformImePosViewport != NULL && ImLengthSqr(g.PlatformImePos - g.PlatformImeLastPos) > 0.0001f)
+    if (g.PlatformIO.Platform_SetImeInputPos && ImLengthSqr(g.PlatformImePos - g.PlatformImeLastPos) > 0.0001f && g.PlatformImePosViewport && g.PlatformImePosViewport->PlatformWindowCreated)
     {
         g.PlatformIO.Platform_SetImeInputPos(g.PlatformImePosViewport, g.PlatformImePos);
         g.PlatformImeLastPos = g.PlatformImePos;
@@ -7292,14 +7292,15 @@ static void ImGui::UpdateViewports()
             continue;
         }
 
+        const bool platform_funcs_available = (n == 0 || viewport->PlatformWindowCreated);
         if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         {
-            if (g.PlatformIO.Platform_GetWindowMinimized && (n == 0 || viewport->PlatformWindowCreated))
+            if (g.PlatformIO.Platform_GetWindowMinimized && platform_funcs_available)
                 viewport->PlatformWindowMinimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
 
             // Apply Position and Size (from Platform Window to ImGui) if requested. 
             // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
-            if (!viewport->PlatformWindowMinimized)
+            if (!viewport->PlatformWindowMinimized && platform_funcs_available)
             {
                 if (viewport->PlatformRequestMove)
                     viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
@@ -7665,10 +7666,13 @@ void ImGui::UpdatePlatformWindows()
     if (g.PlatformIO.Platform_GetWindowFocus != NULL)
     {
         ImGuiViewportP* focused_viewport = NULL;
-        for (int i = 0; i < g.Viewports.Size && focused_viewport == NULL; i++)
-            if (g.Viewports[i]->PlatformUserData != NULL || g.Viewports[i]->PlatformHandle != NULL)
-                if (g.PlatformIO.Platform_GetWindowFocus(g.Viewports[i]))
-                    focused_viewport = g.Viewports[i];
+        for (int n = 0; n < g.Viewports.Size && focused_viewport == NULL; n++)
+        {
+            ImGuiViewportP* viewport = g.Viewports[n];
+            if (n == 0 || viewport->PlatformWindowCreated)
+                if (g.PlatformIO.Platform_GetWindowFocus(viewport))
+                    focused_viewport = viewport;
+        }
         if (focused_viewport && g.PlatformLastFocusedViewport != focused_viewport->ID)
         {
             if (focused_viewport->LastFrontMostStampCount != g.WindowsFrontMostStampCount)
@@ -7758,6 +7762,7 @@ void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
     viewport->PlatformHandle = NULL;
     viewport->RendererUserData = viewport->PlatformHandle = NULL;
     viewport->PlatformWindowCreated = false;
+    viewport->PlatformRequestClose = viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
 }
 
 void ImGui::DestroyPlatformWindows()

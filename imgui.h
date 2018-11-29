@@ -2107,8 +2107,8 @@ struct ImGuiPlatformIO
     void    (*Platform_SetWindowAlpha)(ImGuiViewport* vp, float alpha);     // (Optional) Setup window transparency
     void    (*Platform_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Setup for render (platform side)
     void    (*Platform_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (platform side)
-    float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // (Optional) DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI. (FIXME-DPI)
-    void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // (Optional) DPI handling: Called during Begin() every time the viewport we are outputting into changes, so back-end has a chance to swap fonts to adjust style.
+    float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // (Optional) [BETA] (FIXME-DPI) DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI. IMPORTANT: this will be called _before_ the window is created, in which case the implementation is expected to use the viewport->Pos/Size fields to estimate DPI value.
+    void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // (Optional) [BETA] (FIXME-DPI) DPI handling: Called during Begin() every time the viewport we are outputting into changes, so back-end has a chance to swap fonts to adjust style.
     void    (*Platform_SetImeInputPos)(ImGuiViewport* vp, ImVec2 pos);      // (Optional) Set IME (Input Method Editor, e.g. for Asian languages) input position, so text preview appears over the imgui input box.
     int     (*Platform_CreateVkSurface)(ImGuiViewport* vp, ImU64 vk_inst, const void* vk_allocators, ImU64* out_vk_surface); // (Optional) For Renderer to call into Platform code
 
