@@ -5066,7 +5066,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
             // Collapse button
             if (!(flags & ImGuiWindowFlags_NoCollapse))
-                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
+                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos) || (g.NavWindowingTarget == window && IsNavInputPressed(ImGuiNavInput_Activate, ImGuiInputReadMode_Pressed)))
                     window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
 
             // Close button
@@ -5074,7 +5074,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             {
                 const float pad = style.FramePadding.y;
                 const float rad = g.FontSize * 0.5f;
-                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad + 1))
+                if (CloseButton(window->GetID("#CLOSE"), window->Rect().GetTR() + ImVec2(-pad - rad, pad + rad), rad + 1) || (g.NavWindowingTarget == window && IsNavInputPressed(ImGuiNavInput_Input, ImGuiInputReadMode_Pressed)))
                     *p_open = false;
             }
 
