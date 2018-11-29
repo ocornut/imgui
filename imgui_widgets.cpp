@@ -3116,6 +3116,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackHistory) && (flags & ImGuiInputTextFlags_Multiline)));        // Can't use both together (they both use up/down keys)
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackCompletion) && (flags & ImGuiInputTextFlags_AllowTabInput))); // Can't use both together (they both use tab key)
+    IM_ASSERT(!((flags & ImGuiInputTextFlags_TabReturnsTrue) && (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)))); // Can't use all together (they all use tab key).
 
     ImGuiContext& g = *GImGui;
     const ImGuiIO& io = g.IO;
@@ -3181,7 +3182,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
     ImGuiInputTextState& edit_state = g.InputTextState;
 
-    const bool focus_requested = FocusableItemRegister(window, id, (flags & (ImGuiInputTextFlags_CallbackCompletion|ImGuiInputTextFlags_AllowTabInput)) == 0);    // Using completion callback disable keyboard tabbing
+    const bool tab_stop = (flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_AllowTabInput)) == 0; // Using completion callback disable keyboard tabbing
+    const bool tab_pressed = (g.ActiveId == id) && tab_stop && IsKeyPressedMap(ImGuiKey_Tab);
+    
+    const bool focus_requested = FocusableItemRegister(window, id, tab_stop);    // Using completion callback disable keyboard tabbing
     const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
@@ -3771,8 +3775,15 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (value_changed)
         MarkItemEdited(id);
 
-    if ((flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0)
+    bool check_enter = (flags & ImGuiInputTextFlags_EnterReturnsTrue) != 0;
+    bool check_tab = (flags & ImGuiInputTextFlags_TabReturnsTrue) != 0;
+    
+    if (check_enter && check_tab)
+        return enter_pressed || tab_pressed;
+    else if (check_enter)
         return enter_pressed;
+    else if (check_tab)
+        return tab_pressed;
     else
         return value_changed;
 }

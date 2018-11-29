@@ -704,6 +704,7 @@ enum ImGuiInputTextFlags_
     ImGuiInputTextFlags_NoUndoRedo          = 1 << 16,  // Disable undo/redo. Note that input text owns the text data while active, if you want to provide your own undo/redo stack you need e.g. to call ClearActiveID().
     ImGuiInputTextFlags_CharsScientific     = 1 << 17,  // Allow 0123456789.+-*/eE (Scientific notation input)
     ImGuiInputTextFlags_CallbackResize      = 1 << 18,  // Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow. Notify when the string wants to be resized (for string types which hold a cache of their Size). You will be provided a new BufSize in the callback and NEED to honor it. (see misc/cpp/imgui_stdlib.h for an example of using this)
+    ImGuiInputTextFlags_TabReturnsTrue      = 1 << 19,  // Return 'true' when Tab is pressed (as opposed to when the value was modified)
     // [Internal]
     ImGuiInputTextFlags_Multiline           = 1 << 20   // For internal use by InputTextMultiline()
 };
