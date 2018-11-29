@@ -38,9 +38,9 @@ static D3D12_CPU_DESCRIPTOR_HANDLE  g_mainRenderTargetDescriptor[NUM_BACK_BUFFER
 
 void CreateRenderTarget()
 {
-    ID3D12Resource* pBackBuffer;
     for (UINT i = 0; i < NUM_BACK_BUFFERS; i++)
     {
+        ID3D12Resource* pBackBuffer = NULL;
         g_pSwapChain->GetBuffer(i, IID_PPV_ARGS(&pBackBuffer));
         g_pd3dDevice->CreateRenderTargetView(pBackBuffer, NULL, g_mainRenderTargetDescriptor[i]);
         g_mainRenderTargetResource[i] = pBackBuffer;
@@ -416,7 +416,7 @@ int main(int, char**)
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
+            ImGui::RenderPlatformWindowsDefault(NULL, (void*)g_pd3dCommandList);
         }
 
         g_pSwapChain->Present(1, 0); // Present with vsync
