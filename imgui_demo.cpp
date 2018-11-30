@@ -2647,6 +2647,12 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #ifdef IMGUI_HAS_VIEWPORT
         ImGui::Text("define: IMGUI_HAS_VIEWPORT");
 #endif
+#ifdef IMGUI_HAS_DOCK
+        ImGui::Text("define: IMGUI_HAS_DOCK");
+#endif
+#ifdef IMGUI_HAS_TABS
+        ImGui::Text("define: IMGUI_HAS_TABS");
+#endif
         ImGui::Separator();
         ImGui::Text("io.ConfigFlags: 0x%08X", io.ConfigFlags);
         if (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)        ImGui::Text(" NavEnableKeyboard");
@@ -2655,6 +2661,8 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (io.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard)     ImGui::Text(" NavNoCaptureKeyboard");
         if (io.ConfigFlags & ImGuiConfigFlags_NoMouse)                  ImGui::Text(" NoMouse");
         if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)      ImGui::Text(" NoMouseCursorChange");
+        if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)            ImGui::Text(" DockingEnable");
+        if (io.ConfigFlags & ImGuiConfigFlags_DockingNoSplit)           ImGui::Text(" DockingNoSplit");
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)          ImGui::Text(" ViewportsEnable");
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsNoTaskBarIcon)   ImGui::Text(" ViewportsNoTaskBarIcon");
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge)         ImGui::Text(" ViewportsNoMerge");
@@ -2664,6 +2672,8 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (io.ConfigFlags & ImGuiConfigFlags_IsSRGB)                   ImGui::Text(" IsSRGB");
         if (io.ConfigFlags & ImGuiConfigFlags_IsTouchScreen)            ImGui::Text(" IsTouchScreen");
         if (io.MouseDrawCursor)                                         ImGui::Text(" MouseDrawCursor");
+        if (io.ConfigDockingWithShift)                                  ImGui::Text(" ConfigDockingWithShift");
+        if (io.ConfigDockingTransparentPayload)                         ImGui::Text(" ConfigDockingTransparentPayload");
         if (io.ConfigMacOSXBehaviors)                                   ImGui::Text(" ConfigMacOSXBehaviors");
         if (io.ConfigInputTextCursorBlink)                              ImGui::Text(" ConfigInputTextCursorBlink");
         if (io.ConfigResizeWindowsFromEdges)                            ImGui::Text(" ConfigResizeWindowsFromEdges");
