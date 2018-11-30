@@ -28,6 +28,9 @@
 //---- It is very strongly recommended to NOT disable the demo windows during development. Please read the comments in imgui_demo.cpp.
 //#define IMGUI_DISABLE_DEMO_WINDOWS
 
+//---- Don't implement debug window.
+#define IMGUI_DISABLE_DEBUG_WINDOWS
+
 //---- Don't implement some functions to reduce linkage requirements.
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS   // [Win32] Don't implement default clipboard handler. Won't use and link with OpenClipboard/GetClipboardData/CloseClipboard etc.
 //#define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS         // [Win32] Don't implement default IME handler. Won't use and link with ImmGetContext/ImmSetCompositionWindow.

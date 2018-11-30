@@ -3298,10 +3298,12 @@ void ImGui::NewFrame()
     g.CurrentPopupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow);
 
+#ifndef IMGUI_DISABLE_DEBUG_WINDOWS
     // Create implicit window - we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
+#endif
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
     ImGuiTestEngineHook_PostNewFrame();
@@ -3540,11 +3542,15 @@ void ImGui::EndFrame()
         g.PlatformImeLastPos = g.PlatformImePos;
     }
 
+#ifdef IMGUI_DISABLE_DEBUG_WINDOWS
+    IM_ASSERT(g.CurrentWindowStack.Size == 0);    // Mismatched Begin()/End() calls
+#else
     // Hide implicit "Debug" window if it hasn't been used
     IM_ASSERT(g.CurrentWindowStack.Size == 1);    // Mismatched Begin()/End() calls, did you forget to call end on g.CurrentWindow->Name?
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
+#endif
 
     // Show CTRL+TAB list
     if (g.NavWindowingTarget)
