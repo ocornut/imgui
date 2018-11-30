@@ -6770,12 +6770,22 @@ static float inline NavScoreItemDistInterval(float a0, float a1, float b0, float
     return 0.0f;
 }
 
-static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImRect& clip_rect)
+static void inline NavClampRectToVisibleAreaForMoveDir(ImGuiDir move_dir, ImRect& r, const ImGuiWindow* window)
 {
+    const ImRect& clip_rect = window->ClipRect;
+
     if (move_dir == ImGuiDir_Left || move_dir == ImGuiDir_Right)
     {
         r.Min.y = ImClamp(r.Min.y, clip_rect.Min.y, clip_rect.Max.y);
         r.Max.y = ImClamp(r.Max.y, clip_rect.Min.y, clip_rect.Max.y);
+
+        // In the case we're using columns, clip against them in the navigation axis, too.
+        const ImGuiColumnsSet* column_set = window->DC.ColumnsSet;
+        if (column_set && column_set->Count > 1)
+        {
+            r.Min.x = ImClamp(r.Min.x, clip_rect.Min.x, clip_rect.Max.x);
+            r.Max.x = ImClamp(r.Max.x, clip_rect.Min.x, clip_rect.Max.x);
+        }
     }
     else
     {
@@ -6806,7 +6816,7 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
 
     // We perform scoring on items bounding box clipped by the current clipping rectangle on the other axis (clipping on our movement axis would give us equal scores for all clipped items)
     // For example, this ensure that items in one column are not reached when moving vertically from items in another column.
-    NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window->ClipRect);
+    NavClampRectToVisibleAreaForMoveDir(g.NavMoveClipDir, cand, window);
 
     // Compute distance between boxes
     // FIXME-NAV: Introducing biases for vertical navigation, needs to be removed.
