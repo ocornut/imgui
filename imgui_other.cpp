@@ -1,6 +1,6 @@
 #include "imgui_other.h"
 
-void    ExampleAppLog::AddLog(const char* fmt, ...) 
+void AppLog::AddLog(const char* fmt, ...) 
 {
 	int old_size = Buf.size();
 	va_list args;
@@ -13,7 +13,7 @@ void    ExampleAppLog::AddLog(const char* fmt, ...)
 	ScrollToBottom = true;
 }
 
-void ExampleAppLog::Draw(const char* title, bool* p_open)
+void AppLog::Draw(const char* title, bool* p_open)
 {
 	ImGui::SetNextWindowSize(ImVec2(500, 400), ImGuiCond_FirstUseEver);
 	if (!ImGui::Begin(title, p_open))

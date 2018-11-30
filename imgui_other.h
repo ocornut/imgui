@@ -10,9 +10,9 @@
 using namespace std;
 namespace fs = std::filesystem;
 
-inline void ShowErrorMessage(string titre, string message)
+inline void ShowErrorMessage(string titre, string message,bool* p_open = nullptr)
 {
-	if(ImGui::BeginPopupModal(titre.c_str()))
+	if(ImGui::BeginPopupModal(titre.c_str(),p_open))
 	{
 		ImGui::Separator();
 		ImGui::Text(message.c_str());
@@ -26,7 +26,7 @@ inline void ShowErrorMessage(string titre, string message)
 	
 }
 
-struct ExampleAppLog
+struct AppLog
 {
 	ImGuiTextBuffer     Buf;
 	ImGuiTextFilter     Filter;
@@ -91,6 +91,8 @@ struct FileExplorer
 
 	bool				get_folder = false;
 
+	bool				waiting_data = false;
+
 
 	void SetCurrentDirectory(fs::path path)
 	{
@@ -132,9 +134,11 @@ struct FileExplorer
 
 	void Start()
 	{
-		SetCurrentDirectory(fs::current_path());
+		if(current_directory.empty())
+			SetCurrentDirectory(fs::current_path());
 		ImGui::OpenPopup("Ouvrir un fichier");
 		is_close = false;
+		waiting_data = true;
 	}
 
 	void ChangeParent() // Change le répertoire courrant pour le parrent
@@ -154,7 +158,7 @@ struct FileExplorer
 
 		static int track_line = 50, scroll_to_px = 200;
 
-		ImGui::SetNextWindowSize(ImVec2(510, 300), ImGuiCond_FirstUseEver);
+		ImGui::SetNextWindowSize(ImVec2(510, 350), ImGuiCond_FirstUseEver);
 		if(ImGui::BeginPopupModal("Ouvrir un fichier",p_open))
 		{
 
@@ -189,7 +193,7 @@ struct FileExplorer
 			ImGui::Separator();
 			ImGui::BeginGroup();
 			ImGui::BeginChild("Fichiers", ImVec2(500, 250), true);
-			ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px);
+			//ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px);
 			
 			static int selected = -1;
 			static FileInfo fi;
@@ -214,6 +218,7 @@ struct FileExplorer
 							selected_current = f.file;
 							is_close = true;
 							ImGui::CloseCurrentPopup();
+		
 						}
 					}
 					selected = n;

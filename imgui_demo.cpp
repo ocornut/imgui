@@ -3065,10 +3065,10 @@ static void ShowExampleAppConsole(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Usage:
-//  static ExampleAppLog my_log;
+//  static AppLog my_log;
 //  my_log.AddLog("Hello %d world\n", 123);
 //  my_log.Draw("title");
-struct ExampleAppLog
+struct AppLog
 {
     ImGuiTextBuffer     Buf;
     ImGuiTextFilter     Filter;
@@ -3135,7 +3135,7 @@ struct ExampleAppLog
 // Demonstrate creating a simple log window with basic filtering.
 static void ShowExampleAppLog(bool* p_open)
 {
-    static ExampleAppLog log;
+    static AppLog log;
 
     // Demo: add random items (unless Ctrl is held)
     static double last_time = -1.0;
