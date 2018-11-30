@@ -1153,7 +1153,7 @@ void ImGui::Separator()
     window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
 
     if (g.LogEnabled)
-        LogRenderedText(NULL, IM_NEWLINE "--------------------------------");
+        LogRenderedText(&bb.Min, "--------------------------------");
 
     if (window->DC.ColumnsSet)
     {
