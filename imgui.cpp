@@ -1097,6 +1097,7 @@ ImGuiIO::ImGuiIO()
     ConfigResizeWindowsFromEdges = false;
 
     // Platform Functions
+    BackendPlatformName = BackendRendererName = NULL;
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ClipboardUserData = NULL;
