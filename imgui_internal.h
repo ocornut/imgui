@@ -99,6 +99,8 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 #else
 #define IM_NEWLINE      "\n"
 #endif
+
+//#define IMGUI_DEBUG_LOG(FMT,...)      printf("[%05d] " FMT, GImGui->FrameCount, __VA_ARGS__)
 #define IM_STATIC_ASSERT(_COND)         typedef char static_assertion_##__line__[(_COND)?1:-1]
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
@@ -241,14 +243,6 @@ struct IMGUI_API ImPool
 // Types
 //-----------------------------------------------------------------------------
 
-// 1D vector (this odd construct is used to facilitate the transition between 1D and 2D and maintenance of some patches)
-struct ImVec1
-{
-    float     x;
-    ImVec1() { x = 0.0f; }
-    ImVec1(float _x) { x = _x; }
-};
-
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_None                   = 0,
@@ -305,6 +299,19 @@ enum ImGuiSeparatorFlags_
     ImGuiSeparatorFlags_None                = 0,
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
     ImGuiSeparatorFlags_Vertical            = 1 << 1
+};
+
+// Transient per-window ItemFlags, reset at the beginning of the frame. For child windows: inherited from parent on first Begin().
+// This is going to be exposed in imgui.h when stabilized enough.
+enum ImGuiItemFlags_
+{
+    ImGuiItemFlags_NoTabStop                    = 1 << 0,  // false
+    ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
+    ImGuiItemFlags_Disabled                     = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
+    ImGuiItemFlags_NoNav                        = 1 << 3,  // false
+    ImGuiItemFlags_NoNavDefaultFocus            = 1 << 4,  // false
+    ImGuiItemFlags_SelectableDontClosePopup     = 1 << 5,  // false    // MenuItem/Selectable() automatically closes current Popup window
+    ImGuiItemFlags_Default_                     = 0
 };
 
 // Storage for LastItem data
@@ -396,6 +403,14 @@ enum ImGuiPopupPositionPolicy
 {
     ImGuiPopupPositionPolicy_Default,
     ImGuiPopupPositionPolicy_ComboBox
+};
+
+// 1D vector (this odd construct is used to facilitate the transition between 1D and 2D and maintenance of some patches)
+struct ImVec1
+{
+    float     x;
+    ImVec1() { x = 0.0f; }
+    ImVec1(float _x) { x = _x; }
 };
 
 // 2D axis aligned bounding-box
@@ -632,7 +647,7 @@ struct ImGuiViewportP : public ImGuiViewport
     int                 PlatformMonitor;
     bool                PlatformWindowCreated;
     bool                PlatformWindowMinimized;
-    ImGuiWindow*        Window;
+    ImGuiWindow*        Window;                   // Set when the viewport is owned by a window
     ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
@@ -702,7 +717,10 @@ struct ImGuiNextWindowData
     }
 };
 
+//-----------------------------------------------------------------------------
 // Main imgui context
+//-----------------------------------------------------------------------------
+
 struct ImGuiContext
 {
     bool                    Initialized;
@@ -984,18 +1002,9 @@ struct ImGuiContext
     }
 };
 
-// Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
-// This is going to be exposed in imgui.h when stabilized enough.
-enum ImGuiItemFlags_
-{
-    ImGuiItemFlags_NoTabStop                    = 1 << 0,  // false
-    ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
-    ImGuiItemFlags_Disabled                     = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
-    ImGuiItemFlags_NoNav                        = 1 << 3,  // false
-    ImGuiItemFlags_NoNavDefaultFocus            = 1 << 4,  // false
-    ImGuiItemFlags_SelectableDontClosePopup     = 1 << 5,  // false    // MenuItem/Selectable() automatically closes current Popup window
-    ImGuiItemFlags_Default_                     = 0
-};
+//-----------------------------------------------------------------------------
+// ImGuiWindow
+//-----------------------------------------------------------------------------
 
 // Transient per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the DC variable name in ImGuiWindow.
 // FIXME: That's theory, in practice the delimitation between ImGuiWindow and ImGuiWindowTempData is quite tenuous and could be reconsidered.
