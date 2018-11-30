@@ -10,6 +10,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_Marmalade_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
@@ -42,7 +43,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
     draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
     // Render command lists
-    for(int n = 0; n < draw_data->CmdListsCount; n++)
+    for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
         const ImDrawIdx* idx_buffer = cmd_list->IdxBuffer.Data;
@@ -51,7 +52,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
         CIwFVec2* pUVStream = IW_GX_ALLOC(CIwFVec2, nVert);
         CIwColour* pColStream = IW_GX_ALLOC(CIwColour, nVert);
 
-        for( int i=0; i < nVert; i++ )
+        for (int i = 0; i < nVert; i++)
         {
             // TODO: optimize multiplication on gpu using vertex shader/projection matrix.
             pVertStream[i].x = cmd_list->VtxBuffer[i].pos.x * g_RenderScale.x;
@@ -214,6 +215,8 @@ void    ImGui_Marmalade_InvalidateDeviceObjects()
 bool    ImGui_Marmalade_Init(bool install_callbacks)
 {
     ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName = io.BackendRendererName = "imgui_impl_marmalade";
+
     io.KeyMap[ImGuiKey_Tab] = s3eKeyTab;                     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array.
     io.KeyMap[ImGuiKey_LeftArrow] = s3eKeyLeft;
     io.KeyMap[ImGuiKey_RightArrow] = s3eKeyRight;
