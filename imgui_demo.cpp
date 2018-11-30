@@ -945,6 +945,8 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Multi-line Text Input"))
     {
+        // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize 
+        // and the code in misc/cpp/imgui_stdlib.h for how to setup InputText() for dynamically resizing strings.
         static bool read_only = false;
         static char text[1024*16] =
             "/*\n"

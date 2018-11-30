@@ -2683,7 +2683,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         while (y_end < clip_rect.w && s_end < text_end)
         {
             s_end = (const char*)memchr(s_end, '\n', text_end - s_end);
-            s = s ? s + 1 : text_end;
+            s_end = s_end ? s_end + 1 : text_end;
             y_end += line_height;
         }
         text_end = s_end;

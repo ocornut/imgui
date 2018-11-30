@@ -64,6 +64,8 @@ Breaking Changes:
 
 Other Changes:
 
+- Fixed a text rendering/clipping bug introduced in 1.66 (on 2018-10-12, commit ede3a3b9) that affect single ImDrawList::AddText()
+  calls with single strings larger than 10k. Text/TextUnformatted() calls were not affected, but e.g. InputText() was. [@pdoane]
 - When the focused window become inactive don't restore focus to a window with the ImGuiWindowFlags_NoInputs flag. (#2213) [@zzzyap]
 - Separator: Fixed Separator() outputting an extraneous empty line when captured into clipboard/text/file. 
 - Demo: Added ShowAboutWindow() call, previously was only accessible from the demo window.
