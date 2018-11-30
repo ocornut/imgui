@@ -11,15 +11,18 @@ https://discourse.dearimgui.org/c/getting-started
 
 ----
 
+_(you may also go to Demo>About Window, and click "Config/Build Information" to obtain a bunch of detailed information that you can paste here)_
+
 **Version/Branch of Dear ImGui:**
 
-XXX
+Version: XXX
+Branch: XXX _(master/viewport/docking/etc.)_
 
-**Back-end file/Renderer/OS:** _(or specify if you are using a custom engine back-end)_
+**Back-end/Renderer/Compiler/OS** 
 
-Back-ends: imgui_impl_XXX.cpp + imgui_impl_XXX.cpp
-OS: XXX 
+Back-ends: imgui_impl_XXX.cpp + imgui_impl_XXX.cpp _(or specify if using a custom engine/back-end)_
 Compiler: XXX _(if the question is related to building)_
+Operating System: XXX 
 
 **My Issue/Question:** _(please provide context)_
 
@@ -27,6 +30,7 @@ XXX
 
 **Standalone, minimal, complete and verifiable example:** _(see CONTRIBUTING.md)_
 ```
+// Please do not forget this!
 ImGui::Begin("Example Bug");
 MoreCodeToExplainMyIssue();
 ImGui::End();

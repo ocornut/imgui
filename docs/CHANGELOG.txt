@@ -64,6 +64,11 @@ Breaking Changes:
 
 Other Changes:
 
+- When the focused window become inactive don't restore focus to a window with the ImGuiWindowFlags_NoInputs flag. (#2213) [@zzzyap]
+- Separator: Fixed Separator() outputting an extraneous empty line when captured into clipboard/text/file. 
+- Demo: Added ShowAboutWindow() call, previously was only accessible from the demo window.
+- Demo: ShowAboutWindow() now display various Build/Config Information (compiler, os, etc.) that can easily be copied into bug reports.
+- Fixed build issue with osxcross and macOS. (#2218) [@dos1]
 - Examples: SDL: changed the signature of ImGui_ImplSDL2_ProcessEvent() to use a const SDL_Event*. (#2187)
 
 
