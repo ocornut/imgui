@@ -2540,24 +2540,36 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #ifdef __clang_version__
         ImGui::Text("define: __clang_version__=%s", __clang_version__);
 #endif
+#ifdef IMGUI_HAS_VIEWPORT
+        ImGui::Text("define: IMGUI_HAS_VIEWPORT");
+#endif
         ImGui::Separator();
         ImGui::Text("io.ConfigFlags: 0x%08X", io.ConfigFlags);
-        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)    ImGui::Text(" NavEnableKeyboard");
-        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)     ImGui::Text(" NavEnableGamepad");
-        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) ImGui::Text(" NavEnableSetMousePos");
-        if (io.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard) ImGui::Text(" NavNoCaptureKeyboard");
-        if (io.ConfigFlags & ImGuiConfigFlags_NoMouse)              ImGui::Text(" NoMouse");
-        if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)  ImGui::Text(" NoMouseCursorChange");
-        if (io.ConfigFlags & ImGuiConfigFlags_IsSRGB)               ImGui::Text(" IsSRGB");
-        if (io.ConfigFlags & ImGuiConfigFlags_IsTouchScreen)        ImGui::Text(" IsTouchScreen");
-        if (io.MouseDrawCursor)                                     ImGui::Text(" MouseDrawCursor");
-        if (io.ConfigMacOSXBehaviors)                               ImGui::Text(" ConfigMacOSXBehaviors");
-        if (io.ConfigInputTextCursorBlink)                          ImGui::Text(" ConfigInputTextCursorBlink");
-        if (io.ConfigResizeWindowsFromEdges)                        ImGui::Text(" ConfigResizeWindowsFromEdges");
+        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)        ImGui::Text(" NavEnableKeyboard");
+        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)         ImGui::Text(" NavEnableGamepad");
+        if (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos)     ImGui::Text(" NavEnableSetMousePos");
+        if (io.ConfigFlags & ImGuiConfigFlags_NavNoCaptureKeyboard)     ImGui::Text(" NavNoCaptureKeyboard");
+        if (io.ConfigFlags & ImGuiConfigFlags_NoMouse)                  ImGui::Text(" NoMouse");
+        if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)      ImGui::Text(" NoMouseCursorChange");
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)          ImGui::Text(" ViewportsEnable");
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsNoTaskBarIcon)   ImGui::Text(" ViewportsNoTaskBarIcon");
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge)         ImGui::Text(" ViewportsNoMerge");
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsDecoration)      ImGui::Text(" ViewportsDecoration");
+        if (io.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)  ImGui::Text(" DpiEnableScaleViewports");
+        if (io.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleFonts)      ImGui::Text(" DpiEnableScaleFonts");
+        if (io.ConfigFlags & ImGuiConfigFlags_IsSRGB)                   ImGui::Text(" IsSRGB");
+        if (io.ConfigFlags & ImGuiConfigFlags_IsTouchScreen)            ImGui::Text(" IsTouchScreen");
+        if (io.MouseDrawCursor)                                         ImGui::Text(" MouseDrawCursor");
+        if (io.ConfigMacOSXBehaviors)                                   ImGui::Text(" ConfigMacOSXBehaviors");
+        if (io.ConfigInputTextCursorBlink)                              ImGui::Text(" ConfigInputTextCursorBlink");
+        if (io.ConfigResizeWindowsFromEdges)                            ImGui::Text(" ConfigResizeWindowsFromEdges");
         ImGui::Text("io.BackendFlags: 0x%08X", io.BackendFlags);
-        if (io.BackendFlags & ImGuiBackendFlags_HasGamepad)         ImGui::Text(" HasGamepad");
-        if (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors)    ImGui::Text(" HasMouseCursors");
-        if (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos)     ImGui::Text(" HasSetMousePos");
+        if (io.BackendFlags & ImGuiBackendFlags_HasGamepad)             ImGui::Text(" HasGamepad");
+        if (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors)        ImGui::Text(" HasMouseCursors");
+        if (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos)         ImGui::Text(" HasSetMousePos");
+        if (io.BackendFlags & ImGuiBackendFlags_PlatformHasViewports)   ImGui::Text(" PlatformHasViewports");
+        if (io.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)ImGui::Text(" HasMouseHoveredViewport");
+        if (io.BackendFlags & ImGuiBackendFlags_RendererHasViewports)   ImGui::Text(" RendererHasViewports");
         ImGui::Text("io.BackendPlatformName: %s", io.BackendPlatformName ? io.BackendPlatformName : "NULL");
         ImGui::Text("io.BackendRendererName: %s", io.BackendRendererName ? io.BackendRendererName : "NULL");
         ImGui::Separator();
