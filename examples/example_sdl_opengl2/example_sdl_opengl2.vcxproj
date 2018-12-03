@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{94E991D0-790A-4DAF-B442-AAADE3233C75}</ProjectGuid>
+    <ProjectGuid>{2AE17FDE-F7F3-4CAC-ADAB-0710EDA4F741}</ProjectGuid>
     <RootNamespace>example_sdl_opengl2</RootNamespace>
   </PropertyGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.Default.props" />
