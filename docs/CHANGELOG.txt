@@ -36,6 +36,8 @@ HOW TO UPDATE?
 Breaking Changes:
 
 Other Changes:
+- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
+  to ease integration.
 
 
 -----------------------------------------------------------------------
