@@ -57,10 +57,8 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.67 (In Progress)
+ VERSION 1.66b (Released 2018-12-01)
 -----------------------------------------------------------------------
-
-Breaking Changes:
 
 Other Changes:
 
@@ -71,6 +69,7 @@ Other Changes:
 - Demo: Added ShowAboutWindow() call, previously was only accessible from the demo window.
 - Demo: ShowAboutWindow() now display various Build/Config Information (compiler, os, etc.) that can easily be copied into bug reports.
 - Fixed build issue with osxcross and macOS. (#2218) [@dos1]
+- Examples: Setting up 'io.BackendPlatformName'/'io.BackendRendererName' fields to the current back-end can be displayed in the About window.
 - Examples: SDL: changed the signature of ImGui_ImplSDL2_ProcessEvent() to use a const SDL_Event*. (#2187)
 
 
