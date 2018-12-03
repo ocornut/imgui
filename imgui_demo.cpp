@@ -1,4 +1,4 @@
-// dear imgui, v1.66b
+// dear imgui, v1.67 WIP
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
@@ -199,7 +199,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
     if (show_app_metrics)             { ImGui::ShowMetricsWindow(&show_app_metrics); }
     if (show_app_style_editor)        { ImGui::Begin("Style Editor", &show_app_style_editor); ImGui::ShowStyleEditor(); ImGui::End(); }
-    if (show_app_about)               { ShowAboutWindow(&show_app_about); }
+    if (show_app_about)               { ImGui::ShowAboutWindow(&show_app_about); }
 
     // Demonstrate the various window flags. Typically you would just use the default!
     static bool no_titlebar = false;
@@ -2470,7 +2470,7 @@ static void ShowDemoWindowMisc()
 void ImGui::ShowAboutWindow(bool* p_open)
 {
     ImGui::Begin("About Dear ImGui", p_open, ImGuiWindowFlags_AlwaysAutoResize);
-    ImGui::Text("Dear ImGui, %s", ImGui::GetVersion());
+    ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
     ImGui::Separator();
     ImGui::Text("By Omar Cornut and all dear imgui contributors.");
     ImGui::Text("Dear ImGui is licensed under the MIT License, see LICENSE for more information.");
