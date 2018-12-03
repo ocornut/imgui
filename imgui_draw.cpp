@@ -1,4 +1,4 @@
-// dear imgui, v1.67 WIP
+// dear imgui, v1.66b
 // (drawing and font code)
 
 /*
@@ -32,7 +32,7 @@ Index of this file:
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #if !defined(alloca)
-#if defined(__GLIBC__) || defined(__sun) || defined(__CYGWIN__)
+#if defined(__GLIBC__) || defined(__sun) || defined(__CYGWIN__) || defined(__APPLE__)
 #include <alloca.h>     // alloca (glibc uses <alloca.h>. Note that Cygwin may have _WIN32 defined, so the order matters here)
 #elif defined(_WIN32)
 #include <malloc.h>     // alloca
