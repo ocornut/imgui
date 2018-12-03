@@ -10337,7 +10337,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
 
     // Update selection immediately
     if (ImGuiTabBar* tab_bar = target_node->TabBar)
-        tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = next_selected_id;
+        tab_bar->NextSelectedTabId = next_selected_id;
     MarkIniSettingsDirty();
 }
 
@@ -10461,6 +10461,10 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
         {
             node->TabBar = IM_NEW(ImGuiTabBar)();
             node->TabBar->SelectedTabId = node->TabBar->NextSelectedTabId = node->SelectedTabID;
+            
+            // Add existing windows
+            for (int n = 0; n < node->Windows.Size - 1; n++)
+                TabBarAddTab(node->TabBar, node->Windows[n], ImGuiTabItemFlags_None);
         }
         TabBarAddTab(node->TabBar, window, ImGuiTabItemFlags_Unsorted);
     }
@@ -10835,7 +10839,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             char window_label[20];
             DockNodeGetHostWindowTitle(node, window_label, IM_ARRAYSIZE(window_label));
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_DockNodeHost;
-            //window_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
+            window_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
             window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
             window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse;
 
@@ -11018,6 +11022,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (tab_bar == NULL)
         tab_bar = node->TabBar = IM_NEW(ImGuiTabBar)();
 
+    ImGuiID focus_tab_id = 0;
+
     // Collapse button changes shape and display a list
     if (IsPopupOpen("#TabListMenu"))
     {
@@ -11037,7 +11043,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
                     ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
                     IM_ASSERT(tab->Window != NULL);
                     if (Selectable(tab->Window->Name, tab->ID == tab_bar->SelectedTabId))
-                        tab_bar->NextSelectedTabId = tab_bar->WantFocusTabId = tab->ID;
+                        focus_tab_id = tab_bar->NextSelectedTabId = tab->ID;
                     SameLine();
                     Text("   ");
                 }
@@ -11045,8 +11051,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             EndPopup();
         }
     }
-
-    ImGuiID focus_tab_id = 0;
 
     // Title bar
     node->IsFocused = is_focused;
@@ -11063,11 +11067,16 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (IsItemActive())
         focus_tab_id = tab_bar->SelectedTabId;
 
-    // Submit new tabs
+    // Submit new tabs and apply NavWindow focus back to the tab bar. They will be added as Unsorted and sorted below based on relative DockOrder value.
     const int tabs_count_old = tab_bar->Tabs.Size;
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
-        if (TabBarFindTabByID(tab_bar, node->Windows[window_n]->ID) == NULL)
-            TabBarAddTab(tab_bar, node->Windows[window_n], ImGuiTabItemFlags_Unsorted);
+    {
+        ImGuiWindow* window = node->Windows[window_n];
+        if (g.NavWindow && g.NavWindow->RootWindowDockStop == window)
+            tab_bar->SelectedTabId = window->ID;
+        if (TabBarFindTabByID(tab_bar, window->ID) == NULL)
+            TabBarAddTab(tab_bar, window, ImGuiTabItemFlags_Unsorted);
+    }
 
     // If multiple tabs are appearing on the same frame, sort them based on their persistent DockOrder value
     int tabs_unsorted_start = tab_bar->Tabs.Size;
@@ -11170,13 +11179,13 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     }
 
     // Forward focus from host node to selected window
-    if (is_focused && g.NavWindow == host_window && !g.NavWindowingTarget)
-        focus_tab_id = tab_bar->SelectedTabId;
+    //if (is_focused && g.NavWindow == host_window && !g.NavWindowingTarget)
+    //    focus_tab_id = tab_bar->SelectedTabId;
 
     // When clicked on a tab we requested focus to the docked child
     // This overrides the value set by "forward focus from host node to selected window".
-    if (tab_bar->WantFocusTabId)
-        focus_tab_id = tab_bar->WantFocusTabId;
+    if (tab_bar->NextSelectedTabId)
+        focus_tab_id = tab_bar->NextSelectedTabId;
 
     // Apply navigation focus
     if (focus_tab_id != 0)

@@ -1355,7 +1355,6 @@ struct ImGuiTabBar
     ImGuiID             SelectedTabId;          // Selected tab
     ImGuiID             NextSelectedTabId;
     ImGuiID             VisibleTabId;           // Can occasionally be != SelectedTabId (e.g. when previewing contents for CTRL+TAB preview)
-    ImGuiID             WantFocusTabId;         // Request focus for the window associated to this tab. Used and only honored by DockNode (meaningless for standalone tab bars)
     int                 CurrFrameVisible;
     int                 PrevFrameVisible;
     ImRect              BarRect;
