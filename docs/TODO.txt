@@ -312,7 +312,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - viewport: with platform decoration enabled, platform may force constraint (e.g. minimum size)
  - viewport: use getfocus/setfocus api to synchronize imgui<>platform focus better (e.g imgui-side ctrl-tab can focus os window, OS initial setup and alt-tab can focus imgui window etc.)
  - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
- - viewport: implicit Debug window can hog a zombie viewport (harmless, noisy?) > could at least clear out the reference on a per session basis?
+ - viewport: implicit/fallback Debug window can hog a zombie viewport (harmless, noisy?) > could at least clear out the reference on a per session basis?
  - viewport: need to clarify how to use GetMousePos() from a user point of view.
  - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport. 
  - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set

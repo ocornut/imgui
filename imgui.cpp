@@ -1,4 +1,4 @@
-// dear imgui, v1.66b
+// dear imgui, v1.67 WIP
 // (main code and documentation)
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
@@ -3471,8 +3471,9 @@ void ImGui::NewFrame()
     // Docking
     DockContextNewFrameUpdateDocking(&g);
 
-    // Create implicit window - we will only render it if the user has added something to it.
+    // Create implicit/fallback window - which we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
+    // This fallback is particularly important as it avoid ImGui:: calls from crashing.
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
 
@@ -4793,7 +4794,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     ImGuiWindowFlags flags = window->Flags;
     if ((flags & ImGuiWindowFlags_NoResize) || (flags & ImGuiWindowFlags_AlwaysAutoResize) || window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0)
         return;
-    if (window->WasActive == false) // Early out to avoid running this code for e.g. an hidden implicit Debug window.
+    if (window->WasActive == false) // Early out to avoid running this code for e.g. an hidden implicit/fallback Debug window.
         return;
 
     const int resize_border_count = g.IO.ConfigResizeWindowsFromEdges ? 4 : 0;
@@ -5258,7 +5259,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 ClampWindowRect(window, viewport_rect, clamp_padding);
             else if (window->ViewportOwned && g.PlatformIO.Monitors.Size > 0)
             {
-                IM_ASSERT(window->Viewport->PlatformMonitor != INT_MIN);
                 if (window->Viewport->PlatformMonitor == -1)
                 {
                     // Fallback for "lost" window (e.g. a monitor disconnected): we move the window back over the main viewport
@@ -7573,7 +7573,7 @@ static void ImGui::UpdateViewports()
             }
 
             // Update monitor (we'll use this info to clamp windows and save windows lost in a removed monitor)
-            viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
+            viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
         }
 
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
@@ -7692,7 +7692,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport->Idx = g.Viewports.Size;
         viewport->Pos = viewport->LastPos = pos;
         viewport->Size = size;
-        viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
+        viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
         g.Viewports.push_back(viewport);
         //IMGUI_DEBUG_LOG("Add Viewport %08X (%s)\n", id, window->Name);
 
@@ -7733,10 +7733,6 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         return;
     }
 
-    // Merge into host viewport
-    bool try_to_merge_into_host_viewport = false;
-    if (window->ViewportOwned && g.ActiveId == 0)
-        try_to_merge_into_host_viewport = true;
     window->ViewportOwned = false;
 
     // Appearing popups reset their viewport so they can inherit again
@@ -7787,6 +7783,9 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     }
     else
     {
+        // Merge into host viewport?
+        // We cannot test window->ViewportOwned as it set lower in the function.
+        bool try_to_merge_into_host_viewport = (window->Viewport && window == window->Viewport->Window && g.ActiveId == 0);
         if (try_to_merge_into_host_viewport)
             UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0]);
     }
@@ -7815,7 +7814,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         if ((window->Flags & ImGuiWindowFlags_DockNodeHost) && window->Viewport->LastFrameActive < g.FrameCount && will_be_visible)
         {
             // Steal/transfer ownership
-            //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, window->Name, window->Viewport->ID, window->Viewport->Window->Name);
+            //IMGUI_DEBUG_LOG("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, window->Name, window->Viewport->ID, window->Viewport->Window->Name);
             window->Viewport->Window = window;
             window->Viewport->ID = window->ID;
             window->Viewport->LastNameHash = 0;
@@ -7858,7 +7857,7 @@ void ImGui::UpdatePlatformWindows()
     {
         ImGuiViewportP* viewport = g.Viewports[i];
 
-        // Destroy platform window if the viewport hasn't been submitted or if it is hosting a hidden window (the implicit Debug window will be registered its viewport then be disabled)
+        // Destroy platform window if the viewport hasn't been submitted or if it is hosting a hidden window (the implicit/fallback Debug window will be registered its viewport then be disabled)
         bool destroy_platform_window = false;
         destroy_platform_window |= (viewport->LastFrameActive < g.FrameCount - 1);
         destroy_platform_window |= (viewport->Window && !IsWindowActiveAndVisible(viewport->Window));

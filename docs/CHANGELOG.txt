@@ -57,6 +57,17 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VERSION 1.67 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
+  to ease integration.
+
+
+-----------------------------------------------------------------------
  VERSION 1.66b (Released 2018-12-01)
 -----------------------------------------------------------------------
 
