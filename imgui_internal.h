@@ -644,7 +644,7 @@ struct ImGuiViewportP : public ImGuiViewport
     ImVec2              LastPos;
     float               Alpha;                    // Window opacity (when dragging dockable windows/viewports we make them transparent)
     float               LastAlpha;
-    int                 PlatformMonitor;
+    short               PlatformMonitor;
     bool                PlatformWindowCreated;
     bool                PlatformWindowMinimized;
     ImGuiWindow*        Window;                   // Set when the viewport is owned by a window
@@ -655,7 +655,7 @@ struct ImGuiViewportP : public ImGuiViewport
     ImVec2              LastPlatformSize;
     ImVec2              LastRendererSize;
 
-    ImGuiViewportP()         { Idx = -1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = INT_MIN; PlatformWindowCreated = PlatformWindowMinimized = false; Window = NULL; OverlayDrawList = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
+    ImGuiViewportP()         { Idx = -1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = -1; PlatformWindowCreated = PlatformWindowMinimized = false; Window = NULL; OverlayDrawList = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
     ~ImGuiViewportP()        { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
     ImRect  GetRect() const  { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     ImVec2  GetCenter() const{ return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }

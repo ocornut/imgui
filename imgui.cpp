@@ -7165,7 +7165,7 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
         /*
         if (viewport->LastFrameActive < g.FrameCount && viewport->Window != current_window && viewport->Window != NULL && current_window != NULL)
         {
-            //printf("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
+            //IMGUI_DEBUG_LOG("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, current_window->Name, viewport->ID, viewport->Window->Name);
             viewport->Window = current_window;
             viewport->ID = current_window->ID;
         }
@@ -7327,7 +7327,7 @@ static void ImGui::UpdateViewports()
             }
 
             // Update monitor (we'll use this info to clamp windows and save windows lost in a removed monitor)
-            viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
+            viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
         }
 
         // Reset alpha every frame. Users of transparency will need to request a lower alpha back.
@@ -7446,7 +7446,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport->Idx = g.Viewports.Size;
         viewport->Pos = viewport->LastPos = pos;
         viewport->Size = size;
-        viewport->PlatformMonitor = FindPlatformMonitorForRect(viewport->GetRect());
+        viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
         g.Viewports.push_back(viewport);
         //IMGUI_DEBUG_LOG("Add Viewport %08X (%s)\n", id, window->Name);
 
