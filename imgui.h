@@ -1446,11 +1446,11 @@ struct ImGuiPayload
 // [BETA] For SetNextWindowDockFamily() and DockSpace() function
 struct ImGuiDockFamily
 {
-    ImGuiID ID;                         // 0 = unaffiliated
+    ImGuiID FamilyId;                   // 0 = unaffiliated
     bool    CompatibleWithFamilyZero;   // true = can be docked/merged with an unaffiliated window
 
-    ImGuiDockFamily()                                                    { ID = 0; CompatibleWithFamilyZero = true; } 
-    ImGuiDockFamily(ImGuiID id, bool compatible_with_family_zero = true) { ID = id; CompatibleWithFamilyZero = compatible_with_family_zero; }
+    ImGuiDockFamily()                                                           { FamilyId = 0; CompatibleWithFamilyZero = true; }
+    ImGuiDockFamily(ImGuiID family_id, bool compatible_with_family_zero = true) { FamilyId = family_id; CompatibleWithFamilyZero = compatible_with_family_zero; }
 };
 
 //-----------------------------------------------------------------------------

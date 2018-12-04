@@ -11219,11 +11219,11 @@ static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_win
 
     ImGuiDockFamily* host_family = host_window->DockNodeAsHost ? &host_window->DockNodeAsHost->DockFamily : &host_window->DockFamily;
     ImGuiDockFamily* payload_family = &payload->DockFamily;
-    if (host_family->ID != payload_family->ID)
+    if (host_family->FamilyId != payload_family->FamilyId)
     {
-        if (host_family->ID != 0 && host_family->CompatibleWithFamilyZero && payload_family->ID == 0)
+        if (host_family->FamilyId != 0 && host_family->CompatibleWithFamilyZero && payload_family->FamilyId == 0)
             return true;
-        if (payload_family->ID != 0 && payload_family->CompatibleWithFamilyZero && host_family->ID == 0)
+        if (payload_family->FamilyId != 0 && payload_family->CompatibleWithFamilyZero && host_family->FamilyId == 0)
             return true;
         return false;
     }
@@ -13068,7 +13068,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, ImGuiSetting
         settings->ViewportPos = window->ViewportPos;
         IM_ASSERT(window->DockNode == NULL || window->DockNode->ID == window->DockId);
         settings->DockId = window->DockId;
-        settings->DockFamilyId = window->DockFamily.ID;
+        settings->DockFamilyId = window->DockFamily.FamilyId;
         settings->DockOrder = window->DockOrder;
         settings->Collapsed = window->Collapsed;
     }
