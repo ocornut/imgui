@@ -4935,6 +4935,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Find or create
     ImGuiWindow* window = FindWindowByName(name);
     const bool window_just_created = (window == NULL);
+    const bool window_is_fallback = (g.CurrentWindowStack.Size == 0);
     if (window_just_created)
     {
         ImVec2 size_on_first_use = (g.NextWindowData.SizeCond != 0) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
@@ -4983,10 +4984,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     IM_ASSERT(window->DockNode == NULL || window->DockNodeAsHost == NULL); // Cannot be both
     if (g.NextWindowData.DockCond)
         SetWindowDock(window, g.NextWindowData.DockId, g.NextWindowData.DockCond);
-    if (first_begin_of_the_frame && (window->DockId != 0 || window->DockNode != NULL))
+    if (first_begin_of_the_frame)
     {
-        BeginDocked(window, p_open);
-        flags = window->Flags;
+        bool has_dock_node = (window->DockId != 0 || window->DockNode != NULL);
+        bool new_auto_dock_node = !has_dock_node && g.IO.ConfigDockingTabBarOnSingleWindows && !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking)) && !window_is_fallback;
+        if (has_dock_node || new_auto_dock_node)
+        {
+            BeginDocked(window, p_open);
+            flags = window->Flags;
+        }
     }
 
     // Parent window is latched only on the first call to Begin() of the frame, so further append-calls can be done from a different window stack
@@ -10247,7 +10253,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     if (target_node)
         IM_ASSERT(target_node->LastFrameAlive < g.FrameCount);
     if (target_node && target_window && target_node == target_window->DockNodeAsHost)
-        IM_ASSERT(target_node->Windows.Size > 1 || target_node->IsSplitNode() || target_node->IsCentralNode);
+        IM_ASSERT(target_node->Windows.Size > 0 || target_node->IsSplitNode() || target_node->IsCentralNode);
 
     // Create new node and add existing window to it
     if (target_node == NULL)
@@ -10758,7 +10764,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     }
 
     // Early out for hidden root dock nodes (when all DockId references are in inactive windows, or there is only 1 floating window holding on the DockId)
-    if (node->IsRootNode() && node->IsLeafNode() && node->Windows.Size <= 1 && !node->IsDockSpace)
+    if (node->Windows.Size <= 1 && node->IsRootNode() && node->IsLeafNode() && !node->IsDockSpace && !g.IO.ConfigDockingTabBarOnSingleWindows)
     {
         if (node->Windows.Size == 1)
         {
@@ -12288,15 +12294,28 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
 
-    // Calling SetNextWindowPos() undock windows by default (by setting PosUndock)
-    bool want_undock = false;
-    want_undock |= (window->Flags & ImGuiWindowFlags_NoDocking) != 0;
-    want_undock |= (g.NextWindowData.PosCond && (window->SetWindowPosAllowFlags & g.NextWindowData.PosCond) && g.NextWindowData.PosUndock);
-    g.NextWindowData.PosUndock = false;
-    if (want_undock)
+    const bool auto_dock_node = (g.IO.ConfigDockingTabBarOnSingleWindows) && !(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking));
+
+    if (auto_dock_node)
     {
-        DockContextProcessUndockWindow(ctx, window);
-        return;
+        if (window->DockId == 0)
+        {
+            IM_ASSERT(window->DockNode == NULL);
+            window->DockId = DockContextGenNodeID(ctx);
+        }
+    }
+    else
+    {
+        // Calling SetNextWindowPos() undock windows by default (by setting PosUndock)
+        bool want_undock = false;
+        want_undock |= (window->Flags & ImGuiWindowFlags_NoDocking) != 0;
+        want_undock |= (g.NextWindowData.PosCond && (window->SetWindowPosAllowFlags & g.NextWindowData.PosCond) && g.NextWindowData.PosUndock);
+        g.NextWindowData.PosUndock = false;
+        if (want_undock)
+        {
+            DockContextProcessUndockWindow(ctx, window);
+            return;
+        }
     }
 
     // Bind to our dock node
@@ -12337,7 +12356,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
     // Undock if our dockspace node disappeared
     // Note how we are testing for LastFrameAlive and NOT LastFrameActive. A DockSpace node can be maintained alive while being inactive with ImGuiDockNodeFlags_KeepAliveOnly.
-    if (dock_node->LastFrameAlive < g.FrameCount)
+    if (dock_node->LastFrameAlive < g.FrameCount && !auto_dock_node)
     {
         // If the window has been orphaned, transition the docknode to an implicit node processed in DockContextUpdateDocking()
         ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);

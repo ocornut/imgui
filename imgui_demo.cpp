@@ -353,6 +353,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
             ImGui::Checkbox("io.ConfigDockingWithShift", &io.ConfigDockingWithShift);
             ImGui::SameLine(); ShowHelpMarker("Enable docking when holding Shift only (allows to drop in wider space, reduce visual noise)");
+            ImGui::Checkbox("io.ConfigDockingTabBarOnSingleWindows", &io.ConfigDockingTabBarOnSingleWindows);
+            ImGui::SameLine(); ShowHelpMarker("Associate a docking node and tab-bar to sinle floating windows.");
             ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
             ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");
             ImGui::Checkbox("io.ConfigResizeWindowsFromEdges [beta]", &io.ConfigResizeWindowsFromEdges);

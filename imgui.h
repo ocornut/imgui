@@ -1278,6 +1278,7 @@ struct ImGuiIO
     // Miscellaneous configuration options
     bool          MouseDrawCursor;                  // = false      // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor). Cannot be easily renamed to 'io.ConfigXXX' because this is frequently used by back-end implementations.
     bool          ConfigDockingWithShift;           // = false      // Enable docking with holding Shift key (reduce visual noise, allows dropping in wider space)
+    bool          ConfigDockingTabBarOnSingleWindows;//= false      // [BETA] Make every single floating window display within a docking node.
     bool          ConfigDockingTransparentPayload;  // = false      // [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport. Useful if rendering of multiple viewport can be synced. Best used with ImGuiConfigFlags_ViewportsNoMerge.
     bool          ConfigMacOSXBehaviors;            // = defined(__APPLE__) // OS X style: Text editing cursor movement using Alt instead of Ctrl, Shortcuts using Cmd/Super instead of Ctrl, Line/Text Start and End using Cmd+Arrows instead of Home/End, Double click selects by word instead of selecting whole text, Multi-selection in lists uses Cmd/Super instead of Ctrl (was called io.OptMacOSXBehaviors prior to 1.63)
     bool          ConfigInputTextCursorBlink;       // = true       // Set to false to disable blinking cursor, for users who consider it distracting. (was called: io.OptCursorBlink prior to 1.63)

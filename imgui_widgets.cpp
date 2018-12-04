@@ -6452,9 +6452,19 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     if (!held)
         SetItemAllowOverlap();
 
-    // Drag and drop
-    if (held && !tab_appearing && IsMouseDragging())
+    // Drag and drop a single floating window node moves it
+    // FIXME-DOCK: In theory we shouldn't test for the ConfigDockingNodifySingleWindows flag here.
+    // When our single window node and OnlyNodeWithWindows are working properly we may remove this check here.
+    ImGuiDockNode* node = docked_window->DockNode;
+    const bool single_window_node = node->IsRootNode() && node->Windows.Size == 1 && g.IO.ConfigDockingTabBarOnSingleWindows;
+    if (held && single_window_node && IsMouseDragging(0, 0.0f))
     {
+        // Move
+        StartMouseMovingWindow(docked_window);
+    }
+    else if (held && !tab_appearing && IsMouseDragging(0))
+    {
+        // Drag and drop
         // Re-order local or dockable tabs
         float drag_distance_from_edge_x = 0.0f;
         if (!g.DragDropActive && ((tab_bar->Flags & ImGuiTabBarFlags_Reorderable) || (flags & ImGuiTabItemFlags_DockedWindow)))
@@ -6478,9 +6488,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         if (flags & ImGuiTabItemFlags_DockedWindow)
         {
             // We use a variable threshold to distinguish dragging tabs within a tab bar and extracting them out of the tab bar
-            //ImVec2 drag_delta = GetMouseDragDelta();
             bool undocking_tab = (g.DragDropActive && g.DragDropPayload.SourceId == id);
-            if (!undocking_tab && held)// && (drag_delta.x != 0.0f || drag_delta.y != 0.0f))
+            if (!undocking_tab && held)
             {
                 //if (!g.IO.ConfigDockingWithShift || g.IO.KeyShift)
                 {
@@ -6499,9 +6508,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 }
             }
 
-            // Undock
-            if (undocking_tab && g.ActiveId == id && IsMouseDragging())
+            if (undocking_tab)
             {
+                // Undock
                 DockContextQueueUndockWindow(&g, docked_window);
                 g.MovingWindow = docked_window;
                 g.ActiveId = g.MovingWindow->MoveId;
