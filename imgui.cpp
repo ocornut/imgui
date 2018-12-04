@@ -5811,7 +5811,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 
     // Select in dock node
     if (window->DockNode && window->DockNode->TabBar)
-        window->DockNode->TabBar->SelectedTabId = window->ID;
+        window->DockNode->TabBar->SelectedTabId = window->DockNode->TabBar->NextSelectedTabId = window->ID;
 
     // Move the root window to the top of the pile
     if (window->RootWindow)
@@ -12301,6 +12301,8 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
     // Bind to our dock node
     ImGuiDockNode* dock_node = window->DockNode;
+    if (dock_node != NULL)
+        IM_ASSERT(window->DockId == dock_node->ID);
     if (window->DockId != 0 && dock_node == NULL)
     {
         dock_node = DockContextFindNodeByID(ctx, window->DockId);
