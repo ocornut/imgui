@@ -10845,8 +10845,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             DockNodeGetHostWindowTitle(node, window_label, IM_ARRAYSIZE(window_label));
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoScrollWithMouse | ImGuiWindowFlags_DockNodeHost;
             window_flags |= ImGuiWindowFlags_NoFocusOnAppearing;
-            window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
-            window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse;
+            window_flags |= ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus | ImGuiWindowFlags_NoCollapse;
+            window_flags |= ImGuiWindowFlags_NoTitleBar;
 
             PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0, 0));
             Begin(window_label, NULL, window_flags);
@@ -11032,7 +11032,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     // Collapse button changes shape and display a list
     if (IsPopupOpen("#TabListMenu"))
     {
-        SetNextWindowPos(ImVec2(node->Pos.x - style.FramePadding.x, node->Pos.y + GetFrameHeight()));
+        // Try to position the menu so it is more likely to stays within the same viewport
+        SetNextWindowPos(ImVec2(node->Pos.x, node->Pos.y + GetFrameHeight()));
         if (BeginPopup("#TabListMenu"))
         {
             is_focused = true;
