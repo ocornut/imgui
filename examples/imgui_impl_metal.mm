@@ -10,6 +10,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
 #include "imgui.h"
@@ -65,6 +66,9 @@ static MetalContext *g_sharedMetalContext = nil;
 
 bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendRendererName = "imgui_impl_metal";
+
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         g_sharedMetalContext = [[MetalContext alloc] init];

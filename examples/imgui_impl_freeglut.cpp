@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-03-22: Added FreeGLUT Platform binding.
 
 #include "imgui.h"
@@ -26,6 +27,8 @@ static int g_Time = 0;          // Current time, in milliseconds
 bool ImGui_ImplFreeGLUT_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
+    io.BackendPlatformName ="imgui_impl_freeglut";
+
     g_Time = 0;
 
     // Glut has 1 function for characters and one for "special keys". We map the characters in the 0..255 range and the keys above.

@@ -17,6 +17,8 @@ Dear ImGui is designed to enable fast iterations and to empower programmers to c
 
 Dear ImGui is particularly suited to integration in games engine (for tooling), real-time 3D applications, fullscreen applications, embedded applications, or any applications on consoles platforms where operating system features are non-standard. 
 
+See [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui), [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Gallery](https://github.com/ocornut/imgui/issues/1902) pages to get an idea of its use cases.
+
 Dear ImGui is self-contained within a few files that you can easily copy and compile into your application/engine:
 - imgui.cpp
 - imgui.h
@@ -85,9 +87,9 @@ Result:
 
 ### How it works
 
-Check out the References section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize state duplication, state synchronization and state storage from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces. 
+Check out the References section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize superfluous state duplication, state synchronization and state retention from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces. 
 
-Dear ImGui outputs vertex buffers and command lists that you can easily render in your application. The number of draw calls and state changes is typically very small. Because it doesn't know or touch graphics state directly, you can call ImGui commands anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
+Dear ImGui outputs vertex buffers and command lists that you can easily render in your application. The number of draw calls and state changes required to render them is fairly small. Because Dear ImGui doesn't know or touch graphics state directly, you can call its functions  anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase. 
 
 _A common misunderstanding is to mistake immediate mode gui for immediate mode rendering, which usually implies hammering your driver/GPU with a bunch of inefficient draw calls and state changes as the gui functions are called. This is NOT what Dear ImGui does. Dear ImGui outputs vertex buffers and a small list of draw calls batches. It never touches your GPU directly. The draw call batches are decently optimal and you can render them later, in your app or even remotely._
 
@@ -99,17 +101,17 @@ Demo Binaries
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20181008.zip](http://www.miracleworld.net/imgui/binaries/imgui-demo-binaries-20181008.zip) (Windows binaries, Dear ImGui 1.66 WIP built 2018/10/08, master branch, 5 executables)
 
-The demo applications are unfortunately not yet DPI aware so expect some blurriness on a 4K screen. For DPI awareness you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
+The demo applications are unfortunately not yet DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
 Bindings
 --------
 
-Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer and at ease with those concepts, it should take you less than an hour to integrate Dear ImGui in your custom engine, but make sure to spend time reading the FAQ, the comments and other documentation!
+Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you about an hour to integrate Dear ImGui in your custom engine. Make sure to spend time reading the FAQ, the comments and other documentation!
 
 _NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
 Languages: (third-party bindings)
-- C: [cimgui](https://github.com/cimgui/cimgui) (new 2018 auto-generated version!)
+- C: [cimgui](https://github.com/cimgui/cimgui) (2018: now auto-generated! you can use its json output to generate bindings for other languages)
 - C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
 - ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
 - D: [DerelictImgui](https://github.com/Extrawurst/DerelictImgui)
@@ -126,12 +128,11 @@ Languages: (third-party bindings)
 - Swift [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
 Frameworks:
-- Renderers: DirectX 9, DirectX 10, DirectX 11, DirectX 12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
+- Renderers: DirectX 9/10/11/12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Platform: GLFW, SDL, Win32, OSX, Freeglut: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Framework: Allegro 5, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
 - Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
-- Unmerged PR: ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
 - Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
@@ -140,6 +141,7 @@ Frameworks:
 - Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
 - OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
+- ORX: [pr #1843](https://github.com/ocornut/imgui/pull/1843)
 - LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
 - Magnum: [magnum-imgui](https://github.com/lecopivo/magnum-imgui), [MagnumImguiPort](https://github.com/lecopivo/MagnumImguiPort)
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
@@ -152,10 +154,11 @@ For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Binding
 
 Roadmap
 -------
-Some of the goals for 2018-2019 are:
+Some of the goals for 2019 are:
+- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), public branch looking for feedback)
+- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), public branch looking for feedback)
 - Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
-- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109))
-- Finish work on viewports and multiple OS windows management. (see [#1542](https://github.com/ocornut/imgui/issues/1542))
+- Add an automation and testing system, both to test the library and end-user apps.
 - Make Columns better. (they are currently pretty terrible!)
 - Make the examples look better, improve styles, improve font support, make the examples hi-DPI aware.
 
@@ -215,9 +218,9 @@ See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [B
 Support Forums
 --------------
 
-If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forum: https://discourse.dearimgui.org/c/getting-started.
+If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forum: https://discourse.dearimgui.org.
 
-For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues.
+For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
 Frequently Asked Question (FAQ)
 -------------------------------
@@ -238,7 +241,7 @@ You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issue
 
 **Who uses Dear ImGui?**
 
-See the [Software using dear imgui page](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) for an (incomplete) list of games/software which are publicly known to use dear imgui. Please add yours if you can!
+See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) pages for an (incomplete) list of games/software which are publicly known to use dear imgui. Please add yours if you can!
 
 **Why the odd dual naming, "dear imgui" vs "ImGui"?**
 
@@ -305,7 +308,7 @@ If your company uses dear imgui, please consider financial support (e.g. sponsor
 - Blizzard Entertainment.
 
 **Double-chocolate sponsors**
-- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner, Friendly Shade.
+- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner.
 
 **Salty caramel supporters**
 - Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert, Brandon Townsend, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Jeff Roberts.

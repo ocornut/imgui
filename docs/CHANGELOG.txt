@@ -30,7 +30,35 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.66 (In Progress)
+ VERSION 1.67 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
+  to ease integration.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.66b (Released 2018-12-01)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Fixed a text rendering/clipping bug introduced in 1.66 (on 2018-10-12, commit ede3a3b9) that affect single ImDrawList::AddText()
+  calls with single strings larger than 10k. Text/TextUnformatted() calls were not affected, but e.g. InputText() was. [@pdoane]
+- When the focused window become inactive don't restore focus to a window with the ImGuiWindowFlags_NoInputs flag. (#2213) [@zzzyap]
+- Separator: Fixed Separator() outputting an extraneous empty line when captured into clipboard/text/file. 
+- Demo: Added ShowAboutWindow() call, previously was only accessible from the demo window.
+- Demo: ShowAboutWindow() now display various Build/Config Information (compiler, os, etc.) that can easily be copied into bug reports.
+- Fixed build issue with osxcross and macOS. (#2218) [@dos1]
+- Examples: Setting up 'io.BackendPlatformName'/'io.BackendRendererName' fields to the current back-end can be displayed in the About window.
+- Examples: SDL: changed the signature of ImGui_ImplSDL2_ProcessEvent() to use a const SDL_Event*. (#2187)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -40,16 +68,20 @@ Breaking Changes:
 
 Other Changes:
 
-- Fixed calling DestroyContext() always saving .ini data with the current context instead
-  of the supplied context pointer. (#2066)
 - Fixed calling SetNextWindowSize()/SetWindowSize() with non-integer values leading to 
   accidental alteration of window position. We now round the provided size. (#2067)
+- Fixed calling DestroyContext() always saving .ini data with the current context instead
+  of the supplied context pointer. (#2066)
 - Nav, Focus: Fixed ImGuiWindowFlags_NoBringToFrontOnFocus windows not being restoring focus
   properly after the main menu bar or last focused window is deactivated.
+- Nav: Fixed an assert in certain circumstance (mostly when using popups) when mouse positions stop being valid. (#2168)
+- Nav: Fixed explicit directional input not re-highlighting current nav item if there is a single item in the window
+  and highlight has been previously disabled by the mouse. (#787)
 - DragFloat: Fixed a situation where dragging with value rounding enabled or with a power curve 
   erroneously wrapped the value to one of the min/max edge. (#2024, #708, #320, #2075).
 - DragFloat: Disabled using power curve when one edge is FLT_MAX (broken in 1.61). (#2024)
 - DragFloat: Disabled setting a default drag speed when one edge is FLT_MAX. (#2024)
+- SliderAngle: Added optional format argument to alter precision or localize the string. (#2150) [@podsvirov]
 - Window: Resizing from edges (with io.ConfigResizeWindowsFromEdges Beta flag) extends the hit region
   of root floating windows outside the window, making it easier to resize windows. Resize grips are also
   extended accordingly so there are no discontinuity when hovering between borders and corners. (#1495, #822)
@@ -65,15 +97,23 @@ Other Changes:
   introduced in 1.50 and broken in 1.60. (#1698, #894, #713).
 - TextUnformatted(): Fixed a case where large-text path would read bytes past the text_end marker depending
   on the position of new lines in the buffer (it wasn't affecting the output but still not the right thing to do!) 
+- ListBox(): Fixed frame sizing when items_count==1 unnecessarily showing a scrollbar. (#2173) [@luk1337, @ocornut]  
+- ListBox(): Tweaked frame sizing so list boxes will look more consistent when FramePadding is far from ItemSpacing. 
 - RenderText(): Some optimization for very large text buffers, useful for non-optimized builds.
 - BeginMenu(): Fixed menu popup horizontal offset being off the item in the menu bar when WindowPadding=0.0f.
 - ArrowButton(): Fixed arrow shape being horizontally misaligned by (FramePadding.y-FramePadding.x) if they are different.
+- Demo: Split the contents of ShowDemoWindow() into smaller functions as it appears to speed up link time with VS. (#2152)
 - Drag and Drop: Added GetDragDropPayload() to peek directly into the payload (if any) from anywhere. (#143)
 - ImGuiTextBuffer: Avoid heap allocation when empty.
 - ImDrawList: Fixed AddConvexPolyFilled() undefined behavior when passing points_count smaller than 3,
   in particular, points_count==0 could lead to a memory stomp if the draw list was previously empty.
 - Examples: DirectX10, DirectX11: Removed seemingly unnecessary calls to invalidate and recreate device objects
   in the WM_SIZE handler. (#2088) [@ice1000]
+- Examples: GLFW: User previously installed GLFW callbacks are now saved and chain-called by the default callbacks. (#1759)
+- Examples: OpenGL3: Added support for GL 4.5's glClipControl(GL_UPPER_LEFT). (#2186)
+- Examples: OpenGL3+GLFW: Fixed error condition when using the GLAD loader. (#2157) [@blackball]
+- Examples: OpenGL3+GLFW/SDL: Made main.cpp compile with IMGUI_IMPL_OPENGL_LOADER_CUSTOM (may be missing init). (#2178) [@doug-moen]
+- Examples: SDL2+Vulkan: Fixed application shutdown which could deadlock on Linux + Xorg. (#2181) [@eRabbit0]
 
 
 -----------------------------------------------------------------------
@@ -97,7 +137,7 @@ Other Changes:
   Although it is not perfect and will keep being improved, it is fairly functional and used by many. (#787)
 - Fixed a build issue with non-Cygwin GCC under Windows.
 - Demo: Added a "Configuration" block to make io.ConfigFlags/io.BackendFlags more prominent.
-- Examples: OpenGL3: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
+- Examples: OpenGL3+SDL2: Fixed error condition when using the GLAD loader. (#2059, #2002) [@jiri]
 
 
 -----------------------------------------------------------------------

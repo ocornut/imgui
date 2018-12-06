@@ -1,4 +1,4 @@
-// dear imgui, v1.66 WIP
+// dear imgui, v1.67 WIP
 // (drawing and font code)
 
 /*
@@ -32,7 +32,7 @@ Index of this file:
 
 #include <stdio.h>      // vsnprintf, sscanf, printf
 #if !defined(alloca)
-#if defined(__GLIBC__) || defined(__sun) || defined(__CYGWIN__)
+#if defined(__GLIBC__) || defined(__sun) || defined(__CYGWIN__) || defined(__APPLE__)
 #include <alloca.h>     // alloca (glibc uses <alloca.h>. Note that Cygwin may have _WIN32 defined, so the order matters here)
 #elif defined(_WIN32)
 #include <malloc.h>     // alloca
@@ -2662,7 +2662,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         while (y_end < clip_rect.w && s_end < text_end)
         {
             s_end = (const char*)memchr(s_end, '\n', text_end - s_end);
-            s = s ? s + 1 : text_end;
+            s_end = s_end ? s_end + 1 : text_end;
             y_end += line_height;
         }
         text_end = s_end;
