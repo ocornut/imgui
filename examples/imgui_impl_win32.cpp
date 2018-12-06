@@ -135,21 +135,14 @@ static bool ImGui_ImplWin32_UpdateMouseCursor()
     return true;
 }
 
-// This code supports multiple OS Windows mapped into different ImGui viewports, 
-// Because of that, it is a little more complicated than your typical single-viewport binding code.
-// A) In Single-viewport mode imgui needs:
-//   - io.MousePos ............... mouse position, in client window coordinates (what you'd get from GetCursorPos+ScreenToClient() or from WM_MOUSEMOVE) 
-//                                 io.MousePos is (0,0) when the mouse is on the upper-left corner of the application window.
-// B) In Multi-viewport mode imgui needs: (when ImGuiConfigFlags_ViewportsEnable is set)
-//   - io.MousePos ............... mouse position, in OS absolute coordinates (what you'd get from GetCursorPos(), or from WM_MOUSEMOVE+viewport->Pos). 
-//                                 io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor.
-//   - io.MouseHoveredViewport ... [optional] viewport which mouse is hovering, with _VERY_ specific and strict conditions (Read comments next to io.MouseHoveredViewport. This is _NOT_ easy to provide in many high-level engine because of how we use the ImGuiViewportFlags_NoInputs flag)
+// This code supports multi-viewports (multiple OS Windows mapped into different Dear ImGui viewports)
+// Because of that, it is a little more complicated than your typical single-viewport binding code!
 static void ImGui_ImplWin32_UpdateMousePos()
 {
     ImGuiIO& io = ImGui::GetIO();
 
     // Set OS mouse position if requested (rarely used, only when ImGuiConfigFlags_NavEnableSetMousePos is enabled by user)
-    // (When multi-viewports are enabled, all imgui positions are same as OS positions.)
+    // (When multi-viewports are enabled, all imgui positions are same as OS positions)
     if (io.WantSetMousePos)
     {
         POINT pos = { (int)io.MousePos.x, (int)io.MousePos.y };
@@ -161,21 +154,39 @@ static void ImGui_ImplWin32_UpdateMousePos()
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     io.MouseHoveredViewport = 0;
 
-    // Set mouse position and viewport
-    // (Note that ScreenToClient() and adding +viewport->Pos are mutually cancelling each others when we have multi-viewport enabled. In single-viewport mode, viewport->Pos will be zero)
-    POINT pos;
-    if (!::GetCursorPos(&pos))
+    // Set imgui mouse position
+    POINT mouse_screen_pos;
+    if (!::GetCursorPos(&mouse_screen_pos))
         return;
     if (HWND focused_hwnd = ::GetActiveWindow())
-        if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)focused_hwnd))
+    {
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            POINT client_pos = pos;
-            ::ScreenToClient(focused_hwnd, &client_pos);
-            io.MousePos = ImVec2(viewport->Pos.x + (float)client_pos.x, viewport->Pos.y + (float)client_pos.y);
+            // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
+            // This is the position you can get with GetCursorPos(). In theory adding viewport->Pos is also the reverse operation of doing ScreenToClient().
+            if (ImGui::FindViewportByPlatformHandle((void*)focused_hwnd) != NULL)
+                io.MousePos = ImVec2((float)mouse_screen_pos.x, (float)mouse_screen_pos.y);
         }
+        else
+        {
+            // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window.)
+            // This is the position you can get with GetCursorPos() + ScreenToClient() or from WM_MOUSEMOVE.
+            if (focused_hwnd == g_hWnd)
+            {
+                POINT mouse_client_pos = mouse_screen_pos;
+                ::ScreenToClient(focused_hwnd, &mouse_client_pos);
+                io.MousePos = ImVec2((float)mouse_client_pos.x, (float)mouse_client_pos.y);
+            }
+        }
+    }
 
-    // Our back-end can tell which window is under the mouse cursor (not every back-end can), so pass that info to imgui
-    if (HWND hovered_hwnd = ::WindowFromPoint(pos))
+    // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
+    // Important: this information is not easy to provide and many high-level windowing library won't be able to provide it correctly, because
+    // - This is _ignoring_ viewports with the ImGuiViewportFlags_NoInputs flag (pass-through windows).
+    // - This is _regardless_ of whether another viewport is focused or being dragged from.
+    // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the back-end, imgui will ignore this field and infer the information by relying on the
+    // rectangles and last focused time of every viewports it knows about. It will be unaware of other windows that may be sitting between or over your windows.
+    if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
         if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
             io.MouseHoveredViewport = viewport->ID;
 }

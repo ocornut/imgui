@@ -264,16 +264,20 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     if (focused_window)
     {
-        // SDL_GetMouseState() gives mouse position seemingly based on the last window entered/focused(?)
-        // The creation of new windows at runtime and SDL_CaptureMouse both seems to severely mess up with that, so we retrieve that position globally.
-        int wx, wy;
-        SDL_GetWindowPosition(focused_window, &wx, &wy);
-        SDL_GetGlobalMouseState(&mx, &my);
-        mx -= wx;
-        my -= wy;
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
+            SDL_GetGlobalMouseState(&mx, &my);
+            if (ImGui::FindViewportByPlatformHandle((void*)focused_window) != NULL)
+                io.MousePos = ImVec2((float)mx, (float)my);
+        }
+        else
+        {
+            // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
+            if (focused_window == g_Window)
+                io.MousePos = ImVec2((float)mx, (float)my);
+        }
     }
-    if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)focused_window))
-        io.MousePos = ImVec2(viewport->Pos.x + (float)mx, viewport->Pos.y + (float)my);
 
     // We already retrieve global mouse position, SDL_CaptureMouse() also let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't trigger the OS window resize cursor
     // The function is only supported from SDL 2.0.4 (released Jan 2016)
