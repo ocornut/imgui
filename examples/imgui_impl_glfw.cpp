@@ -141,7 +141,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
-#if GLFW_HAS_GLFW_HOVERED
+#if GLFW_HAS_GLFW_HOVERED && defined(_WIN32)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
 #endif
     io.BackendPlatformName = "imgui_impl_glfw";
@@ -264,14 +264,32 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
             {
                 double mouse_x, mouse_y;
                 glfwGetCursorPos(window, &mouse_x, &mouse_y);
-                io.MousePos = ImVec2((float)mouse_x + viewport->Pos.x, (float)mouse_y + viewport->Pos.y);
+                if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+                {
+                    // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
+                    int window_x, window_y;
+                    glfwGetWindowPos(window, &window_x, &window_y);
+                    io.MousePos = ImVec2((float)mouse_x + window_x, (float)mouse_y + window_y);
+                }
+                else
+                {
+                    // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
+                    io.MousePos = ImVec2((float)mouse_x, (float)mouse_y);
+                }
             }
             for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
                 io.MouseDown[i] |= glfwGetMouseButton(window, i) != 0;
         }
 
-#if GLFW_HAS_GLFW_HOVERED
-        io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
+        // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
+        // Important: this information is not easy to provide and many high-level windowing library won't be able to provide it correctly, because
+        // - This is _ignoring_ viewports with the ImGuiViewportFlags_NoInputs flag (pass-through windows).
+        // - This is _regardless_ of whether another viewport is focused or being dragged from.
+        // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the back-end, imgui will ignore this field and infer the information by relying on the
+        // rectangles and last focused time of every viewports it knows about. It will be unaware of other windows that may be sitting between or over your windows.
+        // [GLFW] FIXME: This is currently only correct on Win32. See what we do below with the WM_NCHITTEST, missing an equivalent for other systems.
+        // See https://github.com/glfw/glfw/issues/1236 if you want to help in making this a GLFW feature.
+#if GLFW_HAS_GLFW_HOVERED && defined(_WIN32)
         if (glfwGetWindowAttrib(window, GLFW_HOVERED) && !(viewport->Flags & ImGuiViewportFlags_NoInputs))
             io.MouseHoveredViewport = viewport->ID;
 #endif
