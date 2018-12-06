@@ -74,6 +74,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
  - input text: what's the easiest way to implement a nice IP/Mac address input editor?
+ - input text: Global callback system so user can plug in an expression evaluator easily.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)
@@ -253,8 +254,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
  - font: fix AddRemapChar() to work before font has been built.
- - font: (api breaking) removed "TTF" from symbol names. also because it now supports OTF.
+ - font: (api breaking) remove "TTF" from symbol names. also because it now supports OTF.
+ - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
+ - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16 bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
 
+ - nav: NavScrollToBringItemIntoView() with item bigger than view should focus top-right? Repro: using Nav in "About Window"
  - nav: wrap around logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
  - nav: patterns to make it possible for arrows key to update selection
  - nav: restore/find nearest navid when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
@@ -266,8 +270,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav: NavFlattened: init request doesn't select items that are part of a NavFlattened child
  - nav: NavFlattened: cannot access menu-bar of a flattened child window with Alt/menu key (not a very common use case..).
  - nav: Left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
- - nav: menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
- - nav: menus: allow pressing Menu to leave a sub-menu.
+ - nav/menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
+ - nav/menus: allow pressing Menu to leave a sub-menu.
+ - nav/menus: a way to access the main menu bar with Alt? (currently needs CTRL+TAB)
+ - nav/menus: when using the main menu bar, even though we restore focus after, the underlying window loses its title bar highlight during menu manipulation. could we prevent it?
  - nav: simulate right-click or context activation? (SHIFT+F10)
  - nav: tabs should go through most/all widgets (in submission order?).
  - nav: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
