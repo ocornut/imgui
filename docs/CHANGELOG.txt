@@ -39,10 +39,14 @@ Breaking Changes:
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
 
 Other Changes:
-- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
-  to ease integration.
 - Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
   it only works _if_ the back-end sets ImGuiBackendFlags_HasMouseCursors, which the standard back-end do.
+- Added io.ConfigWindowsMoveFromTitleBarOnly option. Still is ignored by window with no title bars (often popups).
+  This affects clamping window within the visible area: with this option enabled title bars need to be visible. (#899)
+- Style: Tweaked default value of style.DisplayWindowPadding from (20,20) to (19,19) so the default style as a value
+  which is the same as the title bar height.
+- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
+  to ease integration.
 
 
 -----------------------------------------------------------------------

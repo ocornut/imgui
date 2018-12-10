@@ -1016,7 +1016,7 @@ ImGuiStyle::ImGuiStyle()
     GrabMinSize             = 10.0f;            // Minimum width/height of a grab box for slider/scrollbar
     GrabRounding            = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
-    DisplayWindowPadding    = ImVec2(20,20);    // Window position are clamped to be visible within the display area by at least this amount. Only applies to regular windows.
+    DisplayWindowPadding    = ImVec2(19,19);    // Window position are clamped to be visible within the display area by at least this amount. Only applies to regular windows.
     DisplaySafeAreaPadding  = ImVec2(3,3);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     MouseCursorScale        = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
     AntiAliasedLines        = true;             // Enable anti-aliasing on lines/borders. Disable if you are really short on CPU/GPU.
@@ -1088,6 +1088,7 @@ ImGuiIO::ImGuiIO()
 #endif
     ConfigInputTextCursorBlink = true;
     ConfigWindowsResizeFromEdges = true;
+    ConfigWindowsMoveFromTitleBarOnly = false;
 
     // Platform Functions
     BackendPlatformName = BackendRendererName = NULL;
@@ -2906,6 +2907,8 @@ ImDrawListSharedData* ImGui::GetDrawListSharedData()
 void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
 {
     // Set ActiveId even if the _NoMove flag is set. Without it, dragging away from a window with _NoMove would activate hover on other windows.
+    // We _also_ call this when clicking in a window empty space when io.ConfigWindowsMoveFromTitleBarOnly is set, but clear g.MovingWindow afterward.
+    // This is because we want ActiveId to be set even when the window is stuck from moving.
     ImGuiContext& g = *GImGui;
     FocusWindow(window);
     SetActiveID(window->MoveId, window);
@@ -3571,9 +3574,16 @@ void ImGui::EndFrame()
             if (g.IO.MouseClicked[0])
             {
                 if (g.HoveredRootWindow != NULL)
+                {
                     StartMouseMovingWindow(g.HoveredWindow);
+                    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar))
+                        if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
+                            g.MovingWindow = NULL;
+                }
                 else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
+                {
                     FocusWindow(NULL);  // Clicking on void disable focus
+                }
             }
 
             // With right mouse button we close popups without changing focus
@@ -4832,7 +4842,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (!window_pos_set_by_api && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
                 ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
-                window->Pos = ImMax(window->Pos + window->Size, padding) - window->Size;
+                ImVec2 size_for_clamping = ((g.IO.ConfigWindowsMoveFromTitleBarOnly) && !(window->Flags & ImGuiWindowFlags_NoTitleBar)) ? ImVec2(window->Size.x, window->TitleBarHeight()) : window->Size;
+                window->Pos = ImMax(window->Pos + size_for_clamping, padding) - size_for_clamping;
                 window->Pos = ImMin(window->Pos, g.IO.DisplaySize - padding);
             }
         }
