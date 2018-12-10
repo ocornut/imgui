@@ -946,6 +946,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (label_size.x > 0.0f)
         RenderText(text_bb.Min, label);
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }
 
@@ -4794,6 +4795,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // (Ideally we'd want to add a flag for the user to specify if we want the hit test to be done up to the right side of the content or not)
     const ImRect interact_bb = display_frame ? frame_bb : ImRect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + text_width + style.ItemSpacing.x*2, frame_bb.Max.y);
     bool is_open = TreeNodeBehaviorIsOpen(id, flags);
+    bool is_leaf = (flags & ImGuiTreeNodeFlags_Leaf) != 0;
 
     // Store a flag for the current depth to tell if we will allow closing this node when navigating one of its child.
     // For this purpose we essentially compare if g.NavIdIsAlive went from 0 to 1 between TreeNode() and TreePop().
@@ -4809,6 +4811,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     {
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
             TreePushRawID(id);
+        IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.ItemFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
         return is_open;
     }
 
@@ -4818,13 +4821,13 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // - OpenOnArrow .................... single-click on arrow to open
     // - OpenOnDoubleClick|OpenOnArrow .. single-click on arrow or double-click anywhere to open
     ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) ? ImGuiButtonFlags_AllowItemOverlap : 0);
-    if (!(flags & ImGuiTreeNodeFlags_Leaf))
+    if (!is_leaf)
         button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
 
     bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
-    if (!(flags & ImGuiTreeNodeFlags_Leaf))
+    if (!is_leaf)
     {
         bool toggled = false;
         if (pressed)
@@ -4892,7 +4895,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
         if (flags & ImGuiTreeNodeFlags_Bullet)
             RenderBullet(frame_bb.Min + ImVec2(text_offset_x * 0.5f, g.FontSize*0.50f + text_base_offset_y));
-        else if (!(flags & ImGuiTreeNodeFlags_Leaf))
+        else if (!is_leaf)
             RenderArrow(frame_bb.Min + ImVec2(padding.x, g.FontSize*0.15f + text_base_offset_y), is_open ? ImGuiDir_Down : ImGuiDir_Right, 0.70f);
         if (g.LogEnabled)
             LogRenderedText(&text_pos, ">");
@@ -4901,6 +4904,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
         TreePushRawID(id);
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
     return is_open;
 }
 
@@ -5686,6 +5690,8 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (want_close && IsPopupOpen(id))
         ClosePopupToLevel(g.CurrentPopupStack.Size);
 
+    IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));
+
     if (!menu_is_open && want_open && g.OpenPopupStack.Size > g.CurrentPopupStack.Size)
     {
         // Don't recycle same menu level in the same frame, first close the other menu and yield for a frame.
@@ -5765,6 +5771,8 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool selected, boo
         if (selected)
             RenderCheckMark(pos + ImVec2(window->MenuColumns.Pos[2] + extra_w + g.FontSize * 0.40f, g.FontSize * 0.134f * 0.5f), GetColorU32(enabled ? ImGuiCol_Text : ImGuiCol_TextDisabled), g.FontSize  * 0.866f);
     }
+
+    IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Checkable | (selected ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
 }
 

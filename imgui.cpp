@@ -358,7 +358,9 @@ CODE
  - 2018/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
  - 2018/XX/XX (1.XX) - removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (it was used to clip within the DisplayMin..DisplayMax range, I don't know of anyone using it)
 
- - 2018/10/12 (1.66) - Renamed misc/stl/imgui_stl.* to misc/cpp/imgui_stdlib.* in prevision for other C++ helper files.
+
+ - 2018/12/10 (1.67) - renamed io.ConfigResizeWindowsFromEdges to io.ConfigWindowsResizeFromEdges as we are doing a large pass on configuration flags.
+ - 2018/10/12 (1.66) - renamed misc/stl/imgui_stl.* to misc/cpp/imgui_stdlib.* in prevision for other C++ helper files.
  - 2018/09/28 (1.66) - renamed SetScrollHere() to SetScrollHereY(). Kept redirection function (will obsolete).
  - 2018/09/06 (1.65) - renamed stb_truetype.h to imstb_truetype.h, stb_textedit.h to imstb_textedit.h, and stb_rect_pack.h to imstb_rectpack.h. 
                        If you were conveniently using the imgui copy of those STB headers in your project you will have to update your include paths.
@@ -369,7 +371,7 @@ CODE
  - 2018/08/22 (1.63) - renamed IsItemDeactivatedAfterChange() to IsItemDeactivatedAfterEdit() for consistency with new IsItemEdited() API. Kept redirection function (will obsolete soonish as IsItemDeactivatedAfterChange() is very recent).
  - 2018/08/21 (1.63) - renamed ImGuiTextEditCallback to ImGuiInputTextCallback, ImGuiTextEditCallbackData to ImGuiInputTextCallbackData for consistency. Kept redirection types (will obsolete).
  - 2018/08/21 (1.63) - removed ImGuiInputTextCallbackData::ReadOnly since it is a duplication of (ImGuiInputTextCallbackData::Flags & ImGuiInputTextFlags_ReadOnly).
- - 2018/08/01 (1.63) - removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor of a global io.ConfigResizeWindowsFromEdges to enable the feature.
+ - 2018/08/01 (1.63) - removed per-window ImGuiWindowFlags_ResizeFromAnySide beta flag in favor of a global io.ConfigResizeWindowsFromEdges [update 1.67 renamed to ConfigWindowsResizeFromEdges] to enable the feature.
  - 2018/08/01 (1.63) - renamed io.OptCursorBlink to io.ConfigCursorBlink [-> io.ConfigInputTextCursorBlink in 1.65], io.OptMacOSXBehaviors to ConfigMacOSXBehaviors for consistency.
  - 2018/07/22 (1.63) - changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
  - 2018/07/08 (1.63) - style: renamed ImGuiCol_ModalWindowDarkening to ImGuiCol_ModalWindowDimBg for consistency with other features. Kept redirection enum (will obsolete).
@@ -916,9 +918,9 @@ CODE
 static const float NAV_WINDOWING_HIGHLIGHT_DELAY            = 0.20f;    // Time before the highlight and screen dimming starts fading in
 static const float NAV_WINDOWING_LIST_APPEAR_DELAY          = 0.15f;    // Time before the window list starts to appear
 
-// Window resizing from edges (when io.ConfigResizeWindowsFromEdges = true)
-static const float RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS = 4.0f;     // Extend outside and inside windows. Affect FindHoveredWindow().
-static const float RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduce visual noise by only highlighting the border after a certain time.
+// Window resizing from edges (when io.ConfigWindowsResizeFromEdges = true and ImGuiBackendFlags_HasMouseCursors is set in io.BackendFlags by back-end)
+static const float WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS = 4.0f;     // Extend outside and inside windows. Affect FindHoveredWindow().
+static const float WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER = 0.04f;    // Reduce visual noise by only highlighting the border after a certain time.
 
 // Docking
 static const float DOCKING_TRANSPARENT_PAYLOAD_ALPHA        = 0.50f;    // For use with io.ConfigDockingTransparentPayload. Apply to Viewport _or_ WindowBg in host viewport.
@@ -983,14 +985,6 @@ static int              FindPlatformMonitorForRect(const ImRect& r);
 
 }
 
-// Test engine hooks (imgui-test)
-//#define IMGUI_ENABLE_TEST_ENGINE_HOOKS
-#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
-extern void             ImGuiTestEngineHook_PreNewFrame();
-extern void             ImGuiTestEngineHook_PostNewFrame();
-extern void             ImGuiTestEngineHook_ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg);
-#endif
-
 //-----------------------------------------------------------------------------
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
 //-----------------------------------------------------------------------------
@@ -1051,7 +1045,7 @@ ImGuiStyle::ImGuiStyle()
     TabRounding             = 4.0f;             // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
     TabBorderSize           = 0.0f;             // Thickness of border around tabs.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
-    DisplayWindowPadding    = ImVec2(20,20);    // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
+    DisplayWindowPadding    = ImVec2(19,19);    // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
     DisplaySafeAreaPadding  = ImVec2(3,3);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     MouseCursorScale        = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
     AntiAliasedLines        = true;             // Enable anti-aliasing on lines/borders. Disable if you are really short on CPU/GPU.
@@ -1124,7 +1118,8 @@ ImGuiIO::ImGuiIO()
     ConfigMacOSXBehaviors = false;
 #endif
     ConfigInputTextCursorBlink = true;
-    ConfigResizeWindowsFromEdges = true;
+    ConfigWindowsResizeFromEdges = true;
+    ConfigWindowsMoveFromTitleBarOnly = false;
 
     // Platform Functions
     BackendPlatformName = BackendRendererName = NULL;
@@ -2663,10 +2658,6 @@ void ImGui::ItemSize(const ImRect& bb, float text_offset_y)
 // declare their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
 bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 {
-#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
-    ImGuiTestEngineHook_ItemAdd(bb, id, nav_bb_arg);
-#endif
-
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
@@ -2687,6 +2678,10 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     window->DC.LastItemId = id;
     window->DC.LastItemRect = bb;
     window->DC.LastItemStatusFlags = 0;
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngineHook_ItemAdd(id, bb);
+#endif
 
     // Clipping test
     const bool is_clipped = IsClippedEx(bb, id, false);
@@ -2994,6 +2989,8 @@ ImDrawListSharedData* ImGui::GetDrawListSharedData()
 void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
 {
     // Set ActiveId even if the _NoMove flag is set. Without it, dragging away from a window with _NoMove would activate hover on other windows.
+    // We _also_ call this when clicking in a window empty space when io.ConfigWindowsMoveFromTitleBarOnly is set, but clear g.MovingWindow afterward.
+    // This is because we want ActiveId to be set even when the window is stuck from moving.
     ImGuiContext& g = *GImGui;
     FocusWindow(window);
     SetActiveID(window->MoveId, window);
@@ -3248,7 +3245,7 @@ void ImGui::NewFrame()
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
     ImGuiContext& g = *GImGui;
 
-#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
+#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_PreNewFrame();
 #endif
 
@@ -3269,9 +3266,9 @@ void ImGui::NewFrame()
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
-    // Perform simple check: the beta io.ConfigResizeWindowsFromEdges option requires back-end to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
-    if (g.IO.ConfigResizeWindowsFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
-        g.IO.ConfigResizeWindowsFromEdges = false;
+    // Perform simple check: the beta io.ConfigWindowsResizeFromEdges option requires back-end to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
+    if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
+        g.IO.ConfigWindowsResizeFromEdges = false;
 
     // Perform simple checks: multi-viewport and platform windows support
     if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -3477,7 +3474,7 @@ void ImGui::NewFrame()
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
 
-#ifdef IMGUI_ENABLE_TEST_ENGINE_HOOKS
+#ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_PostNewFrame();
 #endif
 }
@@ -3831,9 +3828,16 @@ void ImGui::EndFrame()
             if (g.IO.MouseClicked[0])
             {
                 if (g.HoveredRootWindow != NULL)
+                {
                     StartMouseMovingWindow(g.HoveredWindow);
+                    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar))
+                        if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
+                            g.MovingWindow = NULL;
+                }
                 else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
+                {
                     FocusWindow(NULL);  // Clicking on void disable focus
+                }
             }
 
             // With right mouse button we close popups without changing focus
@@ -4042,7 +4046,7 @@ static void FindHoveredWindow()
         hovered_window = g.MovingWindow;
 
     ImVec2 padding_regular = g.Style.TouchExtraPadding;
-    ImVec2 padding_for_resize_from_edges = g.IO.ConfigResizeWindowsFromEdges ? ImMax(g.Style.TouchExtraPadding, ImVec2(RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS)) : padding_regular;
+    ImVec2 padding_for_resize_from_edges = g.IO.ConfigWindowsResizeFromEdges ? ImMax(g.Style.TouchExtraPadding, ImVec2(WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS, WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS)) : padding_regular;
     for (int i = g.Windows.Size - 1; i >= 0; i--)
     {
         ImGuiWindow* window = g.Windows[i];
@@ -4797,10 +4801,10 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     if (window->WasActive == false) // Early out to avoid running this code for e.g. an hidden implicit/fallback Debug window.
         return;
 
-    const int resize_border_count = g.IO.ConfigResizeWindowsFromEdges ? 4 : 0;
+    const int resize_border_count = g.IO.ConfigWindowsResizeFromEdges ? 4 : 0;
     const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
     const float grip_hover_inner_size = (float)(int)(grip_draw_size * 0.75f);
-    const float grip_hover_outer_size = g.IO.ConfigResizeWindowsFromEdges ? RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS : 0.0f;
+    const float grip_hover_outer_size = g.IO.ConfigWindowsResizeFromEdges ? WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS : 0.0f;
 
     ImVec2 pos_target(FLT_MAX, FLT_MAX);
     ImVec2 size_target(FLT_MAX, FLT_MAX);
@@ -4841,10 +4845,10 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     for (int border_n = 0; border_n < resize_border_count; border_n++)
     {
         bool hovered, held;
-        ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_inner_size, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS);
+        ImRect border_rect = GetResizeBorderRect(window, border_n, grip_hover_inner_size, WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS);
         ButtonBehavior(border_rect, window->GetID((void*)(intptr_t)(border_n + 4)), &hovered, &held, ImGuiButtonFlags_FlattenChildren);
         //GetOverlayDrawList(window)->AddRect(border_rect.Min, border_rect.Max, IM_COL32(255, 255, 0, 255));
-        if ((hovered && g.HoveredIdTimer > RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER) || held)
+        if ((hovered && g.HoveredIdTimer > WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER) || held)
         {
             g.MouseCursor = (border_n & 1) ? ImGuiMouseCursor_ResizeEW : ImGuiMouseCursor_ResizeNS;
             if (held) *border_held = border_n;
@@ -4853,10 +4857,10 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
         {
             ImVec2 border_target = window->Pos;
             ImVec2 border_posn;
-            if (border_n == 0) { border_posn = ImVec2(0, 0); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y + RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS); }
-            if (border_n == 1) { border_posn = ImVec2(1, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS); }
-            if (border_n == 2) { border_posn = ImVec2(0, 1); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y + RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS); }
-            if (border_n == 3) { border_posn = ImVec2(0, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS); }
+            if (border_n == 0) { border_posn = ImVec2(0, 0); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); }
+            if (border_n == 1) { border_posn = ImVec2(1, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); }
+            if (border_n == 2) { border_posn = ImVec2(0, 1); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); }
+            if (border_n == 3) { border_posn = ImVec2(0, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); }
             CalcResizePosSizeFromAnyCorner(window, border_target, border_posn, &pos_target, &size_target);
         }
     }
@@ -4899,7 +4903,9 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
 
 static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& rect, const ImVec2& padding)
 {
-    window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos + window->Size, rect.Min + padding) - window->Size);
+    ImGuiContext& g = *GImGui;
+    ImVec2 size_for_clamping = (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(window->Flags & ImGuiWindowFlags_NoTitleBar)) ? ImVec2(window->Size.x, window->TitleBarHeight()) : window->Size;
+    window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos + size_for_clamping, rect.Min + padding) - size_for_clamping);
 }
 
 void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window)
@@ -5307,7 +5313,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_held = -1;
         ImU32 resize_grip_col[4] = { 0 };
-        const int resize_grip_count = g.IO.ConfigResizeWindowsFromEdges ? 2 : 1; // 4
+        const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // 4
         const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
         if (!window->Collapsed)
             UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]);
@@ -9951,7 +9957,7 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
             DockContextClearNodes(ctx, 0, true);
         return;
     }
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_DockingNoSplit)
+    if (g.IO.ConfigDockingNoSplit)
     {
         for (int n = 0; n < dc->Nodes.Data.Size; n++)
             if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
@@ -10899,7 +10905,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         // Add a little padding to match the "resize from edges" behavior and allow grabbing the splitter easily.
         IM_ASSERT(node->IsDockSpace); // We cannot pass this flag without the DockSpace() api. Testing this because we also setup the hole in host_window->ParentNode
         ImRect central_hole(central_node->Pos, central_node->Pos + central_node->Size);
-        central_hole.Expand(ImVec2(-RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, -RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS));
+        central_hole.Expand(ImVec2(-WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS, -WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS));
         if (central_node_hole && !central_hole.IsInverted())
         {
             SetWindowHitTestHole(host_window, central_hole.Min, central_hole.Max - central_hole.Min);
@@ -11362,7 +11368,7 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
-    if ((host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit)) || (g.IO.ConfigFlags & ImGuiConfigFlags_DockingNoSplit))
+    if ((host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit)) || g.IO.ConfigDockingNoSplit)
         data->IsSidesAvailable = false;
     if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsCentralNode)
         data->IsSidesAvailable = false;
@@ -11513,7 +11519,7 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
         }
         
         // Stop after ImGuiDir_None
-        if ((host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit)) || (g.IO.ConfigFlags & ImGuiConfigFlags_DockingNoSplit))
+        if ((host_node && (host_node->Flags & ImGuiDockNodeFlags_NoSplit)) || g.IO.ConfigDockingNoSplit)
             return;
     }
 }
@@ -11740,7 +11746,7 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
             float cur_size_1 = child_1->Size[axis];
             float min_size_0 = resize_limits[0] - child_0->Pos[axis];
             float min_size_1 = child_1->Pos[axis] + child_1->Size[axis] - resize_limits[1];
-            if (SplitterBehavior(bb, GetID("##Splitter"), axis, &cur_size_0, &cur_size_1, min_size_0, min_size_1, RESIZE_WINDOWS_FROM_EDGES_HALF_THICKNESS, RESIZE_WINDOWS_FROM_EDGES_FEEDBACK_TIMER))
+            if (SplitterBehavior(bb, GetID("##Splitter"), axis, &cur_size_0, &cur_size_1, min_size_0, min_size_1, WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS, WINDOWS_RESIZE_FROM_EDGES_FEEDBACK_TIMER))
             {
                 if (touching_nodes[0].Size > 0 && touching_nodes[1].Size > 0)
                 {
