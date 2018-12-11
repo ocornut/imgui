@@ -39,6 +39,8 @@ Breaking Changes:
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
 
 Other Changes:
+- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering 
+  the ID, as a convenience to avoid using the ### operator.
 - Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
   it only works _if_ the back-end sets ImGuiBackendFlags_HasMouseCursors, which the standard back-end do.
 - Added io.ConfigWindowsMoveFromTitleBarOnly option. Still is ignored by window with no title bars (often popups).
