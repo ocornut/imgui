@@ -3830,7 +3830,7 @@ void ImGui::EndFrame()
                 if (g.HoveredRootWindow != NULL)
                 {
                     StartMouseMovingWindow(g.HoveredWindow);
-                    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar))
+                    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && (!(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar) || g.HoveredWindow->RootWindowDockStop->DockIsActive))
                         if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                             g.MovingWindow = NULL;
                 }
