@@ -39,6 +39,15 @@ Breaking Changes:
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
 
 Other Changes:
+- Added BETA api for Tab Bar/Tabs widgets: (#261, #351)
+  - Added BeginTabBar(), EndTabBar(), BeginTabItem(), EndTabItem(), SetTabItemClosed() API.
+  - Added ImGuiTabBarFlags flags for BeginTabBar().
+  - Added ImGuiTabItemFlags flags for BeginTabItem().
+  - Style: Added ImGuiCol_Tab, ImGuiCol_TabHovered, ImGuiCol_TabActive, ImGuiCol_TabUnfocused, ImGuiCol_TabUnfocusedActive colors.
+  - Demo: Added Layout->Tabs demo code.
+  - Demo: Added "Documents" example app showcasing possible use for tabs.
+  This feature was merged from the Docking branch in order to allow the use of regular tabs in your code.
+  (It does not provide the docking/splitting/merging of windows available in the Docking branch)
 - Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering 
   the ID, as a convenience to avoid using the ### operator.
 - Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
