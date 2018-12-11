@@ -4650,6 +4650,8 @@ static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
 
 static ImVec2 CalcSizeContents(ImGuiWindow* window)
 {
+    if (window->Collapsed)
+        return window->SizeContents;
     if (window->Hidden && window->HiddenFramesForResize == 0 && window->HiddenFramesRegular > 0)
         return window->SizeContents;
 
