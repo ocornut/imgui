@@ -6343,6 +6343,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Click to Select a tab
     ImGuiButtonFlags button_flags = (ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_AllowItemOverlap);
+    if (g.DragDropActive)
+        button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     hovered |= (g.HoveredId == id);
