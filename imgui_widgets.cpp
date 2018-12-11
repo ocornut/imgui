@@ -6218,7 +6218,10 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
     ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
     bool ret = TabItemEx(tab_bar, label, p_open, flags);
     if (ret && !(flags & ImGuiTabItemFlags_NoPushId))
-        PushID(tab_bar->Tabs[tab_bar->LastTabItemIdx].ID);
+    {
+        ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
+        g.CurrentWindow->IDStack.push_back(tab->ID);    // We already hashed 'label' so push into the ID stack directly instead of doing another hash through PushID(label)
+    }
     return ret;
 }
 
@@ -6232,7 +6235,7 @@ void    ImGui::EndTabItem()
     ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
-        PopID();
+        g.CurrentWindow->IDStack.pop_back();
 }
 
 bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags)
