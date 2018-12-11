@@ -2368,7 +2368,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Name = ImStrdup(name);
     ID = ImHash(name, 0);
     IDStack.push_back(ID);
-    Flags = FlagsPreviousFrame = 0;
+    Flags = FlagsPreviousFrame = ImGuiWindowFlags_None;
     Viewport = NULL;
     ViewportId = 0;
     ViewportAllowPlatformMonitorExtend = -1;
@@ -2677,7 +2677,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 
     window->DC.LastItemId = id;
     window->DC.LastItemRect = bb;
-    window->DC.LastItemStatusFlags = 0;
+    window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_ItemAdd(id, bb);
@@ -8691,7 +8691,7 @@ static void ImGui::NavUpdate()
     if (g.NavMoveRequestForward == ImGuiNavForward_None)
     {
         g.NavMoveDir = ImGuiDir_None;
-        g.NavMoveRequestFlags = 0;
+        g.NavMoveRequestFlags = ImGuiNavMoveFlags_None;
         if (g.NavWindow && !g.NavWindowingTarget && allowed_dir_flags && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs))
         {
             if ((allowed_dir_flags & (1<<ImGuiDir_Left))  && IsNavInputPressedAnyOfTwo(ImGuiNavInput_DpadLeft, ImGuiNavInput_KeyLeft_, ImGuiInputReadMode_Repeat)) g.NavMoveDir = ImGuiDir_Left;
@@ -9446,7 +9446,7 @@ void ImGui::ClearDragDrop()
     ImGuiContext& g = *GImGui;
     g.DragDropActive = false;
     g.DragDropPayload.Clear();
-    g.DragDropAcceptFlags = 0;
+    g.DragDropAcceptFlags = ImGuiDragDropFlags_None;
     g.DragDropAcceptIdCurr = g.DragDropAcceptIdPrev = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropAcceptFrameCount = -1;
@@ -10305,7 +10305,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         {
             target_node->TabBar = IM_NEW(ImGuiTabBar)();
             for (int n = 0; n < target_node->Windows.Size; n++)
-                TabBarAddTab(target_node->TabBar, target_node->Windows[n], ImGuiTabItemFlags_None);
+                TabBarAddTab(target_node->TabBar, ImGuiTabItemFlags_None, target_node->Windows[n]);
         }
 
         if (payload_node != NULL)
@@ -10477,9 +10477,9 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
             
             // Add existing windows
             for (int n = 0; n < node->Windows.Size - 1; n++)
-                TabBarAddTab(node->TabBar, node->Windows[n], ImGuiTabItemFlags_None);
+                TabBarAddTab(node->TabBar, ImGuiTabItemFlags_None, node->Windows[n]);
         }
-        TabBarAddTab(node->TabBar, window, ImGuiTabItemFlags_Unsorted);
+        TabBarAddTab(node->TabBar, ImGuiTabItemFlags_Unsorted, window);
     }
 
     DockNodeUpdateVisibleFlag(node);
@@ -11089,7 +11089,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         if (g.NavWindow && g.NavWindow->RootWindowDockStop == window)
             tab_bar->SelectedTabId = window->ID;
         if (TabBarFindTabByID(tab_bar, window->ID) == NULL)
-            TabBarAddTab(tab_bar, window, ImGuiTabItemFlags_Unsorted);
+            TabBarAddTab(tab_bar, ImGuiTabItemFlags_Unsorted, window);
     }
 
     // If multiple tabs are appearing on the same frame, sort them based on their persistent DockOrder value
@@ -13466,7 +13466,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         ImGui::TreePop();
     }
-    if (ImGui::TreeNode("Docking & Tabs"))
+    if (ImGui::TreeNode("Docking & Tab Bars"))
     {
         ShowDockingDebug();
         ImGui::TreePop();
@@ -13546,9 +13546,10 @@ void ImGui::ShowDockingDebug()
                 ImGui::TreePop();
             }
         }
+
         static void NodeTabBar(ImGuiTabBar* tab_bar)
         {
-            // Previous window list
+            // Note that standalone tab bars (not associated to docking/windows functionality) currently hold no discernable strings.
             char buf[256];
             char* p = buf;
             const char* buf_end = buf + IM_ARRAYSIZE(buf);

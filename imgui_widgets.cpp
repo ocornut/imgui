@@ -5790,6 +5790,8 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected, 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: BeginTabBar, EndTabBar, etc.
 //-------------------------------------------------------------------------
+// [BETA API] API may evolve!
+//-------------------------------------------------------------------------
 // - BeginTabBar()
 // - BeginTabBarEx() [Internal]
 // - EndTabBar()
@@ -5980,7 +5982,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     {
         if (ImGuiTabItem* tab1 = TabBarFindTabByID(tab_bar, tab_bar->ReorderRequestTabId))
         {
-            IM_ASSERT(tab_bar->Flags & ImGuiTabBarFlags_Reorderable);
+            //IM_ASSERT(tab_bar->Flags & ImGuiTabBarFlags_Reorderable); // <- this may happen when using debug tools
             int tab2_order = tab_bar->GetTabOrder(tab1) + tab_bar->ReorderRequestDir;
             if (tab2_order >= 0 && tab2_order < tab_bar->Tabs.Size)
             {
@@ -6142,7 +6144,7 @@ ImGuiTabItem* ImGui::TabBarFindTabByID(ImGuiTabBar* tab_bar, ImGuiID tab_id)
 
 // The purpose of this call is to register tab in advance so we can control their order at the time they appear. 
 // Otherwise calling this is unnecessary as tabs are appending as needed by the BeginTabItem() function.
-void ImGui::TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window, ImGuiTabItemFlags tab_flags)
+void ImGui::TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiTabItemFlags tab_flags, ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(TabBarFindTabByID(tab_bar, window->ID) == NULL);
@@ -6305,6 +6307,8 @@ static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: BeginTabItem, EndTabItem, etc.
+//-------------------------------------------------------------------------
+// [BETA API] API may evolve!
 //-------------------------------------------------------------------------
 // - BeginTabItem()
 // - EndTabItem()
@@ -6472,8 +6476,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     }
     else if (held && !tab_appearing && IsMouseDragging(0))
     {
-        // Drag and drop
-        // Re-order local or dockable tabs
+        // Drag and drop: re-order tabs
         float drag_distance_from_edge_x = 0.0f;
         if (!g.DragDropActive && ((tab_bar->Flags & ImGuiTabBarFlags_Reorderable) || (flags & ImGuiTabItemFlags_DockedWindow)))
         {
@@ -6628,7 +6631,7 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
     draw_list->PathClear();
 }
 
-// Render text label (with clipping + alpha gradient) + unsaved marker + Close Button logic
+// Render text label (with custom clipping) + Unsaved Document marker + Close Button logic
 bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, const char* label, ImGuiID tab_id, ImGuiID close_button_id)
 {
     ImGuiContext& g = *GImGui;
@@ -6674,7 +6677,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     }
 
     // Label with ellipsis
-    // FIXME: This could be extracted into a helper but or use of text_pixel_clip_bb and !close_button_visible makes it tricky to abstract at the moment
+    // FIXME: This should be extracted into a helper but the use of text_pixel_clip_bb and !close_button_visible makes it tricky to abstract at the moment
     const char* label_display_end = FindRenderedTextEnd(label);
     if (label_size.x > text_ellipsis_clip_bb.GetWidth())
     {

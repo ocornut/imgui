@@ -4068,7 +4068,7 @@ struct ExampleAppDocuments
     }
 };
 
-// [Optional] Notify the system of Tabs/Windows of closure that happened outside the regular tab interface
+// [Optional] Notify the system of Tabs/Windows closure that happened outside the regular tab interface.
 // If a tab has been closed programmatically (aka closed from another source such as the Checkbox() in the demo, as opposed
 // to clicking on the regular tab closing button) and stops being submitted, it will take a frame for the tab bar to notice its absence. 
 // During this frame there will be a gap in the tab bar, and if the tab that has disappeared was the selected one, the tab bar 

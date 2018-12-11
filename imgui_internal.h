@@ -1334,17 +1334,17 @@ struct ImGuiItemHoveredDataBackup
 
 enum ImGuiTabBarFlagsPrivate_
 {
-    ImGuiTabBarFlags_DockNode                       = 1 << 20,  // Part of a dock node
-    ImGuiTabBarFlags_DockNodeIsDockSpace            = 1 << 21,  // Part of an explicit dockspace node node
-    ImGuiTabBarFlags_IsFocused                      = 1 << 22,
-    ImGuiTabBarFlags_SaveSettings                   = 1 << 23   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
+    ImGuiTabBarFlags_DockNode                   = 1 << 20,  // Part of a dock node
+    ImGuiTabBarFlags_DockNodeIsDockSpace        = 1 << 21,  // Part of an explicit dockspace node node
+    ImGuiTabBarFlags_IsFocused                  = 1 << 22,
+    ImGuiTabBarFlags_SaveSettings               = 1 << 23   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
 };
 
 enum ImGuiTabItemFlagsPrivate_
 {
-    ImGuiTabItemFlags_DockedWindow                  = 1 << 20,  // [Docking]
-    ImGuiTabItemFlags_Unsorted                      = 1 << 22,  // [Docking] Trailing tabs with the _Unsorted flag will be sorted based on the DockOrder of their Window.
-    ImGuiTabItemFlags_Preview                       = 1 << 21   // [Docking] Display tab shape for docking preview (height is adjusted slightly to compensate for the yet missing tab bar)
+    ImGuiTabItemFlags_DockedWindow              = 1 << 20,  // [Docking]
+    ImGuiTabItemFlags_Unsorted                  = 1 << 22,  // [Docking] Trailing tabs with the _Unsorted flag will be sorted based on the DockOrder of their Window.
+    ImGuiTabItemFlags_Preview                   = 1 << 21   // [Docking] Display tab shape for docking preview (height is adjusted slightly to compensate for the yet missing tab bar)
 };
 
 // Storage for one active tab item (sizeof() 32~40 bytes)
@@ -1352,14 +1352,14 @@ struct ImGuiTabItem
 {
     ImGuiID             ID;
     ImGuiTabItemFlags   Flags;
-    ImGuiWindow*        Window;             // When TabItem is part of a DockNode's TabBar, we hold on to a window.
+    ImGuiWindow*        Window;                 // When TabItem is part of a DockNode's TabBar, we hold on to a window.
     int                 LastFrameVisible;
-    int                 LastFrameSelected;  // This allows us to infer an ordered list of the last activated tabs with little maintenance
-    float               Offset;             // Position relative to beginning of tab
-    float               Width;              // Width currently displayed
-    float               WidthContents;      // Width of actual contents, stored during BeginTabItem() call
+    int                 LastFrameSelected;      // This allows us to infer an ordered list of the last activated tabs with little maintenance
+    float               Offset;                 // Position relative to beginning of tab
+    float               Width;                  // Width currently displayed
+    float               WidthContents;          // Width of actual contents, stored during BeginTabItem() call
 
-    ImGuiTabItem()      { ID = Flags = 0; Window = NULL; LastFrameVisible = LastFrameSelected = -1; Offset = Width = WidthContents = 0.0f; }
+    ImGuiTabItem()      { ID = Flags = 0; Window = NULL;  LastFrameVisible = LastFrameSelected = -1; Offset = Width = WidthContents = 0.0f; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
@@ -1548,7 +1548,7 @@ namespace ImGui
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags, ImGuiDockNode* dock_node);
     IMGUI_API ImGuiTabItem* TabBarFindTabByID(ImGuiTabBar* tab_bar, ImGuiID tab_id);
-    IMGUI_API void          TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiWindow* window, ImGuiTabItemFlags tab_flags = ImGuiTabItemFlags_None);
+    IMGUI_API void          TabBarAddTab(ImGuiTabBar* tab_bar, ImGuiTabItemFlags tab_flags, ImGuiWindow* window);
     IMGUI_API void          TabBarRemoveTab(ImGuiTabBar* tab_bar, ImGuiID tab_id);
     IMGUI_API void          TabBarCloseTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
     IMGUI_API void          TabBarQueueChangeTabOrder(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, int dir);
