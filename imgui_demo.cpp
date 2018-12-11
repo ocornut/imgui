@@ -3863,6 +3863,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
         if (adding_preview)
             points.pop_back();
     }
+    ImGui::End();
 }
 
 //-----------------------------------------------------------------------------
