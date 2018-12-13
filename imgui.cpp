@@ -4541,6 +4541,11 @@ static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
 
 static ImVec2 CalcSizeContents(ImGuiWindow* window)
 {
+    if (window->Collapsed)
+        return window->SizeContents;
+    if (window->Hidden && window->HiddenFramesForResize == 0 && window->HiddenFramesRegular > 0)
+        return window->SizeContents;
+
     ImVec2 sz;
     sz.x = (float)(int)((window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : (window->DC.CursorMaxPos.x - window->Pos.x + window->Scroll.x));
     sz.y = (float)(int)((window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : (window->DC.CursorMaxPos.y - window->Pos.y + window->Scroll.y));
@@ -6871,7 +6876,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
     int n = 0;
     if (ref_window)
     {
-        for (n = 0; n < g.OpenPopupStack.Size; n++)
+        for (; n < g.OpenPopupStack.Size; n++)
         {
             ImGuiPopupRef& popup = g.OpenPopupStack[n];
             if (!popup.Window)
@@ -6888,7 +6893,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the block below
+    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
         ClosePopupToLevel(n);
 }
 

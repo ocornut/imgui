@@ -50,12 +50,15 @@ Other Changes:
   (It does not provide the docking/splitting/merging of windows available in the Docking branch)
 - Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering 
   the ID, as a convenience to avoid using the ### operator.
-- Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
+- Window: Contents size is preserved while a window collapsed. Fix auto-resizing window losing their size for one frame when uncollapsed.
+- Window: Contents size is preserved while a window contents is hidden (unless it is hidden for resizing purpose).
+- Window: Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
   it only works _if_ the back-end sets ImGuiBackendFlags_HasMouseCursors, which the standard back-end do.
-- Added io.ConfigWindowsMoveFromTitleBarOnly option. Still is ignored by window with no title bars (often popups).
+- Window: Added io.ConfigWindowsMoveFromTitleBarOnly option. Still is ignored by window with no title bars (often popups).
   This affects clamping window within the visible area: with this option enabled title bars need to be visible. (#899)
 - Style: Tweaked default value of style.DisplayWindowPadding from (20,20) to (19,19) so the default style as a value
   which is the same as the title bar height.
+- Demo: "Simple Layout" and "Style Editor" are now using tabs.
 - Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
   to ease integration.
 
