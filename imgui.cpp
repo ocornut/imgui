@@ -6523,7 +6523,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
     int n = 0;
     if (ref_window)
     {
-        for (n = 0; n < g.OpenPopupStack.Size; n++)
+        for (; n < g.OpenPopupStack.Size; n++)
         {
             ImGuiPopupRef& popup = g.OpenPopupStack[n];
             if (!popup.Window)
@@ -6540,7 +6540,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the block below
+    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
         ClosePopupToLevel(n);
 }
 
