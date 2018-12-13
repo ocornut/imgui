@@ -3497,7 +3497,7 @@ static void ShowExampleAppLog(bool* p_open)
 static void ShowExampleAppLayout(bool* p_open)
 {
     ImGui::SetNextWindowSize(ImVec2(500, 440), ImGuiCond_FirstUseEver);
-    if (ImGui::Begin("Example: Layout", p_open, ImGuiWindowFlags_MenuBar))
+    if (ImGui::Begin("Example: Simple layout", p_open, ImGuiWindowFlags_MenuBar))
     {
         if (ImGui::BeginMenuBar())
         {
@@ -3774,7 +3774,7 @@ static void ShowExampleAppSimpleOverlay(bool* p_open)
         ImGui::SetNextWindowViewport(viewport->ID);
     }
     ImGui::SetNextWindowBgAlpha(0.3f); // Transparent background
-    if (ImGui::Begin("Example: Simple Overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+    if (ImGui::Begin("Example: Simple overlay", p_open, (corner != -1 ? ImGuiWindowFlags_NoMove : 0) | ImGuiWindowFlags_NoDocking | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
     {
         ImGui::Text("Simple overlay\n" "in the corner of the screen.\n" "(right-click to change position)");
         ImGui::Separator();

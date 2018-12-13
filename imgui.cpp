@@ -7114,7 +7114,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
     int n = 0;
     if (ref_window)
     {
-        for (n = 0; n < g.OpenPopupStack.Size; n++)
+        for (; n < g.OpenPopupStack.Size; n++)
         {
             ImGuiPopupRef& popup = g.OpenPopupStack[n];
             if (!popup.Window)
@@ -7131,7 +7131,7 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the block below
+    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
         ClosePopupToLevel(n);
 }
 
@@ -13491,7 +13491,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Text("NavDisableHighlight: %d, NavDisableMouseHover: %d", g.NavDisableHighlight, g.NavDisableMouseHover);
         ImGui::Text("NavWindowingTarget: '%s'", g.NavWindowingTarget ? g.NavWindowingTarget->Name : "NULL");
         ImGui::Text("DragDrop: %d, SourceId = 0x%08X, Payload \"%s\" (%d bytes)", g.DragDropActive, g.DragDropPayload.SourceId, g.DragDropPayload.DataType, g.DragDropPayload.DataSize);
-        ImGui::Text("MouseViewport: 0x%08X (UserHovered 0x%08X, LastHovered 0x%08X)", g.MouseViewport->ID, g.IO.MouseHoveredViewport, g.MouseLastHoveredViewport->ID);
+        ImGui::Text("MouseViewport: 0x%08X (UserHovered 0x%08X, LastHovered 0x%08X)", g.MouseViewport->ID, g.IO.MouseHoveredViewport, g.MouseLastHoveredViewport ? g.MouseLastHoveredViewport->ID : 0);
         ImGui::TreePop();
     }
 
