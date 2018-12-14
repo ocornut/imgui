@@ -128,6 +128,8 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 
     // Render command lists
     ImVec2 pos = draw_data->DisplayPos;
+    pos.x *= io.DisplayFramebufferScale.x;
+    pos.y *= io.DisplayFramebufferScale.y;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
