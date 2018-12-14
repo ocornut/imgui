@@ -876,7 +876,7 @@ struct ImGuiContext
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
     ImVector<ImGuiPopupRef> OpenPopupStack;                     // Which popups are open (persistent)
-    ImVector<ImGuiPopupRef> CurrentPopupStack;                  // Which level of BeginPopup() we are in (reset every frame)
+    ImVector<ImGuiPopupRef> BeginPopupStack;                    // Which level of BeginPopup() we are in (reset every frame)
     ImGuiNextWindowData     NextWindowData;                     // Storage for SetNextWindow** functions
     bool                    NextTreeNodeOpenVal;                // Storage for SetNextTreeNode** functions
     ImGuiCond               NextTreeNodeOpenCond;
@@ -1474,10 +1474,9 @@ namespace ImGui
 
     // Popups, Modals, Tooltips
     IMGUI_API void          OpenPopupEx(ImGuiID id);
-    IMGUI_API void          ClosePopup(ImGuiID id);
     IMGUI_API void          ClosePopupToLevel(int remaining);
     IMGUI_API void          ClosePopupsOverWindow(ImGuiWindow* ref_window);
-    IMGUI_API bool          IsPopupOpen(ImGuiID id);
+    IMGUI_API bool          IsPopupOpen(ImGuiID id); // Test for id within current popup stack level (currently begin-ed into); this doesn't scan the whole popup stack!
     IMGUI_API bool          BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
     IMGUI_API void          BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip = true);
     IMGUI_API ImGuiWindow*  GetFrontMostPopupModal();
@@ -1639,7 +1638,7 @@ IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned ch
 #ifdef IMGUI_ENABLE_TEST_ENGINE
 extern void                 ImGuiTestEngineHook_PreNewFrame();
 extern void                 ImGuiTestEngineHook_PostNewFrame();
-extern void                 ImGuiTestEngineHook_ItemAdd(ImGuiID id, const ImRect& bb);
+extern void                 ImGuiTestEngineHook_ItemAdd(const ImRect& bb, ImGuiID id);
 extern void                 ImGuiTestEngineHook_ItemInfo(ImGuiID id, const char* label, int flags);
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID, _LABEL, _FLAGS)  ImGuiTestEngineHook_ItemInfo(_ID, _LABEL, _FLAGS)   // Register status flags
 #else

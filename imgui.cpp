@@ -2680,7 +2680,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_ItemAdd(id, bb);
+    ImGuiTestEngineHook_ItemAdd(bb, id);
 #endif
 
     // Clipping test
@@ -3462,7 +3462,7 @@ void ImGui::NewFrame()
     // No window should be open at the beginning of the frame.
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
-    g.CurrentPopupStack.resize(0);
+    g.BeginPopupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow);
 
     // Docking
@@ -3560,7 +3560,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.StyleModifiers.clear();
     g.FontStack.clear();
     g.OpenPopupStack.clear();
-    g.CurrentPopupStack.clear();
+    g.BeginPopupStack.clear();
     g.CurrentViewport = g.MouseViewport = g.MouseLastHoveredViewport = NULL;
     for (int i = 0; i < g.Viewports.Size; i++)
         IM_DELETE(g.Viewports[i]);
@@ -4235,8 +4235,8 @@ ImVec2 ImGui::GetMousePos()
 ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
 {
     ImGuiContext& g = *GImGui;
-    if (g.CurrentPopupStack.Size > 0)
-        return g.OpenPopupStack[g.CurrentPopupStack.Size-1].OpenMousePos;
+    if (g.BeginPopupStack.Size > 0)
+        return g.OpenPopupStack[g.BeginPopupStack.Size-1].OpenMousePos;
     return g.IO.MousePos;
 }
 
@@ -4518,7 +4518,7 @@ static void CheckStacksSize(ImGuiWindow* window, bool write)
     short* p_backup = &window->DC.StackSizesBackup[0];
     { int current = window->IDStack.Size;       if (write) *p_backup = (short)current; else IM_ASSERT(*p_backup == current && "PushID/PopID or TreeNode/TreePop Mismatch!");   p_backup++; }    // Too few or too many PopID()/TreePop()
     { int current = window->DC.GroupStack.Size; if (write) *p_backup = (short)current; else IM_ASSERT(*p_backup == current && "BeginGroup/EndGroup Mismatch!");                p_backup++; }    // Too few or too many EndGroup()
-    { int current = g.CurrentPopupStack.Size;   if (write) *p_backup = (short)current; else IM_ASSERT(*p_backup == current && "BeginMenu/EndMenu or BeginPopup/EndPopup Mismatch"); p_backup++;}// Too few or too many EndMenu()/EndPopup()
+    { int current = g.BeginPopupStack.Size;     if (write) *p_backup = (short)current; else IM_ASSERT(*p_backup == current && "BeginMenu/EndMenu or BeginPopup/EndPopup Mismatch"); p_backup++;}// Too few or too many EndMenu()/EndPopup()
     // For color, style and font stacks there is an incentive to use Push/Begin/Pop/.../End patterns, so we relax our checks a little to allow them.
     { int current = g.ColorModifiers.Size;      if (write) *p_backup = (short)current; else IM_ASSERT(*p_backup >= current && "PushStyleColor/PopStyleColor Mismatch!");       p_backup++; }    // Too few or too many PopStyleColor()
     { int current = g.StyleModifiers.Size;      if (write) *p_backup = (short)current; else IM_ASSERT(*p_backup >= current && "PushStyleVar/PopStyleVar Mismatch!");           p_backup++; }    // Too few or too many PopStyleVar()
@@ -4965,7 +4965,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     const bool window_just_appearing_after_hidden_for_resize = (window->HiddenFramesForResize > 0);
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
+        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
         window_just_activated_by_user |= (window->PopupId != popup_ref.PopupId); // We recycle popups so treat window as activated if popup id changed
         window_just_activated_by_user |= (window != popup_ref.Window);
     }
@@ -5015,9 +5015,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     CheckStacksSize(window, true);
     if (flags & ImGuiWindowFlags_Popup)
     {
-        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.CurrentPopupStack.Size];
+        ImGuiPopupRef& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
         popup_ref.Window = window;
-        g.CurrentPopupStack.push_back(popup_ref);
+        g.BeginPopupStack.push_back(popup_ref);
         window->PopupId = popup_ref.PopupId;
     }
 
@@ -5215,7 +5215,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             window->AutoPosLastDirection = ImGuiDir_None;
             if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api)
-                window->Pos = g.CurrentPopupStack.back().OpenPopupPos;
+                window->Pos = g.BeginPopupStack.back().OpenPopupPos;
         }
 
         // Position child window
@@ -5752,7 +5752,7 @@ void ImGui::End()
     // Pop from window stack
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
-        g.CurrentPopupStack.pop_back();
+        g.BeginPopupStack.pop_back();
     CheckStacksSize(window, false);
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
     if (g.CurrentWindow)
@@ -7019,13 +7019,13 @@ void ImGui::SetTooltip(const char* fmt, ...)
 bool ImGui::IsPopupOpen(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == id;
+    return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == id;
 }
 
 bool ImGui::IsPopupOpen(const char* str_id)
 {
     ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.CurrentPopupStack.Size && g.OpenPopupStack[g.CurrentPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
+    return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
 }
 
 ImGuiWindow* ImGui::GetFrontMostPopupModal()
@@ -7052,7 +7052,7 @@ void ImGui::OpenPopupEx(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
-    int current_stack_size = g.CurrentPopupStack.Size;
+    int current_stack_size = g.BeginPopupStack.Size;
     ImGuiPopupRef popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
@@ -7111,12 +7111,13 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
 
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
     // Don't close our own child popup windows.
-    int n = 0;
+    int popup_count_to_keep = 0;
     if (ref_window)
     {
-        for (; n < g.OpenPopupStack.Size; n++)
+        // Find the highest popup which is a descendant of the reference window (generally reference window = NavWindow)
+        for (; popup_count_to_keep < g.OpenPopupStack.Size; popup_count_to_keep++)
         {
-            ImGuiPopupRef& popup = g.OpenPopupStack[n];
+            ImGuiPopupRef& popup = g.OpenPopupStack[popup_count_to_keep];
             if (!popup.Window)
                 continue;
             IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
@@ -7124,15 +7125,19 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
                 continue;
 
             // Trim the stack if popups are not direct descendant of the reference window (which is often the NavWindow)
-            bool has_focus = false;
-            for (int m = n; m < g.OpenPopupStack.Size && !has_focus; m++)
-                has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow);
-            if (!has_focus)
+            bool popup_or_descendent_has_focus = false;
+            for (int m = popup_count_to_keep; m < g.OpenPopupStack.Size && !popup_or_descendent_has_focus; m++)
+                if (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow)
+                    popup_or_descendent_has_focus = true;
+            if (!popup_or_descendent_has_focus)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
-        ClosePopupToLevel(n);
+    if (popup_count_to_keep < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
+    {
+        //IMGUI_DEBUG_LOG("ClosePopupsOverWindow(%s) -> ClosePopupToLevel(%d)\n", ref_window->Name, popup_count_to_keep);
+        ClosePopupToLevel(popup_count_to_keep);
+    }
 }
 
 void ImGui::ClosePopupToLevel(int remaining)
@@ -7147,20 +7152,12 @@ void ImGui::ClosePopupToLevel(int remaining)
     g.OpenPopupStack.resize(remaining);
 }
 
-void ImGui::ClosePopup(ImGuiID id)
-{
-    if (!IsPopupOpen(id))
-        return;
-    ImGuiContext& g = *GImGui;
-    ClosePopupToLevel(g.OpenPopupStack.Size - 1);
-}
-
 // Close the popup we have begin-ed into.
 void ImGui::CloseCurrentPopup()
 {
     ImGuiContext& g = *GImGui;
-    int popup_idx = g.CurrentPopupStack.Size - 1;
-    if (popup_idx < 0 || popup_idx >= g.OpenPopupStack.Size || g.CurrentPopupStack[popup_idx].PopupId != g.OpenPopupStack[popup_idx].PopupId)
+    int popup_idx = g.BeginPopupStack.Size - 1;
+    if (popup_idx < 0 || popup_idx >= g.OpenPopupStack.Size || g.BeginPopupStack[popup_idx].PopupId != g.OpenPopupStack[popup_idx].PopupId)
         return;
     while (popup_idx > 0 && g.OpenPopupStack[popup_idx].Window && (g.OpenPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
         popup_idx--;
@@ -7178,7 +7175,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 
     char name[20];
     if (extra_flags & ImGuiWindowFlags_ChildMenu)
-        ImFormatString(name, IM_ARRAYSIZE(name), "##Menu_%02d", g.CurrentPopupStack.Size);    // Recycle windows based on depth
+        ImFormatString(name, IM_ARRAYSIZE(name), "##Menu_%02d", g.BeginPopupStack.Size); // Recycle windows based on depth
     else
         ImFormatString(name, IM_ARRAYSIZE(name), "##Popup_%08x", id); // Not recycling, so we can close/open during the same frame
 
@@ -7192,7 +7189,7 @@ bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
 bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (g.OpenPopupStack.Size <= g.CurrentPopupStack.Size) // Early out for performance
+    if (g.OpenPopupStack.Size <= g.BeginPopupStack.Size) // Early out for performance
     {
         g.NextWindowData.Clear(); // We behave like Begin() and need to consume those values
         return false;
@@ -7201,6 +7198,8 @@ bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
     return BeginPopupEx(g.CurrentWindow->GetID(str_id), flags);
 }
 
+// If 'p_open' is specified for a modal popup window, the popup will have a regular close button which will close the popup.
+// Note that popup visibility status is owned by imgui (and manipulated with e.g. OpenPopup) so the actual value of *p_open is meaningless here.
 bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -7223,7 +7222,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     {
         EndPopup();
         if (is_open)
-            ClosePopup(id);
+            ClosePopupToLevel(g.BeginPopupStack.Size);
         return false;
     }
     return is_open;
@@ -7233,7 +7232,7 @@ void ImGui::EndPopup()
 {
     ImGuiContext& g = *GImGui; (void)g;
     IM_ASSERT(g.CurrentWindow->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
-    IM_ASSERT(g.CurrentPopupStack.Size > 0);
+    IM_ASSERT(g.BeginPopupStack.Size > 0);
 
     // Make all menus and popups wrap around for now, may need to expose that policy.
     NavMoveRequestTryWrapping(g.CurrentWindow, ImGuiNavMoveFlags_LoopY);
@@ -7815,7 +7814,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     {
         // We need to take account of the possibility that mouse may become invalid.
         // Popups/Tooltip always set ViewportAllowPlatformMonitorExtend so GetWindowAllowedExtentRect() will return full monitor bounds.
-        ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.CurrentPopupStack.back().OpenMousePos;
+        ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.BeginPopupStack.back().OpenMousePos;
         bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
         bool mouse_valid = IsMousePosValid(&mouse_ref);
         if ((window->Appearing || (flags & ImGuiWindowFlags_Tooltip)) && (!use_mouse_ref || mouse_valid))
