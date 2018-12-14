@@ -387,7 +387,7 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     // We don't enable SDL_WINDOW_RESIZABLE because it enforce windows decorations
     Uint32 sdl_flags = 0;
     sdl_flags |= use_opengl ? SDL_WINDOW_OPENGL : SDL_WINDOW_VULKAN;
-    sdl_flags |= SDL_WINDOW_HIDDEN;
+    sdl_flags |= SDL_WINDOW_HIDDEN | SDL_WINDOW_ALLOW_HIGHDPI;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? SDL_WINDOW_BORDERLESS : 0;
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_NoDecoration) ? 0 : SDL_WINDOW_RESIZABLE;
 #if SDL_HAS_ALWAYS_ON_TOP
