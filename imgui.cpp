@@ -7376,8 +7376,10 @@ static void ImGui::UpdateViewports()
 
         // Update DPI scale
         float new_dpi_scale;
-        if (g.PlatformIO.Platform_GetWindowDpiScale)
+        if (g.PlatformIO.Platform_GetWindowDpiScale && platform_funcs_available)
             new_dpi_scale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
+        else if (viewport->PlatformMonitor != -1)
+            new_dpi_scale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
         else
             new_dpi_scale = (viewport->DpiScale != 0.0f) ? viewport->DpiScale : 1.0f;
         if (viewport->DpiScale != 0.0f && new_dpi_scale != viewport->DpiScale)
@@ -7490,10 +7492,10 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         g.DrawListSharedData.ClipRectFullscreen.z = ImMax(g.DrawListSharedData.ClipRectFullscreen.z, viewport->Pos.x + viewport->Size.x);
         g.DrawListSharedData.ClipRectFullscreen.w = ImMax(g.DrawListSharedData.ClipRectFullscreen.w, viewport->Pos.y + viewport->Size.y);
 
-        // Request an initial DpiScale before the OS platform window creation
+        // Store initial DpiScale before the OS platform window creation, based on expected monitor data.
         // This is so we can select an appropriate font size on the first frame of our window lifetime
-        if (g.PlatformIO.Platform_GetWindowDpiScale)
-            viewport->DpiScale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
+        if (viewport->PlatformMonitor != -1)
+            viewport->DpiScale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
     }
 
     viewport->Window = window;
