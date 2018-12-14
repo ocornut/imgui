@@ -396,6 +396,11 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if ((flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window)
         g.HoveredWindow = window;
 
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    if (window->DC.LastItemId != id)
+        ImGuiTestEngineHook_ItemAdd(bb, id);
+#endif
+
     bool pressed = false;
     bool hovered = ItemHoverable(bb, id);
 

@@ -2630,7 +2630,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_ItemAdd(id, bb);
+    ImGuiTestEngineHook_ItemAdd(bb, id);
 #endif
 
     // Clipping test
