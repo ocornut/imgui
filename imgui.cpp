@@ -6520,12 +6520,13 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
 
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
     // Don't close our own child popup windows.
-    int n = 0;
+    int popup_count_to_keep = 0;
     if (ref_window)
     {
-        for (; n < g.OpenPopupStack.Size; n++)
+        // Find the highest popup which is a descendant of the reference window (generally reference window = NavWindow)
+        for (; popup_count_to_keep < g.OpenPopupStack.Size; popup_count_to_keep++)
         {
-            ImGuiPopupRef& popup = g.OpenPopupStack[n];
+            ImGuiPopupRef& popup = g.OpenPopupStack[popup_count_to_keep];
             if (!popup.Window)
                 continue;
             IM_ASSERT((popup.Window->Flags & ImGuiWindowFlags_Popup) != 0);
@@ -6533,15 +6534,19 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
                 continue;
 
             // Trim the stack if popups are not direct descendant of the reference window (which is often the NavWindow)
-            bool has_focus = false;
-            for (int m = n; m < g.OpenPopupStack.Size && !has_focus; m++)
-                has_focus = (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow);
-            if (!has_focus)
+            bool popup_or_descendent_has_focus = false;
+            for (int m = popup_count_to_keep; m < g.OpenPopupStack.Size && !popup_or_descendent_has_focus; m++)
+                if (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow)
+                    popup_or_descendent_has_focus = true;
+            if (!popup_or_descendent_has_focus)
                 break;
         }
     }
-    if (n < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
-        ClosePopupToLevel(n);
+    if (popup_count_to_keep < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
+    {
+        //IMGUI_DEBUG_LOG("ClosePopupsOverWindow(%s) -> ClosePopupToLevel(%d)\n", ref_window->Name, popup_count_to_keep);
+        ClosePopupToLevel(popup_count_to_keep);
+    }
 }
 
 void ImGui::ClosePopupToLevel(int remaining)
@@ -6554,14 +6559,6 @@ void ImGui::ClosePopupToLevel(int remaining)
     FocusWindow(focus_window);
     focus_window->DC.NavHideHighlightOneFrame = true;
     g.OpenPopupStack.resize(remaining);
-}
-
-void ImGui::ClosePopup(ImGuiID id)
-{
-    if (!IsPopupOpen(id))
-        return;
-    ImGuiContext& g = *GImGui;
-    ClosePopupToLevel(g.OpenPopupStack.Size - 1);
 }
 
 // Close the popup we have begin-ed into.
@@ -6610,6 +6607,8 @@ bool ImGui::BeginPopup(const char* str_id, ImGuiWindowFlags flags)
     return BeginPopupEx(g.CurrentWindow->GetID(str_id), flags);
 }
 
+// If 'p_open' is specified for a modal popup window, the popup will have a regular close button which will close the popup.
+// Note that popup visibility status is owned by imgui (and manipulated with e.g. OpenPopup) so the actual value of *p_open is meaningless here.
 bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -6632,7 +6631,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     {
         EndPopup();
         if (is_open)
-            ClosePopup(id);
+            ClosePopupToLevel(g.CurrentPopupStack.Size);
         return false;
     }
     return is_open;

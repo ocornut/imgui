@@ -226,7 +226,8 @@ namespace ImGui
     //   which clicking will set the boolean to false when clicked.
     // - Begin() return false to indicate the window is collapsed or fully clipped, so you may early out and omit submitting
     //   anything to the window. Always call a matching End() for each Begin() call, regardless of its return value!
-    //   [this is due to legacy reason and is inconsistent with most other functions such as BeginMenu/EndMenu, BeginPopup/EndPopup, etc. where the EndXXX call should only be called if the corresponding BeginXXX function returned true.]
+    //   [this is due to legacy reason and is inconsistent with most other functions such as BeginMenu/EndMenu, BeginPopup/EndPopup, etc. 
+    //    where the EndXXX call should only be called if the corresponding BeginXXX function returned true.]
     // - Note that the bottom of window stack always contains a window called "Debug".
     IMGUI_API bool          Begin(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);
     IMGUI_API void          End();
@@ -511,7 +512,14 @@ namespace ImGui
     IMGUI_API void          SetTooltip(const char* fmt, ...) IM_FMTARGS(1);                     // set a text-only tooltip, typically use with ImGui::IsItemHovered(). overidde any previous call to SetTooltip().
     IMGUI_API void          SetTooltipV(const char* fmt, va_list args) IM_FMTLIST(1);
 
-    // Popups
+    // Popups, Modals
+    // The properties of popups windows are:
+    // - They block normal mouse hovering detection outside them. (*)
+    // - Unless modal, they can be closed by clicking anywhere outside them, or by pressing ESCAPE.
+    // - Their visibility state (~bool) is held internally by imgui instead of being held by the programmer as we are used to with regular Begin() calls.
+    //   User can manipulate the visibility state by calling OpenPopup().
+    // (*) One can use IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup) to bypass it and detect hovering even when normally blocked by a popup.
+    // Those three properties are connected. The library needs to hold their visibility state because it can close popups at any time.
     IMGUI_API void          OpenPopup(const char* str_id);                                      // call to mark popup as open (don't call every frame!). popups are closed when user click outside, or if CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block. By default, Selectable()/MenuItem() are calling CloseCurrentPopup(). Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
     IMGUI_API bool          BeginPopup(const char* str_id, ImGuiWindowFlags flags = 0);                                             // return true if the popup is open, and you can start outputting to it. only call EndPopup() if BeginPopup() returns true!
     IMGUI_API bool          BeginPopupContextItem(const char* str_id = NULL, int mouse_button = 1);                                 // helper to open and begin popup when clicked on last item. if you can pass a NULL str_id only if the previous item had an id. If you want to use that on a non-interactive item such as Text() you need to pass in an explicit ID here. read comments in .cpp!
@@ -520,11 +528,11 @@ namespace ImGui
     IMGUI_API bool          BeginPopupModal(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0);                     // modal dialog (regular window with title bar, block interactions behind the modal window, can't close the modal window by clicking outside)
     IMGUI_API void          EndPopup();                                                                                             // only call EndPopup() if BeginPopupXXX() returns true!
     IMGUI_API bool          OpenPopupOnItemClick(const char* str_id = NULL, int mouse_button = 1);                                  // helper to open popup when clicked on last item (note: actually triggers on the mouse _released_ event to be consistent with popup behaviors). return true when just opened.
-    IMGUI_API bool          IsPopupOpen(const char* str_id);                                    // return true if the popup is open
+    IMGUI_API bool          IsPopupOpen(const char* str_id);                                    // return true if the popup is open at the current begin-ed level of the popup stack.
     IMGUI_API void          CloseCurrentPopup();                                                // close the popup we have begin-ed into. clicking on a MenuItem or Selectable automatically close the current popup.
 
     // Columns
-    // You can also use SameLine(pos_x) for simplified columns. The columns API is work-in-progress and rather lacking (columns are arguably the worst part of dear imgui at the moment!)
+    // You can also use SameLine(pos_x) to mimic simplified columns. The columns API is work-in-progress and rather lacking (columns are arguably the worst part of dear imgui at the moment!)
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border = true);
     IMGUI_API void          NextColumn();                                                       // next column, defaults to current row or next row if the current row is finished
     IMGUI_API int           GetColumnIndex();                                                   // get current column index
@@ -543,7 +551,7 @@ namespace ImGui
     IMGUI_API void          SetTabItemClosed(const char* tab_or_docked_window_label);           // notify TabBar or Docking system of a closed tab/window ahead (useful to reduce visual flicker on reorderable tab bars). For tab-bar: call after BeginTabBar() and before Tab submissions. Otherwise call with a window name.
 
     // Logging/Capture: all text output from interface is captured to tty/file/clipboard. By default, tree nodes are automatically opened during logging.
-    IMGUI_API void          LogToTTY(int max_depth = -1);                                       // start logging to tty
+    IMGUI_API void          LogToTTY(int max_depth = -1);                                       // start logging to tty (stdout)
     IMGUI_API void          LogToFile(int max_depth = -1, const char* filename = NULL);         // start logging to file
     IMGUI_API void          LogToClipboard(int max_depth = -1);                                 // start logging to OS clipboard
     IMGUI_API void          LogFinish();                                                        // stop logging (close file, etc.)
