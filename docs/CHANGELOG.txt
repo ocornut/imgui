@@ -50,6 +50,8 @@ Other Changes:
   (It does not provide the docking/splitting/merging of windows available in the Docking branch)
 - Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering 
   the ID, as a convenience to avoid using the ### operator.
+- Window, Focus, Popup: Fixed an issue where closing a popup by clicking another window with the _NoMove flag would refocus
+  the parent window of the popup instead of the newly clicked window.
 - Window: Contents size is preserved while a window collapsed. Fix auto-resizing window losing their size for one frame when uncollapsed.
 - Window: Contents size is preserved while a window contents is hidden (unless it is hidden for resizing purpose).
 - Window: Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
