@@ -1,4 +1,5 @@
 - Please read https://github.com/ocornut/imgui/blob/master/.github/CONTRIBUTING.md
+- Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it.
 - When adding a feature, please describe the usage context (how you intend to use it, why you need it, etc.).
 - When adding a feature, try to attach screenshots/gifs to clarify the context and demonstrate the feature at a glance.
 - When fixing a warning or compilation problem, post the compiler log and specify the version and OS you are using.
