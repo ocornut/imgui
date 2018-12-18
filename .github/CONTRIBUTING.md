@@ -33,6 +33,7 @@ You may use the Issue Tracker to submit bug reports, feature requests or suggest
 If you have been using dear imgui for a while or have been using C/C++ for several years or have demonstrated good behavior here, it is ok to not fullfill every item to the letter. Those are guidelines and experienced users or members of the community will know which information are useful in a given context.
 
 ## How to create an Pull Request
+- Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it.
 - When adding a feature, please describe the usage context (how you intend to use it, why you need it, etc.).
 - When fixing a warning or compilation problem, please post the compiler log and specify the version and OS you are using.
 - Try to attach screenshots to clarify the context and demonstrate the feature at a glance. You can drag pictures/files here (prefer github attachments over 3rd party hosting).
