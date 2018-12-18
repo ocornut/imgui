@@ -6557,7 +6557,6 @@ void ImGui::ClosePopupToLevel(int remaining)
     if (g.NavLayer == 0)
         focus_window = NavRestoreLastChildNavWindow(focus_window);
     FocusWindow(focus_window);
-    focus_window->DC.NavHideHighlightOneFrame = true;
     g.OpenPopupStack.resize(remaining);
 }
 
@@ -6571,6 +6570,12 @@ void ImGui::CloseCurrentPopup()
     while (popup_idx > 0 && g.OpenPopupStack[popup_idx].Window && (g.OpenPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
         popup_idx--;
     ClosePopupToLevel(popup_idx);
+
+    // A common pattern is to close a popup when selecting a menu item/selectable that will open another window.
+    // To improve this usage pattern, we avoid nav highlight for a single frame in the parent window.
+    // Similarly, we could avoid mouse hover highlight in this window but it is less visually problematic.
+    if (ImGuiWindow* window = g.NavWindow)
+        window->DC.NavHideHighlightOneFrame = true;
 }
 
 bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags)
