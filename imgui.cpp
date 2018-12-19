@@ -3972,6 +3972,8 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
     return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
 }
 
+// Return the delta from the initial clicking position.
+// This is locked and return 0.0f until the mouse moves past a distance threshold at least once.
 // NB: This is only valid if IsMousePosValid(). Back-ends in theory should always keep mouse position valid when dragging even outside the client window.
 ImVec2 ImGui::GetMouseDragDelta(int button, float lock_threshold)
 {
@@ -6098,10 +6100,10 @@ ImVec2 ImGui::GetCursorScreenPos()
     return window->DC.CursorPos;
 }
 
-void ImGui::SetCursorScreenPos(const ImVec2& screen_pos)
+void ImGui::SetCursorScreenPos(const ImVec2& pos)
 {
     ImGuiWindow* window = GetCurrentWindow();
-    window->DC.CursorPos = screen_pos;
+    window->DC.CursorPos = pos;
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
@@ -6139,12 +6141,12 @@ void ImGui::SetScrollY(float scroll_y)
     window->ScrollTargetCenterRatio.y = 0.0f;
 }
 
-void ImGui::SetScrollFromPosY(float pos_y, float center_y_ratio)
+void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
 {
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     ImGuiWindow* window = GetCurrentWindow();
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
-    window->ScrollTarget.y = (float)(int)(pos_y + window->Scroll.y);
+    window->ScrollTarget.y = (float)(int)(local_y + window->Scroll.y);
     window->ScrollTargetCenterRatio.y = center_y_ratio;
 }
 
