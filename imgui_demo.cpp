@@ -1488,7 +1488,7 @@ static void ShowDemoWindowWidgets()
             ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow));
 
         ImGui::BeginChild("child", ImVec2(0, 50), true);
-        ImGui::Text("This is another child window for testing with the _ChildWindows flag.");
+        ImGui::Text("This is another child window for testing the _ChildWindows flag.");
         ImGui::EndChild();
         if (embed_all_inside_a_child_window)
             ImGui::EndChild();
@@ -1521,8 +1521,9 @@ static void ShowDemoWindowLayout()
     if (!ImGui::CollapsingHeader("Layout"))
         return;
 
-    if (ImGui::TreeNode("Child regions"))
+    if (ImGui::TreeNode("Child windows"))
     {
+        ShowHelpMarker("Use child windows to begin into a self-contained independent scrolling/clipping regions within a host window.");
         static bool disable_mouse_wheel = false;
         static bool disable_menu = false;
         ImGui::Checkbox("Disable Mouse Wheel", &disable_mouse_wheel);
@@ -1537,7 +1538,8 @@ static void ShowDemoWindowLayout()
 
         // Child 1: no border, enable horizontal scrollbar
         {
-            ImGui::BeginChild("Child1", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f, 300), false, ImGuiWindowFlags_HorizontalScrollbar | (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0));
+            ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar | (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0);
+            ImGui::BeginChild("Child1", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f, 260), false, window_flags);
             for (int i = 0; i < 100; i++)
             {
                 ImGui::Text("%04d: scrollable region", i);
@@ -1553,8 +1555,9 @@ static void ShowDemoWindowLayout()
 
         // Child 2: rounded border
         {
+            ImGuiWindowFlags window_flags = (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0) | (disable_menu ? 0 : ImGuiWindowFlags_MenuBar);
             ImGui::PushStyleVar(ImGuiStyleVar_ChildRounding, 5.0f);
-            ImGui::BeginChild("Child2", ImVec2(0, 300), true, (disable_mouse_wheel ? ImGuiWindowFlags_NoScrollWithMouse : 0) | (disable_menu ? 0 : ImGuiWindowFlags_MenuBar));
+            ImGui::BeginChild("Child2", ImVec2(0, 260), true, window_flags);
             if (!disable_menu && ImGui::BeginMenuBar())
             {
                 if (ImGui::BeginMenu("Menu"))
@@ -1574,6 +1577,27 @@ static void ShowDemoWindowLayout()
             }
             ImGui::EndChild();
             ImGui::PopStyleVar();
+        }
+
+        ImGui::Separator();
+
+        // Demonstrate a few extra things
+        // - Changing ImGuiCol_ChildBg (which is transparent black in default styles)
+        // - Using SetCursorPos() to position the child window (because the child window is an item from the POV of the parent window)
+        //   You can also call SetNextWindowPos() to position the child window. The parent window will effectively layout from this position.
+        // - Using ImGui::GetItemRectMin/Max() to query the "item" state (because the child window is an item from the POV of the parent window)
+        //   See "Widgets" -> "Querying Status (Active/Focused/Hovered etc.)" section for more details about this.
+        {
+            ImGui::SetCursorPosX(50);
+            ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
+            ImGui::BeginChild("blah", ImVec2(200, 100), true, ImGuiWindowFlags_None);
+            for (int n = 0; n < 50; n++)
+                ImGui::Text("Some test %d", n);
+            ImGui::EndChild();
+            ImVec2 child_rect_min = ImGui::GetItemRectMin();
+            ImVec2 child_rect_max = ImGui::GetItemRectMax();
+            ImGui::PopStyleColor();
+            ImGui::Text("Rect of child window is: (%.0f,%.0f) (%.0f,%.0f)", child_rect_min.x, child_rect_min.y, child_rect_max.x, child_rect_max.y);
         }
 
         ImGui::TreePop();
@@ -1819,7 +1843,7 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Text Baseline Alignment"))
     {
-        ImGui::TextWrapped("(This is testing the vertical alignment that occurs on text to keep it at the same baseline as widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets)");
+        ShowHelpMarker("This is testing the vertical alignment that gets applied on text to keep it aligned with widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets.");
 
         ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();
         ImGui::Text("Hello\nWorld"); ImGui::SameLine();
@@ -1874,7 +1898,8 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Scrolling"))
     {
-        ImGui::TextWrapped("(Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given position.)");
+        ShowHelpMarker("Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given position.");
+
         static bool track = true;
         static int track_line = 50, scroll_to_px = 200;
         ImGui::Checkbox("Track", &track);
@@ -1915,8 +1940,7 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Horizontal Scrolling"))
     {
-        ImGui::Bullet(); ImGui::TextWrapped("Horizontal scrolling for a window has to be enabled explicitly via the ImGuiWindowFlags_HorizontalScrollbar flag.");
-        ImGui::Bullet(); ImGui::TextWrapped("You may want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
+        ShowHelpMarker("Horizontal scrolling for a window has to be enabled explicitly via the ImGuiWindowFlags_HorizontalScrollbar flag.\n\nYou may want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
         static int lines = 7;
         ImGui::SliderInt("Lines", &lines, 1, 15);
         ImGui::PushStyleVar(ImGuiStyleVar_FrameRounding, 3.0f);
