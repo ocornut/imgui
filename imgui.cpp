@@ -3818,6 +3818,7 @@ void ImGui::EndFrame()
             IM_ASSERT(viewport->Window != NULL);
         g.PlatformIO.Viewports.push_back(viewport);
     }
+    g.Viewports[0]->ClearRequestFlags(); // Clear main viewport flags because UpdatePlatformWindows() won't do it and may not even be called
 
     // Sort the window list so that all child windows are after their parent
     // We cannot do that on FocusWindow() because childs may not exist yet
@@ -7760,7 +7761,7 @@ void ImGui::UpdatePlatformWindows()
         }
 
         // Clear request flags
-        viewport->PlatformRequestClose = viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
+        viewport->ClearRequestFlags();
     }
 
     // Update our implicit z-order knowledge of platform windows, which is used when the back-end cannot provide io.MouseHoveredViewport.
@@ -7865,7 +7866,7 @@ void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
     viewport->PlatformHandle = NULL;
     viewport->RendererUserData = viewport->PlatformHandle = NULL;
     viewport->PlatformWindowCreated = false;
-    viewport->PlatformRequestClose = viewport->PlatformRequestMove = viewport->PlatformRequestResize = false;
+    viewport->ClearRequestFlags();
 }
 
 void ImGui::DestroyPlatformWindows()
