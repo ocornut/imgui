@@ -2143,13 +2143,13 @@ struct ImGuiPlatformMonitor
 };
 
 // (Optional) Setup required only if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) is enabled. 
-// Access via ImGui::GetPlatformIO(). This is designed so we can mix and match two imgui_impl_xxxx files, one for 
-// the Platform (~window handling), one for Renderer. Custom engine back-ends will often provide both Platform 
-// and Renderer interfaces and thus may not need to use all functions.
+// Access via ImGui::GetPlatformIO(). This is designed so we can mix and match two imgui_impl_xxxx files,
+// one for the Platform (~window handling), one for Renderer. Custom engine back-ends will often provide 
+// both Platform and Renderer interfaces and so may not need to use all functions.
 // Platform functions are typically called before their Renderer counterpart, 
 // apart from Destroy which are called the other way. 
 // RenderPlatformWindowsDefault() is that helper that iterate secondary viewports and call, in this order:
-//  Platform_RenderWindow(), Renderer_RenderWindow(), Platform_SwapBuffers(), Renderer_SwapBuffers()
+//   Platform_RenderWindow(), Renderer_RenderWindow(), Platform_SwapBuffers(), Renderer_SwapBuffers()
 // You may skip using RenderPlatformWindowsDefault() and call your draw/swap functions yourself if you need
 // specific behavior for your multi-window rendering.
 struct ImGuiPlatformIO
@@ -2159,6 +2159,7 @@ struct ImGuiPlatformIO
     //------------------------------------------------------------------
 
     // (Optional) Platform functions (e.g. Win32, GLFW, SDL2)
+    // Most of them are called by ImGui::UpdatePlatformWindows() and ImGui::RenderPlatformWindowsDefault().
     void    (*Platform_CreateWindow)(ImGuiViewport* vp);                    // Create a new platform window for the given viewport
     void    (*Platform_DestroyWindow)(ImGuiViewport* vp);
     void    (*Platform_ShowWindow)(ImGuiViewport* vp);                      // Newly created windows are initially hidden so SetWindowPos/Size/Title can be called on them first
@@ -2171,7 +2172,7 @@ struct ImGuiPlatformIO
     bool    (*Platform_GetWindowMinimized)(ImGuiViewport* vp);
     void    (*Platform_SetWindowTitle)(ImGuiViewport* vp, const char* title);
     void    (*Platform_SetWindowAlpha)(ImGuiViewport* vp, float alpha);     // (Optional) Setup window transparency
-    void    (*Platform_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Setup for render (platform side)
+    void    (*Platform_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Setup for render
     void    (*Platform_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (platform side)
     float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // (Optional) [BETA] (FIXME-DPI) DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI.
     void    (*Platform_OnChangedViewport)(ImGuiViewport* vp);               // (Optional) [BETA] (FIXME-DPI) DPI handling: Called during Begin() every time the viewport we are outputting into changes, so back-end has a chance to swap fonts to adjust style.
@@ -2213,8 +2214,8 @@ enum ImGuiViewportFlags_
 // The viewports created and managed by imgui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.
 struct ImGuiViewport
 {
-    ImGuiID             ID;
-    ImGuiViewportFlags  Flags;
+    ImGuiID             ID;                     // Unique identifier for the viewport
+    ImGuiViewportFlags  Flags;                  // See ImGuiViewportFlags_
     ImVec2              Pos;                    // Position of viewport both in imgui space and in OS desktop/native space
     ImVec2              Size;                   // Size of viewport in pixel
     float               DpiScale;               // 1.0f = 96 DPI = No extra scale
