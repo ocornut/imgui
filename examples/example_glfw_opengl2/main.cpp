@@ -140,9 +140,9 @@ int main(int, char**)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
+            glfwMakeContextCurrent(window);
         }
 
-        glfwMakeContextCurrent(window);
         glfwSwapBuffers(window);
     }
 

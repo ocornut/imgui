@@ -56,6 +56,7 @@ int main(int, char**)
     SDL_GetCurrentDisplayMode(0, &current);
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // Initialize OpenGL loader
@@ -177,7 +178,6 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
-        SDL_GL_MakeCurrent(window, gl_context);
         glViewport(0, 0, (int)io.DisplaySize.x, (int)io.DisplaySize.y);
         glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
         glClear(GL_COLOR_BUFFER_BIT);
@@ -188,9 +188,9 @@ int main(int, char**)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
+            SDL_GL_MakeCurrent(window, gl_context);
         }
 
-        SDL_GL_MakeCurrent(window, gl_context);
         SDL_GL_SwapWindow(window);
     }
 

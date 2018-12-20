@@ -32,6 +32,7 @@ int main(int, char**)
     SDL_GetCurrentDisplayMode(0, &current);
     SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // Setup Dear ImGui context
@@ -142,9 +143,9 @@ int main(int, char**)
         {
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
+            SDL_GL_MakeCurrent(window, gl_context);
         }
 
-        SDL_GL_MakeCurrent(window, gl_context);
         SDL_GL_SwapWindow(window);
     }
 
