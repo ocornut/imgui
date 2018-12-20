@@ -9916,6 +9916,7 @@ namespace ImGui
     static void             DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size);
     static void             DockNodeTreeUpdateSplitter(ImGuiDockNode* node);
     static ImGuiDockNode*   DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos);
+    static ImGuiDockNode*   DockNodeTreeFindFallbackLeafNode(ImGuiDockNode* node);
 
     // Settings
     static void             DockSettingsMoveDockReferencesInInactiveWindow(ImGuiID old_dock_id, ImGuiID new_dock_id);
@@ -11399,11 +11400,20 @@ static bool ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNo
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.CurrentWindow == host_window);   // Because we rely on font size to calculate tab sizes
 
+    // There is an edge case when docking into a dockspace which only has inactive nodes.
+    // In this case DockNodeTreeFindNodeByPos() will have selected a leaf node which is inactive. 
+    // Because the inactive leaf node doesn't have proper pos/size yet, we'll use the root node as reference.
+    ImGuiDockNode* ref_node_for_rect = (host_node && !host_node->IsVisible) ? DockNodeGetRootNode(host_node) : host_node;
+    if (ref_node_for_rect)
+        IM_ASSERT(ref_node_for_rect->IsVisible);
+
+    // Build a tentative future node (reuse same structure because it is practical)
     data->FutureNode.HasCloseButton = (host_node ? host_node->HasCloseButton : host_window->HasCloseButton) || (root_payload->HasCloseButton);
     data->FutureNode.HasCollapseButton = host_node ? true : ((host_window->Flags & ImGuiWindowFlags_NoCollapse) == 0);
-    data->FutureNode.Pos = host_node ? host_node->Pos : host_window->Pos;
-    data->FutureNode.Size = host_node ? host_node->Size : host_window->Size;
+    data->FutureNode.Pos = host_node ? ref_node_for_rect->Pos : host_window->Pos;
+    data->FutureNode.Size = host_node ? ref_node_for_rect->Size : host_window->Size;
 
+    // Figure out here we are allowed to dock
     const bool src_is_visibly_splitted = root_payload->DockNodeAsHost && root_payload->DockNodeAsHost->IsSplitNode() && (root_payload->DockNodeAsHost->OnlyNodeWithWindows == NULL);
     data->IsCenterAvailable = !is_outer_docking;
     if (src_is_visibly_splitted && (!host_node || !host_node->IsEmpty()))
@@ -11837,6 +11847,17 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
         DockNodeTreeUpdateSplitter(child_1);
 }
 
+ImGuiDockNode* ImGui::DockNodeTreeFindFallbackLeafNode(ImGuiDockNode* node)
+{
+    if (node->IsLeafNode())
+        return node;
+    if (ImGuiDockNode* leaf_node = DockNodeTreeFindFallbackLeafNode(node->ChildNodes[0]))
+        return leaf_node;
+    if (ImGuiDockNode* leaf_node = DockNodeTreeFindFallbackLeafNode(node->ChildNodes[1]))
+        return leaf_node;
+    return NULL;
+}
+
 ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
 {
     if (!node->IsVisible)
@@ -11856,6 +11877,16 @@ ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
         return hovered_node;
     if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[1], pos))
         return hovered_node;
+
+    // There is an edge case when docking into a dockspace which only has inactive nodes (because none of the windows are active)
+    // In this case we need to fallback into any leaf mode, possibly the central node.
+    if (node->IsDockSpace && node->IsRootNode())
+    {
+        if (node->CentralNode && node->IsLeafNode()) // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
+            return node->CentralNode;
+        return DockNodeTreeFindFallbackLeafNode(node);
+    }
+    
     return NULL;
 }
 
