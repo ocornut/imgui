@@ -1240,9 +1240,12 @@ struct ImGuiIO
     // (the imgui_impl_xxxx back-end files are setting those up for you)
     //------------------------------------------------------------------
 
-    // Optional: Platform/Renderer back-end name (informational only! will be displayed in About Window)
-    const char* BackendPlatformName;
-    const char* BackendRendererName;
+    // Optional: Platform/Renderer back-end name (informational only! will be displayed in About Window) + User data for back-end/wrappers to store their own stuff.
+    const char* BackendPlatformName;        // = NULL
+    const char* BackendRendererName;        // = NULL
+    void*       BackendPlatformUserData;    // = NULL
+    void*       BackendRendererUserData;    // = NULL
+    void*       BackendLanguageUserData;    // = NULL
 
     // Optional: Access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
@@ -1253,7 +1256,7 @@ struct ImGuiIO
     // Optional: Notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME on Windows)
     // (default to use native imm32 api on Windows)
     void        (*ImeSetInputScreenPosFn)(int x, int y);
-    void*       ImeWindowHandle;                // (Windows) Set this to your HWND to get automatic IME cursor positioning.
+    void*       ImeWindowHandle;            // (Windows) Set this to your HWND to get automatic IME cursor positioning.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     // [OBSOLETE since 1.60+] Rendering function, will be automatically called in Render(). Please call your rendering function yourself now!
