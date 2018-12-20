@@ -37,6 +37,8 @@ Breaking Changes:
 
 - Renamed io.ConfigResizeWindowsFromEdges to io.ConfigWindowsResizeFromEdges and removed its [Beta] mark.
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
+- Made it illegal to call Begin("") with an empty string. This somehow accidentally worked before but had various 
+  undesirable side-effect as the window would have ID zero. In particular it is causing problems in viewport/docking branches.
 
 Other Changes:
 - Added BETA api for Tab Bar/Tabs widgets: (#261, #351)
