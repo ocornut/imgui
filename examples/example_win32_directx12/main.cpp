@@ -292,16 +292,16 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
+
     // Setup Platform/Renderer bindings
     ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplDX12_Init(g_pd3dDevice, NUM_FRAMES_IN_FLIGHT, 
         DXGI_FORMAT_R8G8B8A8_UNORM,
         g_pd3dSrvDescHeap->GetCPUDescriptorHandleForHeapStart(), 
         g_pd3dSrvDescHeap->GetGPUDescriptorHandleForHeapStart());
-
-    // Setup Style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
