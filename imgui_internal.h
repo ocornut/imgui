@@ -665,7 +665,7 @@ struct ImGuiViewportP : public ImGuiViewport
     short               PlatformMonitor;
     bool                PlatformWindowCreated;
     bool                PlatformWindowMinimized;
-    ImGuiWindow*        Window;                   // Set when the viewport is owned by a window
+    ImGuiWindow*        Window;                   // Set when the viewport is owned by a window (and ImGuiViewportFlags_CanHostOtherWindows is NOT set)
     ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;

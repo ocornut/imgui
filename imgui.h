@@ -989,8 +989,8 @@ enum ImGuiConfigFlags_
     // When using viewports it is recommended that your default value for ImGuiCol_WindowBg is opaque (Alpha=1.0) so transition to a viewport won't be noticeable.
     ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
     ImGuiConfigFlags_ViewportsNoTaskBarIcon = 1 << 11,  // Disable task bars icons for all secondary viewports (will set ImGuiViewportFlags_NoTaskBarIcon on them)
-    ImGuiConfigFlags_ViewportsNoMerge       = 1 << 12,  // All floating windows will always create their own viewport and platform window.
-    ImGuiConfigFlags_ViewportsDecoration    = 1 << 13,  // FIXME [Broken] Enable platform decoration for all secondary viewports (will not set ImGuiViewportFlags_NoDecoration on them). This currently doesn't behave well in Windows because 1) By default the new window animation get in the way of our transitions, 2) It enable a minimum window size which tends to breaks resizing. You can workaround the later by setting style.WindowMinSize to a bigger value.
+    ImGuiConfigFlags_ViewportsDecoration    = 1 << 12,  // FIXME [Broken] Enable platform decoration for all secondary viewports (will not set ImGuiViewportFlags_NoDecoration on them). This currently doesn't behave well in Windows because 1) By default the new window animation get in the way of our transitions, 2) It enable a minimum window size which tends to breaks resizing. You can workaround the later by setting style.WindowMinSize to a bigger value.
+    ImGuiConfigFlags_ViewportsNoMerge       = 1 << 13,  // All floating windows will always create their own viewport and platform window.
     ImGuiConfigFlags_DpiEnableScaleViewports= 1 << 14,  // FIXME-DPI: Reposition and resize imgui windows when the DpiScale of a viewport changed (mostly useful for the main viewport hosting other window). Note that resizing the main window itself is up to your application.
     ImGuiConfigFlags_DpiEnableScaleFonts    = 1 << 15,  // FIXME-DPI: Request bitmap-scaled fonts to match DpiScale. This is a very low-quality workaround. The correct way to handle DPI is _currently_ to replace the atlas and/or fonts in the Platform_OnChangedViewport callback, but this is all early work in progress.
 
@@ -2217,11 +2217,11 @@ struct ImGuiPlatformIO
 enum ImGuiViewportFlags_
 {
     ImGuiViewportFlags_None                     = 0,
-    ImGuiViewportFlags_NoDecoration             = 1 << 0,   // Platform Window: Disable platform decorations: title bar, borders, etc.
-    ImGuiViewportFlags_NoFocusOnAppearing       = 1 << 1,   // Platform Window: Don't take focus when created.
-    ImGuiViewportFlags_NoInputs                 = 1 << 2,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
-    ImGuiViewportFlags_NoTaskBarIcon            = 1 << 3,   // Platform Window: Disable platform task bar icon (for popups, menus, or all windows if ImGuiConfigFlags_ViewportsNoTaskBarIcons if set)
-    ImGuiViewportFlags_NoRendererClear          = 1 << 4,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead.
+    ImGuiViewportFlags_NoDecoration             = 1 << 0,   // Platform Window: Disable platform decorations: title bar, borders, etc. (generally set all windows, but if ImGuiConfigFlags_ViewportsDecoration is set we only set this on popups/tooltips)
+    ImGuiViewportFlags_NoTaskBarIcon            = 1 << 1,   // Platform Window: Disable platform task bar icon (generally set on popups/tooltips, or all windows if ImGuiConfigFlags_ViewportsNoTaskBarIcon is set)
+    ImGuiViewportFlags_NoFocusOnAppearing       = 1 << 2,   // Platform Window: Don't take focus when created.
+    ImGuiViewportFlags_NoInputs                 = 1 << 3,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
+    ImGuiViewportFlags_NoRendererClear          = 1 << 4,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead (because we will fill it entirely).
     ImGuiViewportFlags_TopMost                  = 1 << 5    // Platform Window: Display on top (for tooltips only)
 };
 
