@@ -3812,10 +3812,12 @@ void ImGui::EndFrame()
         viewport->LastPos = viewport->Pos;
         if (viewport->LastFrameActive < g.FrameCount || viewport->Size.x <= 0.0f || viewport->Size.y <= 0.0f)
             continue;
-        if (viewport->Window && !IsWindowActiveAndVisible(viewport->Window))
+        if (viewport->Window && !IsWindowActiveAndVisible(viewport->Window)) // Will be destroyed in UpdatePlatformWindows()
             continue;
         if (i > 0)
             IM_ASSERT(viewport->Window != NULL);
+
+        // Add to user-facing list
         g.PlatformIO.Viewports.push_back(viewport);
     }
     g.Viewports[0]->ClearRequestFlags(); // Clear main viewport flags because UpdatePlatformWindows() won't do it and may not even be called
@@ -7680,11 +7682,9 @@ void ImGui::UpdatePlatformWindows()
             DestroyPlatformWindow(viewport);
             continue;
         }
-        if (viewport->LastFrameActive < g.FrameCount)
-            continue;
 
         // New windows that appears directly in a new viewport won't always have a size on their first frame
-        if (viewport->Size.x <= 0 || viewport->Size.y <= 0)
+        if (viewport->LastFrameActive < g.FrameCount || viewport->Size.x <= 0 || viewport->Size.y <= 0)
             continue;
 
         // Update common viewport flags for owned viewports

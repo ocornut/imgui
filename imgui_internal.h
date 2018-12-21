@@ -651,6 +651,7 @@ enum ImGuiViewportFlagsPrivate_
 };
 
 // ImGuiViewport Private/Internals fields (cardinal sin: we are using inheritance!)
+// Note that every instance of ImGuiViewport is in fact a ImGuiViewportP.
 struct ImGuiViewportP : public ImGuiViewport
 {
     int                 Idx;
