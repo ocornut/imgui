@@ -3734,11 +3734,11 @@ void ImGui::PopClipRect()
     window->ClipRect = window->DrawList->_ClipRectStack.back();
 }
 
-static ImGuiWindow* FindFromMostVisibleChildWindow(ImGuiWindow* window)
+static ImGuiWindow* FindFrontMostVisibleChildWindow(ImGuiWindow* window)
 {
     for (int n = window->DC.ChildWindows.Size - 1; n >= 0; n--)
         if (IsWindowActiveAndVisible(window->DC.ChildWindows[n]))
-            return FindFromMostVisibleChildWindow(window->DC.ChildWindows[n]);
+            return FindFrontMostVisibleChildWindow(window->DC.ChildWindows[n]);
     return window;
 }
 
@@ -3792,7 +3792,7 @@ void ImGui::EndFrame()
     {
         // Choose a draw list that will be front-most across all our children
         ImGuiWindow* window = g.NavWindowingTargetAnim;
-        ImDrawList* draw_list = FindFromMostVisibleChildWindow(window->RootWindow)->DrawList;
+        ImDrawList* draw_list = FindFrontMostVisibleChildWindow(window->RootWindow)->DrawList;
         draw_list->PushClipRectFullScreen();
 
         // Docking: draw modal whitening background on other nodes of a same dock tree
