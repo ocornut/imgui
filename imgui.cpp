@@ -10695,6 +10695,7 @@ static void DockNodeUpdateScanRec(ImGuiDockNode* node, ImGuiDockNodeUpdateScanRe
     if (node->IsCentralNode)
     {
         IM_ASSERT(results->CentralNode == NULL); // Should be only one
+        IM_ASSERT(node->IsLeafNode() && "If you get this assert: your .ini file may have been damaged by an old bug. OR please submit repro of actions leading to this");
         results->CentralNode = node;
     }
     if (results->CountNodesWithWindows > 1 && results->CentralNode != NULL)
@@ -11916,7 +11917,7 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
                 dock_id = new_node->CentralNode->ID;
             else
                 dock_id = new_node->LastFocusedNodeID;
-        }
+            }
 
     if (window->DockId == dock_id)
         return;
