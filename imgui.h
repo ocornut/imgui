@@ -15,7 +15,7 @@ Index of this file:
 // Flags & Enumerations
 // ImGuiStyle
 // ImGuiIO
-// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload, ImGuiDockFamily)
+// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload, ImGuiWindowClass)
 // Obsolete functions
 // Helpers (ImVector, ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
 // Draw List API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListFlags, ImDrawList, ImDrawData)
@@ -102,7 +102,7 @@ struct ImColor;                     // Helper functions to create a color that c
 typedef void* ImTextureID;          // User data to identify a texture (this is whatever to you want it to be! read the FAQ about ImTextureID in imgui.cpp)
 #endif
 struct ImGuiContext;                // ImGui context (opaque)
-struct ImGuiDockFamily;             // Docking family for dock filtering
+struct ImGuiWindowClass;            // Window class/family for docking filtering or high-level identifiation of windows by user
 struct ImGuiIO;                     // Main configuration and I/O between your application and ImGui
 struct ImGuiInputTextCallbackData;  // Shared state of InputText() when using custom ImGuiInputTextCallback (rare/advanced use)
 struct ImGuiListClipper;            // Helper to manually clip large list of items
@@ -578,10 +578,10 @@ namespace ImGui
     // Note: you DO NOT need to call DockSpace() to use most Docking facilities! 
     // To dock windows: hold SHIFT anywhere while moving windows (if io.ConfigDockingWithShift == true) or drag windows from their title bar (if io.ConfigDockingWithShift = false)
     // Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
-    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, const ImGuiDockFamily* dock_family = NULL);
-    IMGUI_API ImGuiID       DockSpaceOverViewport(ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags dockspace_flags = 0, const ImGuiDockFamily* dock_family = NULL);
+    IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, const ImGuiWindowClass* window_class = NULL);
+    IMGUI_API ImGuiID       DockSpaceOverViewport(ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags dockspace_flags = 0, const ImGuiWindowClass* window_class = NULL);
     IMGUI_API void          SetNextWindowDockId(ImGuiID dock_id, ImGuiCond cond = 0);           // set next window dock id (FIXME-DOCK)
-    IMGUI_API void          SetNextWindowDockFamily(const ImGuiDockFamily* dock_family);        // set next window user type (docking filters by same user_type)
+    IMGUI_API void          SetNextWindowClass(const ImGuiWindowClass* window_class);           // set next window class / user type (docking filters by same user_type)
     IMGUI_API ImGuiID       GetWindowDockId();
     IMGUI_API bool          IsWindowDocked();                                                   // is current window docked into another window? 
 
@@ -1470,14 +1470,13 @@ struct ImGuiPayload
     bool IsDelivery() const                 { return Delivery; }
 };
 
-// [BETA] For SetNextWindowDockFamily() and DockSpace() function
-struct ImGuiDockFamily
+// [BETA] Rarely used, very advanced uses only. Use with SetNextWindowClass() and DockSpace() functions.
+struct ImGuiWindowClass
 {
-    ImGuiID FamilyId;                   // 0 = unaffiliated
-    bool    CompatibleWithFamilyZero;   // true = can be docked/merged with an unaffiliated window
+    ImGuiID             ClassId;                // User data. 0 = Default class (unclassed)
+    bool                DockingAllowUnclassed;  // true = can be docked/merged with an unclassed window
 
-    ImGuiDockFamily()                                                           { FamilyId = 0; CompatibleWithFamilyZero = true; }
-    ImGuiDockFamily(ImGuiID family_id, bool compatible_with_family_zero = true) { FamilyId = family_id; CompatibleWithFamilyZero = compatible_with_family_zero; }
+    ImGuiWindowClass()  { ClassId = 0; DockingAllowUnclassed = true; }
 };
 
 //-----------------------------------------------------------------------------

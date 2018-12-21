@@ -38,7 +38,7 @@ HOW TO UPDATE?
     Set with `io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;`.
   - Added DockSpace() API.
   - Added ImGuiDockNodeFlags flags for DockSpace().
-  - Added SetNextWindowDock(), SetNextWindowDockFamily() API.
+  - Added SetNextWindowDock(), SetNextWindowClass() API.
   - Added GetWindowDockId(), IsWindowDocked() API.
   - Added ImGuiWindowFlags_NoDocking window flag to disable the possibility for a window to be docked.
     Popup, Menu and Child windows always have the ImGuiWindowFlags_NoDocking flag set.

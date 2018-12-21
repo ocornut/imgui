@@ -145,7 +145,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: B- tab bar: make selected tab always shows its full title?
  - dock: B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
  - dock: B- nav: design interactions so nav controls can dock/undock
- - dock: B- dockspace: flag to lock the dock tree and/or sizes (ImGuiDockFlags_Locked?)
+ - dock: B- dockspace: flag to lock the dock tree and/or sizes (ImGuiDockNodeFlags_Locked?)
  - dock: B- reintroduce collapsing a floating dock node. also collapsing a docked dock node!
  - dock: B- allow dragging a non-floating dock node by clicking on the title-bar-looking section (not just the collapse/menu button)
  - dock: B- option to remember undocked window size? (instead of keeping their docked size) (relate to #2104)
