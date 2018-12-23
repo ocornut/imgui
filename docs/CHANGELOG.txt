@@ -62,6 +62,10 @@ Other Changes:
   This affects clamping window within the visible area: with this option enabled title bars need to be visible. (#899)
 - Window: Fixed using SetNextWindowPos() on a child window (which wasn't really documented) position the cursor as expected
   in the parent window, so there is no mismatch between the layout in parent and the position of the child window. 
+- Error recovery: Extraneous/undesired calls to End() are now being caught by an assert in the End() function itself 
+  at the call site (instead of being reported in EndFrame). Past the assert, they don't lead to crashes any more. (#1651)
+- Error recovery: Missing calls to End(), pass the assert, should not lead to crashes or to the fallback Debug window 
+  appearing on screen, (#1651).
 - IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by back-ends.
 - Style: Tweaked default value of style.DisplayWindowPadding from (20,20) to (19,19) so the default style as a value
   which is the same as the title bar height.
