@@ -842,17 +842,13 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
 
-    if (points_count < 2) {
-        return;
-    }
-
     if (Flags & ImDrawListFlags_AntiAliasedFill)
     {
         // Anti-aliased Fill
         const float AA_SIZE = 1.0f;
         const ImU32 col_trans = col & ~IM_COL32_A_MASK;
-        const int idx_count = (points_count-2)*3 + points_count*6;
-        const int vtx_count = (points_count*2);
+        const int idx_count = (points_count - 2) * 3 + points_count * 6;
+        const int vtx_count = (points_count * 2);
         PrimReserve(idx_count, vtx_count);
 
         // Add indexes for fill
@@ -865,24 +861,23 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
 
         // Compute normals
+        ImVec2* temp_normals = (ImVec2*)alloca(points_count * sizeof(ImVec2));
         for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
         {
             const ImVec2& p0 = points[i0];
             const ImVec2& p1 = points[i1];
             ImVec2 diff = p1 - p0;
             diff *= ImInvLength(diff, 1.0f);
-            _VtxWritePtr[i0 << 1].pos.x = diff.y;
-            _VtxWritePtr[i0 << 1].pos.y = -diff.x;
+            temp_normals[i0].x = diff.y;
+            temp_normals[i0].y = -diff.x;
         }
-
-        ImVec2 n0 = _VtxWritePtr[(points_count-1) << 1].pos;
 
         for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
         {
             // Average normals
-            const ImVec2& n1 = _VtxWritePtr[0].pos;
+            const ImVec2& n0 = temp_normals[i0];
+            const ImVec2& n1 = temp_normals[i1];
             ImVec2 dm = (n0 + n1) * 0.5f;
-            n0 = n1;
             float dmr2 = dm.x*dm.x + dm.y*dm.y;
             if (dmr2 > 0.000001f)
             {
@@ -907,7 +902,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
     else
     {
         // Non Anti-aliased Fill
-        const int idx_count = (points_count-2)*3;
+        const int idx_count = (points_count - 2) * 3;
         const int vtx_count = points_count;
         PrimReserve(idx_count, vtx_count);
         for (int i = 0; i < vtx_count; i++)
@@ -917,7 +912,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
         for (int i = 2; i < points_count; i++)
         {
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+i-1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+i);
+            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + i - 1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx + i);
             _IdxWritePtr += 3;
         }
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
