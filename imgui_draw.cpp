@@ -861,7 +861,7 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         }
 
         // Compute normals
-        ImVec2* temp_normals = (ImVec2*)alloca(points_count * sizeof(ImVec2));
+        ImVec2* temp_normals = (ImVec2*)((size_t)(_VtxWritePtr + vtx_count) & ~(alignof(ImVec2) - 1)) - points_count;
         for (int i0 = points_count - 1, i1 = 0; i1 < points_count; i0 = i1++)
         {
             const ImVec2& p0 = points[i0];
