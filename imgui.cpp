@@ -1012,6 +1012,7 @@ static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
+static void             EndFrameDrawDimmedBackgrounds();
 
 // Viewports
 const ImGuiID           IMGUI_VIEWPORT_DEFAULT_ID = 0x11111111; // Using an arbitrary constant instead of e.g. ImHash("ViewportDefault", 0); so it's easier to spot in the debugger. The exact value doesn't matter.
@@ -3045,7 +3046,7 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
 
 // Handle mouse moving window
 // Note: moving window with the navigation keys (Square + d-pad / CTRL+TAB + Arrows) are processed in NavUpdateWindowing()
-void ImGui::UpdateMouseMovingWindow()
+void ImGui::UpdateMouseMovingWindowNewFrame()
 {
     ImGuiContext& g = *GImGui;
     if (g.MovingWindow != NULL)
@@ -3094,6 +3095,56 @@ void ImGui::UpdateMouseMovingWindow()
             if (!g.IO.MouseDown[0])
                 ClearActiveID();
         }
+    }
+}
+
+// Initiate moving window, handle left-click and right-click focus
+void ImGui::UpdateMouseMovingWindowEndFrame()
+{
+    // Initiate moving window
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveId != 0 || g.HoveredId != 0)
+        return;
+
+    // Unless we just made a window/popup appear
+    if (g.NavWindow && g.NavWindow->Appearing)
+        return;
+
+    // Click to focus window and start moving (after we're done with all our widgets)
+    if (g.IO.MouseClicked[0])
+    {
+        if (g.HoveredRootWindow != NULL)
+        {
+            StartMouseMovingWindow(g.HoveredWindow);
+            if (g.IO.ConfigWindowsMoveFromTitleBarOnly && (!(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar) || g.HoveredWindow->RootWindowDockStop->DockIsActive))
+                if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
+                    g.MovingWindow = NULL;
+        }
+        else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
+        {
+            FocusWindow(NULL);  // Clicking on void disable focus
+        }
+    }
+
+    // With right mouse button we close popups without changing focus
+    // (The left mouse button path calls FocusWindow which will lead NewFrame->ClosePopupsOverWindow to trigger)
+    if (g.IO.MouseClicked[1])
+    {
+        // Find the top-most window between HoveredWindow and the front most Modal Window.
+        // This is where we can trim the popup stack.
+        ImGuiWindow* modal = GetFrontMostPopupModal();
+        bool hovered_window_above_modal = false;
+        if (modal == NULL)
+            hovered_window_above_modal = true;
+        for (int i = g.Windows.Size - 1; i >= 0 && hovered_window_above_modal == false; i--)
+        {
+            ImGuiWindow* window = g.Windows[i];
+            if (window == modal)
+                break;
+            if (window == g.HoveredWindow)
+                hovered_window_above_modal = true;
+        }
+        ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal);
     }
 }
 
@@ -3461,7 +3512,8 @@ void ImGui::NewFrame()
     UpdateHoveredWindowAndCaptureFlags();
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
-    UpdateMouseMovingWindow();
+    UpdateMouseMovingWindowNewFrame();
+    UpdateHoveredWindowAndCaptureFlags();
 
     // Background darkening/whitening
     if (GetFrontMostPopupModal() != NULL || (g.NavWindowingTarget != NULL && g.NavWindowingHighlightAlpha > 0.0f))
@@ -3516,6 +3568,7 @@ void ImGui::NewFrame()
     // This fallback is particularly important as it avoid ImGui:: calls from crashing.
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
+    g.FrameScopePushedImplicitWindow = true;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_PostNewFrame();
@@ -3768,6 +3821,56 @@ static ImGuiWindow* FindFrontMostVisibleChildWindow(ImGuiWindow* window)
     return window;
 }
 
+static void ImGui::EndFrameDrawDimmedBackgrounds()
+{
+    ImGuiContext& g = *GImGui;
+
+    // Draw modal whitening background on _other_ viewports than the one the modal is one
+    ImGuiWindow* modal_window = GetFrontMostPopupModal();
+    const bool dim_bg_for_modal = (modal_window != NULL);
+    const bool dim_bg_for_window_list = (g.NavWindowingTargetAnim != NULL);
+    if (dim_bg_for_modal || dim_bg_for_window_list)
+        for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
+        {
+            ImGuiViewportP* viewport = g.Viewports[viewport_n];
+            if (modal_window && viewport == modal_window->Viewport)
+                continue;
+            if (g.NavWindowingList && viewport == g.NavWindowingList->Viewport)
+                continue;
+            if (g.NavWindowingTargetAnim && viewport == g.NavWindowingTargetAnim->Viewport)
+                continue;
+            ImDrawList* draw_list = GetOverlayDrawList(viewport);
+            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
+            draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
+        }
+
+    // Draw modal whitening background between CTRL-TAB list
+    if (dim_bg_for_window_list)
+    {
+        // Choose a draw list that will be front-most across all our children
+        ImGuiWindow* window = g.NavWindowingTargetAnim;
+        ImDrawList* draw_list = FindFrontMostVisibleChildWindow(window->RootWindow)->DrawList;
+        draw_list->PushClipRectFullScreen();
+
+        // Docking: draw modal whitening background on other nodes of a same dock tree
+        if (window->RootWindowDockStop->DockIsActive)
+            if (window->RootWindow != window->RootWindowDockStop)
+                RenderRectFilledWithHole(draw_list, window->RootWindow->Rect(), window->RootWindowDockStop->Rect(), GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio), g.Style.WindowRounding);
+
+        // Draw navigation selection/windowing rectangle border
+        float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
+        ImRect bb = window->Rect();
+        bb.Expand(g.FontSize);
+        if (bb.Contains(window->Viewport->GetRect())) // If a window fits the entire viewport, adjust its highlight inward
+        {
+            bb.Expand(-g.FontSize - 1.0f);
+            rounding = window->WindowRounding;
+        }
+        draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
+        draw_list->PopClipRect();
+    }
+}
+
 // This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
 void ImGui::EndFrame()
 {
@@ -3776,9 +3879,6 @@ void ImGui::EndFrame()
     if (g.FrameCountEnded == g.FrameCount)          // Don't process EndFrame() multiple times.
         return;
     IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()?");
-
-    g.FrameScopeActive = false;
-    g.FrameCountEnded = g.FrameCount;
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.PlatformIO.Platform_SetImeInputPos && ImLengthSqr(g.PlatformImePos - g.PlatformImeLastPos) > 0.0001f && g.PlatformImePosViewport && g.PlatformImePosViewport->PlatformWindowCreated)
@@ -3805,59 +3905,15 @@ void ImGui::EndFrame()
     }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
+    g.FrameScopePushedImplicitWindow = false;
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
 
-    // Docking
-    DockContextEndFrame(&g);
+    // Draw modal whitening background on _other_ viewports than the one the modal is one
+    EndFrameDrawDimmedBackgrounds();
 
-    // Draw modal whitening background on _other_ viewports than the one the modal or target are on
-    ImGuiWindow* modal_window = GetFrontMostPopupModal();
-    const bool dim_bg_for_modal = (modal_window != NULL);
-    const bool dim_bg_for_window_list = (g.NavWindowingTargetAnim != NULL);
-    if (dim_bg_for_modal || dim_bg_for_window_list)
-        for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
-        {
-            ImGuiViewportP* viewport = g.Viewports[viewport_n];
-            if (modal_window && viewport == modal_window->Viewport)
-                continue;
-            if (g.NavWindowingList && viewport == g.NavWindowingList->Viewport)
-                continue;
-            if (g.NavWindowingTargetAnim && viewport == g.NavWindowingTargetAnim->Viewport)
-                continue;
-            ImDrawList* draw_list = GetOverlayDrawList(viewport);
-            const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
-            draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
-        }
-
-    // CTRL-TAB
-    if (dim_bg_for_window_list)
-    {
-        // Choose a draw list that will be front-most across all our children
-        ImGuiWindow* window = g.NavWindowingTargetAnim;
-        ImDrawList* draw_list = FindFrontMostVisibleChildWindow(window->RootWindow)->DrawList;
-        draw_list->PushClipRectFullScreen();
-
-        // Docking: draw modal whitening background on other nodes of a same dock tree
-        if (window->RootWindowDockStop->DockIsActive)
-            if (window->RootWindow != window->RootWindowDockStop)
-                RenderRectFilledWithHole(draw_list, window->RootWindow->Rect(), window->RootWindowDockStop->Rect(), GetColorU32(ImGuiCol_NavWindowingDimBg, g.DimBgRatio), g.Style.WindowRounding);
-
-        // Draw navigation selection/windowing rectangle border
-        float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
-        ImRect bb = window->Rect();
-        bb.Expand(g.FontSize);
-        if (bb.Contains(window->Viewport->GetRect())) // If a window fits the entire viewport, adjust its highlight inward
-        {
-            bb.Expand(-g.FontSize - 1.0f);
-            rounding = window->WindowRounding;
-        }
-        draw_list->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
-        draw_list->PopClipRect();
-    }
-
-    // Show CTRL+TAB list
+    // Show CTRL+TAB list window
     if (g.NavWindowingTarget)
         NavUpdateWindowingList();
 
@@ -3880,49 +3936,12 @@ void ImGui::EndFrame()
         g.DragDropWithinSourceOrTarget = false;
     }
 
-    // Initiate moving window
-    if (g.ActiveId == 0 && g.HoveredId == 0)
-    {
-        if (!g.NavWindow || !g.NavWindow->Appearing) // Unless we just made a window/popup appear
-        {
-            // Click to focus window and start moving (after we're done with all our widgets)
-            if (g.IO.MouseClicked[0])
-            {
-                if (g.HoveredRootWindow != NULL)
-                {
-                    StartMouseMovingWindow(g.HoveredWindow);
-                    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && (!(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar) || g.HoveredWindow->RootWindowDockStop->DockIsActive))
-                        if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
-                            g.MovingWindow = NULL;
-                }
-                else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
-                {
-                    FocusWindow(NULL);  // Clicking on void disable focus
-                }
-            }
+    // End frame
+    g.FrameScopeActive = false;
+    g.FrameCountEnded = g.FrameCount;
 
-            // With right mouse button we close popups without changing focus
-            // (The left mouse button path calls FocusWindow which will lead NewFrame->ClosePopupsOverWindow to trigger)
-            if (g.IO.MouseClicked[1])
-            {
-                // Find the top-most window between HoveredWindow and the front most Modal Window.
-                // This is where we can trim the popup stack.
-                ImGuiWindow* modal = GetFrontMostPopupModal();
-                bool hovered_window_above_modal = false;
-                if (modal == NULL)
-                    hovered_window_above_modal = true;
-                for (int i = g.Windows.Size - 1; i >= 0 && hovered_window_above_modal == false; i--)
-                {
-                    ImGuiWindow* window = g.Windows[i];
-                    if (window == modal)
-                        break;
-                    if (window == g.HoveredWindow)
-                        hovered_window_above_modal = true;
-                }
-                ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal);
-            }
-        }
-    }
+    // Initiate moving window + handle left-click and right-click focus
+    UpdateMouseMovingWindowEndFrame();
 
     // Update user-facing viewport list (g.Viewports -> g.PlatformIO.Viewports after filtering out some)
     UpdateViewportsEndFrame();
@@ -5800,11 +5819,12 @@ void ImGui::End()
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.CurrentWindowStack.Size <= 1 && g.FrameScopeActive)
+    if (g.CurrentWindowStack.Size <= 1 && g.FrameScopePushedImplicitWindow)
     {
         IM_ASSERT(g.CurrentWindowStack.Size > 1 && "Calling End() too many times!");
         return; // FIXME-ERRORHANDLING
     }
+    IM_ASSERT(g.CurrentWindowStack.Size > 0);
 
     ImGuiWindow* window = g.CurrentWindow;
 
@@ -10113,12 +10133,6 @@ void ImGui::DockContextNewFrameUpdateDocking(ImGuiContext* ctx)
         if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
             if (!node->IsDockSpace && node->IsRootNode())
                 DockNodeUpdate(node);
-}
-
-// Docking context update function, called by EndFrame()
-void ImGui::DockContextEndFrame(ImGuiContext* ctx)
-{
-    (void)ctx;
 }
 
 static ImGuiDockNode* ImGui::DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id)

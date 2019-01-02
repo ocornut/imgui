@@ -824,7 +824,8 @@ struct ImGuiDockNode
 struct ImGuiContext
 {
     bool                    Initialized;
-    bool                    FrameScopeActive;                   // Set by NewFrame(), cleared by EndFrame()/Render()
+    bool                    FrameScopeActive;                   // Set by NewFrame(), cleared by EndFrame()
+    bool                    FrameScopePushedImplicitWindow;     // Set by NewFrame(), cleared by EndFrame()
     bool                    FontAtlasOwnedByContext;            // Io.Fonts-> is owned by the ImGuiContext and will be destructed along with it.
     ImGuiIO                 IO;
     ImGuiPlatformIO         PlatformIO;
@@ -1003,7 +1004,7 @@ struct ImGuiContext
     ImGuiContext(ImFontAtlas* shared_font_atlas)
     {
         Initialized = false;
-        FrameScopeActive = false;
+        FrameScopeActive = FrameScopePushedImplicitWindow = false;
         ConfigFlagsForFrame = ImGuiConfigFlags_None;
         Font = NULL;
         FontSize = FontBaseSize = 0.0f;
@@ -1432,7 +1433,8 @@ namespace ImGui
     // NewFrame
     IMGUI_API void          UpdateHoveredWindowAndCaptureFlags();
     IMGUI_API void          StartMouseMovingWindow(ImGuiWindow* window);
-    IMGUI_API void          UpdateMouseMovingWindow();
+    IMGUI_API void          UpdateMouseMovingWindowNewFrame();
+    IMGUI_API void          UpdateMouseMovingWindowEndFrame();
 
     // Viewports
     IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
@@ -1511,7 +1513,6 @@ namespace ImGui
     IMGUI_API void          DockContextRebuild(ImGuiContext* ctx);
     IMGUI_API void          DockContextNewFrameUpdateUndocking(ImGuiContext* ctx);
     IMGUI_API void          DockContextNewFrameUpdateDocking(ImGuiContext* ctx);
-    IMGUI_API void          DockContextEndFrame(ImGuiContext* ctx);
     IMGUI_API void          DockContextQueueUndockWindow(ImGuiContext* ctx, ImGuiWindow* window);
     IMGUI_API void          DockContextQueueUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
     inline ImGuiDockNode*   DockNodeGetRootNode(ImGuiDockNode* node) { while (node->ParentNode) node = node->ParentNode; return node; }
