@@ -10952,6 +10952,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             }
             if (node->InitFromFirstWindowViewport && node->Windows.Size > 0)
                 SetNextWindowViewport(node->Windows[0]->ViewportId);
+            SetNextWindowClass(&node->WindowClass);
 
             // Begin into the host window
             char window_label[20];
