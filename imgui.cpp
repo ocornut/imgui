@@ -4982,6 +4982,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     {
         window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
     }
+    window->WindowClass = g.NextWindowData.WindowClass;
     if (g.NextWindowData.CollapsedCond)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.FocusCond)
@@ -5179,6 +5180,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
             if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsDecoration) == 0 || (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0)
                 viewport_flags |= ImGuiViewportFlags_NoDecoration;
+
+            // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
+            window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId ? window->WindowClass.ParentViewportId : IMGUI_VIEWPORT_DEFAULT_ID;
+            if (window->WindowClass.ViewportFlagsOverrideMask)
+                viewport_flags = (viewport_flags & ~window->WindowClass.ViewportFlagsOverrideMask) | (window->WindowClass.ViewportFlagsOverrideValue & window->WindowClass.ViewportFlagsOverrideMask);
 
             // We also tell the back-end that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
             viewport_flags |= ImGuiViewportFlags_NoRendererClear;
@@ -6343,6 +6349,12 @@ void ImGui::SetNextWindowViewport(ImGuiID id)
     g.NextWindowData.ViewportId = id;
 }
 
+void ImGui::SetNextWindowClass(const ImGuiWindowClass* window_class)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.WindowClass = *window_class;
+}
+
 // In window space (not screen space!)
 ImVec2 ImGui::GetContentRegionMax()
 {
@@ -7253,7 +7265,7 @@ ImGuiViewport* ImGui::GetMainViewport()
     return g.Viewports[0];
 }
 
-ImGuiViewportP* ImGui::FindViewportByID(ImGuiID id)
+ImGuiViewport* ImGui::FindViewportByID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     for (int n = 0; n < g.Viewports.Size; n++)
@@ -7493,7 +7505,7 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiViewportP* viewport_hovered = NULL;
     if (g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport)
     {
-        viewport_hovered = g.IO.MouseHoveredViewport ? FindViewportByID(g.IO.MouseHoveredViewport) : NULL;
+        viewport_hovered = g.IO.MouseHoveredViewport ? (ImGuiViewportP*)FindViewportByID(g.IO.MouseHoveredViewport) : NULL;
         if (viewport_hovered && (viewport_hovered->Flags & ImGuiViewportFlags_NoInputs))
         {
             // Back-end failed at honoring its contract if it returned a viewport with the _NoInputs flag.
@@ -7646,7 +7658,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
         if (window->Viewport == NULL && window->ViewportId != 0)
         {
-            window->Viewport = FindViewportByID(window->ViewportId);
+            window->Viewport = (ImGuiViewportP*)FindViewportByID(window->ViewportId);
             if (window->Viewport == NULL && window->ViewportPos.x != FLT_MAX && window->ViewportPos.y != FLT_MAX)
                 window->Viewport = AddUpdateViewport(window, window->ID, window->ViewportPos, window->Size, ImGuiViewportFlags_None);
         }
@@ -7655,7 +7667,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if (g.NextWindowData.ViewportCond)
     {
         // Code explicitly request a viewport
-        window->Viewport = FindViewportByID(g.NextWindowData.ViewportId);
+        window->Viewport = (ImGuiViewportP*)FindViewportByID(g.NextWindowData.ViewportId);
         window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved yet.
     }
     else if ((flags & ImGuiWindowFlags_ChildWindow) || (flags & ImGuiWindowFlags_ChildMenu))

@@ -114,6 +114,7 @@ struct ImGuiStyle;                  // Runtime data for styling/colors
 struct ImGuiTextFilter;             // Helper to parse and apply text filters (e.g. "aaaaa[,bbbb][,ccccc]")
 struct ImGuiTextBuffer;             // Helper to hold and append into a text buffer (~string builder)
 struct ImGuiViewport;               // Viewport (generally ~1 per window to output to at the OS level. Need per-platform support to use multiple viewports)
+struct ImGuiWindowClass;            // Window class (rare/advanced uses: provide hints to the platform back-end via altered viewport flags and parent/child info)
 
 // Typedefs and Enums/Flags (declared as int for compatibility with old C++, to allow using as flags and to not pollute the top of this file)
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
@@ -276,6 +277,7 @@ namespace ImGui
     IMGUI_API void          SetNextWindowFocus();                                                       // set next window to be focused / front-most. call before Begin()
     IMGUI_API void          SetNextWindowBgAlpha(float alpha);                                          // set next window background color alpha. helper to easily modify ImGuiCol_WindowBg/ChildBg/PopupBg. you may also use ImGuiWindowFlags_NoBackground.
     IMGUI_API void          SetNextWindowViewport(ImGuiID viewport_id);                                 // set next window viewport
+    IMGUI_API void          SetNextWindowClass(const ImGuiWindowClass* window_class);                   // set next window class (rare/advanced uses: provide hints to the platform back-end via altered viewport flags and parent/child info)
     IMGUI_API void          SetWindowPos(const ImVec2& pos, ImGuiCond cond = 0);                        // (not recommended) set current window position - call within Begin()/End(). prefer using SetNextWindowPos(), as this may incur tearing and side-effects.
     IMGUI_API void          SetWindowSize(const ImVec2& size, ImGuiCond cond = 0);                      // (not recommended) set current window size - call within Begin()/End(). set to ImVec2(0,0) to force an auto-fit. prefer using SetNextWindowSize(), as this may incur tearing and minor side-effects.
     IMGUI_API void          SetWindowCollapsed(bool collapsed, ImGuiCond cond = 0);                     // (not recommended) set current window collapsed state. prefer using SetNextWindowCollapsed().
@@ -688,6 +690,7 @@ namespace ImGui
     IMGUI_API void              UpdatePlatformWindows();                                        // call in main loop. will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
     IMGUI_API void              RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport. may be reimplemented by user for custom rendering needs.
     IMGUI_API void              DestroyPlatformWindows();                                       // call DestroyWindow platform functions for all viewports. call from back-end Shutdown() if you need to close platform windows before imgui shutdown. otherwise will be called by DestroyContext().
+    IMGUI_API ImGuiViewport*    FindViewportByID(ImGuiID id);                                   // this is a helper for back-ends.
     IMGUI_API ImGuiViewport*    FindViewportByPlatformHandle(void* platform_handle);            // this is a helper for back-ends. the type platform_handle is decided by the back-end (e.g. HWND, MyWindow*, GLFWwindow* etc.)
 
 } // namespace ImGui
@@ -1428,6 +1431,18 @@ struct ImGuiPayload
     bool IsDataType(const char* type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
     bool IsPreview() const                  { return Preview; }
     bool IsDelivery() const                 { return Delivery; }
+};
+
+// [BETA] Rarely used / very advanced uses only. Use with SetNextWindowClass() function.
+// Provide hints to the platform back-end via altered viewport flags (enable/disable OS decoration, OS task bar icons, etc.) and OS level parent/child relationships.
+struct ImGuiWindowClass
+{
+    ImGuiID             ClassId;                    // User data. 0 = Default class (unclassed)
+    ImGuiID             ParentViewportId;           // Hint for the platform back-end. If non-zero, the platform back-end can create a parent<>child relationship between the platform windows. Not conforming back-ends are free to e.g. parent every viewport to the main viewport or not.
+    ImGuiViewportFlags  ViewportFlagsOverrideMask;  // Viewport flags to override when a window of this class owns a viewport. This allows you to enforce OS decoration or task bar icon, override the defaults on a per-window basis.
+    ImGuiViewportFlags  ViewportFlagsOverrideValue; // Viewport flags values to override when a window of this class owns a viewport.
+
+    ImGuiWindowClass()  { ClassId = 0; ParentViewportId = 0; ViewportFlagsOverrideMask = ViewportFlagsOverrideValue = 0x00; }
 };
 
 //-----------------------------------------------------------------------------
@@ -2235,6 +2250,7 @@ struct ImGuiViewport
     ImVec2              Size;                   // Size of viewport in pixel
     float               DpiScale;               // 1.0f = 96 DPI = No extra scale
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
+    ImGuiID             ParentViewportId;       // (Advanced) 0: no parent. Instruct the platform back-end to setup a parent/child relationship between platform windows.
 
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. swap chain, frame-buffers etc.)
     void*               PlatformUserData;       // void* to hold custom data structure for the OS / platform (e.g. windowing info, render context)
@@ -2243,7 +2259,7 @@ struct ImGuiViewport
     bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved by the OS / host window manager, authoritative position will be OS window position)
     bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resized by the OS / host window manager, authoritative size will be OS window size)
 
-    ImGuiViewport()     { ID = 0; Flags = 0; DpiScale = 0.0f; DrawData = NULL; RendererUserData = PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; }
+    ImGuiViewport()     { ID = 0; Flags = 0; DpiScale = 0.0f; DrawData = NULL; ParentViewportId = 0; RendererUserData = PlatformUserData = PlatformHandle = NULL; PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; }
     ~ImGuiViewport()    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
 };
 

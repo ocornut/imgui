@@ -454,8 +454,11 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformUserData = data;
 
     // Select style and parent window
-    HWND parent_window = g_hWnd;
     ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &data->DwStyle, &data->DwExStyle);
+    HWND parent_window = NULL;
+    if (viewport->ParentViewportId != 0)
+        if (ImGuiViewport* parent_viewport = ImGui::FindViewportByID(viewport->ParentViewportId))
+            parent_window = (HWND)parent_viewport->PlatformHandle;
 
     // Create window
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };

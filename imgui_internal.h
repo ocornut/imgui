@@ -714,6 +714,7 @@ struct ImGuiNextWindowData
     void*                   SizeCallbackUserData;
     float                   BgAlphaVal;
     ImGuiID                 ViewportId;
+    ImGuiWindowClass        WindowClass;
     ImVec2                  MenuBarOffsetMinVal;                // This is not exposed publicly, so we don't clear it.
 
     ImGuiNextWindowData()
@@ -733,6 +734,7 @@ struct ImGuiNextWindowData
     void    Clear()
     {
         PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = ViewportCond = 0;
+        WindowClass = ImGuiWindowClass();
     }
 };
 
@@ -1121,6 +1123,7 @@ struct IMGUI_API ImGuiWindow
     char*                   Name;
     ImGuiID                 ID;                                 // == ImHash(Name)
     ImGuiWindowFlags        Flags, FlagsPreviousFrame;          // See enum ImGuiWindowFlags_
+    ImGuiWindowClass        WindowClass;                        // Advanced users only. Set with SetNextWindowClass()
     ImGuiViewportP*         Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
     ImGuiID                 ViewportId;                         // We backup the viewport id (since the viewport may disappear or never be created if the window is inactive)
     ImVec2                  ViewportPos;                        // We backup the viewport position (since the viewport may disappear or never be created if the window is inactive)
@@ -1331,7 +1334,6 @@ namespace ImGui
     IMGUI_API void          UpdateMouseMovingWindow();
 
     // Viewports
-    IMGUI_API ImGuiViewportP*       FindViewportByID(ImGuiID id);
     IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void                  DestroyPlatformWindow(ImGuiViewportP* viewport);
     IMGUI_API void                  ShowViewportThumbnails();
