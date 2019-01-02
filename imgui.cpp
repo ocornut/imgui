@@ -3513,7 +3513,6 @@ void ImGui::NewFrame()
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
     UpdateMouseMovingWindowNewFrame();
-    UpdateHoveredWindowAndCaptureFlags();
 
     // Background darkening/whitening
     if (GetFrontMostPopupModal() != NULL || (g.NavWindowingTarget != NULL && g.NavWindowingHighlightAlpha > 0.0f))
@@ -10316,6 +10315,7 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id
 
 void ImGui::DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer)
 {
+    IM_ASSERT(target != payload);
     ImGuiDockRequest req;
     req.Type = ImGuiDockRequestType_Dock;
     req.DockTargetWindow = target;
