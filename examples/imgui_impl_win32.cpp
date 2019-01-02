@@ -185,10 +185,11 @@ static void ImGui_ImplWin32_UpdateMousePos()
     // - This is _ignoring_ viewports with the ImGuiViewportFlags_NoInputs flag (pass-through windows).
     // - This is _regardless_ of whether another viewport is focused or being dragged from.
     // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the back-end, imgui will ignore this field and infer the information by relying on the
-    // rectangles and last focused time of every viewports it knows about. It will be unaware of other windows that may be sitting between or over your windows.
+    // rectangles and last focused time of every viewports it knows about. It will be unaware of foreign windows that may be sitting between or over your windows.
     if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
         if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
-            io.MouseHoveredViewport = viewport->ID;
+            if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
+                io.MouseHoveredViewport = viewport->ID;
 }
 
 void    ImGui_ImplWin32_NewFrame()
