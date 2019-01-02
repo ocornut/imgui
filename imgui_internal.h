@@ -669,6 +669,7 @@ enum ImGuiViewportFlagsPrivate_
 };
 
 // ImGuiViewport Private/Internals fields (cardinal sin: we are using inheritance!)
+// Note that every instance of ImGuiViewport is in fact a ImGuiViewportP.
 struct ImGuiViewportP : public ImGuiViewport
 {
     int                 Idx;
@@ -682,7 +683,7 @@ struct ImGuiViewportP : public ImGuiViewport
     short               PlatformMonitor;
     bool                PlatformWindowCreated;
     bool                PlatformWindowMinimized;
-    ImGuiWindow*        Window;                   // Set when the viewport is owned by a window
+    ImGuiWindow*        Window;                   // Set when the viewport is owned by a window (and ImGuiViewportFlags_CanHostOtherWindows is NOT set)
     ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
@@ -1434,7 +1435,6 @@ namespace ImGui
     IMGUI_API void          UpdateMouseMovingWindow();
 
     // Viewports
-    IMGUI_API ImGuiViewportP*       FindViewportByID(ImGuiID id);
     IMGUI_API void                  ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale);
     IMGUI_API void                  DestroyPlatformWindow(ImGuiViewportP* viewport);
     IMGUI_API void                  ShowViewportThumbnails();
