@@ -431,33 +431,38 @@ struct ImGuiViewportDataWin32
     ~ImGuiViewportDataWin32() { IM_ASSERT(Hwnd == NULL); }
 };
 
+static void ImGui_ImplWin32_GetWin32StyleFromViewportFlags(ImGuiViewportFlags flags, DWORD* out_style, DWORD* out_ex_style)
+{
+    if (flags & ImGuiViewportFlags_NoDecoration)
+        *out_style = WS_POPUP;
+    else
+        *out_style = WS_OVERLAPPEDWINDOW;
+
+    if (flags & ImGuiViewportFlags_NoTaskBarIcon)
+        *out_ex_style = WS_EX_TOOLWINDOW;
+    else
+        *out_ex_style = WS_EX_APPWINDOW;
+
+    if (flags & ImGuiViewportFlags_TopMost)
+        *out_ex_style |= WS_EX_TOPMOST;
+}
+
 static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
 {
     ImGuiViewportDataWin32* data = IM_NEW(ImGuiViewportDataWin32)();
     viewport->PlatformUserData = data;
 
-    bool no_decoration = (viewport->Flags & ImGuiViewportFlags_NoDecoration) != 0;
-    bool no_task_bar_icon = (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon) != 0;
-    if (no_decoration)
-    {
-        data->DwStyle = WS_POPUP;
-        data->DwExStyle = no_task_bar_icon ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
-    }
-    else
-    {
-        data->DwStyle = WS_OVERLAPPEDWINDOW;
-        data->DwExStyle = no_task_bar_icon ? WS_EX_TOOLWINDOW : WS_EX_APPWINDOW;
-    }
-    if (viewport->Flags & ImGuiViewportFlags_TopMost)
-        data->DwExStyle |= WS_EX_TOPMOST;
+    // Select style and parent window
+    HWND parent_window = g_hWnd;
+    ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &data->DwStyle, &data->DwExStyle);
 
     // Create window
     RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
     ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle);
     data->Hwnd = ::CreateWindowEx(
-        data->DwExStyle, _T("ImGui Platform"), _T("No Title Yet"), data->DwStyle,   // Style, class name, window name
-        rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,        // Window area
-        g_hWnd, NULL, ::GetModuleHandle(NULL), NULL);                               // Parent window, Menu, Instance, Param
+        data->DwExStyle, _T("ImGui Platform"), _T("Untitled"), data->DwStyle,   // Style, class name, window name
+        rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top,    // Window area
+        parent_window, NULL, ::GetModuleHandle(NULL), NULL);                    // Parent window, Menu, Instance, Param
     data->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = data->Hwnd;
@@ -489,6 +494,31 @@ static void ImGui_ImplWin32_ShowWindow(ImGuiViewport* viewport)
         ::ShowWindow(data->Hwnd, SW_SHOWNA);
     else
         ::ShowWindow(data->Hwnd, SW_SHOW);
+}
+
+static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
+{
+    // (Optional) Update Win32 style if it changed _after_ creation. 
+    // Generally they won't change unless configuration flags are changed, but advanced uses (such as manually rewriting viewport flags) make this useful.
+    ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
+    IM_ASSERT(data->Hwnd != 0);
+    DWORD new_style;
+    DWORD new_ex_style;
+    ImGui_ImplWin32_GetWin32StyleFromViewportFlags(viewport->Flags, &new_style, &new_ex_style);
+
+    // Only reapply the flags that have been changed from our point of view (as other flags are being modified by Windows)
+    if (data->DwStyle != new_style || data->DwExStyle != new_ex_style)
+    {
+        data->DwStyle = new_style;
+        data->DwExStyle = new_ex_style;
+        ::SetWindowLong(data->Hwnd, GWL_STYLE, data->DwStyle);
+        ::SetWindowLong(data->Hwnd, GWL_EXSTYLE, data->DwExStyle);
+        RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
+        ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle); // Client to Screen
+        ::SetWindowPos(data->Hwnd, NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        ::ShowWindow(data->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
+        viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
+    }
 }
 
 static ImVec2 ImGui_ImplWin32_GetWindowPos(ImGuiViewport* viewport)
@@ -695,6 +725,7 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_GetWindowMinimized = ImGui_ImplWin32_GetWindowMinimized;
     platform_io.Platform_SetWindowTitle = ImGui_ImplWin32_SetWindowTitle;
     platform_io.Platform_SetWindowAlpha = ImGui_ImplWin32_SetWindowAlpha;
+    platform_io.Platform_UpdateWindow = ImGui_ImplWin32_UpdateWindow;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale; // FIXME-DPI
     platform_io.Platform_OnChangedViewport = ImGui_ImplWin32_OnChangedViewport; // FIXME-DPI
 #if HAS_WIN32_IME

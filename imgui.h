@@ -2186,6 +2186,7 @@ struct ImGuiPlatformIO
     bool    (*Platform_GetWindowMinimized)(ImGuiViewport* vp);
     void    (*Platform_SetWindowTitle)(ImGuiViewport* vp, const char* title);
     void    (*Platform_SetWindowAlpha)(ImGuiViewport* vp, float alpha);     // (Optional) Setup window transparency
+    void    (*Platform_UpdateWindow)(ImGuiViewport* vp);                    // (Optional) Called in UpdatePlatforms(). Optional hook to allow the platform back-end from doing general book-keeping every frame.
     void    (*Platform_RenderWindow)(ImGuiViewport* vp, void* render_arg);  // (Optional) Setup for render
     void    (*Platform_SwapBuffers)(ImGuiViewport* vp, void* render_arg);   // (Optional) Call Present/SwapBuffers (platform side)
     float   (*Platform_GetWindowDpiScale)(ImGuiViewport* vp);               // (Optional) [BETA] (FIXME-DPI) DPI handling: Return DPI scale for this viewport. 1.0f = 96 DPI.
