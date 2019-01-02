@@ -3349,6 +3349,7 @@ void ImGui::NewFrame()
     // This fallback is particularly important as it avoid ImGui:: calls from crashing.
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
+    g.FrameScopePushedImplicitWindow = true;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_PostNewFrame();
@@ -3580,9 +3581,6 @@ void ImGui::EndFrame()
         return;
     IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()?");
 
-    g.FrameScopeActive = false;
-    g.FrameCountEnded = g.FrameCount;
-
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.IO.ImeSetInputScreenPosFn && ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f)
     {
@@ -3607,11 +3605,12 @@ void ImGui::EndFrame()
     }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
+    g.FrameScopePushedImplicitWindow = false;
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
 
-    // Show CTRL+TAB list
+    // Show CTRL+TAB list window
     if (g.NavWindowingTarget)
         NavUpdateWindowingList();
 
@@ -3631,6 +3630,10 @@ void ImGui::EndFrame()
         SetTooltip("...");
         g.DragDropWithinSourceOrTarget = false;
     }
+
+    // End frame
+    g.FrameScopeActive = false;
+    g.FrameCountEnded = g.FrameCount;
 
     // Initiate moving window
     if (g.ActiveId == 0 && g.HoveredId == 0)
@@ -5283,11 +5286,12 @@ void ImGui::End()
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.CurrentWindowStack.Size <= 1 && g.FrameScopeActive)
+    if (g.CurrentWindowStack.Size <= 1 && g.FrameScopePushedImplicitWindow)
     {
         IM_ASSERT(g.CurrentWindowStack.Size > 1 && "Calling End() too many times!");
         return; // FIXME-ERRORHANDLING
     }
+    IM_ASSERT(g.CurrentWindowStack.Size > 0);
 
     ImGuiWindow* window = g.CurrentWindow;
 
