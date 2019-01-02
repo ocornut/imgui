@@ -6263,7 +6263,7 @@ bool ImGui::IsWindowFocused(ImGuiFocusedFlags flags)
     }
 }
 
-ImGuiID ImGui::GetWindowDockId()
+ImGuiID ImGui::GetWindowDockID()
 {
     ImGuiContext& g = *GImGui;
     return g.CurrentWindow->DockId;
@@ -6524,7 +6524,7 @@ void ImGui::SetNextWindowViewport(ImGuiID id)
     g.NextWindowData.ViewportId = id;
 }
 
-void ImGui::SetNextWindowDockId(ImGuiID id, ImGuiCond cond)
+void ImGui::SetNextWindowDockID(ImGuiID id, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
     g.NextWindowData.DockCond = cond ? cond : ImGuiCond_Always;
