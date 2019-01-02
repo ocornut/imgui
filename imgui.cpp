@@ -3580,15 +3580,37 @@ void ImGui::EndFrame()
         return;
     IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()?");
 
-    g.FrameScopeActive = false;
-    g.FrameCountEnded = g.FrameCount;
-
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.IO.ImeSetInputScreenPosFn && ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f)
     {
         g.IO.ImeSetInputScreenPosFn((int)g.PlatformImePos.x, (int)g.PlatformImePos.y);
         g.PlatformImeLastPos = g.PlatformImePos;
     }
+
+    // Show CTRL+TAB list window
+    if (g.NavWindowingTarget)
+        NavUpdateWindowingList();
+
+    // Drag and Drop: Elapse payload (if delivered, or if source stops being submitted)
+    if (g.DragDropActive)
+    {
+        bool is_delivered = g.DragDropPayload.Delivery;
+        bool is_elapsed = (g.DragDropPayload.DataFrameCount + 1 < g.FrameCount) && ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceAutoExpirePayload) || !IsMouseDown(g.DragDropMouseButton));
+        if (is_delivered || is_elapsed)
+            ClearDragDrop();
+    }
+
+    // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
+    if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
+    {
+        g.DragDropWithinSourceOrTarget = true;
+        SetTooltip("...");
+        g.DragDropWithinSourceOrTarget = false;
+    }
+
+    // End the frame scope. From this point we are not allowed to call Begin() any more.
+    g.FrameScopeActive = false;
+    g.FrameCountEnded = g.FrameCount;
 
     // Report when there is a mismatch of Begin/BeginChild vs End/EndChild calls. Important: Remember that the Begin/BeginChild API requires you
     // to always call End/EndChild even if Begin/BeginChild returns false! (this is unfortunately inconsistent with most other Begin* API).
@@ -3610,27 +3632,6 @@ void ImGui::EndFrame()
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
-
-    // Show CTRL+TAB list
-    if (g.NavWindowingTarget)
-        NavUpdateWindowingList();
-
-    // Drag and Drop: Elapse payload (if delivered, or if source stops being submitted)
-    if (g.DragDropActive)
-    {
-        bool is_delivered = g.DragDropPayload.Delivery;
-        bool is_elapsed = (g.DragDropPayload.DataFrameCount + 1 < g.FrameCount) && ((g.DragDropSourceFlags & ImGuiDragDropFlags_SourceAutoExpirePayload) || !IsMouseDown(g.DragDropMouseButton));
-        if (is_delivered || is_elapsed)
-            ClearDragDrop();
-    }
-
-    // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
-    if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
-    {
-        g.DragDropWithinSourceOrTarget = true;
-        SetTooltip("...");
-        g.DragDropWithinSourceOrTarget = false;
-    }
 
     // Initiate moving window
     if (g.ActiveId == 0 && g.HoveredId == 0)
