@@ -1144,8 +1144,14 @@ ImGuiIO::ImGuiIO()
     FontAllowUserScaling = false;
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
-    // Miscellaneous configuration options
+    // Viewport options (when ImGuiConfigFlags_ViewportsEnable is set)
+    ConfigViewportsNoAutoMerge = false;
+    ConfigViewportsNoTaskBarIcon = false;
+    ConfigViewportsNoDecoration = true;
     ConfigViewportsNoParent = false;
+
+    // Miscellaneous options
+    MouseDrawCursor = false;
 #ifdef __APPLE__
     ConfigMacOSXBehaviors = true;  // Set Mac OS X style defaults based on __APPLE__ compile time flag
 #else
@@ -5196,9 +5202,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             ImGuiViewportFlags viewport_flags = (window->Viewport->Flags) & ~(ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration);
             if (flags & ImGuiWindowFlags_Tooltip)
                 viewport_flags |= ImGuiViewportFlags_TopMost;
-            if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoTaskBarIcon) != 0 || (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0)
+            if (g.IO.ConfigViewportsNoTaskBarIcon || (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0)
                 viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
-            if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsDecoration) == 0 || (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0)
+            if (g.IO.ConfigViewportsNoDecoration || (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0)
                 viewport_flags |= ImGuiViewportFlags_NoDecoration;
 
             // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
@@ -7348,7 +7354,7 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 {
     // Tooltips and menus are not automatically forced into their own viewport when the NoMerge flag is set, however the multiplication of viewports makes them more likely to protude and create their own.
     ImGuiContext& g = *GImGui;
-    if ((g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsNoMerge) && (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
+    if (g.IO.ConfigViewportsNoAutoMerge && (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         //if (!window->DockIsActive)
             if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip)) == 0)
                 return true;
