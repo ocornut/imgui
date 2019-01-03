@@ -6479,8 +6479,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // FIXME-DOCK: In theory we shouldn't test for the ConfigDockingNodifySingleWindows flag here.
     // When our single window node and OnlyNodeWithWindows are working properly we may remove this check here.
     ImGuiDockNode* node = docked_window ? docked_window->DockNode : NULL;
-    const bool single_window_node = node && node->IsRootNode() && node->Windows.Size == 1 && g.IO.ConfigDockingTabBarOnSingleWindows;
-    if (held && single_window_node && IsMouseDragging(0, 0.0f))
+    const bool single_floating_window_node = node && node->IsRootNode() && !node->IsDockSpace && node->Windows.Size == 1 && g.IO.ConfigDockingTabBarOnSingleWindows;
+    if (held && single_floating_window_node && IsMouseDragging(0, 0.0f))
     {
         // Move
         StartMouseMovingWindow(docked_window);
