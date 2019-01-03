@@ -48,6 +48,46 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ VIEWPORT BRANCH (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- IMPORTANT: When multi-viewports are enabled (with io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable), 
+  all coordinates/positions will be in your natural OS coordinates space. It means that:
+   - Reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are _probably_ not what you want anymore. 
+     Use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos).
+   - Likewise io.MousePos and GetMousePos() will use OS coordinates. 
+     If you query mouse positions to interact with non-imgui coordinates you will need to offset them.
+     e.g. subtract GetWindowViewport()->Pos.
+- IO: Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
+- IO: Removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (they were marked obsoleted, used to clip within the (0,0)..(DisplaySize) range).
+
+
+Other changes:
+(FIXME: This need a fuller explanation!)
+
+- Added ImGuiPlatformIO structure and GetPlatformIO().
+  Similarly to ImGuiIO and GetIO(), this structure is the main point of communication for back-ends supporting multi-viewports.
+- Added ImGuiPlatformMonitor to feed OS monitor information in the ImGuiPlatformIO::Monitors.
+- Added GetMainViewport().
+- Added GetWindowViewport(), SetNextWindowViewport().
+- Added GetWindowDpiScale().
+- Added GetOverlayDrawList(ImGuiViewport* viewport). 
+  The no-parameter version of GetOverlayDrawList() return the overlay for the current window's viewport.
+- Added UpdatePlatformWindows(), RenderPlatformWindows(), DestroyPlatformWindows() for usage for application core.
+- Added FindViewportByID(), FindViewportByPlatformHandle() for usage by back-ends.
+- Added ImGuiConfigFlags_ViewportsEnable configuration flag and other viewport options.
+- Added ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_HasMouseHoveredViewport backend flags.
+- Added io.MainViewport, io.Viewports, io.MouseHoveredViewport (MouseHoveredViewport is optional _even_ for multi-viewport support).
+- Added ImGuiViewport structure, ImGuiViewportFlags flags.
+- Added ImGuiWindowClass and SetNextWindowClass() for passing viewport related hints to the OS/platform back-end.
+- Examples: Renderer: OpenGL2, OpenGL3, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
+- Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports. 
+  Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
+
+
+-----------------------------------------------------------------------
  VERSION 1.67 (In Progress)
 -----------------------------------------------------------------------
 
@@ -59,6 +99,7 @@ Breaking Changes:
   undesirable side-effect as the window would have ID zero. In particular it is causing problems in viewport/docking branches.
 
 Other Changes:
+
 - Added BETA api for Tab Bar/Tabs widgets: (#261, #351)
   - Added BeginTabBar(), EndTabBar(), BeginTabItem(), EndTabItem(), SetTabItemClosed() API.
   - Added ImGuiTabBarFlags flags for BeginTabBar().
