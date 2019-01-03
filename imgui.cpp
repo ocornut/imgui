@@ -5169,7 +5169,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         else if ((flags & ImGuiWindowFlags_Tooltip) != 0 && !window_pos_set_by_api && !window_is_child_tooltip)
             window->Pos = FindBestWindowPosForPopup(window);
 
-        if (window->ViewportAllowPlatformMonitorExtend >= 0 && !window->ViewportOwned)
+        if (window->ViewportAllowPlatformMonitorExtend >= 0 && !window->ViewportOwned && !window->Viewport->PlatformWindowMinimized)
             if (!window->Viewport->GetRect().Contains(window->Rect()))
             {
                 // Late create viewport, based on the assumption that with our calculations, the DPI will be known ahead (same as the DPI of the selection done in UpdateSelectWindowViewport)
@@ -7419,13 +7419,25 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
+    // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
+    for (int n = 0; n < g.Viewports.Size; n++)
+    {
+        ImGuiViewportP* viewport = g.Viewports[n];
+        const bool platform_funcs_available = (n == 0 || viewport->PlatformWindowCreated);
+        if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
+            if (g.PlatformIO.Platform_GetWindowMinimized && platform_funcs_available)
+                viewport->PlatformWindowMinimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
+    }
+
+    // Create/update main viewport with current platform position and size
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     IM_ASSERT(main_viewport->Window == NULL);
     ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
-    if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
-        main_viewport_platform_pos = g.PlatformIO.Platform_GetWindowPos(main_viewport);
-    AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, g.IO.DisplaySize, ImGuiViewportFlags_CanHostOtherWindows);
+    ImVec2 main_viewport_platform_size = g.IO.DisplaySize;
+    if (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable)
+        main_viewport_platform_pos = main_viewport->PlatformWindowMinimized ? main_viewport->Pos : g.PlatformIO.Platform_GetWindowPos(main_viewport);
+    AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, main_viewport_platform_size, ImGuiViewportFlags_CanHostOtherWindows);
 
     g.CurrentViewport = NULL;
     g.MouseViewport = NULL;
