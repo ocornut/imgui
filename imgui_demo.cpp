@@ -327,6 +327,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
             ImGui::SameLine(); ShowHelpMarker("Toggling this at runtime is normally unsupported (most platform back-ends won't refresh the decoration right away).");
             ImGui::CheckboxFlags("io.ConfigFlags: ViewportsNoMerge", (unsigned int *)&io.ConfigFlags, ImGuiConfigFlags_ViewportsNoMerge);
             ImGui::SameLine(); ShowHelpMarker("All floating windows will always create their own viewport and platform window.");
+            ImGui::Checkbox("io.ConfigViewportNoParent", &io.ConfigViewportsNoParent);
+            ImGui::SameLine(); ShowHelpMarker("By default, viewports are marked with ParentViewportId = <main_viewport>, expecting the platform back-end to setup a parent/child relationship between the OS windows (some back-end may ignore this). Set to true if you want the default to be 0, then all viewports will be top-level OS windows.");
+
             ImGui::Checkbox("io.ConfigInputTextCursorBlink", &io.ConfigInputTextCursorBlink);
             ImGui::SameLine(); ShowHelpMarker("Set to false to disable blinking cursor, for users who consider it distracting");
             ImGui::Checkbox("io.ConfigWindowsResizeFromEdges", &io.ConfigWindowsResizeFromEdges);

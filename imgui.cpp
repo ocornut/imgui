@@ -1145,6 +1145,7 @@ ImGuiIO::ImGuiIO()
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
 
     // Miscellaneous configuration options
+    ConfigViewportsNoParent = false;
 #ifdef __APPLE__
     ConfigMacOSXBehaviors = true;  // Set Mac OS X style defaults based on __APPLE__ compile time flag
 #else
@@ -5201,7 +5202,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 viewport_flags |= ImGuiViewportFlags_NoDecoration;
 
             // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
-            window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId ? window->WindowClass.ParentViewportId : IMGUI_VIEWPORT_DEFAULT_ID;
+            // We don't default to the main viewport because.
+            if (window->WindowClass.ParentViewportId)
+                window->Viewport->ParentViewportId = window->WindowClass.ParentViewportId;
+            else
+                window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
             if (window->WindowClass.ViewportFlagsOverrideMask)
                 viewport_flags = (viewport_flags & ~window->WindowClass.ViewportFlagsOverrideMask) | (window->WindowClass.ViewportFlagsOverrideValue & window->WindowClass.ViewportFlagsOverrideMask);
 
@@ -5476,6 +5481,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             window->Viewport->PlatformRequestClose = false;
             g.NavWindowingToggleLayer = false; // Assume user mapped PlatformRequestClose on ALT-F4 so we disable ALT for menu toggle. False positive not an issue.
+            //IMGUI_DEBUG_LOG("Window '%s' PlatformRequestClose\n", window->Name);
             *p_open = false;
         }
 
@@ -10307,7 +10313,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         static void NodeViewport(ImGuiViewportP* viewport)
         {
             ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
-            if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->Window ? viewport->Window->Name : "N/A"))
+            if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Parent: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->ParentViewportId, viewport->Window ? viewport->Window->Name : "N/A"))
             {
                 ImGuiWindowFlags flags = viewport->Flags;
                 ImGui::BulletText("Pos: (%.0f,%.0f), Size: (%.0f,%.0f), Monitor: %d, DpiScale: %.0f%%", viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y, viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
