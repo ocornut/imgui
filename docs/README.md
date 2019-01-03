@@ -205,7 +205,7 @@ See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [B
 Support Forums
 --------------
 
-If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forum: https://discourse.dearimgui.org.
+If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forums: https://discourse.dearimgui.org.
 
 For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
@@ -273,9 +273,9 @@ Support dear imgui
 
 **How can I help?**
 
-- You may participate in the Discourse and GitHub [issues trackers](https://github.com/ocornut/imgui/issues).
+- You may participate in the [Discourse forums](https://discourse.dearimgui.org) and the GitHub [issues tracker](https://github.com/ocornut/imgui/issues).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it.
-- See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the Wiki for some more ideas.
+- See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
 - Convince your company to financially support this project.
 
 **How can I help financing further development of Dear ImGui?**
