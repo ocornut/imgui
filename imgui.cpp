@@ -5299,6 +5299,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
+            IM_ASSERT(parent_window->Active);
             window->BeginOrderWithinParent = (short)parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
@@ -12517,7 +12518,11 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
         // Create node
         if (dock_node == NULL)
+        {
             dock_node = DockContextAddNode(ctx, window->DockId);
+            if (auto_dock_node)
+                dock_node->LastFrameAlive = g.FrameCount;
+        }
 
         DockNodeAddWindow(dock_node, window, true);
         IM_ASSERT(dock_node == window->DockNode);
@@ -12538,7 +12543,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
     // Undock if our dockspace node disappeared
     // Note how we are testing for LastFrameAlive and NOT LastFrameActive. A DockSpace node can be maintained alive while being inactive with ImGuiDockNodeFlags_KeepAliveOnly.
-    if (dock_node->LastFrameAlive < g.FrameCount && !auto_dock_node)
+    if (dock_node->LastFrameAlive < g.FrameCount)
     {
         // If the window has been orphaned, transition the docknode to an implicit node processed in DockContextUpdateDocking()
         ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
