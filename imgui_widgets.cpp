@@ -5847,7 +5847,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     g.CurrentTabBar.push_back(tab_bar);
     if (tab_bar->CurrFrameVisible == g.FrameCount)
     {
-        //printf("[%05d] BeginTabBarEx already called this frame\n", g.FrameCount);
+        //IMGUI_DEBUG_LOG("BeginTabBarEx already called this frame\n", g.FrameCount);
         IM_ASSERT(0);
         return true;
     }

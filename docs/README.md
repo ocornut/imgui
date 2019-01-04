@@ -127,6 +127,7 @@ Languages: (third-party bindings)
 - Pascal: [imgui-pas](https://github.com/dpethes/imgui-pas)
 - PureBasic: [pb-cimgui](https://github.com/hippyau/pb-cimgui)
 - Python [CyImGui](https://github.com/chromy/cyimgui) or [pyimgui](https://github.com/swistakm/pyimgui)
+- Ruby: [ruby-imgui](https://github.com/vaiorabbit/ruby-imgui)
 - Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs)
 - Swift [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
