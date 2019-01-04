@@ -74,6 +74,7 @@ Other Changes:
 - Demo: Added a few more things under "Child windows" (changing ImGuiCol_ChildBg, positioning child, using IsItemHovered after a child).
 - Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
   to ease integration.
+- Examples: Allegro 5: Properly destroy globals on shutdown to allow for restart. (#2262) [@DomRe]
 
 
 -----------------------------------------------------------------------
