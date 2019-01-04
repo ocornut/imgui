@@ -282,10 +282,18 @@ void ImGui_ImplAllegro5_Shutdown()
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
     g_Display = NULL;
 
-    // Destroy last known clipboard data
+    // Destroy last known clipboard data.
     if (g_ClipboardTextData)
         al_free(g_ClipboardTextData);
     g_ClipboardTextData = NULL;
+    
+    // Need to properly reset time variable, because it is a global static variable.
+    g_Time = 0.0;
+    
+    // Also need to ensure vertex_decl is properly destroyed.
+    if (g_VertexDecl)
+	    al_destroy_vertex_decl(g_VertexDecl);
+	g_VertexDecl = NULL;
 }
 
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
