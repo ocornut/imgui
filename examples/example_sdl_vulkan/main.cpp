@@ -333,15 +333,17 @@ int main(int, char**)
     ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
     SetupVulkanWindowData(wd, surface, w, h);
 
-    // Setup Dear ImGui binding
+    // Setup Dear ImGui context
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
-    // Setup SDL binding
-    ImGui_ImplSDL2_InitForVulkan(window);
+    // Setup Dear ImGui style
+    ImGui::StyleColorsDark();
+    //ImGui::StyleColorsClassic();
 
-    // Setup Vulkan binding
+    // Setup Platform/Renderer bindings
+    ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
@@ -353,10 +355,6 @@ int main(int, char**)
     init_info.Allocator = g_Allocator;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
-
-    // Setup style
-    ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
@@ -482,8 +480,9 @@ int main(int, char**)
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
-    SDL_DestroyWindow(window);
     CleanupVulkan();
+
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;

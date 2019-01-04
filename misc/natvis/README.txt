@@ -1,3 +1,4 @@
 
-Natvis file to describe types in Visual Studio debugger. 
-You can include this in a project file, or install in Visual Studio folder.
+Natvis file to describe dear imgui types in the Visual Studio debugger. 
+With this, types like ImVector<> will be displayed nicely in the debugger. 
+You can include this file a Visual Studio project file, or install it in Visual Studio folder.

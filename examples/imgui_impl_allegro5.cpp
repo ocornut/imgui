@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
 //  2018-06-13: Platform: Added clipboard support (from Allegro 5.1.12).
 //  2018-06-13: Renderer: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
 //  2018-06-13: Renderer: Backup/restore transform and clipping rectangle.
@@ -231,6 +232,7 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
+    io.BackendPlatformName = io.BackendRendererName = "imgui_impl_allegro5";
 
     // Create custom vertex declaration.
     // Unfortunately Allegro doesn't support 32-bits packed colors so we have to convert them to 4 floats.
@@ -278,9 +280,14 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 void ImGui_ImplAllegro5_Shutdown()
 {
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
-    g_Display = NULL;
 
-    // Destroy last known clipboard data
+    g_Display = NULL;
+    g_Time = 0.0;
+
+    if (g_VertexDecl)
+        al_destroy_vertex_decl(g_VertexDecl);
+    g_VertexDecl = NULL;
+
     if (g_ClipboardTextData)
         al_free(g_ClipboardTextData);
     g_ClipboardTextData = NULL;

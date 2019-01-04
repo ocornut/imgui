@@ -14,6 +14,8 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
+#pragma once
+
 struct SDL_Window;
 typedef union SDL_Event SDL_Event;
 
@@ -21,4 +23,4 @@ IMGUI_IMPL_API bool     ImGui_ImplSDL2_InitForOpenGL(SDL_Window* window, void* s
 IMGUI_IMPL_API bool     ImGui_ImplSDL2_InitForVulkan(SDL_Window* window);
 IMGUI_IMPL_API void     ImGui_ImplSDL2_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplSDL2_NewFrame(SDL_Window* window);
-IMGUI_IMPL_API bool     ImGui_ImplSDL2_ProcessEvent(SDL_Event* event);
+IMGUI_IMPL_API bool     ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event);
