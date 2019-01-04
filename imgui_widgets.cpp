@@ -2338,7 +2338,15 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
     RenderNavHighlight(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+
+    ImRect draw_bb = frame_bb;
+    if (g.Style.SliderThicknessScale != 1.0f)
+    {
+        float shrink_amount = (float)(int)((frame_bb.Max.y - frame_bb.Min.y) * 0.5f * (1.0f - g.Style.SliderThicknessScale));
+        draw_bb.Min.y += shrink_amount;
+        draw_bb.Max.y -= shrink_amount;
+    }
+    RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
@@ -2477,7 +2485,15 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
     RenderNavHighlight(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+
+    ImRect draw_bb = frame_bb;
+    if (g.Style.SliderThicknessScale != 1.0f)
+    {
+        float shrink_amount = (float)(int)((frame_bb.Max.x - frame_bb.Min.x) * 0.5f * (1.0f - g.Style.SliderThicknessScale));
+        draw_bb.Min.x += shrink_amount;
+        draw_bb.Max.x -= shrink_amount;
+    }
+    RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
