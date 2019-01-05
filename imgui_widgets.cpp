@@ -2346,13 +2346,20 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         draw_bb.Min.y += shrink_amount;
         draw_bb.Max.y -= shrink_amount;
     }
-    RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
+    //RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
     const bool value_changed = SliderBehavior(frame_bb, id, data_type, v, v_min, v_max, format, power, ImGuiSliderFlags_None, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
+
+    // render left part
+    RenderFrame(draw_bb.Min, ImVec2(grab_bb.Min.x, draw_bb.Max.y), frame_col, true, g.Style.FrameRounding);
+
+    // render right part
+    ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 0.5f);
+    RenderFrame(ImVec2(grab_bb.Max.x, draw_bb.Min.y), draw_bb.Max, frame_col_after, true, g.Style.FrameRounding);
 
     // Render grab
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
@@ -2493,13 +2500,23 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
         draw_bb.Min.x += shrink_amount;
         draw_bb.Max.x -= shrink_amount;
     }
-    RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
+    //RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
     const bool value_changed = SliderBehavior(frame_bb, id, data_type, v, v_min, v_max, format, power, ImGuiSliderFlags_Vertical, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
+
+    // render bottom part
+    RenderFrame(ImVec2(draw_bb.Min.x, grab_bb.Max.y), draw_bb.Max, frame_col , true, g.Style.FrameRounding);
+
+    // render top part
+    ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 0.5f);
+    RenderFrame(draw_bb.Min, ImVec2(draw_bb.Max.x, grab_bb.Min.y), frame_col_after, true, g.Style.FrameRounding);
+
+    // WIP : same color until thickness is < 0.8f
+    //RenderFrame(draw_bb.Min, ImVec2(draw_bb.Max.x, grab_bb.Min.y), (g.Style.SliderThicknessScale <= 0.8f) ? frame_col_after : frame_col, true, g.Style.FrameRounding);
 
     // Render grab
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
