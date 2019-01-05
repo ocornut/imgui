@@ -2346,7 +2346,6 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         draw_bb.Min.y += shrink_amount;
         draw_bb.Max.y -= shrink_amount;
     }
-    //RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
@@ -2500,7 +2499,6 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
         draw_bb.Min.x += shrink_amount;
         draw_bb.Max.x -= shrink_amount;
     }
-    //RenderFrame(draw_bb.Min, draw_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
