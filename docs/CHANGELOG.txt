@@ -39,6 +39,7 @@ Breaking Changes:
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
 - Made it illegal to call Begin("") with an empty string. This somehow accidentally worked before but had various 
   undesirable side-effect as the window would have ID zero. In particular it is causing problems in viewport/docking branches.
+- Renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Keep redirection typedef (will obsolete).
 
 Other Changes:
 - Added BETA api for Tab Bar/Tabs widgets: (#261, #351)
@@ -734,6 +735,7 @@ Breaking Changes:
 - Removed `IsItemRectHovered()`, `IsWindowRectHovered()` recently introduced in 1.51 which were merely the more consistent/correct names for the above functions which are now obsolete anyway. (#1382)
 - Changed `IsWindowHovered()` default parameters behavior to return false if an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests this specific behavior if you need it. (#1382)
 - Renamed imconfig.h's `IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS`/`IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS` to `IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS`/`IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS` for consistency.
+- Renamed ImFont::Glyph to ImFontGlyph. Keep redirection typedef (will obsolete).
 
 Other Changes:
 
