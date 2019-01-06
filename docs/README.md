@@ -128,7 +128,7 @@ Languages: (third-party bindings)
 - PureBasic: [pb-cimgui](https://github.com/hippyau/pb-cimgui)
 - Python [CyImGui](https://github.com/chromy/cyimgui) or [pyimgui](https://github.com/swistakm/pyimgui)
 - Ruby: [ruby-imgui](https://github.com/vaiorabbit/ruby-imgui)
-- Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs)
+- Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs) or [imgui-rust](https://github.com/nsf/imgui-rust)
 - Swift [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
 Frameworks:
