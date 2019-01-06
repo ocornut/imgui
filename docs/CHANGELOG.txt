@@ -70,6 +70,9 @@ Other Changes:
 - Error recovery: Missing calls to End(), pass the assert, should not lead to crashes or to the fallback Debug window 
   appearing on screen, (#1651).
 - IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by back-ends.
+- IO: Renamed InputCharacters[], marked internal as was always intended. Please don't access directly, and use AddInputCharacter() instead!
+- IO: AddInputCharacter() goes into a queue which can receive as many characters as needed during the frame. This is useful
+  for automation to not have an upper limit on typing speed. Will later transition key/mouse to use the event queue later.
 - Style: Tweaked default value of style.DisplayWindowPadding from (20,20) to (19,19) so the default style as a value
   which is the same as the title bar height.
 - Demo: "Simple Layout" and "Style Editor" are now using tabs.
