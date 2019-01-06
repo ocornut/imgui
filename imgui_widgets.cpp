@@ -6542,7 +6542,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 
         const float ellipsis_x = text_pixel_clip_bb.Min.x + label_size_clipped_x + 1.0f;
         if (!close_button_visible && ellipsis_x + ellipsis_width <= bb.Max.x)
-            RenderPixelEllipsis(draw_list, g.Font, ImVec2(ellipsis_x, text_pixel_clip_bb.Min.y), ellipsis_dot_count, GetColorU32(ImGuiCol_Text));
+            RenderPixelEllipsis(draw_list, ImVec2(ellipsis_x, text_pixel_clip_bb.Min.y), ellipsis_dot_count, GetColorU32(ImGuiCol_Text));
     }
     else
     {

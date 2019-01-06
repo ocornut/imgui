@@ -51,25 +51,26 @@ Other Changes:
   - Demo: Added "Documents" example app showcasing possible use for tabs.
   This feature was merged from the Docking branch in order to allow the use of regular tabs in your code.
   (It does not provide the docking/splitting/merging of windows available in the Docking branch)
-- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering 
-  the ID, as a convenience to avoid using the ### operator.
+- Added ImGuiWindowFlags_UnsavedDocument window flag to append '*' to title without altering the ID,
+  as a convenience to avoid using the ### operator. In the Docking branch this also has an effect on tab closing behavior.
 - Window, Focus, Popup: Fixed an issue where closing a popup by clicking another window with the _NoMove flag would refocus
   the parent window of the popup instead of the newly clicked window.
 - Window: Contents size is preserved while a window collapsed. Fix auto-resizing window losing their size for one frame when uncollapsed.
 - Window: Contents size is preserved while a window contents is hidden (unless it is hidden for resizing purpose).
 - Window: Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that 
-  it only works _if_ the back-end sets ImGuiBackendFlags_HasMouseCursors, which the standard back-end do.
-- Window: Added io.ConfigWindowsMoveFromTitleBarOnly option. Still is ignored by window with no title bars (often popups).
+  it only works _if_ the back-end sets ImGuiBackendFlags_HasMouseCursors, which the standard back-ends do.
+- Window: Added io.ConfigWindowsMoveFromTitleBarOnly option. This is ignored by window with no title bars (often popups).
   This affects clamping window within the visible area: with this option enabled title bars need to be visible. (#899)
 - Window: Fixed using SetNextWindowPos() on a child window (which wasn't really documented) position the cursor as expected
   in the parent window, so there is no mismatch between the layout in parent and the position of the child window. 
 - InputFloat: When using ImGuiInputTextFlags_ReadOnly the step buttons are disabled. (#2257)
 - Nav: Fixed an keyboard issue where holding Activate/Space for longer than two frames on a button would unnecessary 
   keep the focus on the parent window, which could steal it from newly appearing windows. (#787)
-- Error recovery: Extraneous/undesired calls to End() are now being caught by an assert in the End() function itself 
-  at the call site (instead of being reported in EndFrame). Past the assert, they don't lead to crashes any more. (#1651)
-- Error recovery: Missing calls to End(), pass the assert, should not lead to crashes or to the fallback Debug window 
-  appearing on screen, (#1651).
+- Error recovery: Extraneous/undesired calls to End() are now being caught by an assert in the End() function closer
+  to the user call site (instead of being reported in EndFrame). Past the assert, they don't lead to crashes any more. (#1651)
+  Missing calls to End(), past the assert, should not lead to crashes or to the fallback Debug window appearing on screen.
+  Those changes makes it easier to integrate dear imgui with a scripting language allowing, given asserts are redirected
+  into e.g. an error log and stopping the script execution.
 - IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by back-ends.
 - IO: Renamed InputCharacters[], marked internal as was always intended. Please don't access directly, and use AddInputCharacter() instead!
 - IO: AddInputCharacter() goes into a queue which can receive as many characters as needed during the frame. This is useful
@@ -78,8 +79,7 @@ Other Changes:
   which is the same as the title bar height.
 - Demo: "Simple Layout" and "Style Editor" are now using tabs.
 - Demo: Added a few more things under "Child windows" (changing ImGuiCol_ChildBg, positioning child, using IsItemHovered after a child).
-- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file
-  to ease integration.
+- Examples: DirectX10/11/12: Made imgui_impl_dx10/dx11/dx12.cpp link d3dcompiler.lib from the .cpp file to ease integration.
 - Examples: Allegro 5: Properly destroy globals on shutdown to allow for restart. (#2262) [@DomRe]
 
 
