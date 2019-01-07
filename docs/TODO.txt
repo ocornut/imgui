@@ -31,6 +31,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
  - window: investigate better auto-positioning for new windows.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
+ - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents

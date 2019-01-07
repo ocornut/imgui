@@ -33,7 +33,7 @@
 </Type>
 
 <Type Name="ImGuiWindow">
-  <DisplayString>{{Name={Name,s} Active {(Active||WasActive)?1:0,d} Child {(Flags &amp; 0x01000000)?1:0,d} Popup {(Flags &amp; 0x04000000)?1:0,d}}</DisplayString>
+  <DisplayString>{{Name {Name,s} Active {(Active||WasActive)?1:0,d} Child {(Flags &amp; 0x01000000)?1:0,d} Popup {(Flags &amp; 0x04000000)?1:0,d} Hidden {(Hidden)?1:0,d}}</DisplayString>
 </Type>
   
 </AutoVisualizer>

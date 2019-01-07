@@ -12,7 +12,8 @@ Index of this file:
 // [SECTION] Helpers ShadeVertsXXX functions
 // [SECTION] ImFontConfig
 // [SECTION] ImFontAtlas
-// [SECTION] ImFontAtlas glyph ranges helpers + GlyphRangesBuilder
+// [SECTION] ImFontAtlas glyph ranges helpers
+// [SECTION] ImFontGlyphRangesBuilder
 // [SECTION] ImFont
 // [SECTION] Internal Render Helpers
 // [SECTION] Decompression code
@@ -2098,7 +2099,7 @@ static void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short*
 }
 
 //-------------------------------------------------------------------------
-// [SECTION] ImFontAtlas glyph ranges helpers + GlyphRangesBuilder
+// [SECTION] ImFontAtlas glyph ranges helpers
 //-------------------------------------------------------------------------
 
 const ImWchar*  ImFontAtlas::GetGlyphRangesChineseSimplifiedCommon()
@@ -2106,7 +2107,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesChineseSimplifiedCommon()
     // Store 2500 regularly used characters for Simplified Chinese.
     // Sourced from https://zh.wiktionary.org/wiki/%E9%99%84%E5%BD%95:%E7%8E%B0%E4%BB%A3%E6%B1%89%E8%AF%AD%E5%B8%B8%E7%94%A8%E5%AD%97%E8%A1%A8
     // This table covers 97.97% of all characters used during the month in July, 1987.
-    // You can use ImFontAtlas::GlyphRangesBuilder to create your own ranges derived from this, by merging existing ranges or adding new characters.
+    // You can use ImFontGlyphRangesBuilder to create your own ranges derived from this, by merging existing ranges or adding new characters.
     // (Stored as accumulative offsets from the initial unicode codepoint 0x4E00. This encoding is designed to helps us compact the source code size.)
     static const short accumulative_offsets_from_0x4E00[] =
     {
@@ -2172,7 +2173,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesJapanese()
     // 1946 common ideograms code points for Japanese
     // Sourced from http://theinstructionlimit.com/common-kanji-character-ranges-for-xna-spritefont-rendering
     // FIXME: Source a list of the revised 2136 Joyo Kanji list from 2010 and rebuild this.
-    // You can use ImFontAtlas::GlyphRangesBuilder to create your own ranges derived from this, by merging existing ranges or adding new characters.
+    // You can use ImFontGlyphRangesBuilder to create your own ranges derived from this, by merging existing ranges or adding new characters.
     // (Stored as accumulative offsets from the initial unicode codepoint 0x4E00. This encoding is designed to helps us compact the source code size.)
     static const short accumulative_offsets_from_0x4E00[] =
     {
@@ -2250,7 +2251,11 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesThai()
     return &ranges[0];
 }
 
-void ImFontAtlas::GlyphRangesBuilder::AddText(const char* text, const char* text_end)
+//-----------------------------------------------------------------------------
+// [SECTION] ImFontGlyphRangesBuilder
+//-----------------------------------------------------------------------------
+
+void ImFontGlyphRangesBuilder::AddText(const char* text, const char* text_end)
 {
     while (text_end ? (text < text_end) : *text)
     {
@@ -2264,14 +2269,14 @@ void ImFontAtlas::GlyphRangesBuilder::AddText(const char* text, const char* text
     }
 }
 
-void ImFontAtlas::GlyphRangesBuilder::AddRanges(const ImWchar* ranges)
+void ImFontGlyphRangesBuilder::AddRanges(const ImWchar* ranges)
 {
     for (; ranges[0]; ranges += 2)
         for (ImWchar c = ranges[0]; c <= ranges[1]; c++)
             AddChar(c);
 }
 
-void ImFontAtlas::GlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
+void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 {
     for (int n = 0; n < 0x10000; n++)
         if (GetBit(n))
@@ -2993,8 +2998,9 @@ void ImGui::RenderRectFilledWithHole(ImDrawList* draw_list, ImRect outer, ImRect
 // FIXME: Rendering an ellipsis "..." is a surprisingly tricky problem for us... we cannot rely on font glyph having it, 
 // and regular dot are typically too wide. If we render a dot/shape ourselves it comes with the risk that it wouldn't match 
 // the boldness or positioning of what the font uses...
-void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImFont* font, ImVec2 pos, int count, ImU32 col)
+void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, int count, ImU32 col)
 {
+    ImFont* font = draw_list->_Data->Font;
     pos.y += (float)(int)(font->DisplayOffset.y + font->Ascent + 0.5f - 1.0f);
     for (int dot_n = 0; dot_n < count; dot_n++)
         draw_list->AddRectFilled(ImVec2(pos.x + dot_n * 2.0f, pos.y), ImVec2(pos.x + dot_n * 2.0f + 1.0f, pos.y + 1.0f), col);

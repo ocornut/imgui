@@ -489,7 +489,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             // Set active id so it can be queried by user via IsItemActive(), equivalent of holding the mouse button.
             g.NavActivateId = id; // This is so SetActiveId assign a Nav source
             SetActiveID(id, window);
-            if (!(flags & ImGuiButtonFlags_NoNavFocus))
+            if ((nav_activated_by_code || nav_activated_by_inputs) && !(flags & ImGuiButtonFlags_NoNavFocus))
                 SetFocusID(id, window);
             g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         }
@@ -3158,7 +3158,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     IM_ASSERT(!((flags & ImGuiInputTextFlags_CallbackCompletion) && (flags & ImGuiInputTextFlags_AllowTabInput))); // Can't use both together (they both use tab key)
 
     ImGuiContext& g = *GImGui;
-    const ImGuiIO& io = g.IO;
+    ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
 
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
@@ -3343,22 +3343,22 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (edit_state.SelectedAllMouseLock && !io.MouseDown[0])
             edit_state.SelectedAllMouseLock = false;
 
-        if (io.InputCharacters[0])
+        if (io.InputQueueCharacters.Size > 0)
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
             bool ignore_inputs = (io.KeyCtrl && !io.KeyAlt) || (is_osx && io.KeySuper);
             if (!ignore_inputs && is_editable && !user_nav_input_start)
-                for (int n = 0; n < IM_ARRAYSIZE(io.InputCharacters) && io.InputCharacters[n]; n++)
+                for (int n = 0; n < io.InputQueueCharacters.Size; n++)
                 {
                     // Insert character if they pass filtering
-                    unsigned int c = (unsigned int)io.InputCharacters[n];
+                    unsigned int c = (unsigned int)io.InputQueueCharacters[n];
                     if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                         edit_state.OnKeyPressed((int)c);
                 }
 
             // Consume characters
-            memset(g.IO.InputCharacters, 0, sizeof(g.IO.InputCharacters));
+            io.InputQueueCharacters.resize(0);
         }
     }
 
@@ -5885,7 +5885,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     g.CurrentTabBar.push_back(tab_bar);
     if (tab_bar->CurrFrameVisible == g.FrameCount)
     {
-        printf("[%05d] BeginTabBarEx already called this frame\n", g.FrameCount);
+        //IMGUI_DEBUG_LOG("BeginTabBarEx already called this frame\n", g.FrameCount);
         //IM_ASSERT(0);
         return true;
     }
@@ -6352,6 +6352,7 @@ void    ImGui::EndTabItem()
 
     IM_ASSERT(g.CurrentTabBar.Size > 0 && "Needs to be called between BeginTabBar() and EndTabBar()!");
     ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
+    IM_ASSERT(tab_bar->LastTabItemIdx >= 0 && "Needs to be called between BeginTabItem() and EndTabItem()");
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
         g.CurrentWindow->IDStack.pop_back();
@@ -6581,7 +6582,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Tooltip (FIXME: Won't work over the close button because ItemOverlap systems messes up with HoveredIdTimer)
     if (g.HoveredId == id && !held && g.HoveredIdNotActiveTimer > 0.50f)
-        SetTooltip("%.*s", (int)(FindRenderedTextEnd(label) - label), label);
+        if (!(tab_bar->Flags & ImGuiTabBarFlags_NoTooltip))
+            SetTooltip("%.*s", (int)(FindRenderedTextEnd(label) - label), label);
 
     return tab_contents_visible;
 }
@@ -6710,7 +6712,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 
         const float ellipsis_x = text_pixel_clip_bb.Min.x + label_size_clipped_x + 1.0f;
         if (!close_button_visible && ellipsis_x + ellipsis_width <= bb.Max.x)
-            RenderPixelEllipsis(draw_list, g.Font, ImVec2(ellipsis_x, text_pixel_clip_bb.Min.y), ellipsis_dot_count, GetColorU32(ImGuiCol_Text));
+            RenderPixelEllipsis(draw_list, ImVec2(ellipsis_x, text_pixel_clip_bb.Min.y), ellipsis_dot_count, GetColorU32(ImGuiCol_Text));
     }
     else
     {

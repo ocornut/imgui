@@ -280,9 +280,14 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 void ImGui_ImplAllegro5_Shutdown()
 {
     ImGui_ImplAllegro5_InvalidateDeviceObjects();
-    g_Display = NULL;
 
-    // Destroy last known clipboard data
+    g_Display = NULL;
+    g_Time = 0.0;
+
+    if (g_VertexDecl)
+        al_destroy_vertex_decl(g_VertexDecl);
+    g_VertexDecl = NULL;
+
     if (g_ClipboardTextData)
         al_free(g_ClipboardTextData);
     g_ClipboardTextData = NULL;
