@@ -1259,11 +1259,25 @@ void ImStrncpy(char* dst, const char* src, size_t count)
     dst[count-1] = 0;
 }
 
-char* ImStrdup(const char *str)
+char* ImStrdup(const char* str)
 {
-    size_t len = strlen(str) + 1;
-    void* buf = ImGui::MemAlloc(len);
-    return (char*)memcpy(buf, (const void*)str, len);
+    size_t len = strlen(str);
+    void* buf = ImGui::MemAlloc(len + 1);
+    return (char*)memcpy(buf, (const void*)str, len + 1);
+}
+
+char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src)
+{
+    size_t dst_buf_size = p_dst_size ? *p_dst_size : strlen(dst) + 1;
+    size_t src_size = strlen(src) + 1;
+    if (dst_buf_size < src_size)
+    {
+        ImGui::MemFree(dst);
+        dst = (char*)ImGui::MemAlloc(src_size);
+        if (p_dst_size)
+            *p_dst_size = src_size;
+    }
+    return (char*)memcpy(dst, (const void*)src, src_size);
 }
 
 const char* ImStrchrRange(const char* str, const char* str_end, char c)
@@ -1367,7 +1381,9 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 }
 #endif // #ifdef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS
 
-// Pass data_size==0 for zero-terminated strings
+// Pass data_size == 0 for zero-terminated strings, data_size > 0 for non-string data.
+// Pay attention that data_size==0 will yield different results than passing strlen(data) because the zero-terminated codepath handles ###.
+// This should technically be split into two distinct functions (ImHashData/ImHashStr), perhaps once we remove the silly static variable.
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
 ImU32 ImHash(const void* data, int data_size, ImU32 seed)
 {
@@ -2391,6 +2407,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     WindowPadding = ImVec2(0.0f, 0.0f);
     WindowRounding = 0.0f;
     WindowBorderSize = 0.0f;
+    NameBufLen = (int)strlen(name) + 1;
     MoveId = GetID("#MOVE");
     ChildId = 0;
     Scroll = ImVec2(0.0f, 0.0f);
@@ -4801,6 +4818,18 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->LastFrameActive = current_frame;
         window->IDStack.resize(1);
+
+        // Update stored window name when it changes (which can _only_ happen with the "###" operator, so the ID would stay unchanged).
+        // The title bar always display the 'name' parameter, so we only update the string storage if it needs to be visible to the end-user elsewhere.
+        bool window_title_visible_elsewhere = false;
+        if (g.NavWindowingList != NULL && (window->Flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using CTRL+TAB
+            window_title_visible_elsewhere = true;
+        if (window_title_visible_elsewhere && !window_just_created && strcmp(name, window->Name) != 0)
+        {
+            size_t buf_len = (size_t)window->NameBufLen;
+            window->Name = ImStrdupcpy(window->Name, &buf_len, name);
+            window->NameBufLen = (int)buf_len;
+        }
 
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
 
