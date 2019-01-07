@@ -6241,6 +6241,7 @@ void    ImGui::EndTabItem()
 
     IM_ASSERT(g.CurrentTabBar.Size > 0 && "Needs to be called between BeginTabBar() and EndTabBar()!");
     ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
+    IM_ASSERT(tab_bar->LastTabItemIdx >= 0 && "Needs to be called between BeginTabItem() and EndTabItem()");
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
         g.CurrentWindow->IDStack.pop_back();
@@ -6422,7 +6423,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Tooltip (FIXME: Won't work over the close button because ItemOverlap systems messes up with HoveredIdTimer)
     if (g.HoveredId == id && !held && g.HoveredIdNotActiveTimer > 0.50f)
-        SetTooltip("%.*s", (int)(FindRenderedTextEnd(label) - label), label);
+        if (!(tab_bar->Flags & ImGuiTabBarFlags_NoTooltip))
+            SetTooltip("%.*s", (int)(FindRenderedTextEnd(label) - label), label);
 
     return tab_contents_visible;
 }
