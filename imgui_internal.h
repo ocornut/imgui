@@ -331,8 +331,8 @@ enum ImGuiItemStatusFlags_
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
 enum ImGuiLayoutType_
 {
-    ImGuiLayoutType_Vertical,
-    ImGuiLayoutType_Horizontal
+    ImGuiLayoutType_Vertical = 0,
+    ImGuiLayoutType_Horizontal = 1,
 };
 
 enum ImGuiAxis

@@ -282,10 +282,12 @@ void ImGui::TextWrapped(const char* fmt, ...)
 
 void ImGui::TextWrappedV(const char* fmt, va_list args)
 {
-    bool need_wrap = (GImGui->CurrentWindow->DC.TextWrapPos < 0.0f);    // Keep existing wrap position is one ia already set
-    if (need_wrap) PushTextWrapPos(0.0f);
+    bool need_backup = (GImGui->CurrentWindow->DC.TextWrapPos < 0.0f);    // Keep existing wrap position if one is already set
+    if (need_backup)
+        PushTextWrapPos(0.0f);
     TextV(fmt, args);
-    if (need_wrap) PopTextWrapPos();
+    if (need_backup)
+        PopTextWrapPos();
 }
 
 void ImGui::LabelText(const char* label, const char* fmt, ...)
@@ -5030,7 +5032,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     bb.Min.y -= spacing_U;
     bb.Max.x += spacing_R;
     bb.Max.y += spacing_D;
-    if (!ItemAdd(bb, (flags & ImGuiSelectableFlags_Disabled) ? 0 : id))
+    if (!ItemAdd(bb, id))
     {
         if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsSet)
             PushColumnClipRect();
