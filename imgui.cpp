@@ -2697,7 +2697,8 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_ItemAdd(bb, id);
+    if (id != 0)
+        ImGuiTestEngineHook_ItemAdd(&g, bb, id);
 #endif
 
     // Clipping test
@@ -3251,7 +3252,7 @@ void ImGui::NewFrame()
     ImGuiContext& g = *GImGui;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_PreNewFrame();
+    ImGuiTestEngineHook_PreNewFrame(&g);
 #endif
 
     // Check user data
@@ -3427,7 +3428,7 @@ void ImGui::NewFrame()
     g.FrameScopePushedImplicitWindow = true;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_PostNewFrame();
+    ImGuiTestEngineHook_PostNewFrame(&g);
 #endif
 }
 

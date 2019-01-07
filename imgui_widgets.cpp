@@ -282,7 +282,7 @@ void ImGui::TextWrapped(const char* fmt, ...)
 
 void ImGui::TextWrappedV(const char* fmt, va_list args)
 {
-    bool need_backup = (GImGui->CurrentWindow->DC.TextWrapPos < 0.0f);    // Keep existing wrap position if one is already set
+    bool need_backup = (GImGui->CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
     if (need_backup)
         PushTextWrapPos(0.0f);
     TextV(fmt, args);
@@ -399,8 +399,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         g.HoveredWindow = window;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
-    if (window->DC.LastItemId != id)
-        ImGuiTestEngineHook_ItemAdd(bb, id);
+    if (id != 0 && window->DC.LastItemId != id)
+        ImGuiTestEngineHook_ItemAdd(&g, bb, id);
 #endif
 
     bool pressed = false;
