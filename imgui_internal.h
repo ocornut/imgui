@@ -332,7 +332,7 @@ enum ImGuiItemStatusFlags_
 enum ImGuiLayoutType_
 {
     ImGuiLayoutType_Vertical = 0,
-    ImGuiLayoutType_Horizontal = 1,
+    ImGuiLayoutType_Horizontal = 1
 };
 
 enum ImGuiAxis

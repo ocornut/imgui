@@ -4027,7 +4027,7 @@ void ShowExampleAppDocuments(bool* p_open)
 {
     static ExampleAppDocuments app;
 
-    if (!ImGui::Begin("Examples: Documents", p_open, ImGuiWindowFlags_MenuBar))
+    if (!ImGui::Begin("Example: Documents", p_open, ImGuiWindowFlags_MenuBar))
     {
         ImGui::End();
         return;
