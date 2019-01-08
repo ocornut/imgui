@@ -204,7 +204,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         }
 
         ImRect bb(text_pos, text_pos + text_size);
-        ItemSize(bb);
+        ItemSize(text_size);
         ItemAdd(bb, 0);
     }
     else
@@ -548,7 +548,7 @@ bool ImGui::ButtonEx(const char* label, const ImVec2& size_arg, ImGuiButtonFlags
     ImVec2 size = CalcItemSize(size_arg, label_size.x + style.FramePadding.x * 2.0f, label_size.y + style.FramePadding.y * 2.0f);
 
     const ImRect bb(pos, pos + size);
-    ItemSize(bb, style.FramePadding.y);
+    ItemSize(size, style.FramePadding.y);
     if (!ItemAdd(bb, id))
         return false;
 
@@ -602,7 +602,7 @@ bool ImGui::InvisibleButton(const char* str_id, const ImVec2& size_arg)
     const ImGuiID id = window->GetID(str_id);
     ImVec2 size = CalcItemSize(size_arg, 0.0f, 0.0f);
     const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + size);
-    ItemSize(bb);
+    ItemSize(size);
     if (!ItemAdd(bb, id))
         return false;
 
