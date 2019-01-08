@@ -3435,22 +3435,22 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (state->SelectedAllMouseLock && !io.MouseDown[0])
             state->SelectedAllMouseLock = false;
 
-        if (io.InputQueueCharacters.Size > 0)
+        if (io.InputCurrentFrame->InputQueueCharacters.Size > 0)
         {
             // Process text input (before we check for Return because using some IME will effectively send a Return?)
             // We ignore CTRL inputs, but need to allow ALT+CTRL as some keyboards (e.g. German) use AltGR (which _is_ Alt+Ctrl) to input certain characters.
             bool ignore_inputs = (io.KeyCtrl && !io.KeyAlt) || (is_osx && io.KeySuper);
             if (!ignore_inputs && !is_readonly && !user_nav_input_start)
-                for (int n = 0; n < io.InputQueueCharacters.Size; n++)
+                for (int n = 0; n < io.InputCurrentFrame->InputQueueCharacters.Size; n++)
                 {
                     // Insert character if they pass filtering
-                    unsigned int c = (unsigned int)io.InputQueueCharacters[n];
+                    unsigned int c = (unsigned int)io.InputCurrentFrame->InputQueueCharacters[n];
                     if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                         state->OnKeyPressed((int)c);
                 }
 
             // Consume characters
-            io.InputQueueCharacters.resize(0);
+            io.InputCurrentFrame->InputQueueCharacters.resize(0);
         }
     }
 

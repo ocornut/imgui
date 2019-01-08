@@ -133,9 +133,9 @@ int32 ImGui_Marmalade_PointerButtonEventCallback(void* system_data, void* user_d
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MIDDLEMOUSE)
             g_MousePressed[2] = true;
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELUP)
-            io.MouseWheel += pEvent->m_y;
+            io.InputNextFrame->MouseWheel += pEvent->m_y;
         if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELDOWN)
-            io.MouseWheel += pEvent->m_y;
+            io.InputNextFrame->MouseWheel += pEvent->m_y;
     }
 
     return 0;

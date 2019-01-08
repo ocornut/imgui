@@ -175,9 +175,9 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         }
 
         if (fabs(wheel_dx) > 0.0)
-            io.MouseWheelH += wheel_dx * 0.1f;
+            io.InputNextFrame->MouseWheelH += wheel_dx * 0.1f;
         if (fabs(wheel_dy) > 0.0)
-            io.MouseWheel += wheel_dy * 0.1f;
+            io.InputNextFrame->MouseWheel += wheel_dy * 0.1f;
         return io.WantCaptureMouse;
     }
 

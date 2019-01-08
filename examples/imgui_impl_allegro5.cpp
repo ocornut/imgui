@@ -309,8 +309,8 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT *ev)
     case ALLEGRO_EVENT_MOUSE_AXES:
         if (ev->mouse.display == g_Display)
         {
-            io.MouseWheel += ev->mouse.dz;
-            io.MouseWheelH += ev->mouse.dw;
+            io.InputNextFrame->MouseWheel += ev->mouse.dz;
+            io.InputNextFrame->MouseWheelH += ev->mouse.dw;
             io.MousePos = ImVec2(ev->mouse.x, ev->mouse.y);
         }
         return true;

@@ -1202,6 +1202,9 @@ ImGuiIO::ImGuiIO()
     for (int i = 0; i < IM_ARRAYSIZE(MouseDownDuration); i++) MouseDownDuration[i] = MouseDownDurationPrev[i] = -1.0f;
     for (int i = 0; i < IM_ARRAYSIZE(KeysDownDuration); i++) KeysDownDuration[i]  = KeysDownDurationPrev[i] = -1.0f;
     for (int i = 0; i < IM_ARRAYSIZE(NavInputsDownDuration); i++) NavInputsDownDuration[i] = -1.0f;
+
+    InputCurrentFrame = &InputFrames[0];
+    InputNextFrame = &InputFrames[1];
 }
 
 // Pass in translated ASCII characters for text input.
@@ -1209,7 +1212,7 @@ ImGuiIO::ImGuiIO()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
 void ImGuiIO::AddInputCharacter(ImWchar c)
 {
-    InputQueueCharacters.push_back(c);
+    InputNextFrame->InputQueueCharacters.push_back(c);
 }
 
 void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
@@ -1219,13 +1222,13 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
         unsigned int c = 0;
         utf8_chars += ImTextCharFromUtf8(&c, utf8_chars, NULL);
         if (c > 0 && c <= 0xFFFF)
-            InputQueueCharacters.push_back((ImWchar)c);
+            InputNextFrame->InputQueueCharacters.push_back((ImWchar)c);
     }
 }
 
 void ImGuiIO::ClearInputCharacters()
 {
-    InputQueueCharacters.resize(0);
+    InputNextFrame->InputQueueCharacters.resize(0);
 }
 
 //-----------------------------------------------------------------------------
@@ -3272,7 +3275,7 @@ void ImGui::UpdateMouseWheel()
     ImGuiContext& g = *GImGui;
     if (!g.HoveredWindow || g.HoveredWindow->Collapsed)
         return;
-    if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
+    if (g.IO.InputCurrentFrame->MouseWheel == 0.0f && g.IO.InputCurrentFrame->MouseWheelH == 0.0f)
         return;
 
     // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
@@ -3282,12 +3285,12 @@ void ImGui::UpdateMouseWheel()
         scroll_window = scroll_window->ParentWindow;
     const bool scroll_allowed = !(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoMouseInputs);
 
-    if (g.IO.MouseWheel != 0.0f)
+    if (g.IO.InputCurrentFrame->MouseWheel != 0.0f)
     {
         if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
         {
             // Zoom / Scale window
-            const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+            const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.InputCurrentFrame->MouseWheel * 0.10f, 0.50f, 2.50f);
             const float scale = new_font_scale / window->FontWindowScale;
             window->FontWindowScale = new_font_scale;
 
@@ -3301,14 +3304,14 @@ void ImGui::UpdateMouseWheel()
             // Mouse wheel vertical scrolling
             float scroll_amount = 5 * scroll_window->CalcFontSize();
             scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
-            SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
+            SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.InputCurrentFrame->MouseWheel * scroll_amount);
         }
     }
-    if (g.IO.MouseWheelH != 0.0f && scroll_allowed && !g.IO.KeyCtrl)
+    if (g.IO.InputCurrentFrame->MouseWheelH != 0.0f && scroll_allowed && !g.IO.KeyCtrl)
     {
         // Mouse wheel horizontal scrolling (for hardware that supports it)
         float scroll_amount = scroll_window->CalcFontSize();
-        SetWindowScrollX(scroll_window, scroll_window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
+        SetWindowScrollX(scroll_window, scroll_window->Scroll.x - g.IO.InputCurrentFrame->MouseWheelH * scroll_amount);
     }
 }
 
@@ -3486,6 +3489,13 @@ void ImGui::NewFrame()
     g.DragDropAcceptIdCurr = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropWithinSourceOrTarget = false;
+
+    // Swap per frame input buffers
+    ImSwap(g.IO.InputCurrentFrame, g.IO.InputNextFrame);
+
+    // Clear Input data for next frame
+    g.IO.InputNextFrame->MouseWheel = g.IO.InputNextFrame->MouseWheelH = 0.0f;
+    g.IO.InputNextFrame->InputQueueCharacters.resize(0);
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -3886,8 +3896,6 @@ void ImGui::EndFrame()
     g.IO.Fonts->Locked = false;
 
     // Clear Input data for next frame
-    g.IO.MouseWheel = g.IO.MouseWheelH = 0.0f;
-    g.IO.InputQueueCharacters.resize(0);
     memset(g.IO.NavInputs, 0, sizeof(g.IO.NavInputs));
 }
 
