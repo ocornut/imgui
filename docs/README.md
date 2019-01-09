@@ -147,7 +147,7 @@ Frameworks:
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
 - ORX: [pr #1843](https://github.com/ocornut/imgui/pull/1843)
 - LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
-- Magnum: [magnum-imgui](https://github.com/lecopivo/magnum-imgui), [MagnumImguiPort](https://github.com/lecopivo/MagnumImguiPort)
+- Magnum: [ImGuiIntegration](https://doc.magnum.graphics/magnum/namespaceMagnum_1_1ImGuiIntegration.html) ([example](https://doc.magnum.graphics/magnum/examples-imgui.html))
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
 - Qt3d: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d), QOpenGLWindow [qtimgui](https://github.com/ocornut/imgui/issues/1910)
 - SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml)
