@@ -1240,7 +1240,7 @@ struct ImGuiTabBar
     short               LastTabItemIdx;         // For BeginTabItem()/EndTabItem()
 
     ImGuiTabBar();
-    int                 GetTabOrder(const ImGuiTabItem* tab) const { return Tabs.index_from_pointer(tab); }
+    int                 GetTabOrder(const ImGuiTabItem* tab) const { return Tabs.index_from_ptr(tab); }
 };
 
 //-----------------------------------------------------------------------------
