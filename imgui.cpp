@@ -10514,6 +10514,15 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                     DockNodeMoveWindows(visible_node, target_node);
                     DockSettingsMoveDockReferencesInInactiveWindow(target_node->ID, visible_node->ID);
                 }
+                if (target_node->IsCentralNode)
+                {
+                    // Central node property needs to be moved to a leaf node, pick the last focused one.
+                    ImGuiDockNode* last_focused_node = DockContextFindNodeByID(ctx, payload_node->LastFocusedNodeID);
+                    IM_ASSERT(last_focused_node != NULL && DockNodeGetRootNode(last_focused_node) == DockNodeGetRootNode(payload_node));
+                    last_focused_node->IsCentralNode = true;
+                    target_node->IsCentralNode = false;
+                }
+
                 IM_ASSERT(target_node->Windows.Size == 0);
                 DockNodeMoveChildNodes(target_node, payload_node);
             }
@@ -10837,7 +10846,7 @@ static void DockNodeUpdateScanRec(ImGuiDockNode* node, ImGuiDockNodeUpdateScanRe
     if (node->IsCentralNode)
     {
         IM_ASSERT(results->CentralNode == NULL); // Should be only one
-        IM_ASSERT(node->IsLeafNode() && "If you get this assert: your .ini file may have been damaged by an old bug. OR please submit repro of actions leading to this");
+        IM_ASSERT(node->IsLeafNode() && "If you get this assert: please submit .ini file + repro of actions leading to this.");
         results->CentralNode = node;
     }
     if (results->CountNodesWithWindows > 1 && results->CentralNode != NULL)
