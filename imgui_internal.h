@@ -6,7 +6,26 @@
 //   #define IMGUI_DEFINE_MATH_OPERATORS
 // To implement maths operators for ImVec2 (disabled by default to not collide with using IM_VEC2_CLASS_EXTRA along with your own math types+operators)
 
+/*
+
+Index of this file:
+// Header mess
+// Forward declarations
+// STB libraries includes
+// Context pointer
+// Generic helpers
+// Misc data structures
+// Main imgui context
+// Tab bar, tab item
+// Internal API
+
+*/
+
 #pragma once
+
+//-----------------------------------------------------------------------------
+// Header mess
+//-----------------------------------------------------------------------------
 
 #ifndef IMGUI_VERSION
 #error Must include imgui.h before imgui_internal.h
@@ -30,7 +49,7 @@
 #endif
 
 //-----------------------------------------------------------------------------
-// Forward Declarations
+// Forward declarations
 //-----------------------------------------------------------------------------
 
 struct ImRect;                      // An axis-aligned rectangle (2 points)
@@ -68,7 +87,7 @@ typedef int ImGuiSliderFlags;       // -> enum ImGuiSliderFlags_       // Flags:
 typedef int ImGuiDragFlags;         // -> enum ImGuiDragFlags_         // Flags: for DragBehavior()
 
 //-------------------------------------------------------------------------
-// STB libraries
+// STB libraries includes
 //-------------------------------------------------------------------------
 
 namespace ImGuiStb
@@ -84,7 +103,7 @@ namespace ImGuiStb
 } // namespace ImGuiStb
 
 //-----------------------------------------------------------------------------
-// Context
+// Context pointer
 //-----------------------------------------------------------------------------
 
 #ifndef GImGui
@@ -92,7 +111,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 #endif
 
 //-----------------------------------------------------------------------------
-// Helpers
+// Generic helpers
 //-----------------------------------------------------------------------------
 
 #define IM_PI           3.14159265358979323846f
@@ -242,7 +261,7 @@ struct IMGUI_API ImPool
 };
 
 //-----------------------------------------------------------------------------
-// Types
+// Misc data structures
 //-----------------------------------------------------------------------------
 
 // 1D vector (this odd construct is used to facilitate the transition between 1D and 2D, and the maintenance of some branches/patches)
@@ -1172,7 +1191,7 @@ struct ImGuiItemHoveredDataBackup
 };
 
 //-----------------------------------------------------------------------------
-// Tab Bar, Tab Item
+// Tab bar, tab item
 //-----------------------------------------------------------------------------
 
 enum ImGuiTabBarFlagsPrivate_
