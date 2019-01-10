@@ -1,4 +1,4 @@
-// Wrapper to use Freetype (instead of stb_truetype) for Dear ImGui
+// Wrapper to use FreeType (instead of stb_truetype) for Dear ImGui
 // Get latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
 // Original code by @Vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained by @ocornut
 
@@ -20,15 +20,15 @@
 // TODO:
 // - Output texture has excessive resolution (lots of vertical waste).
 // - FreeType's memory allocator is not overridden.
-// - cfg.OversampleH, OversampleV are ignored (but perhaps not so necessary with this rasterizer).
+// - cfg.OversampleH, OversampleV are not supported (but perhaps not so necessary with this rasterizer).
 
 #include "imgui_freetype.h"
 #include "imgui_internal.h"   // ImMin,ImMax,ImFontAtlasBuild*,
 #include <stdint.h>
 #include <ft2build.h>
-#include FT_FREETYPE_H
-#include FT_GLYPH_H
-#include FT_SYNTHESIS_H
+#include FT_FREETYPE_H          // <freetype/freetype.h>
+#include FT_GLYPH_H             // <freetype/ftglyph.h>
+#include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
@@ -96,8 +96,8 @@ namespace
     // NB: No ctor/dtor, explicitly call Init()/Shutdown()
     struct FreeTypeFont
     {
-        bool        Init(const ImFontConfig& cfg, unsigned int extra_user_flags);   // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
-        void        Shutdown();
+        bool        Create(const ImFontConfig& cfg, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
+        void        Destroy();
         void        SetPixelHeight(int pixel_height);                               // Change font pixel size. All following calls to RasterizeGlyph() will use this size
 
         bool        CalcGlyphInfo(uint32_t codepoint, GlyphInfo& glyph_info, FT_Glyph& ft_glyph, FT_BitmapGlyph& ft_bitmap);
@@ -114,7 +114,7 @@ namespace
     // From SDL_ttf: Handy routines for converting from fixed point
     #define FT_CEIL(X)  (((X + 63) & -64) / 64)
 
-    bool FreeTypeFont::Init(const ImFontConfig& cfg, unsigned int extra_user_flags)
+    bool FreeTypeFont::Create(const ImFontConfig& cfg, unsigned int extra_user_flags)
     {
         // FIXME: substitute allocator
         FT_Error error = FT_Init_FreeType(&FreetypeLibrary);
@@ -130,7 +130,7 @@ namespace
         memset(&Info, 0, sizeof(Info));
         SetPixelHeight((uint32_t)cfg.SizePixels);
 
-        // Convert to freetype flags (nb: Bold and Oblique are processed separately)
+        // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
         UserFlags = cfg.RasterizerFlags | extra_user_flags;
         FreetypeLoadFlags = FT_LOAD_NO_BITMAP;
         if (UserFlags & ImGuiFreeType::NoHinting)      FreetypeLoadFlags |= FT_LOAD_NO_HINTING;
@@ -146,7 +146,7 @@ namespace
         return true;
     }
 
-    void FreeTypeFont::Shutdown()
+    void FreeTypeFont::Destroy()
     {
         if (FreetypeFace) 
         {
@@ -162,6 +162,7 @@ namespace
         // I'm not sure how to deal with font sizes properly.
         // As far as I understand, currently ImGui assumes that the 'pixel_height' is a maximum height of an any given glyph,
         // i.e. it's the sum of font's ascender and descender. Seems strange to me.
+        // FT_Set_Pixel_Sizes() doesn't seem to get us the same result.
         FT_Size_RequestRec req;
         req.type = FT_SIZE_REQUEST_TYPE_REAL_DIM;
         req.width = 0;
@@ -180,7 +181,7 @@ namespace
         Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance);
     }
 
-    bool FreeTypeFont::CalcGlyphInfo(uint32_t codepoint, GlyphInfo &glyph_info, FT_Glyph& ft_glyph, FT_BitmapGlyph& ft_bitmap)
+    bool FreeTypeFont::CalcGlyphInfo(uint32_t codepoint, GlyphInfo& glyph_info, FT_Glyph& ft_glyph, FT_BitmapGlyph& ft_bitmap)
     {
         uint32_t glyph_index = FT_Get_Char_Index(FreetypeFace, codepoint);
         if (glyph_index == 0)
@@ -253,7 +254,8 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
 
     ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
 
-    atlas->TexID = NULL;
+    // Clear atlas
+    atlas->TexID = (ImTextureID)NULL;
     atlas->TexWidth = atlas->TexHeight = 0;
     atlas->TexUvScale = ImVec2(0.0f, 0.0f);
     atlas->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
@@ -273,7 +275,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
         FreeTypeFont& font_face = fonts[input_i];
         IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == atlas));
 
-        if (!font_face.Init(cfg, extra_flags))
+        if (!font_face.Create(cfg, extra_flags))
             return false;
 
         max_glyph_size.x = ImMax(max_glyph_size.x, font_face.Info.MaxAdvanceWidth);
@@ -380,7 +382,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
 
     // Cleanup
     for (int n = 0; n < fonts.Size; n++)
-        fonts[n].Shutdown();
+        fonts[n].Destroy();
 
     ImFontAtlasBuildFinish(atlas);
 
