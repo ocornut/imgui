@@ -1541,11 +1541,11 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     if (!font_cfg->MergeMode)
         Fonts.push_back(IM_NEW(ImFont));
     else
-        IM_ASSERT(!Fonts.empty()); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
+        IM_ASSERT(!Fonts.empty() && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
 
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();
-    if (!new_font_cfg.DstFont)
+    if (new_font_cfg.DstFont == NULL)
         new_font_cfg.DstFont = Fonts.back();
     if (!new_font_cfg.FontDataOwnedByAtlas)
     {
@@ -1733,139 +1733,220 @@ void    ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsig
             data[i] = table[data[i]];
 }
 
+// Temporary data for one source font (multiple source fonts can be merged into one destination ImFont)
+// (C++03 doesn't allow instancing ImVector<> with function-local types so we declare the type here.)
+struct ImFontBuildSrcData
+{
+    stbtt_fontinfo      FontInfo;
+    stbtt_pack_range    PackRange;          // Hold the list of codepoints to pack (essentially points to Codepoints.Data)
+    stbrp_rect*         Rects;              // Rectangle to pack. We first fill in their size and the packer will give us their position.
+    stbtt_packedchar*   PackedChars;        // Output glyphs
+    const ImWchar*      SrcRanges;          // Ranges as requested by user (user is allowed to request too much, e.g. 0x0020..0xFFFF)
+    int                 DstIndex;           // Index into atlas->Fonts[] and dst_tmp_array[]
+    int                 GlyphsHighest;      // Highest requested codepoint
+    int                 GlyphsCount;        // Glyph count (excluding missing glyphs and glyphs already set by an earlier source font)
+    ImBoolVector        GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
+    ImVector<int>       GlyphsList;         // Glyph codepoints list (flattened version of GlyphsMap)
+};
+
+// Temporary data for one destination ImFont* (multiple source fonts can be merged into one destination ImFont)
+struct ImFontBuildDstData
+{
+    int                 SrcCount;           // Number of source fonts targeting this destination font.
+    int                 GlyphsHighest;
+    int                 GlyphsCount;
+    ImBoolVector        GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
+};
+
+static void UnpackBoolVectorToFlatIndexList(const ImBoolVector* in, ImVector<int>* out)
+{
+    IM_ASSERT(sizeof(in->Storage.Data[0]) == sizeof(int));
+    const int* it_begin = in->Storage.begin();
+    const int* it_end = in->Storage.end();
+    for (const int* it = it_begin; it < it_end; it++)
+        if (int entries_32 = *it)
+            for (int bit_n = 0; bit_n < 32; bit_n++)
+                if (entries_32 & (1 << bit_n))
+                    out->push_back((int)((it - it_begin) << 5) + bit_n);
+}
+
 bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
     ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
 
+    // Clear atlas
     atlas->TexID = (ImTextureID)NULL;
     atlas->TexWidth = atlas->TexHeight = 0;
     atlas->TexUvScale = ImVec2(0.0f, 0.0f);
     atlas->TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     atlas->ClearTexData();
 
-    // Count glyphs/ranges
-    int total_glyphs_count = 0;
-    int total_ranges_count = 0;
-    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
+    // Temporary storage for building
+    ImVector<ImFontBuildSrcData> src_tmp_array;
+    ImVector<ImFontBuildDstData> dst_tmp_array;
+    src_tmp_array.resize(atlas->ConfigData.Size);
+    dst_tmp_array.resize(atlas->Fonts.Size);
+    memset(src_tmp_array.Data, 0, (size_t)src_tmp_array.size_in_bytes());
+    memset(dst_tmp_array.Data, 0, (size_t)dst_tmp_array.size_in_bytes());
+
+    // 1. Initialize font loading structure, check font data validity
+    for (int src_i = 0; src_i < atlas->ConfigData.Size; src_i++)
     {
-        ImFontConfig& cfg = atlas->ConfigData[input_i];
-        if (!cfg.GlyphRanges)
-            cfg.GlyphRanges = atlas->GetGlyphRangesDefault();
-        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, total_ranges_count++)
-            total_glyphs_count += (in_range[1] - in_range[0]) + 1;
-    }
-
-    // We need a width for the skyline algorithm. Using a dumb heuristic here to decide of width. User can override TexDesiredWidth and TexGlyphPadding if they wish.
-    // Width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
-    atlas->TexWidth = (atlas->TexDesiredWidth > 0) ? atlas->TexDesiredWidth : (total_glyphs_count > 4000) ? 4096 : (total_glyphs_count > 2000) ? 2048 : (total_glyphs_count > 1000) ? 1024 : 512;
-    atlas->TexHeight = 0;
-
-    // Start packing
-    const int max_tex_height = 1024*32;
-    stbtt_pack_context spc = {};
-    if (!stbtt_PackBegin(&spc, NULL, atlas->TexWidth, max_tex_height, 0, atlas->TexGlyphPadding, NULL))
-        return false;
-    stbtt_PackSetOversampling(&spc, 1, 1);
-
-    // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
-    ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
-
-    // Initialize font information (so we can error without any cleanup)
-    struct ImFontTempBuildData
-    {
-        stbtt_fontinfo      FontInfo;
-        stbrp_rect*         Rects;
-        int                 RectsCount;
-        stbtt_pack_range*   Ranges;
-        int                 RangesCount;
-    };
-    ImFontTempBuildData* tmp_array = (ImFontTempBuildData*)ImGui::MemAlloc((size_t)atlas->ConfigData.Size * sizeof(ImFontTempBuildData));
-    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
-    {
-        ImFontConfig& cfg = atlas->ConfigData[input_i];
-        ImFontTempBuildData& tmp = tmp_array[input_i];
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        ImFontConfig& cfg = atlas->ConfigData[src_i];
         IM_ASSERT(cfg.DstFont && (!cfg.DstFont->IsLoaded() || cfg.DstFont->ContainerAtlas == atlas));
 
+        // Find index from cfg.DstFont (we allow the user to set cfg.DstFont. Also it makes casual debugging nicer than when storing indices)
+        src_tmp.DstIndex = -1;
+        for (int output_i = 0; output_i < atlas->Fonts.Size && src_tmp.DstIndex == -1; output_i++)
+            if (cfg.DstFont == atlas->Fonts[output_i])
+                src_tmp.DstIndex = output_i;
+        IM_ASSERT(src_tmp.DstIndex != -1); // cfg.DstFont not pointing within atlas->Fonts[] array?
+        if (src_tmp.DstIndex == -1)
+            return false;
+
+        // Initialize helper structure for font loading and verify that the TTF/OTF data is correct
         const int font_offset = stbtt_GetFontOffsetForIndex((unsigned char*)cfg.FontData, cfg.FontNo);
         IM_ASSERT(font_offset >= 0 && "FontData is incorrect, or FontNo cannot be found.");
-        if (!stbtt_InitFont(&tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
-        {
-            atlas->TexWidth = atlas->TexHeight = 0; // Reset output on failure
-            ImGui::MemFree(tmp_array);
+        if (!stbtt_InitFont(&src_tmp.FontInfo, (unsigned char*)cfg.FontData, font_offset))
             return false;
-        }
+
+        // Measure highest codepoints
+        ImFontBuildDstData& dst_tmp = dst_tmp_array[src_tmp.DstIndex];
+        src_tmp.SrcRanges = cfg.GlyphRanges ? cfg.GlyphRanges : atlas->GetGlyphRangesDefault();
+        for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
+            src_tmp.GlyphsHighest = ImMax(src_tmp.GlyphsHighest, (int)src_range[1]);
+        dst_tmp.SrcCount++;
+        dst_tmp.GlyphsHighest = ImMax(dst_tmp.GlyphsHighest, src_tmp.GlyphsHighest);
     }
+
+    // 2. For every requested codepoint, check for their presence in the font data, and handle redundancy or overlaps between source fonts to avoid unused glyphs.
+    int total_glyphs_count = 0;
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
+    {
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        ImFontBuildDstData& dst_tmp = dst_tmp_array[src_tmp.DstIndex];
+        ImFontConfig& cfg = atlas->ConfigData[src_i];
+        src_tmp.GlyphsSet.Resize(src_tmp.GlyphsHighest);
+        if (dst_tmp.SrcCount > 1 && dst_tmp.GlyphsSet.Storage.empty())
+            dst_tmp.GlyphsSet.Resize(dst_tmp.GlyphsHighest);
+
+        for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
+            for (int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
+            {
+                if (cfg.MergeMode && dst_tmp.GlyphsSet.GetBit(codepoint))   // Don't overwrite existing glyphs. We could make this an option (e.g. MergeOverwrite)
+                    continue;
+                if (!stbtt_FindGlyphIndex(&src_tmp.FontInfo, codepoint))    // It is actually in the font?
+                    continue;
+                
+                // Add to avail set/counters
+                src_tmp.GlyphsCount++;
+                dst_tmp.GlyphsCount++;
+                src_tmp.GlyphsSet.SetBit(codepoint, true);
+                if (dst_tmp.SrcCount > 1)
+                    dst_tmp.GlyphsSet.SetBit(codepoint, true);
+                total_glyphs_count++;
+            }
+    }
+
+    // 3. Unpack our bit map into a flat list (we now have all the Unicode points that we know are requested _and_ available _and_ not overlapping another)
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
+    {
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        src_tmp.GlyphsList.reserve(src_tmp.GlyphsCount);
+        UnpackBoolVectorToFlatIndexList(&src_tmp.GlyphsSet, &src_tmp.GlyphsList);
+        src_tmp.GlyphsSet.Clear();
+        IM_ASSERT(src_tmp.GlyphsList.Size == src_tmp.GlyphsCount);
+    }
+    for (int dst_i = 0; dst_i < dst_tmp_array.Size; dst_i++)
+        dst_tmp_array[dst_i].GlyphsSet.Clear();
+    dst_tmp_array.clear();
 
     // Allocate packing character data and flag packed characters buffer as non-packed (x0=y0=x1=y1=0)
-    int buf_packedchars_n = 0, buf_rects_n = 0, buf_ranges_n = 0;
-    stbtt_packedchar* buf_packedchars = (stbtt_packedchar*)ImGui::MemAlloc(total_glyphs_count * sizeof(stbtt_packedchar));
-    stbrp_rect* buf_rects = (stbrp_rect*)ImGui::MemAlloc(total_glyphs_count * sizeof(stbrp_rect));
-    stbtt_pack_range* buf_ranges = (stbtt_pack_range*)ImGui::MemAlloc(total_ranges_count * sizeof(stbtt_pack_range));
-    memset(buf_packedchars, 0, total_glyphs_count * sizeof(stbtt_packedchar));
-    memset(buf_rects, 0, total_glyphs_count * sizeof(stbrp_rect));              // Unnecessary but let's clear this for the sake of sanity.
-    memset(buf_ranges, 0, total_ranges_count * sizeof(stbtt_pack_range));
+    // (We technically don't need to zero-clear buf_rects, but let's do it for the sake of sanity)
+    ImVector<stbrp_rect> buf_rects;
+    ImVector<stbtt_packedchar> buf_packedchars;
+    buf_rects.resize(total_glyphs_count);
+    buf_packedchars.resize(total_glyphs_count);
+    memset(buf_rects.Data, 0, (size_t)buf_rects.size_in_bytes());
+    memset(buf_packedchars.Data, 0, (size_t)buf_packedchars.size_in_bytes());
 
-    // First font pass: pack all glyphs (no rendering at this point, we are working with rectangles in an infinitely tall texture at this point)
-    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
+    // 4. Gather glyphs sizes so we can pack them in our virtual canvas.
+    int total_surface = 0;
+    int buf_rects_out_n = 0;
+    int buf_packedchars_out_n = 0;
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
-        ImFontConfig& cfg = atlas->ConfigData[input_i];
-        ImFontTempBuildData& tmp = tmp_array[input_i];
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        if (src_tmp.GlyphsCount == 0)
+            continue;
 
-        // Setup ranges
-        int font_glyphs_count = 0;
-        int font_ranges_count = 0;
-        for (const ImWchar* in_range = cfg.GlyphRanges; in_range[0] && in_range[1]; in_range += 2, font_ranges_count++)
-            font_glyphs_count += (in_range[1] - in_range[0]) + 1;
-        tmp.Ranges = buf_ranges + buf_ranges_n;
-        tmp.RangesCount = font_ranges_count;
-        buf_ranges_n += font_ranges_count;
-        for (int i = 0; i < font_ranges_count; i++)
+        src_tmp.Rects = &buf_rects[buf_rects_out_n];
+        src_tmp.PackedChars = &buf_packedchars[buf_packedchars_out_n];
+        buf_rects_out_n += src_tmp.GlyphsCount;
+        buf_packedchars_out_n += src_tmp.GlyphsCount;
+
+        // Convert our ranges in the format stb_truetype wants
+        ImFontConfig& cfg = atlas->ConfigData[src_i];
+        src_tmp.PackRange.font_size = cfg.SizePixels;
+        src_tmp.PackRange.first_unicode_codepoint_in_range = 0;
+        src_tmp.PackRange.array_of_unicode_codepoints = src_tmp.GlyphsList.Data;
+        src_tmp.PackRange.num_chars = src_tmp.GlyphsList.Size;
+        src_tmp.PackRange.chardata_for_range = src_tmp.PackedChars;
+        src_tmp.PackRange.h_oversample = (unsigned char)cfg.OversampleH;
+        src_tmp.PackRange.v_oversample = (unsigned char)cfg.OversampleV;
+
+        // Gather the sizes of all rectangles we will need to pack (this loop is based on stbtt_PackFontRangesGatherRects)
+        const float scale = (cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
+        const int padding = atlas->TexGlyphPadding;
+        for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
-            const ImWchar* in_range = &cfg.GlyphRanges[i * 2];
-            stbtt_pack_range& range = tmp.Ranges[i];
-            range.font_size = cfg.SizePixels;
-            range.first_unicode_codepoint_in_range = in_range[0];
-            range.num_chars = (in_range[1] - in_range[0]) + 1;
-            range.chardata_for_range = buf_packedchars + buf_packedchars_n;
-            buf_packedchars_n += range.num_chars;
-        }
-
-        // Gather the sizes of all rectangle we need
-        tmp.Rects = buf_rects + buf_rects_n;
-        tmp.RectsCount = font_glyphs_count;
-        buf_rects_n += font_glyphs_count;
-        stbtt_PackSetOversampling(&spc, cfg.OversampleH, cfg.OversampleV);
-        int n = stbtt_PackFontRangesGatherRects(&spc, &tmp.FontInfo, tmp.Ranges, tmp.RangesCount, tmp.Rects);
-        IM_ASSERT(n == font_glyphs_count);
-
-        // Detect missing glyphs and replace them with a zero-sized box instead of relying on the default glyphs
-        // This allows us merging overlapping icon fonts more easily.
-        int rect_i = 0;
-        for (int range_i = 0; range_i < tmp.RangesCount; range_i++)
-            for (int char_i = 0; char_i < tmp.Ranges[range_i].num_chars; char_i++, rect_i++)
-                if (stbtt_FindGlyphIndex(&tmp.FontInfo, tmp.Ranges[range_i].first_unicode_codepoint_in_range + char_i) == 0)
-                    tmp.Rects[rect_i].w = tmp.Rects[rect_i].h = 0;
-
-        // Pack
-        stbrp_pack_rects((stbrp_context*)spc.pack_info, tmp.Rects, n);
-
-        // Extend texture height
-        // Also mark missing glyphs as non-packed so we don't attempt to render into them
-        for (int i = 0; i < n; i++)
-        {
-            if (tmp.Rects[i].w == 0 && tmp.Rects[i].h == 0)
-                tmp.Rects[i].was_packed = 0;
-            if (tmp.Rects[i].was_packed)
-                atlas->TexHeight = ImMax(atlas->TexHeight, tmp.Rects[i].y + tmp.Rects[i].h);
+            int x0, y0, x1, y1;
+            const int glyph_index_in_font = stbtt_FindGlyphIndex(&src_tmp.FontInfo, src_tmp.GlyphsList[glyph_i]);
+            IM_ASSERT(glyph_index_in_font != 0);
+            stbtt_GetGlyphBitmapBoxSubpixel(&src_tmp.FontInfo, glyph_index_in_font, scale * cfg.OversampleH, scale * cfg.OversampleV, 0, 0, &x0, &y0, &x1, &y1);
+            src_tmp.Rects[glyph_i].w = (stbrp_coord)(x1 - x0 + padding + cfg.OversampleH - 1);
+            src_tmp.Rects[glyph_i].h = (stbrp_coord)(y1 - y0 + padding + cfg.OversampleV - 1);
+            total_surface += src_tmp.Rects[glyph_i].w * src_tmp.Rects[glyph_i].h;
         }
     }
-    IM_ASSERT(buf_rects_n == total_glyphs_count);
-    IM_ASSERT(buf_packedchars_n == total_glyphs_count);
-    IM_ASSERT(buf_ranges_n == total_ranges_count);
 
-    // Create texture
+    // We need a width for the skyline algorithm, any width!
+    // The exact width doesn't really matter much, but some API/GPU have texture size limitations and increasing width can decrease height.
+    // User can override TexDesiredWidth and TexGlyphPadding if they wish, otherwise we use a simple heuristic to select the width based on expected surface.
+    const int surface_sqrt = (int)ImSqrt((float)total_surface) + 1;
+    atlas->TexHeight = 0;
+    if (atlas->TexDesiredWidth > 0)
+        atlas->TexWidth = atlas->TexDesiredWidth;
+    else
+        atlas->TexWidth = (surface_sqrt >= 4096*0.7f) ? 4096 : (surface_sqrt >= 2048*0.7f) ? 2048 : (surface_sqrt >= 1024*0.7f) ? 1024 : 512;
+
+    // 5. Start packing
+    // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
+    const int TEX_HEIGHT_MAX = 1024 * 32;
+    stbtt_pack_context spc = {};
+    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding, NULL);
+    ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
+
+    // 6. Pack each source font. No rendering yet, we are working with rectangles in an infinitely tall texture at this point.
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
+    {
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        if (src_tmp.GlyphsCount == 0)
+            continue;
+
+        stbrp_pack_rects((stbrp_context*)spc.pack_info, src_tmp.Rects, src_tmp.GlyphsCount);
+
+        // Extend texture height and mark missing glyphs as non-packed so we won't render them.
+        // FIXME: We are not handling packing failure here (would happen if we got off TEX_HEIGHT_MAX or if a single if larger than TexWidth?)
+        for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
+            if (src_tmp.Rects[glyph_i].was_packed)
+                atlas->TexHeight = ImMax(atlas->TexHeight, src_tmp.Rects[glyph_i].y + src_tmp.Rects[glyph_i].h);
+    }
+
+    // 7. Allocate texture
     atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
     atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
     atlas->TexPixelsAlpha8 = (unsigned char*)ImGui::MemAlloc(atlas->TexWidth * atlas->TexHeight);
@@ -1873,41 +1954,46 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     spc.pixels = atlas->TexPixelsAlpha8;
     spc.height = atlas->TexHeight;
 
-    // Second pass: render font characters
-    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
+    // 8. Render/rasterize font characters into the texture
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
-        ImFontConfig& cfg = atlas->ConfigData[input_i];
-        ImFontTempBuildData& tmp = tmp_array[input_i];
-        stbtt_PackSetOversampling(&spc, cfg.OversampleH, cfg.OversampleV);
-        stbtt_PackFontRangesRenderIntoRects(&spc, &tmp.FontInfo, tmp.Ranges, tmp.RangesCount, tmp.Rects);
+        ImFontConfig& cfg = atlas->ConfigData[src_i];
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        if (src_tmp.GlyphsCount == 0)
+            continue;
+
+        stbtt_PackFontRangesRenderIntoRects(&spc, &src_tmp.FontInfo, &src_tmp.PackRange, 1, src_tmp.Rects);
+
+        // Apply multiply operator
         if (cfg.RasterizerMultiply != 1.0f)
         {
             unsigned char multiply_table[256];
             ImFontAtlasBuildMultiplyCalcLookupTable(multiply_table, cfg.RasterizerMultiply);
-            for (const stbrp_rect* r = tmp.Rects; r != tmp.Rects + tmp.RectsCount; r++)
+            stbrp_rect* r = &src_tmp.Rects[0];
+            for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++, r++)
                 if (r->was_packed)
-                    ImFontAtlasBuildMultiplyRectAlpha8(multiply_table, spc.pixels, r->x, r->y, r->w, r->h, spc.stride_in_bytes);
+                    ImFontAtlasBuildMultiplyRectAlpha8(multiply_table, atlas->TexPixelsAlpha8, r->x, r->y, r->w, r->h, atlas->TexWidth * 1);
         }
-        tmp.Rects = NULL;
+        src_tmp.Rects = NULL;
     }
 
     // End packing
     stbtt_PackEnd(&spc);
-    ImGui::MemFree(buf_rects);
-    buf_rects = NULL;
+    buf_rects.clear();
 
-    // Third pass: setup ImFont and glyphs for runtime
-    for (int input_i = 0; input_i < atlas->ConfigData.Size; input_i++)
+    // 9. Setup ImFont and glyphs for runtime
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
     {
-        ImFontConfig& cfg = atlas->ConfigData[input_i];
-        ImFontTempBuildData& tmp = tmp_array[input_i];
-        ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
-        if (cfg.MergeMode)
-            dst_font->BuildLookupTable();
+        ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
+        if (src_tmp.GlyphsCount == 0)
+            continue;
 
-        const float font_scale = stbtt_ScaleForPixelHeight(&tmp.FontInfo, cfg.SizePixels);
+        ImFontConfig& cfg = atlas->ConfigData[src_i];
+        ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
+
+        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels);
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
-        stbtt_GetFontVMetrics(&tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
+        stbtt_GetFontVMetrics(&src_tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
         const float ascent = ImFloor(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
         const float descent = ImFloor(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
@@ -1915,40 +2001,30 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         const float font_off_x = cfg.GlyphOffset.x;
         const float font_off_y = cfg.GlyphOffset.y + (float)(int)(dst_font->Ascent + 0.5f);
 
-        for (int i = 0; i < tmp.RangesCount; i++)
+        for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
         {
-            stbtt_pack_range& range = tmp.Ranges[i];
-            for (int char_idx = 0; char_idx < range.num_chars; char_idx += 1)
-            {
-                const stbtt_packedchar& pc = range.chardata_for_range[char_idx];
-                if (!pc.x0 && !pc.x1 && !pc.y0 && !pc.y1)
-                    continue;
+            const int codepoint = src_tmp.GlyphsList[glyph_i];
+            const stbtt_packedchar& pc = src_tmp.PackedChars[glyph_i];
 
-                const int codepoint = range.first_unicode_codepoint_in_range + char_idx;
-                if (cfg.MergeMode && dst_font->FindGlyphNoFallback((ImWchar)codepoint))
-                    continue;
-
-                float char_advance_x_org = pc.xadvance;
-                float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
-                float char_off_x = font_off_x;
-                if (char_advance_x_org != char_advance_x_mod)
-                    char_off_x += cfg.PixelSnapH ? (float)(int)((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
-
-                stbtt_aligned_quad q;
-                float dummy_x = 0.0f, dummy_y = 0.0f;
-                stbtt_GetPackedQuad(range.chardata_for_range, atlas->TexWidth, atlas->TexHeight, char_idx, &dummy_x, &dummy_y, &q, 0);
-                dst_font->AddGlyph((ImWchar)codepoint, q.x0 + char_off_x, q.y0 + font_off_y, q.x1 + char_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, char_advance_x_mod);
-            }
+            const float char_advance_x_org = pc.xadvance;
+            const float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
+            float char_off_x = font_off_x;
+            if (char_advance_x_org != char_advance_x_mod)
+                char_off_x += cfg.PixelSnapH ? (float)(int)((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
+            
+            // Register glyph
+            stbtt_aligned_quad q;
+            float dummy_x = 0.0f, dummy_y = 0.0f;
+            stbtt_GetPackedQuad(src_tmp.PackedChars, atlas->TexWidth, atlas->TexHeight, glyph_i, &dummy_x, &dummy_y, &q, 0);
+            dst_font->AddGlyph((ImWchar)codepoint, q.x0 + char_off_x, q.y0 + font_off_y, q.x1 + char_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, char_advance_x_mod);
         }
     }
 
-    // Cleanup temporaries
-    ImGui::MemFree(buf_packedchars);
-    ImGui::MemFree(buf_ranges);
-    ImGui::MemFree(tmp_array);
+    // Cleanup temporary (ImVector doesn't honor destructor)
+    for (int src_i = 0; src_i < src_tmp_array.Size; src_i++)
+        src_tmp_array[src_i].~ImFontBuildSrcData();
 
     ImFontAtlasBuildFinish(atlas);
-
     return true;
 }
 
@@ -1976,16 +2052,16 @@ void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* f
     font->ConfigDataCount++;
 }
 
-void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* pack_context_opaque)
+void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
 {
-    stbrp_context* pack_context = (stbrp_context*)pack_context_opaque;
+    stbrp_context* pack_context = (stbrp_context*)stbrp_context_opaque;
 
     ImVector<ImFontAtlas::CustomRect>& user_rects = atlas->CustomRects;
     IM_ASSERT(user_rects.Size >= 1); // We expect at least the default custom rects to be registered, else something went wrong.
 
     ImVector<stbrp_rect> pack_rects;
     pack_rects.resize(user_rects.Size);
-    memset(pack_rects.Data, 0, sizeof(stbrp_rect) * user_rects.Size);
+    memset(pack_rects.Data, 0, (size_t)pack_rects.size_in_bytes());
     for (int i = 0; i < user_rects.Size; i++)
     {
         pack_rects[i].w = user_rects[i].Width;
