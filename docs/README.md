@@ -20,7 +20,7 @@ Dear ImGui is designed to enable fast iterations and to empower programmers to c
 
 Dear ImGui is particularly suited to integration in games engine (for tooling), real-time 3D applications, fullscreen applications, embedded applications, or any applications on consoles platforms where operating system features are non-standard. 
 
-See [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui), [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Gallery](https://github.com/ocornut/imgui/issues/1902) pages to get an idea of its use cases.
+See [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui), [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Gallery](https://github.com/ocornut/imgui/issues/2265) pages to get an idea of its use cases.
 
 Dear ImGui is self-contained within a few files that you can easily copy and compile into your application/engine:
 - imgui.cpp
@@ -175,7 +175,8 @@ User screenshots:
 <br>[Gallery Part 4](https://github.com/ocornut/imgui/issues/973) (Jan 2017 to Aug 2017)
 <br>[Gallery Part 5](https://github.com/ocornut/imgui/issues/1269) (Aug 2017 to Feb 2018)
 <br>[Gallery Part 6](https://github.com/ocornut/imgui/issues/1607) (Feb 2018 to June 2018)
-<br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 onward)
+<br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 to January 2018)
+<br>[Gallery Part 8](https://github.com/ocornut/imgui/issues/2265) (January 2018 onward)
 <br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
 Custom engine
@@ -243,6 +244,7 @@ The library started its life and is best known as "ImGui" only due to the fact t
 <br>**How can I easily use icons in my application?**
 <br>**How can I load multiple fonts?**
 <br>**How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?** ([example](https://github.com/ocornut/imgui/wiki/Loading-Font-Example))
+<br>**How can I interact with standard C++ types (such as std::string and std::vector)?**
 <br>**How can I use the drawing facilities without an Dear ImGui window? (using ImDrawList API)**
 <br>**How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)**
 <br>**I integrated Dear ImGui in my engine and the text or lines are blurry..**
@@ -298,7 +300,7 @@ Ongoing dear imgui development is financially supported by users and private spo
 - **Blizzard Entertainment**.
 
 **Double-chocolate sponsors**
-- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner, Aiden Koss.
+- Media Molecule, Mobigame, Insomniac Games, Aras Pranckevičius, Lizardcube, Greggman, DotEmu, Nadeo, Supercell, Runner, Aiden Koss, Kylotonn.
 
 **Salty caramel supporters**
 - Jetha Chan, Wild Sheep Studio, Pastagames, Mārtiņš Možeiko, Daniel Collin, Recognition Robotics, Chris Genova, ikrima, Glenn Fiedler, Geoffrey Evans, Dakko Dakko, Mercury Labs, Singularity Demo Group, Mischa Alff, Sebastien Ronsse, Lionel Landwerlin, Nikolay Ivanov, Ron Gilbert, Brandon Townsend, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Jeff Roberts, Rainway inc.

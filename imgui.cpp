@@ -45,6 +45,7 @@ DOCUMENTATION
   - How can I easily use icons in my application?
   - How can I load multiple fonts?
   - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
+  - How can I interact with standard C++ types (such as std::string and std::vector)? 
   - How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
   - How can I use Dear ImGui on a platform that doesn't have a mouse or a keyboard? (input share, remoting, gamepad)
   - I integrated Dear ImGui in my engine and the text or lines are blurry..
@@ -842,6 +843,28 @@ CODE
     You may also use MultiByteToWideChar() or ToUnicode() to retrieve Unicode codepoints from MultiByte characters or keyboard state.
     Windows: if your language is relying on an Input Method Editor (IME), you copy the HWND of your window to io.ImeWindowHandle in order for 
     the default implementation of io.ImeSetInputScreenPosFn() to set your Microsoft IME position correctly.
+
+ Q: How can I interact with standard C++ types (such as std::string and std::vector)? 
+ A: - Being highly portable (bindings for several languages, frameworks, programming style, obscure or older platforms/compilers),
+      and aiming for compatibility & performance suitable for every modern real-time game engines, dear imgui does not use
+      any of std C++ types. We use raw types (e.g. char* instead of std::string) because they adapt to more use cases.
+    - To use ImGui::InputText() with a std::string or any resizable string class, see misc/cpp/imgui_stdlib.h.
+    - To use combo boxes and list boxes with std::vector or any other data structure: the BeginCombo()/EndCombo() API
+      lets you iterate and submit items yourself, so does the ListBoxHeader()/ListBoxFooter() API.
+      Prefer using them over the old and awkward Combo()/ListBox() api.
+    - Generally for most high-level types you should be able to access the underlying data type. 
+      You may write your own one-liner wrappers to facilitate user code (tip: add new functions in ImGui:: namespace from your code).
+    - Dear ImGui applications often need to make intensive use of strings. It is expected that many of the strings you will pass
+      to the API are raw literals (free in C/C++) or allocated in a manner that won't incur a large cost on your application.
+      Please bear in mind that using std::string on applications with large amount of UI may incur unsatisfactory performances.
+      Modern implementations of std::string often include small-string optimization (which is often a local buffer) but those 
+      are not configurable and not the same across implementations. 
+    - If you are finding your UI traversal cost to be too large, make sure your string usage is not leading to excessive amount 
+      of heap allocations. Consider using literals, statically sized buffers and your own helper functions. A common pattern
+      is that you will need to build lots of strings on the fly, and their maximum length can be easily be scoped ahead. 
+      One possible implementation of a helper to facilitate printf-style building of strings: https://github.com/ocornut/Str
+      This is a small helper where you can instance strings with configurable local buffers length. Many game engines will 
+      provide similar or better string helpers.
 
  Q: How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
  A: - You can create a dummy window. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags.
