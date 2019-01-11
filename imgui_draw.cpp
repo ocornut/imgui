@@ -1829,9 +1829,9 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
         ImFontBuildDstData& dst_tmp = dst_tmp_array[src_tmp.DstIndex];
         ImFontConfig& cfg = atlas->ConfigData[src_i];
-        src_tmp.GlyphsSet.Resize(src_tmp.GlyphsHighest);
+        src_tmp.GlyphsSet.Resize(src_tmp.GlyphsHighest + 1);
         if (dst_tmp.SrcCount > 1 && dst_tmp.GlyphsSet.Storage.empty())
-            dst_tmp.GlyphsSet.Resize(dst_tmp.GlyphsHighest);
+            dst_tmp.GlyphsSet.Resize(dst_tmp.GlyphsHighest + 1);
 
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
             for (int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
