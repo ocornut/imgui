@@ -98,8 +98,8 @@ namespace
         bool                    InitFont(FT_Library ft_library, const ImFontConfig& cfg, unsigned int extra_user_flags); // Initialize from an external data buffer. Doesn't copy data, and you must ensure it stays valid up to this object lifetime.
         void                    CloseFont();
         void                    SetPixelHeight(int pixel_height); // Change font pixel size. All following calls to RasterizeGlyph() will use this size
-        const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint, uint32_t* out_glyph_index);
-        const FT_Bitmap*        RenderGlyphAndGetInfo(uint32_t in_glyph_index, GlyphInfo* out_glyph_info);
+        const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
+        const FT_Bitmap*        RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
         void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint8_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = NULL);
         ~FreeTypeFont()         { CloseFont(); }
 
@@ -177,20 +177,14 @@ namespace
         Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance);
     }
 
-    const FT_Glyph_Metrics* FreeTypeFont::LoadGlyph(uint32_t codepoint, uint32_t* out_glyph_index)
+    const FT_Glyph_Metrics* FreeTypeFont::LoadGlyph(uint32_t codepoint)
     {
-        if (out_glyph_index)
-            *out_glyph_index = 0;
-
         uint32_t glyph_index = FT_Get_Char_Index(Face, codepoint);
         if (glyph_index == 0)
             return NULL;
         FT_Error error = FT_Load_Glyph(Face, glyph_index, LoadFlags);
         if (error)
             return NULL;
-
-        if (out_glyph_index)
-            *out_glyph_index = glyph_index;
 
         // Need an outline for this to work
         FT_GlyphSlot slot = Face->glyph;
@@ -211,25 +205,12 @@ namespace
         return &slot->metrics;
     }
 
-    const FT_Bitmap* FreeTypeFont::RenderGlyphAndGetInfo(uint32_t in_glyph_index, GlyphInfo* out_glyph_info)
+    const FT_Bitmap* FreeTypeFont::RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info)
     {
-        IM_ASSERT(in_glyph_index != 0);
-        FT_Error error = FT_Load_Glyph(Face, in_glyph_index, LoadFlags);
-        if (error)
-            return NULL;
-
-        // Need an outline for this to work
         FT_GlyphSlot slot = Face->glyph;
-        IM_ASSERT(slot->format == FT_GLYPH_FORMAT_OUTLINE);
-
-        if (UserFlags & ImGuiFreeType::Bold)
-            FT_GlyphSlot_Embolden(slot);
-        if (UserFlags & ImGuiFreeType::Oblique)
-            FT_GlyphSlot_Oblique(slot);
-
-        error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL);
+        FT_Error error = FT_Render_Glyph(slot, FT_RENDER_MODE_NORMAL);
         if (error != 0)
-            return false;
+            return NULL;
 
         FT_Bitmap* ft_bitmap = &Face->glyph->bitmap;
         out_glyph_info->Width = (int)ft_bitmap->width;
@@ -272,7 +253,6 @@ struct ImFontBuildSrcGlyphFT
 {
     GlyphInfo           Info;
     uint32_t            Codepoint;
-    uint32_t            GlyphIndex;         // Index in font (to avoid calling FT_Get_Char_Index multiple times)
     unsigned char*      BitmapData;         // Point within one of the dst_tmp_bitmap_buffers[] array
 };
 
@@ -446,13 +426,13 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
         {
             ImFontBuildSrcGlyphFT& src_glyph = src_tmp.GlyphsList[glyph_i];
 
-            const FT_Glyph_Metrics* metrics = src_tmp.Font.LoadGlyph(src_glyph.Codepoint, &src_glyph.GlyphIndex);
+            const FT_Glyph_Metrics* metrics = src_tmp.Font.LoadGlyph(src_glyph.Codepoint);
             IM_ASSERT(metrics != NULL);
             if (metrics == NULL)
                 continue;
 
             // Render glyph into a bitmap (currently held by FreeType)
-            const FT_Bitmap* ft_bitmap = src_tmp.Font.RenderGlyphAndGetInfo(src_glyph.GlyphIndex, &src_glyph.Info);
+            const FT_Bitmap* ft_bitmap = src_tmp.Font.RenderGlyphAndGetInfo(&src_glyph.Info);
             IM_ASSERT(ft_bitmap);
 
             // Allocate new temporary chunk if needed
