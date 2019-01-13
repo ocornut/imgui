@@ -43,9 +43,13 @@ Index of this file:
 
 #ifdef __clang__
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"        // for stb_textedit.h
-#pragma clang diagnostic ignored "-Wmissing-prototypes"     // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wunused-function"                // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wmissing-prototypes"             // for stb_textedit.h
 #pragma clang diagnostic ignored "-Wold-style-cast"
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#if __has_warning("-Wdouble-promotion")
+#pragma clang diagnostic ignored "-Wdouble-promotion"
+#endif
 #endif
 
 //-----------------------------------------------------------------------------
