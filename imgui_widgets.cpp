@@ -1720,7 +1720,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     ImGuiContext& g = *GImGui;
     const ImGuiAxis axis = (flags & ImGuiDragFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
-    const bool has_min_max = (v_min != v_max);
+    const bool has_min_max = (!FLOAT_EQUAL(v_min, v_max));
 
     // Default tweak speed
     if (v_speed == 0.0f && has_min_max && (v_max - v_min < FLT_MAX))
@@ -1799,11 +1799,11 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     }
 
     // Lose zero sign for float/double
-    if (v_cur == (TYPE)-0)
+    if (FLOAT_EQUAL(v_cur, (TYPE) -0))
         v_cur = (TYPE)0;
 
     // Clamp values (+ handle overflow/wrap-around for integer types)
-    if (*v != v_cur && has_min_max)
+    if (!FLOAT_EQUAL(*v, v_cur) && has_min_max)
     {
         if (v_cur < v_min || (v_cur > *v && adjust_delta < 0.0f && !is_decimal))
             v_cur = v_min;
@@ -1812,7 +1812,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     }
 
     // Apply result
-    if (*v == v_cur)
+    if (FLOAT_EQUAL(*v, v_cur))
         return false;
     *v = v_cur;
     return true;
@@ -2065,7 +2065,7 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
 template<typename TYPE, typename FLOATTYPE>
 float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos)
 {
-    if (v_min == v_max)
+    if (FLOAT_EQUAL(v_min, v_max))
         return 0.0f;
 
     const bool is_power = (power != 1.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
@@ -2231,7 +2231,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             v_new = RoundScalarWithFormatT<TYPE,SIGNEDTYPE>(format, data_type, v_new);
 
             // Apply result
-            if (*v != v_new)
+            if (!FLOAT_EQUAL(*v, v_new))
             {
                 *v = v_new;
                 value_changed = true;
@@ -4279,7 +4279,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         ColorConvertRGBtoHSV(col[0], col[1], col[2], new_H, new_S, new_V);
         if (new_H <= 0 && H > 0)
         {
-            if (new_V <= 0 && V != new_V)
+            if (new_V <= 0 && !FLOAT_EQUAL(V, new_V))
                 ColorConvertHSVtoRGB(H, S, new_V <= 0 ? V * 0.5f : new_V, col[0], col[1], col[2]);
             else if (new_S <= 0)
                 ColorConvertHSVtoRGB(H, new_S <= 0 ? S * 0.5f : new_S, new_V, col[0], col[1], col[2]);
@@ -5018,7 +5018,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     ImVec2 window_padding = window->WindowPadding;
     float max_x = (flags & ImGuiSelectableFlags_SpanAllColumns) ? GetWindowContentRegionMax().x : GetContentRegionMax().x;
     float w_draw = ImMax(label_size.x, window->Pos.x + max_x - window_padding.x - window->DC.CursorPos.x);
-    ImVec2 size_draw((size_arg.x != 0 && !(flags & ImGuiSelectableFlags_DrawFillAvailWidth)) ? size_arg.x : w_draw, size_arg.y != 0.0f ? size_arg.y : size.y);
+    ImVec2 size_draw((!FLOAT_EQUAL(size_arg.x, 0) && !(flags & ImGuiSelectableFlags_DrawFillAvailWidth)) ? size_arg.x : w_draw, size_arg.y != 0.0f ? size_arg.y : size.y);
     ImRect bb(pos, pos + size_draw);
     if (size_arg.x == 0.0f || (flags & ImGuiSelectableFlags_DrawFillAvailWidth))
         bb.Max.x += window_padding.x;
@@ -5239,7 +5239,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
     const bool hovered = ItemHoverable(inner_bb, 0);
 
     // Determine scale from values if not specified
-    if (scale_min == FLT_MAX || scale_max == FLT_MAX)
+    if (FLOAT_EQUAL(scale_min, FLT_MAX) || FLOAT_EQUAL(scale_max, FLT_MAX))
     {
         float v_min = FLT_MAX;
         float v_max = -FLT_MAX;
@@ -5249,9 +5249,9 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
             v_min = ImMin(v_min, v);
             v_max = ImMax(v_max, v);
         }
-        if (scale_min == FLT_MAX)
+        if (FLOAT_EQUAL(scale_min, FLT_MAX))
             scale_min = v_min;
-        if (scale_max == FLT_MAX)
+        if (FLOAT_EQUAL(scale_max, FLT_MAX))
             scale_max = v_max;
     }
 
@@ -5280,7 +5280,7 @@ void ImGui::PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_ge
         }
 
         const float t_step = 1.0f / (float)res_w;
-        const float inv_scale = (scale_min == scale_max) ? 0.0f : (1.0f / (scale_max - scale_min));
+        const float inv_scale = FLOAT_EQUAL(scale_min, scale_max) ? 0.0f : (1.0f / (scale_max - scale_min));
 
         float v0 = values_getter(data, (0 + values_offset) % values_count);
         float t0 = 0.0f;
@@ -6003,7 +6003,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         int tab_count_same_width = 1;
         while (width_excess > 0.0f && tab_count_same_width < tab_bar->Tabs.Size)
         {
-            while (tab_count_same_width < tab_bar->Tabs.Size && width_sort_buffer[0].Width == width_sort_buffer[tab_count_same_width].Width)
+            while (tab_count_same_width < tab_bar->Tabs.Size && FLOAT_EQUAL(width_sort_buffer[0].Width, width_sort_buffer[tab_count_same_width].Width))
                 tab_count_same_width++;
             float width_to_remove_per_tab_max = (tab_count_same_width < tab_bar->Tabs.Size) ? (width_sort_buffer[0].Width - width_sort_buffer[tab_count_same_width].Width) : (width_sort_buffer[0].Width - 1.0f);
             float width_to_remove_per_tab = ImMin(width_excess / tab_count_same_width, width_to_remove_per_tab_max);
@@ -6060,7 +6060,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     tab_bar->ScrollingAnim = TabBarScrollClamp(tab_bar, tab_bar->ScrollingAnim);
     tab_bar->ScrollingTarget = TabBarScrollClamp(tab_bar, tab_bar->ScrollingTarget);
     const float scrolling_speed = (tab_bar->PrevFrameVisible + 1 < g.FrameCount) ? FLT_MAX : (g.IO.DeltaTime * g.FontSize * 70.0f);
-    if (tab_bar->ScrollingAnim != tab_bar->ScrollingTarget)
+    if (!FLOAT_EQUAL(tab_bar->ScrollingAnim, tab_bar->ScrollingTarget))
         tab_bar->ScrollingAnim = ImLinearSweep(tab_bar->ScrollingAnim, tab_bar->ScrollingTarget, scrolling_speed);
 }
 
