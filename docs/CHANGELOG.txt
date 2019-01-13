@@ -131,6 +131,11 @@ Other Changes:
   Missing calls to End(), past the assert, should not lead to crashes or to the fallback Debug window appearing on screen.
   Those changes makes it easier to integrate dear imgui with a scripting language allowing, given asserts are redirected
   into e.g. an error log and stopping the script execution.
+- ImFontAtlas: Stb and FreeType: Atlas width is now properly based on total surface rather than glyph count (unless overridden with TexDesiredWidth).
+- ImFontAtlas: Stb and FreeType: Fixed atlas builder so missing glyphs won't influence the atlas texture width. (#2233)
+- ImFontAtlas: Stb and FreeType: Fixed atlas builder so duplicate glyphs (when merging fonts) won't be included in the rasterized atlas.
+- ImFontAtlas: FreeType: Fixed abnormally high atlas height.
+- ImFontAtlas: FreeType: Fixed support for any values of TexGlyphPadding (not just only 1).
 - ImDrawList: Optimized some of the functions for performance of debug builds where non-inline function call cost are non-negligible.
   (Our test UI scene on VS2015 Debug Win64 with /RTC1 went ~5.9 ms -> ~4.9 ms. In Release same scene stays at ~0.3 ms.)
 - IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by back-ends.

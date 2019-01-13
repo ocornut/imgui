@@ -259,9 +259,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)
 
-!- font: need handling of missing glyphs by not packing/rasterizing glyph 0 of a given font.
- - font: MergeMode: flags to select overwriting or not.
- - font: MergeMode: duplicate glyphs are stored in the atlas texture which is suboptimal.
+ - font: MergeMode: flags to select overwriting or not (this is now very easy with refactored ImFontAtlasBuildWithStbTruetype)
  - font: free the Alpha buffer if user only requested RGBA.
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
@@ -276,11 +274,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
  - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
- - font: imgui_freetype.h alternative renderer (#618)
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct).
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
  - font: fix AddRemapChar() to work before font has been built.
+ - font: what would it take to support codepoint higher than 0xFFFF? (smileys, etc.)
  - font: (api breaking) remove "TTF" from symbol names. also because it now supports OTF.
  - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16 bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
