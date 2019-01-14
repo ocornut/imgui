@@ -64,6 +64,7 @@ Other Changes:
 - Window: Fixed using SetNextWindowPos() on a child window (which wasn't really documented) position the cursor as expected
   in the parent window, so there is no mismatch between the layout in parent and the position of the child window. 
 - InputFloat: When using ImGuiInputTextFlags_ReadOnly the step buttons are disabled. (#2257)
+- DragFloat: Fixed broken mouse direction change with power!=1.0. (#2174, #2206) [@Joshhua5]
 - Nav: Fixed an keyboard issue where holding Activate/Space for longer than two frames on a button would unnecessary 
   keep the focus on the parent window, which could steal it from newly appearing windows. (#787)
 - Nav: Fixed animated window titles from being updated when displayed in the CTRL+Tab list. (#787)
