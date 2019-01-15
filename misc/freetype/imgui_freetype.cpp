@@ -18,7 +18,6 @@
 //  For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
 //  The default imgui styles will be impacted by this change (alpha values will need tweaking).
 
-// FIXME: FreeType's memory allocator is not overridden.
 // FIXME: cfg.OversampleH, OversampleV are not supported (but perhaps not so necessary with this rasterizer).
 
 #include "imgui_freetype.h"
@@ -26,6 +25,7 @@
 #include <stdint.h>
 #include <ft2build.h>
 #include FT_FREETYPE_H          // <freetype/freetype.h>
+#include FT_MODULE_H            // <freetype/ftmodapi.h>
 #include FT_GLYPH_H             // <freetype/ftglyph.h>
 #include FT_SYNTHESIS_H         // <freetype/ftsynth.h>
 
@@ -115,7 +115,6 @@ namespace
 
     bool FreeTypeFont::InitFont(FT_Library ft_library, const ImFontConfig& cfg, unsigned int extra_user_flags)
     {
-        // FIXME: substitute allocator
         FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)cfg.FontData, (uint32_t)cfg.FontDataSize, (uint32_t)cfg.FontNo, &Face);
         if (error != 0)
             return false;
@@ -566,15 +565,77 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     return true;
 }
 
+static void* ImFreeTypeDefaultAllocFunc(size_t size, void* user_data)	{ (void)user_data; return ImGui::MemAlloc(size); }
+static void ImFreeTypeDefaultFreeFunc(void* ptr, void* user_data)	    { (void)user_data; ImGui::MemFree(ptr); }
+
+static void* (*GImFreeTypeAllocFunc)(size_t size, void* user_data) = ImFreeTypeDefaultAllocFunc;
+static void (*GImFreeTypeFreeFunc)(void* ptr, void* user_data) = ImFreeTypeDefaultFreeFunc;
+static void* GImFreeTypeAllocatorUserData = NULL;
+
+static void* FreeType_Alloc(FT_Memory memory, long size)
+{
+    (void)memory;
+    return GImFreeTypeAllocFunc(size, GImFreeTypeAllocatorUserData);
+}
+
+static void FreeType_Free(FT_Memory memory, void* block)
+{
+    (void)memory;
+    GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
+}
+
+static void* FreeType_Realloc(FT_Memory memory, long cur_size, long new_size, void* block)
+{
+    // Implement realloc() as we don't ask user to provide it.
+
+    (void)memory;
+
+    if (!block)
+        return GImFreeTypeAllocFunc(new_size, GImFreeTypeAllocatorUserData);
+
+    if (new_size == 0)
+    {
+        GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
+        return nullptr;
+    }
+
+    if (new_size > cur_size)
+    {
+        void* new_block = GImFreeTypeAllocFunc(new_size, GImFreeTypeAllocatorUserData);
+        memcpy(new_block, block, cur_size);
+        GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
+        block = new_block;
+    }
+
+    return block;
+}
+
 bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
 {
+    // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
+    FT_MemoryRec_ memoryRec = {0};
+    memoryRec.alloc = &FreeType_Alloc;
+    memoryRec.free = &FreeType_Free;
+    memoryRec.realloc = &FreeType_Realloc;
+
+    // https://www.freetype.org/freetype2/docs/reference/ft2-module_management.html#FT_New_Library
     FT_Library ft_library;
-    FT_Error error = FT_Init_FreeType(&ft_library);
+    FT_Error error = FT_New_Library(&memoryRec, &ft_library);
     if (error != 0)
         return false;
 
+    // NB: If you don't call FT_Add_Default_Modules() the rest of code may work, but FreeType won't use our custom allocator.
+    FT_Add_Default_Modules(ft_library);
+
     bool ret = ImFontAtlasBuildWithFreeType(ft_library, atlas, extra_flags);
-    FT_Done_FreeType(ft_library);
+    FT_Done_Library(ft_library);
 
     return ret;
+}
+
+void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void(*free_func)(void* ptr, void* user_data), void* user_data)
+{
+    GImFreeTypeAllocFunc = alloc_func;
+    GImFreeTypeFreeFunc = free_func;
+    GImFreeTypeAllocatorUserData = user_data;
 }

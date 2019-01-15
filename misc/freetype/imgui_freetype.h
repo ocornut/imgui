@@ -28,4 +28,8 @@ namespace ImGuiFreeType
     };
 
     IMGUI_API bool BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags = 0);
+
+    // FreeType does lots of allocations so user might want to provide separate memory heap.
+    // By default ImGuiFreeType will use ImGui::MemAlloc()/MemFree().
+    IMGUI_API void SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void(*free_func)(void* ptr, void* user_data), void* user_data = NULL);
 }
