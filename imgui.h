@@ -1,4 +1,4 @@
-// dear imgui, v1.67
+// dear imgui, v1.68 WIP
 // (headers)
 
 // See imgui.cpp file for documentation.
@@ -46,8 +46,8 @@ Index of this file:
 
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY00 then bounced up to XYY01 when release tagging happens)
-#define IMGUI_VERSION               "1.67"
-#define IMGUI_VERSION_NUM           16603
+#define IMGUI_VERSION               "1.68 WIP"
+#define IMGUI_VERSION_NUM           16800
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert))
 #define IMGUI_HAS_VIEWPORT          1 // Viewport WIP branch
 #define IMGUI_HAS_DOCK              1 // Docking WIP branch
@@ -2217,8 +2217,8 @@ struct ImFont
 // - if you are new to dear imgui and trying to integrate it into your engine, you should probably ignore this for now.
 //-----------------------------------------------------------------------------
 
-// (Optional) Represent the bounds of each connected monitor/display and their DPI
-// This is used for: multiple DPI support + clamping the position of popups and tooltips so they don't straddle multiple monitors.
+// (Optional) This is required when enabling multi-viewport. Represent the bounds of each connected monitor/display and their DPI. 
+// We use this information for multiple DPI support + clamping the position of popups and tooltips so they don't straddle multiple monitors.
 struct ImGuiPlatformMonitor
 {
     ImVec2  MainPos, MainSize;  // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
