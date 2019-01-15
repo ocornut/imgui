@@ -2004,7 +2004,7 @@ static void ShowDemoWindowLayout()
         {
             ImGui::BeginChild("scrolling"); // Demonstrate a trick: you can use Begin to set yourself in the context of another window (here we are already out of your child window)
             ImGui::SetScrollX(ImGui::GetScrollX() + scroll_x_delta);
-            ImGui::End();
+            ImGui::EndChild();
         }
         ImGui::TreePop();
     }

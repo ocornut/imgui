@@ -8,16 +8,12 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - doc/test: add a proper documentation+regression testing system (#435)
  - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
- - project: folder or separate repository with maintained helpers (e.g. imgui_memory_editor.h, imgui_stl.h, maybe imgui_dock would be there?)
 
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
  - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
  - window: allow resizing of child windows (possibly given min/max for each axis?.)
  - window: background options for child windows, border option (disable rounding).
- - window: resizing from any sides? done. > need backends to honor mouse cursors properly. (#822)
- - window: resize from borders: support some form of outer padding to make it easier to grab borders. (#822)
- - window: fix resize glitch when collapsing an AlwaysAutoResize window.
  - window: begin with *p_open == false could return false.
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
@@ -28,9 +24,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: expose contents size. (#1045)
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
- - window: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
  - window: investigate better auto-positioning for new windows.
+ - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
+ - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
@@ -99,7 +96,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
- - columns: headers. reorderable. (#513, #125)
+ - columns: headers. re-orderable. (#513, #125)
  - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-criteria. notify user when sort order changed.
  - columns: option to alternate background colors on odd/even scanlines.  
  - columns: allow columns to recurse. 
@@ -126,7 +123,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
  
- - dock: docking extension
+ - dock: merge docking branch (#2109)
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
 
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
@@ -134,7 +131,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - ext: stl-ish friendly extension (imgui_stl.h) that has wrapper for std::string, std::vector etc.
 
- - button: provide a button that looks framed.
+ - button: provide a button that looks framed. (?)
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - image button: not taking an explicit id is odd.
@@ -146,7 +143,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: step option (#1183)
  - slider style: fill % of the bar instead of positioning a drag.
  - knob: rotating knob widget (#942)
+ - drag float: power/logarithmic slider and drags are weird. (#1316)
  - drag float: up/down axis
+ - drag float: power != 0.0f with current value being outside the the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
@@ -202,7 +201,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - stb: add defines to disable stb implementations
 
-!- style: better default styles. (#707)
+ - style: better default styles. (#707)
  - style: add a highlighted text color (for headers, etc.)
  - style: border types: out-screen, in-screen, etc. (#447)
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
@@ -223,6 +222,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
+ - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov.
  - drag and drop: allow preview tooltip to be submitted from a different place than the drag source. (#1725)
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
@@ -243,6 +243,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data 
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
+ - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.
+ - font/demo: demonstrate use of ImFontGlyphRangesBuilder.
  - font/atlas: add a missing Glyphs.reserve()
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
@@ -250,7 +252,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
  - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
- - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct).
+ - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct), would save on cache line.
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
  - font: fix AddRemapChar() to work before font has been built.
@@ -307,13 +309,12 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
 
- - misc: idle refresh: expose cursor blink animation timer for backend to be able to lower framerate.
+ - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
+ - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
  - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
- - misc: ImVector: erase_unsorted() helper
- - misc: imgui_cpp: perhaps a misc/ header file with more friendly helper (e.g. type-infer versions of DragScalar, vector<> variants if appropriate for some functions).
 
  - backend: bgfx? https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
@@ -324,7 +325,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - demo: find a way to demonstrate textures in the examples application, as it such a a common issue for new users.
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
- - demo: demonstration Plot offset
+ - demo: demonstrate Plot offset
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
  - examples: apple: example_apple should be using modern GL3.

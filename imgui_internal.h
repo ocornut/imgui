@@ -370,12 +370,14 @@ enum ImGuiItemStatusFlags_
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
+// Horizontal/Vertical enums are fixed to 0/1 so they may be used to index ImVec2
 enum ImGuiLayoutType_
 {
-    ImGuiLayoutType_Vertical = 0,
-    ImGuiLayoutType_Horizontal = 1
+    ImGuiLayoutType_Horizontal = 0,
+    ImGuiLayoutType_Vertical = 1
 };
 
+// X/Y enums are fixed to 0/1 so they may be used to index ImVec2
 enum ImGuiAxis
 {
     ImGuiAxis_None = -1,
