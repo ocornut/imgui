@@ -121,6 +121,5 @@ struct FreeTypeTest
 ```
 
 ### Known issues
-- FreeType's memory allocator is not overridden.
 - `cfg.OversampleH`, `OversampleV` are ignored (but perhaps not so necessary with this rasterizer).
 
