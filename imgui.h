@@ -2174,8 +2174,8 @@ struct ImFont
 // - if you are new to dear imgui and trying to integrate it into your engine, you should probably ignore this for now.
 //-----------------------------------------------------------------------------
 
-// (Optional) Represent the bounds of each connected monitor/display and their DPI
-// This is used for: multiple DPI support + clamping the position of popups and tooltips so they don't straddle multiple monitors.
+// (Optional) This is required when enabling multi-viewport. Represent the bounds of each connected monitor/display and their DPI. 
+// We use this information for multiple DPI support + clamping the position of popups and tooltips so they don't straddle multiple monitors.
 struct ImGuiPlatformMonitor
 {
     ImVec2  MainPos, MainSize;  // Coordinates of the area displayed on this monitor (Min = upper left, Max = bottom right)
