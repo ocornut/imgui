@@ -5,12 +5,13 @@
 // Changelog:
 // - v0.50: (2017/08/16) imported from https://github.com/Vuhdo/imgui_freetype into http://www.github.com/ocornut/imgui_club, updated for latest changes in ImFontAtlas, minor tweaks.
 // - v0.51: (2017/08/26) cleanup, optimizations, support for ImFontConfig::RasterizerFlags, ImFontConfig::RasterizerMultiply.
-// - v0.52: (2017/09/26) fixes for imgui internal changes
-// - v0.53: (2017/10/22) minor inconsequential change to match change in master (removed an unnecessary statement)
-// - v0.54: (2018/01/22) fix for addition of ImFontAtlas::TexUvscale member
+// - v0.52: (2017/09/26) fixes for imgui internal changes.
+// - v0.53: (2017/10/22) minor inconsequential change to match change in master (removed an unnecessary statement).
+// - v0.54: (2018/01/22) fix for addition of ImFontAtlas::TexUvscale member.
 // - v0.55: (2018/02/04) moved to main imgui repository (away from http://www.github.com/ocornut/imgui_club)
-// - v0.56: (2018/06/08) added support for ImFontConfig::GlyphMinAdvanceX, GlyphMaxAdvanceX
+// - v0.56: (2018/06/08) added support for ImFontConfig::GlyphMinAdvanceX, GlyphMaxAdvanceX.
 // - v0.60: (2019/01/10) re-factored to match big update in STB builder. fixed texture height waste. fixed redundant glyphs when merging. support for glyph padding.
+// - v0.61: (2019/01/15) added support for imgui allocators + added FreeType only override function SetAllocatorFunctions().
 
 // Gamma Correct Blending:
 //  FreeType assumes blending in linear space rather than gamma space.
@@ -565,46 +566,44 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     return true;
 }
 
+// Default memory allocators
 static void* ImFreeTypeDefaultAllocFunc(size_t size, void* user_data)	{ (void)user_data; return ImGui::MemAlloc(size); }
-static void ImFreeTypeDefaultFreeFunc(void* ptr, void* user_data)	    { (void)user_data; ImGui::MemFree(ptr); }
+static void  ImFreeTypeDefaultFreeFunc(void* ptr, void* user_data)	    { (void)user_data; ImGui::MemFree(ptr); }
 
+// Current memory allocators
 static void* (*GImFreeTypeAllocFunc)(size_t size, void* user_data) = ImFreeTypeDefaultAllocFunc;
-static void (*GImFreeTypeFreeFunc)(void* ptr, void* user_data) = ImFreeTypeDefaultFreeFunc;
+static void  (*GImFreeTypeFreeFunc)(void* ptr, void* user_data) = ImFreeTypeDefaultFreeFunc;
 static void* GImFreeTypeAllocatorUserData = NULL;
 
-static void* FreeType_Alloc(FT_Memory memory, long size)
+// FreeType memory allocation callbacks
+static void* FreeType_Alloc(FT_Memory /*memory*/, long size)
 {
-    (void)memory;
-    return GImFreeTypeAllocFunc(size, GImFreeTypeAllocatorUserData);
+    return GImFreeTypeAllocFunc((size_t)size, GImFreeTypeAllocatorUserData);
 }
 
-static void FreeType_Free(FT_Memory memory, void* block)
+static void FreeType_Free(FT_Memory /*memory*/, void* block)
 {
-    (void)memory;
     GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
 }
 
-static void* FreeType_Realloc(FT_Memory memory, long cur_size, long new_size, void* block)
+static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size, void* block)
 {
     // Implement realloc() as we don't ask user to provide it.
-
-    (void)memory;
-
-    if (!block)
-        return GImFreeTypeAllocFunc(new_size, GImFreeTypeAllocatorUserData);
+    if (block == NULL)
+        return GImFreeTypeAllocFunc((size_t)new_size, GImFreeTypeAllocatorUserData);
 
     if (new_size == 0)
     {
         GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
-        return nullptr;
+        return NULL;
     }
 
     if (new_size > cur_size)
     {
-        void* new_block = GImFreeTypeAllocFunc(new_size, GImFreeTypeAllocatorUserData);
-        memcpy(new_block, block, cur_size);
+        void* new_block = GImFreeTypeAllocFunc((size_t)new_size, GImFreeTypeAllocatorUserData);
+        memcpy(new_block, block, (size_t)cur_size);
         GImFreeTypeFreeFunc(block, GImFreeTypeAllocatorUserData);
-        block = new_block;
+        return new_block;
     }
 
     return block;
@@ -613,18 +612,18 @@ static void* FreeType_Realloc(FT_Memory memory, long cur_size, long new_size, vo
 bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
 {
     // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
-    FT_MemoryRec_ memoryRec = {0};
-    memoryRec.alloc = &FreeType_Alloc;
-    memoryRec.free = &FreeType_Free;
-    memoryRec.realloc = &FreeType_Realloc;
+    FT_MemoryRec_ memory_rec = { 0 };
+    memory_rec.alloc = &FreeType_Alloc;
+    memory_rec.free = &FreeType_Free;
+    memory_rec.realloc = &FreeType_Realloc;
 
     // https://www.freetype.org/freetype2/docs/reference/ft2-module_management.html#FT_New_Library
     FT_Library ft_library;
-    FT_Error error = FT_New_Library(&memoryRec, &ft_library);
+    FT_Error error = FT_New_Library(&memory_rec, &ft_library);
     if (error != 0)
         return false;
 
-    // NB: If you don't call FT_Add_Default_Modules() the rest of code may work, but FreeType won't use our custom allocator.
+    // If you don't call FT_Add_Default_Modules() the rest of code may work, but FreeType won't use our custom allocator.
     FT_Add_Default_Modules(ft_library);
 
     bool ret = ImFontAtlasBuildWithFreeType(ft_library, atlas, extra_flags);
@@ -633,7 +632,7 @@ bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
     return ret;
 }
 
-void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void(*free_func)(void* ptr, void* user_data), void* user_data)
+void ImGuiFreeType::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data)
 {
     GImFreeTypeAllocFunc = alloc_func;
     GImFreeTypeFreeFunc = free_func;

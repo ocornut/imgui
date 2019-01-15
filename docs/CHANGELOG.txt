@@ -34,6 +34,7 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Other Changes:
+- Fonts: imgui_freetype: Added support for imgui allocators + custom FreeType only SetAllocatorFunctions. (#2285) [@Vuhdo]
 - Examples: Win32: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created 
   in a different thread. (#1951, #2087, #2156, #2232) [many people]
 - Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
