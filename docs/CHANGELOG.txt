@@ -33,6 +33,10 @@ HOW TO UPDATE?
  VERSION 1.68
 -----------------------------------------------------------------------
 
+Other Changes:
+- Examples: Win32: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created 
+  in a different thread. (#1951, #2087, #2156, #2232) [many people]
+
 
 -----------------------------------------------------------------------
  VERSION 1.67 (Released 2019-01-14)

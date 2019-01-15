@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-01-15: Inputs: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created in a different thread.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
 //  2018-06-10: Inputs: Fixed handling of mouse wheel messages to support fine position messages (typically sent by track-pads).
@@ -134,7 +135,7 @@ static void ImGui_ImplWin32_UpdateMousePos()
     // Set mouse position
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     POINT pos;
-    if (::GetActiveWindow() == g_hWnd && ::GetCursorPos(&pos))
+    if (::GetForegroundWindow() == g_hWnd && ::GetCursorPos(&pos))
         if (::ScreenToClient(g_hWnd, &pos))
             io.MousePos = ImVec2((float)pos.x, (float)pos.y);
 }
