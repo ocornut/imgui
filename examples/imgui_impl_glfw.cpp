@@ -286,7 +286,7 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateMousePosAndButtons();
     ImGui_ImplGlfw_UpdateMouseCursor();
 
-    // Gamepad navigation mapping [BETA]
+    // Gamepad navigation mapping
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
     if (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad)
     {
