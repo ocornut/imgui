@@ -75,6 +75,10 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->GetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
 
+	// Backup the DX9 fog state (Fixes issue #2288)
+	DWORD dwFogEnabled;
+	g_pd3dDevice->GetRenderState(D3DRS_FOGENABLE, &dwFogEnabled);
+
     // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
     // FIXME-OPT: This is a waste of resource, the ideal is to use imconfig.h and
     //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
@@ -131,6 +135,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
     g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
     g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+    g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, FALSE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
@@ -192,6 +197,9 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
     g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &last_projection);
+
+	// Restore the DX9 fog state (Fixes issue #2288)
+	g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, dwFogEnabled);
 
     // Restore the DX9 state
     d3d9_state_block->Apply();
