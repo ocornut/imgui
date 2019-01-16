@@ -38,7 +38,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
  - drawlist: primitives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
  - drawlist: make it easier to toggle AA per primitive, so we can use e.g. non-AA fill + AA borders more naturally
- - drawlist: non-AA strokes have gaps between points (#593, #288), especially RenderCheckmark().
+ - drawlist: non-AA strokes have gaps between points (#593, #288), glitch especially on RenderCheckmark() and ColorPicker4().
  - drawlist: would be good to be able to deep copy of ImDrawData (we have a deep copy of ImDrawList now).
  - drawlist: rendering: provide a way for imgui to output to a single/global vertex buffer, re-order indices only at the end of the frame (ref: https://gist.github.com/floooh/10388a0afbe08fce9e617d8aefa7d302)
  - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
