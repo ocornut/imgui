@@ -10,6 +10,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2019-01-16: Misc: Disabled fog before drawing.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-06-08: Misc: Extracted imgui_impl_dx9.cpp/.h away from the old combined DX9+Win32 example.
 //  2018-06-08: DirectX9: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
@@ -74,10 +75,6 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->GetTransform(D3DTS_WORLD, &last_world);
     g_pd3dDevice->GetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
-
-    // Backup the DX9 fog state (Fixes issue #2288)
-    DWORD dwFogEnabled;
-    g_pd3dDevice->GetRenderState(D3DRS_FOGENABLE, &dwFogEnabled);
 
     // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
     // FIXME-OPT: This is a waste of resource, the ideal is to use imconfig.h and
@@ -197,9 +194,6 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
     g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &last_projection);
-
-    // Restore the DX9 fog state (Fixes issue #2288)
-    g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, dwFogEnabled);
 
     // Restore the DX9 state
     d3d9_state_block->Apply();
