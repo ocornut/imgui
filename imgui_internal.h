@@ -1057,6 +1057,7 @@ struct ImGuiContext
         CurrentWindow = NULL;
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
+        HoveredWindowUnderMovingWindow = NULL;
         HoveredId = 0;
         HoveredIdAllowOverlap = false;
         HoveredIdPreviousFrame = 0;

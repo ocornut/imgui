@@ -5064,10 +5064,11 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     window->ParentWindow = parent_window;
     window->RootWindow = window->RootWindowDockStop = window->RootWindowForTitleBarHighlight = window->RootWindowForNav = window;
     if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
+    {
         window->RootWindow = parent_window->RootWindow;
-    if (parent_window && (flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Tooltip))
         if (!window->DockIsActive && !(parent_window->Flags & ImGuiWindowFlags_DockNodeHost))
             window->RootWindowDockStop = parent_window->RootWindowDockStop;
+    }
     if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
         window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
     while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
@@ -10507,12 +10508,9 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         ImGuiDockNode* inheritor_node = target_node->ChildNodes[split_inheritor_child_idx];
         ImGuiDockNode* new_node = target_node->ChildNodes[split_inheritor_child_idx ^ 1];
         new_node->HostWindow = target_node->HostWindow;
-        if (target_node)
-        {
-            inheritor_node->IsCentralNode = target_node->IsCentralNode;
-            inheritor_node->IsHiddenTabBar = target_node->IsHiddenTabBar;
-            target_node->IsCentralNode = false;
-        }
+        inheritor_node->IsCentralNode = target_node->IsCentralNode;
+        inheritor_node->IsHiddenTabBar = target_node->IsHiddenTabBar;
+        target_node->IsCentralNode = false;
         target_node = new_node;
     }
     target_node->IsHiddenTabBar = false;
@@ -11453,7 +11451,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
 static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_window)
 {
-    if ((host_window->Flags & ImGuiWindowFlags_DockNodeHost) && host_window->DockNodeAsHost->IsDockSpace && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
+    if (host_window->DockNodeAsHost && host_window->DockNodeAsHost->IsDockSpace && payload->BeginOrderWithinContext < host_window->BeginOrderWithinContext)
         return false;
 
     ImGuiWindowClass* host_class = host_window->DockNodeAsHost ? &host_window->DockNodeAsHost->WindowClass : &host_window->WindowClass;
@@ -12776,7 +12774,7 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
             DockNodePreviewDockRender(window, target_node, payload_window, &split_outer);
 
             // Queue docking request
-            if (split_data && split_data->IsDropAllowed && payload->IsDelivery())
+            if (split_data->IsDropAllowed && payload->IsDelivery())
                 DockContextQueueDock(ctx, window, split_data->SplitNode, payload_window, split_data->SplitDir, split_data->SplitRatio, split_data == &split_outer);
         }
     }
@@ -13057,7 +13055,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
 
     IM_ASSERT(g.LogFile == NULL);
     g.LogFile = ImFileOpen(filename, "ab");
-    if (!g.LogFile)
+    if (g.LogFile == NULL)
     {
         IM_ASSERT(g.LogFile != NULL); // Consider this an error
         return;

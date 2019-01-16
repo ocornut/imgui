@@ -6527,7 +6527,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         {
             // We use a variable threshold to distinguish dragging tabs within a tab bar and extracting them out of the tab bar
             bool undocking_tab = (g.DragDropActive && g.DragDropPayload.SourceId == id);
-            if (!undocking_tab && held)
+            if (!undocking_tab)
             {
                 //if (!g.IO.ConfigDockingWithShift || g.IO.KeyShift)
                 {
