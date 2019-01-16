@@ -75,9 +75,9 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->GetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->GetTransform(D3DTS_PROJECTION, &last_projection);
 
-	// Backup the DX9 fog state (Fixes issue #2288)
-	DWORD dwFogEnabled;
-	g_pd3dDevice->GetRenderState(D3DRS_FOGENABLE, &dwFogEnabled);
+    // Backup the DX9 fog state (Fixes issue #2288)
+    DWORD dwFogEnabled;
+    g_pd3dDevice->GetRenderState(D3DRS_FOGENABLE, &dwFogEnabled);
 
     // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
     // FIXME-OPT: This is a waste of resource, the ideal is to use imconfig.h and
@@ -198,8 +198,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
     g_pd3dDevice->SetTransform(D3DTS_PROJECTION, &last_projection);
 
-	// Restore the DX9 fog state (Fixes issue #2288)
-	g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, dwFogEnabled);
+    // Restore the DX9 fog state (Fixes issue #2288)
+    g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, dwFogEnabled);
 
     // Restore the DX9 state
     d3d9_state_block->Apply();
