@@ -386,10 +386,8 @@ bool RemoteGetInput(RemoteInput & input)
             res = true;
 		}
 	}
-    memset(GServer.Input.KeysDown, 0, 256*sizeof(bool));
-    GServer.Input.KeyCtrl = false;
-    GServer.Input.KeyShift = false;
-    GServer.Input.MouseWheelDelta = 0;
+	memset(GServer.Input.KeysDown, 0, 256*sizeof(bool));
+	GServer.Input.MouseWheelDelta = 0;
 	return res;
 }
 
