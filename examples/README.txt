@@ -161,61 +161,61 @@ example_win32_directx11/
     
 example_win32_directx12/
     DirectX12 example, Windows only.
-    This is quite long and tedious, because: DirectX12.
     = main.cpp + imgui_impl_win32.cpp + imgui_impl_dx12.cpp
+    This is quite long and tedious, because: DirectX12.
 
 example_apple_metal/
     OSX & iOS + Metal.
+    = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm
     It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
     (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
-    = game template + imgui_impl_osx.mm + imgui_impl_metal.mm
 
 example_apple_opengl2/
     OSX + OpenGL2.
-    (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
     = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
+    (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
 
 example_glfw_opengl2/
+    GLFW + OpenGL2 example (legacy, fixed pipeline).
+    = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
-    GLFW + OpenGL2 example (legacy, fixed pipeline).
     This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended.
-    = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
 
 example_glfw_opengl3/
-    GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (programmable pipeline, binding modern functions with GL3W).
+    GLFW (Win32, Mac, Linux) + OpenGL3+/ES2/ES3 example (programmable pipeline).
+    = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
-    = main.cpp + imgui_impl_glfw.cpp + imgui_impl_opengl3.cpp
 	
 example_glfw_vulkan/
     GLFW (Win32, Mac, Linux) + Vulkan example.
-    This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
+    This is quite long and tedious, because: Vulkan.
 
 example_sdl_opengl2/
+    SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
     **DO NOT USE OPENGL2 CODE IF YOUR CODE/ENGINE IS USING MODERN OPENGL (SHADERS, VBO, VAO, etc.)**
     **Prefer using OPENGL3 code (with gl3w/glew/glad, you can replace the OpenGL function loader)**
-    SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
     This code is mostly provided as a reference to learn about Dear ImGui integration, because it is shorter.
     If your code is using GL3+ context or any semi modern OpenGL calls, using this renderer is likely to
     make things more complicated, will require your code to reset many OpenGL attributes to their initial
     state, and might confuse your GPU driver. One star, not recommended. 
-    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl2.cpp
 
 example_sdl_opengl3/
     SDL2 (Win32, Mac, Linux, etc.) + OpenGL3+/ES2/ES3 example.
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
     This uses more modern OpenGL calls and custom shaders. 
     Prefer using that if you are using modern OpenGL in your application (anything with shaders).
-    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
 
 example_sdl_vulkan/
     SDL2 (Win32, Mac, Linux, etc.) + Vulkan example.
-    This is quite long and tedious, because: Vulkan.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
+    This is quite long and tedious, because: Vulkan.
 
 example_allegro5/
     Allegro 5 example.
