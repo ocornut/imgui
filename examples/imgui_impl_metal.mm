@@ -3,6 +3,8 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+// Missing features:
+//  [ ] Renderer: Multi-viewport / platform windows.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -10,13 +12,14 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-07-05: Metal: Added new Metal backend implementation.
 
 #include "imgui.h"
 #include "imgui_impl_metal.h"
 
 #import <Metal/Metal.h>
-#import <QuartzCore/CAMetalLayer.h>
+// #import <QuartzCore/CAMetalLayer.h> // Not suported in XCode 9.2. Maybe a macro to detect the SDK version can be used (something like #if MACOS_SDK >= 10.13 ...)
 #import <simd/simd.h>
 
 #pragma mark - Support classes
@@ -65,6 +68,9 @@ static MetalContext *g_sharedMetalContext = nil;
 
 bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 {
+    ImGuiIO& io = ImGui::GetIO();
+    io.BackendRendererName = "imgui_impl_metal";
+
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
         g_sharedMetalContext = [[MetalContext alloc] init];

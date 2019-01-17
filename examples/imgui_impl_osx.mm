@@ -3,8 +3,9 @@
 // [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
 
 // Issues:
-// [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-// [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
+//  [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Multi-viewport / platform windows.
 
 #include "imgui.h"
 #include "imgui_impl_osx.h"
@@ -12,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-07-07: Initial version.
 
 // Data
@@ -27,6 +29,7 @@ bool ImGui_ImplOSX_Init()
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
+    io.BackendPlatformName = "imgui_impl_osx";
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;

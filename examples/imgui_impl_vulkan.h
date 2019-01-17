@@ -2,6 +2,7 @@
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Missing features:
+//  [ ] Platform: Multi-viewport / platform windows.
 //  [ ] Renderer: User texture binding. Changes of ImTextureID aren't supported by this binding! See https://github.com/ocornut/imgui/pull/914
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
@@ -50,7 +51,7 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 // You probably do NOT need to use or care about those functions. 
 // Those functions only exist because:
 //   1) they facilitate the readability and maintenance of the multiple main.cpp examples files.
-//   2) the upcoming multi-viewport feature will need them internally.
+//   2) the multi-viewport / platform window implementation needs them internally.
 // Generally we avoid exposing any kind of superfluous high-level helpers in the bindings, 
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
 // Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).

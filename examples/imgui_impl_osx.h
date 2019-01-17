@@ -3,8 +3,9 @@
 // [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
 
 // Issues:
-// [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-// [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
+//  [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Multi-viewport / platform windows.
 
 @class NSEvent;
 @class NSView;

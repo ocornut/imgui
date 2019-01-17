@@ -26,11 +26,9 @@
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        (void)ImGui::GetIO();
-        
-        ImGui_ImplMetal_Init(_device);
-
         ImGui::StyleColorsDark();
+
+        ImGui_ImplMetal_Init(_device);
     }
 
     return self;
