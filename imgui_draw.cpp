@@ -955,6 +955,9 @@ void ImDrawList::PathArcTo(const ImVec2& centre, float radius, float a_min, floa
         _Path.push_back(centre);
         return;
     }
+
+    // Note that we are adding a point at both a_min and a_max. 
+    // If you are trying to draw a full closed circle you don't want the overlapping points!
     _Path.reserve(_Path.Size + (num_segments + 1));
     for (int i = 0; i <= num_segments; i++)
     {
@@ -1138,21 +1141,23 @@ void ImDrawList::AddTriangleFilled(const ImVec2& a, const ImVec2& b, const ImVec
 
 void ImDrawList::AddCircle(const ImVec2& centre, float radius, ImU32 col, int num_segments, float thickness)
 {
-    if ((col & IM_COL32_A_MASK) == 0)
+    if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
+    // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathArcTo(centre, radius-0.5f, 0.0f, a_max, num_segments);
+    PathArcTo(centre, radius-0.5f, 0.0f, a_max, num_segments - 1);
     PathStroke(col, true, thickness);
 }
 
 void ImDrawList::AddCircleFilled(const ImVec2& centre, float radius, ImU32 col, int num_segments)
 {
-    if ((col & IM_COL32_A_MASK) == 0)
+    if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
+    // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = IM_PI*2.0f * ((float)num_segments - 1.0f) / (float)num_segments;
-    PathArcTo(centre, radius, 0.0f, a_max, num_segments);
+    PathArcTo(centre, radius, 0.0f, a_max, num_segments - 1);
     PathFillConvex(col);
 }
 
@@ -1518,7 +1523,7 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
         GetTexDataAsAlpha8(&pixels, NULL, NULL);
         if (pixels)
         {
-            TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc((size_t)(TexWidth * TexHeight * 4));
+            TexPixelsRGBA32 = (unsigned int*)ImGui::MemAlloc((size_t)TexWidth * (size_t)TexHeight * 4);
             const unsigned char* src = pixels;
             unsigned int* dst = TexPixelsRGBA32;
             for (int n = TexWidth * TexHeight; n > 0; n--)
@@ -3010,13 +3015,14 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
     const float inv_rounding = 1.0f / rounding;
     const float arc0_b = ImAcos01(1.0f - (p0.x - rect.Min.x) * inv_rounding);
     const float arc0_e = ImAcos01(1.0f - (p1.x - rect.Min.x) * inv_rounding);
+    const float half_pi = IM_PI * 0.5f; // We will == compare to this because we know this is the exact value ImAcos01 can return.
     const float x0 = ImMax(p0.x, rect.Min.x + rounding);
     if (arc0_b == arc0_e)
     {
         draw_list->PathLineTo(ImVec2(x0, p1.y));
         draw_list->PathLineTo(ImVec2(x0, p0.y));
     }
-    else if (arc0_b == 0.0f && arc0_e == IM_PI*0.5f)
+    else if (arc0_b == 0.0f && arc0_e == half_pi)
     {
         draw_list->PathArcToFast(ImVec2(x0, p1.y - rounding), rounding, 3, 6); // BL
         draw_list->PathArcToFast(ImVec2(x0, p0.y + rounding), rounding, 6, 9); // TR
@@ -3036,7 +3042,7 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
             draw_list->PathLineTo(ImVec2(x1, p0.y));
             draw_list->PathLineTo(ImVec2(x1, p1.y));
         }
-        else if (arc1_b == 0.0f && arc1_e == IM_PI*0.5f)
+        else if (arc1_b == 0.0f && arc1_e == half_pi)
         {
             draw_list->PathArcToFast(ImVec2(x1, p0.y + rounding), rounding, 9, 12); // TR
             draw_list->PathArcToFast(ImVec2(x1, p1.y - rounding), rounding, 0, 3);  // BR
