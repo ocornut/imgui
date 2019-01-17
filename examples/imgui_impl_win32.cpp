@@ -18,7 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2019-01-15: Inputs: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created in a different thread.
+//  2019-01-17: Inputs: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created in a different thread or parent.
 //  2019-01-15: Inputs: Added support for XInput gamepads (if ImGuiConfigFlags_NavEnableGamepad is set by user application).
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
@@ -138,9 +138,10 @@ static void ImGui_ImplWin32_UpdateMousePos()
     // Set mouse position
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     POINT pos;
-    if (::GetForegroundWindow() == g_hWnd && ::GetCursorPos(&pos))
-        if (::ScreenToClient(g_hWnd, &pos))
-            io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+    if (HWND active_window = ::GetForegroundWindow())
+        if (active_window == g_hWnd || ::IsChild(active_window, g_hWnd))
+            if (::GetCursorPos(&pos) && ::ScreenToClient(g_hWnd, &pos))
+                io.MousePos = ImVec2((float)pos.x, (float)pos.y);
 }
 
 #ifdef _MSC_VER
