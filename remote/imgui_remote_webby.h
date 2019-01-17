@@ -69,7 +69,7 @@ struct IWebSocketServer
 		ServerConfig.bind_address = local_address;
 		ServerConfig.listening_port = local_port;
 		ServerConfig.flags = WEBBY_SERVER_WEBSOCKETS;
-		ServerConfig.connection_max = 1;
+		ServerConfig.connection_max = 255;
 		ServerConfig.request_buffer_size = 2048;
 		ServerConfig.io_buffer_size = 8192;
 		ServerConfig.dispatch = &onDispatch;
@@ -164,10 +164,20 @@ static void onLog(const char* text)
 	//printf("[WsOnLog] %s\n", text);
 }
 
+#include "imgui_remote_html.h"
+
 static int onDispatch(struct WebbyConnection *connection)
 {
-	//printf("[WsOnDispatch] %s\n", connection->request.uri);
-	return 1;
+	std::string htmlStr;
+	for(size_t i = 0; i < sizeof(imgui_html) / sizeof(imgui_html[0]); ++i) {
+		htmlStr += imgui_html[i];
+	}
+
+	WebbyBeginResponse(connection, 200, htmlStr.size(), NULL, 0);
+	WebbyWrite(connection, htmlStr.data(), htmlStr.size());
+	WebbyEndResponse(connection);
+
+	return 0;
 }
 
 static int onConnect(struct WebbyConnection *connection)
