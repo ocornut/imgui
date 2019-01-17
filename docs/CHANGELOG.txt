@@ -30,7 +30,7 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.68
+ VERSION 1.68 (In progress)
 -----------------------------------------------------------------------
 
 Other Changes:
@@ -41,6 +41,7 @@ Other Changes:
 - Examples: Win32: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created 
   in a different thread. (#1951, #2087, #2156, #2232) [many people]
 - Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
+- Examples: DirectX9: Explicitly disable fog (D3DRS_FOGENABLE) before drawing in case user state has it set. (#2288, #2230)
 
 
 -----------------------------------------------------------------------
