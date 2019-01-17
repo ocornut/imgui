@@ -20,7 +20,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
-//  2019-01-15: Inputs: Using GetForegroundWindow() instead of GetActiveWindow() to be compatible with windows created in a different thread.
+//  2019-01-17: Inputs: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created in a different thread or parent.
 //  2019-01-15: Inputs: Added support for XInput gamepads (if ImGuiConfigFlags_NavEnableGamepad is set by user application).
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
@@ -164,6 +164,8 @@ static void ImGui_ImplWin32_UpdateMousePos()
         return;
     if (HWND focused_hwnd = ::GetForegroundWindow())
     {
+        if (::IsChild(focused_hwnd, g_hWnd))
+            focused_hwnd = g_hWnd;
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
@@ -194,6 +196,14 @@ static void ImGui_ImplWin32_UpdateMousePos()
         if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
             if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
                 io.MouseHoveredViewport = viewport->ID;
+
+#if 0
+    POINT pos;
+    if (HWND active_window = ::GetForegroundWindow())
+        if (active_window == g_hWnd || ::IsChild(active_window, g_hWnd))
+            if (::GetCursorPos(&pos) && ::ScreenToClient(g_hWnd, &pos))
+                io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+#endif
 }
 
 #ifdef _MSC_VER

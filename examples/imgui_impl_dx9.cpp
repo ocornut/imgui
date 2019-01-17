@@ -10,6 +10,7 @@
 
 // CHANGELOG 
 // (minor and older changes stripped away, please see git history for details)
+//  2019-01-16: Misc: Disabled fog before drawing UI's. Fixes issue #2288.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-06-08: Misc: Extracted imgui_impl_dx9.cpp/.h away from the old combined DX9+Win32 example.
 //  2018-06-08: DirectX9: Use draw_data->DisplayPos and draw_data->DisplaySize to setup projection matrix and clipping rectangle.
@@ -131,6 +132,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     g_pd3dDevice->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCALPHA);
     g_pd3dDevice->SetRenderState(D3DRS_SCISSORTESTENABLE, true);
     g_pd3dDevice->SetRenderState(D3DRS_SHADEMODE, D3DSHADE_GOURAUD);
+    g_pd3dDevice->SetRenderState(D3DRS_FOGENABLE, false);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLOROP, D3DTOP_MODULATE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG1, D3DTA_TEXTURE);
     g_pd3dDevice->SetTextureStageState(0, D3DTSS_COLORARG2, D3DTA_DIFFUSE);
