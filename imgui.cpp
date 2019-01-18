@@ -1038,11 +1038,19 @@ static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& si
 //-----------------------------------------------------------------------------
 
 // Current context pointer. Implicitly used by all Dear ImGui functions. Always assumed to be != NULL.
-// CreateContext() will automatically set this pointer if it is NULL. Change to a different context by calling ImGui::SetCurrentContext().
-// If you use DLL hotreloading you might need to call SetCurrentContext() after reloading code from this file.
-// ImGui functions are not thread-safe because of this pointer. If you want thread-safety to allow N threads to access N different contexts, you can:
-// - Change this variable to use thread local storage. You may #define GImGui in imconfig.h for that purpose. Future development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
-// - Having multiple instances of the ImGui code compiled inside different namespace (easiest/safest, if you have a finite number of contexts)
+// ImGui::CreateContext() will automatically set this pointer if it is NULL. Change to a different context by calling ImGui::SetCurrentContext().
+// 1) Important: globals are not shared across DLL boundaries! If you use DLLs or any form of hot-reloading: you will need to call
+//    SetCurrentContext() (with the pointer you got from CreateContext) from each unique static/DLL boundary, and after each hot-reloading.
+//    In your debugger, add GImGui to your watch window and notice how its value changes depending on which location you are currently stepping into.
+// 2) Important: Dear ImGui functions are not thread-safe because of this pointer. 
+//    If you want thread-safety to allow N threads to access N different contexts, you can:
+//    - Change this variable to use thread local storage so each thread can refer to a different context, in imconfig.h:
+//          struct ImGuiContext;
+//          extern thread_local ImGuiContext* MyImGuiTLS;
+//          #define GImGui MyImGuiTLS
+//      And then define MyImGuiTLS in one of your cpp file. Note that thread_local is a C++11 keyword, earlier C++ uses compiler-specific keyword.
+//    - Future development aim to make this context pointer explicit to all calls. Also read https://github.com/ocornut/imgui/issues/586
+//    - If you need a finite number of contexts, you may compile and use multiple instances of the ImGui code from different namespace.
 #ifndef GImGui
 ImGuiContext*   GImGui = NULL;
 #endif
