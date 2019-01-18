@@ -50,6 +50,9 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+
+#ifdef IMGUI_ENABLED
+
 #include <ctype.h>          // toupper, isprint
 #include <limits.h>         // INT_MIN, INT_MAX
 #include <math.h>           // sqrtf, powf, cosf, sinf, floorf, ceilf
@@ -4461,3 +4464,5 @@ void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
 
 #endif
+
+#endif //IMGUI_ENABLED

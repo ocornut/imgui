@@ -935,6 +935,9 @@ CODE
 #endif
 
 #include "imgui.h"
+
+#ifdef IMGUI_ENABLED
+
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -13930,3 +13933,5 @@ void ImGui::ShowDockingDebug()
 #endif
 
 //-----------------------------------------------------------------------------
+
+#endif //IMGUI_ENABLED

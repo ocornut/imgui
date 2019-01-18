@@ -71,3 +71,7 @@ namespace ImGui
     void MyFunction(const char* name, const MyMatrix44& v);
 }
 */
+
+#ifndef MCPE_PUBLISH
+#define IMGUI_ENABLED
+#endif

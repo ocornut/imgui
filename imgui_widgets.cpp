@@ -32,6 +32,9 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+
+#ifdef IMGUI_ENABLED
+
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -6736,3 +6739,5 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 
     return close_button_pressed;
 }
+
+#endif //IMGUI_ENABLED

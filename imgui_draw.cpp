@@ -26,6 +26,9 @@ Index of this file:
 #endif
 
 #include "imgui.h"
+
+#ifdef IMGUI_ENABLED
+
 #ifndef IMGUI_DEFINE_MATH_OPERATORS
 #define IMGUI_DEFINE_MATH_OPERATORS
 #endif
@@ -3320,3 +3323,5 @@ static const char* GetDefaultCompressedFontDataTTFBase85()
 {
     return proggy_clean_ttf_compressed_data_base85;
 }
+
+#endif //IMGUI_ENABLED
