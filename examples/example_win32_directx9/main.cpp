@@ -49,13 +49,13 @@ int main(int, char**)
     // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
     RegisterClassEx(&wc);
-    HWND hwnd = CreateWindow(_T("ImGui Example"), _T("Dear ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = CreateWindow(wc.lpszClassName, _T("Dear ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
     LPDIRECT3D9 pD3D;
     if ((pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
     {
-        UnregisterClass(_T("ImGui Example"), wc.hInstance);
+        UnregisterClass(wc.lpszClassName, wc.hInstance);
         return 0;
     }
     ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
@@ -71,7 +71,7 @@ int main(int, char**)
     if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &g_d3dpp, &g_pd3dDevice) < 0)
     {
         pD3D->Release();
-        UnregisterClass(_T("ImGui Example"), wc.hInstance);
+        UnregisterClass(wc.lpszClassName, wc.hInstance);
         return 0;
     }
 
@@ -200,7 +200,7 @@ int main(int, char**)
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (pD3D) pD3D->Release();
     DestroyWindow(hwnd);
-    UnregisterClass(_T("ImGui Example"), wc.hInstance);
+    UnregisterClass(wc.lpszClassName, wc.hInstance);
 
     return 0;
 }

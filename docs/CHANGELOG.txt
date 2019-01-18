@@ -30,7 +30,6 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
-<<<<<<< HEAD
  VIEWPORT BRANCH (In Progress)
 -----------------------------------------------------------------------
 
@@ -71,20 +70,19 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.68
-=======
  VERSION 1.68 (In progress)
->>>>>>> master
 -----------------------------------------------------------------------
 
 Other Changes:
 - Added .editorconfig file for text editors to standardize using spaces. (#2038) [@kudaba]
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
   with a small number of segments (e.g. an hexagon). (#2287) [@baktery]
-- Fonts: imgui_freetype: Added support for imgui allocators + custom FreeType only SetAllocatorFunctions. (#2285) [@Vuhdo]
+- ImFontAtlas: Added 0x2000-0x206F general punctuation range to default ChineseFull/ChineseSimplifiedCommon ranges. (#2093)
+- ImFontAtlas: FreeType: Added support for imgui allocators + custom FreeType only SetAllocatorFunctions. (#2285) [@Vuhdo]
 - Examples: Win32: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created 
   in a different thread or parent. (#1951, #2087, #2156, #2232) [many people]
 - Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
+- Examples: Win32: Added support for mouse buttons 4 and 5 via WM_XBUTTON* messages. (#2264)
 - Examples: DirectX9: Explicitly disable fog (D3DRS_FOGENABLE) before drawing in case user state has it set. (#2288, #2230)
 
 
