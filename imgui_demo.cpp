@@ -3,22 +3,22 @@
 
 // Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
 // Do NOT remove this file from your project! Think again! It is the most useful reference code that you and other coders
-// will want to refer to and call. Have the ImGui::ShowDemoWindow() function wired in an always-available debug menu of 
-// your game/app! Removing this file from your project is hindering access to documentation for everyone in your team, 
+// will want to refer to and call. Have the ImGui::ShowDemoWindow() function wired in an always-available debug menu of
+// your game/app! Removing this file from your project is hindering access to documentation for everyone in your team,
 // likely leading you to poorer usage of the library.
 // Everything in this file will be stripped out by the linker if you don't call ImGui::ShowDemoWindow().
-// If you want to link core Dear ImGui in your shipped builds but want an easy guarantee that the demo will not be linked, 
+// If you want to link core Dear ImGui in your shipped builds but want an easy guarantee that the demo will not be linked,
 // you can setup your imconfig.h with #define IMGUI_DISABLE_DEMO_WINDOWS and those functions will be empty.
 // In other situation, whenever you have Dear ImGui available you probably want this to be available for reference.
 // Thank you,
 // -Your beloved friend, imgui_demo.cpp (that you won't delete)
 
-// Message to beginner C/C++ programmers about the meaning of the 'static' keyword: 
-// In this demo code, we frequently we use 'static' variables inside functions. A static variable persist across calls, so it is 
-// essentially like a global variable but declared inside the scope of the function. We do this as a way to gather code and data 
+// Message to beginner C/C++ programmers about the meaning of the 'static' keyword:
+// In this demo code, we frequently we use 'static' variables inside functions. A static variable persist across calls, so it is
+// essentially like a global variable but declared inside the scope of the function. We do this as a way to gather code and data
 // in the same place, to make the demo source code faster to read, faster to write, and smaller in size.
 // It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be reentrant
-// or used in threads. This might be a pattern you will want to use in your code, but most of the real data you would be editing is 
+// or used in threads. This might be a pattern you will want to use in your code, but most of the real data you would be editing is
 // likely going to be stored outside your functions.
 
 /*
@@ -70,7 +70,9 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning : cast to 'void *' from smaller integer type 'int'
 #pragma clang diagnostic ignored "-Wformat-security"            // warning : warning: format string is not a string literal
 #pragma clang diagnostic ignored "-Wexit-time-destructors"      // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning : zero as null pointer constant                  // some standard header variations use #define NULL 0
+#if __has_warning("-Wzero-as-null-pointer-constant")
+# pragma GCC diagnostic ignored "-Wzero-as-null-pointer-constant" // warning : zero as null pointer constant                  // some standard header variations use #define NULL 0
+#endif
 #if __has_warning("-Wdouble-promotion")
 #pragma clang diagnostic ignored "-Wdouble-promotion"           // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
 #endif
@@ -419,7 +421,7 @@ static void ShowDemoWindowWidgets()
         // Color buttons, demonstrate using PushID() to add unique identifier in the ID stack, and changing style.
         for (int i = 0; i < 7; i++)
         {
-            if (i > 0) 
+            if (i > 0)
                 ImGui::SameLine();
             ImGui::PushID(i);
             ImGui::PushStyleColor(ImGuiCol_Button, (ImVec4)ImColor::HSV(i/7.0f, 0.6f, 0.6f));
@@ -913,7 +915,7 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Multi-line Text Input"))
     {
-        // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize 
+        // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize
         // and the code in misc/cpp/imgui_stdlib.h for how to setup InputText() for dynamically resizing strings.
         static bool read_only = false;
         static char text[1024*16] =
@@ -1150,15 +1152,15 @@ static void ShowDemoWindowWidgets()
     if (ImGui::TreeNode("Data Types"))
     {
         // The DragScalar/InputScalar/SliderScalar functions allow various data types: signed/unsigned int/long long and float/double
-        // To avoid polluting the public API with all possible combinations, we use the ImGuiDataType enum to pass the type, 
-        // and passing all arguments by address. 
+        // To avoid polluting the public API with all possible combinations, we use the ImGuiDataType enum to pass the type,
+        // and passing all arguments by address.
         // This is the reason the test code below creates local variables to hold "zero" "one" etc. for each types.
-        // In practice, if you frequently use a given type that is not covered by the normal API entry points, you can wrap it 
-        // yourself inside a 1 line function which can take typed argument as value instead of void*, and then pass their address 
+        // In practice, if you frequently use a given type that is not covered by the normal API entry points, you can wrap it
+        // yourself inside a 1 line function which can take typed argument as value instead of void*, and then pass their address
         // to the generic function. For example:
-        //   bool MySliderU64(const char *label, u64* value, u64 min = 0, u64 max = 0, const char* format = "%lld") 
-        //   { 
-        //      return SliderScalar(label, ImGuiDataType_U64, value, &min, &max, format); 
+        //   bool MySliderU64(const char *label, u64* value, u64 min = 0, u64 max = 0, const char* format = "%lld")
+        //   {
+        //      return SliderScalar(label, ImGuiDataType_U64, value, &min, &max, format);
         //   }
 
         // Limits (as helper variables that we can take the address of)
@@ -1353,7 +1355,7 @@ static void ShowDemoWindowWidgets()
             static int mode = 0;
             if (ImGui::RadioButton("Copy", mode == Mode_Copy)) { mode = Mode_Copy; } ImGui::SameLine();
             if (ImGui::RadioButton("Move", mode == Mode_Move)) { mode = Mode_Move; } ImGui::SameLine();
-            if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; } 
+            if (ImGui::RadioButton("Swap", mode == Mode_Swap)) { mode = Mode_Swap; }
             static const char* names[9] = { "Bobby", "Beatrice", "Betty", "Brianna", "Barry", "Bernard", "Bibi", "Blaine", "Bryn" };
             for (int n = 0; n < IM_ARRAYSIZE(names); n++)
             {
@@ -1498,7 +1500,7 @@ static void ShowDemoWindowWidgets()
         if (embed_all_inside_a_child_window)
             ImGui::EndChild();
 
-        // Calling IsItemHovered() after begin returns the hovered status of the title bar. 
+        // Calling IsItemHovered() after begin returns the hovered status of the title bar.
         // This is useful in particular if you want to create a context menu (with BeginPopupContextItem) associated to the title bar of a window.
         static bool test_window = false;
         ImGui::Checkbox("Hovered/Active tests after Begin() for title bar testing", &test_window);
@@ -2024,7 +2026,7 @@ static void ShowDemoWindowPopups()
     //   if (ImGui::Button("Open")) ImGui::OpenPopup("MyPopup"); if (ImGui::BeginPopup("MyPopup") { [...] EndPopup(); }
 
     // With popups we have to go through a library call (here OpenPopup) to manipulate the visibility state.
-    // This may be a bit confusing at first but it should quickly make sense. Follow on the examples below. 
+    // This may be a bit confusing at first but it should quickly make sense. Follow on the examples below.
 
     if (ImGui::TreeNode("Popups"))
     {
@@ -2120,7 +2122,7 @@ static void ShowDemoWindowPopups()
         ImGui::Text("(You can also right-click me to the same popup as above.)");
         ImGui::OpenPopupOnItemClick("item context menu", 1);
 
-        // When used after an item that has an ID (here the Button), we can skip providing an ID to BeginPopupContextItem(). 
+        // When used after an item that has an ID (here the Button), we can skip providing an ID to BeginPopupContextItem().
         // BeginPopupContextItem() will use the last item ID as the popup ID.
         // In addition here, we want to include your editable label inside the button label. We use the ### operator to override the ID (read FAQ about ID for details)
         static char name[32] = "Label1";
@@ -3383,10 +3385,10 @@ struct ExampleAppLog
     ImVector<int>       LineOffsets;        // Index to lines offset. We maintain this with AddLog() calls, allowing us to have a random access on lines
     bool                ScrollToBottom;
 
-    void    Clear() 
-    { 
-        Buf.clear(); 
-        LineOffsets.clear(); 
+    void    Clear()
+    {
+        Buf.clear();
+        LineOffsets.clear();
         LineOffsets.push_back(0);
     }
 
@@ -3436,11 +3438,11 @@ struct ExampleAppLog
         else
         {
             // The simplest and easy way to display the entire buffer:
-            //   ImGui::TextUnformatted(buf_begin, buf_end); 
+            //   ImGui::TextUnformatted(buf_begin, buf_end);
             // And it'll just work. TextUnformatted() has specialization for large blob of text and will fast-forward to skip non-visible lines.
             // Here we instead demonstrate using the clipper to only process lines that are within the visible area.
             // If you have tens of thousands of items and their processing cost is non-negligible, coarse clipping them on your side is recommended.
-            // Using ImGuiListClipper requires A) random access into your data, and B) items all being the  same height, 
+            // Using ImGuiListClipper requires A) random access into your data, and B) items all being the  same height,
             // both of which we can handle since we an array pointing to the beginning of each line of text.
             // When using the filter (in the block of code above) we don't have random access into the data to display anymore, which is why we don't use the clipper.
             // Storing or skimming through the search result would make it possible (and would be recommended if you want to search through tens of thousands of entries)
@@ -3483,7 +3485,7 @@ static void ShowExampleAppLog(bool* p_open)
         {
             const char* categories[3] = { "info", "warn", "error" };
             const char* words[] = { "Bumfuzzled", "Cattywampus", "Snickersnee", "Abibliophobia", "Absquatulate", "Nincompoop", "Pauciloquent" };
-            log.AddLog("[%05d] [%s] Hello, current time is %.1f, here's a word: '%s'\n", 
+            log.AddLog("[%05d] [%s] Hello, current time is %.1f, here's a word: '%s'\n",
                 ImGui::GetFrameCount(), categories[counter % IM_ARRAYSIZE(categories)], ImGui::GetTime(), words[counter % IM_ARRAYSIZE(words)]);
             counter++;
         }
@@ -3950,16 +3952,16 @@ struct MyDocument
     bool        Open;           // Set when the document is open (in this demo, we keep an array of all available documents to simplify the demo)
     bool        OpenPrev;       // Copy of Open from last update.
     bool        Dirty;          // Set when the document has been modified
-    bool        WantClose;      // Set when the document 
+    bool        WantClose;      // Set when the document
     ImVec4      Color;          // An arbitrary variable associated to the document
 
     MyDocument(const char* name, bool open = true, const ImVec4& color = ImVec4(1.0f,1.0f,1.0f,1.0f))
-    { 
-        Name = name; 
-        Open = OpenPrev = open; 
-        Dirty = false; 
-        WantClose = false; 
-        Color = color; 
+    {
+        Name = name;
+        Open = OpenPrev = open;
+        Dirty = false;
+        WantClose = false;
+        Color = color;
     }
     void DoOpen()       { Open = true; }
     void DoQueueClose() { WantClose = true; }
@@ -4016,8 +4018,8 @@ struct ExampleAppDocuments
 
 // [Optional] Notify the system of Tabs/Windows closure that happened outside the regular tab interface.
 // If a tab has been closed programmatically (aka closed from another source such as the Checkbox() in the demo, as opposed
-// to clicking on the regular tab closing button) and stops being submitted, it will take a frame for the tab bar to notice its absence. 
-// During this frame there will be a gap in the tab bar, and if the tab that has disappeared was the selected one, the tab bar 
+// to clicking on the regular tab closing button) and stops being submitted, it will take a frame for the tab bar to notice its absence.
+// During this frame there will be a gap in the tab bar, and if the tab that has disappeared was the selected one, the tab bar
 // will report no selected tab during the frame. This will effectively give the impression of a flicker for one frame.
 // We call SetTabItemClosed() to manually notify the Tab Bar or Docking system of removed tabs to avoid this glitch.
 // Note that this completely optional, and only affect tab bars with the ImGuiTabBarFlags_Reorderable flag.
