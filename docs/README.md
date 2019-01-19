@@ -175,8 +175,8 @@ User screenshots:
 <br>[Gallery Part 4](https://github.com/ocornut/imgui/issues/973) (Jan 2017 to Aug 2017)
 <br>[Gallery Part 5](https://github.com/ocornut/imgui/issues/1269) (Aug 2017 to Feb 2018)
 <br>[Gallery Part 6](https://github.com/ocornut/imgui/issues/1607) (Feb 2018 to June 2018)
-<br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 to January 2018)
-<br>[Gallery Part 8](https://github.com/ocornut/imgui/issues/2265) (January 2018 onward)
+<br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 to January 2019)
+<br>[Gallery Part 8](https://github.com/ocornut/imgui/issues/2265) (January 2019 onward)
 <br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
 Custom engine
