@@ -49,13 +49,13 @@ int main(int, char**)
     // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
     RegisterClassEx(&wc);
-    HWND hwnd = CreateWindow(_T("ImGui Example"), _T("Dear ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = CreateWindow(wc.lpszClassName, _T("Dear ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
     LPDIRECT3D9 pD3D;
     if ((pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
     {
-        UnregisterClass(_T("ImGui Example"), wc.hInstance);
+        UnregisterClass(wc.lpszClassName, wc.hInstance);
         return 0;
     }
     ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
@@ -71,7 +71,7 @@ int main(int, char**)
     if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &g_d3dpp, &g_pd3dDevice) < 0)
     {
         pD3D->Release();
-        UnregisterClass(_T("ImGui Example"), wc.hInstance);
+        UnregisterClass(wc.lpszClassName, wc.hInstance);
         return 0;
     }
 
@@ -94,8 +94,8 @@ int main(int, char**)
     ImGui_ImplDX9_Init(g_pd3dDevice);
 
     // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple. 
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
     // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
     // - Read 'misc/fonts/README.txt' for more instructions and details.
@@ -151,7 +151,7 @@ int main(int, char**)
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -204,7 +204,7 @@ int main(int, char**)
     if (g_pd3dDevice) g_pd3dDevice->Release();
     if (pD3D) pD3D->Release();
     DestroyWindow(hwnd);
-    UnregisterClass(_T("ImGui Example"), wc.hInstance);
+    UnregisterClass(wc.lpszClassName, wc.hInstance);
 
     return 0;
 }

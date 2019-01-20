@@ -20,7 +20,8 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
-//  2019-01-17: Inputs: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created in a different thread or parent.
+//  2019-01-17: Misc: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created in a different thread or parent.
+//  2019-01-17: Inputs: Added support for mouse buttons 4 and 5 via WM_XBUTTON* messages.
 //  2019-01-15: Inputs: Added support for XInput gamepads (if ImGuiConfigFlags_NavEnableGamepad is set by user application).
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-06-29: Inputs: Added support for the ImGuiMouseCursor_Hand cursor.
@@ -35,7 +36,7 @@
 //  2018-01-08: Inputs: Added mapping for ImGuiKey_Insert.
 //  2018-01-05: Inputs: Added WM_LBUTTONDBLCLK double-click handlers for window classes with the CS_DBLCLKS flag.
 //  2017-10-23: Inputs: Added WM_SYSKEYDOWN / WM_SYSKEYUP handlers so e.g. the VK_MENU key can be read.
-//  2017-10-23: Inputs: Using Win32 ::SetCapture/::GetCapture() to retrieve mouse positions outside the client area when dragging. 
+//  2017-10-23: Inputs: Using Win32 ::SetCapture/::GetCapture() to retrieve mouse positions outside the client area when dragging.
 //  2016-11-12: Inputs: Only call Win32 ::SetCursor(NULL) when io.MouseDrawCursor is set.
 
 // Win32 Data
@@ -305,7 +306,7 @@ void    ImGui_ImplWin32_NewFrame()
 #define DBT_DEVNODES_CHANGED 0x0007
 #endif
 
-// Process Win32 mouse/keyboard inputs. 
+// Process Win32 mouse/keyboard inputs.
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -323,11 +324,13 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
+    case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK:
     {
         int button = 0;
-        if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) button = 0;
-        if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) button = 1;
-        if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) button = 2;
+        if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) { button = 0; }
+        if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
+        if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
+        if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
         if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
             ::SetCapture(hwnd);
         io.MouseDown[button] = true;
@@ -336,11 +339,13 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_LBUTTONUP:
     case WM_RBUTTONUP:
     case WM_MBUTTONUP:
+    case WM_XBUTTONUP:
     {
         int button = 0;
-        if (msg == WM_LBUTTONUP) button = 0;
-        if (msg == WM_RBUTTONUP) button = 1;
-        if (msg == WM_MBUTTONUP) button = 2;
+        if (msg == WM_LBUTTONUP) { button = 0; }
+        if (msg == WM_RBUTTONUP) { button = 1; }
+        if (msg == WM_MBUTTONUP) { button = 2; }
+        if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
         io.MouseDown[button] = false;
         if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
             ::ReleaseCapture();
@@ -411,6 +416,8 @@ typedef enum { MDT_EFFECTIVE_DPI = 0, MDT_ANGULAR_DPI = 1, MDT_RAW_DPI = 2, MDT_
 #ifndef _DPI_AWARENESS_CONTEXTS_
 DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE    (DPI_AWARENESS_CONTEXT)-3
+#endif
+#ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (DPI_AWARENESS_CONTEXT)-4
 #endif
 typedef HRESULT(WINAPI * PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib+dll, Windows 8.1

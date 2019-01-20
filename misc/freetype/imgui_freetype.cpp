@@ -38,7 +38,7 @@
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
 #endif
 
-namespace 
+namespace
 {
     // Glyph metrics:
     // --------------
@@ -72,7 +72,7 @@ namespace
     //              |------------- advanceX ----------->|
 
     /// A structure that describe a glyph.
-    struct GlyphInfo 
+    struct GlyphInfo
     {
         int         Width;              // Glyph's width in pixels.
         int         Height;             // Glyph's height in pixels.
@@ -139,7 +139,7 @@ namespace
             LoadFlags |= FT_LOAD_TARGET_LIGHT;
         else if (UserFlags & ImGuiFreeType::MonoHinting)
             LoadFlags |= FT_LOAD_TARGET_MONO;
-        else                                                
+        else
             LoadFlags |= FT_LOAD_TARGET_NORMAL;
 
         return true;
@@ -147,16 +147,16 @@ namespace
 
     void FreeTypeFont::CloseFont()
     {
-        if (Face) 
+        if (Face)
         {
             FT_Done_Face(Face);
             Face = NULL;
         }
     }
 
-    void FreeTypeFont::SetPixelHeight(int pixel_height) 
+    void FreeTypeFont::SetPixelHeight(int pixel_height)
     {
-        // Vuhdo: I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height' 
+        // Vuhdo: I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
         // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
         // NB: FT_Set_Pixel_Sizes() doesn't seem to get us the same result.
         FT_Size_RequestRec req;
@@ -391,7 +391,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     buf_rects.resize(total_glyphs_count);
     memset(buf_rects.Data, 0, (size_t)buf_rects.size_in_bytes());
 
-    // Allocate temporary rasterization data buffers. 
+    // Allocate temporary rasterization data buffers.
     // We could not find a way to retrieve accurate glyph size without rendering them.
     // (e.g. slot->metrics->width not always matching bitmap->width, especially considering the Oblique transform)
     // We allocate in chunks of 256 KB to not waste too much extra memory ahead. Hopefully users of FreeType won't find the temporary allocations.
@@ -539,7 +539,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             float char_off_x = font_off_x;
             if (char_advance_x_org != char_advance_x_mod)
                 char_off_x += cfg.PixelSnapH ? (float)(int)((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
-            
+
             // Register glyph
             float x0 = info.OffsetX + char_off_x;
             float y0 = info.OffsetY + font_off_y;

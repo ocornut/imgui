@@ -8,7 +8,7 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-// CHANGELOG 
+// CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2019-01-16: Misc: Disabled fog before drawing UI's. Fixes issue #2288.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.

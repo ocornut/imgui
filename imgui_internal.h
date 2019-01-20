@@ -46,7 +46,9 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wunused-function"                // for stb_textedit.h
 #pragma clang diagnostic ignored "-Wmissing-prototypes"             // for stb_textedit.h
 #pragma clang diagnostic ignored "-Wold-style-cast"
+#if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
+#endif
 #if __has_warning("-Wdouble-promotion")
 #pragma clang diagnostic ignored "-Wdouble-promotion"
 #endif
@@ -369,9 +371,9 @@ enum ImGuiItemStatusFlags_
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     , // [imgui-test only]
-    ImGuiItemStatusFlags_Openable           = 1 << 10,  // 
-    ImGuiItemStatusFlags_Opened             = 1 << 11,  // 
-    ImGuiItemStatusFlags_Checkable          = 1 << 12,  // 
+    ImGuiItemStatusFlags_Openable           = 1 << 10,  //
+    ImGuiItemStatusFlags_Opened             = 1 << 11,  //
+    ImGuiItemStatusFlags_Checkable          = 1 << 12,  //
     ImGuiItemStatusFlags_Checked            = 1 << 13   //
 #endif
 };
@@ -1640,7 +1642,7 @@ namespace ImGui
     IMGUI_API bool          TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextTreeNodeOpened() data, if any. May return true when logging
     IMGUI_API void          TreePushRawID(ImGuiID id);
 
-    // Template functions are instantiated in imgui_widgets.cpp for a finite number of types. 
+    // Template functions are instantiated in imgui_widgets.cpp for a finite number of types.
     // To use them externally (for custom widget) you may need an "extern template" statement in your code in order to link to existing instances and silence Clang warnings (see #2036).
     // e.g. " extern template IMGUI_API float RoundScalarWithFormatT<float, float>(const char* format, ImGuiDataType data_type, float v); "
     template<typename T, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  DragBehaviorT(ImGuiDataType data_type, T* v, float v_speed, const T v_min, const T v_max, const char* format, float power, ImGuiDragFlags flags);

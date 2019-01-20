@@ -149,7 +149,7 @@ Frameworks:
 - LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
 - Magnum: [ImGuiIntegration](https://doc.magnum.graphics/magnum/namespaceMagnum_1_1ImGuiIntegration.html) ([example](https://doc.magnum.graphics/magnum/examples-imgui.html))
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
-- Qt3d: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d), QOpenGLWindow [qtimgui](https://github.com/ocornut/imgui/issues/1910)
+- Qt: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d) / [QOpenGLWindow (qtimgui)](https://github.com/ocornut/imgui/issues/1910) / [QtDirect3D](https://github.com/giladreich/QtDirect3D) / [qt6](https://github.com/alpqr/qvk6/tree/imgui/examples/rhi/imguidemo)
 - SFML: [imgui-sfml](https://github.com/EliasD/imgui-sfml)
 - Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
 - Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
@@ -175,8 +175,8 @@ User screenshots:
 <br>[Gallery Part 4](https://github.com/ocornut/imgui/issues/973) (Jan 2017 to Aug 2017)
 <br>[Gallery Part 5](https://github.com/ocornut/imgui/issues/1269) (Aug 2017 to Feb 2018)
 <br>[Gallery Part 6](https://github.com/ocornut/imgui/issues/1607) (Feb 2018 to June 2018)
-<br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 to January 2018)
-<br>[Gallery Part 8](https://github.com/ocornut/imgui/issues/2265) (January 2018 onward)
+<br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 to January 2019)
+<br>[Gallery Part 8](https://github.com/ocornut/imgui/issues/2265) (January 2019 onward)
 <br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
 Custom engine

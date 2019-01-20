@@ -32,7 +32,7 @@ void my_display_code()
         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
         ImGui::Checkbox("Another Window", &show_another_window);
 
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
         ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
         if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -82,7 +82,7 @@ void glut_display_func()
 // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
 
 int main(int argc, char** argv)
-{ 
+{
     // Create GLUT window
     glutInit(&argc, argv);
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     glutCreateWindow("Dear ImGui FreeGLUT+OpenGL2 Example");
 
     // Setup GLUT display function
-    // We will also call ImGui_ImplFreeGLUT_InstallFuncs() to get all the other functions installed for us, 
+    // We will also call ImGui_ImplFreeGLUT_InstallFuncs() to get all the other functions installed for us,
     // otherwise it is possible to install our own functions and call the imgui_impl_freeglut.h functions ourselves.
     glutDisplayFunc(glut_display_func);
 
@@ -111,8 +111,8 @@ int main(int argc, char** argv)
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
-    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them. 
-    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple. 
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
     // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
     // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
     // - Read 'misc/fonts/README.txt' for more instructions and details.
