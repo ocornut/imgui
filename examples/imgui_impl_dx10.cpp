@@ -8,7 +8,7 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-// CHANGELOG 
+// CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-12-03: Misc: Added #pragma comment statement to automatically link with d3dcompiler.lib when using D3DCompile().
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
@@ -311,9 +311,9 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         ImGui_ImplDX10_InvalidateDeviceObjects();
 
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
-    // If you would like to use this DX10 sample code but remove this dependency you can: 
+    // If you would like to use this DX10 sample code but remove this dependency you can:
     //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
-    //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL. 
+    //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL.
     // See https://github.com/ocornut/imgui/pull/638 for sources and details.
 
     // Create the vertex shader
@@ -353,7 +353,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
             return false;
 
         // Create the input layout
-        D3D10_INPUT_ELEMENT_DESC local_layout[] = 
+        D3D10_INPUT_ELEMENT_DESC local_layout[] =
         {
             { "POSITION", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->pos), D3D10_INPUT_PER_VERTEX_DATA, 0 },
             { "TEXCOORD", 0, DXGI_FORMAT_R32G32_FLOAT,   0, (size_t)(&((ImDrawVert*)0)->uv),  D3D10_INPUT_PER_VERTEX_DATA, 0 },

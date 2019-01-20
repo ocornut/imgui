@@ -144,7 +144,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     g_pIB->Unmap(0, &range);
 
     // Setup orthographic projection matrix into our constant buffer
-    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). 
+    // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
     VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
     {
         VERTEX_CONSTANT_BUFFER* constant_buffer = &vertex_constant_buffer;
@@ -437,9 +437,9 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
     }
 
     // By using D3DCompile() from <d3dcompiler.h> / d3dcompiler.lib, we introduce a dependency to a given version of d3dcompiler_XX.dll (see D3DCOMPILER_DLL_A)
-    // If you would like to use this DX12 sample code but remove this dependency you can: 
+    // If you would like to use this DX12 sample code but remove this dependency you can:
     //  1) compile once, save the compiled shader blobs into a file or source code and pass them to CreateVertexShader()/CreatePixelShader() [preferred solution]
-    //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL. 
+    //  2) use code to detect any version of the DLL and grab a pointer to D3DCompile from the DLL.
     // See https://github.com/ocornut/imgui/pull/638 for sources and details.
 
     D3D12_GRAPHICS_PIPELINE_STATE_DESC psoDesc;

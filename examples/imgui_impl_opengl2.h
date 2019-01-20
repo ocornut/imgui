@@ -13,7 +13,7 @@
 // This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
 // If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
 // complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
-// confuse your GPU driver. 
+// confuse your GPU driver.
 // The GL2 code is unable to reset attributes or even call e.g. "glUseProgram(0)" because they don't exist in that API.
 
 #pragma once

@@ -97,7 +97,7 @@ void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yo
 
 void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
-    if (g_PrevUserCallbackKey != NULL) 
+    if (g_PrevUserCallbackKey != NULL)
         g_PrevUserCallbackKey(window, key, scancode, action, mods);
 
     ImGuiIO& io = ImGui::GetIO();
@@ -172,7 +172,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);  // FIXME: GLFW doesn't have this.
     g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);  // FIXME: GLFW doesn't have this.
     g_MouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
-    
+
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     g_PrevUserCallbackMousebutton = NULL;
     g_PrevUserCallbackScroll = NULL;

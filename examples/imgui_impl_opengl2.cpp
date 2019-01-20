@@ -13,10 +13,10 @@
 // This code is mostly provided as a reference to learn how ImGui integration works, because it is shorter to read.
 // If your code is using GL3+ context or any semi modern OpenGL calls, using this is likely to make everything more
 // complicated, will require your code to reset every single OpenGL attributes to their initial state, and might
-// confuse your GPU driver. 
+// confuse your GPU driver.
 // The GL2 code is unable to reset attributes or even call e.g. "glUseProgram(0)" because they don't exist in that API.
 
-// CHANGELOG 
+// CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-08-03: OpenGL: Disabling/restoring GL_LIGHTING and GL_COLOR_MATERIAL to increase compatibility with legacy OpenGL applications.
@@ -72,7 +72,7 @@ void    ImGui_ImplOpenGL2_NewFrame()
 
 // OpenGL2 Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-// Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so. 
+// Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so.
 void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -88,7 +88,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
-    GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box); 
+    GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
