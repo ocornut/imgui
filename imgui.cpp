@@ -2097,6 +2097,32 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 
 char ImGuiTextBuffer::EmptyString[1] = { 0 };
 
+void ImGuiTextBuffer::append(const char* str, const char* str_end)
+{
+    int len = str_end ? (int)(str_end - str) : (int)strlen(str);
+
+    // Add zero-terminator the first time
+    const int write_off = (Buf.Size != 0) ? Buf.Size : 1;
+    const int needed_sz = write_off + len;
+    if (write_off + len >= Buf.Capacity)
+    {
+        int new_capacity = Buf.Capacity * 2;
+        Buf.reserve(needed_sz > new_capacity ? needed_sz : new_capacity);
+    }
+
+    Buf.resize(needed_sz);
+    memcpy(&Buf[write_off - 1], str, (size_t)len);
+    Buf[write_off - 1 + len] = 0;
+}
+
+void ImGuiTextBuffer::appendf(const char* fmt, ...)
+{
+    va_list args;
+    va_start(args, fmt);
+    appendfv(fmt, args);
+    va_end(args);
+}
+
 // Helper: Text buffer for logging/accumulating text
 void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 {
@@ -2115,21 +2141,13 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
     const int needed_sz = write_off + len;
     if (write_off + len >= Buf.Capacity)
     {
-        int double_capacity = Buf.Capacity * 2;
-        Buf.reserve(needed_sz > double_capacity ? needed_sz : double_capacity);
+        int new_capacity = Buf.Capacity * 2;
+        Buf.reserve(needed_sz > new_capacity ? needed_sz : new_capacity);
     }
 
     Buf.resize(needed_sz);
     ImFormatStringV(&Buf[write_off - 1], (size_t)len + 1, fmt, args_copy);
     va_end(args_copy);
-}
-
-void ImGuiTextBuffer::appendf(const char* fmt, ...)
-{
-    va_list args;
-    va_start(args, fmt);
-    appendfv(fmt, args);
-    va_end(args);
 }
 
 //-----------------------------------------------------------------------------
