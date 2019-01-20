@@ -102,7 +102,14 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glEnableClientState(GL_COLOR_ARRAY);
     glEnable(GL_TEXTURE_2D);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-    //glUseProgram(0); // You may want this if using this code in an OpenGL 3+ context where shaders may be bound
+
+    // If you are using this code with non-legacy OpenGL header/contexts (which you should not, prefer using imgui_impl_opengl3.cpp!!), 
+    // you may need to backup/reset/restore current shader using the lines below. DO NOT MODIFY THIS FILE! Add the code in your calling function:
+    //  GLint last_program; 
+    //  glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
+    //  glUseProgram(0);
+    //  ImGui_ImplOpenGL2_RenderDrawData(...);
+    //  glUseProgram(last_program)
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayMin is typically (0,0) for single viewport apps.
