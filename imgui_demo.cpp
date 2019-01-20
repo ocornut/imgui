@@ -3382,6 +3382,7 @@ struct ExampleAppLog
     ImGuiTextFilter     Filter;
     ImVector<int>       LineOffsets;        // Index to lines offset. We maintain this with AddLog() calls, allowing us to have a random access on lines
     bool                ScrollToBottom;
+    bool                Follow;
 
     void    Clear() 
     { 
@@ -3400,7 +3401,7 @@ struct ExampleAppLog
         for (int new_size = Buf.size(); old_size < new_size; old_size++)
             if (Buf[old_size] == '\n')
                 LineOffsets.push_back(old_size + 1);
-        ScrollToBottom = true;
+        ScrollToBottom = Follow;
     }
 
     void    Draw(const char* title, bool* p_open = NULL)
@@ -3410,6 +3411,8 @@ struct ExampleAppLog
             ImGui::End();
             return;
         }
+        ImGui::Checkbox("Follow", &Follow);
+        ImGui::SameLine();
         if (ImGui::Button("Clear")) Clear();
         ImGui::SameLine();
         bool copy = ImGui::Button("Copy");
