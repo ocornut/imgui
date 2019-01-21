@@ -702,8 +702,8 @@ CODE
      you to animate labels. For example you may want to include varying information in a window title bar,
      but windows are uniquely identified by their ID. Use "###" to pass a label that isn't part of ID:
 
-       Button("Hello###ID");  // Label = "Hello",  ID = hash of (..., "ID")
-       Button("World###ID");  // Label = "World",  ID = hash of (..., "ID")     // Same as above, even though the label looks different
+       Button("Hello###ID");  // Label = "Hello",  ID = hash of (..., "###ID")
+       Button("World###ID");  // Label = "World",  ID = hash of (..., "###ID")  // Same as above, even though the label looks different
 
        sprintf(buf, "My game (%f FPS)###MyGame", fps);
        Begin(buf);            // Variable title,   ID = hash of "MyGame"
@@ -1435,7 +1435,7 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 
 // CRC32 needs a 1KB lookup table (not cache friendly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
-// - avoid an unnecessary branch/memory tap, - keep the ImHash() function usable by static constructors, - make it thread-safe.
+// - avoid an unnecessary branch/memory tap, - keep the ImHashXXX functions usable by static constructors, - make it thread-safe.
 static const ImU32 GCrc32LookupTable[256] = 
 {
     0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,0x0EDB8832,0x79DCB8A4,0xE0D5E91E,0x97D2D988,0x09B64C2B,0x7EB17CBD,0xE7B82D07,0x90BF1D91,
@@ -1456,33 +1456,46 @@ static const ImU32 GCrc32LookupTable[256] =
     0xBDBDF21C,0xCABAC28A,0x53B39330,0x24B4A3A6,0xBAD03605,0xCDD70693,0x54DE5729,0x23D967BF,0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D,
 };
 
-// Pass data_size == 0 for zero-terminated strings, data_size > 0 for non-string data.
-// Pay attention that data_size==0 will yield different results than passing strlen(data) because the zero-terminated codepath handles ###.
-// This should technically be split into two distinct functions (ImHashData/ImHashStr), perhaps once we remove the silly static variable.
+// Known size hash
+// It is ok to call ImHashData on a string with known length but the ### operator won't be supported.
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImU32 ImHash(const void* data, int data_size, ImU32 seed)
+ImU32 ImHashData(const void* data_p, size_t data_size, ImU32 seed)
+{
+    ImU32 crc = ~seed;
+    const unsigned char* data = (const unsigned char*)data_p;
+    const ImU32* crc32_lut = GCrc32LookupTable;
+    while (data_size-- != 0)
+        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
+    return ~crc;
+}
+
+// Zero-terminated string hash, with support for ### to reset back to seed value
+// We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
+// Because this syntax is rarely used we are optimizing for the common case.
+// - If we reach ### in the string we discard the hash so far and reset to the seed.
+// - We don't do 'current += 2; continue;' after handling ### to keep the code smaller/faster (measured ~10% diff in Debug build)
+// FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
+ImU32 ImHashStr(const char* data, size_t data_size, ImU32 seed)
 {
     seed = ~seed;
     ImU32 crc = seed;
-    const unsigned char* current = (const unsigned char*)data;
+    const unsigned char* src = (const unsigned char*)data;
     const ImU32* crc32_lut = GCrc32LookupTable;
-
-    if (data_size > 0)
+    if (data_size != 0)
     {
-        // Known size
-        while (data_size--)
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *current++];
+        while (data_size-- != 0)
+        {
+            unsigned char c = *src++;
+            if (c == '#' && src[0] == '#' && src[1] == '#')
+                crc = seed;
+            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
+        }
     }
     else
     {
-        // Zero-terminated string
-        while (unsigned char c = *current++)
+        while (unsigned char c = *src++)
         {
-            // We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
-            // Because this syntax is rarely used we are optimizing for the common case.
-            // - If we reach ### in the string we discard the hash so far and reset to the seed.
-            // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller.
-            if (c == '#' && current[0] == '#' && current[1] == '#')
+            if (c == '#' && src[0] == '#' && src[1] == '#')
                 crc = seed;
             crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
         }
@@ -2479,7 +2492,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     : DrawListInst(&context->DrawListSharedData)
 {
     Name = ImStrdup(name);
-    ID = ImHash(name, 0);
+    ID = ImHashStr(name, 0);
     IDStack.push_back(ID);
     Flags = ImGuiWindowFlags_None;
     Pos = ImVec2(0.0f, 0.0f);
@@ -2547,9 +2560,8 @@ ImGuiWindow::~ImGuiWindow()
 
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 {
-    // FIXME: ImHash with str_end doesn't behave same as with identical zero-terminated string, because of ### handling.
     ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
+    ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
     ImGui::KeepAliveID(id);
     return id;
 }
@@ -2557,7 +2569,7 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
 ImGuiID ImGuiWindow::GetID(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
-    ImGuiID id = ImHash(&ptr, sizeof(void*), seed);
+    ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
     ImGui::KeepAliveID(id);
     return id;
 }
@@ -2565,13 +2577,13 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
-    return ImHash(str, str_end ? (int)(str_end - str) : 0, seed);
+    return ImHashStr(str, str_end ? (str_end - str) : 0, seed);
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
-    return ImHash(&ptr, sizeof(void*), seed);
+    return ImHashData(&ptr, sizeof(void*), seed);
 }
 
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
@@ -2579,7 +2591,7 @@ ImGuiID ImGuiWindow::GetIDFromRectangle(const ImRect& r_abs)
 {
     ImGuiID seed = IDStack.back();
     const int r_rel[4] = { (int)(r_abs.Min.x - Pos.x), (int)(r_abs.Min.y - Pos.y), (int)(r_abs.Max.x - Pos.x), (int)(r_abs.Max.y - Pos.y) };
-    ImGuiID id = ImHash(&r_rel, sizeof(r_rel), seed);
+    ImGuiID id = ImHashData(&r_rel, sizeof(r_rel), seed);
     ImGui::KeepAliveID(id);
     return id;
 }
@@ -3523,7 +3535,7 @@ void ImGui::Initialize(ImGuiContext* context)
     // Add .ini handle for ImGuiWindow type
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Window";
-    ini_handler.TypeHash = ImHash("Window", 0, 0);
+    ini_handler.TypeHash = ImHashStr("Window", 0);
     ini_handler.ReadOpenFn = SettingsHandlerWindow_ReadOpen;
     ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
@@ -4432,7 +4444,7 @@ ImGuiWindow* ImGui::FindWindowByID(ImGuiID id)
 
 ImGuiWindow* ImGui::FindWindowByName(const char* name)
 {
-    ImGuiID id = ImHash(name, 0);
+    ImGuiID id = ImHashStr(name, 0);
     return FindWindowByID(id);
 }
 
@@ -8437,7 +8449,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
     else
     {
         window = NULL;
-        source_id = ImHash("#SourceExtern", 0);
+        source_id = ImHashStr("#SourceExtern", 0);
         source_drag_active = true;
     }
 
@@ -8852,7 +8864,7 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
     g.SettingsWindows.push_back(ImGuiWindowSettings());
     ImGuiWindowSettings* settings = &g.SettingsWindows.back();
     settings->Name = ImStrdup(name);
-    settings->ID = ImHash(name, 0);
+    settings->ID = ImHashStr(name, 0);
     return settings;
 }
 
@@ -8878,7 +8890,7 @@ void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiID type_hash = ImHash(type_name, 0, 0);
+    const ImGuiID type_hash = ImHashStr(type_name, 0);
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
         if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
             return &g.SettingsHandlers[handler_n];
@@ -8982,7 +8994,7 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
 
 static void* SettingsHandlerWindow_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
-    ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHash(name, 0));
+    ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHashStr(name, 0));
     if (!settings)
         settings = ImGui::CreateNewWindowSettings(name);
     return (void*)settings;
