@@ -40,6 +40,7 @@ Other Changes:
 - ImGuiTextBuffer: Added append() function (unformatted).
 - ImFontAtlas: Added 0x2000-0x206F general punctuation range to default ChineseFull/ChineseSimplifiedCommon ranges. (#2093)
 - ImFontAtlas: FreeType: Added support for imgui allocators + custom FreeType only SetAllocatorFunctions. (#2285) [@Vuhdo]
+- ImFontAtlas: FreeType: Fixed using imgui_freetype.cpp in unity builds. (#2302)
 - Examples: Win32: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created
   in a different thread or parent. (#1951, #2087, #2156, #2232) [many people]
 - Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
