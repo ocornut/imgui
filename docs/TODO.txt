@@ -25,7 +25,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
- - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. 
+ - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
@@ -60,7 +60,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: activate by identifier (trigger button, focus given id)
  - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
 
- - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile. 
+ - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text: expose CursorPos in char filter event (#816)
  - input text: access public fields via a non-callback API e.g. InputTextGetState("xxx") that may return NULL if not active.
@@ -93,19 +93,19 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - layout: BeginGroup() needs a border option. (~#1496)
  - layout: vertical alignment of mixed height items (e.g. buttons) within a same line (#1284)
- 
+
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
  - columns: headers. re-orderable. (#513, #125)
  - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-criteria. notify user when sort order changed.
- - columns: option to alternate background colors on odd/even scanlines.  
- - columns: allow columns to recurse. 
- - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them. 
+ - columns: option to alternate background colors on odd/even scanlines.
+ - columns: allow columns to recurse.
+ - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
 
-!- color: the color conversion helpers/types are a mess and needs sorting out. 
+!- color: the color conversion helpers/types are a mess and needs sorting out.
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 
  - plot: full featured plot/graph api w/ scrolling, zooming etc. all bell & whistle. why not!
@@ -122,7 +122,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - clipper: ability to run without knowing full count in advance.
 
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
- 
+
  - dock: merge docking branch (#2109)
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
 
@@ -171,8 +171,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
- - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485) 
- 
+ - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485)
+
  - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - menus: menu bars inside modal windows are acting weird.
  - status-bar: add a per-window status bar helper similar to what menu-bar does.
@@ -180,7 +180,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - shortcuts,menus: global-style shortcut api e.g. "Save (CTRL+S)" -> explicit flag for recursing into closed menu
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
- - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer. 
+ - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
 
  - text: selectable text (for copy) as a generic feature (ItemFlags?)
  - text: proper alignment options in imgui_internal.h
@@ -240,7 +240,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
- - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data 
+ - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.

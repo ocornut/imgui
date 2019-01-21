@@ -8,7 +8,7 @@ https://discourse.dearimgui.org/c/getting-started
 
 3. PLEASE MAKE SURE that you have: read the FAQ in imgui.cpp; explored the contents of ShowDemoWindow() including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the link provided in (1).
 
-4. Delete points 1-4 and PLEASE FILL THE TEMPLATE BELOW before submitting your issue. 
+4. Delete points 1-4 and PLEASE FILL THE TEMPLATE BELOW before submitting your issue.
 
 ----
 
@@ -19,17 +19,17 @@ _(you may also go to Demo>About Window, and click "Config/Build Information" to 
 Version: XXX
 Branch: XXX _(master/viewport/docking/etc.)_
 
-**Back-end/Renderer/Compiler/OS** 
+**Back-end/Renderer/Compiler/OS**
 
 Back-ends: imgui_impl_XXX.cpp + imgui_impl_XXX.cpp _(or specify if using a custom engine/back-end)_
 Compiler: XXX _(if the question is related to building or platform specific features)_
-Operating System: XXX 
+Operating System: XXX
 
-**My Issue/Question:** 
+**My Issue/Question:**
 
 XXX _(please provide as much context as possible)_
 
-**Screenshots/Video** 
+**Screenshots/Video**
 
 XXX _(you can drag files here)_
 
