@@ -154,7 +154,8 @@ IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const 
 IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string in UTF-8
 
 // Helpers: Misc
-IMGUI_API ImU32         ImHash(const void* data, int data_size, ImU32 seed = 0);    // Pass data_size==0 for zero-terminated strings
+IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
+IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size, ImU32 seed = 0);
 IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 IMGUI_API FILE*         ImFileOpen(const char* filename, const char* file_open_mode);
 static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
@@ -162,6 +163,9 @@ static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c =
 static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 #define ImQsort         qsort
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+static inline ImU32     ImHash(const void* data, int size, ImU32 seed = 0) { return size ? ImHashData(data, (size_t)size, seed) : ImHashStr((const char*)data, 0, seed); } // [moved to ImHashStr/ImHashData in 1.68]
+#endif
 
 // Helpers: Geometry
 IMGUI_API ImVec2        ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p);
@@ -616,7 +620,7 @@ struct ImGuiWindowSettings
 struct ImGuiSettingsHandler
 {
     const char* TypeName;       // Short description stored in .ini file. Disallowed characters: '[' ']'
-    ImGuiID     TypeHash;       // == ImHash(TypeName, 0, 0)
+    ImGuiID     TypeHash;       // == ImHashStr(TypeName, 0, 0)
     void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);              // Read: Called when entering into a new ini entry e.g. "[Window][Name]"
     void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line); // Read: Called for every line of text within an ini entry
     void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'
@@ -1242,7 +1246,7 @@ struct IMGUI_API ImGuiWindowTempData
 struct IMGUI_API ImGuiWindow
 {
     char*                   Name;
-    ImGuiID                 ID;                                 // == ImHash(Name)
+    ImGuiID                 ID;                                 // == ImHashStr(Name)
     ImGuiWindowFlags        Flags, FlagsPreviousFrame;          // See enum ImGuiWindowFlags_
     ImGuiWindowClass        WindowClass;                        // Advanced users only. Set with SetNextWindowClass()
     ImGuiViewportP*         Viewport;                           // Always set in Begin(), only inactive windows may have a NULL value here
