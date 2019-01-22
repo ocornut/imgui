@@ -10462,10 +10462,10 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id
         if (window->DockNode != NULL)
             continue;
 
-        ImGuiDockNode* dock_node = DockContextFindNodeByID(ctx, window->DockId);
-        IM_ASSERT(dock_node != NULL);   // This should have been called after DockContextBuildNodesFromSettings()
-        if (root_id == 0 || DockNodeGetRootNode(dock_node)->ID == root_id)
-            DockNodeAddWindow(dock_node, window, true);
+        ImGuiDockNode* node = DockContextFindNodeByID(ctx, window->DockId);
+        IM_ASSERT(node != NULL);   // This should have been called after DockContextBuildNodesFromSettings()
+        if (root_id == 0 || DockNodeGetRootNode(node)->ID == root_id)
+            DockNodeAddWindow(node, window, true);
     }
 }
 
@@ -12589,10 +12589,10 @@ void ImGui::DockBuilderCopyDockspace(ImGuiID src_dockspace_id, ImGuiID dst_docks
         if (ImGuiID src_dock_id = node_remap_pairs[dock_remap_n])
         {
             ImGuiID dst_dock_id = node_remap_pairs[dock_remap_n + 1];
-            ImGuiDockNode* dock_node = DockBuilderGetNode(src_dock_id);
-            for (int window_n = 0; window_n < dock_node->Windows.Size; window_n++)
+            ImGuiDockNode* node = DockBuilderGetNode(src_dock_id);
+            for (int window_n = 0; window_n < node->Windows.Size; window_n++)
             {
-                ImGuiWindow* window = dock_node->Windows[window_n];
+                ImGuiWindow* window = node->Windows[window_n];
                 if (src_windows.contains(window->ID))
                     continue;
 
@@ -12644,30 +12644,30 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     // Bind to our dock node
-    ImGuiDockNode* dock_node = window->DockNode;
-    if (dock_node != NULL)
-        IM_ASSERT(window->DockId == dock_node->ID);
-    if (window->DockId != 0 && dock_node == NULL)
+    ImGuiDockNode* node = window->DockNode;
+    if (node != NULL)
+        IM_ASSERT(window->DockId == node->ID);
+    if (window->DockId != 0 && node == NULL)
     {
-        dock_node = DockContextFindNodeByID(ctx, window->DockId);
+        node = DockContextFindNodeByID(ctx, window->DockId);
         
         // We should not be docking into a split node (SetWindowDock should avoid this)
-        if (dock_node && dock_node->IsSplitNode())
+        if (node && node->IsSplitNode())
         {
             DockContextProcessUndockWindow(ctx, window);
             return;
         }
 
         // Create node
-        if (dock_node == NULL)
+        if (node == NULL)
         {
-            dock_node = DockContextAddNode(ctx, window->DockId);
+            node = DockContextAddNode(ctx, window->DockId);
             if (auto_dock_node)
-                dock_node->LastFrameAlive = g.FrameCount;
+                node->LastFrameAlive = g.FrameCount;
         }
 
-        DockNodeAddWindow(dock_node, window, true);
-        IM_ASSERT(dock_node == window->DockNode);
+        DockNodeAddWindow(node, window, true);
+        IM_ASSERT(node == window->DockNode);
 
         // Fix an edge case with auto-resizing windows: if they are created on the same frame they are creating their dock node, 
         // we don't want their initial zero-size to spread to the DockNode. We preserve their size.
@@ -12677,7 +12677,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     // Undock if the ImGuiDockNodeFlags_NoDockingInCentralNode got set
-    if (dock_node->IsCentralNode && (dock_node->Flags & ImGuiDockNodeFlags_NoDockingInCentralNode))
+    if (node->IsCentralNode && (node->Flags & ImGuiDockNodeFlags_NoDockingInCentralNode))
     {
         DockContextProcessUndockWindow(ctx, window);
         return;
@@ -12685,10 +12685,10 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 
     // Undock if our dockspace node disappeared
     // Note how we are testing for LastFrameAlive and NOT LastFrameActive. A DockSpace node can be maintained alive while being inactive with ImGuiDockNodeFlags_KeepAliveOnly.
-    if (dock_node->LastFrameAlive < g.FrameCount)
+    if (node->LastFrameAlive < g.FrameCount)
     {
         // If the window has been orphaned, transition the docknode to an implicit node processed in DockContextUpdateDocking()
-        ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
+        ImGuiDockNode* root_node = DockNodeGetRootNode(node);
         if (root_node->LastFrameAlive < g.FrameCount)
         {
             DockContextProcessUndockWindow(ctx, window);
@@ -12702,34 +12702,34 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
 
     // Undock if we are submitted earlier than the host window
-    if (dock_node->HostWindow && window->BeginOrderWithinContext < dock_node->HostWindow->BeginOrderWithinContext)
+    if (node->HostWindow && window->BeginOrderWithinContext < node->HostWindow->BeginOrderWithinContext)
     {
         DockContextProcessUndockWindow(ctx, window);
         return;
     }
 
     // FIXME-DOCK: replace ->HostWindow NULL compare with something more explicit (~was initially intended as a first frame test)
-    if (dock_node->HostWindow == NULL)
+    if (node->HostWindow == NULL)
     {
         window->DockTabIsVisible = false;
         return;
     }
 
-    IM_ASSERT(dock_node->HostWindow);
-    IM_ASSERT(dock_node->IsLeafNode());
+    IM_ASSERT(node->HostWindow);
+    IM_ASSERT(node->IsLeafNode());
 
     // Position window
-    SetNextWindowPos(dock_node->Pos);
-    SetNextWindowSize(dock_node->Size);
+    SetNextWindowPos(node->Pos);
+    SetNextWindowSize(node->Size);
     g.NextWindowData.PosUndock = false; // Cancel implicit undocking of SetNextWindowPos()
 
     window->DockIsActive = true;
     window->DockTabIsVisible = false;
-    if (dock_node->Flags & ImGuiDockNodeFlags_KeepAliveOnly)
+    if (node->Flags & ImGuiDockNodeFlags_KeepAliveOnly)
         return;
 
     // When the window is selected we mark it as visible.
-    if (dock_node->TabBar && dock_node->TabBar->VisibleTabId == window->ID)
+    if (node->TabBar && node->TabBar->VisibleTabId == window->ID)
         window->DockTabIsVisible = true;
 
     // When we are about to select this tab (which will only be visible on the _next frame_), flag it with a non-zero HiddenFramesForResize.
@@ -12737,22 +12737,22 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // This is analogous to regular windows being hidden from one frame. It is especially important as nested TabBars would otherwise generate flicker in the form
     // of one empty frame.
     // Note that we set HiddenFramesForResize=2 because BeginDocked() is called just before Begin() has a chance to decrement the value. Effectively it'll be a 1 frame thing. 
-    if (!window->DockTabIsVisible && dock_node->TabBar && dock_node->TabBar->NextSelectedTabId == window->ID)
+    if (!window->DockTabIsVisible && node->TabBar && node->TabBar->NextSelectedTabId == window->ID)
         window->HiddenFramesForResize = 2;
 
     // Update window flag
     IM_ASSERT((window->Flags & ImGuiWindowFlags_ChildWindow) == 0);
     window->Flags |= ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_NoResize;
-    if (dock_node->IsHiddenTabBar)
+    if (node->IsHiddenTabBar)
         window->Flags |= ImGuiWindowFlags_NoTitleBar;
     else
         window->Flags &= ~ImGuiWindowFlags_NoTitleBar;      // Clear the NoTitleBar flag in case the user set it: confusingly enough we need a title bar height so we are correctly offset, but it won't be displayed!
 
     // Save new dock order only if the tab bar is active
-    if (dock_node->TabBar)
+    if (node->TabBar)
         window->DockOrder = (short)DockNodeGetTabOrder(window);
 
-    if ((dock_node->WantCloseAll || dock_node->WantCloseTabID == window->ID) && p_open != NULL)
+    if ((node->WantCloseAll || node->WantCloseTabID == window->ID) && p_open != NULL)
         *p_open = false;
 
     // Update ChildId to allow returning from Child to Parent with Escape
@@ -13847,13 +13847,16 @@ void ImGui::ShowDockingDebug()
             if (node->Windows.Size > 0)
                 open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
             else
-                open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: split %s (act: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+                open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
             if (open)
             {
                 IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
                 IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
                 ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f) Ref (%.0f, %.0f)",
                     node->Pos.x, node->Pos.y, node->Size.x, node->Size.y, node->SizeRef.x, node->SizeRef.y);
+                ImGui::BulletText("VisibleWindow: 0x%08X %s", node->VisibleWindow ? node->VisibleWindow->ID : 0, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+                ImGui::BulletText("SelectedTabID: 0x%08X", node->SelectedTabID);
+                ImGui::BulletText("LastFocusedNodeID: 0x%08X", node->LastFocusedNodeID);
                 ImGui::BulletText("Flags 0x%02X%s%s%s%s",
                     node->Flags, node->IsDockSpace ? ", IsDockSpace" : "", node->IsCentralNode ? ", IsCentralNode" : "",
                     (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
