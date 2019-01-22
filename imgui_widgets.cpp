@@ -2340,9 +2340,9 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     RenderNavHighlight(frame_bb, id);
 
     ImRect draw_bb = frame_bb;
-    if (g.Style.SliderThicknessScale != 1.0f)
+    if (g.Style.SliderThicknessScale != 0.0f)
     {
-        float shrink_amount = (float)(int)((frame_bb.Max.y - frame_bb.Min.y) * 0.5f * (1.0f - g.Style.SliderThicknessScale));
+        float shrink_amount = (float)(int)((frame_bb.Max.y - frame_bb.Min.y) * 0.5f * g.Style.SliderThicknessScale);
         draw_bb.Min.y += shrink_amount;
         draw_bb.Max.y -= shrink_amount;
     }
@@ -2353,12 +2353,14 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     if (value_changed)
         MarkItemEdited(id);
 
+    ImVec2 middle(((grab_bb.Max.x + grab_bb.Min.x)/2.0f),((grab_bb.Max.y + grab_bb.Min.y)/2.0f));
+
     // render left part
-    RenderFrame(draw_bb.Min, ImVec2(grab_bb.Min.x, draw_bb.Max.y), frame_col, true, g.Style.FrameRounding);
+    window->DrawList->AddRectFilled(draw_bb.Min, ImVec2(middle.x, draw_bb.Max.y), frame_col, g.Style.FrameRounding, ImDrawCornerFlags_Left);
 
     // render right part
-    ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 0.5f);
-    RenderFrame(ImVec2(grab_bb.Max.x, draw_bb.Min.y), draw_bb.Max, frame_col_after, true, g.Style.FrameRounding);
+    ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 0.3f);
+    window->DrawList->AddRectFilled(ImVec2(middle.x, draw_bb.Min.y), draw_bb.Max, frame_col_after, g.Style.FrameRounding, ImDrawCornerFlags_Right);
 
     // Render grab
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);
@@ -2493,9 +2495,9 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     RenderNavHighlight(frame_bb, id);
 
     ImRect draw_bb = frame_bb;
-    if (g.Style.SliderThicknessScale != 1.0f)
+    if (g.Style.SliderThicknessScale != 0.0f)
     {
-        float shrink_amount = (float)(int)((frame_bb.Max.x - frame_bb.Min.x) * 0.5f * (1.0f - g.Style.SliderThicknessScale));
+        float shrink_amount = (float)(int)((frame_bb.Max.x - frame_bb.Min.x) * 0.5f * g.Style.SliderThicknessScale);
         draw_bb.Min.x += shrink_amount;
         draw_bb.Max.x -= shrink_amount;
     }
@@ -2506,15 +2508,13 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     if (value_changed)
         MarkItemEdited(id);
 
+    ImVec2 middle(((grab_bb.Max.x + grab_bb.Min.x)/2.0f),((grab_bb.Max.y + grab_bb.Min.y)/2.0f));
     // render bottom part
-    RenderFrame(ImVec2(draw_bb.Min.x, grab_bb.Max.y), draw_bb.Max, frame_col , true, g.Style.FrameRounding);
+    window->DrawList->AddRectFilled(ImVec2(draw_bb.Min.x, middle.y), draw_bb.Max, frame_col, g.Style.FrameRounding, ImDrawCornerFlags_Bot);
 
     // render top part
-    ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 0.5f);
-    RenderFrame(draw_bb.Min, ImVec2(draw_bb.Max.x, grab_bb.Min.y), frame_col_after, true, g.Style.FrameRounding);
-
-    // WIP : same color until thickness is < 0.8f
-    //RenderFrame(draw_bb.Min, ImVec2(draw_bb.Max.x, grab_bb.Min.y), (g.Style.SliderThicknessScale <= 0.8f) ? frame_col_after : frame_col, true, g.Style.FrameRounding);
+    ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 0.3f);
+    window->DrawList->AddRectFilled(draw_bb.Min, ImVec2(draw_bb.Max.x, middle.y), frame_col_after, g.Style.FrameRounding, ImDrawCornerFlags_Top);
 
     // Render grab
     window->DrawList->AddRectFilled(grab_bb.Min, grab_bb.Max, GetColorU32(g.ActiveId == id ? ImGuiCol_SliderGrabActive : ImGuiCol_SliderGrab), style.GrabRounding);

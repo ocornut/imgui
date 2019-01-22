@@ -1059,7 +1059,7 @@ ImGuiStyle::ImGuiStyle()
     ScrollbarRounding       = 9.0f;             // Radius of grab corners rounding for scrollbar
     GrabMinSize             = 10.0f;            // Minimum width/height of a grab box for slider/scrollbar
     GrabRounding            = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
-    SliderThicknessScale    = 1.0f;             // % Tab rectangle thickness. Set to 100.0f to have rectangular slider, 0.0f to eliminate it.
+    SliderThicknessScale    = 0.68f;             // % of maximal tab rectangle thickness. Set to 0.0f to have rectangular slider, 1.0f to eliminate it.
     TabRounding             = 4.0f;             // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
     TabBorderSize           = 0.0f;             // Thickness of border around tabs.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.

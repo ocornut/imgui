@@ -1262,8 +1262,8 @@ static void ShowDemoWindowWidgets()
         const float spacing = 4;
         ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(spacing, spacing));
 
-        static float sliderThicknessScale = 1.0f;
-        ImGui::SliderFloat("Slider Thickness", &sliderThicknessScale, 0.0f, 1.0f, "%.2f");
+        static float sliderThicknessScale = 0.68f;
+        ImGui::SliderFloat("Slider Thickness", &sliderThicknessScale, 0.0f, 1.0f, "%.2f"); // Minimal displayed value is 
 
         ImGui::PushStyleVar(ImGuiStyleVar_SliderThicknessScale, sliderThicknessScale);
 
@@ -2750,13 +2750,11 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     ImGui::ShowFontSelector("Fonts##Selector");
 
     // Simplified Settings
+
     if (ImGui::SliderFloat("FrameRounding", &style.FrameRounding, 0.0f, 12.0f, "%.0f"))
         style.GrabRounding = style.FrameRounding; // Make GrabRounding always the same value as FrameRounding
 
-    static float sliderThicknessScale = 1.0f;
-    ImGui::PushStyleVar(ImGuiStyleVar_SliderThicknessScale, sliderThicknessScale);
-    ImGui::SliderFloat("Slider Thickness", &sliderThicknessScale, 0.0f, 1.0f, "%.2f");
-    ImGui::PopStyleVar();
+    ImGui::SliderFloat("Slider Thickness", &style.SliderThicknessScale, 0.0f, 1.0f, "%.2f"); // Minimal displayed value is 
 
     { bool window_border = (style.WindowBorderSize > 0.0f); if (ImGui::Checkbox("WindowBorder", &window_border)) style.WindowBorderSize = window_border ? 1.0f : 0.0f; }
     ImGui::SameLine();
