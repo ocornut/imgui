@@ -11561,8 +11561,8 @@ static ImRect ImGui::DockNodeCalcTabBarRect(const ImGuiDockNode* node)
     ImRect r = ImRect(node->Pos.x, node->Pos.y, node->Pos.x + node->Size.x, node->Pos.y + (g.FontSize + g.Style.FramePadding.y * 2.0f));
     if (node->HasCollapseButton)
         r.Min.x += g.Style.FramePadding.x + g.FontSize; // + g.Style.ItemInnerSpacing.x; // <-- Adding ItemInnerSpacing makes the title text moves slightly when in a tab bar. Instead we adjusted RenderArrowDockMenu()
-    if (node->HasCloseButton)
-        r.Max.x -= g.Style.FramePadding.x + g.FontSize + 1.0f;
+    // In DockNodeUpdateTabBar() we currently display a disabled close button even if there is none.
+    r.Max.x -= g.Style.FramePadding.x + g.FontSize + 1.0f;
     return r;
 }
 
