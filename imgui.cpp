@@ -1046,7 +1046,7 @@ static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
-static void             RenderOuterBorders(ImGuiWindow* window, int border_held);
+static void             RenderOuterBorders(ImGuiWindow* window);
 static void             EndFrameDrawDimmedBackgrounds();
 
 // Viewports
@@ -2567,6 +2567,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Appearing = false;
     Hidden = false;
     HasCloseButton = false;
+    ResizeBorderHeld = -1;
     BeginCount = 0;
     BeginOrderWithinParent = -1;
     BeginOrderWithinContext = -1;
@@ -5115,13 +5116,15 @@ static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& rect, cons
     window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos + size_for_clamping, rect.Min + padding) - size_for_clamping);
 }
 
-static void ImGui::RenderOuterBorders(ImGuiWindow* window, int border_held)
+static void ImGui::RenderOuterBorders(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     float rounding = window->WindowRounding;
     float border_size = window->WindowBorderSize;
     if (border_size > 0.0f && !(window->Flags & ImGuiWindowFlags_NoBackground))
         window->DrawList->AddRect(window->Pos, window->Pos + window->Size, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
+
+    int border_held = window->ResizeBorderHeld;
     if (border_held != -1)
     {
         struct ImGuiResizeBorderDef
@@ -5373,9 +5376,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         flags = window->Flags;
 
         // Lock border size and padding for the frame (so that altering them doesn't cause inconsistencies)
-        if (window->DockIsActive)
-            window->WindowBorderSize = 0.0f;
-        else if (flags & ImGuiWindowFlags_ChildWindow)
+        if (flags & ImGuiWindowFlags_ChildWindow)
             window->WindowBorderSize = style.ChildBorderSize;
         else
             window->WindowBorderSize = ((flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupBorderSize : style.WindowBorderSize;
@@ -5579,13 +5580,17 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 want_focus = true;
         }
 
+        // Decide if we are going to handle borders and resize grips
+        const bool handle_borders_and_resize_grips = (window->DockNodeAsHost || !window->DockIsActive);
+
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_held = -1;
         ImU32 resize_grip_col[4] = { 0 };
         const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // 4
         const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
-        if (!window->Collapsed)
+        if (handle_borders_and_resize_grips && !window->Collapsed)
             UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]);
+        window->ResizeBorderHeld = (signed char)border_held;
 
         // Synchronize window --> viewport
         if (window->ViewportOwned)
@@ -5698,7 +5703,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             {
                 ImRect menu_bar_rect = window->MenuBarRect();
                 menu_bar_rect.ClipWith(window->Rect());  // Soft clipping, in particular child window don't have minimum size covering the menu bar so this is useful for them.
-                window->DrawList->AddRectFilled(menu_bar_rect.Min, menu_bar_rect.Max, GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_Top);
+                window->DrawList->AddRectFilled(menu_bar_rect.Min+ImVec2(window_border_size,0), menu_bar_rect.Max-ImVec2(window_border_size,0), GetColorU32(ImGuiCol_MenuBarBg), (flags & ImGuiWindowFlags_NoTitleBar) ? window_rounding : 0.0f, ImDrawCornerFlags_Top);
                 if (style.FrameBorderSize > 0.0f && menu_bar_rect.Max.y < window->Pos.y + window->Size.y)
                     window->DrawList->AddLine(menu_bar_rect.GetBL(), menu_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.FrameBorderSize);
             }
@@ -5725,7 +5730,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 Scrollbar(ImGuiLayoutType_Vertical);
 
             // Render resize grips (after their input handling so we don't have a frame of latency)
-            if (!(flags & ImGuiWindowFlags_NoResize))
+            if (handle_borders_and_resize_grips && !(flags & ImGuiWindowFlags_NoResize))
             {
                 for (int resize_grip_n = 0; resize_grip_n < resize_grip_count; resize_grip_n++)
                 {
@@ -5738,8 +5743,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 }
             }
 
-            // Borders
-            RenderOuterBorders(window, border_held);
+            // Borders (for dock node host they will be rendered over after the tab bar)
+            if (handle_borders_and_resize_grips && !window->DockNodeAsHost)
+                RenderOuterBorders(window);
         }
 
         // Store a backup of SizeFull which we will use next frame to decide if we need scrollbars.
@@ -11300,6 +11306,10 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (beginned_into_host_window)
             End();
     }
+
+    // Render outer borders last (after the tab bar)
+    if (node->IsRootNode() && host_window)
+        RenderOuterBorders(host_window);
 }
 
 // Compare TabItem nodes given the last known DockOrder (will persist in .ini file as hint), used to sort tabs when multiple tabs are added on the same frame.
@@ -11403,7 +11413,6 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     ImRect title_bar_rect = ImRect(node->Pos, node->Pos + ImVec2(node->Size.x, g.FontSize + style.FramePadding.y * 2.0f));
     ImU32 title_bar_col = GetColorU32(host_window->Collapsed ? ImGuiCol_TitleBgCollapsed : is_focused ? ImGuiCol_TitleBgActive : ImGuiCol_TitleBg);
     host_window->DrawList->AddRectFilled(title_bar_rect.Min, title_bar_rect.Max, title_bar_col, host_window->WindowRounding, ImDrawCornerFlags_Top);
-    host_window->DrawList->AddLine(title_bar_rect.GetBL(), title_bar_rect.GetBR(), GetColorU32(ImGuiCol_Border), style.WindowBorderSize);
 
     // Collapse button
     if (CollapseButton(host_window->GetID("#COLLAPSE"), title_bar_rect.Min, node))
