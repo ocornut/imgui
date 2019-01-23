@@ -813,6 +813,11 @@ struct ImGuiTabBarSortItem
     float       Width;
 };
 
+enum ImGuiDockNodeFlagsPrivate_
+{
+    ImGuiDockNodeFlags_Dockspace  = 1 << 10
+};
+
 // sizeof() 116~160
 struct ImGuiDockNode
 {
@@ -842,7 +847,6 @@ struct ImGuiDockNode
     bool                    InitFromFirstWindowViewport :1;
     bool                    IsVisible               :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsFocused               :1;
-    bool                    IsDockSpace             :1; // Root node was created by a DockSpace() call.
     bool                    IsCentralNode           :1;
     bool                    IsHiddenTabBar          :1;
     bool                    HasCloseButton          :1;
@@ -855,6 +859,7 @@ struct ImGuiDockNode
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();
     bool                    IsRootNode() const  { return ParentNode == NULL; }
+    bool                    IsDockSpace() const { return (Flags & ImGuiDockNodeFlags_Dockspace) != 0; }
     bool                    IsSplitNode() const { return ChildNodes[0] != NULL; }
     bool                    IsLeafNode() const  { return ChildNodes[0] == NULL; }
     bool                    IsEmpty() const     { return ChildNodes[0] == NULL && Windows.Size == 0; }
@@ -1384,9 +1389,8 @@ struct ImGuiItemHoveredDataBackup
 enum ImGuiTabBarFlagsPrivate_
 {
     ImGuiTabBarFlags_DockNode                   = 1 << 20,  // Part of a dock node
-    ImGuiTabBarFlags_DockNodeIsDockSpace        = 1 << 21,  // Part of an explicit dockspace node node
-    ImGuiTabBarFlags_IsFocused                  = 1 << 22,
-    ImGuiTabBarFlags_SaveSettings               = 1 << 23   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
+    ImGuiTabBarFlags_IsFocused                  = 1 << 21,
+    ImGuiTabBarFlags_SaveSettings               = 1 << 22   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
 };
 
 enum ImGuiTabItemFlagsPrivate_

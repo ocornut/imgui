@@ -5937,8 +5937,8 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     }
     else
     {
-        const float separator_min_x = tab_bar->BarRect.Min.x - ((flags & ImGuiTabBarFlags_DockNodeIsDockSpace) ? 0.0f : window->WindowPadding.x);
-        const float separator_max_x = tab_bar->BarRect.Max.x + ((flags & ImGuiTabBarFlags_DockNodeIsDockSpace) ? 0.0f : window->WindowPadding.x);
+        const float separator_min_x = tab_bar->BarRect.Min.x - window->WindowPadding.x;
+        const float separator_max_x = tab_bar->BarRect.Max.x + window->WindowPadding.x;
         window->DrawList->AddLine(ImVec2(separator_min_x, y), ImVec2(separator_max_x, y), col, 1.0f);
     }
     return true;
@@ -6497,7 +6497,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // FIXME-DOCK: In theory we shouldn't test for the ConfigDockingNodifySingleWindows flag here.
     // When our single window node and OnlyNodeWithWindows are working properly we may remove this check here.
     ImGuiDockNode* node = docked_window ? docked_window->DockNode : NULL;
-    const bool single_floating_window_node = node && node->IsRootNode() && !node->IsDockSpace && node->Windows.Size == 1 && g.IO.ConfigDockingTabBarOnSingleWindows;
+    const bool single_floating_window_node = node && node->IsRootNode() && !node->IsDockSpace() && node->Windows.Size == 1 && g.IO.ConfigDockingTabBarOnSingleWindows;
     if (held && single_floating_window_node && IsMouseDragging(0, 0.0f))
     {
         // Move
