@@ -882,7 +882,7 @@ static void ShowDemoWindowWidgets()
                     // Note: We _unnecessarily_ test for both x/y and i here only to silence some static analyzer. The second part of each test is unnecessary.
                     int x = i % 4;
                     int y = i / 4;
-                    if (x > 0 && i > 0)  { selected[i - 1] ^= 1; }
+                    if (x > 0)           { selected[i - 1] ^= 1; }
                     if (x < 3 && i < 15) { selected[i + 1] ^= 1; }
                     if (y > 0 && i > 3)  { selected[i - 4] ^= 1; }
                     if (y < 3 && i < 12) { selected[i + 4] ^= 1; }
