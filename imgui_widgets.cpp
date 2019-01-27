@@ -6476,9 +6476,9 @@ ImVec2 ImGui::TabItemCalcSize(const char* label, bool has_close_button)
 void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImU32 col)
 {
     // While rendering tabs, we trim 1 pixel off the top of our bounding box so they can fit within a regular frame height while looking "detached" from it.
-    (void)flags;
     ImGuiContext& g = *GImGui;
     const float width = bb.GetWidth();
+    IM_UNUSED(flags);
     IM_ASSERT(width > 0.0f);
     const float rounding = ImMax(0.0f, ImMin(g.Style.TabRounding, width * 0.5f - 1.0f));
     float y1 = bb.Min.y + 1.0f;
