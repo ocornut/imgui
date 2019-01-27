@@ -4039,7 +4039,8 @@ int ImGui::CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_
 int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate)
 {
     ImGuiContext& g = *GImGui;
-    if (key_index < 0) return false;
+    if (key_index < 0) 
+        return 0;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[key_index];
     return CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, repeat_delay, repeat_rate);
@@ -4048,7 +4049,8 @@ int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_r
 bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
 {
     ImGuiContext& g = *GImGui;
-    if (user_key_index < 0) return false;
+    if (user_key_index < 0) 
+        return false;
     IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[user_key_index];
     if (t == 0.0f)
@@ -4139,13 +4141,12 @@ ImVec2 ImGui::GetMousePosOnOpeningCurrentPopup()
     return g.IO.MousePos;
 }
 
-// We typically use ImVec2(-FLT_MAX,-FLT_MAX) to denote an invalid mouse position
+// We typically use ImVec2(-FLT_MAX,-FLT_MAX) to denote an invalid mouse position.
 bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
 {
-    if (mouse_pos == NULL)
-        mouse_pos = &GImGui->IO.MousePos;
     const float MOUSE_INVALID = -256000.0f;
-    return mouse_pos->x >= MOUSE_INVALID && mouse_pos->y >= MOUSE_INVALID;
+    ImVec2 p = mouse_pos ? *mouse_pos : GImGui->IO.MousePos;
+    return p.x >= MOUSE_INVALID && p.y >= MOUSE_INVALID;
 }
 
 // Return the delta from the initial clicking position.
@@ -4819,7 +4820,10 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     if (parent_window && !(flags & ImGuiWindowFlags_Modal) && (flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)))
         window->RootWindowForTitleBarHighlight = parent_window->RootWindowForTitleBarHighlight;
     while (window->RootWindowForNav->Flags & ImGuiWindowFlags_NavFlattened)
+    {
+        IM_ASSERT(window->RootWindowForNav->ParentWindow != NULL);
         window->RootWindowForNav = window->RootWindowForNav->ParentWindow;
+    }
 }
 
 // Push a new ImGui window to add widgets to.
@@ -5082,7 +5086,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Position child window
         if (flags & ImGuiWindowFlags_ChildWindow)
         {
-            IM_ASSERT(parent_window->Active);
+            IM_ASSERT(parent_window && parent_window->Active);
             window->BeginOrderWithinParent = (short)parent_window->DC.ChildWindows.Size;
             parent_window->DC.ChildWindows.push_back(window);
             if (!(flags & ImGuiWindowFlags_Popup) && !window_pos_set_by_api && !window_is_child_tooltip)
@@ -9283,7 +9287,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         {
                             ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[vtx_i] : vtx_i];
                             triangles_pos[n] = v.pos;
-                            buf_p += ImFormatString(buf_p, (int)(buf_end - buf_p), "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
+                            buf_p += ImFormatString(buf_p, buf_end - buf_p, "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n", (n == 0) ? "vtx" : "   ", vtx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                         }
                         ImGui::Selectable(buf, false);
                         if (ImGui::IsItemHovered())
@@ -9352,12 +9356,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         static void NodeTabBar(ImGuiTabBar* tab_bar)
         {
-            // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernable strings.
+            // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
             char buf[256];
             char* p = buf;
             const char* buf_end = buf + IM_ARRAYSIZE(buf);
-            p += ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s",
-                tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
+            ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s", tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
             if (ImGui::TreeNode(tab_bar, "%s", buf))
             {
                 for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)

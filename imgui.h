@@ -1945,7 +1945,7 @@ struct ImFontGlyphRangesBuilder
 {
     ImVector<int> UsedChars;            // Store 1-bit per Unicode code point (0=unused, 1=used)
 
-    ImFontGlyphRangesBuilder()          { UsedChars.resize(0x10000 / 32); memset(UsedChars.Data, 0, 0x10000 / 32); }
+    ImFontGlyphRangesBuilder()          { UsedChars.resize(0x10000 / sizeof(int)); memset(UsedChars.Data, 0, 0x10000 / sizeof(int)); }
     bool           GetBit(int n) const  { int off = (n >> 5); int mask = 1 << (n & 31); return (UsedChars[off] & mask) != 0; } // Get bit n in the array
     void           SetBit(int n)        { int off = (n >> 5); int mask = 1 << (n & 31); UsedChars[off] |= mask; }              // Set bit n in the array
     void           AddChar(ImWchar c)   { SetBit(c); }                          // Add character

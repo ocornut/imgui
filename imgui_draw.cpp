@@ -2063,6 +2063,7 @@ void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* f
 void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
 {
     stbrp_context* pack_context = (stbrp_context*)stbrp_context_opaque;
+    IM_ASSERT(pack_context != NULL);
 
     ImVector<ImFontAtlas::CustomRect>& user_rects = atlas->CustomRects;
     IM_ASSERT(user_rects.Size >= 1); // We expect at least the default custom rects to be registered, else something went wrong.

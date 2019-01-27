@@ -879,12 +879,13 @@ static void ShowDemoWindowWidgets()
                 ImGui::PushID(i);
                 if (ImGui::Selectable("Sailor", &selected[i], 0, ImVec2(50,50)))
                 {
+                    // Note: We _unnecessarily_ test for both x/y and i here only to silence some static analyzer. The second part of each test is unnecessary.
                     int x = i % 4;
                     int y = i / 4;
-                    if (x > 0) { selected[i - 1] ^= 1; }
-                    if (x < 3) { selected[i + 1] ^= 1; }
-                    if (y > 0) { selected[i - 4] ^= 1; }
-                    if (y < 3) { selected[i + 4] ^= 1; }
+                    if (x > 0 && i > 0)  { selected[i - 1] ^= 1; }
+                    if (x < 3 && i < 15) { selected[i + 1] ^= 1; }
+                    if (y > 0 && i > 3)  { selected[i - 4] ^= 1; }
+                    if (y < 3 && i < 12) { selected[i + 4] ^= 1; }
                 }
                 if ((i % 4) < 3) ImGui::SameLine();
                 ImGui::PopID();
@@ -3093,7 +3094,7 @@ struct ExampleAppConsole
     // Portable helpers
     static int   Stricmp(const char* str1, const char* str2)         { int d; while ((d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; } return d; }
     static int   Strnicmp(const char* str1, const char* str2, int n) { int d = 0; while (n > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; n--; } return d; }
-    static char* Strdup(const char *str)                             { size_t len = strlen(str) + 1; void* buff = malloc(len); return (char*)memcpy(buff, (const void*)str, len); }
+    static char* Strdup(const char *str)                             { size_t len = strlen(str) + 1; void* buf = malloc(len); IM_ASSERT(buf); return (char*)memcpy(buf, (const void*)str, len); }
     static void  Strtrim(char* str)                                  { char* str_end = str + strlen(str); while (str_end > str && str_end[-1] == ' ') str_end--; *str_end = 0; }
 
     void    ClearLog()

@@ -2577,7 +2577,7 @@ const char* ImParseFormatFindEnd(const char* fmt)
 //  fmt = "%.3f"       -> return fmt
 //  fmt = "hello %.3f" -> return fmt + 6
 //  fmt = "%.3f hello" -> return buf written with "%.3f"
-const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, int buf_size)
+const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, size_t buf_size)
 {
     const char* fmt_start = ImParseFormatFindStart(fmt);
     if (fmt_start[0] != '%')
@@ -2585,7 +2585,7 @@ const char* ImParseFormatTrimDecorations(const char* fmt, char* buf, int buf_siz
     const char* fmt_end = ImParseFormatFindEnd(fmt_start);
     if (fmt_end[0] == 0) // If we only have leading decoration, we don't need to copy the data.
         return fmt_start;
-    ImStrncpy(buf, fmt_start, ImMin((int)(fmt_end + 1 - fmt_start), buf_size));
+    ImStrncpy(buf, fmt_start, ImMin((size_t)(fmt_end - fmt_start) + 1, buf_size));
     return buf;
 }
 
@@ -6427,7 +6427,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // Render tab label, process close button
     const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
     bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, label, id, close_button_id);
-    if (just_closed)
+    if (just_closed && p_open != NULL)
     {
         *p_open = false;
         TabBarCloseTab(tab_bar, tab);
