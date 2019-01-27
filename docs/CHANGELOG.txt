@@ -53,11 +53,11 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
-- IMPORTANT: When multi-viewports are enabled (with io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable), 
+- IMPORTANT: When multi-viewports are enabled (with io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable),
   all coordinates/positions will be in your natural OS coordinates space. It means that:
-   - Reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are _probably_ not what you want anymore. 
+   - Reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are _probably_ not what you want anymore.
      Use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos).
-   - Likewise io.MousePos and GetMousePos() will use OS coordinates. 
+   - Likewise io.MousePos and GetMousePos() will use OS coordinates.
      If you query mouse positions to interact with non-imgui coordinates you will need to offset them.
      e.g. subtract GetWindowViewport()->Pos.
 - IO: Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
@@ -72,7 +72,7 @@ Other changes:
 - Added GetMainViewport().
 - Added GetWindowViewport(), SetNextWindowViewport().
 - Added GetWindowDpiScale().
-- Added GetOverlayDrawList(ImGuiViewport* viewport). 
+- Added GetOverlayDrawList(ImGuiViewport* viewport).
   The no-parameter version of GetOverlayDrawList() return the overlay for the current window's viewport.
 - Added UpdatePlatformWindows(), RenderPlatformWindows(), DestroyPlatformWindows() for usage for application core.
 - Added FindViewportByID(), FindViewportByPlatformHandle() for usage by back-ends.
@@ -82,7 +82,7 @@ Other changes:
 - Added ImGuiViewport structure, ImGuiViewportFlags flags.
 - Added ImGuiWindowClass and SetNextWindowClass() for passing viewport related hints to the OS/platform back-end.
 - Examples: Renderer: OpenGL2, OpenGL3, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
-- Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports. 
+- Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports.
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
 
 
@@ -518,7 +518,7 @@ VIEWPORT BRANCH
  - Viewport: Added support for multi-viewport [...] blah blah
  - Viewport: Rendering: the ImDrawData structure now contains 'DisplayPos' and 'DisplaySize' fields. To support multi-viewport, you need to use those values when
    creating your orthographic projection matrix. Use 'draw_data->DisplaySize' instead of 'io.DisplaySize', and 'draw_data->DisplayPos' instead of (0,0) as the upper-left point.
-   You also need to subtract 'draw_data->DisplayPos' from your scissor rectangles, as scissor rectangles are specified in the space of your target viewport.   
+   You also need to subtract 'draw_data->DisplayPos' from your scissor rectangles, as scissor rectangles are specified in the space of your target viewport.
  - Examples: Back-ends have been refactored to separate the platform code (e.g. Win32, Glfw, SDL2) from the renderer code (e.g. DirectX11, OpenGL3, Vulkan).
        before: imgui_impl_dx11.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx11.cpp
        before: imgui_impl_dx12.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx12.cpp
@@ -533,7 +533,7 @@ VIEWPORT BRANCH
      amount of redundancy accross files was becoming too difficult to maintain.
    - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
    - Each example still has its own main.cpp which you may refer you to understand how to initialize and glue everything together.
- - Examples: Win32: Added DPI-related helpers to access DPI features _without_ requiring the latest Windows SDK at compile time, and _without_ requiring Windows 10 at runtime.  
+ - Examples: Win32: Added DPI-related helpers to access DPI features _without_ requiring the latest Windows SDK at compile time, and _without_ requiring Windows 10 at runtime.
  - Examples: Platforms currently supporting multi-viewport: Win32, Glfw, SDL2.
  - Examples: Renderers currently supporting multi-viewport: DirectX10, DirectX11, OpenGL2, OpenGL3, Vulkan (WIP).
  - Examples: All imgui_impl_xxx files now have an individual Changelog at the top of the file, making it easier to follow how back-ends are evolving.
