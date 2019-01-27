@@ -6837,8 +6837,21 @@ void ImGui::CloseCurrentPopup()
     int popup_idx = g.BeginPopupStack.Size - 1;
     if (popup_idx < 0 || popup_idx >= g.OpenPopupStack.Size || g.BeginPopupStack[popup_idx].PopupId != g.OpenPopupStack[popup_idx].PopupId)
         return;
-    while (popup_idx > 0 && g.OpenPopupStack[popup_idx].Window && (g.OpenPopupStack[popup_idx].Window->Flags & ImGuiWindowFlags_ChildMenu))
+
+    // Closing a menu closes its top-most parent popup (unless a modal)
+    while (popup_idx > 0)
+    {
+        ImGuiWindow* popup_window = g.OpenPopupStack[popup_idx].Window;
+        ImGuiWindow* parent_popup_window = g.OpenPopupStack[popup_idx - 1].Window;
+        bool close_parent = false;
+        if (popup_window && (popup_window->Flags & ImGuiWindowFlags_ChildMenu))
+            if (parent_popup_window == NULL || !(parent_popup_window->Flags & ImGuiWindowFlags_Modal))
+                close_parent = true;
+        if (!close_parent)
+            break;
         popup_idx--;
+    }
+    //IMGUI_DEBUG_LOG("CloseCurrentPopup %d -> %d\n", g.BeginPopupStack.Size - 1, popup_idx);
     ClosePopupToLevel(popup_idx, true);
 
     // A common pattern is to close a popup when selecting a menu item/selectable that will open another window.
