@@ -37,6 +37,7 @@ Other Changes:
 - Added .editorconfig file for text editors to standardize using spaces. (#2038) [@kudaba]
 - Fixed range-version of PushID() and GetID() not honoring the ### operator to restart from the seed value.
 - Window: When resizing from an edge, the border is more visible and better follow the rounded corners.
+- Added PushID(size_t sz) helper (may not be useful/meaningful for non C/C++ languages).
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
   with a small number of segments (e.g. an hexagon). (#2287) [@baktery]
 - ImGuiTextBuffer: Added append() function (unformatted).

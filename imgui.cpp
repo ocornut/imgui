@@ -6450,6 +6450,13 @@ void ImGui::PushID(const void* ptr_id)
     window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
 }
 
+void ImGui::PushID(size_t int_id)
+{
+    const void* ptr_id = (void*)int_id;
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
+}
+
 void ImGui::PushID(int int_id)
 {
     const void* ptr_id = (void*)(intptr_t)int_id;
