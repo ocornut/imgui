@@ -10697,10 +10697,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     IM_ASSERT(node->IsLeafNode());
     IM_ASSERT(node->Windows.Size >= 1);
 
-    // In the case of a root node or central node, the node will have to stay in place. Create a new node to receive the payload.
-    // Otherwise delete the previous node by merging the other sibling back into the parent node.
     if (node->IsRootNode() || node->IsCentralNode)
     {
+        // In the case of a root node or central node, the node will have to stay in place. Create a new node to receive the payload.
         ImGuiDockNode* new_node = DockContextAddNode(ctx, 0);
         DockNodeMoveWindows(new_node, node);
         DockSettingsMoveDockReferencesInInactiveWindow(node->ID, new_node->ID);
@@ -10710,6 +10709,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     }
     else
     {
+        // Otherwise delete the previous node by merging the other sibling back into the parent node.
         IM_ASSERT(node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
         int index_in_parent = (node->ParentNode->ChildNodes[0] == node) ? 0 : 1;
         node->ParentNode->ChildNodes[index_in_parent] = NULL;

@@ -33,6 +33,8 @@ HOW TO UPDATE?
  DOCKING BRANCH (In Progress)
 -----------------------------------------------------------------------
 
+DOCKING FEATURES
+
 - Added Docking system: [BETA] (#2109, #351)
   - Added ImGuiConfigFlags_DockingEnable flag to enable Docking.
     Set with `io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;`.
@@ -46,10 +48,7 @@ HOW TO UPDATE?
   - Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors.
   - Demo: Added "DockSpace" example app showcasing use of explicit dockspace nodes.
 
-
------------------------------------------------------------------------
- VIEWPORT BRANCH (In Progress)
------------------------------------------------------------------------
+MULTI-VIEWPORT FEATURES (was previously 'viewport' branch, merged into 'docking')
 
 Breaking Changes:
 
@@ -60,6 +59,10 @@ Breaking Changes:
    - Likewise io.MousePos and GetMousePos() will use OS coordinates.
      If you query mouse positions to interact with non-imgui coordinates you will need to offset them.
      e.g. subtract GetWindowViewport()->Pos.
+- Render function: the ImDrawData structure now contains 'DisplayPos' and 'DisplaySize' fields.
+  To support multi-viewport, you need to use those values when creating your orthographic projection matrix.
+  Use 'draw_data->DisplaySize' instead of 'io.DisplaySize', and 'draw_data->DisplayPos' instead of (0,0) as the upper-left point.
+  You need to subtract 'draw_data->DisplayPos' from your scissor rectangles to convert them from global coordinates to frame-buffer coordinates.
 - IO: Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 - IO: Removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (they were marked obsoleted, used to clip within the (0,0)..(DisplaySize) range).
 
@@ -84,6 +87,10 @@ Other changes:
 - Examples: Renderer: OpenGL2, OpenGL3, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
 - Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports.
   Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
+- Examples: Win32: Added DPI-related helpers to access DPI features without requiring the latest Windows SDK at compile time,
+  and without requiring Windows 10 at runtime.
+- Examples: Vulkan: Added various optional helpers in imgui_impl_vulkan.h (they are used for multi-viewport support)
+  to make the examples main.cpp easier to read.
 
 
 -----------------------------------------------------------------------
@@ -511,37 +518,6 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.60
 The gamepad/keyboard navigation branch (which has been in the work since July 2016) has been merged.
 Gamepad/keyboard navigation is still marked as Beta and has to be enabled explicitly.
 Various internal refactoring have also been done, as part of the navigation work and as part of the upcoming viewport/docking work.
-
-VIEWPORT BRANCH
-(IN PROGRESS, WILL MERGE INTO THE MAIN LISTS WHEN WE MERGE THE BRANCH)
-
- - Viewport: Added support for multi-viewport [...] blah blah
- - Viewport: Rendering: the ImDrawData structure now contains 'DisplayPos' and 'DisplaySize' fields. To support multi-viewport, you need to use those values when
-   creating your orthographic projection matrix. Use 'draw_data->DisplaySize' instead of 'io.DisplaySize', and 'draw_data->DisplayPos' instead of (0,0) as the upper-left point.
-   You also need to subtract 'draw_data->DisplayPos' from your scissor rectangles, as scissor rectangles are specified in the space of your target viewport.
- - Examples: Back-ends have been refactored to separate the platform code (e.g. Win32, Glfw, SDL2) from the renderer code (e.g. DirectX11, OpenGL3, Vulkan).
-       before: imgui_impl_dx11.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx11.cpp
-       before: imgui_impl_dx12.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx12.cpp
-       before: imgui_impl_glfw_gl3.cpp    --> after: imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
-       before: imgui_impl_glfw_vulkan.cpp --> after: imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
-       before: imgui_impl_sdl_gl3.cpp     --> after: imgui_impl_sdl2.cpp + imgui_impl_opengl2.cpp
-       before: imgui_impl_sdl_gl3.cpp     --> after: imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp
-       etc.
-   - The idea is what we can now easily combine and maintain back-ends and reduce code redundancy. Integration of imgui into a new/custom engine may also
-     be easier as there is less overlap between "windowing / inputs" and "rendering" code, so you may study or grab one half of the code and not the other.
-   - This change was motivated by the fact that adding support for multi-viewport requires more work from the platform and renderer back-ends, and the
-     amount of redundancy accross files was becoming too difficult to maintain.
-   - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
-   - Each example still has its own main.cpp which you may refer you to understand how to initialize and glue everything together.
- - Examples: Win32: Added DPI-related helpers to access DPI features _without_ requiring the latest Windows SDK at compile time, and _without_ requiring Windows 10 at runtime.
- - Examples: Platforms currently supporting multi-viewport: Win32, Glfw, SDL2.
- - Examples: Renderers currently supporting multi-viewport: DirectX10, DirectX11, OpenGL2, OpenGL3, Vulkan (WIP).
- - Examples: All imgui_impl_xxx files now have an individual Changelog at the top of the file, making it easier to follow how back-ends are evolving.
- - Examples: Vulkan: Added various optional helpers in imgui_impl_vulkan.h (they are used for multi-viewport support) to make the examples main.cpp easier to read.
- - Examples: Allegro: Renamed imgui_impl_a5.xxx files to imgui_impl_allegro5.xxx, ImGui_ImplA5_** symbols to ImGui_ImplAllegro5_xxx.
- - Examples: Vulkan+SDL: Added a Vulkan+SDL example. (#1367) [@gmueckl]
- - Metrics: Added a "Show window begin order" checkbox to visualize the order windows are submitted.
- - Internal: Settings: Added ReadCloseFn handler to be able to patch/alter a loaded object after all the fields are known.
 
 Breaking Changes:
 
