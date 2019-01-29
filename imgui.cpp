@@ -10743,7 +10743,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
     IsVisible = true;
     IsFocused = IsCentralNode = IsHiddenTabBar = HasCloseButton = HasCollapseButton = false;
-    WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarToggle = false;
+    WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarUpdate = WantHiddenTabBarToggle = false;
 }
 
 ImGuiDockNode::~ImGuiDockNode()
@@ -10774,6 +10774,7 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
     IM_ASSERT(window->DockNode == NULL || window->DockNodeAsHost == NULL);
 
     node->Windows.push_back(window);
+    node->WantHiddenTabBarUpdate = true;
     window->DockNode = node;
     window->DockId = node->ID;
     window->DockIsActive = (node->Windows.Size > 1);
@@ -10841,6 +10842,7 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
         node->VisibleWindow = NULL;
 
     // Remove tab and possibly tab bar
+    node->WantHiddenTabBarUpdate = true;
     if (node->TabBar)
     {
         TabBarRemoveTab(node->TabBar, window->ID);
@@ -11032,6 +11034,11 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         DockNodeRemoveWindow(node, window, node->ID);
         window_n--;
     }
+
+    // Auto-hide tab bar option
+    if (node->WantHiddenTabBarUpdate && node->Windows.Size == 1 && (node->Flags & ImGuiDockNodeFlags_AutoHideTabBar) && !node->IsHiddenTabBar)
+        node->WantHiddenTabBarToggle = true;
+    node->WantHiddenTabBarUpdate = false;
 
     // Apply toggles at a single point of the frame (here!)
     if (node->Windows.Size > 1)
@@ -12863,7 +12870,7 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
         else
             allow_null_target_node = true; // Dock into a regular window
 
-        const ImRect explicit_target_rect = (target_node && target_node->TabBar) ? target_node->TabBar->BarRect : ImRect(window->Pos, window->Pos + ImVec2(window->Size.x, GetFrameHeight()));
+        const ImRect explicit_target_rect = (target_node && target_node->TabBar && !target_node->IsHiddenTabBar) ? target_node->TabBar->BarRect : ImRect(window->Pos, window->Pos + ImVec2(window->Size.x, GetFrameHeight()));
         const bool is_explicit_target = g.IO.ConfigDockingWithShift || IsMouseHoveringRect(explicit_target_rect.Min, explicit_target_rect.Max);
 
         // Preview docking request and find out split direction/ratio

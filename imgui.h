@@ -879,7 +879,8 @@ enum ImGuiDockNodeFlags_
     ImGuiDockNodeFlags_NoDockingInCentralNode       = 1 << 3,   // Disable docking inside the Central Node, which will be always kept empty.
     //ImGuiDockNodeFlags_NoLayoutChanges            = 1 << 4,   // Disable adding/removing nodes interactively. Useful with programatically setup dockspaces.
     ImGuiDockNodeFlags_NoResize                     = 1 << 5,   // Disable resizing child nodes using the splitter/separators. Useful with programatically setup dockspaces. 
-    ImGuiDockNodeFlags_PassthruDockspace            = 1 << 6    // 1) DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node when empty. Meaning the host window should probably use SetNextWindowBgAlpha(0.0f) prior to Begin() when using this. 2) When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background.
+    ImGuiDockNodeFlags_PassthruDockspace            = 1 << 6,   // Enable passthru dockspace: 1) DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node when empty. Meaning the host window should probably use SetNextWindowBgAlpha(0.0f) prior to Begin() when using this. 2) When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background.
+    ImGuiDockNodeFlags_AutoHideTabBar               = 1 << 7    // Tab bar will automatically hide when there is a single window in the dock node.
 };
 
 // Flags for ImGui::IsWindowFocused()
@@ -1373,7 +1374,7 @@ struct ImGuiIO
     bool        ConfigDockingNoSplit;           // = false          // Simplified docking mode: disable window splitting, so docking is limited to merging multiple windows together into tab-bars.
     bool        ConfigDockingWithShift;         // = false          // Enable docking with holding Shift key (reduce visual noise, allows dropping in wider space)
     bool        ConfigDockingTabBarOnSingleWindows; // = false      // [BETA] Make every single floating window display within a docking node.
-    bool        ConfigDockingTransparentPayload;// = false          // [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport. Useful if rendering of multiple viewport can be synced. Best used with ImGuiConfigFlags_ViewportsNoMerge.
+    bool        ConfigDockingTransparentPayload;// = false          // [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport. Useful if rendering of multiple viewport cannot be synced. Best used with ConfigViewportsNoAutoMerge.
     
     // Viewport options (when ImGuiConfigFlags_ViewportsEnable is set)
     bool        ConfigViewportsNoAutoMerge;     // = false;         // Set to make all floating imgui windows always create their own viewport. Otherwise, they are merged into the main host viewports when overlapping it.

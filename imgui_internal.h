@@ -854,6 +854,7 @@ struct ImGuiDockNode
     bool                    WantCloseAll            :1; // Set when closing all tabs at once.
     bool                    WantLockSizeOnce        :1;
     bool                    WantMouseMove           :1; // After a node extraction we need to transition toward moving the newly created host window
+    bool                    WantHiddenTabBarUpdate  :1;
     bool                    WantHiddenTabBarToggle  :1;
 
     ImGuiDockNode(ImGuiID id);
