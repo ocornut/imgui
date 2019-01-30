@@ -72,11 +72,6 @@ namespace ImGui
 }
 */
 
-#ifndef MCPE_PUBLISH
-#define IMGUI_ENABLED
-
 #if defined(MCPE_PLATFORM_UAP) || defined(MCPE_PLATFORM_WINRT)
 #define IMGUI_DISABLE_WIN32_FUNCTIONS
-#endif
-
 #endif
