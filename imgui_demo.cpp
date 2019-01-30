@@ -1034,16 +1034,18 @@ static void ShowDemoWindowWidgets()
 
         ImGui::Text("Color button with Custom Picker Popup:");
 
-        // Generate a dummy palette
-        static bool saved_palette_inited = false;
-        static ImVec4 saved_palette[32];
-        if (!saved_palette_inited)
+        // Generate a dummy default palette. The palette will persist and can be edited.
+        static bool saved_palette_init = true;
+        static ImVec4 saved_palette[32] = { };
+        if (saved_palette_init)
+        {
             for (int n = 0; n < IM_ARRAYSIZE(saved_palette); n++)
             {
                 ImGui::ColorConvertHSVtoRGB(n / 31.0f, 0.8f, 0.8f, saved_palette[n].x, saved_palette[n].y, saved_palette[n].z);
                 saved_palette[n].w = 1.0f; // Alpha
             }
-        saved_palette_inited = true;
+            saved_palette_init = false;
+        }
 
         static ImVec4 backup_color;
         bool open_popup = ImGui::ColorButton("MyColor##3b", color, misc_flags);
@@ -1056,12 +1058,12 @@ static void ShowDemoWindowWidgets()
         }
         if (ImGui::BeginPopup("mypicker"))
         {
-            // FIXME: Adding a drag and drop example here would be perfect!
             ImGui::Text("MY CUSTOM COLOR PICKER WITH AN AMAZING PALETTE!");
             ImGui::Separator();
             ImGui::ColorPicker4("##picker", (float*)&color, misc_flags | ImGuiColorEditFlags_NoSidePreview | ImGuiColorEditFlags_NoSmallPreview);
             ImGui::SameLine();
-            ImGui::BeginGroup();
+
+            ImGui::BeginGroup(); // Lock X position
             ImGui::Text("Current");
             ImGui::ColorButton("##current", color, ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_AlphaPreviewHalf, ImVec2(60,40));
             ImGui::Text("Previous");
@@ -1077,6 +1079,8 @@ static void ShowDemoWindowWidgets()
                 if (ImGui::ColorButton("##palette", saved_palette[n], ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_NoPicker | ImGuiColorEditFlags_NoTooltip, ImVec2(20,20)))
                     color = ImVec4(saved_palette[n].x, saved_palette[n].y, saved_palette[n].z, color.w); // Preserve alpha!
 
+                // Allow user to drop colors into each palette entry
+                // (Note that ColorButton is already a drag source by default, unless using ImGuiColorEditFlags_NoDragDrop)
                 if (ImGui::BeginDragDropTarget())
                 {
                     if (const ImGuiPayload* payload = ImGui::AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_3F))

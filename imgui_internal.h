@@ -1475,7 +1475,7 @@ IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned ch
 extern void                 ImGuiTestEngineHook_PreNewFrame(ImGuiContext* ctx);
 extern void                 ImGuiTestEngineHook_PostNewFrame(ImGuiContext* ctx);
 extern void                 ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id);
-extern void                 ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, int flags);
+extern void                 ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, ImGuiItemStatusFlags flags);
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID, _LABEL, _FLAGS)  ImGuiTestEngineHook_ItemInfo(&g, _ID, _LABEL, _FLAGS)   // Register status flags
 #else
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID, _LABEL, _FLAGS)  do { } while (0)
