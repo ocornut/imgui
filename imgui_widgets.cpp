@@ -3588,7 +3588,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
 
             // If the underlying buffer resize was denied or not carried to the next frame, apply_new_text_length+1 may be >= buf_size.
-            ImStrncpy(buf, edit_state.TempBuffer.Data, ImMin(apply_new_text_length + 1, buf_size));
+            ImStrncpy(buf, apply_new_text, ImMin(apply_new_text_length + 1, buf_size));
             value_changed = true;
         }
 
