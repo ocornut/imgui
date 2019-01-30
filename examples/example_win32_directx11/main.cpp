@@ -139,6 +139,10 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;     // FIXME-DPI: THIS CURRENTLY DOESN'T WORK AS EXPECTED. DON'T USE IN USER APP!
     io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports; // FIXME-DPI
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = false;
+    //io.ConfigDockingTabBarOnSingleWindows = true;
+    //io.ConfigDockingTransparentPayload = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();

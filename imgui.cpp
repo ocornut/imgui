@@ -5520,6 +5520,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
             if (g.IO.ConfigViewportsNoDecoration || (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0)
                 viewport_flags |= ImGuiViewportFlags_NoDecoration;
+            if ((viewport_flags & ImGuiViewportFlags_NoDecoration) && (viewport_flags & ImGuiViewportFlags_NoTaskBarIcon))
+                viewport_flags |= ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoFocusOnClick;
 
             // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
             // We don't default to the main viewport because.

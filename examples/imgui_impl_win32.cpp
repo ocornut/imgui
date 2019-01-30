@@ -737,6 +737,10 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
         case WM_SIZE:
             viewport->PlatformRequestResize = true;
             break;
+        case WM_MOUSEACTIVATE:
+            if (viewport->Flags & ImGuiViewportFlags_NoFocusOnClick)
+                return MA_NOACTIVATE;
+            break;
         case WM_NCHITTEST:
             // Let mouse pass-through the window. This will allow the back-end to set io.MouseHoveredViewport properly (which is OPTIONAL).
             // The ImGuiViewportFlags_NoInputs flag is set while dragging a viewport, as want to detect the window behind the one we are dragging.
