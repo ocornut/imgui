@@ -36,6 +36,7 @@ HOW TO UPDATE?
 Other Changes:
 - Added .editorconfig file for text editors to standardize using spaces. (#2038) [@kudaba]
 - InputText: Fixed a bug where ESCAPE would not restore the initial value in all situations. (#2321) [@relick]
+- InputText: Fixed a bug where ESCAPE would be first captured by the Keyboard Navigation code. (#2321, #787)
 - Fixed range-version of PushID() and GetID() not honoring the ### operator to restart from the seed value.
 - Fixed CloseCurrentPopup() on a child-menu of a modal incorrectly closing the modal. (#2308)
 - Window: When resizing from an edge, the border is more visible and better follow the rounded corners.
