@@ -3638,11 +3638,11 @@ void ImGui::NewFrame()
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
 
     // Undocking
-    // (needs to be before UpdateMouseMovingWindow so the window is already offset and following the mouse on the detaching frame)
+    // (needs to be before UpdateMouseMovingWindowNewFrame so the window is already offset and following the mouse on the detaching frame)
     DockContextNewFrameUpdateUndocking(&g);
 
     // Find hovered window
-    // (needs to be before UpdateMouseMovingWindow() so we fill g.HoveredWindowUnderMovingWindow on the mouse release frame)
+    // (needs to be before UpdateMouseMovingWindowNewFrame so we fill g.HoveredWindowUnderMovingWindow on the mouse release frame)
     UpdateHoveredWindowAndCaptureFlags();
 
     // Handle user moving window with mouse (at the beginning of the frame to avoid input lag or sheering)
@@ -4284,7 +4284,7 @@ static void FindHoveredWindow()
 
     g.HoveredWindow = hovered_window;
     g.HoveredRootWindow = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
-    g.HoveredWindowUnderMovingWindow = hovered_window_ignoring_moving_window;
+    g.HoveredWindowUnderMovingWindow = g.MovingWindow ? hovered_window_ignoring_moving_window : NULL;
 
     if (g.MovingWindow)
         g.MovingWindow->Viewport = moving_window_viewport;
@@ -7434,7 +7434,7 @@ void ImGui::ClosePopupToLevel(int remaining, bool apply_focus_to_window_under)
     // FIXME: This code is faulty and we may want to eventually to replace or remove the 'apply_focus_to_window_under=true' path completely.
     // Instead of using g.OpenPopupStack[remaining-1].Window etc. we should find the highest root window that is behind the popups we are closing.
     // The current code will set focus to the parent of the popup window which is incorrect.
-    // It rarely manifested until now because UpdateMouseMovingWindow() would call FocusWindow() again on the clicked window,
+    // It rarely manifested until now because UpdateMouseMovingWindowNewFrame() would call FocusWindow() again on the clicked window,
     // leading to a chain of focusing A (clicked window) then B (parent window of the popup) then A again.
     // However if the clicked window has the _NoMove flag set we would be left with B focused.
     // For now, we have disabled this path when called from ClosePopupsOverWindow() because the users of ClosePopupsOverWindow() don't need to alter focus anyway,
@@ -10304,7 +10304,7 @@ void ImGui::DockContextNewFrameUpdateUndocking(ImGuiContext* ctx)
         dc->WantFullRebuild = false;
     }
 
-    // Process Undocking requests (we need to process them _before_ the UpdateMouseMovingWindow call in NewFrame)
+    // Process Undocking requests (we need to process them _before_ the UpdateMouseMovingWindowNewFrame call in NewFrame)
     for (int n = 0; n < dc->Requests.Size; n++)
     {
         ImGuiDockRequest* req = &dc->Requests[n];
