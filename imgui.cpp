@@ -10367,7 +10367,6 @@ static ImGuiDockNode* ImGui::DockContextAddNode(ImGuiContext* ctx, ImGuiID id)
     else
         IM_ASSERT(DockContextFindNodeByID(ctx, id) == NULL);
     ImGuiDockNode* node = IM_NEW(ImGuiDockNode)(id);
-    node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = true;
     ctx->DockContext->Nodes.SetVoidPtr(node->ID, node);
     return node;
 }
@@ -10719,9 +10718,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         int index_in_parent = (node->ParentNode->ChildNodes[0] == node) ? 0 : 1;
         node->ParentNode->ChildNodes[index_in_parent] = NULL;
         DockNodeTreeMerge(ctx, node->ParentNode, node->ParentNode->ChildNodes[index_in_parent ^ 1]);
-        node->ParentNode->InitFromFirstWindowViewport = true; // The node that stays in place keeps the viewport, so our newly dragged out node will create a new viewport
+        node->ParentNode->AutorityForViewport = ImGuiDataAutority_Window; // The node that stays in place keeps the viewport, so our newly dragged out node will create a new viewport
         node->ParentNode = NULL;
-        node->InitFromFirstWindowPosSize = true;
+        node->AutorityForPos = node->AutorityForSize = ImGuiDataAutority_Window;
         node->WantMouseMove = true;
     }
     MarkIniSettingsDirty();
@@ -10745,7 +10744,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     LastFocusedNodeID = 0;
     SelectedTabID = 0;
     WantCloseTabID = 0;
-    InitFromFirstWindowPosSize = InitFromFirstWindowViewport = false;
+    AutorityForPos = AutorityForSize = AutorityForViewport = ImGuiDataAutority_Auto;
     IsVisible = true;
     IsFocused = IsCentralNode = IsHiddenTabBar = HasCloseButton = HasCollapseButton = false;
     WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarUpdate = WantHiddenTabBarToggle = false;
@@ -10796,7 +10795,14 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
     // When reactivating a node with one or two loose window, the window pos/size/viewport are authoritative over the node storage.
     // In particular it is important we init the viewport from the first window so we don't create two viewports and drop one.
     if (node->HostWindow == NULL && !node->IsDockSpace() && node->IsRootNode())
-        node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = true;
+    {
+        if (node->AutorityForPos == ImGuiDataAutority_Auto)
+            node->AutorityForPos = ImGuiDataAutority_Window;
+        if (node->AutorityForSize == ImGuiDataAutority_Auto)
+            node->AutorityForSize = ImGuiDataAutority_Window;
+        if (node->AutorityForViewport == ImGuiDataAutority_Auto)
+            node->AutorityForViewport = ImGuiDataAutority_Window;
+    }
 
     // Add to tab bar if requested
     if (add_to_tab_bar)
@@ -11138,7 +11144,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         }
 
         DockNodeHideHostWindow(node);
-        node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = false;
+        node->AutorityForPos = node->AutorityForSize = node->AutorityForViewport = ImGuiDataAutority_Auto;
         node->WantCloseAll = false;
         node->WantCloseTabID = 0;
         node->HasCloseButton = node->HasCollapseButton = false;
@@ -11174,20 +11180,28 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
         if (node->IsRootNode() && node->IsVisible)
         {
-            if (node->InitFromFirstWindowPosSize && node->Windows.Size > 0)
-            {
-                ImGuiWindow* init_window = node->Windows[0];
-                SetNextWindowPos(init_window->Pos);
-                SetNextWindowSize(init_window->SizeFull);
-                SetNextWindowCollapsed(init_window->Collapsed);
-            }
-            else if (node->HostWindow == NULL)
-            {
+            ImGuiWindow* ref_window = (node->Windows.Size > 0) ? node->Windows[0] : NULL;
+
+            // Sync Pos
+            if (node->AutorityForPos == ImGuiDataAutority_Window && ref_window)
+                SetNextWindowPos(ref_window->Pos);
+            else if (node->AutorityForPos == ImGuiDataAutority_DockNode)
                 SetNextWindowPos(node->Pos);
+
+            // Sync Size
+            if (node->AutorityForSize == ImGuiDataAutority_Window && ref_window)
+                SetNextWindowSize(ref_window->SizeFull);
+            else if (node->AutorityForSize == ImGuiDataAutority_DockNode)
                 SetNextWindowSize(node->Size);
-            }
-            if (node->InitFromFirstWindowViewport && node->Windows.Size > 0)
-                SetNextWindowViewport(node->Windows[0]->ViewportId);
+
+            // Sync Collapsed
+            if (node->AutorityForSize == ImGuiDataAutority_Window && ref_window)
+                SetNextWindowCollapsed(ref_window->Collapsed);
+
+            // Sync Viewport
+            if (node->AutorityForViewport == ImGuiDataAutority_Window && ref_window)
+                SetNextWindowViewport(ref_window->ViewportId);
+
             SetNextWindowClass(&node->WindowClass);
 
             // Begin into the host window
@@ -11222,7 +11236,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         {
             node->HostWindow = host_window = node->ParentNode->HostWindow;
         }
-        node->InitFromFirstWindowPosSize = node->InitFromFirstWindowViewport = false;
+        node->AutorityForPos = node->AutorityForSize = node->AutorityForViewport = ImGuiDataAutority_Auto;
         if (node->WantMouseMove && node->HostWindow)
             DockNodeStartMouseMovingWindow(node, node->HostWindow);
     }
@@ -11950,7 +11964,7 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
         DockSettingsRenameNodeReferences(child_1->ID, parent_node->ID);
     }
     DockNodeApplyPosSizeToWindows(parent_node);
-    parent_node->InitFromFirstWindowPosSize = parent_node->InitFromFirstWindowViewport = false;
+    parent_node->AutorityForPos = parent_node->AutorityForSize = parent_node->AutorityForViewport = ImGuiDataAutority_Auto;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
     parent_node->IsCentralNode = (child_0 && child_0->IsCentralNode) || (child_1 && child_1->IsCentralNode);
     parent_node->IsHiddenTabBar = merge_lead_child->IsHiddenTabBar;
@@ -12359,11 +12373,13 @@ ImGuiID ImGui::DockSpaceOverViewport(ImGuiViewport* viewport, ImGuiDockNodeFlags
 
 void ImGui::DockBuilderDockWindow(const char* window_name, ImGuiID node_id)
 {
+    // We don't preserve relative order of multiple docked windows (by clearing DockOrder back to -1)
     ImGuiID window_id = ImHashStr(window_name, 0);
     if (ImGuiWindow* window = FindWindowByID(window_id))
     {
         // Apply to created window
         SetWindowDock(window, node_id, ImGuiCond_Always);
+        window->DockOrder = -1;
     }
     else
     {
@@ -12372,6 +12388,7 @@ void ImGui::DockBuilderDockWindow(const char* window_name, ImGuiID node_id)
         if (settings == NULL)
             settings = CreateNewWindowSettings(window_name);
         settings->DockId = node_id;
+        settings->DockOrder = -1;
     }
 }
 
@@ -12381,13 +12398,47 @@ ImGuiDockNode* ImGui::DockBuilderGetNode(ImGuiID node_id)
     return DockContextFindNodeByID(ctx, node_id);
 }
 
-void ImGui::DockBuilderAddNode(ImGuiID id, ImVec2 ref_size, ImGuiDockNodeFlags flags)
+void ImGui::DockBuilderSetNodePos(ImGuiID node_id, ImVec2 pos)
 {
     ImGuiContext* ctx = GImGui;
-    DockSpace(id, ImVec2(0,0), flags | ImGuiDockNodeFlags_KeepAliveOnly);
-    ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
-    node->SizeRef = node->Size = ref_size;
-    node->LastFrameAlive = -1;
+    ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_id);
+    if (node == NULL)
+        return;
+    node->Pos = pos;
+    node->AutorityForPos = ImGuiDataAutority_DockNode;
+}
+
+void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
+{
+    ImGuiContext* ctx = GImGui;
+    ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_id);
+    if (node == NULL)
+        return;
+    node->Size = node->SizeRef = size;
+    node->AutorityForSize = ImGuiDataAutority_DockNode;
+}
+
+// If you create a regular node, both ref_pos/ref_size will position the window.
+// If you create a dockspace node: ref_pos won't be used, ref_size is useful on the first frame to...
+ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
+{
+    ImGuiContext* ctx = GImGui;
+    ImGuiDockNode* node = NULL;
+    if (flags & ImGuiDockNodeFlags_Dockspace)
+    {
+        DockSpace(id, ImVec2(0, 0), flags | ImGuiDockNodeFlags_KeepAliveOnly);
+        node = DockContextFindNodeByID(ctx, id);
+        node->LastFrameAlive = -1;
+    }
+    else
+    {
+        if (id != 0)
+            node = DockContextFindNodeByID(ctx, id);
+        if (!node)
+            node = DockContextAddNode(ctx, id);
+        node->LastFrameAlive = ctx->FrameCount;
+    }
+    return node->ID;
 }
 
 void ImGui::DockBuilderRemoveNode(ImGuiID node_id)
@@ -12413,6 +12464,9 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
         return;
     bool has_document_root = false;
 
+    ImGuiDataAutority backup_root_node_autority_for_pos = root_node ? root_node->AutorityForPos : ImGuiDataAutority_Auto;
+    ImGuiDataAutority backup_root_node_autority_for_size = root_node ? root_node->AutorityForSize : ImGuiDataAutority_Auto;
+
     // Process active windows
     ImVector<ImGuiDockNode*> nodes_to_remove;
     for (int n = 0; n < dc->Nodes.Data.Size; n++)
@@ -12434,7 +12488,10 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
     // DockNodeMoveWindows->DockNodeAddWindow will normally set those when reaching two windows (which is only adequate during interactive merge)
     // Make sure we don't lose our current pos/size. (FIXME-DOCK: Consider tidying up that code in DockNodeAddWindow instead)
     if (root_node)
-        root_node->InitFromFirstWindowPosSize = false;
+    {
+        root_node->AutorityForPos = backup_root_node_autority_for_pos;
+        root_node->AutorityForSize = backup_root_node_autority_for_size;
+    }
 
     // Apply to settings
     for (int settings_n = 0; settings_n < ctx->SettingsWindows.Size; settings_n++)

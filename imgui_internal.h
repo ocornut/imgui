@@ -818,6 +818,13 @@ enum ImGuiDockNodeFlagsPrivate_
     ImGuiDockNodeFlags_Dockspace  = 1 << 10
 };
 
+enum ImGuiDataAutority
+{
+    ImGuiDataAutority_Auto,
+    ImGuiDataAutority_DockNode,
+    ImGuiDataAutority_Window
+};
+
 // sizeof() 116~160
 struct ImGuiDockNode
 {
@@ -843,8 +850,9 @@ struct ImGuiDockNode
     ImGuiID                 LastFocusedNodeID;          // [Root node only] Which of our child docking node (any ancestor in the hierarchy) was last focused.
     ImGuiID                 SelectedTabID;              // [Tab node only] Which of our tab is selected.
     ImGuiID                 WantCloseTabID;             // [Tab node only] Set when closing a specific tab.
-    bool                    InitFromFirstWindowPosSize  :1;
-    bool                    InitFromFirstWindowViewport :1;
+    ImGuiDataAutority       AutorityForPos          :3;
+    ImGuiDataAutority       AutorityForSize         :3;
+    ImGuiDataAutority       AutorityForViewport     :3;
     bool                    IsVisible               :1; // Set to false when the node is hidden (usually disabled as it has no active window)
     bool                    IsFocused               :1;
     bool                    IsCentralNode           :1;
@@ -1577,10 +1585,12 @@ namespace ImGui
     IMGUI_API void          DockBuilderDockWindow(const char* window_name, ImGuiID node_id);
     IMGUI_API ImGuiDockNode*DockBuilderGetNode(ImGuiID node_id);                    // Warning: DO NOT HOLD ON ImGuiDockNode* pointer, will be invalided by any split/merge/remove operation.
     inline ImGuiDockNode*   DockBuilderGetCentralNode(ImGuiID node_id)              { ImGuiDockNode* node = DockBuilderGetNode(node_id); if (!node) return NULL; return DockNodeGetRootNode(node)->CentralNode; }
-    IMGUI_API void          DockBuilderAddNode(ImGuiID node_id, ImVec2 ref_size, ImGuiDockNodeFlags flags = 0);
+    IMGUI_API ImGuiID       DockBuilderAddNode(ImGuiID node_id, ImGuiDockNodeFlags flags = 0);
     IMGUI_API void          DockBuilderRemoveNode(ImGuiID node_id);                 // Remove node and all its child, undock all windows
     IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiID node_id, bool clear_persistent_docking_references = true);
     IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiID node_id);       // Remove all split/hierarchy. All remaining docked windows will be re-docked to the root.
+    IMGUI_API void          DockBuilderSetNodePos(ImGuiID node_id, ImVec2 pos);
+    IMGUI_API void          DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size);
     IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiID node_id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_dir, ImGuiID* out_id_other);
     IMGUI_API void          DockBuilderCopyDockspace(ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id, ImVector<const char*>* in_window_remap_pairs);
     IMGUI_API void          DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs);
