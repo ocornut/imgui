@@ -14004,7 +14004,7 @@ namespace ImGui
 
 		ImRect bb(Window->DC.CursorPos, Window->DC.CursorPos + Canvas);
 		ItemSize(bb);
-		if (!ItemAdd(bb, NULL))
+		if (!ItemAdd(bb, 0))
 			return changed;
 
 		//const ImGuiID id = Window->GetID(label);
