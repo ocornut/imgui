@@ -768,6 +768,7 @@ static void ShowDemoWindowWidgets()
             flags &= ~ImGuiComboFlags_NoPreview;     // Clear the other flag, as we cannot combine both
         if (ImGui::CheckboxFlags("ImGuiComboFlags_NoPreview", (unsigned int*)&flags, ImGuiComboFlags_NoPreview))
             flags &= ~ImGuiComboFlags_NoArrowButton; // Clear the other flag, as we cannot combine both
+        ImGui::CheckboxFlags("ImGuiComboFlags_ArrowAlignLeft", (unsigned int*)&flags, ImGuiComboFlags_ArrowAlignLeft);
 
         // General BeginCombo() API, you have full control over your selection data and display type.
         // (your selection data could be an index, a pointer to the object, an id for the object, a flag stored in the object itself, etc.)
