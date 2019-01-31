@@ -712,7 +712,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_no
     if (IsItemActive() && IsMouseDragging(0))
     {
         bool can_extract_dock_node = false;
-        if (dock_node != NULL)
+        if (dock_node != NULL && dock_node->VisibleWindow && !(dock_node->VisibleWindow->Flags & ImGuiWindowFlags_NoMove))
         {
             ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
             if (root_node->OnlyNodeWithWindows != dock_node || (root_node->CentralNode != NULL))
