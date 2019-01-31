@@ -11474,7 +11474,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             continue;
         if (window->LastFrameActive + 1 >= g.FrameCount || !node_was_active)
         {
-            ImGuiTabItemFlags tab_item_flags = ImGuiTabItemFlags_DockedWindow;
+            ImGuiTabItemFlags tab_item_flags = 0;
             if (window->Flags & ImGuiWindowFlags_UnsavedDocument)
                 tab_item_flags |= ImGuiTabItemFlags_UnsavedDocument;
             if (tab_bar->Flags & ImGuiTabBarFlags_NoCloseWithMiddleMouseButton)
