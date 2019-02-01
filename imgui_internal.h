@@ -85,6 +85,7 @@ struct ImGuiWindowSettings;         // Storage for window settings stored in .in
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;        // -> enum ImGuiLayoutType_        // Enum: Horizontal or vertical
+typedef int ImGuiDataAutority;      // -> enum ImGuiDataAutority_      // Enum: for storing the source autority (dock node vs window) of a field
 typedef int ImGuiButtonFlags;       // -> enum ImGuiButtonFlags_       // Flags: for ButtonEx(), ButtonBehavior()
 typedef int ImGuiItemFlags;         // -> enum ImGuiItemFlags_         // Flags: for PushItemFlag()
 typedef int ImGuiItemStatusFlags;   // -> enum ImGuiItemStatusFlags_   // Flags: for DC.LastItemStatusFlags
@@ -818,7 +819,7 @@ enum ImGuiDockNodeFlagsPrivate_
     ImGuiDockNodeFlags_Dockspace  = 1 << 10
 };
 
-enum ImGuiDataAutority
+enum ImGuiDataAutority_
 {
     ImGuiDataAutority_Auto,
     ImGuiDataAutority_DockNode,
