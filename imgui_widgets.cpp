@@ -4811,20 +4811,24 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
 
     // Flags that affects opening behavior:
-    // - 0(default) ..................... single-click anywhere to open
+    // - 0 (default) .................... single-click anywhere to open
     // - OpenOnDoubleClick .............. double-click anywhere to open
     // - OpenOnArrow .................... single-click on arrow to open
     // - OpenOnDoubleClick|OpenOnArrow .. single-click on arrow or double-click anywhere to open
-    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers | ((flags & ImGuiTreeNodeFlags_AllowItemOverlap) ? ImGuiButtonFlags_AllowItemOverlap : 0);
-    if (!is_leaf)
-        button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
+    ImGuiButtonFlags button_flags = ImGuiButtonFlags_NoKeyModifiers;
+    if (flags & ImGuiTreeNodeFlags_AllowItemOverlap)
+        button_flags |= ImGuiButtonFlags_AllowItemOverlap;
     if (flags & ImGuiTreeNodeFlags_OpenOnDoubleClick)
         button_flags |= ImGuiButtonFlags_PressedOnDoubleClick | ((flags & ImGuiTreeNodeFlags_OpenOnArrow) ? ImGuiButtonFlags_PressedOnClickRelease : 0);
+    if (!is_leaf)
+        button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
 
-    bool hovered, held, pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
+    bool selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
+    bool hovered, held;
+    bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
+    bool toggled = false;
     if (!is_leaf)
     {
-        bool toggled = false;
         if (pressed)
         {
             toggled = !(flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) || (g.NavActivateId == id);
@@ -4859,11 +4863,12 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
     const ImVec2 text_pos = frame_bb.Min + ImVec2(text_offset_x, text_base_offset_y);
+    ImGuiNavHighlightFlags nav_highlight_flags = ImGuiNavHighlightFlags_TypeThin;
     if (display_frame)
     {
         // Framed type
         RenderFrame(frame_bb.Min, frame_bb.Max, col, true, style.FrameRounding);
-        RenderNavHighlight(frame_bb, id, ImGuiNavHighlightFlags_TypeThin);
+        RenderNavHighlight(frame_bb, id, nav_highlight_flags);
         RenderArrow(frame_bb.Min + ImVec2(padding.x, text_base_offset_y), is_open ? ImGuiDir_Down : ImGuiDir_Right, 1.0f);
         if (g.LogEnabled)
         {
@@ -4882,10 +4887,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     else
     {
         // Unframed typed for tree nodes
-        if (hovered || (flags & ImGuiTreeNodeFlags_Selected))
+        if (hovered || selected)
         {
             RenderFrame(frame_bb.Min, frame_bb.Max, col, false);
-            RenderNavHighlight(frame_bb, id, ImGuiNavHighlightFlags_TypeThin);
+            RenderNavHighlight(frame_bb, id, nav_highlight_flags);
         }
 
         if (flags & ImGuiTreeNodeFlags_Bullet)
@@ -5065,11 +5070,11 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_PressedOnRelease) button_flags |= ImGuiButtonFlags_PressedOnRelease;
     if (flags & ImGuiSelectableFlags_Disabled) button_flags |= ImGuiButtonFlags_Disabled;
     if (flags & ImGuiSelectableFlags_AllowDoubleClick) button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick;
-    bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     if (flags & ImGuiSelectableFlags_Disabled)
         selected = false;
 
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     // Hovering selectable with mouse updates NavId accordingly so navigation can be resumed with gamepad/keyboard (this doesn't happen on most widgets)
     if (pressed || hovered)
         if (!g.NavDisableMouseHover && g.NavWindow == window && g.NavLayer == window->DC.NavLayerCurrent)
