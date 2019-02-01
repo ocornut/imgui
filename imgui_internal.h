@@ -352,7 +352,7 @@ enum ImGuiSeparatorFlags_
     ImGuiSeparatorFlags_Vertical            = 1 << 1
 };
 
-// Transient per-window ItemFlags, reset at the beginning of the frame. For child windows: inherited from parent on first Begin().
+// Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
 // This is going to be exposed in imgui.h when stabilized enough.
 enum ImGuiItemFlags_
 {

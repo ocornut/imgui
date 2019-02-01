@@ -2730,9 +2730,6 @@ void ImGui::ShowAboutWindow(bool* p_open)
 #ifdef IMGUI_HAS_DOCK
         ImGui::Text("define: IMGUI_HAS_DOCK");
 #endif
-#ifdef IMGUI_HAS_TABS
-        ImGui::Text("define: IMGUI_HAS_TABS");
-#endif
         ImGui::Separator();
         ImGui::Text("io.BackendPlatformName: %s", io.BackendPlatformName ? io.BackendPlatformName : "NULL");
         ImGui::Text("io.BackendRendererName: %s", io.BackendRendererName ? io.BackendRendererName : "NULL");
@@ -2756,10 +2753,6 @@ void ImGui::ShowAboutWindow(bool* p_open)
         if (io.ConfigDockingWithShift)                                  ImGui::Text("io.ConfigDockingWithShift");
         if (io.ConfigDockingTabBarOnSingleWindows)                      ImGui::Text("io.ConfigDockingTabBarOnSingleWindows");
         if (io.ConfigDockingTransparentPayload)                         ImGui::Text("io.ConfigDockingTransparentPayload");
-        if (io.ConfigViewportsNoAutoMerge)                              ImGui::Text("io.ConfigViewportsNoAutoMerge");
-        if (io.ConfigViewportsNoTaskBarIcon)                            ImGui::Text("io.ConfigViewportsNoTaskBarIcon");
-        if (io.ConfigViewportsNoDecoration)                             ImGui::Text("io.ConfigViewportsNoDecoration");
-        if (io.ConfigViewportsNoParent)                                 ImGui::Text("io.ConfigViewportsNoParent");
         if (io.ConfigMacOSXBehaviors)                                   ImGui::Text("io.ConfigMacOSXBehaviors");
         if (io.ConfigInputTextCursorBlink)                              ImGui::Text("io.ConfigInputTextCursorBlink");
         if (io.ConfigWindowsResizeFromEdges)                            ImGui::Text("io.ConfigWindowsResizeFromEdges");
@@ -4263,7 +4256,7 @@ void ShowExampleAppDocuments(bool* p_open)
         return;
     }
 
-    // Menu Bar
+    // Menu
     if (ImGui::BeginMenuBar())
     {
         if (ImGui::BeginMenu("File"))

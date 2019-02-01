@@ -884,8 +884,8 @@ CODE
       (The ImGuiWindowFlags_NoDecoration flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse)
       Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
     - You can call ImGui::GetOverlayDrawList() and use this draw list to display contents over every other imgui windows (1 overlay per viewport).
-    - You can create your own ImDrawList instance. You'll need to initialize them ImGui::GetDrawListSharedData(), or create your own ImDrawListSharedData,
-      and then call your rendered code with your own ImDrawList or ImDrawData data.
+    - You can create your own ImDrawList instance. You'll need to initialize them ImGui::GetDrawListSharedData(), or create
+      your own ImDrawListSharedData, and then call your rendered code with your own ImDrawList or ImDrawData data.
 
  Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
  A: - You can control Dear ImGui with a gamepad. Read about navigation in "Using gamepad/keyboard navigation controls".
@@ -3576,7 +3576,7 @@ void ImGui::NewFrame()
 
     UpdateViewportsNewFrame();
 
-    // Setup current font, and draw list shared data
+    // Setup current font and draw list shared data
     // FIXME-VIEWPORT: the concept of a single ClipRectFullscreen is not ideal!
     g.IO.Fonts->Locked = true;
     SetCurrentFont(GetDefaultFont());
@@ -3587,7 +3587,8 @@ void ImGui::NewFrame()
     g.DrawListSharedData.ClipRectFullscreen = ImVec4(0.0f, 0.0f, virtual_space_max.x, virtual_space_max.y);
     g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
 
-    // Mark rendering data as invalid to prevent user who may have a handle on it to use it. Setup Overlay draw list for the viewport.
+    // Setup Overlay draw list for the viewport.
+    // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
@@ -5110,7 +5111,7 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     }
 
     // Apply back modified position/size to window
-    if (size_target.x != FLT_MAX && (size_target.x != window->SizeFull.x || size_target.y != window->SizeFull.y))
+    if (size_target.x != FLT_MAX)
     {
         window->SizeFull = size_target;
         MarkIniSettingsDirty(window);
@@ -5451,9 +5452,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 MarkIniSettingsDirty(window);
         }
 
-        //if (window->DockNode && window->DockIsActive)
-        //    size_full_modified = window->SizeFull;
-
         // Apply minimum/maximum window size constraints and final size
         window->SizeFull = CalcSizeAfterConstraint(window, window->SizeFull);
         window->Size = window->Collapsed && !(flags & ImGuiWindowFlags_ChildWindow) ? window->TitleBarRect().GetSize() : window->SizeFull;
@@ -5596,7 +5594,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             if (flags & ImGuiWindowFlags_Popup)
                 want_focus = true;
-            else if ((window->DockIsActive || !(flags & ImGuiWindowFlags_ChildWindow)) && !(flags & ImGuiWindowFlags_Tooltip))
+            else if ((window->DockIsActive || (flags & ImGuiWindowFlags_ChildWindow) == 0) && !(flags & ImGuiWindowFlags_Tooltip))
                 want_focus = true;
         }
 
@@ -11398,10 +11396,9 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         node->IsFocused = is_focused;
         if (is_focused)
             node->LastFrameFocused = g.FrameCount;
-
-        // Notify root of visible window (used to display title in OS task bar)
         if (node->VisibleWindow)
         {
+            // Notify root of visible window (used to display title in OS task bar)
             if (is_focused || root_node->VisibleWindow == NULL)
                 root_node->VisibleWindow = node->VisibleWindow;
             if (node->TabBar)
@@ -13172,6 +13169,9 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
 
 //-----------------------------------------------------------------------------
 // [SECTION] LOGGING/CAPTURING
+//-----------------------------------------------------------------------------
+// All text output from the interface can be captured into tty/file/clipboard. 
+// By default, tree nodes are automatically opened during logging.
 //-----------------------------------------------------------------------------
 
 // Pass text data straight to log (without being displayed)
