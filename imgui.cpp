@@ -937,8 +937,8 @@ CODE
 #endif
 
 // Debug options
-#define IMGUI_DEBUG_NAV_SCORING     0
-#define IMGUI_DEBUG_NAV_RECTS       0
+#define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Display last moving direction matches when holding CTRL
+#define IMGUI_DEBUG_NAV_RECTS       0   // Display the reference navigation rectangle for each window
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -998,7 +998,6 @@ static void             CheckStacksSize(ImGuiWindow* window, bool write);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges);
 
 static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
-static void             AddWindowToDrawData(ImVector<ImDrawList*>* out_list, ImGuiWindow* window);
 static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 static ImRect           GetViewportRect();
@@ -1033,7 +1032,7 @@ static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
-static void             RenderOuterBorders(ImGuiWindow* window, int border_held);
+static void             RenderOuterBorders(ImGuiWindow* window);
 
 }
 
@@ -1170,7 +1169,8 @@ ImGuiIO::ImGuiIO()
     DisplayFramebufferScale = ImVec2(1.0f, 1.0f);
     DisplayVisibleMin = DisplayVisibleMax = ImVec2(0.0f, 0.0f);
 
-    // Miscellaneous configuration options
+    // Miscellaneous options
+    MouseDrawCursor = false;
 #ifdef __APPLE__
     ConfigMacOSXBehaviors = true;  // Set Mac OS X style defaults based on __APPLE__ compile time flag
 #else
@@ -2522,6 +2522,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Appearing = false;
     Hidden = false;
     HasCloseButton = false;
+    ResizeBorderHeld = -1;
     BeginCount = 0;
     BeginOrderWithinParent = -1;
     BeginOrderWithinContext = -1;
@@ -2850,7 +2851,8 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
     if ((window->DC.ItemFlags & ImGuiItemFlags_Disabled) && !(flags & ImGuiHoveredFlags_AllowWhenDisabled))
         return false;
 
-    // Special handling for the 1st item after Begin() which represent the title bar. When the window is collapsed (SkipItems==true) that last item will never be overwritten so we need to detect tht case.
+    // Special handling for the dummy item after Begin() which represent the title bar or tab. 
+    // When the window is collapsed (SkipItems==true) that last item will never be overwritten so we need to detect the case.
     if (window->DC.LastItemId == window->MoveId && window->WriteAccessed)
         return false;
     return true;
@@ -3084,13 +3086,17 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
 {
     // Set ActiveId even if the _NoMove flag is set. Without it, dragging away from a window with _NoMove would activate hover on other windows.
     // We _also_ call this when clicking in a window empty space when io.ConfigWindowsMoveFromTitleBarOnly is set, but clear g.MovingWindow afterward.
-    // This is because we want ActiveId to be set even when the window is stuck from moving.
+    // This is because we want ActiveId to be set even when the window is not permitted to move.
     ImGuiContext& g = *GImGui;
     FocusWindow(window);
     SetActiveID(window->MoveId, window);
     g.NavDisableHighlight = true;
     g.ActiveIdClickOffset = g.IO.MousePos - window->RootWindow->Pos;
-    if (!(window->Flags & ImGuiWindowFlags_NoMove) && !(window->RootWindow->Flags & ImGuiWindowFlags_NoMove))
+
+    bool can_move_window = true;
+    if ((window->Flags & ImGuiWindowFlags_NoMove) || (window->RootWindow->Flags & ImGuiWindowFlags_NoMove))
+        can_move_window = false;
+    if (can_move_window)
         g.MovingWindow = window;
 }
 
@@ -3158,7 +3164,8 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         }
         else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
         {
-            FocusWindow(NULL);  // Clicking on void disable focus
+            // Clicking on void disable focus
+            FocusWindow(NULL);
         }
     }
 
@@ -3406,7 +3413,7 @@ void ImGui::NewFrame()
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
 
-    // Setup current font and draw list
+    // Setup current font and draw list shared data
     g.IO.Fonts->Locked = true;
     SetCurrentFont(GetDefaultFont());
     IM_ASSERT(g.Font->IsLoaded());
@@ -3418,7 +3425,7 @@ void ImGui::NewFrame()
     g.OverlayDrawList.PushClipRectFullScreen();
     g.OverlayDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
-    // Mark rendering data as invalid to prevent user who may have a handle on it to use it
+    // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     g.DrawData.Clear();
 
     // Drag and drop keep the source ID alive so even if the source disappear our state is consistent
@@ -3545,7 +3552,7 @@ void ImGui::Initialize(ImGuiContext* context)
     ini_handler.ReadOpenFn = SettingsHandlerWindow_ReadOpen;
     ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
-    g.SettingsHandlers.push_front(ini_handler);
+    g.SettingsHandlers.push_back(ini_handler);
 
     g.Initialized = true;
 }
@@ -3585,8 +3592,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.CurrentWindowStack.clear();
     g.WindowsById.Clear();
     g.NavWindow = NULL;
-    g.HoveredWindow = NULL;
-    g.HoveredRootWindow = NULL;
+    g.HoveredWindow = g.HoveredRootWindow = NULL;
     g.ActiveIdWindow = g.ActiveIdPreviousFrameWindow = NULL;
     g.MovingWindow = NULL;
     g.ColorModifiers.clear();
@@ -3691,7 +3697,7 @@ static void AddWindowToDrawData(ImVector<ImDrawList*>* out_render_list, ImGuiWin
     }
 }
 
-static void AddWindowToDrawDataSelectLayer(ImGuiWindow* window)
+static void AddRootWindowToDrawData(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     if (window->Flags & ImGuiWindowFlags_Tooltip)
@@ -3827,7 +3833,8 @@ void ImGui::EndFrame()
         AddWindowToSortBuffer(&g.WindowsSortBuffer, window);
     }
 
-    IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);  // we done something wrong
+    // This usually assert if there is a mismatch between the ImGuiWindowFlags_ChildWindow / ParentWindow values and DC.ChildWindows[] in parents, aka we've done something wrong.
+    IM_ASSERT(g.Windows.Size == g.WindowsSortBuffer.Size);
     g.Windows.swap(g.WindowsSortBuffer);
     g.IO.MetricsActiveWindows = g.WindowsActiveCount;
 
@@ -3859,11 +3866,11 @@ void ImGui::Render()
     {
         ImGuiWindow* window = g.Windows[n];
         if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != windows_to_render_front_most[0] && window != windows_to_render_front_most[1])
-            AddWindowToDrawDataSelectLayer(window);
+            AddRootWindowToDrawData(window);
     }
     for (int n = 0; n < IM_ARRAYSIZE(windows_to_render_front_most); n++)
         if (windows_to_render_front_most[n] && IsWindowActiveAndVisible(windows_to_render_front_most[n])) // NavWindowingTarget is always temporarily displayed as the front-most window
-            AddWindowToDrawDataSelectLayer(windows_to_render_front_most[n]);
+            AddRootWindowToDrawData(windows_to_render_front_most[n]);
     g.DrawDataBuilder.FlattenIntoSingleLayer();
 
     // Draw software mouse cursor if requested
@@ -4227,7 +4234,10 @@ bool ImGui::IsItemFocused()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    return g.NavId && !g.NavDisableHighlight && g.NavId == window->DC.LastItemId;
+
+    if (g.NavId == 0 || g.NavDisableHighlight || g.NavId != window->DC.LastItemId)
+        return false;
+    return true;
 }
 
 bool ImGui::IsItemClicked(int mouse_button)
@@ -4561,13 +4571,16 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
     }
     else
     {
-        // When the window cannot fit all contents (either because of constraints, either because screen is too small): we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than DisplaySize-WindowPadding.
+        // Maximum window size is determined by the display size
         const bool is_popup = (window->Flags & ImGuiWindowFlags_Popup) != 0;
         const bool is_menu = (window->Flags & ImGuiWindowFlags_ChildMenu) != 0;
         ImVec2 size_min = style.WindowMinSize;
         if (is_popup || is_menu) // Popups and menus bypass style.WindowMinSize by default, but we give then a non-zero minimum size to facilitate understanding problematic cases (e.g. empty popups)
             size_min = ImMin(size_min, ImVec2(4.0f, 4.0f));
         ImVec2 size_auto_fit = ImClamp(size_contents, size_min, ImMax(size_min, g.IO.DisplaySize - style.DisplaySafeAreaPadding * 2.0f));
+
+        // When the window cannot fit all contents (either because of constraints, either because screen is too small),
+        // we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than ViewportSize-WindowPadding.
         ImVec2 size_auto_fit_after_constraint = CalcSizeAfterConstraint(window, size_auto_fit);
         if (size_auto_fit_after_constraint.x < size_contents.x && !(window->Flags & ImGuiWindowFlags_NoScrollbar) && (window->Flags & ImGuiWindowFlags_HorizontalScrollbar))
             size_auto_fit.y += style.ScrollbarSize;
@@ -4783,13 +4796,15 @@ static void ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
     window->Size = window->SizeFull;
 }
 
-static void ImGui::RenderOuterBorders(ImGuiWindow* window, int border_held)
+static void ImGui::RenderOuterBorders(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     float rounding = window->WindowRounding;
     float border_size = window->WindowBorderSize;
     if (border_size > 0.0f && !(window->Flags & ImGuiWindowFlags_NoBackground))
         window->DrawList->AddRect(window->Pos, window->Pos + window->Size, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
+
+    int border_held = window->ResizeBorderHeld;
     if (border_held != -1)
     {
         struct ImGuiResizeBorderDef
@@ -5111,9 +5126,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->Pos = FindBestWindowPosForPopup(window);
 
         // Clamp position so it stays visible
-        if (!(flags & ImGuiWindowFlags_ChildWindow))
+        // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
+        if (!window_pos_set_by_api && !(flags & ImGuiWindowFlags_ChildWindow) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
         {
-            if (!window_pos_set_by_api && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
+            if (g.IO.DisplaySize.x > 0.0f && g.IO.DisplaySize.y > 0.0f) // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
             {
                 ImVec2 padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
                 ImVec2 size_for_clamping = ((g.IO.ConfigWindowsMoveFromTitleBarOnly) && !(window->Flags & ImGuiWindowFlags_NoTitleBar)) ? ImVec2(window->Size.x, window->TitleBarHeight()) : window->Size;
@@ -5139,8 +5155,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Apply window focus (new and reactivated windows are moved to front)
         bool want_focus = false;
         if (window_just_activated_by_user && !(flags & ImGuiWindowFlags_NoFocusOnAppearing))
-            if (!(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) || (flags & ImGuiWindowFlags_Popup))
+        {
+            if (flags & ImGuiWindowFlags_Popup)
                 want_focus = true;
+            else if ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Tooltip)) == 0)
+                want_focus = true;
+        }
 
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_held = -1;
@@ -5149,6 +5169,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
         if (!window->Collapsed)
             UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]);
+        window->ResizeBorderHeld = (signed char)border_held;
 
         // Default item width. Make it proportional to window size if window manually resizes
         if (window->Size.x > 0.0f && !(flags & ImGuiWindowFlags_Tooltip) && !(flags & ImGuiWindowFlags_AlwaysAutoResize))
@@ -5187,6 +5208,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         }
 
         // Draw window + handle manual resize
+        // As we highlight the title bar when want_focus is set, multiple reappearing windows will have have their title bar highlighted on their reappearing frame.
         const float window_rounding = window->WindowRounding;
         const float window_border_size = window->WindowBorderSize;
         const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
@@ -5207,8 +5229,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (!(flags & ImGuiWindowFlags_NoBackground))
             {
                 ImU32 bg_col = GetColorU32(GetWindowBgColorIdxFromFlags(flags));
+                float alpha = 1.0f;
                 if (g.NextWindowData.BgAlphaCond != 0)
-                    bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(g.NextWindowData.BgAlphaVal) << IM_COL32_A_SHIFT);
+                    alpha = g.NextWindowData.BgAlphaVal;
+                if (alpha != 1.0f)
+                    bg_col = (bg_col & ~IM_COL32_A_MASK) | (IM_F32_TO_INT8_SAT(alpha) << IM_COL32_A_SHIFT);
                 window->DrawList->AddRectFilled(window->Pos + ImVec2(0, window->TitleBarHeight()), window->Pos + window->Size, bg_col, window_rounding, (flags & ImGuiWindowFlags_NoTitleBar) ? ImDrawCornerFlags_All : ImDrawCornerFlags_Bot);
             }
             g.NextWindowData.BgAlphaCond = 0;
@@ -5251,7 +5276,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
 
             // Borders
-            RenderOuterBorders(window, border_held);
+            RenderOuterBorders(window);
         }
 
         // Draw navigation selection/windowing rectangle border
@@ -5408,7 +5433,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->InnerClipRect.Max.x = ImFloor(0.5f + window->InnerMainRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x*0.5f - window->WindowBorderSize)));
         window->InnerClipRect.Max.y = ImFloor(0.5f + window->InnerMainRect.Max.y);
 
-        // After Begin() we fill the last item / hovered data based on title bar data. It is a standard behavior (to allow creation of context menus on title bar only, etc.).
+        // We fill last item data based on Title Bar, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
+        // This is useful to allow creating context menus on title bar only, etc.
         window->DC.LastItemId = window->MoveId;
         window->DC.LastItemStatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
         window->DC.LastItemRect = title_bar_rect;
@@ -5428,7 +5454,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Child window can be out of sight and have "negative" clip windows.
         // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
         IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
-
         if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
             if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
                 window->HiddenFramesRegular = 1;
@@ -5553,7 +5578,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
         g.NavIdIsAlive = false;
         g.NavLayer = ImGuiNavLayer_Main;
-        //IMGUI_DEBUG_LOG("FocusWindow(\"%s\")\n", g.FrameCount, window ? window->Name : NULL);
+        //IMGUI_DEBUG_LOG("FocusWindow(\"%s\")\n", window ? window->Name : NULL);
     }
 
     // Passing NULL allow to disable keyboard focus
@@ -6821,7 +6846,7 @@ void ImGui::ClosePopupToLevel(int remaining, bool apply_focus_to_window_under)
     // FIXME: This code is faulty and we may want to eventually to replace or remove the 'apply_focus_to_window_under=true' path completely.
     // Instead of using g.OpenPopupStack[remaining-1].Window etc. we should find the highest root window that is behind the popups we are closing.
     // The current code will set focus to the parent of the popup window which is incorrect.
-    // It rarely manifested until now because UpdateMouseMovingWindow() would call FocusWindow() again on the clicked window,
+    // It rarely manifested until now because UpdateMouseMovingWindowNewFrame() would call FocusWindow() again on the clicked window,
     // leading to a chain of focusing A (clicked window) then B (parent window of the popup) then A again.
     // However if the clicked window has the _NoMove flag set we would be left with B focused.
     // For now, we have disabled this path when called from ClosePopupsOverWindow() because the users of ClosePopupsOverWindow() don't need to alter focus anyway,
@@ -8728,6 +8753,9 @@ void ImGui::EndDragDropTarget()
 //-----------------------------------------------------------------------------
 // [SECTION] LOGGING/CAPTURING
 //-----------------------------------------------------------------------------
+// All text output from the interface can be captured into tty/file/clipboard. 
+// By default, tree nodes are automatically opened during logging.
+//-----------------------------------------------------------------------------
 
 // Pass text data straight to log (without being displayed)
 void ImGui::LogText(const char* fmt, ...)
@@ -8929,6 +8957,13 @@ ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id)
         if (g.SettingsWindows[i].ID == id)
             return &g.SettingsWindows[i];
     return NULL;
+}
+
+ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name)
+{
+    if (ImGuiWindowSettings* settings = FindWindowSettings(ImHashStr(name, 0)))
+        return settings;
+    return CreateNewWindowSettings(name);
 }
 
 void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)

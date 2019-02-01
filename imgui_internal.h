@@ -126,6 +126,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit ImGui context pointe
 #else
 #define IM_NEWLINE      "\n"
 #endif
+
 #define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
 #define IM_STATIC_ASSERT(_COND)         typedef char static_assertion_##__line__[(_COND)?1:-1]
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose
@@ -286,14 +287,6 @@ struct IMGUI_API ImPool
 // Misc data structures
 //-----------------------------------------------------------------------------
 
-// 1D vector (this odd construct is used to facilitate the transition between 1D and 2D, and the maintenance of some branches/patches)
-struct ImVec1
-{
-    float               x;
-    ImVec1()            { x = 0.0f; }
-    ImVec1(float _x)    { x = _x; }
-};
-
 enum ImGuiButtonFlags_
 {
     ImGuiButtonFlags_None                   = 0,
@@ -350,6 +343,19 @@ enum ImGuiSeparatorFlags_
     ImGuiSeparatorFlags_None                = 0,
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
     ImGuiSeparatorFlags_Vertical            = 1 << 1
+};
+
+// Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
+// This is going to be exposed in imgui.h when stabilized enough.
+enum ImGuiItemFlags_
+{
+    ImGuiItemFlags_NoTabStop                    = 1 << 0,  // false
+    ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
+    ImGuiItemFlags_Disabled                     = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
+    ImGuiItemFlags_NoNav                        = 1 << 3,  // false
+    ImGuiItemFlags_NoNavDefaultFocus            = 1 << 4,  // false
+    ImGuiItemFlags_SelectableDontClosePopup     = 1 << 5,  // false    // MenuItem/Selectable() automatically closes current Popup window
+    ImGuiItemFlags_Default_                     = 0
 };
 
 // Storage for LastItem data
@@ -459,6 +465,15 @@ enum ImGuiPopupPositionPolicy
     ImGuiPopupPositionPolicy_Default,
     ImGuiPopupPositionPolicy_ComboBox
 };
+
+// 1D vector (this odd construct is used to facilitate the transition between 1D and 2D, and the maintenance of some branches/patches)
+struct ImVec1
+{
+    float   x;
+    ImVec1()         { x = 0.0f; }
+    ImVec1(float _x) { x = _x; }
+};
+
 
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
@@ -585,8 +600,8 @@ struct ImGuiWindowSettings
 
 struct ImGuiSettingsHandler
 {
-    const char* TypeName;   // Short description stored in .ini file. Disallowed characters: '[' ']'
-    ImGuiID     TypeHash;   // == ImHash(TypeName, 0, 0)
+    const char* TypeName;       // Short description stored in .ini file. Disallowed characters: '[' ']'
+    ImGuiID     TypeHash;       // == ImHashStr(TypeName, 0, 0)
     void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);              // Read: Called when entering into a new ini entry e.g. "[Window][Name]"
     void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line); // Read: Called for every line of text within an ini entry
     void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'
@@ -725,6 +740,10 @@ struct ImGuiNextWindowData
         PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = 0;
     }
 };
+
+//-----------------------------------------------------------------------------
+// Tabs
+//-----------------------------------------------------------------------------
 
 struct ImGuiTabBarSortItem
 {
@@ -1010,18 +1029,9 @@ struct ImGuiContext
     }
 };
 
-// Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
-// This is going to be exposed in imgui.h when stabilized enough.
-enum ImGuiItemFlags_
-{
-    ImGuiItemFlags_NoTabStop                    = 1 << 0,  // false
-    ImGuiItemFlags_ButtonRepeat                 = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
-    ImGuiItemFlags_Disabled                     = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
-    ImGuiItemFlags_NoNav                        = 1 << 3,  // false
-    ImGuiItemFlags_NoNavDefaultFocus            = 1 << 4,  // false
-    ImGuiItemFlags_SelectableDontClosePopup     = 1 << 5,  // false    // MenuItem/Selectable() automatically closes current Popup window
-    ImGuiItemFlags_Default_                     = 0
-};
+//-----------------------------------------------------------------------------
+// ImGuiWindow
+//-----------------------------------------------------------------------------
 
 // Transient per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the DC variable name in ImGuiWindow.
 // FIXME: That's theory, in practice the delimitation between ImGuiWindow and ImGuiWindowTempData is quite tenuous and could be reconsidered.
@@ -1134,6 +1144,7 @@ struct IMGUI_API ImGuiWindow
     bool                    Appearing;                          // Set during the frame where the window is appearing (or re-appearing)
     bool                    Hidden;                             // Do not display (== (HiddenFramesForResize > 0) ||
     bool                    HasCloseButton;                     // Set when the window has a close button (p_open != NULL)
+    signed char             ResizeBorderHeld;                   // Current border being held for resize (-1: none, otherwise 0-3)
     short                   BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
     short                   BeginOrderWithinParent;             // Order within immediate parent window, if we are a child window. Otherwise 0.
     short                   BeginOrderWithinContext;            // Order within entire imgui context. This is mostly used for debugging submission order related issues.
@@ -1317,6 +1328,7 @@ namespace ImGui
     IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
     IMGUI_API ImGuiWindowSettings*  CreateNewWindowSettings(const char* name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
+    IMGUI_API ImGuiWindowSettings*  FindOrCreateWindowSettings(const char* name);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
 
     // Basic Accessors
