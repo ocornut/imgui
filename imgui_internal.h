@@ -431,7 +431,7 @@ enum ImGuiNavHighlightFlags_
     ImGuiNavHighlightFlags_None         = 0,
     ImGuiNavHighlightFlags_TypeDefault  = 1 << 0,
     ImGuiNavHighlightFlags_TypeThin     = 1 << 1,
-    ImGuiNavHighlightFlags_AlwaysDraw   = 1 << 2,
+    ImGuiNavHighlightFlags_AlwaysDraw   = 1 << 2,       // Draw rectangular highlight if (g.NavId == id) _even_ when using the mouse.
     ImGuiNavHighlightFlags_NoRounding   = 1 << 3
 };
 
@@ -746,6 +746,7 @@ struct ImGuiViewportP : public ImGuiViewport
 struct ImGuiNavMoveResult
 {
     ImGuiID       ID;           // Best candidate
+    ImGuiID       SelectScopeId;// Best candidate window current selectable group ID
     ImGuiWindow*  Window;       // Best candidate window
     float         DistBox;      // Best candidate box distance to current NavId
     float         DistCenter;   // Best candidate center distance to current NavId
@@ -753,7 +754,7 @@ struct ImGuiNavMoveResult
     ImRect        RectRel;      // Best candidate bounding box in window relative space
 
     ImGuiNavMoveResult() { Clear(); }
-    void Clear()         { ID = 0; Window = NULL; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
+    void Clear()         { ID = SelectScopeId = 0; Window = NULL; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
 };
 
 // Storage for SetNexWindow** functions
@@ -922,6 +923,7 @@ struct ImGuiContext
     float                   ActiveIdTimer;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
+    bool                    ActiveIdHasBeenPressed;             // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease without pressing twice). Used by range_select branch.
     bool                    ActiveIdHasBeenEdited;              // Was the value associated to the widget Edited over the course of the Active state.
     bool                    ActiveIdPreviousFrameIsAlive;
     bool                    ActiveIdPreviousFrameHasBeenEdited;
@@ -959,8 +961,9 @@ struct ImGuiContext
     ImGuiID                 NavActivatePressedId;               // ~~ IsNavInputPressed(ImGuiNavInput_Activate) ? NavId : 0
     ImGuiID                 NavInputId;                         // ~~ IsNavInputPressed(ImGuiNavInput_Input) ? NavId : 0
     ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
-    ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest)
-    ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame
+    ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest).
+    ImGuiID                 NavJustMovedToSelectScopeId;        // Just navigated to this select scope id (result of a successfully MoveRequest).
+    ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame.
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS WILL ONLY BE None or NavGamepad or NavKeyboard.
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
     int                     NavScoringCount;                    // Metrics for debugging
@@ -1030,8 +1033,13 @@ struct ImGuiContext
     int                     TooltipOverrideCount;
     ImVector<char>          PrivateClipboard;                   // If no custom clipboard handler is defined
 
+    // Range-Select/Multi-Select
+    // [This is unused in this branch, but left here to facilitate merging/syncing multiple branches]
+    ImGuiID                 MultiSelectScopeId;
+
     // Platform support
-    ImVec2                  PlatformImePos, PlatformImeLastPos; // Cursor position request & last passed to the OS Input Method Editor
+    ImVec2                  PlatformImePos;                     // Cursor position request & last passed to the OS Input Method Editor
+    ImVec2                  PlatformImeLastPos;
     ImGuiViewportP*         PlatformImePosViewport;
 
     // Extensions
@@ -1090,6 +1098,7 @@ struct ImGuiContext
         ActiveIdTimer = 0.0f;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
+        ActiveIdHasBeenPressed = false;
         ActiveIdHasBeenEdited = false;
         ActiveIdPreviousFrameIsAlive = false;
         ActiveIdPreviousFrameHasBeenEdited = false;
@@ -1111,7 +1120,7 @@ struct ImGuiContext
 
         NavWindow = NULL;
         NavId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
-        NavJustTabbedId = NavJustMovedToId = NavNextActivateId = 0;
+        NavJustTabbedId = NavJustMovedToId = NavJustMovedToSelectScopeId = NavNextActivateId = 0;
         NavInputSource = ImGuiInputSource_None;
         NavScoringRectScreen = ImRect();
         NavScoringCount = 0;
@@ -1155,6 +1164,9 @@ struct ImGuiContext
         DragSpeedDefaultRatio = 1.0f / 100.0f;
         ScrollbarClickDeltaToGrabCenter = ImVec2(0.0f, 0.0f);
         TooltipOverrideCount = 0;
+
+        MultiSelectScopeId = 0;
+
         PlatformImePos = PlatformImeLastPos = ImVec2(FLT_MAX, FLT_MAX);
         PlatformImePosViewport = 0;
 
@@ -1529,7 +1541,7 @@ namespace ImGui
     IMGUI_API bool          ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb = NULL);
     IMGUI_API bool          ItemHoverable(const ImRect& bb, ImGuiID id);
     IMGUI_API bool          IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged);
-    IMGUI_API bool          FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop = true);      // Return true if focus is requested
+    IMGUI_API bool          FocusableItemRegister(ImGuiWindow* window, ImGuiID id, bool tab_stop = true);   // Return true if focus is requested
     IMGUI_API void          FocusableItemUnregister(ImGuiWindow* window);
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_x, float default_y);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
