@@ -103,7 +103,7 @@ void ImGui_ImplFreeGLUT_KeyboardFunc(unsigned char c, int x, int y)
     if (c >= 32)
         io.AddInputCharacter((unsigned short)c);
 
-    // Store letters in KeysDown[] array as both uppercase and lowercase + Handle GLUT translating CTRL+A..CTRL+Z as 1..26. 
+    // Store letters in KeysDown[] array as both uppercase and lowercase + Handle GLUT translating CTRL+A..CTRL+Z as 1..26.
     // This is a hacky mess but GLUT is unable to distinguish e.g. a TAB key from CTRL+I so this is probably the best we can do here.
     if (c >= 1 && c <= 26)
         io.KeysDown[c] = io.KeysDown[c - 1 + 'a'] = io.KeysDown[c - 1 + 'A'] = true;

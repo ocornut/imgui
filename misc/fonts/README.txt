@@ -3,7 +3,7 @@ The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default.
 We embed it font in source code so you can use Dear ImGui without any file system access.
 
-You may also load external .TTF/.OTF files. 
+You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
 (Note: .OTF support in imstb_truetype.h currently doesn't appear to load every font)
 
@@ -45,9 +45,9 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
  USING ICONS
 ---------------------------------------
 
-Using an icon font (such as FontAwesome: http://fontawesome.io or OpenFontIcons. https://github.com/traverseda/OpenFontIcons) 
+Using an icon font (such as FontAwesome: http://fontawesome.io or OpenFontIcons. https://github.com/traverseda/OpenFontIcons)
 is an easy and practical way to use icons in your Dear ImGui application.
-A common pattern is to merge the icon font within your main font, so you can embed icons directly from your strings without 
+A common pattern is to merge the icon font within your main font, so you can embed icons directly from your strings without
 having to change fonts back and forth.
 
 To refer to the icon UTF-8 codepoints from your C++ code, you may use those headers files created by Juliette Foucaut:
@@ -77,8 +77,8 @@ Example Usage:
   ImGui::Text("%s among %d items", ICON_FA_SEARCH, count);
   ImGui::Button(ICON_FA_SEARCH " Search");
   // C string _literals_ can be concatenated at compilation time, e.g. "hello" " world"
-  // ICON_FA_SEARCH is defined as a string literal so this is the same as "A" "B" becoming "AB" 
-   
+  // ICON_FA_SEARCH is defined as a string literal so this is the same as "A" "B" becoming "AB"
+
 See Links below for other icons fonts and related tools.
 
 
@@ -96,7 +96,7 @@ Load .TTF/.OTF file with:
   ImGuiIO& io = ImGui::GetIO();
   ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
   ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
-  
+
   // Select font at runtime
   ImGui::Text("Hello");	// use the default font (which is the first loaded font)
   ImGui::PushFont(font2);
@@ -113,14 +113,14 @@ For advanced options create a ImFontConfig structure and pass it to the AddFont 
 
 If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API.
 The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
-In particular, using a large range such as GetGlyphRangesChineseSimplifiedCommon() is not recommended unless you 
+In particular, using a large range such as GetGlyphRangesChineseSimplifiedCommon() is not recommended unless you
 set OversampleH/OversampleV to 1 and use a small font size.
 Mind the fact that some graphics drivers have texture size limitation.
 If you are building a PC application, mind the fact that your users may use hardware with lower limitations than yours.
 Some solutions:
 
- - 1) Reduce glyphs ranges by calculating them from source localization data. You can use ImFont::GlyphRangesBuilder for this purpose,
-   this will be the biggest win. 
+ - 1) Reduce glyphs ranges by calculating them from source localization data.
+   You can use ImFontGlyphRangesBuilder for this purpose, this will be the biggest win!
  - 2) You may reduce oversampling, e.g. config.OversampleH = config.OversampleV = 1, this will largely reduce your texture size.
  - 3) Set io.Fonts.TexDesiredWidth to specify a texture width to minimize texture height (see comment in ImFontAtlas::Build function).
  - 4) Set io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight; to disable rounding the texture height to the next power of two.
@@ -144,14 +144,14 @@ Add a fourth parameter to bake specific font ranges only:
 
   // Basic Latin, Extended Latin
   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
-   
+
   // Default + Selection of 2500 Ideographs used by Simplified Chinese
   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesChineseSimplifiedCommon());
-   
+
   // Default + Hiragana, Katakana, Half-Width, Selection of 1946 Ideographs
   io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
 
-See "BUILDING CUSTOM GLYPH RANGES" section to create your own ranges. 
+See "BUILDING CUSTOM GLYPH RANGES" section to create your own ranges.
 Offset font vertically by altering the io.Font->DisplayOffset value:
 
   ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
@@ -163,8 +163,8 @@ Offset font vertically by altering the io.Font->DisplayOffset value:
 ---------------------------------------
 
 Dear ImGui uses imstb_truetype.h to rasterize fonts (with optional oversampling).
-This technique and its implementation are not ideal for fonts rendered at _small sizes_, which may appear a 
-little blurry or hard to read. 
+This technique and its implementation are not ideal for fonts rendered at _small sizes_, which may appear a
+little blurry or hard to read.
 
 There is an implementation of the ImFontAtlas builder using FreeType that you can use in the misc/freetype/ folder.
 
@@ -177,11 +177,11 @@ Also note that correct sRGB space blending will have an important effect on your
  BUILDING CUSTOM GLYPH RANGES
 ---------------------------------------
 
-You can use the ImFontAtlas::GlyphRangesBuilder helper to create glyph ranges based on text input.
-For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs. 
+You can use the ImFontGlyphRangesBuilder helper to create glyph ranges based on text input.
+For example: for a game where your script is known, if you can feed your entire script to it and only build the characters the game needs.
 
   ImVector<ImWchar> ranges;
-  ImFontAtlas::GlyphRangesBuilder builder;
+  ImFontGlyphRangesBuilder builder;
   builder.AddText("Hello world");                        // Add a string (here "Hello world" contains 7 unique characters)
   builder.AddChar(0x7262);                               // Add a specific character
   builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
@@ -198,11 +198,11 @@ For example: for a game where your script is known, if you can feed your entire 
 Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array that you can embed in source code.
 See the documentation in binary_to_compressed_c.cpp for instruction on how to use the tool.
 You may find a precompiled version binary_to_compressed_c.exe for Windows instead of demo binaries package (see README).
-The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger. 
+The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger.
 
 Then load the font with:
   ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
-or: 
+or:
   ImFont* font = io.Fonts->AddFontFromMemoryCompressedBase85TTF(compressed_data_base85, size_pixels, ...);
 
 
@@ -221,7 +221,7 @@ Cousine-Regular.ttf
   by Steve Matteson
   Digitized data copyright (c) 2010 Google Corporation.
   Licensed under the SIL Open Font License, Version 1.1
-  https://fonts.google.com/specimen/Cousine 
+  https://fonts.google.com/specimen/Cousine
 
 DroidSans.ttf
 
@@ -267,7 +267,7 @@ ICON FONTS
 
   Kenney Icon Font (Game Controller Icons)
   https://github.com/nicodinh/kenney-icon-font
- 
+
   IcoMoon - Custom Icon font builder
   https://icomoon.io/app
 
