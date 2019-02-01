@@ -447,6 +447,10 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     }
 }
 
+#ifdef _MSC_VER
+#pragma comment(lib, "gdi32")   // GetDeviceCaps()
+#endif
+
 float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
 {
     UINT xdpi = 96, ydpi = 96;
