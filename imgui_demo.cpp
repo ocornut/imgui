@@ -1198,7 +1198,7 @@ static void ShowDemoWindowWidgets()
             ImGui::TreePop();
         }
         IMGUI_DEMO_MARKER("Widgets/Selectables/Multiple Selection");
-        if (ImGui::TreeNode("Selection State: Multiple Selection"))
+        if (ImGui::TreeNode("Selection State: Multiple Selection (Simplified)"))
         {
             HelpMarker("Hold CTRL and click to select multiple items.");
             static bool selection[5] = { false, false, false, false, false };
@@ -1212,6 +1212,68 @@ static void ShowDemoWindowWidgets()
                         memset(selection, 0, sizeof(selection));
                     selection[n] ^= 1;
                 }
+            }
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("Selection State: Multiple Selection (Full)"))
+        {
+            // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
+            // In this demo we use ImGuiStorage (simple key->value storage) to avoid external dependencies but it's probably not optimal.
+            // In your real code you could use e.g std::unordered_set<> or your own data structure for storing selection.
+            // If you don't mind being limited to one view over your objects, the simplest way is to use an intrusive selection (e.g. store bool inside object, as used in examples above).
+            // Otherwise external set/hash/map/interval trees (storing indices, etc.) may be appropriate.
+            struct MySelection
+            {
+                ImGuiStorage Storage;
+                void Clear()                         { Storage.Clear(); }
+                void SelectAll(int count)            { Storage.Data.reserve(count); Storage.Data.resize(0); for (int n = 0; n < count; n++) Storage.Data.push_back(ImGuiStorage::ImGuiStoragePair((ImGuiID)n, 1)); }
+                void SetRange(int a, int b, int sel) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) Storage.SetInt((ImGuiID)n, sel); }
+                bool GetSelected(int id) const       { return Storage.GetInt((ImGuiID)id) != 0; }
+                void SetSelected(int id, bool v)     { SetRange(id, id, v ? 1 : 0); }
+            };
+
+            static int selection_ref = 0;   // Selection pivot (last clicked item, we need to preserve this to handle range-select)
+            static MySelection selection;
+            const char* random_names[] =
+            {
+                "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
+                "Bitter Gourd", "Bok Choy", "Broccoli", "Brussels Sprouts", "Burdock Root", "Cabbage", "Calabash", "Capers", "Carrot", "Cassava",
+                "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
+            };
+
+            int COUNT = 1000;
+            HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range.");
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int *)&ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+
+            if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
+            {
+                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(0, (void*)(intptr_t)selection_ref, selection.GetSelected((int)selection_ref));
+                if (multi_select_data->RequestClear) { selection.Clear(); }
+                if (multi_select_data->RequestSelectAll) { selection.SelectAll(COUNT); }
+                ImGuiListClipper clipper;
+                clipper.Begin(COUNT);
+                while (clipper.Step())
+                {
+                    if (clipper.DisplayStart > (int)selection_ref)
+                        multi_select_data->RangeSrcPassedBy = true;
+                    for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
+                    {
+                        ImGui::PushID(n);
+                        char label[64];
+                        sprintf(label, "Object %05d (category: %s)", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+                        bool item_is_selected = selection.GetSelected(n);
+                        ImGui::SetNextItemMultiSelectData((void*)(intptr_t)n);
+                        if (ImGui::Selectable(label, item_is_selected))
+                            selection.SetSelected(n, !item_is_selected);
+                        ImGui::PopID();
+                    }
+                }
+                multi_select_data = ImGui::EndMultiSelect();
+                selection_ref = (int)(intptr_t)multi_select_data->RangeSrc;
+                ImGui::EndListBox();
+                if (multi_select_data->RequestClear)     { selection.Clear(); }
+                if (multi_select_data->RequestSelectAll) { selection.SelectAll(COUNT); }
+                if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
             }
             ImGui::TreePop();
         }
@@ -1272,6 +1334,15 @@ static void ShowDemoWindowWidgets()
             if (winning_state)
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f + 0.5f * cosf(time * 2.0f), 0.5f + 0.5f * sinf(time * 3.0f)));
 
+            static float spacing = 0.0f;
+            ImGui::PushItemWidth(100);
+            ImGui::SliderFloat("SelectableSpacing", &spacing, 0, 20, "%.0f");
+            ImGui::SameLine(); HelpMarker("Selectable cancel out the regular spacing between items by extending itself by ItemSpacing/2 in each direction.\nThis has two purposes:\n- Avoid the gap between items so the mouse is always hitting something.\n- Avoid the gap between items so range-selected item looks connected.\nBy changing SelectableSpacing we can enforce spacing between selectables.");
+            ImGui::PopItemWidth();
+            ImGui::Spacing();
+            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 8));
+            ImGui::PushStyleVar(ImGuiStyleVar_SelectableSpacing, ImVec2(spacing, spacing));
+
             for (int y = 0; y < 4; y++)
                 for (int x = 0; x < 4; x++)
                 {
@@ -1290,8 +1361,10 @@ static void ShowDemoWindowWidgets()
                     ImGui::PopID();
                 }
 
+            ImGui::PopStyleVar(2);
             if (winning_state)
                 ImGui::PopStyleVar();
+
             ImGui::TreePop();
         }
         IMGUI_DEMO_MARKER("Widgets/Selectables/Alignment");
@@ -6149,6 +6222,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat2("CellPadding", (float*)&style.CellPadding, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
+            ImGui::SliderFloat2("SelectableSpacing", (float*)&style.SelectableSpacing, 0.0f, 20.0f, "%.0f"); ImGui::SameLine(); HelpMarker("SelectableSpacing must be < ItemSpacing.\nSelectables display their highlight after canceling out the effect of ItemSpacing, so they can be look tightly packed. This setting allows to enforce spacing between them.");
             ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
             ImGui::SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
             ImGui::SliderFloat("ScrollbarSize", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
