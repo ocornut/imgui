@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-02-01: OpenGL: Using GLSL 410 shaders for any version over 410 (e.g. 430, 450).
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-11-13: OpenGL: Support for GL 4.5's glClipControl(GL_UPPER_LEFT).
 //  2018-08-29: OpenGL: Added support for more OpenGL loaders: glew and glad, with comments indicative that any loader can be used.
@@ -477,7 +478,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         vertex_shader = vertex_shader_glsl_120;
         fragment_shader = fragment_shader_glsl_120;
     }
-    else if (glsl_version == 410)
+    else if (glsl_version >= 410)
     {
         vertex_shader = vertex_shader_glsl_410_core;
         fragment_shader = fragment_shader_glsl_410_core;
