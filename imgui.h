@@ -1300,8 +1300,6 @@ struct ImGuiIO
     bool        FontAllowUserScaling;           // = false          // Allow user scaling text of individual window with CTRL+Wheel.
     ImFont*     FontDefault;                    // = NULL           // Font to use on NewFrame(). Use NULL to uses Fonts->Fonts[0].
     ImVec2      DisplayFramebufferScale;        // = (1.0f,1.0f)    // For hi-dpi/retina display or other situations where window coordinates are different from framebuffer coordinates. User storage only, presently not used by ImGui.
-    ImVec2      DisplayVisibleMin;              // <unset>          // [OBSOLETE] If you use DisplaySize as a virtual space larger than your screen, set DisplayVisibleMin/Max to the visible area.
-    ImVec2      DisplayVisibleMax;              // <unset>          // [OBSOLETE] Just use io.DisplaySize! If the values are the same, we defaults to Min=(0.0f) and Max=DisplaySize
 
     // Miscellaneous options
     bool        MouseDrawCursor;                // = false          // Request ImGui to draw a mouse cursor for you (if you are on a platform without a mouse cursor). Cannot be easily renamed to 'io.ConfigXXX' because this is frequently used by back-end implementations.

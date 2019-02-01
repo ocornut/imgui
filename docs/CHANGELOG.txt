@@ -33,6 +33,10 @@ HOW TO UPDATE?
  VERSION 1.68 (In progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
+
 Other Changes:
 - Added .editorconfig file for text editors to standardize using spaces. (#2038) [@kudaba]
 - InputText: Fixed a bug where ESCAPE would not restore the initial value in all situations. (#2321) [@relick]
