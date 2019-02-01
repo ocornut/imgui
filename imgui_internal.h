@@ -134,6 +134,7 @@ struct ImGuiInputTextDeactivateData;// Short term storage to backup text of a de
 struct ImGuiLastItemData;           // Status storage for last submitted items
 struct ImGuiLocEntry;               // A localization entry.
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
+struct ImGuiMultiSelectState;       // Multi-selection state
 struct ImGuiNavItemData;            // Result of a gamepad/keyboard directional navigation move query result
 struct ImGuiMetricsConfig;          // Storage for ShowMetricsWindow() and DebugNodeXXX() functions
 struct ImGuiNextWindowData;         // Storage for SetNextWindow** functions
@@ -854,6 +855,7 @@ enum ImGuiItemFlagsPrivate_
     // Controlled by widget code
     ImGuiItemFlags_Inputable                = 1 << 20, // false     // [WIP] Auto-activate input mode when tab focused. Currently only used and supported by a few items before it becomes a generic feature.
     ImGuiItemFlags_HasSelectionUserData     = 1 << 21, // false     // Set by SetNextItemSelectionUserData()
+    ImGuiItemFlags_IsMultiSelect            = 1 << 22, // false     // Set by SetNextItemSelectionUserData()
 
     ImGuiItemFlags_Default_                 = ImGuiItemFlags_AutoClosePopups,    // Please don't change, use PushItemFlag() instead.
 
@@ -1200,10 +1202,6 @@ struct ImGuiNextWindowData
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
-
-// Multi-Selection item index or identifier when using SetNextItemSelectionUserData()/BeginMultiSelect()
-// (Most users are likely to use this store an item INDEX but this may be used to store a POINTER as well.)
-typedef ImS64 ImGuiSelectionUserData;
 
 enum ImGuiNextItemDataFlags_
 {
@@ -1711,8 +1709,20 @@ struct ImGuiOldColumns
 // We always assume that -1 is an invalid value (which works for indices and pointers)
 #define ImGuiSelectionUserData_Invalid        ((ImGuiSelectionUserData)-1)
 
+#define IMGUI_HAS_MULTI_SELECT 1
 #ifdef IMGUI_HAS_MULTI_SELECT
-// <this is filled in 'range_select' branch>
+
+struct IMGUI_API ImGuiMultiSelectState
+{
+    ImGuiMultiSelectData    In;                     // The In requests are set and returned by BeginMultiSelect()
+    ImGuiMultiSelectData    Out;                    // The Out requests are finalized and returned by EndMultiSelect()
+    bool                    InRangeDstPassedBy;     // (Internal) set by the the item that match NavJustMovedToId when InRequestRangeSetNav is set.
+    bool                    InRequestSetRangeNav;   // (Internal) set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
+
+    ImGuiMultiSelectState() { Clear(); }
+    void Clear() { In.Clear(); Out.Clear(); InRangeDstPassedBy = InRequestSetRangeNav = false; }
+};
+
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
 
 //-----------------------------------------------------------------------------
@@ -2107,6 +2117,12 @@ struct ImGuiContext
     ImVec2                  NavWindowingAccumDeltaPos;
     ImVec2                  NavWindowingAccumDeltaSize;
 
+    // Range-Select/Multi-Select
+    ImGuiID                 MultiSelectScopeId;
+    ImGuiWindow*            MultiSelectScopeWindow;
+    ImGuiMultiSelectFlags   MultiSelectFlags;
+    ImGuiMultiSelectState   MultiSelectState;
+
     // Render
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)
 
@@ -2369,6 +2385,10 @@ struct ImGuiContext
         NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
         NavWindowingToggleLayer = false;
         NavWindowingToggleKey = ImGuiKey_None;
+
+        MultiSelectScopeId = 0;
+        MultiSelectScopeWindow = NULL;
+        MultiSelectFlags = 0;
 
         DimBgRatio = 0.0f;
 
@@ -3144,7 +3164,6 @@ namespace ImGui
     IMGUI_API ImVec2        CalcItemSize(ImVec2 size, float default_w, float default_h);
     IMGUI_API float         CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x);
     IMGUI_API void          PushMultiItemsWidths(int components, float width_full);
-    IMGUI_API bool          IsItemToggledSelection();                                   // Was the last item selection toggled? (after Selectable(), TreeNode() etc. We only returns toggle _event_ in order to handle clipping correctly)
     IMGUI_API ImVec2        GetContentRegionMaxAbs();
     IMGUI_API void          ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_excess);
 
@@ -3325,6 +3344,10 @@ namespace ImGui
     IMGUI_API int           TypingSelectFindNextSingleCharMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data, int nav_item_idx);
     IMGUI_API int           TypingSelectFindBestLeadingMatch(ImGuiTypingSelectRequest* req, int items_count, const char* (*get_item_name_func)(void*, int), void* user_data);
 
+    // Multi-Select/Range-Select API
+    IMGUI_API void          MultiSelectItemHeader(ImGuiID id, bool* p_selected);
+    IMGUI_API void          MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed);
+
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
     IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);
     IMGUI_API void          BeginColumns(const char* str_id, int count, ImGuiOldColumnFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
@@ -3461,7 +3484,6 @@ namespace ImGui
     IMGUI_API bool          DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags);
     IMGUI_API bool          SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb);
     IMGUI_API bool          SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f, float hover_visibility_delay = 0.0f, ImU32 bg_col = 0);
-    IMGUI_API void          SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
 
     // Widgets: Tree Nodes
     IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);

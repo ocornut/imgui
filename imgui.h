@@ -44,6 +44,7 @@ Index of this file:
 // [SECTION] ImGuiIO
 // [SECTION] Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
 // [SECTION] Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, Math Operators, ImColor)
+// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectData)
 // [SECTION] Drawing API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawFlags, ImDrawListFlags, ImDrawList, ImDrawData)
 // [SECTION] Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // [SECTION] Viewports (ImGuiViewportFlags, ImGuiViewport)
@@ -174,6 +175,7 @@ struct ImGuiIO;                     // Main configuration and I/O between your a
 struct ImGuiInputTextCallbackData;  // Shared state of InputText() when using custom ImGuiInputTextCallback (rare/advanced use)
 struct ImGuiKeyData;                // Storage for ImGuiIO and IsKeyDown(), IsKeyPressed() etc functions.
 struct ImGuiListClipper;            // Helper to manually clip large list of items
+struct ImGuiMultiSelectData;        // State for a BeginMultiSelect() block
 struct ImGuiOnceUponAFrame;         // Helper for running a block of code not more than once a frame
 struct ImGuiPayload;                // User data payload for drag and drop operations
 struct ImGuiPlatformImeData;        // Platform IME data for io.PlatformSetImeDataFn() function.
@@ -227,6 +229,7 @@ typedef int ImGuiInputTextFlags;    // -> enum ImGuiInputTextFlags_  // Flags: f
 typedef int ImGuiItemFlags;         // -> enum ImGuiItemFlags_       // Flags: for PushItemFlag(), shared by all items
 typedef int ImGuiKeyChord;          // -> ImGuiKey | ImGuiMod_XXX    // Flags: for IsKeyChordPressed(), Shortcut() etc. an ImGuiKey optionally OR-ed with one or more ImGuiMod_XXX values.
 typedef int ImGuiPopupFlags;        // -> enum ImGuiPopupFlags_      // Flags: for OpenPopup*(), BeginPopupContext*(), IsPopupOpen()
+typedef int ImGuiMultiSelectFlags;  // -> enum ImGuiMultiSelectFlags_// Flags: for BeginMultiSelect()
 typedef int ImGuiSelectableFlags;   // -> enum ImGuiSelectableFlags_ // Flags: for Selectable()
 typedef int ImGuiSliderFlags;       // -> enum ImGuiSliderFlags_     // Flags: for DragFloat(), DragInt(), SliderFloat(), SliderInt() etc.
 typedef int ImGuiTabBarFlags;       // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
@@ -261,6 +264,10 @@ typedef ImWchar32 ImWchar;
 #else
 typedef ImWchar16 ImWchar;
 #endif
+
+// Multi-Selection item index or identifier when using SetNextItemSelectionUserData()/BeginMultiSelect()
+// (Most users are likely to use this store an item INDEX but this may be used to store a POINTER as well.)
+typedef ImS64 ImGuiSelectionUserData;
 
 // Callback and functions types
 typedef int     (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData* data);    // Callback function for ImGui::InputText()
@@ -661,6 +668,14 @@ namespace ImGui
     IMGUI_API bool          Selectable(const char* label, bool selected = false, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0)); // "bool selected" carry the selection state (read-only). Selectable() is clicked is returns true so you can modify your selection state. size.x==0.0: use remaining width, size.x>0.0: specify width. size.y==0.0: use label height, size.y>0.0: specify height
     IMGUI_API bool          Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags flags = 0, const ImVec2& size = ImVec2(0, 0));      // "bool* p_selected" point to the selection state (read-write), as a convenient helper.
 
+    // Multi-selection system for Selectable() and TreeNode() functions.
+    // This enables standard multi-selection/range-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow items to be fully clipped (= not submitted at all) when not visible.
+    // Read comments near ImGuiMultiSelectData for details.
+    // When enabled, Selectable() and TreeNode() functions will return true when selection needs toggling.
+    IMGUI_API ImGuiMultiSelectData* BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected);
+    IMGUI_API ImGuiMultiSelectData* EndMultiSelect();
+    IMGUI_API void                  SetNextItemSelectionUserData(ImGuiSelectionUserData selection_user_data);
+
     // Widgets: List Boxes
     // - This is essentially a thin wrapper to using BeginChild/EndChild with the ImGuiChildFlags_FrameStyle flag for stylistic changes + displaying a label.
     // - You can submit contents and manage your selection state however you want it, by creating e.g. Selectable() or any other items.
@@ -893,6 +908,7 @@ namespace ImGui
     IMGUI_API bool          IsItemDeactivated();                                                // was the last item just made inactive (item was previously active). Useful for Undo/Redo patterns with widgets that require continuous editing.
     IMGUI_API bool          IsItemDeactivatedAfterEdit();                                       // was the last item just made inactive and made a value change when it was active? (e.g. Slider/Drag moved). Useful for Undo/Redo patterns with widgets that require continuous editing. Note that you may get false positives (some widgets such as Combo()/ListBox()/Selectable() will return true even when clicking an already selected item).
     IMGUI_API bool          IsItemToggledOpen();                                                // was the last item open state toggled? set by TreeNode().
+    IMGUI_API bool          IsItemToggledSelection();                                           // was the last item selection state toggled? (after Selectable(), TreeNode() etc. We only returns toggle _event_ in order to handle clipping correctly)
     IMGUI_API bool          IsAnyItemHovered();                                                 // is any item hovered?
     IMGUI_API bool          IsAnyItemActive();                                                  // is any item active?
     IMGUI_API bool          IsAnyItemFocused();                                                 // is any item focused?
@@ -1683,6 +1699,7 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_TableAngledHeadersAngle,  // float     TableAngledHeadersAngle
     ImGuiStyleVar_TableAngledHeadersTextAlign,// ImVec2  TableAngledHeadersTextAlign
     ImGuiStyleVar_ButtonTextAlign,          // ImVec2    ButtonTextAlign
+    ImGuiStyleVar_SelectableSpacing,        // ImVec2    SelectableSpacing
     ImGuiStyleVar_SelectableTextAlign,      // ImVec2    SelectableTextAlign
     ImGuiStyleVar_SeparatorTextBorderSize,  // float     SeparatorTextBorderSize
     ImGuiStyleVar_SeparatorTextAlign,       // ImVec2    SeparatorTextAlign
@@ -2127,6 +2144,7 @@ struct ImGuiStyle
     ImVec2      TableAngledHeadersTextAlign;// Alignment of angled headers within the cell
     ImGuiDir    ColorButtonPosition;        // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ImVec2      ButtonTextAlign;            // Alignment of button text when button is larger than text. Defaults to (0.5f, 0.5f) (centered).
+    ImVec2      SelectableSpacing;          // Horizontal and vertical spacing between selectables (by default they are canceling out the effect of ItemSpacing).
     ImVec2      SelectableTextAlign;        // Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
     float       SeparatorTextBorderSize;    // Thickkness of border in SeparatorText()
     ImVec2      SeparatorTextAlign;         // Alignment of text within the separator. Defaults to (0.0f, 0.5f) (left aligned, center).
@@ -2700,6 +2718,70 @@ struct ImColor
     // FIXME-OBSOLETE: May need to obsolete/cleanup those helpers.
     inline void    SetHSV(float h, float s, float v, float a = 1.0f){ ImGui::ColorConvertHSVtoRGB(h, s, v, Value.x, Value.y, Value.z); Value.w = a; }
     static ImColor HSV(float h, float s, float v, float a = 1.0f)   { float r, g, b; ImGui::ColorConvertHSVtoRGB(h, s, v, r, g, b); return ImColor(r, g, b, a); }
+};
+
+//-----------------------------------------------------------------------------
+// [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectData)
+//-----------------------------------------------------------------------------
+
+// Flags for BeginMultiSelect().
+// This system is designed to allow mouse/keyboard multi-selection, including support for range-selection (SHIFT + click) which is difficult to re-implement manually.
+// If you disable multi-selection with ImGuiMultiSelectFlags_NoMultiSelect (which is provided for consistency and flexibility), the whole BeginMultiSelect() system
+// becomes largely overkill as you can handle single-selection in a simpler manner by just calling Selectable() and reacting on clicks yourself.
+enum ImGuiMultiSelectFlags_
+{
+    ImGuiMultiSelectFlags_NoMultiSelect     = 1 << 0,
+    ImGuiMultiSelectFlags_NoUnselect        = 1 << 1,   // Disable unselecting items with CTRL+Click, CTRL+Space etc.
+    ImGuiMultiSelectFlags_NoSelectAll       = 1 << 2,   // Disable CTRL+A shortcut to set RequestSelectAll
+};
+
+// Abstract:
+// - This system implements standard multi-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow items to be
+//   fully clipped (= not submitted at all) when not visible. Clipping is typically provided by ImGuiListClipper.
+//   Handling all of this in a single pass imgui is a little tricky, and this is why we provide those functionalities.
+//   Note however that if you don't need SHIFT+Click/Arrow range-select, you can handle a simpler form of multi-selection yourself,
+//   by reacting to click/presses on Selectable() items and checking keyboard modifiers.
+//   The complexity of this system here is mostly caused by the handling of range-select while optionally allowing to clip elements.
+// - The work involved to deal with multi-selection differs whether you want to only submit visible items (and clip others) or submit all items
+//   regardless of their visibility. Clipping items is more efficient and will allow you to deal with large lists (1k~100k items) with near zero
+//   performance penalty, but requires a little more work on the code. If you only have a few hundreds elements in your possible selection set,
+//   you may as well not bother with clipping, as the cost should be negligible (as least on imgui side).
+//   If you are not sure, always start without clipping and you can work your way to the more optimized version afterwards.
+// - The void* Src/Dst value represent a selectable object. They are the values you pass to SetNextItemMultiSelectData().
+//   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points. But the code never assume that sortable integers are used.
+// - In the spirit of imgui design, your code own the selection data. So this is designed to handle all kind of selection data: instructive (store a bool inside each object),
+//   external array (store an array aside from your objects), set (store only selected items in a hash/map/set), using intervals (store indices in an interval tree), etc.
+// Usage flow:
+//   1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection status. As a default value for the initial frame or when,
+//      resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*.
+//   2) Honor Clear/SelectAll requests by updating your selection data.  [Only required if you are using a clipper in step 4]
+//   3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item.  [Only required if you are using a clipper in step 4]
+//      This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
+//      If you are using integer indices everywhere, this is easy to compute:  if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
+//   4) Submit your items with SetNextItemMultiSelectData() + Selectable()/TreeNode() calls.
+//      Call IsItemSelectionToggled() to query with the selection state has been toggled, in which you need the info immediately (before EndMultiSelect()) for your display.
+//      When cannot reliably return a "IsItemSelected()" value because we need to consider clipped (unprocessed) item, this is why we return a toggle event instead.
+//   5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
+//   6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
+// If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
+struct ImGuiMultiSelectData
+{
+    bool    RequestClear;           // Begin, End   // Request user to clear selection
+    bool    RequestSelectAll;       // Begin, End   // Request user to select all
+    bool    RequestSetRange;        // End          // Request user to set or clear selection in the [RangeSrc..RangeDst] range
+    bool    RangeSrcPassedBy;       // After Begin  // Need to be set by user is RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
+    bool    RangeValue;             // End          // End: parameter from RequestSetRange request. True = Select Range, False = Unselect range.
+    void*   RangeSrc;               // Begin, End   // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
+    void*   RangeDst;               // End          // End: parameter from RequestSetRange request.
+    int     RangeDirection;         // End          // End: parameter from RequestSetRange request. +1 if RangeSrc came before RangeDst, -1 otherwise. Available as an indicator in case you cannot infer order from the void* values.
+
+    ImGuiMultiSelectData()  { Clear(); }
+    void Clear()
+    {
+        RequestClear = RequestSelectAll = RequestSetRange = RangeSrcPassedBy = RangeValue = false;
+        RangeSrc = RangeDst = NULL;
+        RangeDirection = 0;
+    }
 };
 
 //-----------------------------------------------------------------------------
