@@ -4297,7 +4297,7 @@ static void FindHoveredWindow()
 
     g.HoveredWindow = hovered_window;
     g.HoveredRootWindow = g.HoveredWindow ? g.HoveredWindow->RootWindow : NULL;
-    g.HoveredWindowUnderMovingWindow = g.MovingWindow ? hovered_window_ignoring_moving_window : NULL;
+    g.HoveredWindowUnderMovingWindow = hovered_window_ignoring_moving_window;
 
     if (g.MovingWindow)
         g.MovingWindow->Viewport = moving_window_viewport;
