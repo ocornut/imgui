@@ -1876,12 +1876,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
-    // NB- we don't call ItemSize() yet because we may turn into a text edit box below
+    ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id, &frame_bb))
-    {
-        ItemSize(total_bb, style.FramePadding.y);
         return false;
-    }
+
     const bool hovered = ItemHoverable(frame_bb, id);
 
     // Default format string when passing NULL
@@ -1909,12 +1907,12 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
     {
+        window->DC.CursorPos = frame_bb.Min;
         FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
     }
 
     // Actual drag behavior
-    ItemSize(total_bb, style.FramePadding.y);
     const bool value_changed = DragBehavior(id, data_type, v, v_speed, v_min, v_max, format, power, ImGuiDragFlags_None);
     if (value_changed)
         MarkItemEdited(id);
@@ -2311,12 +2309,9 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y*2.0f));
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
-    // NB- we don't call ItemSize() yet because we may turn into a text edit box below
+    ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id, &frame_bb))
-    {
-        ItemSize(total_bb, style.FramePadding.y);
         return false;
-    }
 
     // Default format string when passing NULL
     // Patch old "%.0f" format string to use "%d", read function comments for more details.
@@ -2344,11 +2339,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
     {
+        window->DC.CursorPos = frame_bb.Min;
         FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
     }
-
-    ItemSize(total_bb, style.FramePadding.y);
 
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
