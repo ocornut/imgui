@@ -41,6 +41,8 @@ Other Changes:
 - Added .editorconfig file for text editors to standardize using spaces. (#2038) [@kudaba]
 - InputText: Fixed a bug where ESCAPE would not restore the initial value in all situations. (#2321) [@relick]
 - InputText: Fixed a bug where ESCAPE would be first captured by the Keyboard Navigation code. (#2321, #787)
+- InputText: Fixed redo buffer exhaustion handling (rare) which could corrupt the undo character buffer. (#2333)
+  The way the redo/undo buffers work would have made it generally unnoticeable to the user.
 - Fixed range-version of PushID() and GetID() not honoring the ### operator to restart from the seed value.
 - Fixed CloseCurrentPopup() on a child-menu of a modal incorrectly closing the modal. (#2308)
 - Tabs: Added ImGuiTabBarFlags_TabListPopupButton flag to show a popup button on manual tab bars. (#261, #351)
