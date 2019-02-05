@@ -107,6 +107,9 @@ Other Changes:
 - InputText: Fixed a bug where ESCAPE would be first captured by the Keyboard Navigation code. (#2321, #787)
 - Fixed range-version of PushID() and GetID() not honoring the ### operator to restart from the seed value.
 - Fixed CloseCurrentPopup() on a child-menu of a modal incorrectly closing the modal. (#2308)
+- Tabs: Added ImGuiTabBarFlags_TabListPopupButton flag to show a popup button on manual tab bars. (#261, #351)
+- Tabs: Removed ImGuiTabBarFlags_NoTabListPopupButton which was available in 1.67 but actually had zero use.
+- RadioButton: Fixed label horizontal alignment to precisely match Checkbox().
 - Window: When resizing from an edge, the border is more visible and better follow the rounded corners.
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
   with a small number of segments (e.g. an hexagon). (#2287) [@baktery]

@@ -1420,8 +1420,9 @@ enum ImGuiTabBarFlagsPrivate_
 
 enum ImGuiTabItemFlagsPrivate_
 {
-    ImGuiTabItemFlags_Unsorted                  = 1 << 20,  // [Docking] Trailing tabs with the _Unsorted flag will be sorted based on the DockOrder of their Window.
-    ImGuiTabItemFlags_Preview                   = 1 << 21   // [Docking] Display tab shape for docking preview (height is adjusted slightly to compensate for the yet missing tab bar)
+    ImGuiTabItemFlags_NoCloseButton             = 1 << 20,  // Store whether p_open is set or not, which we need to recompute WidthContents during layout.
+    ImGuiTabItemFlags_Unsorted                  = 1 << 21,  // [Docking] Trailing tabs with the _Unsorted flag will be sorted based on the DockOrder of their Window.
+    ImGuiTabItemFlags_Preview                   = 1 << 22   // [Docking] Display tab shape for docking preview (height is adjusted slightly to compensate for the yet missing tab bar)
 };
 
 // Storage for one active tab item (sizeof() 32~40 bytes)
@@ -1432,11 +1433,12 @@ struct ImGuiTabItem
     ImGuiWindow*        Window;                 // When TabItem is part of a DockNode's TabBar, we hold on to a window.
     int                 LastFrameVisible;
     int                 LastFrameSelected;      // This allows us to infer an ordered list of the last activated tabs with little maintenance
+    int                 NameOffset;             // When Window==NULL, offset to name within parent ImGuiTabBar::TabsNames
     float               Offset;                 // Position relative to beginning of tab
     float               Width;                  // Width currently displayed
     float               WidthContents;          // Width of actual contents, stored during BeginTabItem() call
 
-    ImGuiTabItem()      { ID = Flags = 0; Window = NULL;  LastFrameVisible = LastFrameSelected = -1; Offset = Width = WidthContents = 0.0f; }
+    ImGuiTabItem()      { ID = Flags = 0; Window = NULL; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = WidthContents = 0.0f; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
@@ -1461,9 +1463,18 @@ struct ImGuiTabBar
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     short               LastTabItemIdx;         // For BeginTabItem()/EndTabItem()
+    ImVec2              FramePadding;           // style.FramePadding locked at the time of BeginTabBar()
+    ImGuiTextBuffer     TabsNames;              // For non-docking tab bar we re-append names in a contiguous buffer. 
 
     ImGuiTabBar();
-    int                 GetTabOrder(const ImGuiTabItem* tab) const { return Tabs.index_from_ptr(tab); }
+    int                 GetTabOrder(const ImGuiTabItem* tab) const  { return Tabs.index_from_ptr(tab); }
+    const char*         GetTabName(const ImGuiTabItem* tab) const 
+    {
+        if (tab->Window)
+            return tab->Window->Name;
+        IM_ASSERT(tab->NameOffset != -1 && tab->NameOffset < TabsNames.Buf.Size); 
+        return TabsNames.Buf.Data + tab->NameOffset;
+    }
 };
 
 //-----------------------------------------------------------------------------
@@ -1635,7 +1646,7 @@ namespace ImGui
     IMGUI_API bool          TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags, ImGuiWindow* docked_window);
     IMGUI_API ImVec2        TabItemCalcSize(const char* label, bool has_close_button);
     IMGUI_API void          TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImU32 col);
-    IMGUI_API bool          TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, const char* label, ImGuiID tab_id, ImGuiID close_button_id);
+    IMGUI_API bool          TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, const char* label, ImGuiID tab_id, ImGuiID close_button_id);
 
     // Render helpers
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.

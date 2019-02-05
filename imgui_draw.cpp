@@ -1598,8 +1598,10 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
         font_cfg.OversampleH = font_cfg.OversampleV = 1;
         font_cfg.PixelSnapH = true;
     }
-    if (font_cfg.Name[0] == '\0') strcpy(font_cfg.Name, "ProggyClean.ttf, 13px");
-    if (font_cfg.SizePixels <= 0.0f) font_cfg.SizePixels = 13.0f;
+    if (font_cfg.SizePixels <= 0.0f) 
+        font_cfg.SizePixels = 13.0f * 1.0f;
+    if (font_cfg.Name[0] == '\0') 
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf, %dpx", (int)font_cfg.SizePixels);
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
@@ -3101,7 +3103,8 @@ void ImGui::RenderRectFilledWithHole(ImDrawList* draw_list, ImRect outer, ImRect
 void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, int count, ImU32 col)
 {
     ImFont* font = draw_list->_Data->Font;
-    pos.y += (float)(int)(font->DisplayOffset.y + font->Ascent + 0.5f - 1.0f);
+    const float font_scale = draw_list->_Data->FontSize / font->FontSize;
+    pos.y += (float)(int)(font->DisplayOffset.y + font->Ascent * font_scale + 0.5f - 1.0f);
     for (int dot_n = 0; dot_n < count; dot_n++)
         draw_list->AddRectFilled(ImVec2(pos.x + dot_n * 2.0f, pos.y), ImVec2(pos.x + dot_n * 2.0f + 1.0f, pos.y + 1.0f), col);
 }

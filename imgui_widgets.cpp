@@ -926,19 +926,11 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
-    const ImRect check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(label_size.y + style.FramePadding.y*2, label_size.y + style.FramePadding.y*2)); // We want a square shape to we use Y twice
-    ItemSize(check_bb, style.FramePadding.y);
-
-    ImRect total_bb = check_bb;
-    if (label_size.x > 0)
-        SameLine(0, style.ItemInnerSpacing.x);
-    const ImRect text_bb(window->DC.CursorPos + ImVec2(0,style.FramePadding.y), window->DC.CursorPos + ImVec2(0,style.FramePadding.y) + label_size);
-    if (label_size.x > 0)
-    {
-        ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()), style.FramePadding.y);
-        total_bb = ImRect(ImMin(check_bb.Min, text_bb.Min), ImMax(check_bb.Max, text_bb.Max));
-    }
-
+    const float square_sz = GetFrameHeight();
+    const ImVec2 pos = window->DC.CursorPos;
+    const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
+    const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
+    ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id))
         return false;
 
@@ -954,15 +946,14 @@ bool ImGui::Checkbox(const char* label, bool* v)
     RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
     if (*v)
     {
-        const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-        const float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f));
-        RenderCheckMark(check_bb.Min + ImVec2(pad,pad), GetColorU32(ImGuiCol_CheckMark), check_bb.GetWidth() - pad*2.0f);
+        const float pad = ImMax(1.0f, (float)(int)(square_sz / 6.0f));
+        RenderCheckMark(check_bb.Min + ImVec2(pad, pad), GetColorU32(ImGuiCol_CheckMark), square_sz - pad*2.0f);
     }
 
     if (g.LogEnabled)
-        LogRenderedText(&text_bb.Min, *v ? "[x]" : "[ ]");
+        LogRenderedText(&total_bb.Min, *v ? "[x]" : "[ ]");
     if (label_size.x > 0.0f)
-        RenderText(text_bb.Min, label);
+        RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y), label);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Checkable | (*v ? ImGuiItemStatusFlags_Checked : 0));
     return pressed;
@@ -994,26 +985,18 @@ bool ImGui::RadioButton(const char* label, bool active)
     const ImGuiID id = window->GetID(label);
     const ImVec2 label_size = CalcTextSize(label, NULL, true);
 
-    const ImRect check_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(label_size.y + style.FramePadding.y*2-1, label_size.y + style.FramePadding.y*2-1));
-    ItemSize(check_bb, style.FramePadding.y);
-
-    ImRect total_bb = check_bb;
-    if (label_size.x > 0)
-        SameLine(0, style.ItemInnerSpacing.x);
-    const ImRect text_bb(window->DC.CursorPos + ImVec2(0, style.FramePadding.y), window->DC.CursorPos + ImVec2(0, style.FramePadding.y) + label_size);
-    if (label_size.x > 0)
-    {
-        ItemSize(ImVec2(text_bb.GetWidth(), check_bb.GetHeight()), style.FramePadding.y);
-        total_bb.Add(text_bb);
-    }
-
+    const float square_sz = GetFrameHeight();
+    const ImVec2 pos = window->DC.CursorPos;
+    const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
+    const ImRect total_bb(pos, pos + ImVec2(square_sz + (label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f), label_size.y + style.FramePadding.y * 2.0f));
+    ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id))
         return false;
 
     ImVec2 center = check_bb.GetCenter();
     center.x = (float)(int)center.x + 0.5f;
     center.y = (float)(int)center.y + 0.5f;
-    const float radius = check_bb.GetHeight() * 0.5f;
+    const float radius = (square_sz - 1.0f) * 0.5f;
 
     bool hovered, held;
     bool pressed = ButtonBehavior(total_bb, id, &hovered, &held);
@@ -1024,21 +1007,20 @@ bool ImGui::RadioButton(const char* label, bool active)
     window->DrawList->AddCircleFilled(center, radius, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), 16);
     if (active)
     {
-        const float check_sz = ImMin(check_bb.GetWidth(), check_bb.GetHeight());
-        const float pad = ImMax(1.0f, (float)(int)(check_sz / 6.0f));
-        window->DrawList->AddCircleFilled(center, radius-pad, GetColorU32(ImGuiCol_CheckMark), 16);
+        const float pad = ImMax(1.0f, (float)(int)(square_sz / 6.0f));
+        window->DrawList->AddCircleFilled(center, radius - pad, GetColorU32(ImGuiCol_CheckMark), 16);
     }
 
     if (style.FrameBorderSize > 0.0f)
     {
-        window->DrawList->AddCircle(center+ImVec2(1,1), radius, GetColorU32(ImGuiCol_BorderShadow), 16, style.FrameBorderSize);
+        window->DrawList->AddCircle(center + ImVec2(1,1), radius, GetColorU32(ImGuiCol_BorderShadow), 16, style.FrameBorderSize);
         window->DrawList->AddCircle(center, radius, GetColorU32(ImGuiCol_Border), 16, style.FrameBorderSize);
     }
 
     if (g.LogEnabled)
-        LogRenderedText(&text_bb.Min, active ? "(x)" : "( )");
+        LogRenderedText(&total_bb.Min, active ? "(x)" : "( )");
     if (label_size.x > 0.0f)
-        RenderText(text_bb.Min, label);
+        RenderText(ImVec2(check_bb.Max.x + style.ItemInnerSpacing.x, check_bb.Min.y + style.FramePadding.y), label);
 
     return pressed;
 }
@@ -1907,12 +1889,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     const ImRect inner_bb(frame_bb.Min + style.FramePadding, frame_bb.Max - style.FramePadding);
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
-    // NB- we don't call ItemSize() yet because we may turn into a text edit box below
+    ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id, &frame_bb))
-    {
-        ItemSize(total_bb, style.FramePadding.y);
         return false;
-    }
+
     const bool hovered = ItemHoverable(frame_bb, id);
 
     // Default format string when passing NULL
@@ -1940,12 +1920,12 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
     {
+        window->DC.CursorPos = frame_bb.Min;
         FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
     }
 
     // Actual drag behavior
-    ItemSize(total_bb, style.FramePadding.y);
     const bool value_changed = DragBehavior(id, data_type, v, v_speed, v_min, v_max, format, power, ImGuiDragFlags_None);
     if (value_changed)
         MarkItemEdited(id);
@@ -2342,12 +2322,9 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     const ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + ImVec2(w, label_size.y + style.FramePadding.y*2.0f));
     const ImRect total_bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
 
-    // NB- we don't call ItemSize() yet because we may turn into a text edit box below
+    ItemSize(total_bb, style.FramePadding.y);
     if (!ItemAdd(total_bb, id, &frame_bb))
-    {
-        ItemSize(total_bb, style.FramePadding.y);
         return false;
-    }
 
     // Default format string when passing NULL
     // Patch old "%.0f" format string to use "%d", read function comments for more details.
@@ -2375,11 +2352,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     }
     if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
     {
+        window->DC.CursorPos = frame_bb.Min;
         FocusableItemUnregister(window);
         return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
     }
-
-    ItemSize(total_bb, style.FramePadding.y);
 
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
@@ -5931,6 +5907,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     tab_bar->WantLayout = true; // Layout will be done on the first call to ItemTab()
     tab_bar->PrevFrameVisible = tab_bar->CurrFrameVisible;
     tab_bar->CurrFrameVisible = g.FrameCount;
+    tab_bar->FramePadding = g.Style.FramePadding;
 
     // Layout
     ItemSize(ImVec2(tab_bar->OffsetMax, tab_bar->BarRect.GetHeight()));
@@ -6035,6 +6012,12 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         tab_bar->ReorderRequestTabId = 0;
     }
 
+    // Tab List Popup (will alter tab_bar->BarRect and therefore the available width!)
+    const bool tab_list_popup_button = (tab_bar->Flags & ImGuiTabBarFlags_TabListPopupButton) != 0;
+    if (tab_list_popup_button)
+        if (ImGuiTabItem* tab_to_select = TabBarTabListPopupButton(tab_bar)) // NB: Will alter BarRect.Max.x!
+            scroll_track_selected_tab_id = tab_bar->SelectedTabId = tab_to_select->ID;
+
     ImVector<ImGuiTabBarSortItem>& width_sort_buffer = g.TabSortByWidthBuffer;
     width_sort_buffer.resize(tab_bar->Tabs.Size);
 
@@ -6052,11 +6035,13 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         if (tab->ID == tab_bar->SelectedTabId)
             found_selected_tab_id = true;
 
-        // Refresh tab width immediately if we can (for manual tab bar, WidthContent will lag by one frame which is mostly noticeable when changing style.FramePadding.x)
+        // Refresh tab width immediately, otherwise changes of style e.g. style.FramePadding.x would noticeably lag in the tab bar.
         // Additionally, when using TabBarAddTab() to manipulate tab bar order we occasionally insert new tabs that don't have a width yet,
         // and we cannot wait for the next BeginTabItem() call. We cannot compute this width within TabBarAddTab() because font size depends on the active window.
-        if (tab->Window)
-            tab->WidthContents = TabItemCalcSize(tab->Window->Name, tab->Window->HasCloseButton).x;
+        const char* tab_name = tab_bar->GetTabName(tab);
+        const bool has_close_button = tab->Window ? tab->Window->HasCloseButton : ((tab->Flags & ImGuiTabItemFlags_NoCloseButton) == 0);
+        tab->WidthContents = TabItemCalcSize(tab_name, has_close_button).x;
+
         width_total_contents += (tab_n > 0 ? g.Style.ItemInnerSpacing.x : 0.0f) + tab->WidthContents;
 
         // Store data so we can build an array sorted by width if we need to shrink tabs down
@@ -6109,12 +6094,6 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     tab_bar->OffsetMax = ImMax(offset_x - g.Style.ItemInnerSpacing.x, 0.0f);
     tab_bar->OffsetNextTab = 0.0f;
 
-    // Tab List Popup
-    const bool tab_list_popup_button = (tab_bar->Flags & ImGuiTabBarFlags_DockNode) != 0 && (tab_bar->Flags & ImGuiTabBarFlags_NoTabListPopupButton) == 0;
-    if (tab_list_popup_button)
-        if (ImGuiTabItem* tab_to_select = TabBarTabListPopupButton(tab_bar)) // NB: Will alter BarRect.Max.x!
-            scroll_track_selected_tab_id = tab_bar->SelectedTabId = tab_to_select->ID;
-
     // Horizontal scrolling buttons
     const bool scrolling_buttons = (tab_bar->OffsetMax > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll);
     if (scrolling_buttons)
@@ -6144,6 +6123,10 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     const float scrolling_speed = (tab_bar->PrevFrameVisible + 1 < g.FrameCount) ? FLT_MAX : (g.IO.DeltaTime * g.FontSize * 70.0f);
     if (tab_bar->ScrollingAnim != tab_bar->ScrollingTarget)
         tab_bar->ScrollingAnim = ImLinearSweep(tab_bar->ScrollingAnim, tab_bar->ScrollingTarget, scrolling_speed);
+
+    // Clear name buffers
+    if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0)
+        tab_bar->TabsNames.Buf.resize(0);
 }
 
 // Dockables uses Name/ID in the global namespace. Non-dockable items use the ID stack.
@@ -6303,18 +6286,16 @@ static ImGuiTabItem* ImGui::TabBarScrollingButtons(ImGuiTabBar* tab_bar)
     return tab_to_select;
 }
 
-// FIXME-DOCK: Unused by Docking system
 static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    const float tab_list_popup_button_width = g.FontSize + g.Style.FramePadding.y * 2.0f;
+    // We use g.Style.FramePadding.y to match the square ArrowButton size
+    const float tab_list_popup_button_width = g.FontSize + g.Style.FramePadding.y;
     const ImVec2 backup_cursor_pos = window->DC.CursorPos;
-    tab_bar->BarRect.Max.x -= tab_list_popup_button_width;
-    if (window->HasCloseButton)
-        tab_bar->BarRect.Max.x += g.Style.ItemInnerSpacing.x;
-    window->DC.CursorPos = ImVec2(tab_bar->BarRect.Max.x, tab_bar->BarRect.Min.y);
+    window->DC.CursorPos = ImVec2(tab_bar->BarRect.Min.x - g.Style.FramePadding.y, tab_bar->BarRect.Min.y);
+    tab_bar->BarRect.Min.x += tab_list_popup_button_width;
 
     ImVec4 arrow_col = g.Style.Colors[ImGuiCol_Text];
     arrow_col.w *= 0.5f;
@@ -6329,8 +6310,8 @@ static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
         for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
         {
             ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
-            IM_ASSERT(tab->Window != NULL);
-            if (MenuItem(tab->Window->Name))
+            const char* tab_name = tab_bar->GetTabName(tab);
+            if (Selectable(tab_name, tab_bar->SelectedTabId == tab->ID))
                 tab_to_select = tab;
         }
         EndCombo();
@@ -6425,12 +6406,19 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     tab_bar->LastTabItemIdx = (short)tab_bar->Tabs.index_from_ptr(tab);
     tab->WidthContents = size.x;
 
+    if (p_open == NULL)
+        flags |= ImGuiTabItemFlags_NoCloseButton;
+
     const bool tab_bar_appearing = (tab_bar->PrevFrameVisible + 1 < g.FrameCount);
     const bool tab_bar_focused = (tab_bar->Flags & ImGuiTabBarFlags_IsFocused) != 0;
     const bool tab_appearing = (tab->LastFrameVisible + 1 < g.FrameCount);
     tab->LastFrameVisible = g.FrameCount;
     tab->Flags = flags;
     tab->Window = docked_window;
+
+    // Append name with zero-terminator
+    tab->NameOffset = tab_bar->TabsNames.size();
+    tab_bar->TabsNames.append(label, label + strlen(label) + 1);
 
     // If we are not reorderable, always reset offset based on submission order.
     // (We already handled layout and sizing using the previous known order, but sizing is not affected by order!)
@@ -6593,7 +6581,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Render tab label, process close button
     const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
-    bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, label, id, close_button_id);
+    bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, tab_bar->FramePadding, label, id, close_button_id);
     if (just_closed && p_open != NULL)
     {
         *p_open = false;
@@ -6671,22 +6659,22 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
 }
 
 // Render text label (with custom clipping) + Unsaved Document marker + Close Button logic
-bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, const char* label, ImGuiID tab_id, ImGuiID close_button_id)
+// We tend to lock style.FramePadding for a given tab-bar, hence the 'frame_padding' parameter.
+bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, const char* label, ImGuiID tab_id, ImGuiID close_button_id)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiStyle& style = g.Style;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
     if (bb.GetWidth() <= 1.0f)
         return false;
 
     // Render text label (with clipping + alpha gradient) + unsaved marker
     const char* TAB_UNSAVED_MARKER = "*";
-    ImRect text_pixel_clip_bb(bb.Min.x + style.FramePadding.x, bb.Min.y + style.FramePadding.y, bb.Max.x - style.FramePadding.x, bb.Max.y);
+    ImRect text_pixel_clip_bb(bb.Min.x + frame_padding.x, bb.Min.y + frame_padding.y, bb.Max.x - frame_padding.x, bb.Max.y);
     if (flags & ImGuiTabItemFlags_UnsavedDocument)
     {
         text_pixel_clip_bb.Max.x -= CalcTextSize(TAB_UNSAVED_MARKER, NULL, false).x;
-        ImVec2 unsaved_marker_pos(ImMin(bb.Min.x + style.FramePadding.x + label_size.x + 2, text_pixel_clip_bb.Max.x), bb.Min.y + style.FramePadding.y + (float)(int)(-g.FontSize * 0.25f));
-        RenderTextClippedEx(draw_list, unsaved_marker_pos, bb.Max - style.FramePadding, TAB_UNSAVED_MARKER, NULL, NULL);
+        ImVec2 unsaved_marker_pos(ImMin(bb.Min.x + frame_padding.x + label_size.x + 2, text_pixel_clip_bb.Max.x), bb.Min.y + frame_padding.y + (float)(int)(-g.FontSize * 0.25f));
+        RenderTextClippedEx(draw_list, unsaved_marker_pos, bb.Max - frame_padding, TAB_UNSAVED_MARKER, NULL, NULL);
     }
     ImRect text_ellipsis_clip_bb = text_pixel_clip_bb;
 
@@ -6704,7 +6692,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     {
         ImGuiItemHoveredDataBackup last_item_backup;
         const float close_button_sz = g.FontSize * 0.5f;
-        if (CloseButton(close_button_id, ImVec2(bb.Max.x - style.FramePadding.x - close_button_sz, bb.Min.y + style.FramePadding.y + close_button_sz), close_button_sz))
+        if (CloseButton(close_button_id, ImVec2(bb.Max.x - frame_padding.x - close_button_sz, bb.Min.y + frame_padding.y + close_button_sz), close_button_sz))
             close_button_pressed = true;
         last_item_backup.Restore();
 
