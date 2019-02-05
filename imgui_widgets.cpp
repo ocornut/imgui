@@ -5780,6 +5780,7 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected, 
 // - TabBarScrollToTab() [Internal]
 // - TabBarQueueChangeTabOrder() [Internal]
 // - TabBarScrollingButtons() [Internal]
+// - TabBarTabListPopupButton() [Internal]
 //-------------------------------------------------------------------------
 
 namespace ImGui
@@ -5790,6 +5791,7 @@ namespace ImGui
     static float            TabBarScrollClamp(ImGuiTabBar* tab_bar, float scrolling);
     static void             TabBarScrollToTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab);
     static ImGuiTabItem*    TabBarScrollingButtons(ImGuiTabBar* tab_bar);
+    static ImGuiTabItem*    TabBarTabListPopupButton(ImGuiTabBar* tab_bar);
 }
 
 ImGuiTabBar::ImGuiTabBar()
@@ -5869,6 +5871,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     tab_bar->WantLayout = true; // Layout will be done on the first call to ItemTab()
     tab_bar->PrevFrameVisible = tab_bar->CurrFrameVisible;
     tab_bar->CurrFrameVisible = g.FrameCount;
+    tab_bar->FramePadding = g.Style.FramePadding;
 
     // Layout
     ItemSize(ImVec2(tab_bar->OffsetMax, tab_bar->BarRect.GetHeight()));
@@ -5878,8 +5881,8 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     const ImU32 col = GetColorU32((flags & ImGuiTabBarFlags_IsFocused) ? ImGuiCol_TabActive : ImGuiCol_Tab);
     const float y = tab_bar->BarRect.Max.y - 1.0f;
     {
-        const float separator_min_x = tab_bar->BarRect.Min.x - ((flags & ImGuiTabBarFlags_DockNodeIsDockSpace) ? 0.0f : window->WindowPadding.x);
-        const float separator_max_x = tab_bar->BarRect.Max.x + ((flags & ImGuiTabBarFlags_DockNodeIsDockSpace) ? 0.0f : window->WindowPadding.x);
+        const float separator_min_x = tab_bar->BarRect.Min.x - window->WindowPadding.x;
+        const float separator_max_x = tab_bar->BarRect.Max.x + window->WindowPadding.x;
         window->DrawList->AddLine(ImVec2(separator_min_x, y), ImVec2(separator_max_x, y), col, 1.0f);
     }
     return true;
@@ -5983,9 +5986,12 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         if (tab->ID == tab_bar->SelectedTabId)
             found_selected_tab_id = true;
 
-        // Refresh tab width immediately if we can (for manual tab bar, WidthContent will lag by one frame which is mostly noticeable when changing style.FramePadding.x)
+        // Refresh tab width immediately, otherwise changes of style e.g. style.FramePadding.x would noticeably lag in the tab bar.
         // Additionally, when using TabBarAddTab() to manipulate tab bar order we occasionally insert new tabs that don't have a width yet,
         // and we cannot wait for the next BeginTabItem() call. We cannot compute this width within TabBarAddTab() because font size depends on the active window.
+        const char* tab_name = tab_bar->GetTabName(tab);
+        tab->WidthContents = TabItemCalcSize(tab_name, (tab->Flags & ImGuiTabItemFlags_NoCloseButton) ? false : true).x;
+
         width_total_contents += (tab_n > 0 ? g.Style.ItemInnerSpacing.x : 0.0f) + tab->WidthContents;
 
         // Store data so we can build an array sorted by width if we need to shrink tabs down
@@ -6038,6 +6044,12 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     tab_bar->OffsetMax = ImMax(offset_x - g.Style.ItemInnerSpacing.x, 0.0f);
     tab_bar->OffsetNextTab = 0.0f;
 
+    // Tab List Popup
+    const bool tab_list_popup_button = (tab_bar->Flags & ImGuiTabBarFlags_TabListPopupButton) != 0;
+    if (tab_list_popup_button)
+        if (ImGuiTabItem* tab_to_select = TabBarTabListPopupButton(tab_bar)) // NB: Will alter BarRect.Max.x!
+            scroll_track_selected_tab_id = tab_bar->SelectedTabId = tab_to_select->ID;
+
     // Horizontal scrolling buttons
     const bool scrolling_buttons = (tab_bar->OffsetMax > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll);
     if (scrolling_buttons)
@@ -6063,6 +6075,10 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     const float scrolling_speed = (tab_bar->PrevFrameVisible + 1 < g.FrameCount) ? FLT_MAX : (g.IO.DeltaTime * g.FontSize * 70.0f);
     if (tab_bar->ScrollingAnim != tab_bar->ScrollingTarget)
         tab_bar->ScrollingAnim = ImLinearSweep(tab_bar->ScrollingAnim, tab_bar->ScrollingTarget, scrolling_speed);
+
+    // Clear name buffers
+    if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0)
+        tab_bar->TabsNames.Buf.resize(0);
 }
 
 // Dockables uses Name/ID in the global namespace. Non-dockable items use the ID stack.
@@ -6204,6 +6220,42 @@ static ImGuiTabItem* ImGui::TabBarScrollingButtons(ImGuiTabBar* tab_bar)
     return tab_to_select;
 }
 
+static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    const float tab_list_popup_button_width = g.FontSize + g.Style.FramePadding.y * 2.0f;
+    const ImVec2 backup_cursor_pos = window->DC.CursorPos;
+    tab_bar->BarRect.Max.x -= tab_list_popup_button_width;
+    if (window->HasCloseButton)
+        tab_bar->BarRect.Max.x += g.Style.ItemInnerSpacing.x;
+    window->DC.CursorPos = ImVec2(tab_bar->BarRect.Max.x, tab_bar->BarRect.Min.y);
+
+    ImVec4 arrow_col = g.Style.Colors[ImGuiCol_Text];
+    arrow_col.w *= 0.5f;
+    PushStyleColor(ImGuiCol_Text, arrow_col);
+    PushStyleColor(ImGuiCol_Button, ImVec4(0, 0, 0, 0));
+    bool open = BeginCombo("##v", NULL, ImGuiComboFlags_NoPreview | ImGuiComboFlags_PopupAlignLeft);
+    PopStyleColor(2);
+
+    ImGuiTabItem* tab_to_select = NULL;
+    if (open)
+    {
+        for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
+        {
+            ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+            const char* tab_name = tab_bar->GetTabName(tab);
+            if (MenuItem(tab_name))
+                tab_to_select = tab;
+        }
+        EndCombo();
+    }
+
+    window->DC.CursorPos = backup_cursor_pos;
+    return tab_to_select;
+}
+
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: BeginTabItem, EndTabItem, etc.
 //-------------------------------------------------------------------------
@@ -6290,11 +6342,18 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     tab_bar->LastTabItemIdx = (short)tab_bar->Tabs.index_from_ptr(tab);
     tab->WidthContents = size.x;
 
+    if (p_open == NULL)
+        flags |= ImGuiTabItemFlags_NoCloseButton;
+
     const bool tab_bar_appearing = (tab_bar->PrevFrameVisible + 1 < g.FrameCount);
     const bool tab_bar_focused = (tab_bar->Flags & ImGuiTabBarFlags_IsFocused) != 0;
     const bool tab_appearing = (tab->LastFrameVisible + 1 < g.FrameCount);
     tab->LastFrameVisible = g.FrameCount;
     tab->Flags = flags;
+
+    // Append name with zero-terminator
+    tab->NameOffset = tab_bar->TabsNames.size();
+    tab_bar->TabsNames.append(label, label + strlen(label) + 1);
 
     // If we are not reorderable, always reset offset based on submission order.
     // (We already handled layout and sizing using the previous known order, but sizing is not affected by order!)
@@ -6412,7 +6471,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Render tab label, process close button
     const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
-    bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, label, id, close_button_id);
+    bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, tab_bar->FramePadding, label, id, close_button_id);
     if (just_closed && p_open != NULL)
     {
         *p_open = false;
@@ -6480,22 +6539,22 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
 }
 
 // Render text label (with custom clipping) + Unsaved Document marker + Close Button logic
-bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, const char* label, ImGuiID tab_id, ImGuiID close_button_id)
+// We tend to lock style.FramePadding for a given tab-bar, hence the 'frame_padding' parameter.
+bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, const char* label, ImGuiID tab_id, ImGuiID close_button_id)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiStyle& style = g.Style;
     ImVec2 label_size = CalcTextSize(label, NULL, true);
     if (bb.GetWidth() <= 1.0f)
         return false;
 
     // Render text label (with clipping + alpha gradient) + unsaved marker
     const char* TAB_UNSAVED_MARKER = "*";
-    ImRect text_pixel_clip_bb(bb.Min.x + style.FramePadding.x, bb.Min.y + style.FramePadding.y, bb.Max.x - style.FramePadding.x, bb.Max.y);
+    ImRect text_pixel_clip_bb(bb.Min.x + frame_padding.x, bb.Min.y + frame_padding.y, bb.Max.x - frame_padding.x, bb.Max.y);
     if (flags & ImGuiTabItemFlags_UnsavedDocument)
     {
         text_pixel_clip_bb.Max.x -= CalcTextSize(TAB_UNSAVED_MARKER, NULL, false).x;
-        ImVec2 unsaved_marker_pos(ImMin(bb.Min.x + style.FramePadding.x + label_size.x + 2, text_pixel_clip_bb.Max.x), bb.Min.y + style.FramePadding.y + (float)(int)(-g.FontSize * 0.25f));
-        RenderTextClippedEx(draw_list, unsaved_marker_pos, bb.Max - style.FramePadding, TAB_UNSAVED_MARKER, NULL, NULL);
+        ImVec2 unsaved_marker_pos(ImMin(bb.Min.x + frame_padding.x + label_size.x + 2, text_pixel_clip_bb.Max.x), bb.Min.y + frame_padding.y + (float)(int)(-g.FontSize * 0.25f));
+        RenderTextClippedEx(draw_list, unsaved_marker_pos, bb.Max - frame_padding, TAB_UNSAVED_MARKER, NULL, NULL);
     }
     ImRect text_ellipsis_clip_bb = text_pixel_clip_bb;
 
@@ -6513,7 +6572,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     {
         ImGuiItemHoveredDataBackup last_item_backup;
         const float close_button_sz = g.FontSize * 0.5f;
-        if (CloseButton(close_button_id, ImVec2(bb.Max.x - style.FramePadding.x - close_button_sz, bb.Min.y + style.FramePadding.y + close_button_sz), close_button_sz))
+        if (CloseButton(close_button_id, ImVec2(bb.Max.x - frame_padding.x - close_button_sz, bb.Min.y + frame_padding.y + close_button_sz), close_button_sz))
             close_button_pressed = true;
         last_item_backup.Restore();
 
