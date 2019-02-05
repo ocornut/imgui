@@ -145,7 +145,7 @@ Frameworks:
 - Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
 - OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
-- ORX: [pr #1843](https://github.com/ocornut/imgui/pull/1843)
+- ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
 - LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
 - Magnum: [ImGuiIntegration](https://doc.magnum.graphics/magnum/namespaceMagnum_1_1ImGuiIntegration.html) ([example](https://doc.magnum.graphics/magnum/examples-imgui.html))
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
@@ -159,8 +159,8 @@ For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Binding
 Roadmap
 -------
 Some of the goals for 2019 are:
-- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), public branch looking for feedback)
-- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), public branch looking for feedback)
+- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), in public `docking` branch looking for feedback)
+- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), in public `docking` branch looking for feedback)
 - Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
 - Add an automation and testing system, both to test the library and end-user apps. (see [#435](https://github.com/ocornut/imgui/issues/435))
 - Make Columns better. (they are currently pretty terrible!)
@@ -177,7 +177,6 @@ User screenshots:
 <br>[Gallery Part 6](https://github.com/ocornut/imgui/issues/1607) (Feb 2018 to June 2018)
 <br>[Gallery Part 7](https://github.com/ocornut/imgui/issues/1902) (June 2018 to January 2019)
 <br>[Gallery Part 8](https://github.com/ocornut/imgui/issues/2265) (January 2019 onward)
-<br>Also see the [Mega screenshots](https://github.com/ocornut/imgui/issues/1273) for an idea of the available features.
 
 Custom engine
 [![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
@@ -204,12 +203,14 @@ The Immediate Mode GUI paradigm may at first appear unusual to some users. This 
 
 See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to different languages and frameworks.
 
-Support Forums
---------------
+Support
+-------
 
-If you have issues with: compiling, linking, adding fonts, running or displaying Dear ImGui, or wiring inputs: please post on the Discourse forums: https://discourse.dearimgui.org.
+If you are new to Dear ImGui and have issues with: compiling, linking, adding fonts, wiring inputs, running or displaying Dear ImGui: please post on the Discourse forums: https://discourse.dearimgui.org.
 
-For any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
+Otherwise for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
+
+Private support is available for paying customers.
 
 Frequently Asked Question (FAQ)
 -------------------------------
@@ -226,7 +227,7 @@ Frequently Asked Question (FAQ)
 
 I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported.
 
-You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issues/1542) and [Docking](https://github.com/ocornut/imgui/issues/2109) branches. Even though they are marked beta, several projects are using them and they are kept in sync with master regularly.
+You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issues/1542) and [Docking](https://github.com/ocornut/imgui/issues/2109) features in the `docking` branch. Several projects are using this branch and it is kept in sync with master regularly.
 
 **Who uses Dear ImGui?**
 
@@ -234,7 +235,7 @@ See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software usi
 
 **Why the odd dual naming, "Dear ImGui" vs "ImGui"?**
 
-The library started its life and is best known as "ImGui" only due to the fact that I didn't give it a proper name when I released it. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations. It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "dear imgui" that people can use to refer to this specific library in ambiguous situations.
+The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would taker off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). It seemed confusing and unfair to hog the name. To reduce the ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library in ambiguous situations. Please try to refer to it as "Dear ImGui".
 
 **How can I tell whether to dispatch mouse/keyboard to imgui or to my application?**
 <br>**How can I display an image? What is ImTextureID, how does it works?**
@@ -269,7 +270,7 @@ You can alter the look of the interface to some degree: changing colors, sizes, 
 
 Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost-insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
-There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. This is designed for binding other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to other languages.
+There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. It is designed for creating binding to other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for various third-party bindings.
 
 Support dear imgui
 ------------------
@@ -279,7 +280,7 @@ Support dear imgui
 - You may participate in the [Discourse forums](https://discourse.dearimgui.org) and the GitHub [issues tracker](https://github.com/ocornut/imgui/issues).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it.
 - See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
-- Convince your company to financially support this project.
+- Have your company financially support this project.
 
 **How can I help financing further development of Dear ImGui?**
 
@@ -316,7 +317,7 @@ Credits
 
 Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com).
 
-I first discovered the IMGUI paradigm at [Q-Games](http://www.q-games.com) where Atman had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating on it.
+I first discovered the IMGUI paradigm at [Q-Games](http://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it.
 
 Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 
@@ -327,4 +328,4 @@ Inspiration, feedback, and testing for early versions: Casey Muratori, Atman Bin
 License
 -------
 
-Dear ImGui is licensed under the MIT License, see LICENSE for more information.
+Dear ImGui is licensed under the MIT License, see [LICENSE.txt](https://github.com/ocornut/imgui/blob/master/LICENSE.txt) for more information.
