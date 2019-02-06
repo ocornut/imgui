@@ -3138,7 +3138,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     ImGuiWindow* draw_window = window;
     if (is_multiline)
     {
-        ItemAdd(total_bb, id, &frame_bb);
+        if (!ItemAdd(total_bb, id, &frame_bb))
+        {
+            ItemSize(total_bb, style.FramePadding.y);
+            EndGroup();
+            return false;
+        }
         if (!BeginChildFrame(id, frame_bb.GetSize()))
         {
             EndChildFrame();
@@ -5121,6 +5126,13 @@ bool ImGui::ListBoxHeader(const char* label, const ImVec2& size_arg)
     ImRect frame_bb(window->DC.CursorPos, window->DC.CursorPos + frame_size);
     ImRect bb(frame_bb.Min, frame_bb.Max + ImVec2(label_size.x > 0.0f ? style.ItemInnerSpacing.x + label_size.x : 0.0f, 0.0f));
     window->DC.LastItemRect = bb; // Forward storage for ListBoxFooter.. dodgy.
+
+    if (!IsRectVisible(bb.Min, bb.Max))
+    {
+        ItemSize(bb.GetSize(), style.FramePadding.y);
+        ItemAdd(bb, 0, &frame_bb);
+        return false;
+    }
 
     BeginGroup();
     if (label_size.x > 0)
