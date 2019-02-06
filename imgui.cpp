@@ -4215,6 +4215,18 @@ bool ImGui::IsItemActive()
     return false;
 }
 
+bool ImGui::IsItemActivated()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.ActiveId)
+    {
+        ImGuiWindow* window = g.CurrentWindow;
+        if (g.ActiveId == window->DC.LastItemId && g.ActiveIdPreviousFrame != window->DC.LastItemId)
+            return true;
+    }
+    return false;
+}
+
 bool ImGui::IsItemDeactivated()
 {
     ImGuiContext& g = *GImGui;

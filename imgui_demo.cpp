@@ -1420,7 +1420,7 @@ static void ShowDemoWindowWidgets()
         static float col4f[4] = { 1.0f, 0.5, 0.0f, 1.0f };
         ImGui::RadioButton("Text", &item_type, 0);
         ImGui::RadioButton("Button", &item_type, 1);
-        ImGui::RadioButton("CheckBox", &item_type, 2);
+        ImGui::RadioButton("Checkbox", &item_type, 2);
         ImGui::RadioButton("SliderFloat", &item_type, 3);
         ImGui::RadioButton("ColorEdit4", &item_type, 4);
         ImGui::RadioButton("ListBox", &item_type, 5);
@@ -1428,7 +1428,7 @@ static void ShowDemoWindowWidgets()
         bool ret = false;
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
         if (item_type == 1) { ret = ImGui::Button("ITEM: Button"); }                                    // Testing button
-        if (item_type == 2) { ret = ImGui::Checkbox("ITEM: CheckBox", &b); }                            // Testing checkbox
+        if (item_type == 2) { ret = ImGui::Checkbox("ITEM: Checkbox", &b); }                            // Testing checkbox
         if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
         if (item_type == 4) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
         if (item_type == 5) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
@@ -1442,6 +1442,7 @@ static void ShowDemoWindowWidgets()
             "IsItemHovered(_RectOnly) = %d\n"
             "IsItemActive() = %d\n"
             "IsItemEdited() = %d\n"
+            "IsItemActivated() = %d\n"
             "IsItemDeactivated() = %d\n"
             "IsItemDeactivatedEdit() = %d\n"
             "IsItemVisible() = %d\n"
@@ -1457,6 +1458,7 @@ static void ShowDemoWindowWidgets()
             ImGui::IsItemHovered(ImGuiHoveredFlags_RectOnly),
             ImGui::IsItemActive(),
             ImGui::IsItemEdited(),
+            ImGui::IsItemActivated(),
             ImGui::IsItemDeactivated(),
             ImGui::IsItemDeactivatedAfterEdit(),
             ImGui::IsItemVisible(),
