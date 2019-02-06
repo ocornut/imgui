@@ -8863,7 +8863,7 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     g.LogFile = ImFileOpen(filename, "ab");
     if (!g.LogFile)
     {
-        IM_ASSERT(g.LogFile != NULL); // Consider this an error
+        IM_ASSERT(0);
         return;
     }
     g.LogEnabled = true;

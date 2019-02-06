@@ -3225,7 +3225,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     select_all = true;
             }
             if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
-                edit_state.StbState.insert_mode = true;
+                edit_state.StbState.insert_mode = 1;
             if (!is_multiline && (focus_requested_by_tab || (user_clicked && io.KeyCtrl)))
                 select_all = true;
         }
