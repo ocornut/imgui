@@ -50,6 +50,8 @@ Other Changes:
 - Tabs: Added ImGuiTabBarFlags_TabListPopupButton flag to show a popup button on manual tab bars. (#261, #351)
 - Tabs: Removed ImGuiTabBarFlags_NoTabListPopupButton which was available in 1.67 but actually had zero use.
 - Tabs: Fixed a minor clipping glitch when changing style's FramePadding from frame to frame.
+- Menus: Tweaked horizontal overlap between parent and child menu (to help convey relative depth)
+  from using style.ItemSpacing.x to style.ItemInnerSpacing.x, the later being expected to be smaller. (#1086)
 - RadioButton: Fixed label horizontal alignment to precisely match Checkbox().
 - Window: When resizing from an edge, the border is more visible and better follow the rounded corners.
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"

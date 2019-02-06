@@ -159,6 +159,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: user may want to initial scroll to focus on the one selected value?
  - listbox: expose hovered item for a basic ListBox
  - listbox: keyboard navigation.
+ - listbox: disable capturing mouse wheel if the listbox has no scrolling. (#1681)
  - listbox: scrolling should track modified selection.
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)

@@ -7078,11 +7078,11 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
     ImRect r_outer = GetWindowAllowedExtentRect(window);
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
-        // Child menus typically request _any_ position within the parent menu item, and then our FindBestWindowPosForPopup() function will move the new menu outside the parent bounds.
+        // Child menus typically request _any_ position within the parent menu item, and then we move the new menu outside the parent bounds.
         // This is how we end up with child menus appearing (most-commonly) on the right of the parent menu.
         IM_ASSERT(g.CurrentWindow == window);
         ImGuiWindow* parent_window = g.CurrentWindowStack[g.CurrentWindowStack.Size - 2];
-        float horizontal_overlap = g.Style.ItemSpacing.x;       // We want some overlap to convey the relative depth of each menu (currently the amount of overlap is hard-coded to style.ItemSpacing.x).
+        float horizontal_overlap = g.Style.ItemInnerSpacing.x; // We want some overlap to convey the relative depth of each menu (currently the amount of overlap is hard-coded to style.ItemSpacing.x).
         ImRect r_avoid;
         if (parent_window->DC.MenuBarAppending)
             r_avoid = ImRect(-FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight(), FLT_MAX, parent_window->Pos.y + parent_window->TitleBarHeight() + parent_window->MenuBarHeight());
