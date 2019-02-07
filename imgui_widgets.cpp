@@ -6281,7 +6281,7 @@ static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
 // - TabItemEx() [Internal]
 // - SetTabItemClosed()
 // - TabItemCalcSize() [Internal]
-// - TabItemRenderBackground() [Internal]
+// - TabItemBackground() [Internal]
 // - TabItemLabelAndCloseButton() [Internal]
 //-------------------------------------------------------------------------
 
@@ -6465,7 +6465,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         // Enlarge tab display when hovering
         bb.Max.x = bb.Min.x + (float)(int)ImLerp(bb.GetWidth(), tab->WidthContents, ImSaturate((g.HoveredIdNotActiveTimer - 0.40f) * 6.0f));
         display_draw_list = GetOverlayDrawList(window);
-        TabItemRenderBackground(display_draw_list, bb, flags, GetColorU32(ImGuiCol_TitleBgActive));
+        TabItemBackground(display_draw_list, bb, flags, GetColorU32(ImGuiCol_TitleBgActive));
     }
 #endif
 
@@ -6540,16 +6540,21 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
     IM_UNUSED(flags);
     IM_ASSERT(width > 0.0f);
     const float rounding = ImMax(0.0f, ImMin(g.Style.TabRounding, width * 0.5f - 1.0f));
-    float y1 = bb.Min.y + 1.0f;
-    float y2 = bb.Max.y - 1.0f;
+    const float y1 = bb.Min.y + 1.0f;
+    const float y2 = bb.Max.y - 1.0f;
     draw_list->PathLineTo(ImVec2(bb.Min.x, y2));
     draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding, y1 + rounding), rounding, 6, 9);
     draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding, y1 + rounding), rounding, 9, 12);
     draw_list->PathLineTo(ImVec2(bb.Max.x, y2));
-    draw_list->AddConvexPolyFilled(draw_list->_Path.Data, draw_list->_Path.Size, col);
+    draw_list->PathFillConvex(col);
     if (g.Style.TabBorderSize > 0.0f)
-        draw_list->AddPolyline(draw_list->_Path.Data, draw_list->_Path.Size, GetColorU32(ImGuiCol_Border), false, g.Style.TabBorderSize);
-    draw_list->PathClear();
+    {
+        draw_list->PathLineTo(ImVec2(bb.Min.x + 0.5f, y2));
+        draw_list->PathArcToFast(ImVec2(bb.Min.x + rounding + 0.5f, y1 + rounding + 0.5f), rounding, 6, 9);
+        draw_list->PathArcToFast(ImVec2(bb.Max.x - rounding - 0.5f, y1 + rounding + 0.5f), rounding, 9, 12);
+        draw_list->PathLineTo(ImVec2(bb.Max.x - 0.5f, y2));
+        draw_list->PathStroke(GetColorU32(ImGuiCol_Border), false, g.Style.TabBorderSize);
+    }
 }
 
 // Render text label (with custom clipping) + Unsaved Document marker + Close Button logic
