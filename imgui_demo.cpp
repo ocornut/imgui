@@ -2738,8 +2738,13 @@ void ImGui::ShowFontSelector(const char* label)
     if (ImGui::BeginCombo(label, font_current->GetDebugName()))
     {
         for (int n = 0; n < io.Fonts->Fonts.Size; n++)
-            if (ImGui::Selectable(io.Fonts->Fonts[n]->GetDebugName(), io.Fonts->Fonts[n] == font_current))
-                io.FontDefault = io.Fonts->Fonts[n];
+        {
+            ImFont* font = io.Fonts->Fonts[n];
+            ImGui::PushID((void*)font);
+            if (ImGui::Selectable(font->GetDebugName(), font == font_current))
+                io.FontDefault = font;
+            ImGui::PopID();
+        }
         ImGui::EndCombo();
     }
     ImGui::SameLine();
