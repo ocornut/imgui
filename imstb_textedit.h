@@ -1,9 +1,10 @@
-// [ImGui] this is a slightly modified version of stb_textedit.h 1.12. Those changes would need to be pushed into nothings/stb
-// [ImGui] - 2018-06: fixed undo/redo after pasting large amount of text (over 32 kb). Redo will still fail when undo buffers are exhausted, but text won't be corrupted (see nothings/stb issue #620)
-// [ImGui] - 2018-06: fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
-// [ImGui] - fixed some minor warnings
+// [DEAR IMGUI] 
+// This is a slightly modified version of stb_textedit.h 1.13. 
+// Those changes would need to be pushed into nothings/stb:
+// - Fix in stb_textedit_discard_redo (see https://github.com/nothings/stb/issues/321)
+// Grep for [DEAR IMGUI] to find the changes.
 
-// stb_textedit.h - v1.12  - public domain - Sean Barrett
+// stb_textedit.h - v1.13  - public domain - Sean Barrett
 // Development of this library was sponsored by RAD Game Tools
 //
 // This C header file implements the guts of a multi-line text-editing
@@ -34,6 +35,7 @@
 //
 // VERSION HISTORY
 //
+//   1.13 (2019-02-07) fix bug in undo size management
 //   1.12 (2018-01-29) user can change STB_TEXTEDIT_KEYTYPE, fix redo to avoid crash
 //   1.11 (2017-03-03) fix HOME on last line, dragging off single-line textfield
 //   1.10 (2016-10-25) supress warnings about casting away const with -Wcast-qual
@@ -692,7 +694,7 @@ static void stb_textedit_prep_selection_at_cursor(STB_TexteditState *state)
 static int stb_textedit_cut(STB_TEXTEDIT_STRING *str, STB_TexteditState *state)
 {
    if (STB_TEXT_HAS_SELECTION(state)) {
-      stb_textedit_delete_selection(str,state); // implicity clamps
+      stb_textedit_delete_selection(str,state); // implicitly clamps
       state->has_preferred_x = 0;
       return 1;
    }
@@ -744,7 +746,7 @@ retry:
                   state->has_preferred_x = 0;
                }
             } else {
-               stb_textedit_delete_selection(str,state); // implicity clamps
+               stb_textedit_delete_selection(str,state); // implicitly clamps
                if (STB_TEXTEDIT_INSERTCHARS(str, state->cursor, &ch, 1)) {
                   stb_text_makeundo_insert(state, state->cursor, 1);
                   ++state->cursor;
@@ -1132,6 +1134,7 @@ static void stb_textedit_discard_redo(StbUndoState *state)
                state->undo_rec[i].char_storage += n;
       }
       // now move all the redo records towards the end of the buffer; the first one is at 'redo_point'
+      // {DEAR IMGUI]
       size_t move_size = (size_t)((STB_TEXTEDIT_UNDOSTATECOUNT - state->redo_point - 1) * sizeof(state->undo_rec[0]));
       const char* buf_begin = (char*)state->undo_rec; (void)buf_begin;
       const char* buf_end   = (char*)state->undo_rec + sizeof(state->undo_rec); (void)buf_end;
