@@ -55,6 +55,7 @@ Other Changes:
   from using style.ItemSpacing.x to style.ItemInnerSpacing.x, the later being expected to be smaller. (#1086)
 - RadioButton: Fixed label horizontal alignment to precisely match Checkbox().
 - Window: When resizing from an edge, the border is more visible and better follow the rounded corners.
+- Window: Fixed initial width of collapsed windows not taking account of contents width (broken in 1.67). (#2336, #176)
 - ListBox: Better optimized when clipped / non-visible.
 - InputTextMultiline: Better optimized when clipped / non-visible.
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
