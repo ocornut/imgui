@@ -2390,38 +2390,36 @@ void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 
 ImFont::ImFont()
 {
-    Scale = 1.0f;
+    FontSize = 0.0f;
+    FallbackAdvanceX = 0.0f;
     FallbackChar = (ImWchar)'?';
     DisplayOffset = ImVec2(0.0f, 0.0f);
-    ClearOutputData();
+    FallbackGlyph = NULL;
+    ContainerAtlas = NULL;
+    ConfigData = NULL;
+    ConfigDataCount = 0;
+    DirtyLookupTables = false;
+    Scale = 1.0f;
+    Ascent = Descent = 0.0f;
+    MetricsTotalSurface = 0;
 }
 
 ImFont::~ImFont()
 {
-    // Invalidate active font so that the user gets a clear crash instead of a dangling pointer.
-    // If you want to delete fonts you need to do it between Render() and NewFrame().
-    // FIXME-CLEANUP
-    /*
-    ImGuiContext& g = *GImGui;
-    if (g.Font == this)
-        g.Font = NULL;
-    */
     ClearOutputData();
 }
 
 void    ImFont::ClearOutputData()
 {
     FontSize = 0.0f;
+    FallbackAdvanceX = 0.0f;
     Glyphs.clear();
     IndexAdvanceX.clear();
     IndexLookup.clear();
     FallbackGlyph = NULL;
-    FallbackAdvanceX = 0.0f;
-    ConfigDataCount = 0;
-    ConfigData = NULL;
     ContainerAtlas = NULL;
-    Ascent = Descent = 0.0f;
     DirtyLookupTables = true;
+    Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
 }
 
