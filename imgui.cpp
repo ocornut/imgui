@@ -3211,6 +3211,27 @@ static void ImGui::UpdateMouseInputs()
         g.NavDisableMouseHover = false;
 
     g.IO.MousePosPrev = g.IO.MousePos;
+
+    if (g.IO.ConfigMacOSXBehaviors)
+    {
+        if (g.IO.MouseDown[0] && g.IO.MouseDownDuration[0] < 0.0f && g.IO.KeyCtrl)
+        {
+            g.IO.MouseDown[0] = false;
+            g.IO.MouseDown[1] = true;
+            // On the first frame, the control button counts as part of the mouse event, so we eat it
+            g.IO.KeyCtrl = false;
+            g.IO.MacOSXInCtrlRightClick = true;
+        }
+        else if (g.IO.MacOSXInCtrlRightClick && g.IO.MouseDown[0])
+        {
+            // On all frames after the first, we let control go through to allow for ctrl+right click
+            g.IO.MouseDown[0] = false;
+            g.IO.MouseDown[1] = true;
+        }
+        else if (!g.IO.MouseDown[0])
+            g.IO.MacOSXInCtrlRightClick = false;
+    }
+
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
         g.IO.MouseClicked[i] = g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] < 0.0f;
