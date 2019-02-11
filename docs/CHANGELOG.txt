@@ -77,6 +77,7 @@ Other Changes:
 - Examples: Clarified the use the ImDrawData::DisplayPos to offset clipping rectangles.
 - Examples: Win32: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created
   in a different thread or parent. (#1951, #2087, #2156, #2232) [many people]
+- Examples: SDL: Using the SDL_WINDOW_ALLOW_HIGHDPI flag. (#2306, #1676) [@rasky]
 - Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
 - Examples: Win32: Added support for mouse buttons 4 and 5 via WM_XBUTTON* messages. (#2264)
 - Examples: DirectX9: Explicitly disable fog (D3DRS_FOGENABLE) before drawing in case user state has it set. (#2288, #2230)
