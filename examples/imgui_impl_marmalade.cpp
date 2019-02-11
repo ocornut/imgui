@@ -3,6 +3,8 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+// Missing features:
+//  [ ] Renderer: Clipping rectangles are not honored.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -38,10 +40,6 @@ static ImVec2       g_RenderScale = ImVec2(1.0f,1.0f);
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 {
-    // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
-    ImGuiIO& io = ImGui::GetIO();
-    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
-
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
@@ -54,7 +52,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 
         for (int i = 0; i < nVert; i++)
         {
-            // TODO: optimize multiplication on gpu using vertex shader/projection matrix.
+            // FIXME-OPT: optimize multiplication on GPU using vertex shader/projection matrix.
             pVertStream[i].x = cmd_list->VtxBuffer[i].pos.x * g_RenderScale.x;
             pVertStream[i].y = cmd_list->VtxBuffer[i].pos.y * g_RenderScale.y;
             pUVStream[i].x = cmd_list->VtxBuffer[i].uv.x;
@@ -76,6 +74,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
+                // FIXME: Not honoring ClipRect fields.
                 CIwMaterial* pCurrentMaterial = IW_GX_ALLOC_MATERIAL();
                 pCurrentMaterial->SetShadeMode(CIwMaterial::SHADE_FLAT);
                 pCurrentMaterial->SetCullMode(CIwMaterial::CULL_NONE);

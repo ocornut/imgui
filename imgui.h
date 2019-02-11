@@ -1369,7 +1369,7 @@ struct ImGuiIO
     float       FontGlobalScale;                // = 1.0f           // Global scale all fonts
     bool        FontAllowUserScaling;           // = false          // Allow user scaling text of individual window with CTRL+Wheel.
     ImFont*     FontDefault;                    // = NULL           // Font to use on NewFrame(). Use NULL to uses Fonts->Fonts[0].
-    ImVec2      DisplayFramebufferScale;        // = (1.0f,1.0f)    // For hi-dpi/retina display or other situations where window coordinates are different from framebuffer coordinates. User storage only, presently not used by ImGui.
+    ImVec2      DisplayFramebufferScale;        // = (1, 1)         // For retina display or other situations where window coordinates are different from framebuffer coordinates. This generally ends up in ImDrawData::FramebufferScale.
 
     // Docking options (when ImGuiConfigFlags_DockingEnable is set)
     bool        ConfigDockingNoSplit;           // = false          // Simplified docking mode: disable window splitting, so docking is limited to merging multiple windows together into tab-bars.
@@ -1983,13 +1983,14 @@ struct ImDrawData
     int             TotalVtxCount;          // For convenience, sum of all ImDrawList's VtxBuffer.Size
     ImVec2          DisplayPos;             // Upper-left position of the viewport to render (== upper-left of the orthogonal projection matrix to use)
     ImVec2          DisplaySize;            // Size of the viewport to render (== io.DisplaySize for the main viewport) (DisplayPos + DisplaySize == lower-right of the orthogonal projection matrix to use)
+    ImVec2          FramebufferScale;       // Amount of pixels for each unit of DisplaySize. Based on io.DisplayFramebufferScale. Generally (1,1) on normal display, (2,2) on OSX with Retina display.
 
     // Functions
     ImDrawData()    { Valid = false; Clear(); }
     ~ImDrawData()   { Clear(); }
-    void Clear()    { Valid = false; CmdLists = NULL; CmdListsCount = TotalVtxCount = TotalIdxCount = 0; DisplayPos = DisplaySize = ImVec2(0.f, 0.f); } // The ImDrawList are owned by ImGuiContext!
-    IMGUI_API void  DeIndexAllBuffers();                // Helper to convert all buffers from indexed to non-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
-    IMGUI_API void  ScaleClipRects(const ImVec2& sc);   // Helper to scale the ClipRect field of each ImDrawCmd. Use if your final output buffer is at a different scale than ImGui expects, or if there is a difference between your window resolution and framebuffer resolution.
+    void Clear()    { Valid = false; CmdLists = NULL; CmdListsCount = TotalVtxCount = TotalIdxCount = 0; DisplayPos = DisplaySize = FramebufferScale = ImVec2(0.f, 0.f); } // The ImDrawList are owned by ImGuiContext!
+    IMGUI_API void  DeIndexAllBuffers();                    // Helper to convert all buffers from indexed to non-indexed, in case you cannot render indexed. Note: this is slow and most likely a waste of resources. Always prefer indexed rendering!
+    IMGUI_API void  ScaleClipRects(const ImVec2& fb_scale); // Helper to scale the ClipRect field of each ImDrawCmd. Use if your final output buffer is at a different scale than ImGui expects, or if there is a difference between your window resolution and framebuffer resolution.
 };
 
 //-----------------------------------------------------------------------------
@@ -2168,24 +2169,26 @@ struct ImFontAtlas
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Hot ~62/78 bytes
-    float                       FontSize;           // <user set>   // Height of characters, set during loading (don't change after loading)
-    float                       Scale;              // = 1.f        // Base font scale, multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
-    ImVec2                      DisplayOffset;      // = (0.f,0.f)  // Offset font rendering by xx pixels
-    ImVector<ImFontGlyph>       Glyphs;             //              // All glyphs.
-    ImVector<float>             IndexAdvanceX;      //              // Sparse. Glyphs->AdvanceX in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
-    ImVector<ImWchar>           IndexLookup;        //              // Sparse. Index glyphs by Unicode code-point.
-    const ImFontGlyph*          FallbackGlyph;      // == FindGlyph(FontFallbackChar)
-    float                       FallbackAdvanceX;   // == FallbackGlyph->AdvanceX
-    ImWchar                     FallbackChar;       // = '?'        // Replacement glyph if one isn't found. Only set via SetFallbackChar()
+    // Members: Hot ~24/32 bytes (for CalcTextSize)
+    ImVector<float>             IndexAdvanceX;      // 12/16 // out //            // Sparse. Glyphs->AdvanceX in a directly indexable way (more cache-friendly, for CalcTextSize functions which are often bottleneck in large UI).
+    float                       FontSize;           // 4     // in  // <user set> // Height of characters, set during loading (don't change after loading)
+    float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
+    ImWchar                     FallbackChar;       // 2     // in  // = '?'      // Replacement glyph if one isn't found. Only set via SetFallbackChar()
 
-    // Members: Cold ~18/26 bytes
-    short                       ConfigDataCount;    // ~ 1          // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
-    ImFontConfig*               ConfigData;         //              // Pointer within ContainerAtlas->ConfigData
-    ImFontAtlas*                ContainerAtlas;     //              // What we has been loaded into
-    float                       Ascent, Descent;    //              // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
-    bool                        DirtyLookupTables;
-    int                         MetricsTotalSurface;//              // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
+    // Members: Hot ~36/48 bytes (for CalcTextSize + render loop)
+    ImVector<ImWchar>           IndexLookup;        // 12-16 // out //            // Sparse. Index glyphs by Unicode code-point.
+    ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out //            // All glyphs.
+    ImVec2                      DisplayOffset;      // 8     // in  // = (0,0)    // Offset font rendering by xx pixels
+    const ImFontGlyph*          FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
+
+    // Members: Cold ~28/40 bytes
+    ImFontAtlas*                ContainerAtlas;     // 4-8   // out //            // What we has been loaded into
+    ImFontConfig*               ConfigData;         // 4-8   // in  //            // Pointer within ContainerAtlas->ConfigData
+    short                       ConfigDataCount;    // 2     // in  // ~ 1        // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
+    bool                        DirtyLookupTables;  // 1     // out //
+    float                       Scale;              // 4     // in  // = 1.f       // Base font scale, multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
+    float                       Ascent, Descent;    // 8     // out               // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
+    int                         MetricsTotalSurface;// 4     // out               // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
 
     // Methods
     IMGUI_API ImFont();

@@ -122,8 +122,9 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
             indices = (const int*)cmd_list->IdxBuffer.Data;
         }
 
+        // Render command lists
         int idx_offset = 0;
-        ImVec2 pos = draw_data->DisplayPos;
+        ImVec2 clip_off = draw_data->DisplayPos;
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
@@ -134,7 +135,7 @@ void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 ALLEGRO_BITMAP* texture = (ALLEGRO_BITMAP*)pcmd->TextureId;
-                al_set_clipping_rectangle(pcmd->ClipRect.x - pos.x, pcmd->ClipRect.y - pos.y, pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y);
+                al_set_clipping_rectangle(pcmd->ClipRect.x - clip_off.x, pcmd->ClipRect.y - clip_off.y, pcmd->ClipRect.z - pcmd->ClipRect.x, pcmd->ClipRect.w - pcmd->ClipRect.y);
                 al_draw_prim(&vertices[0], g_VertexDecl, texture, idx_offset, idx_offset + pcmd->ElemCount, ALLEGRO_PRIM_TRIANGLE_LIST);
             }
             idx_offset += pcmd->ElemCount;

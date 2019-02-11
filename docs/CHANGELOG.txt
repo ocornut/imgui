@@ -103,6 +103,11 @@ Breaking Changes:
 
 Other Changes:
 - Added .editorconfig file for text editors to standardize using spaces. (#2038) [@kudaba]
+- ImDrawData: Added FramebufferScale field (currently a copy of the value from io.DisplayFramebufferScale).
+  This is to allow render functions being written without pulling any data from ImGuiIO, allowing incoming
+  multi-viewport feature to behave on Retina display and with multiple displays.
+  If you are not using a custom binding, please update your render function code ahead of time,
+  and use draw_data->FramebufferScale instead of io.DisplayFramebufferScale. (#2306, #1676)
 - InputText: Fixed a bug where ESCAPE would not restore the initial value in all situations. (#2321) [@relick]
 - InputText: Fixed a bug where ESCAPE would be first captured by the Keyboard Navigation code. (#2321, #787)
 - InputText: Fixed redo buffer exhaustion handling (rare) which could corrupt the undo character buffer. (#2333)
@@ -114,10 +119,12 @@ Other Changes:
 - Tabs: Added ImGuiTabBarFlags_TabListPopupButton flag to show a popup button on manual tab bars. (#261, #351)
 - Tabs: Removed ImGuiTabBarFlags_NoTabListPopupButton which was available in 1.67 but actually had zero use.
 - Tabs: Fixed a minor clipping glitch when changing style's FramePadding from frame to frame.
+- Tabs: Fixed border (when enabled) so it is aligned correctly mid-pixel and appears as bright as other borders.
 - Menus: Tweaked horizontal overlap between parent and child menu (to help convey relative depth)
   from using style.ItemSpacing.x to style.ItemInnerSpacing.x, the later being expected to be smaller. (#1086)
 - RadioButton: Fixed label horizontal alignment to precisely match Checkbox().
 - Window: When resizing from an edge, the border is more visible and better follow the rounded corners.
+- Window: Fixed initial width of collapsed windows not taking account of contents width (broken in 1.67). (#2336, #176)
 - ListBox: Better optimized when clipped / non-visible.
 - InputTextMultiline: Better optimized when clipped / non-visible.
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
@@ -127,8 +134,14 @@ Other Changes:
 - ImFontAtlas: FreeType: Added support for imgui allocators + custom FreeType only SetAllocatorFunctions. (#2285) [@Vuhdo]
 - ImFontAtlas: FreeType: Fixed using imgui_freetype.cpp in unity builds. (#2302)
 - Demo: Fixed "Log" demo not initializing properly, leading to the first line not showing before a Clear. (#2318) [@bluescan]
+- Examples: Metal, OpenGL2, OpenGL3: Fixed offsetting of clipping rectangle with ImDrawData::DisplayPos != (0,0) when
+  the display frame-buffer scale scale is not (1,1). While this doesn't make a difference when using master branch,
+  this is effectively fixing support for multi-viewport with Mac Retina Displays on those examples. (#2306) [@rasky, @ocornut]
+  Also using ImDrawData::FramebufferScale instead of io.DisplayFramebufferScale.
+- Examples: Clarified the use the ImDrawData::DisplayPos to offset clipping rectangles.
 - Examples: Win32: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created
   in a different thread or parent. (#1951, #2087, #2156, #2232) [many people]
+- Examples: SDL: Using the SDL_WINDOW_ALLOW_HIGHDPI flag. (#2306, #1676) [@rasky]
 - Examples: Win32: Added support for XInput games (if ImGuiConfigFlags_NavEnableGamepad is enabled).
 - Examples: Win32: Added support for mouse buttons 4 and 5 via WM_XBUTTON* messages. (#2264)
 - Examples: DirectX9: Explicitly disable fog (D3DRS_FOGENABLE) before drawing in case user state has it set. (#2288, #2230)
