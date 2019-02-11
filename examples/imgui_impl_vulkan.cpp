@@ -289,7 +289,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     // Render the command lists:
     int vtx_offset = 0;
     int idx_offset = 0;
-    ImVec2 display_pos = draw_data->DisplayPos;
+    ImVec2 clip_off = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -305,8 +305,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 // Apply scissor/clipping rectangle
                 // FIXME: We could clamp width/height based on clamped min/max values.
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - display_pos.x) > 0 ? (int32_t)(pcmd->ClipRect.x - display_pos.x) : 0;
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y - display_pos.y) > 0 ? (int32_t)(pcmd->ClipRect.y - display_pos.y) : 0;
+                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - clip_off.x) > 0 ? (int32_t)(pcmd->ClipRect.x - clip_off.x) : 0;
+                scissor.offset.y = (int32_t)(pcmd->ClipRect.y - clip_off.y) > 0 ? (int32_t)(pcmd->ClipRect.y - clip_off.y) : 0;
                 scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
                 scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);

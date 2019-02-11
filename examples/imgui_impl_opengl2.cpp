@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-02-11: OpenGL: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-08-03: OpenGL: Disabling/restoring GL_LIGHTING and GL_COLOR_MATERIAL to increase compatibility with legacy OpenGL applications.
 //  2018-06-08: Misc: Extracted imgui_impl_opengl2.cpp/.h away from the old combined GLFW/SDL+OpenGL2 examples.
@@ -76,12 +77,10 @@ void    ImGui_ImplOpenGL2_NewFrame()
 void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    ImGuiIO& io = ImGui::GetIO();
-    int fb_width = (int)(draw_data->DisplaySize.x * io.DisplayFramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * io.DisplayFramebufferScale.y);
+    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_width == 0 || fb_height == 0)
         return;
-    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
 
     // We are using the OpenGL fixed pipeline to make the example code simpler to read!
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, vertex/texcoord/color pointers, polygon fill.
@@ -122,8 +121,11 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glPushMatrix();
     glLoadIdentity();
 
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
     // Render command lists
-    ImVec2 pos = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -143,7 +145,13 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
-                ImVec4 clip_rect = ImVec4(pcmd->ClipRect.x - pos.x, pcmd->ClipRect.y - pos.y, pcmd->ClipRect.z - pos.x, pcmd->ClipRect.w - pos.y);
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec4 clip_rect;
+                clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
+                clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
+                clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
+                clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
+
                 if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                 {
                     // Apply scissor/clipping rectangle

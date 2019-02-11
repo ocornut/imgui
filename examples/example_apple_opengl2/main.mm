@@ -92,13 +92,14 @@
 	[[self openGLContext] makeCurrentContext];
 
     ImGuiIO& io = ImGui::GetIO();
-    GLsizei width  = (GLsizei)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-    GLsizei height = (GLsizei)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
+    ImDrawData* draw_data = ImGui::GetDrawData();
+    GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     glViewport(0, 0, width, height);
 
 	glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 	glClear(GL_COLOR_BUFFER_BIT);
-	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+	ImGui_ImplOpenGL2_RenderDrawData(draw_data);
 
     // Present
     [[self openGLContext] flushBuffer];

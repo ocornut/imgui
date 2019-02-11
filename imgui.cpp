@@ -3731,6 +3731,7 @@ static void SetupDrawData(ImVector<ImDrawList*>* draw_lists, ImDrawData* draw_da
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = ImVec2(0.0f, 0.0f);
     draw_data->DisplaySize = io.DisplaySize;
+    draw_data->FramebufferScale = io.DisplayFramebufferScale;
     for (int n = 0; n < draw_lists->Size; n++)
     {
         draw_data->TotalVtxCount += draw_lists->Data[n]->VtxBuffer.Size;
