@@ -440,17 +440,10 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
     [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
 
-    size_t vertexBufferLength = 0;
-    size_t indexBufferLength = 0;
-    for (int n = 0; n < drawData->CmdListsCount; n++)
-    {
-        const ImDrawList* cmd_list = drawData->CmdLists[n];
-        vertexBufferLength += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
-        indexBufferLength += cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
-    }
-
-    MetalBuffer *vertexBuffer = [self dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
-    MetalBuffer *indexBuffer = [self dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
+    size_t vertexBufferLength = drawData->TotalVtxCount * sizeof(ImDrawVert);
+    size_t indexBufferLength = drawData->TotalIdxCount * sizeof(ImDrawIdx);
+    MetalBuffer* vertexBuffer = [self dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
+    MetalBuffer* indexBuffer = [self dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
     id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
     [commandEncoder setRenderPipelineState:renderPipelineState];
@@ -484,10 +477,13 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                 if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                 {
                     // Apply scissor/clipping rectangle
-                    MTLScissorRect scissorRect = { .x = NSUInteger(clip_rect.x),
+                    MTLScissorRect scissorRect =
+                    {
+                        .x = NSUInteger(clip_rect.x),
                         .y = NSUInteger(clip_rect.y),
                         .width = NSUInteger(clip_rect.z - clip_rect.x),
-                        .height = NSUInteger(clip_rect.w - clip_rect.y) };
+                        .height = NSUInteger(clip_rect.w - clip_rect.y)
+                    };
                     [commandEncoder setScissorRect:scissorRect];
 
 
