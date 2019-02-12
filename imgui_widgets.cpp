@@ -2832,8 +2832,9 @@ static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char**
 
 static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* text_end, const ImWchar** remaining, ImVec2* out_offset, bool stop_on_new_line)
 {
-    ImFont* font = GImGui->Font;
-    const float line_height = GImGui->FontSize;
+    ImGuiContext& g = *GImGui;
+    ImFont* font = g.Font;
+    const float line_height = g.FontSize;
     const float scale = line_height / font->FontSize;
 
     ImVec2 text_size = ImVec2(0,0);
