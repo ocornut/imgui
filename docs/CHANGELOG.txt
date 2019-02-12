@@ -63,6 +63,10 @@ Other Changes:
 - Window: Fixed initial width of collapsed windows not taking account of contents width (broken in 1.67). (#2336, #176)
 - ListBox: Better optimized when clipped / non-visible.
 - InputTextMultiline: Better optimized when clipped / non-visible.
+- Font: Fixed high-level ImGui::CalcTextSize() used by most widgets from erroneously subtracting 1.0f*scale to
+  calculated text width. Among noticeable side-effects, it would make sequences of repeated Text/SameLine calls
+  not align the same as a single call, and create mismatch between high-level size calculation and those performed
+  with the lower-level ImDrawList api. (#792) [@SlNPacifist]
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
   with a small number of segments (e.g. an hexagon). (#2287) [@baktery]
 - ImGuiTextBuffer: Added append() function (unformatted).
