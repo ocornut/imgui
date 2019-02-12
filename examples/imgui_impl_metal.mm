@@ -402,8 +402,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(drawData->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(drawData->DisplaySize.y * draw_data->FramebufferScale.y);
+    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
     if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
         return;
 
@@ -450,8 +450,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
 
     // Will project scissor/clipping rectangles into framebuffer space
-    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
-    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+    ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = drawData->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
 
     // Render command lists
     size_t vertexBufferOffset = 0;
