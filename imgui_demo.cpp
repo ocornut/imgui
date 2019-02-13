@@ -893,6 +893,25 @@ static void ShowDemoWindowWidgets()
             }
             ImGui::TreePop();
         }
+        if (ImGui::TreeNode("Alignment"))
+        {
+            static bool selected[3*3] = { true, false, true, false, true, false, true, false, true };
+            static char name[16];
+            for (int i = 0; i < 3; i++)
+            {
+                for (int j = 0; j < 3; j++)
+                {
+                    float x = (float) i / 2.f;
+                    float y = (float) j / 2.f;
+                    snprintf(name, IM_ARRAYSIZE(name), "(%.1f,%.1f)", x, y);
+                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(x, y));
+                    ImGui::Selectable(name, &selected[3*i+j], 0, ImVec2(70,70));
+                    ImGui::PopStyleVar();
+                    if (j != 2) ImGui::SameLine();
+                }
+            }
+            ImGui::TreePop();
+        }
         ImGui::TreePop();
     }
 
@@ -2825,6 +2844,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::Text("Alignment");
             ImGui::SliderFloat2("WindowTitleAlign", (float*)&style.WindowTitleAlign, 0.0f, 1.0f, "%.2f");
             ImGui::SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); ShowHelpMarker("Alignment applies when a button is larger than its text content.");
+            ImGui::SliderFloat2("SelectableTextAlign", (float*)&style.SelectableTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); ShowHelpMarker("Alignment applies when a selectable is larger than its text content.");
             ImGui::Text("Safe Area Padding"); ImGui::SameLine(); ShowHelpMarker("Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).");
             ImGui::SliderFloat2("DisplaySafeAreaPadding", (float*)&style.DisplaySafeAreaPadding, 0.0f, 30.0f, "%.0f");
             ImGui::EndTabItem();
