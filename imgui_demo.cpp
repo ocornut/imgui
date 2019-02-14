@@ -62,7 +62,6 @@ Index of this file:
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
-#define vsnprintf _vsnprintf
 #endif
 #ifdef __clang__
 #pragma clang diagnostic ignored "-Wold-style-cast"             // warning : use of old-style cast                              // yes, they are more terse.
@@ -70,6 +69,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning : cast to 'void *' from smaller integer type 'int'
 #pragma clang diagnostic ignored "-Wformat-security"            // warning : warning: format string is not a string literal
 #pragma clang diagnostic ignored "-Wexit-time-destructors"      // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
+#pragma clang diagnostic ignored "-Wunused-macros"              // warning : warning: macro is not used                         // we define snprintf/vsnprintf on Windows so they are available, but not always used.
 #if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning : zero as null pointer constant                  // some standard header variations use #define NULL 0
 #endif
@@ -91,9 +91,11 @@ Index of this file:
 
 // Play it nice with Windows users. Notepad in 2017 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
-#define IM_NEWLINE "\r\n"
+#define IM_NEWLINE  "\r\n"
+#define snprintf    _snprintf
+#define vsnprintf   _vsnprintf
 #else
-#define IM_NEWLINE "\n"
+#define IM_NEWLINE  "\n"
 #endif
 
 #define IM_MAX(_A,_B)       (((_A) >= (_B)) ? (_A) : (_B))
@@ -895,19 +897,19 @@ static void ShowDemoWindowWidgets()
         }
         if (ImGui::TreeNode("Alignment"))
         {
+            ShowHelpMarker("Alignment applies when a selectable is larger than its text content.\nBy default, Selectables uses style.SelectableTextAlign but it can be overriden on a per-item basis using PushStyleVar().");
             static bool selected[3*3] = { true, false, true, false, true, false, true, false, true };
-            static char name[16];
-            for (int i = 0; i < 3; i++)
+            for (int y = 0; y < 3; y++)
             {
-                for (int j = 0; j < 3; j++)
+                for (int x = 0; x < 3; x++)
                 {
-                    float x = (float) i / 2.f;
-                    float y = (float) j / 2.f;
-                    snprintf(name, IM_ARRAYSIZE(name), "(%.1f,%.1f)", x, y);
-                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(x, y));
-                    ImGui::Selectable(name, &selected[3*i+j], 0, ImVec2(70,70));
+                    ImVec2 alignment = ImVec2((float)x / 2.0f, (float)y / 2.0f);
+                    char name[32];
+                    sprintf(name, "(%.1f,%.1f)", alignment.x, alignment.y);
+                    if (x > 0) ImGui::SameLine();
+                    ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, alignment);
+                    ImGui::Selectable(name, &selected[3*y+x], ImGuiSelectableFlags_None, ImVec2(80,80));
                     ImGui::PopStyleVar();
-                    if (j != 2) ImGui::SameLine();
                 }
             }
             ImGui::TreePop();
