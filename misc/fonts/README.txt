@@ -25,7 +25,7 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
 - Building Custom Glyph Ranges
 - Embedding Fonts in Source Code
 - Credits/Licences for fonts included in this folder
-- Links, Other fonts
+- Fonts Links
 
 
 ---------------------------------------
@@ -106,10 +106,13 @@ Load .TTF/.OTF file with:
 For advanced options create a ImFontConfig structure and pass it to the AddFont function (it will be copied internally):
 
   ImFontConfig config;
-  config.OversampleH = 3;
+  config.OversampleH = 2;
   config.OversampleV = 1;
   config.GlyphExtraSpacing.x = 1.0f;
   ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
+
+Read about oversampling here:
+  https://github.com/nothings/stb/blob/master/tests/oversample
 
 If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API.
 The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
