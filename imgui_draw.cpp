@@ -1361,7 +1361,7 @@ ImFontConfig::ImFontConfig()
     FontDataOwnedByAtlas = true;
     FontNo = 0;
     SizePixels = 0.0f;
-    OversampleH = 3;
+    OversampleH = 3; // FIXME: 2 may be a better default?
     OversampleV = 1;
     PixelSnapH = false;
     GlyphExtraSpacing = ImVec2(0.0f, 0.0f);
