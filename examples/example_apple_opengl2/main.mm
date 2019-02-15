@@ -91,7 +91,6 @@
 	ImGui::Render();
 	[[self openGLContext] makeCurrentContext];
 
-    ImGuiIO& io = ImGui::GetIO();
     ImDrawData* draw_data = ImGui::GetDrawData();
     GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
