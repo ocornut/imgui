@@ -203,10 +203,13 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer)
 {
-    VkResult err;
-    if (draw_data->TotalVtxCount == 0)
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount == 0)
         return;
 
+    VkResult err;
     FrameDataForRender* fd = &g_FramesDataBuffers[g_FrameIndex];
     g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
 
@@ -267,8 +270,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
-        viewport.height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
+        viewport.width = (float)fb_width;
+        viewport.height = (float)fb_height;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
@@ -313,17 +316,19 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
                 clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
                 clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
 
-                // Apply scissor/clipping rectangle
-                // FIXME: We could clamp width/height based on clamped min/max values.
-                VkRect2D scissor;
-                scissor.offset.x = ((int32_t)clip_rect.x > 0) ? (int32_t)(clip_rect.x) : 0;
-                scissor.offset.y = ((int32_t)clip_rect.y > 0) ? (int32_t)(clip_rect.y) : 0;
-                scissor.extent.width = (uint32_t)(clip_rect.z - clip_rect.x);
-                scissor.extent.height = (uint32_t)(clip_rect.w - clip_rect.y + 1); // FIXME: Why +1 here?
-                vkCmdSetScissor(command_buffer, 0, 1, &scissor);
+                if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
+                {
+                    // Apply scissor/clipping rectangle
+                    VkRect2D scissor;
+                    scissor.offset.x = (int32_t)(clip_rect.x);
+                    scissor.offset.y = (int32_t)(clip_rect.y);
+                    scissor.extent.width = (uint32_t)(clip_rect.z - clip_rect.x);
+                    scissor.extent.height = (uint32_t)(clip_rect.w - clip_rect.y);
+                    vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
-                // Draw
-                vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
+                    // Draw
+                    vkCmdDrawIndexed(command_buffer, pcmd->ElemCount, 1, idx_offset, vtx_offset, 0);
+                }
             }
             idx_offset += pcmd->ElemCount;
         }
