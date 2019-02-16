@@ -81,8 +81,8 @@ Other Changes:
 - ImFontAtlas: FreeType: Fixed using imgui_freetype.cpp in unity builds. (#2302)
 - Demo: Fixed "Log" demo not initializing properly, leading to the first line not showing before a Clear. (#2318) [@bluescan]
 - Demo: Added "Auto-scroll" option in Log/Console demos. (#2300) [@nicolasnoble, @ocornut]
-- Examples: Metal, OpenGL2, OpenGL3: Fixed offsetting of clipping rectangle with ImDrawData::DisplayPos != (0,0) when
-  the display frame-buffer scale scale is not (1,1). While this doesn't make a difference when using master branch,
+- Examples: Metal, OpenGL2, OpenGL3, Vulkan: Fixed offsetting of clipping rectangle with ImDrawData::DisplayPos != (0,0)
+  when the display frame-buffer scale scale is not (1,1). While this doesn't make a difference when using master branch,
   this is effectively fixing support for multi-viewport with Mac Retina Displays on those examples. (#2306) [@rasky, @ocornut]
   Also using ImDrawData::FramebufferScale instead of io.DisplayFramebufferScale.
 - Examples: Clarified the use the ImDrawData::DisplayPos to offset clipping rectangles.

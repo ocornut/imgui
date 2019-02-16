@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-02-16: Vulkan: Viewport and clipping rectangles correctly using draw_data->FramebufferScale to allow retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-08-25: Vulkan: Fixed mishandled VkSurfaceCapabilitiesKHR::maxImageCount=0 case.
 //  2018-06-22: Inverted the parameters to ImGui_ImplVulkan_RenderDrawData() to be consistent with other bindings.
@@ -266,8 +267,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         VkViewport viewport;
         viewport.x = 0;
         viewport.y = 0;
-        viewport.width = draw_data->DisplaySize.x;
-        viewport.height = draw_data->DisplaySize.y;
+        viewport.width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
+        viewport.height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
         viewport.minDepth = 0.0f;
         viewport.maxDepth = 1.0f;
         vkCmdSetViewport(command_buffer, 0, 1, &viewport);
@@ -286,10 +287,13 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
     }
 
-    // Render the command lists:
+    // Will project scissor/clipping rectangles into framebuffer space
+    ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
+    ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+
+    // Render command lists
     int vtx_offset = 0;
     int idx_offset = 0;
-    ImVec2 clip_off = draw_data->DisplayPos;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -302,13 +306,20 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
             }
             else
             {
+                // Project scissor/clipping rectangles into framebuffer space
+                ImVec4 clip_rect;
+                clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
+                clip_rect.y = (pcmd->ClipRect.y - clip_off.y) * clip_scale.y;
+                clip_rect.z = (pcmd->ClipRect.z - clip_off.x) * clip_scale.x;
+                clip_rect.w = (pcmd->ClipRect.w - clip_off.y) * clip_scale.y;
+
                 // Apply scissor/clipping rectangle
                 // FIXME: We could clamp width/height based on clamped min/max values.
                 VkRect2D scissor;
-                scissor.offset.x = (int32_t)(pcmd->ClipRect.x - clip_off.x) > 0 ? (int32_t)(pcmd->ClipRect.x - clip_off.x) : 0;
-                scissor.offset.y = (int32_t)(pcmd->ClipRect.y - clip_off.y) > 0 ? (int32_t)(pcmd->ClipRect.y - clip_off.y) : 0;
-                scissor.extent.width = (uint32_t)(pcmd->ClipRect.z - pcmd->ClipRect.x);
-                scissor.extent.height = (uint32_t)(pcmd->ClipRect.w - pcmd->ClipRect.y + 1); // FIXME: Why +1 here?
+                scissor.offset.x = ((int32_t)clip_rect.x > 0) ? (int32_t)(clip_rect.x) : 0;
+                scissor.offset.y = ((int32_t)clip_rect.y > 0) ? (int32_t)(clip_rect.y) : 0;
+                scissor.extent.width = (uint32_t)(clip_rect.z - clip_rect.x);
+                scissor.extent.height = (uint32_t)(clip_rect.w - clip_rect.y + 1); // FIXME: Why +1 here?
                 vkCmdSetScissor(command_buffer, 0, 1, &scissor);
 
                 // Draw
