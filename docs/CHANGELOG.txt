@@ -73,6 +73,7 @@ Other Changes:
   calculated text width. Among noticeable side-effects, it would make sequences of repeated Text/SameLine calls
   not align the same as a single call, and create mismatch between high-level size calculation and those performed
   with the lower-level ImDrawList api. (#792) [@SlNPacifist]
+- Font: Fixed building atlas when specifying duplicate/overlapping ranges within a same font. (#2353, #2233)
 - ImDrawList: Fixed AddCircle(), AddCircleFilled() angle step being off, which was visible when drawing a "circle"
   with a small number of segments (e.g. an hexagon). (#2287) [@baktery]
 - ImGuiTextBuffer: Added append() function (unformatted).
