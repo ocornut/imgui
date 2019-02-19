@@ -471,6 +471,7 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
     viewport->PlatformUserData = viewport->PlatformHandle = NULL;
 }
 
+// FIXME-VIEWPORT: Implement same work-around for Linux/OSX in the meanwhile.
 #if defined(_WIN32) && GLFW_HAS_GLFW_HOVERED
 static WNDPROC g_GlfwWndProc = NULL;
 static LRESULT CALLBACK WndProcNoInputs(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -513,7 +514,9 @@ static void ImGui_ImplGlfw_ShowWindow(ImGuiViewport* viewport)
 #endif
 
     // GLFW hack: GLFW 3.2 has a bug where glfwShowWindow() also activates/focus the window.
-    // The fix was pushed to GLFW repository on 2018/01/09 and should be included in GLFW 3.3. See https://github.com/glfw/glfw/issues/1179
+    // The fix was pushed to GLFW repository on 2018/01/09 and should be included in GLFW 3.3 via a GLFW_FOCUS_ON_SHOW window attribute.
+    // See https://github.com/glfw/glfw/issues/1189
+    // FIXME-VIEWPORT: Implement same work-around for Linux/OSX in the meanwhile.
     if (viewport->Flags & ImGuiViewportFlags_NoFocusOnAppearing)
     {
         ::ShowWindow(hwnd, SW_SHOWNA);
