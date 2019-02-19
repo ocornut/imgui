@@ -2648,7 +2648,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
         return false;
 
     ImGuiContext& g = *GImGui;
-    const ImGuiStyle& style = g.Style;
+    ImGuiStyle& style = g.Style;
 
     IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
     if (format == NULL)
@@ -2674,6 +2674,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
         PopItemWidth();
 
         // Step buttons
+        const ImVec2 backup_frame_padding = style.FramePadding;
+        style.FramePadding.x = style.FramePadding.y;
         ImGuiButtonFlags button_flags = ImGuiButtonFlags_Repeat | ImGuiButtonFlags_DontClosePopups;
         if (flags & ImGuiInputTextFlags_ReadOnly)
             button_flags |= ImGuiButtonFlags_Disabled;
@@ -2691,6 +2693,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
         }
         SameLine(0, style.ItemInnerSpacing.x);
         TextUnformatted(label, FindRenderedTextEnd(label));
+        style.FramePadding = backup_frame_padding;
 
         PopID();
         EndGroup();
