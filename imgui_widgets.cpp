@@ -2616,6 +2616,7 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
 // FIXME: Facilitate using this in variety of other situations.
 bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
+    IM_UNUSED(id);
     ImGuiContext& g = *GImGui;
 
     // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id.
