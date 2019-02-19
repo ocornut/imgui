@@ -72,8 +72,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
  - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
- - input text: what's the easiest way to implement a nice IP/Mac address input editor?
- - input text: Global callback system so user can plug in an expression evaluator easily.
+ - input text: decorrelate layout from inputs - e.g. what's the easiest way to implement a nice IP/Mac address input editor?
+ - input text: global callback system so user can plug in an expression evaluator easily.
+ - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
+ - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
+ - input text: a way for the user to provide syntax coloring.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)

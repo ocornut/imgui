@@ -3212,13 +3212,14 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.ID == id && g.ActiveIdPreviousFrame == GetScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
+    const bool user_scroll_finish = is_multiline && edit_state.ID == id && g.ActiveId == 0 && g.ActiveIdPreviousFrame == GetScrollbarID(draw_window, ImGuiAxis_Y);
+    const bool user_scroll_active = is_multiline && edit_state.ID == id && g.ActiveId == GetScrollbarID(draw_window, ImGuiAxis_Y);
 
     bool clear_active_id = false;
 
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0 || user_nav_input_start) && (!is_multiline);
-    if (focus_requested || user_clicked || user_scrolled || user_nav_input_start)
+    if (focus_requested || user_clicked || user_scroll_finish || user_nav_input_start)
     {
         if (g.ActiveId != id)
         {
@@ -3624,9 +3625,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.f, 0.f);
-    const bool is_currently_scrolling = (edit_state.ID == id && is_multiline && g.ActiveId == GetScrollbarID(draw_window, ImGuiAxis_Y));
-    if (g.ActiveId == id || is_currently_scrolling)
+    if (g.ActiveId == id || user_scroll_active)
     {
+        // Animate cursor
         edit_state.CursorAnim += io.DeltaTime;
 
         // This is going to be messy. We need to:
@@ -3707,7 +3708,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     scroll_y = ImMax(0.0f, cursor_offset.y - g.FontSize);
                 else if (cursor_offset.y - size.y >= scroll_y)
                     scroll_y = cursor_offset.y - size.y;
-                draw_window->DC.CursorPos.y += (draw_window->Scroll.y - scroll_y);   // To avoid a frame of lag
+                draw_window->DC.CursorPos.y += (draw_window->Scroll.y - scroll_y);   // Manipulate cursor pos immediately avoid a frame of lag
                 draw_window->Scroll.y = scroll_y;
                 render_pos.y = draw_window->DC.CursorPos.y;
             }
@@ -3751,6 +3752,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
         }
 
+        // We test for 'buf_display_max_length' as a way to avoid some pathological cases (e.g. single-line 1 MB string) which would make ImDrawList crash.
         const int buf_display_len = edit_state.CurLenA;
         if (is_multiline || buf_display_len < buf_display_max_length)
             draw_window->DrawList->AddText(g.Font, g.FontSize, render_pos - render_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display + buf_display_len, 0.0f, is_multiline ? NULL : &clip_rect);
