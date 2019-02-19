@@ -710,11 +710,9 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     return pressed;
 }
 
-ImGuiID ImGui::GetScrollbarID(ImGuiLayoutType direction)
+ImGuiID ImGui::GetScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
 {
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    return window->GetID((direction == ImGuiLayoutType_Horizontal) ? "#SCROLLX" : "#SCROLLY");
+    return window->GetIDNoKeepAlive(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
 }
 
 // Vertical/Horizontal scrollbar
@@ -722,15 +720,16 @@ ImGuiID ImGui::GetScrollbarID(ImGuiLayoutType direction)
 // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
 // - We store values as normalized ratio and in a form that allows the window content to change while we are holding on a scrollbar
 // - We handle both horizontal and vertical scrollbars, which makes the terminology not ideal.
-void ImGui::Scrollbar(ImGuiLayoutType direction)
+void ImGui::Scrollbar(ImGuiAxis axis)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    const bool horizontal = (direction == ImGuiLayoutType_Horizontal);
+    const bool horizontal = (axis == ImGuiAxis_X);
     const ImGuiStyle& style = g.Style;
-    const ImGuiID id = GetScrollbarID(direction);
-    
+    const ImGuiID id = GetScrollbarID(window, axis);
+    KeepAliveID(id);
+
     // Render background
     bool other_scrollbar = (horizontal ? window->ScrollbarY : window->ScrollbarX);
     float other_scrollbar_size_w = other_scrollbar ? style.ScrollbarSize : 0.0f;
@@ -748,7 +747,7 @@ void ImGui::Scrollbar(ImGuiLayoutType direction)
 
     // When we are too small, start hiding and disabling the grab (this reduce visual noise on very small window and facilitate using the resize grab)
     float alpha = 1.0f;
-    if ((direction == ImGuiLayoutType_Vertical) && bb_height < g.FontSize + g.Style.FramePadding.y * 2.0f)
+    if ((axis == ImGuiAxis_Y) && bb_height < g.FontSize + g.Style.FramePadding.y * 2.0f)
     {
         alpha = ImSaturate((bb_height - g.FontSize) / (g.Style.FramePadding.y * 2.0f));
         if (alpha <= 0.0f)
@@ -3210,7 +3209,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
-    const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.ID == id && g.ActiveIdPreviousFrame == draw_window->GetIDNoKeepAlive("#SCROLLY");
+    const bool user_scrolled = is_multiline && g.ActiveId == 0 && edit_state.ID == id && g.ActiveIdPreviousFrame == GetScrollbarID(draw_window, ImGuiAxis_Y);
     const bool user_nav_input_start = (g.ActiveId != id) && ((g.NavInputId == id) || (g.NavActivateId == id && g.NavInputSource == ImGuiInputSource_NavKeyboard));
 
     bool clear_active_id = false;
@@ -3622,7 +3621,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 render_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.f, 0.f);
-    const bool is_currently_scrolling = (edit_state.ID == id && is_multiline && g.ActiveId == draw_window->GetIDNoKeepAlive("#SCROLLY"));
+    const bool is_currently_scrolling = (edit_state.ID == id && is_multiline && g.ActiveId == GetScrollbarID(draw_window, ImGuiAxis_Y));
     if (g.ActiveId == id || is_currently_scrolling)
     {
         edit_state.CursorAnim += io.DeltaTime;
