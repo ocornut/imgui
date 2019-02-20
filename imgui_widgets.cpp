@@ -2898,7 +2898,7 @@ static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* t
 }
 
 // Wrapper for stb_textedit.h to edit text (our wrapper is for: statically sized buffer, single-line, wchar characters. InputText converts between UTF-8 and wchar)
-namespace ImGuiStb
+namespace ImStb
 {
 
 static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return obj->CurLenW; }
@@ -3001,7 +3001,7 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
 
 void ImGuiInputTextState::OnKeyPressed(int key)
 {
-    stb_textedit_key(this, &StbState, key);
+    stb_textedit_key(this, &Stb, key);
     CursorFollow = true;
     CursorAnimReset();
 }
@@ -3249,12 +3249,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             {
                 edit_state.ID = id;
                 edit_state.ScrollX = 0.0f;
-                stb_textedit_initialize_state(&edit_state.StbState, !is_multiline);
+                stb_textedit_initialize_state(&edit_state.Stb, !is_multiline);
                 if (!is_multiline && focus_requested_by_code)
                     select_all = true;
             }
             if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
-                edit_state.StbState.insert_mode = 1;
+                edit_state.Stb.insert_mode = 1;
             if (!is_multiline && (focus_requested_by_tab || (user_clicked && io.KeyCtrl)))
                 select_all = true;
         }
@@ -3318,13 +3318,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             if (hovered)
             {
-                stb_textedit_click(&edit_state, &edit_state.StbState, mouse_x, mouse_y);
+                stb_textedit_click(&edit_state, &edit_state.Stb, mouse_x, mouse_y);
                 edit_state.CursorAnimReset();
             }
         }
         else if (io.MouseDown[0] && !edit_state.SelectedAllMouseLock && (io.MouseDelta.x != 0.0f || io.MouseDelta.y != 0.0f))
         {
-            stb_textedit_drag(&edit_state, &edit_state.StbState, mouse_x, mouse_y);
+            stb_textedit_drag(&edit_state, &edit_state.Stb, mouse_x, mouse_y);
             edit_state.CursorAnimReset();
             edit_state.CursorFollow = true;
         }
@@ -3424,8 +3424,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // Cut, Copy
             if (io.SetClipboardTextFn)
             {
-                const int ib = edit_state.HasSelection() ? ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end) : 0;
-                const int ie = edit_state.HasSelection() ? ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end) : edit_state.CurLenW;
+                const int ib = edit_state.HasSelection() ? ImMin(edit_state.Stb.select_start, edit_state.Stb.select_end) : 0;
+                const int ie = edit_state.HasSelection() ? ImMax(edit_state.Stb.select_start, edit_state.Stb.select_end) : edit_state.CurLenW;
                 edit_state.TempBuffer.resize((ie-ib) * 4 + 1);
                 ImTextStrToUtf8(edit_state.TempBuffer.Data, edit_state.TempBuffer.Size, edit_state.TextW.Data+ib, edit_state.TextW.Data+ie);
                 SetClipboardText(edit_state.TempBuffer.Data);
@@ -3435,7 +3435,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 if (!edit_state.HasSelection())
                     edit_state.SelectAll();
                 edit_state.CursorFollow = true;
-                stb_textedit_cut(&edit_state, &edit_state.StbState);
+                stb_textedit_cut(&edit_state, &edit_state.Stb);
             }
         }
         else if (is_paste)
@@ -3459,7 +3459,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 clipboard_filtered[clipboard_filtered_len] = 0;
                 if (clipboard_filtered_len > 0) // If everything was filtered, ignore the pasting operation
                 {
-                    stb_textedit_paste(&edit_state, &edit_state.StbState, clipboard_filtered, clipboard_filtered_len);
+                    stb_textedit_paste(&edit_state, &edit_state.Stb, clipboard_filtered, clipboard_filtered_len);
                     edit_state.CursorFollow = true;
                 }
                 MemFree(clipboard_filtered);
@@ -3538,9 +3538,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
                     // We have to convert from wchar-positions to UTF-8-positions, which can be pretty slow (an incentive to ditch the ImWchar buffer, see https://github.com/nothings/stb/issues/188)
                     ImWchar* text = edit_state.TextW.Data;
-                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.cursor);
-                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_start);
-                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromStr(text, text + edit_state.StbState.select_end);
+                    const int utf8_cursor_pos = callback_data.CursorPos = ImTextCountUtf8BytesFromStr(text, text + edit_state.Stb.cursor);
+                    const int utf8_selection_start = callback_data.SelectionStart = ImTextCountUtf8BytesFromStr(text, text + edit_state.Stb.select_start);
+                    const int utf8_selection_end = callback_data.SelectionEnd = ImTextCountUtf8BytesFromStr(text, text + edit_state.Stb.select_end);
 
                     // Call user code
                     callback(&callback_data);
@@ -3549,9 +3549,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     IM_ASSERT(callback_data.Buf == edit_state.TempBuffer.Data);  // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == edit_state.BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
-                    if (callback_data.CursorPos != utf8_cursor_pos)            { edit_state.StbState.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos); edit_state.CursorFollow = true; }
-                    if (callback_data.SelectionStart != utf8_selection_start)  { edit_state.StbState.select_start = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionStart); }
-                    if (callback_data.SelectionEnd != utf8_selection_end)      { edit_state.StbState.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd); }
+                    if (callback_data.CursorPos != utf8_cursor_pos)            { edit_state.Stb.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos); edit_state.CursorFollow = true; }
+                    if (callback_data.SelectionStart != utf8_selection_start)  { edit_state.Stb.select_start = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionStart); }
+                    if (callback_data.SelectionEnd != utf8_selection_end)      { edit_state.Stb.select_end = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.SelectionEnd); }
                     if (callback_data.BufDirty)
                     {
                         IM_ASSERT(callback_data.BufTextLen == (int)strlen(callback_data.Buf)); // You need to maintain BufTextLen if you change the text!
@@ -3607,15 +3607,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (clear_active_id && g.ActiveId == id)
         ClearActiveID();
 
-    // Render
-    // Select which buffer we are going to display. When ImGuiInputTextFlags_NoLiveEdit is set 'buf' might still be the old value. We set buf to NULL to prevent accidental usage from now on.
-    const char* buf_display = (g.ActiveId == id && is_editable) ? edit_state.TempBuffer.Data : buf; buf = NULL;
-
     // Set upper limit of single-line InputTextEx() at 2 million characters strings. The current pathological worst case is a long line
     // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
     // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
     const int buf_display_max_length = 2 * 1024 * 1024;
 
+    // Select which buffer we are going to display. We set buf to NULL to prevent accidental usage from now on.
+    const char* buf_display = (g.ActiveId == id && is_editable) ? edit_state.TempBuffer.Data : buf; 
+    buf = NULL;
+
+    // Render
     if (!is_multiline)
     {
         RenderNavHighlight(frame_bb, id);
@@ -3642,13 +3643,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         {
             // Count lines + find lines numbers straddling 'cursor' and 'select_start' position.
             const ImWchar* searches_input_ptr[2];
-            searches_input_ptr[0] = text_begin + edit_state.StbState.cursor;
+            searches_input_ptr[0] = text_begin + edit_state.Stb.cursor;
             searches_input_ptr[1] = NULL;
             int searches_remaining = 1;
             int searches_result_line_number[2] = { -1, -999 };
-            if (edit_state.StbState.select_start != edit_state.StbState.select_end)
+            if (edit_state.Stb.select_start != edit_state.Stb.select_end)
             {
-                searches_input_ptr[1] = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
+                searches_input_ptr[1] = text_begin + ImMin(edit_state.Stb.select_start, edit_state.Stb.select_end);
                 searches_result_line_number[1] = -1;
                 searches_remaining++;
             }
@@ -3717,10 +3718,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         const ImVec2 render_scroll = ImVec2(edit_state.ScrollX, 0.0f);
 
         // Draw selection
-        if (edit_state.StbState.select_start != edit_state.StbState.select_end)
+        if (edit_state.Stb.select_start != edit_state.Stb.select_end)
         {
-            const ImWchar* text_selected_begin = text_begin + ImMin(edit_state.StbState.select_start, edit_state.StbState.select_end);
-            const ImWchar* text_selected_end = text_begin + ImMax(edit_state.StbState.select_start, edit_state.StbState.select_end);
+            const ImWchar* text_selected_begin = text_begin + ImMin(edit_state.Stb.select_start, edit_state.Stb.select_end);
+            const ImWchar* text_selected_end = text_begin + ImMax(edit_state.Stb.select_start, edit_state.Stb.select_end);
 
             float bg_offy_up = is_multiline ? 0.0f : -1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
             float bg_offy_dn = is_multiline ? 0.0f : 2.0f;

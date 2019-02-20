@@ -96,7 +96,7 @@ typedef int ImGuiDragFlags;         // -> enum ImGuiDragFlags_         // Flags:
 // STB libraries includes
 //-------------------------------------------------------------------------
 
-namespace ImGuiStb
+namespace ImStb
 {
 
 #undef STB_TEXTEDIT_STRING
@@ -106,7 +106,7 @@ namespace ImGuiStb
 #define STB_TEXTEDIT_GETWIDTH_NEWLINE   -1.0f
 #include "imstb_textedit.h"
 
-} // namespace ImGuiStb
+} // namespace ImStb
 
 //-----------------------------------------------------------------------------
 // Context pointer
@@ -567,10 +567,10 @@ struct IMGUI_API ImGuiInputTextState
     int                     CurLenA, CurLenW;       // we need to maintain our buffer length in both UTF-8 and wchar format.
     int                     BufCapacityA;           // end-user buffer capacity
     float                   ScrollX;
-    ImGuiStb::STB_TexteditState StbState;
-    float                   CursorAnim;
-    bool                    CursorFollow;
-    bool                    SelectedAllMouseLock;
+    ImStb::STB_TexteditState Stb;                   // state for stb_textedit.h
+    float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
+    bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
+    bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
 
     // Temporarily set when active
     ImGuiInputTextFlags     UserFlags;
@@ -579,10 +579,10 @@ struct IMGUI_API ImGuiInputTextState
 
     ImGuiInputTextState()                           { memset(this, 0, sizeof(*this)); }
     void                CursorAnimReset()           { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
-    void                CursorClamp()               { StbState.cursor = ImMin(StbState.cursor, CurLenW); StbState.select_start = ImMin(StbState.select_start, CurLenW); StbState.select_end = ImMin(StbState.select_end, CurLenW); }
-    bool                HasSelection() const        { return StbState.select_start != StbState.select_end; }
-    void                ClearSelection()            { StbState.select_start = StbState.select_end = StbState.cursor; }
-    void                SelectAll()                 { StbState.select_start = 0; StbState.cursor = StbState.select_end = CurLenW; StbState.has_preferred_x = 0; }
+    void                CursorClamp()               { Stb.cursor = ImMin(Stb.cursor, CurLenW); Stb.select_start = ImMin(Stb.select_start, CurLenW); Stb.select_end = ImMin(Stb.select_end, CurLenW); }
+    bool                HasSelection() const        { return Stb.select_start != Stb.select_end; }
+    void                ClearSelection()            { Stb.select_start = Stb.select_end = Stb.cursor; }
+    void                SelectAll()                 { Stb.select_start = 0; Stb.cursor = Stb.select_end = CurLenW; Stb.has_preferred_x = 0; }
     void                OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
 };
 
