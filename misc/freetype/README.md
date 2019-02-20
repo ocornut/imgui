@@ -1,14 +1,14 @@
 # imgui_freetype
 
-This is an attempt to replace stb_truetype (the default imgui's font rasterizer) with FreeType. 
-Currently not optimal and probably has some limitations or bugs.
-By [Vuhdo](https://github.com/Vuhdo) (Aleksei Skriabin). Improvements by @mikesart. Maintained by @ocornut.
+Build font atlases using FreeType instead of stb_truetype (the default imgui's font rasterizer).
+<br>by @vuhdo, @mikesart, @ocornut.
 
-**Usage**
-1. Get latest FreeType binaries or build yourself.
+### Usage
+
+1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype`).
 2. Add imgui_freetype.h/cpp alongside your imgui sources.
 3. Include imgui_freetype.h after imgui.h.
-4. Call ImGuiFreeType::BuildFontAtlas() *BEFORE* calling ImFontAtlas::GetTexDataAsRGBA32() or ImFontAtlas::Build() (so normal Build() won't be called):
+4. Call `ImGuiFreeType::BuildFontAtlas()` *BEFORE* calling `ImFontAtlas::GetTexDataAsRGBA32()` or `ImFontAtlas::Build()` (so normal Build() won't be called):
 
 ```cpp
 // See ImGuiFreeType::RasterizationFlags
@@ -17,13 +17,14 @@ ImGuiFreeType::BuildFontAtlas(io.Fonts, flags);
 io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 ```
 
-**Gamma Correct Blending**
+### Gamma Correct Blending
+
 FreeType assumes blending in linear space rather than gamma space.
 See FreeType note for [FT_Render_Glyph](https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#FT_Render_Glyph).
 For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
 The default imgui styles will be impacted by this change (alpha values will need tweaking).
 
-**Test code Usage**
+### Test code Usage
 ```cpp
 #include "misc/freetype/imgui_freetype.h"
 #include "misc/freetype/imgui_freetype.cpp"
@@ -42,16 +43,15 @@ while (true)
    if (freetype_test.UpdateRebuild())
    {
       // REUPLOAD FONT TEXTURE TO GPU
-      // e.g ImGui_ImplGlfwGL3_InvalidateDeviceObjects() + ImGui_ImplGlfwGL3_CreateDeviceObjects()
+      // e.g ImGui_ImplOpenGL3_DestroyDeviceObjects() + ImGui_ImplOpenGL3_CreateDeviceObjects()
    }
    ImGui::NewFrame();
    freetype_test.ShowFreetypeOptionsWindow();
    ...
-   }
 }
 ```
 
-**Test code**
+### Test code
 ```cpp
 #include "misc/freetype/imgui_freetype.h"
 #include "misc/freetype/imgui_freetype.cpp"
@@ -61,12 +61,13 @@ struct FreeTypeTest
     enum FontBuildMode
     {
         FontBuildMode_FreeType,
-        FontBuildMode_Stb,
+        FontBuildMode_Stb
     };
 
     FontBuildMode BuildMode;
     bool          WantRebuild;
     float         FontsMultiply;
+    int           FontsPadding;
     unsigned int  FontsFlags;
 
     FreeTypeTest()
@@ -74,6 +75,7 @@ struct FreeTypeTest
         BuildMode = FontBuildMode_FreeType;
         WantRebuild = true;
         FontsMultiply = 1.0f;
+        FontsPadding = 1;
         FontsFlags = 0;
     }
 
@@ -85,8 +87,10 @@ struct FreeTypeTest
         ImGuiIO& io = ImGui::GetIO();
         for (int n = 0; n < io.Fonts->Fonts.Size; n++)
         {
-            io.Fonts->Fonts[n]->ConfigData->RasterizerMultiply = FontsMultiply;
-            io.Fonts->Fonts[n]->ConfigData->RasterizerFlags = (BuildMode == FontBuildMode_FreeType) ? FontsFlags : 0x00;
+            ImFontConfig* font_config = (ImFontConfig*)io.Fonts->Fonts[n]->ConfigData;
+            io.Fonts->TexGlyphPadding = FontsPadding;
+            font_config->RasterizerMultiply = FontsMultiply;
+            font_config->RasterizerFlags = (BuildMode == FontBuildMode_FreeType) ? FontsFlags : 0x00;
         }
         if (BuildMode == FontBuildMode_FreeType)
             ImGuiFreeType::BuildFontAtlas(io.Fonts, FontsFlags);
@@ -105,6 +109,7 @@ struct FreeTypeTest
         ImGui::SameLine();
         WantRebuild |= ImGui::RadioButton("Stb (Default)", (int*)&BuildMode, FontBuildMode_Stb);
         WantRebuild |= ImGui::DragFloat("Multiply", &FontsMultiply, 0.001f, 0.0f, 2.0f);
+        WantRebuild |= ImGui::DragInt("Padding", &FontsPadding, 0.1f, 0, 16);
         if (BuildMode == FontBuildMode_FreeType)
         {
             WantRebuild |= ImGui::CheckboxFlags("NoHinting",     &FontsFlags, ImGuiFreeType::NoHinting);
@@ -120,14 +125,6 @@ struct FreeTypeTest
 };
 ```
 
-**Known issues**
-- Output texture has excessive resolution (lots of vertical waste).
-- FreeType's memory allocator is not overridden.
+### Known issues
 - `cfg.OversampleH`, `OversampleV` are ignored (but perhaps not so necessary with this rasterizer).
-
-**Obligatory comparison screenshots**
-
-Using Windows built-in segoeui.ttf font. Open in new browser tabs, view at 1080p+.
-
-![freetype rasterizer](https://raw.githubusercontent.com/wiki/ocornut/imgui_club/images/freetype_20170817.png)
 
