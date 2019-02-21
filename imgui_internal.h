@@ -562,11 +562,11 @@ struct IMGUI_API ImGuiInputTextState
 {
     ImGuiID                 ID;                     // widget id owning the text state
     ImVector<ImWchar>       TextW;                  // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
-    ImVector<char>          InitialText;            // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
-    ImVector<char>          TempBuffer;             // temporary buffer for callback and other other operations. size=capacity.
+    ImVector<char>          InitialTextA;           // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
+    ImVector<char>          TempBufferA;            // temporary buffer for callbacks and other operations. size=capacity.
     int                     CurLenA, CurLenW;       // we need to maintain our buffer length in both UTF-8 and wchar format.
     int                     BufCapacityA;           // end-user buffer capacity
-    float                   ScrollX;
+    float                   ScrollX;                // horizontal scrolling/offset
     ImStb::STB_TexteditState Stb;                   // state for stb_textedit.h
     float                   CursorAnim;             // timer for cursor blink, reset on every user action so the cursor reappears immediately
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
@@ -578,6 +578,7 @@ struct IMGUI_API ImGuiInputTextState
     void*                   UserCallbackData;
 
     ImGuiInputTextState()                           { memset(this, 0, sizeof(*this)); }
+    void                ClearFreeMemory()           { TextW.clear(); InitialTextA.clear(); TempBufferA.clear(); }
     void                CursorAnimReset()           { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
     void                CursorClamp()               { Stb.cursor = ImMin(Stb.cursor, CurLenW); Stb.select_start = ImMin(Stb.select_start, CurLenW); Stb.select_end = ImMin(Stb.select_end, CurLenW); }
     bool                HasSelection() const        { return Stb.select_start != Stb.select_end; }

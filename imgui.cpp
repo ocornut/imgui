@@ -58,9 +58,9 @@ CODE
 // [SECTION] FORWARD DECLARATIONS
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
 // [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
-// [SECTION] MISC HELPER/UTILITIES (Maths, String, Format, Hash, File functions)
-// [SECTION] MISC HELPER/UTILITIES (ImText* functions)
-// [SECTION] MISC HELPER/UTILITIES (Color functions)
+// [SECTION] MISC HELPERS/UTILITIES (Maths, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
+// [SECTION] MISC HELPERS/UTILITIES (Color functions)
 // [SECTION] ImGuiStorage
 // [SECTION] ImGuiTextFilter
 // [SECTION] ImGuiTextBuffer
@@ -1226,7 +1226,7 @@ void ImGuiIO::ClearInputCharacters()
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] MISC HELPER/UTILITIES (Maths, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (Maths, String, Format, Hash, File functions)
 //-----------------------------------------------------------------------------
 
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
@@ -1749,7 +1749,7 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] MISC HELPER/UTILTIES (Color functions)
+// [SECTION] MISC HELPERS/UTILTIES (Color functions)
 // Note: The Convert functions are early design which are not consistent with other API.
 //-----------------------------------------------------------------------------
 
@@ -3603,9 +3603,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.DrawDataBuilder.ClearFreeMemory();
     g.OverlayDrawList.ClearFreeMemory();
     g.PrivateClipboard.clear();
-    g.InputTextState.TextW.clear();
-    g.InputTextState.InitialText.clear();
-    g.InputTextState.TempBuffer.clear();
+    g.InputTextState.ClearFreeMemory();
 
     for (int i = 0; i < g.SettingsWindows.Size; i++)
         IM_DELETE(g.SettingsWindows[i].Name);
