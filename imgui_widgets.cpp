@@ -3223,50 +3223,51 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     bool clear_active_id = false;
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0 || user_nav_input_start) && (!is_multiline);
 
-    if (focus_requested || user_clicked || user_scroll_finish || user_nav_input_start)
+    const bool init_make_active = (focus_requested || user_clicked || user_scroll_finish || user_nav_input_start);
+    if (init_make_active && g.ActiveId != id)
     {
-        if (g.ActiveId != id)
+        // Access state even if we don't own it yet.
+        state = &g.InputTextState;
+        state->CursorAnimReset();
+
+        // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
+        // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
+        const int buf_len = (int)strlen(buf);
+        state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
+        memcpy(state->InitialTextA.Data, buf, buf_len + 1);
+
+        // Start edition
+        const int prev_len_w = state->CurLenW;
+        const char* buf_end = NULL;
+        state->TextW.resize(buf_size + 1);          // wchar count <= UTF-8 count. we use +1 to make sure that .Data is always pointing to at least an empty string.
+        state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, buf_size, buf, NULL, &buf_end);
+        state->CurLenA = (int)(buf_end - buf);      // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
+
+        // Preserve cursor position and undo/redo stack if we come back to same widget
+        // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
+        const bool recycle_state = (state->ID == id) && (prev_len_w == state->CurLenW);
+        if (recycle_state)
         {
-            // Access state even if we don't own it yet.
-            state = &g.InputTextState;
-
-            // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
-            // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
-            const int buf_len = (int)strlen(buf);
-            state->InitialTextA.resize(buf_len + 1);    // UTF-8. we use +1 to make sure that .Data is always pointing to at least an empty string.
-            memcpy(state->InitialTextA.Data, buf, buf_len + 1);
-
-            // Start edition
-            const int prev_len_w = state->CurLenW;
-            const char* buf_end = NULL;
-            state->TextW.resize(buf_size+1);            // wchar count <= UTF-8 count. we use +1 to make sure that .Data is always pointing to at least an empty string.
-            state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, buf_size, buf, NULL, &buf_end);
-            state->CurLenA = (int)(buf_end - buf);      // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
-            state->CursorAnimReset();
-
-            // Preserve cursor position and undo/redo stack if we come back to same widget
-            // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
-            const bool recycle_state = (state->ID == id) && (prev_len_w == state->CurLenW);
-            if (recycle_state)
-            {
-                // Recycle existing cursor/selection/undo stack but clamp position
-                // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
-                state->CursorClamp();
-            }
-            else
-            {
-                state->ID = id;
-                state->ScrollX = 0.0f;
-                stb_textedit_initialize_state(&state->Stb, !is_multiline);
-                if (!is_multiline && focus_requested_by_code)
-                    select_all = true;
-            }
-            if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
-                state->Stb.insert_mode = 1;
-            if (!is_multiline && (focus_requested_by_tab || (user_clicked && io.KeyCtrl)))
+            // Recycle existing cursor/selection/undo stack but clamp position
+            // Note a single mouse click will override the cursor/position immediately by calling stb_textedit_click handler.
+            state->CursorClamp();
+        }
+        else
+        {
+            state->ID = id;
+            state->ScrollX = 0.0f;
+            stb_textedit_initialize_state(&state->Stb, !is_multiline);
+            if (!is_multiline && focus_requested_by_code)
                 select_all = true;
         }
+        if (flags & ImGuiInputTextFlags_AlwaysInsertMode)
+            state->Stb.insert_mode = 1;
+        if (!is_multiline && (focus_requested_by_tab || (user_clicked && io.KeyCtrl)))
+            select_all = true;
+    }
 
+    if (init_make_active)
+    {
         IM_ASSERT(state && state->ID == id);
         SetActiveID(id, window);
         SetFocusID(id, window);
@@ -3275,11 +3276,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         if (!is_multiline && !(flags & ImGuiInputTextFlags_CallbackHistory))
             g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
     }
-    else if (io.MouseClicked[0])
-    {
-        // Release focus when we click outside
+
+    // Release focus when we click outside
+    if (!init_make_active && io.MouseClicked[0])
         clear_active_id = true;
-    }
 
     // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped)
     if (g.ActiveId == id && state == NULL)
@@ -3630,17 +3630,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (clear_active_id && g.ActiveId == id)
         ClearActiveID();
 
-    // Set upper limit of single-line InputTextEx() at 2 million characters strings. The current pathological worst case is a long line
-    // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
-    // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
-    const int buf_display_max_length = 2 * 1024 * 1024;
-
-    // Select which buffer we are going to display. We set buf to NULL to prevent accidental usage from now on.
-    const char* buf_display = (state != NULL && !is_readonly) ? state->TextA.Data : buf;
-    IM_ASSERT(buf_display);
-    buf = NULL;
-
-    // Render
+    // Render frame
     if (!is_multiline)
     {
         RenderNavHighlight(frame_bb, id);
@@ -3651,7 +3641,17 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     ImVec2 draw_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.0f, 0.0f);
 
-    // We currently only render selection when the widget is active or while scrolling.
+    // Set upper limit of single-line InputTextEx() at 2 million characters strings. The current pathological worst case is a long line
+    // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
+    // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
+    const int buf_display_max_length = 2 * 1024 * 1024;
+
+    // Select which buffer we are going to display. We set buf to NULL to prevent accidental usage from now on.
+    const char* buf_display = (state != NULL && !is_readonly) ? state->TextA.Data : buf;
+    IM_ASSERT(buf_display);
+    buf = NULL;
+
+    // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
     const bool render_cursor = (g.ActiveId == id) || user_scroll_active;
     const bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
