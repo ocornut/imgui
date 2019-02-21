@@ -3143,6 +3143,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
 
+    const bool RENDER_SELECTION_WHEN_INACTIVE = true;
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
     const bool is_readonly = (flags & ImGuiInputTextFlags_ReadOnly) != 0;
     const bool is_password = (flags & ImGuiInputTextFlags_Password) != 0;
@@ -3220,8 +3221,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool user_scroll_active = is_multiline && state != NULL && g.ActiveId == GetScrollbarID(draw_window, ImGuiAxis_Y);
 
     bool clear_active_id = false;
-
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0 || user_nav_input_start) && (!is_multiline);
+
     if (focus_requested || user_clicked || user_scroll_finish || user_nav_input_start)
     {
         if (g.ActiveId != id)
@@ -3649,7 +3650,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const ImVec4 clip_rect(frame_bb.Min.x, frame_bb.Min.y, frame_bb.Min.x + size.x, frame_bb.Min.y + size.y); // Not using frame_bb.Max because we have adjusted size
     ImVec2 draw_pos = is_multiline ? draw_window->DC.CursorPos : frame_bb.Min + style.FramePadding;
     ImVec2 text_size(0.0f, 0.0f);
-    if (g.ActiveId == id || user_scroll_active)
+
+    // We currently only render selection when the widget is active or while scrolling.
+    // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
+    const bool render_cursor = (g.ActiveId == id) || user_scroll_active;
+    const bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
+    if (render_cursor || render_selection)
     {
         // Render text (with cursor and selection)
         // This is going to be messy. We need to:
@@ -3663,16 +3669,20 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         ImVec2 cursor_offset, select_start_offset;
 
         {
-            // Count lines + find lines numbers straddling 'cursor' and 'select_start' position.
-            const ImWchar* searches_input_ptr[2];
-            searches_input_ptr[0] = text_begin + state->Stb.cursor;
-            searches_input_ptr[1] = NULL;
-            int searches_remaining = 1;
-            int searches_result_line_number[2] = { -1, -999 };
-            if (state->Stb.select_start != state->Stb.select_end)
+            // Find lines numbers straddling 'cursor' (slot 0) and 'select_start' (slot 1) positions.
+            const ImWchar* searches_input_ptr[2] = { NULL, NULL };
+            int searches_result_line_no[2] = { -1000, -1000 };
+            int searches_remaining = 0;
+            if (render_cursor)
+            {
+                searches_input_ptr[0] = text_begin + state->Stb.cursor;
+                searches_result_line_no[0] = -1;
+                searches_remaining++;
+            }
+            if (render_selection)
             {
                 searches_input_ptr[1] = text_begin + ImMin(state->Stb.select_start, state->Stb.select_end);
-                searches_result_line_number[1] = -1;
+                searches_result_line_no[1] = -1;
                 searches_remaining++;
             }
 
@@ -3685,20 +3695,22 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 if (*s == '\n')
                 {
                     line_count++;
-                    if (searches_result_line_number[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_number[0] = line_count; if (--searches_remaining <= 0) break; }
-                    if (searches_result_line_number[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_number[1] = line_count; if (--searches_remaining <= 0) break; }
+                    if (searches_result_line_no[0] == -1 && s >= searches_input_ptr[0]) { searches_result_line_no[0] = line_count; if (--searches_remaining <= 0) break; }
+                    if (searches_result_line_no[1] == -1 && s >= searches_input_ptr[1]) { searches_result_line_no[1] = line_count; if (--searches_remaining <= 0) break; }
                 }
             line_count++;
-            if (searches_result_line_number[0] == -1) searches_result_line_number[0] = line_count;
-            if (searches_result_line_number[1] == -1) searches_result_line_number[1] = line_count;
+            if (searches_result_line_no[0] == -1) 
+                searches_result_line_no[0] = line_count;
+            if (searches_result_line_no[1] == -1) 
+                searches_result_line_no[1] = line_count;
 
             // Calculate 2d position by finding the beginning of the line and measuring distance
             cursor_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_ptr[0], text_begin), searches_input_ptr[0]).x;
-            cursor_offset.y = searches_result_line_number[0] * g.FontSize;
-            if (searches_result_line_number[1] >= 0)
+            cursor_offset.y = searches_result_line_no[0] * g.FontSize;
+            if (searches_result_line_no[1] >= 0)
             {
                 select_start_offset.x = InputTextCalcTextSizeW(ImStrbolW(searches_input_ptr[1], text_begin), searches_input_ptr[1]).x;
-                select_start_offset.y = searches_result_line_number[1] * g.FontSize;
+                select_start_offset.y = searches_result_line_no[1] * g.FontSize;
             }
 
             // Store text height (note that we haven't calculated text width at all, see GitHub issues #383, #1224)
@@ -3707,7 +3719,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
 
         // Scroll
-        if (state->CursorFollow)
+        if (render_cursor && state->CursorFollow)
         {
             // Horizontal scroll in chunks of quarter width
             if (!(flags & ImGuiInputTextFlags_NoHorizontalScroll))
@@ -3735,19 +3747,20 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                 draw_window->Scroll.y = scroll_y;
                 draw_pos.y = draw_window->DC.CursorPos.y;
             }
+
+            state->CursorFollow = false;
         }
-        const ImVec2 draw_scroll = ImVec2(state->ScrollX, 0.0f);
-        state->CursorFollow = false;
 
         // Draw selection
-        if (state->HasSelection())
+        const ImVec2 draw_scroll = ImVec2(state->ScrollX, 0.0f);
+        if (render_selection)
         {
             const ImWchar* text_selected_begin = text_begin + ImMin(state->Stb.select_start, state->Stb.select_end);
             const ImWchar* text_selected_end = text_begin + ImMax(state->Stb.select_start, state->Stb.select_end);
 
+            ImU32 bg_color = GetColorU32(ImGuiCol_TextSelectedBg, render_cursor ? 1.0f : 0.6f); // FIXME: current code flow mandate that render_cursor is always true here, we are leaving the transparent one for tests.
             float bg_offy_up = is_multiline ? 0.0f : -1.0f;    // FIXME: those offsets should be part of the style? they don't play so well with multi-line selection.
             float bg_offy_dn = is_multiline ? 0.0f : 2.0f;
-            ImU32 bg_color = GetColorU32(ImGuiCol_TextSelectedBg);
             ImVec2 rect_pos = draw_pos + select_start_offset - draw_scroll;
             for (const ImWchar* p = text_selected_begin; p < text_selected_end; )
             {
@@ -3781,16 +3794,19 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display + buf_display_len, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor
-        state->CursorAnim += io.DeltaTime;
-        bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
-        ImVec2 cursor_screen_pos = draw_pos + cursor_offset - draw_scroll;
-        ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
-        if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-            draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+        if (render_cursor)
+        {
+            state->CursorAnim += io.DeltaTime;
+            bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
+            ImVec2 cursor_screen_pos = draw_pos + cursor_offset - draw_scroll;
+            ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
+            if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
+                draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
 
-        // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
-        if (!is_readonly)
-            g.PlatformImePos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
+            // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
+            if (!is_readonly)
+                g.PlatformImePos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
+        }
     }
     else
     {
