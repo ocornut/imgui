@@ -3278,6 +3278,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         clear_active_id = true;
     }
 
+    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped)
+    if (g.ActiveId == id && state == NULL)
+        ClearActiveID();
+
     bool value_changed = false;
     bool enter_pressed = false;
     int backup_current_text_length = 0;
