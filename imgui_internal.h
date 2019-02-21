@@ -561,10 +561,10 @@ struct IMGUI_API ImGuiMenuColumns
 struct IMGUI_API ImGuiInputTextState
 {
     ImGuiID                 ID;                     // widget id owning the text state
+    int                     CurLenW, CurLenA;       // we need to maintain our buffer length in both UTF-8 and wchar format.
     ImVector<ImWchar>       TextW;                  // edit buffer, we need to persist but can't guarantee the persistence of the user-provided buffer. so we copy into own buffer.
+    ImVector<char>          TextA;                  // temporary UTF8 buffer for callbacks and other operations. this is not updated in every code-path! size=capacity.
     ImVector<char>          InitialTextA;           // backup of end-user buffer at the time of focus (in UTF-8, unaltered)
-    ImVector<char>          TempBufferA;            // temporary buffer for callbacks and other operations. size=capacity.
-    int                     CurLenA, CurLenW;       // we need to maintain our buffer length in both UTF-8 and wchar format.
     int                     BufCapacityA;           // end-user buffer capacity
     float                   ScrollX;                // horizontal scrolling/offset
     ImStb::STB_TexteditState Stb;                   // state for stb_textedit.h
@@ -578,7 +578,7 @@ struct IMGUI_API ImGuiInputTextState
     void*                   UserCallbackData;
 
     ImGuiInputTextState()                           { memset(this, 0, sizeof(*this)); }
-    void                ClearFreeMemory()           { TextW.clear(); InitialTextA.clear(); TempBufferA.clear(); }
+    void                ClearFreeMemory()           { TextW.clear(); TextA.clear(); InitialTextA.clear(); }
     void                CursorAnimReset()           { CursorAnim = -0.30f; }                                   // After a user-input the cursor stays on for a while without blinking
     void                CursorClamp()               { Stb.cursor = ImMin(Stb.cursor, CurLenW); Stb.select_start = ImMin(Stb.select_start, CurLenW); Stb.select_end = ImMin(Stb.select_end, CurLenW); }
     bool                HasSelection() const        { return Stb.select_start != Stb.select_end; }

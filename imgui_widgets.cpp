@@ -3045,10 +3045,10 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, const char* new_text, cons
         ImGuiContext& g = *GImGui;
         ImGuiInputTextState* edit_state = &g.InputTextState;
         IM_ASSERT(edit_state->ID != 0 && g.ActiveId == edit_state->ID);
-        IM_ASSERT(Buf == edit_state->TempBufferA.Data);
+        IM_ASSERT(Buf == edit_state->TextA.Data);
         int new_buf_size = BufTextLen + ImClamp(new_text_len * 4, 32, ImMax(256, new_text_len)) + 1;
-        edit_state->TempBufferA.reserve(new_buf_size + 1);
-        Buf = edit_state->TempBufferA.Data;
+        edit_state->TextA.reserve(new_buf_size + 1);
+        Buf = edit_state->TextA.Data;
         BufSize = edit_state->BufCapacityA = new_buf_size;
     }
 
@@ -3444,9 +3444,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             {
                 const int ib = state->HasSelection() ? ImMin(state->Stb.select_start, state->Stb.select_end) : 0;
                 const int ie = state->HasSelection() ? ImMax(state->Stb.select_start, state->Stb.select_end) : state->CurLenW;
-                state->TempBufferA.resize((ie-ib) * 4 + 1);
-                ImTextStrToUtf8(state->TempBufferA.Data, state->TempBufferA.Size, state->TextW.Data+ib, state->TextW.Data+ie);
-                SetClipboardText(state->TempBufferA.Data);
+                const int clipboard_data_len = ImTextCountUtf8BytesFromStr(state->TextW.Data + ib, state->TextW.Data + ie) + 1;
+                char* clipboard_data = (char*)MemAlloc(clipboard_data_len * sizeof(char));
+                ImTextStrToUtf8(clipboard_data, clipboard_data_len, state->TextW.Data + ib, state->TextW.Data + ie);
+                SetClipboardText(clipboard_data);
+                MemFree(clipboard_data);
             }
             if (is_cut)
             {
@@ -3512,8 +3514,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks.
             if (!is_readonly)
             {
-                state->TempBufferA.resize(state->TextW.Size * 4 + 1);
-                ImTextStrToUtf8(state->TempBufferA.Data, state->TempBufferA.Size, state->TextW.Data, NULL);
+                state->TextA.resize(state->TextW.Size * 4 + 1);
+                ImTextStrToUtf8(state->TextA.Data, state->TextA.Size, state->TextW.Data, NULL);
             }
 
             // User callback
@@ -3551,7 +3553,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     callback_data.UserData = callback_user_data;
 
                     callback_data.EventKey = event_key;
-                    callback_data.Buf = state->TempBufferA.Data;
+                    callback_data.Buf = state->TextA.Data;
                     callback_data.BufTextLen = state->CurLenA;
                     callback_data.BufSize = state->BufCapacityA;
                     callback_data.BufDirty = false;
@@ -3566,7 +3568,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
                     callback(&callback_data);
 
                     // Read back what user may have modified
-                    IM_ASSERT(callback_data.Buf == state->TempBufferA.Data);  // Invalid to modify those fields
+                    IM_ASSERT(callback_data.Buf == state->TextA.Data);  // Invalid to modify those fields
                     IM_ASSERT(callback_data.BufSize == state->BufCapacityA);
                     IM_ASSERT(callback_data.Flags == flags);
                     if (callback_data.CursorPos != utf8_cursor_pos)            { state->Stb.cursor = ImTextCountCharsFromUtf8(callback_data.Buf, callback_data.Buf + callback_data.CursorPos); state->CursorFollow = true; }
@@ -3585,9 +3587,9 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             }
 
             // Will copy result string if modified
-            if (!is_readonly && strcmp(state->TempBufferA.Data, buf) != 0)
+            if (!is_readonly && strcmp(state->TextA.Data, buf) != 0)
             {
-                apply_new_text = state->TempBufferA.Data;
+                apply_new_text = state->TextA.Data;
                 apply_new_text_length = state->CurLenA;
             }
         }
@@ -3633,7 +3635,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const int buf_display_max_length = 2 * 1024 * 1024;
 
     // Select which buffer we are going to display. We set buf to NULL to prevent accidental usage from now on.
-    const char* buf_display = (state != NULL && !is_readonly) ? state->TempBufferA.Data : buf;
+    const char* buf_display = (state != NULL && !is_readonly) ? state->TextA.Data : buf;
     IM_ASSERT(buf_display);
     buf = NULL;
 
