@@ -5905,6 +5905,20 @@ static int IMGUI_CDECL TabBarSortItemComparer(const void* lhs, const void* rhs)
     return (b->Index - a->Index);
 }
 
+static ImGuiTabBar* GetTabBarFromTabBarRef(const ImGuiTabBarRef& ref)
+{
+    ImGuiContext& g = *GImGui;
+    return ref.Ptr ? ref.Ptr : g.TabBars.GetByIndex(ref.IndexInMainPool);
+}
+
+static ImGuiTabBarRef GetTabBarRefFromTabBar(ImGuiTabBar* tab_bar)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.TabBars.Contains(tab_bar))
+        return ImGuiTabBarRef(g.TabBars.GetIndex(tab_bar));
+    return ImGuiTabBarRef(tab_bar);
+}
+
 bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -5929,7 +5943,10 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     if ((flags & ImGuiTabBarFlags_DockNode) == 0)
         window->IDStack.push_back(tab_bar->ID);
 
-    g.CurrentTabBar.push_back(tab_bar);
+    // Add to stack
+    g.CurrentTabBarStack.push_back(GetTabBarRefFromTabBar(tab_bar));
+    g.CurrentTabBar = tab_bar;
+
     if (tab_bar->CurrFrameVisible == g.FrameCount)
     {
         //IMGUI_DEBUG_LOG("BeginTabBarEx already called this frame\n", g.FrameCount);
@@ -5975,8 +5992,8 @@ void    ImGui::EndTabBar()
     if (window->SkipItems)
         return;
 
-    IM_ASSERT(!g.CurrentTabBar.empty());      // Mismatched BeginTabBar/EndTabBar
-    ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
+    ImGuiTabBar* tab_bar = g.CurrentTabBar;
+    IM_ASSERT(tab_bar != NULL && "Mismatched BeginTabBar()/EndTabBar()!");
     if (tab_bar->WantLayout)
         TabBarLayout(tab_bar);
 
@@ -5989,7 +6006,9 @@ void    ImGui::EndTabBar()
 
     if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0)
         PopID();
-    g.CurrentTabBar.pop_back();
+
+    g.CurrentTabBarStack.pop_back();
+    g.CurrentTabBar = g.CurrentTabBarStack.empty() ? NULL : GetTabBarFromTabBarRef(g.CurrentTabBarStack.back());
 }
 
 // This is called only once a frame before by the first call to ItemTab()
@@ -6356,8 +6375,8 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
     if (g.CurrentWindow->SkipItems)
         return false;
 
-    IM_ASSERT(g.CurrentTabBar.Size > 0 && "Needs to be called between BeginTabBar() and EndTabBar()!");
-    ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
+    ImGuiTabBar* tab_bar = g.CurrentTabBar;
+    IM_ASSERT(tab_bar && "Needs to be called between BeginTabBar() and EndTabBar()!");
     bool ret = TabItemEx(tab_bar, label, p_open, flags);
     if (ret && !(flags & ImGuiTabItemFlags_NoPushId))
     {
@@ -6373,9 +6392,9 @@ void    ImGui::EndTabItem()
     if (g.CurrentWindow->SkipItems)
         return;
 
-    IM_ASSERT(g.CurrentTabBar.Size > 0 && "Needs to be called between BeginTabBar() and EndTabBar()!");
-    ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
-    IM_ASSERT(tab_bar->LastTabItemIdx >= 0 && "Needs to be called between BeginTabItem() and EndTabItem()");
+    ImGuiTabBar* tab_bar = g.CurrentTabBar;
+    IM_ASSERT(tab_bar != NULL && "Needs to be called between BeginTabBar() and EndTabBar()!");
+    IM_ASSERT(tab_bar->LastTabItemIdx >= 0);
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
         g.CurrentWindow->IDStack.pop_back();
@@ -6575,10 +6594,10 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 void    ImGui::SetTabItemClosed(const char* label)
 {
     ImGuiContext& g = *GImGui;
-    bool is_within_manual_tab_bar = (g.CurrentTabBar.Size > 0) && !(g.CurrentTabBar.back()->Flags & ImGuiTabBarFlags_DockNode);
+    bool is_within_manual_tab_bar = g.CurrentTabBar && !(g.CurrentTabBar->Flags & ImGuiTabBarFlags_DockNode);
     if (is_within_manual_tab_bar)
     {
-        ImGuiTabBar* tab_bar = g.CurrentTabBar.back();
+        ImGuiTabBar* tab_bar = g.CurrentTabBar;
         IM_ASSERT(tab_bar->WantLayout);         // Needs to be called AFTER BeginTabBar() and BEFORE the first call to BeginTabItem()
         ImGuiID tab_id = TabBarCalcTabID(tab_bar, label);
         TabBarRemoveTab(tab_bar, tab_id);

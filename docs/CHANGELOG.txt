@@ -40,6 +40,7 @@ Other Changes:
   meant to be square (to align with e.g. color button) we always use FramePadding.y. (#2367)
 - InputText: Fixed an edge case crash that would happen if another widget sharing the same ID
   is being swapped with an InputText that has yet to be activated.
+- TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
 - Examples: OpenGL: Fix for OSX not supporting OpenGL 4.5, we don't try to read GL_CLIP_ORIGIN
   even if the OpenGL headers/loader happens to define the value. (#2366, #2186)
 
