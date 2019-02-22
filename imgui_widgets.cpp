@@ -5993,7 +5993,11 @@ void    ImGui::EndTabBar()
         return;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    IM_ASSERT(tab_bar != NULL && "Mismatched BeginTabBar()/EndTabBar()!");
+    if (tab_bar == NULL)
+    {
+        IM_ASSERT(tab_bar != NULL && "Mismatched BeginTabBar()/EndTabBar()!");
+        return; // FIXME-ERRORHANDLING
+    }
     if (tab_bar->WantLayout)
         TabBarLayout(tab_bar);
 
@@ -6376,7 +6380,11 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
         return false;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    IM_ASSERT(tab_bar && "Needs to be called between BeginTabBar() and EndTabBar()!");
+    if (tab_bar == NULL)
+    {
+        IM_ASSERT(tab_bar && "Needs to be called between BeginTabBar() and EndTabBar()!");
+        return false; // FIXME-ERRORHANDLING
+    }
     bool ret = TabItemEx(tab_bar, label, p_open, flags);
     if (ret && !(flags & ImGuiTabItemFlags_NoPushId))
     {
@@ -6393,7 +6401,11 @@ void    ImGui::EndTabItem()
         return;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
-    IM_ASSERT(tab_bar != NULL && "Needs to be called between BeginTabBar() and EndTabBar()!");
+    if (tab_bar == NULL)
+    {
+        IM_ASSERT(tab_bar != NULL && "Needs to be called between BeginTabBar() and EndTabBar()!");
+        return;
+    }
     IM_ASSERT(tab_bar->LastTabItemIdx >= 0);
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
