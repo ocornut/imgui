@@ -547,7 +547,6 @@ struct ImGuiGroupData
     ImVec1      BackupGroupOffset;
     ImVec2      BackupCurrentLineSize;
     float       BackupCurrentLineTextBaseOffset;
-    float       BackupLogLinePosY;
     ImGuiID     BackupActiveIdIsAlive;
     bool        BackupActiveIdPreviousFrameIsAlive;
     bool        AdvanceCursor;
@@ -940,6 +939,8 @@ struct ImGuiContext
     ImGuiLogType            LogType;
     FILE*                   LogFile;                            // If != NULL log to stdout/ file
     ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
+    float                   LogLinePosY;
+    bool                    LogLineFirstItem;
     int                     LogDepthRef;
     int                     LogDepthToExpand;
     int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
@@ -1054,6 +1055,8 @@ struct ImGuiContext
         LogEnabled = false;
         LogType = ImGuiLogType_None;
         LogFile = NULL;
+        LogLinePosY = FLT_MAX;
+        LogLineFirstItem = false;
         LogDepthRef = 0;
         LogDepthToExpand = LogDepthToExpandDefault = 2;
 
@@ -1081,7 +1084,6 @@ struct IMGUI_API ImGuiWindowTempData
     float                   CurrentLineTextBaseOffset;
     ImVec2                  PrevLineSize;
     float                   PrevLineTextBaseOffset;
-    float                   LogLinePosY;
     int                     TreeDepth;
     ImU32                   TreeDepthMayJumpToParentOnPop; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31
     ImGuiID                 LastItemId;
@@ -1121,7 +1123,6 @@ struct IMGUI_API ImGuiWindowTempData
         CursorPos = CursorPosPrevLine = CursorStartPos = CursorMaxPos = ImVec2(0.0f, 0.0f);
         CurrentLineSize = PrevLineSize = ImVec2(0.0f, 0.0f);
         CurrentLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
-        LogLinePosY = -1.0f;
         TreeDepth = 0;
         TreeDepthMayJumpToParentOnPop = 0x00;
         LastItemId = 0;
@@ -1409,7 +1410,8 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
 
     // Logging/Capture
-    IMGUI_API void          LogToBuffer(int auto_open_depth = -1); // Start logging to internal buffer
+    IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);   // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
+    IMGUI_API void          LogToBuffer(int auto_open_depth = -1);              // Start logging/capturing to internal buffer
 
     // Popups, Modals, Tooltips
     IMGUI_API void          OpenPopupEx(ImGuiID id);

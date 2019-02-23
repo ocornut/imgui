@@ -5325,7 +5325,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
         window->DC.MenuBarAppending = false;
-        window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f;
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
@@ -6550,7 +6549,6 @@ void ImGui::BeginGroup()
     group_data.BackupGroupOffset = window->DC.GroupOffset;
     group_data.BackupCurrentLineSize = window->DC.CurrentLineSize;
     group_data.BackupCurrentLineTextBaseOffset = window->DC.CurrentLineTextBaseOffset;
-    group_data.BackupLogLinePosY = window->DC.LogLinePosY;
     group_data.BackupActiveIdIsAlive = g.ActiveIdIsAlive;
     group_data.BackupActiveIdPreviousFrameIsAlive = g.ActiveIdPreviousFrameIsAlive;
     group_data.AdvanceCursor = true;
@@ -6559,14 +6557,15 @@ void ImGui::BeginGroup()
     window->DC.Indent = window->DC.GroupOffset;
     window->DC.CursorMaxPos = window->DC.CursorPos;
     window->DC.CurrentLineSize = ImVec2(0.0f, 0.0f);
-    window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f; // To enforce Log carriage return
+    if (g.LogEnabled)
+        g.LogLinePosY = -FLT_MAX; // To enforce Log carriage return
 }
 
 void ImGui::EndGroup()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    IM_ASSERT(!window->DC.GroupStack.empty());    // Mismatched BeginGroup()/EndGroup() calls
+    IM_ASSERT(!window->DC.GroupStack.empty());  // Mismatched BeginGroup()/EndGroup() calls
 
     ImGuiGroupData& group_data = window->DC.GroupStack.back();
 
@@ -6579,7 +6578,8 @@ void ImGui::EndGroup()
     window->DC.GroupOffset = group_data.BackupGroupOffset;
     window->DC.CurrentLineSize = group_data.BackupCurrentLineSize;
     window->DC.CurrentLineTextBaseOffset = group_data.BackupCurrentLineTextBaseOffset;
-    window->DC.LogLinePosY = window->DC.CursorPos.y - 9999.0f; // To enforce Log carriage return
+    if (g.LogEnabled)
+        g.LogLinePosY = -FLT_MAX; // To enforce Log carriage return
 
     if (group_data.AdvanceCursor)
     {
@@ -8800,9 +8800,11 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
     if (!text_end)
         text_end = FindRenderedTextEnd(text, text_end);
 
-    const bool log_new_line = ref_pos && (ref_pos->y > window->DC.LogLinePosY + 1);
+    const bool log_new_line = ref_pos && (ref_pos->y > g.LogLinePosY + 1);
     if (ref_pos)
-        window->DC.LogLinePosY = ref_pos->y;
+        g.LogLinePosY = ref_pos->y;
+    if (log_new_line)
+        g.LogLineFirstItem = true;
 
     const char* text_remaining = text;
     if (g.LogDepthRef > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
@@ -8811,6 +8813,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
     for (;;)
     {
         // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
+        // We don't add a trailing \n to allow a subsequent item on the same line to be captured.
         const char* line_start = text_remaining;
         const char* line_end = ImStreolRange(line_start, text_end);
         const bool is_first_line = (line_start == text);
@@ -8819,9 +8822,18 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
         {
             const int char_count = (int)(line_end - line_start);
             if (log_new_line || !is_first_line)
-                LogText(IM_NEWLINE "%*s%.*s", tree_depth*4, "", char_count, line_start);
-            else
+                LogText(IM_NEWLINE "%*s%.*s", tree_depth * 4, "", char_count, line_start);
+            else if (g.LogLineFirstItem)
+                LogText("%*s%.*s", tree_depth * 4, "", char_count, line_start);
+            else 
                 LogText(" %.*s", char_count, line_start);
+            g.LogLineFirstItem = false;
+        }
+        else if (log_new_line)
+        {
+            // An empty "" string at a different Y position should output a carriage return.
+            LogText(IM_NEWLINE);
+            break;
         }
 
         if (is_last_line)
@@ -8830,20 +8842,29 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
     }
 }
 
-// Start logging/capturing text output to TTY
+// Start logging/capturing text output
+void ImGui::LogBegin(ImGuiLogType type, int auto_open_depth)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(g.LogEnabled == false);
+    IM_ASSERT(g.LogFile == NULL);
+    IM_ASSERT(g.LogBuffer.empty());
+    g.LogEnabled = true;
+    g.LogType = type;
+    g.LogDepthRef = window->DC.TreeDepth;
+    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
+    g.LogLinePosY = FLT_MAX;
+    g.LogLineFirstItem = true;
+}
+
 void ImGui::LogToTTY(int auto_open_depth)
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    IM_ASSERT(g.LogFile == NULL);
+    LogBegin(ImGuiLogType_TTY, auto_open_depth);
     g.LogFile = stdout;
-    g.LogEnabled = true;
-    g.LogType = ImGuiLogType_TTY;
-    g.LogDepthRef = window->DC.TreeDepth;
-    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
 }
 
 // Start logging/capturing text output to given file
@@ -8852,24 +8873,23 @@ void ImGui::LogToFile(int auto_open_depth, const char* filename)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = g.CurrentWindow;
 
+    // FIXME: We could probably open the file in text mode "at", however note that clipboard/buffer logging will still 
+    // be subject to outputting OS-incompatible carriage return if within strings the user doesn't use IM_NEWLINE.
+    // By opening the file in binary mode "ab" we have consistent output everywhere.
     if (!filename)
         filename = g.IO.LogFilename;
     if (!filename || !filename[0])
         return;
-
-    IM_ASSERT(g.LogFile == NULL);
-    g.LogFile = ImFileOpen(filename, "ab"); // FIXME: Why not logging in text mode? Then we don't need to bother the user with IM_NEWLINE..
-    if (!g.LogFile)
+    FILE* f = ImFileOpen(filename, "ab");
+    if (f == NULL)
     {
         IM_ASSERT(0);
         return;
     }
-    g.LogEnabled = true;
-    g.LogType = ImGuiLogType_File;
-    g.LogDepthRef = window->DC.TreeDepth;
-    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
+
+    LogBegin(ImGuiLogType_File, auto_open_depth);
+    g.LogFile = f;
 }
 
 // Start logging/capturing text output to clipboard
@@ -8878,15 +8898,7 @@ void ImGui::LogToClipboard(int auto_open_depth)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    IM_ASSERT(g.LogFile == NULL);
-    IM_ASSERT(g.LogBuffer.empty());
-    g.LogEnabled = true;
-    g.LogType = ImGuiLogType_Clipboard;
-    g.LogFile = NULL;
-    g.LogDepthRef = window->DC.TreeDepth;
-    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
+    LogBegin(ImGuiLogType_Clipboard, auto_open_depth);
 }
 
 void ImGui::LogToBuffer(int auto_open_depth)
@@ -8894,15 +8906,7 @@ void ImGui::LogToBuffer(int auto_open_depth)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    IM_ASSERT(g.LogFile == NULL);
-    IM_ASSERT(g.LogBuffer.empty());
-    g.LogEnabled = true;
-    g.LogType = ImGuiLogType_Clipboard;
-    g.LogFile = NULL;
-    g.LogDepthRef = window->DC.TreeDepth;
-    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
+    LogBegin(ImGuiLogType_Buffer, auto_open_depth);
 }
 
 void ImGui::LogFinish()

@@ -44,6 +44,8 @@ Other Changes:
 - TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
 - TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
+- Log/Capture: Fixed extraneous leading carriage return.
+- Log/Capture: Fixed an issue when empty string on a new line would not emit a carriage return.
 - Log/Capture: Fixed LogXXX functions 'auto_open_depth' parameter being treated as an absolute
   tree depth instead of a relative one.
 - Log/Capture: Fixed CollapsingHeader trailing ascii representation being "#" instead of "##".
