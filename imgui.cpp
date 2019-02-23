@@ -3615,7 +3615,7 @@ void ImGui::Shutdown(ImGuiContext* context)
         fclose(g.LogFile);
         g.LogFile = NULL;
     }
-    g.LogClipboard.clear();
+    g.LogBuffer.clear();
 
     g.Initialized = false;
 }
@@ -8786,7 +8786,7 @@ void ImGui::LogText(const char* fmt, ...)
     if (g.LogFile)
         vfprintf(g.LogFile, fmt, args);
     else
-        g.LogClipboard.appendfv(fmt, args);
+        g.LogBuffer.appendfv(fmt, args);
     va_end(args);
 }
 
@@ -8830,7 +8830,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
     }
 }
 
-// Start logging ImGui output to TTY
+// Start logging/capturing text output to TTY
 void ImGui::LogToTTY(int max_depth)
 {
     ImGuiContext& g = *GImGui;
@@ -8841,12 +8841,13 @@ void ImGui::LogToTTY(int max_depth)
     IM_ASSERT(g.LogFile == NULL);
     g.LogFile = stdout;
     g.LogEnabled = true;
+    g.LogType = ImGuiLogType_TTY;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
 }
 
-// Start logging ImGui output to given file
+// Start logging/capturing text output to given file
 void ImGui::LogToFile(int max_depth, const char* filename)
 {
     ImGuiContext& g = *GImGui;
@@ -8855,26 +8856,25 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     ImGuiWindow* window = g.CurrentWindow;
 
     if (!filename)
-    {
         filename = g.IO.LogFilename;
-        if (!filename)
-            return;
-    }
+    if (!filename || !filename[0])
+        return;
 
     IM_ASSERT(g.LogFile == NULL);
-    g.LogFile = ImFileOpen(filename, "ab");
+    g.LogFile = ImFileOpen(filename, "ab"); // FIXME: Why not logging in text mode? Then we don't need to bother the user with IM_NEWLINE..
     if (!g.LogFile)
     {
         IM_ASSERT(0);
         return;
     }
     g.LogEnabled = true;
+    g.LogType = ImGuiLogType_File;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
 }
 
-// Start logging ImGui output to clipboard
+// Start logging/capturing text output to clipboard
 void ImGui::LogToClipboard(int max_depth)
 {
     ImGuiContext& g = *GImGui;
@@ -8883,8 +8883,27 @@ void ImGui::LogToClipboard(int max_depth)
     ImGuiWindow* window = g.CurrentWindow;
 
     IM_ASSERT(g.LogFile == NULL);
-    g.LogFile = NULL;
+    IM_ASSERT(g.LogBuffer.empty());
     g.LogEnabled = true;
+    g.LogType = ImGuiLogType_Clipboard;
+    g.LogFile = NULL;
+    g.LogStartDepth = window->DC.TreeDepth;
+    if (max_depth >= 0)
+        g.LogAutoExpandMaxDepth = max_depth;
+}
+
+void ImGui::LogToBuffer(int max_depth)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.LogEnabled)
+        return;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    IM_ASSERT(g.LogFile == NULL);
+    IM_ASSERT(g.LogBuffer.empty());
+    g.LogEnabled = true;
+    g.LogType = ImGuiLogType_Clipboard;
+    g.LogFile = NULL;
     g.LogStartDepth = window->DC.TreeDepth;
     if (max_depth >= 0)
         g.LogAutoExpandMaxDepth = max_depth;
@@ -8897,23 +8916,30 @@ void ImGui::LogFinish()
         return;
 
     LogText(IM_NEWLINE);
-    if (g.LogFile != NULL)
+    switch (g.LogType)
     {
-        if (g.LogFile == stdout)
-            fflush(g.LogFile);
-        else
-            fclose(g.LogFile);
-        g.LogFile = NULL;
+    case ImGuiLogType_TTY:
+        fflush(g.LogFile);
+        break;
+    case ImGuiLogType_File:
+        fclose(g.LogFile);
+        break;
+    case ImGuiLogType_Buffer:
+        break;
+    case ImGuiLogType_Clipboard:
+        if (!g.LogBuffer.empty())
+            SetClipboardText(g.LogBuffer.begin());
+        break;
     }
-    if (g.LogClipboard.size() > 1)
-    {
-        SetClipboardText(g.LogClipboard.begin());
-        g.LogClipboard.clear();
-    }
+
     g.LogEnabled = false;
+    g.LogType = ImGuiLogType_None;
+    g.LogFile = NULL;
+    g.LogBuffer.clear();
 }
 
 // Helper to display logging buttons
+// FIXME-OBSOLETE: We should probably obsolete this and let the user have their own helper (this is one of the oldest function alive!)
 void ImGui::LogButtons()
 {
     ImGuiContext& g = *GImGui;
