@@ -3647,7 +3647,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const int buf_display_max_length = 2 * 1024 * 1024;
 
     // Select which buffer we are going to display. We set buf to NULL to prevent accidental usage from now on.
-    const char* buf_display = (state != NULL && !is_readonly) ? state->TextA.Data : buf;
+    const char* buf_display = (g.ActiveId == id && state && !is_readonly) ? state->TextA.Data : buf;
     IM_ASSERT(buf_display);
     buf = NULL;
 
