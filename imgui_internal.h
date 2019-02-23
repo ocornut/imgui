@@ -1037,6 +1037,8 @@ struct ImGuiContext
         DragDropAcceptFrameCount = -1;
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
 
+        CurrentTabBar = NULL;
+
         ScalarAsInputTextId = 0;
         ColorEditOptions = ImGuiColorEditFlags__OptionsDefault;
         DragCurrentAccumDirty = false;
