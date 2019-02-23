@@ -8805,9 +8805,9 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
         window->DC.LogLinePosY = ref_pos->y;
 
     const char* text_remaining = text;
-    if (g.LogStartDepth > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
-        g.LogStartDepth = window->DC.TreeDepth;
-    const int tree_depth = (window->DC.TreeDepth - g.LogStartDepth);
+    if (g.LogDepthRef > window->DC.TreeDepth)  // Re-adjust padding if we have popped out of our starting depth
+        g.LogDepthRef = window->DC.TreeDepth;
+    const int tree_depth = (window->DC.TreeDepth - g.LogDepthRef);
     for (;;)
     {
         // Split the string. Each new line (after a '\n') is followed by spacing corresponding to the current depth of our log entry.
@@ -8831,7 +8831,7 @@ void ImGui::LogRenderedText(const ImVec2* ref_pos, const char* text, const char*
 }
 
 // Start logging/capturing text output to TTY
-void ImGui::LogToTTY(int max_depth)
+void ImGui::LogToTTY(int auto_open_depth)
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -8842,13 +8842,12 @@ void ImGui::LogToTTY(int max_depth)
     g.LogFile = stdout;
     g.LogEnabled = true;
     g.LogType = ImGuiLogType_TTY;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
+    g.LogDepthRef = window->DC.TreeDepth;
+    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
 }
 
 // Start logging/capturing text output to given file
-void ImGui::LogToFile(int max_depth, const char* filename)
+void ImGui::LogToFile(int auto_open_depth, const char* filename)
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -8869,13 +8868,12 @@ void ImGui::LogToFile(int max_depth, const char* filename)
     }
     g.LogEnabled = true;
     g.LogType = ImGuiLogType_File;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
+    g.LogDepthRef = window->DC.TreeDepth;
+    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
 }
 
 // Start logging/capturing text output to clipboard
-void ImGui::LogToClipboard(int max_depth)
+void ImGui::LogToClipboard(int auto_open_depth)
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -8887,12 +8885,11 @@ void ImGui::LogToClipboard(int max_depth)
     g.LogEnabled = true;
     g.LogType = ImGuiLogType_Clipboard;
     g.LogFile = NULL;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
+    g.LogDepthRef = window->DC.TreeDepth;
+    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
 }
 
-void ImGui::LogToBuffer(int max_depth)
+void ImGui::LogToBuffer(int auto_open_depth)
 {
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
@@ -8904,9 +8901,8 @@ void ImGui::LogToBuffer(int max_depth)
     g.LogEnabled = true;
     g.LogType = ImGuiLogType_Clipboard;
     g.LogFile = NULL;
-    g.LogStartDepth = window->DC.TreeDepth;
-    if (max_depth >= 0)
-        g.LogAutoExpandMaxDepth = max_depth;
+    g.LogDepthRef = window->DC.TreeDepth;
+    g.LogDepthToExpand = ((auto_open_depth >= 0) ? auto_open_depth : g.LogDepthToExpandDefault);
 }
 
 void ImGui::LogFinish()
@@ -8950,18 +8946,18 @@ void ImGui::LogButtons()
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
     PushItemWidth(80.0f);
     PushAllowKeyboardFocus(false);
-    SliderInt("Depth", &g.LogAutoExpandMaxDepth, 0, 9, NULL);
+    SliderInt("Default Depth", &g.LogDepthToExpandDefault, 0, 9, NULL);
     PopAllowKeyboardFocus();
     PopItemWidth();
     PopID();
 
     // Start logging at the end of the function so that the buttons don't appear in the log
     if (log_to_tty)
-        LogToTTY(g.LogAutoExpandMaxDepth);
+        LogToTTY();
     if (log_to_file)
-        LogToFile(g.LogAutoExpandMaxDepth, g.IO.LogFilename);
+        LogToFile();
     if (log_to_clipboard)
-        LogToClipboard(g.LogAutoExpandMaxDepth);
+        LogToClipboard();
 }
 
 //-----------------------------------------------------------------------------

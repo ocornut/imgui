@@ -939,9 +939,10 @@ struct ImGuiContext
     bool                    LogEnabled;
     ImGuiLogType            LogType;
     FILE*                   LogFile;                            // If != NULL log to stdout/ file
-    ImGuiTextBuffer         LogBuffer;                       // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
-    int                     LogStartDepth;
-    int                     LogAutoExpandMaxDepth;
+    ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
+    int                     LogDepthRef;
+    int                     LogDepthToExpand;
+    int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
 
     // Misc
     float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
@@ -1053,8 +1054,8 @@ struct ImGuiContext
         LogEnabled = false;
         LogType = ImGuiLogType_None;
         LogFile = NULL;
-        LogStartDepth = 0;
-        LogAutoExpandMaxDepth = 2;
+        LogDepthRef = 0;
+        LogDepthToExpand = LogDepthToExpandDefault = 2;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
@@ -1408,7 +1409,7 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
 
     // Logging/Capture
-    IMGUI_API void          LogToBuffer(int max_depth = -1); // Start logging to internal buffer
+    IMGUI_API void          LogToBuffer(int auto_open_depth = -1); // Start logging to internal buffer
 
     // Popups, Modals, Tooltips
     IMGUI_API void          OpenPopupEx(ImGuiID id);

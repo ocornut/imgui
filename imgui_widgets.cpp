@@ -4795,7 +4795,7 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
 
     // When logging is enabled, we automatically expand tree nodes (but *NOT* collapsing headers.. seems like sensible behavior).
     // NB- If we are above max depth we still allow manually opened nodes to be logged.
-    if (g.LogEnabled && !(flags & ImGuiTreeNodeFlags_NoAutoOpenOnLog) && window->DC.TreeDepth < g.LogAutoExpandMaxDepth)
+    if (g.LogEnabled && !(flags & ImGuiTreeNodeFlags_NoAutoOpenOnLog) && (window->DC.TreeDepth - g.LogDepthRef) < g.LogDepthToExpand)
         is_open = true;
 
     return is_open;
@@ -4922,7 +4922,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
             const char log_suffix[] = "##";
             LogRenderedText(&text_pos, log_prefix, log_prefix+3);
             RenderTextClipped(text_pos, frame_bb.Max, label, label_end, &label_size);
-            LogRenderedText(&text_pos, log_suffix+1, log_suffix+3);
+            LogRenderedText(&text_pos, log_suffix, log_suffix+2);
         }
         else
         {
