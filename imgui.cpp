@@ -8931,6 +8931,7 @@ void ImGui::LogFinish()
             SetClipboardText(g.LogBuffer.begin());
         break;
     case ImGuiLogType_None:
+        IM_ASSERT(0);
         break;
     }
 
