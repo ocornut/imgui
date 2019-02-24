@@ -392,6 +392,15 @@ enum ImGuiLayoutType_
     ImGuiLayoutType_Vertical = 1
 };
 
+enum ImGuiLogType
+{
+    ImGuiLogType_None = 0,
+    ImGuiLogType_TTY,
+    ImGuiLogType_File,
+    ImGuiLogType_Buffer,
+    ImGuiLogType_Clipboard
+};
+
 // X/Y enums are fixed to 0/1 so they may be used to index ImVec2
 enum ImGuiAxis
 {
@@ -553,7 +562,6 @@ struct ImGuiGroupData
     ImVec1      BackupGroupOffset;
     ImVec2      BackupCurrentLineSize;
     float       BackupCurrentLineTextBaseOffset;
-    float       BackupLogLinePosY;
     ImGuiID     BackupActiveIdIsAlive;
     bool        BackupActiveIdPreviousFrameIsAlive;
     bool        AdvanceCursor;
@@ -1067,10 +1075,14 @@ struct ImGuiContext
 
     // Logging
     bool                    LogEnabled;
+    ImGuiLogType            LogType;
     FILE*                   LogFile;                            // If != NULL log to stdout/ file
-    ImGuiTextBuffer         LogClipboard;                       // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
-    int                     LogStartDepth;
-    int                     LogAutoExpandMaxDepth;
+    ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
+    float                   LogLinePosY;
+    bool                    LogLineFirstItem;
+    int                     LogDepthRef;
+    int                     LogDepthToExpand;
+    int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
 
     // Misc
     float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
@@ -1169,6 +1181,8 @@ struct ImGuiContext
         DragDropAcceptFrameCount = -1;
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
 
+        CurrentTabBar = NULL;
+
         ScalarAsInputTextId = 0;
         ColorEditOptions = ImGuiColorEditFlags__OptionsDefault;
         DragCurrentAccumDirty = false;
@@ -1188,9 +1202,12 @@ struct ImGuiContext
         SettingsDirtyTimer = 0.0f;
 
         LogEnabled = false;
+        LogType = ImGuiLogType_None;
         LogFile = NULL;
-        LogStartDepth = 0;
-        LogAutoExpandMaxDepth = 2;
+        LogLinePosY = FLT_MAX;
+        LogLineFirstItem = false;
+        LogDepthRef = 0;
+        LogDepthToExpand = LogDepthToExpandDefault = 2;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
@@ -1216,7 +1233,6 @@ struct IMGUI_API ImGuiWindowTempData
     float                   CurrentLineTextBaseOffset;
     ImVec2                  PrevLineSize;
     float                   PrevLineTextBaseOffset;
-    float                   LogLinePosY;
     int                     TreeDepth;
     ImU32                   TreeDepthMayJumpToParentOnPop; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31
     ImGuiID                 LastItemId;
@@ -1256,7 +1272,6 @@ struct IMGUI_API ImGuiWindowTempData
         CursorPos = CursorPosPrevLine = CursorStartPos = CursorMaxPos = ImVec2(0.0f, 0.0f);
         CurrentLineSize = PrevLineSize = ImVec2(0.0f, 0.0f);
         CurrentLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
-        LogLinePosY = -1.0f;
         TreeDepth = 0;
         TreeDepthMayJumpToParentOnPop = 0x00;
         LastItemId = 0;
@@ -1574,6 +1589,10 @@ namespace ImGui
     IMGUI_API void          PushMultiItemsWidths(int components, float width_full = 0.0f);
     IMGUI_API void          PushItemFlag(ImGuiItemFlags option, bool enabled);
     IMGUI_API void          PopItemFlag();
+
+    // Logging/Capture
+    IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);   // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
+    IMGUI_API void          LogToBuffer(int auto_open_depth = -1);              // Start logging/capturing to internal buffer
 
     // Popups, Modals, Tooltips
     IMGUI_API void          OpenPopupEx(ImGuiID id);
