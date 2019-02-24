@@ -3143,7 +3143,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
 
-    const bool RENDER_SELECTION_WHEN_INACTIVE = true;
+    const bool RENDER_SELECTION_WHEN_INACTIVE = false;
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
     const bool is_readonly = (flags & ImGuiInputTextFlags_ReadOnly) != 0;
     const bool is_password = (flags & ImGuiInputTextFlags_Password) != 0;
