@@ -3277,32 +3277,33 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
     }
 
+    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped), clear id immediately (don't wait until the end of the function)
+    if (g.ActiveId == id && state == NULL)
+        ClearActiveID();
+
     // Release focus when we click outside
     if (!init_make_active && io.MouseClicked[0])
         clear_active_id = true;
-
-    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped)
-    if (g.ActiveId == id && state == NULL)
-        ClearActiveID();
 
     bool value_changed = false;
     bool enter_pressed = false;
     int backup_current_text_length = 0;
 
+    // When read-only we always use the live data passed to the function
+    if (g.ActiveId == id && is_readonly && !g.ActiveIdIsJustActivated)
+    {
+        IM_ASSERT(state != NULL);
+        const char* buf_end = NULL;
+        state->TextW.resize(buf_size + 1);
+        state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, state->TextW.Size, buf, NULL, &buf_end);
+        state->CurLenA = (int)(buf_end - buf);
+        state->CursorClamp();
+    }
+
     // Process mouse inputs and character inputs
     if (g.ActiveId == id)
     {
         IM_ASSERT(state != NULL);
-        if (is_readonly && !g.ActiveIdIsJustActivated)
-        {
-            // When read-only we always use the live data passed to the function
-            const char* buf_end = NULL;
-            state->TextW.resize(buf_size+1);
-            state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, state->TextW.Size, buf, NULL, &buf_end);
-            state->CurLenA = (int)(buf_end - buf);
-            state->CursorClamp();
-        }
-
         backup_current_text_length = state->CurLenA;
         state->BufCapacityA = buf_size;
         state->UserFlags = flags;
@@ -3653,7 +3654,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
-    const bool render_cursor = (g.ActiveId == id) || user_scroll_active;
+    const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
     const bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     if (render_cursor || render_selection)
     {
@@ -3811,13 +3812,13 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     else
     {
         // Render text only (no selection, no cursor)
-        const char* buf_end = NULL;
+        const char* buf_display_end = NULL;
         if (is_multiline)
-            text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_end) * g.FontSize); // We don't need width
+            text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_display_end) * g.FontSize); // We don't need width
         else
-            buf_end = buf_display + strlen(buf_display);
-        if (is_multiline || (buf_end - buf_display) < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            buf_display_end = buf_display + strlen(buf_display);
+        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
     }
 
     if (is_multiline)

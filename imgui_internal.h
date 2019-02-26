@@ -104,6 +104,8 @@ namespace ImStb
 #define STB_TEXTEDIT_STRING             ImGuiInputTextState
 #define STB_TEXTEDIT_CHARTYPE           ImWchar
 #define STB_TEXTEDIT_GETWIDTH_NEWLINE   -1.0f
+#define STB_TEXTEDIT_UNDOSTATECOUNT     99
+#define STB_TEXTEDIT_UNDOCHARCOUNT      999
 #include "imstb_textedit.h"
 
 } // namespace ImStb
@@ -593,6 +595,8 @@ struct IMGUI_API ImGuiInputTextState
     bool                HasSelection() const        { return Stb.select_start != Stb.select_end; }
     void                ClearSelection()            { Stb.select_start = Stb.select_end = Stb.cursor; }
     void                SelectAll()                 { Stb.select_start = 0; Stb.cursor = Stb.select_end = CurLenW; Stb.has_preferred_x = 0; }
+    int                 GetUndoAvailCount() const   { return Stb.undostate.undo_point; }
+    int                 GetRedoAvailCount() const   { return STB_TEXTEDIT_UNDOSTATECOUNT - Stb.undostate.redo_point; }
     void                OnKeyPressed(int key);      // Cannot be inline because we call in code in stb_textedit.h implementation
 };
 
