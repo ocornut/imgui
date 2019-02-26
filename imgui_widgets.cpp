@@ -3174,7 +3174,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     ImGuiIO& io = g.IO;
     const ImGuiStyle& style = g.Style;
 
-    const bool RENDER_SELECTION_WHEN_INACTIVE = true;
+    const bool RENDER_SELECTION_WHEN_INACTIVE = false;
     const bool is_multiline = (flags & ImGuiInputTextFlags_Multiline) != 0;
     const bool is_readonly = (flags & ImGuiInputTextFlags_ReadOnly) != 0;
     const bool is_password = (flags & ImGuiInputTextFlags_Password) != 0;
@@ -3255,7 +3255,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     bool select_all = (g.ActiveId != id) && ((flags & ImGuiInputTextFlags_AutoSelectAll) != 0 || user_nav_input_start) && (!is_multiline);
 
     const bool init_make_active = (focus_requested || user_clicked || user_scroll_finish || user_nav_input_start);
-    if (init_make_active && g.ActiveId != id)
+    const bool init_state = (init_make_active || user_scroll_active);
+    if (init_state && g.ActiveId != id)
     {
         // Access state even if we don't own it yet.
         state = &g.InputTextState;
@@ -3268,15 +3269,16 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         memcpy(state->InitialTextA.Data, buf, buf_len + 1);
 
         // Start edition
-        const int prev_len_w = state->CurLenW;
         const char* buf_end = NULL;
         state->TextW.resize(buf_size + 1);          // wchar count <= UTF-8 count. we use +1 to make sure that .Data is always pointing to at least an empty string.
+        state->TextA.resize(0);
+        state->TextAIsValid = false;                // TextA is not valid yet (we will display buf until then)
         state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, buf_size, buf, NULL, &buf_end);
         state->CurLenA = (int)(buf_end - buf);      // We can't get the result from ImStrncpy() above because it is not UTF-8 aware. Here we'll cut off malformed UTF-8.
 
         // Preserve cursor position and undo/redo stack if we come back to same widget
-        // FIXME: We should probably compare the whole buffer to be on the safety side. Comparing buf (utf8) and edit_state.Text (wchar).
-        const bool recycle_state = (state->ID == id) && (prev_len_w == state->CurLenW);
+        // FIXME: For non-readonly widgets we might be able to require that TextAIsValid && TextA == buf ? (untested) and discard undo stack if user buffer has changed.
+        const bool recycle_state = (state->ID == id);
         if (recycle_state)
         {
             // Recycle existing cursor/selection/undo stack but clamp position
@@ -3297,7 +3299,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             select_all = true;
     }
 
-    if (init_make_active)
+    if (g.ActiveId != id && init_make_active)
     {
         IM_ASSERT(state && state->ID == id);
         SetActiveID(id, window);
@@ -3308,32 +3310,38 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
     }
 
-    // Release focus when we click outside
-    if (!init_make_active && io.MouseClicked[0])
-        clear_active_id = true;
-
-    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped)
+    // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped), clear id immediately (don't wait until the end of the function)
     if (g.ActiveId == id && state == NULL)
         ClearActiveID();
+
+    // Release focus when we click outside
+    if (g.ActiveId == id && io.MouseClicked[0] && !init_state && !init_make_active)
+        clear_active_id = true;
 
     bool value_changed = false;
     bool enter_pressed = false;
     int backup_current_text_length = 0;
 
-    // Process mouse inputs and character inputs
-    if (g.ActiveId == id)
+    // When read-only we always use the live data passed to the function
+    // FIXME-OPT: Because our selection/cursor code currently needs the wide text we need to convert it when active, which is not ideal :(
+    if (is_readonly && state != NULL)
     {
-        IM_ASSERT(state != NULL);
-        if (is_readonly && !g.ActiveIdIsJustActivated)
+        const bool will_render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
+        const bool will_render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || will_render_cursor);
+        if (will_render_cursor || will_render_selection)
         {
-            // When read-only we always use the live data passed to the function
             const char* buf_end = NULL;
-            state->TextW.resize(buf_size+1);
+            state->TextW.resize(buf_size + 1);
             state->CurLenW = ImTextStrFromUtf8(state->TextW.Data, state->TextW.Size, buf, NULL, &buf_end);
             state->CurLenA = (int)(buf_end - buf);
             state->CursorClamp();
         }
+    }
 
+    // Process mouse inputs and character inputs
+    if (g.ActiveId == id)
+    {
+        IM_ASSERT(state != NULL);
         backup_current_text_length = state->CurLenA;
         state->BufCapacityA = buf_size;
         state->UserFlags = flags;
@@ -3546,6 +3554,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             // FIXME-OPT: CPU waste to do this every time the widget is active, should mark dirty state from the stb_textedit callbacks.
             if (!is_readonly)
             {
+                state->TextAIsValid = true;
                 state->TextA.resize(state->TextW.Size * 4 + 1);
                 ImTextStrToUtf8(state->TextA.Data, state->TextA.Size, state->TextW.Data, NULL);
             }
@@ -3676,15 +3685,12 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
     // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
     const int buf_display_max_length = 2 * 1024 * 1024;
-
-    // Select which buffer we are going to display. We set buf to NULL to prevent accidental usage from now on.
-    const char* buf_display = (g.ActiveId == id && state && !is_readonly) ? state->TextA.Data : buf;
-    IM_ASSERT(buf_display);
-    buf = NULL;
+    const char* buf_display = NULL;
+    const char* buf_display_end = NULL;
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
-    const bool render_cursor = (g.ActiveId == id) || user_scroll_active;
+    const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
     const bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     if (render_cursor || render_selection)
     {
@@ -3820,9 +3826,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
 
         // We test for 'buf_display_max_length' as a way to avoid some pathological cases (e.g. single-line 1 MB string) which would make ImDrawList crash.
-        const int buf_display_len = state->CurLenA;
-        if (is_multiline || buf_display_len < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display + buf_display_len, 0.0f, is_multiline ? NULL : &clip_rect);
+        buf_display = (!is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
+        buf_display_end = buf_display + state->CurLenA;
+        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
 
         // Draw blinking cursor
         if (render_cursor)
@@ -3845,13 +3852,15 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     else
     {
         // Render text only (no selection, no cursor)
-        const char* buf_end = NULL;
+        buf_display = (g.ActiveId == id && !is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
         if (is_multiline)
-            text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_end) * g.FontSize); // We don't need width
+            text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_display_end) * g.FontSize); // We don't need width
+        else if (g.ActiveId == id)
+            buf_display_end = buf_display + state->CurLenA;
         else
-            buf_end = buf_display + strlen(buf_display);
-        if (is_multiline || (buf_end - buf_display) < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            buf_display_end = buf_display + strlen(buf_display);
+        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
     }
 
     if (is_multiline)
@@ -3866,7 +3875,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
 
     // Log as text
     if (g.LogEnabled && !is_password)
-        LogRenderedText(&draw_pos, buf_display, NULL);
+        LogRenderedText(&draw_pos, buf_display, buf_display_end);
 
     if (label_size.x > 0)
         RenderText(ImVec2(frame_bb.Max.x + style.ItemInnerSpacing.x, frame_bb.Min.y + style.FramePadding.y), label);

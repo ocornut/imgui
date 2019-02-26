@@ -105,6 +105,9 @@ Other Changes:
   meant to be square (to align with e.g. color button) we always use FramePadding.y. (#2367)
 - InputText: Fixed an edge case crash that would happen if another widget sharing the same ID
   is being swapped with an InputText that has yet to be activated.
+- InputText: Fixed various display corruption related to swapping the underlying buffer while
+  a input widget is active (both for writable and read-only paths). Often they would manifest
+  when manipulating the scrollbar of a multi-line input text.
 - TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
 - TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
