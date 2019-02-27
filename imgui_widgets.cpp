@@ -74,22 +74,30 @@ Index of this file:
 //-------------------------------------------------------------------------
 
 // Those MIN/MAX values are not define because we need to point to them
-static const ImS32  IM_S32_MIN = INT_MIN;    // (-2147483647 - 1), (0x80000000);
-static const ImS32  IM_S32_MAX = INT_MAX;    // (2147483647), (0x7FFFFFFF)
-static const ImU32  IM_U32_MIN = 0;
-static const ImU32  IM_U32_MAX = UINT_MAX;   // (0xFFFFFFFF)
+static const char           IM_S8_MIN  = -128;
+static const char           IM_S8_MAX  = 127;
+static const unsigned char  IM_U8_MIN  = 0;
+static const unsigned char  IM_U8_MAX  = 0xFF;
+static const short          IM_S16_MIN = -32768;
+static const short          IM_S16_MAX = 32767;
+static const unsigned short IM_U16_MIN = 0;
+static const unsigned short IM_U16_MAX = 0xFFFF;
+static const ImS32          IM_S32_MIN = INT_MIN;    // (-2147483647 - 1), (0x80000000);
+static const ImS32          IM_S32_MAX = INT_MAX;    // (2147483647), (0x7FFFFFFF)
+static const ImU32          IM_U32_MIN = 0;
+static const ImU32          IM_U32_MAX = UINT_MAX;   // (0xFFFFFFFF)
 #ifdef LLONG_MIN
-static const ImS64  IM_S64_MIN = LLONG_MIN;  // (-9223372036854775807ll - 1ll);
-static const ImS64  IM_S64_MAX = LLONG_MAX;  // (9223372036854775807ll);
+static const ImS64          IM_S64_MIN = LLONG_MIN;  // (-9223372036854775807ll - 1ll);
+static const ImS64          IM_S64_MAX = LLONG_MAX;  // (9223372036854775807ll);
 #else
-static const ImS64  IM_S64_MIN = -9223372036854775807LL - 1;
-static const ImS64  IM_S64_MAX = 9223372036854775807LL;
+static const ImS64          IM_S64_MIN = -9223372036854775807LL - 1;
+static const ImS64          IM_S64_MAX = 9223372036854775807LL;
 #endif
-static const ImU64  IM_U64_MIN = 0;
+static const ImU64          IM_U64_MIN = 0;
 #ifdef ULLONG_MAX
-static const ImU64  IM_U64_MAX = ULLONG_MAX; // (0xFFFFFFFFFFFFFFFFull);
+static const ImU64          IM_U64_MAX = ULLONG_MAX; // (0xFFFFFFFFFFFFFFFFull);
 #else
-static const ImU64  IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
+static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
 #endif
 
 //-------------------------------------------------------------------------
@@ -1495,17 +1503,21 @@ struct ImGuiDataTypeInfo
 
 static const ImGuiDataTypeInfo GDataTypeInfo[] =
 {
-    { sizeof(int),          "%d",   "%d"    },
-    { sizeof(unsigned int), "%u",   "%u"    },
+    { sizeof(char),             "%d",   "%d"    },  // ImGuiDataType_S8
+    { sizeof(unsigned char),    "%u",   "%u"    },
+    { sizeof(short),            "%d",   "%d"    },  // ImGuiDataType_S16
+    { sizeof(unsigned short),   "%u",   "%u"    },
+    { sizeof(int),              "%d",   "%d"    },  // ImGuiDataType_S32
+    { sizeof(unsigned int),     "%u",   "%u"    },
 #ifdef _MSC_VER
-    { sizeof(ImS64),        "%I64d","%I64d" },
-    { sizeof(ImU64),        "%I64u","%I64u" },
+    { sizeof(ImS64),            "%I64d","%I64d" },  // ImGuiDataType_S64
+    { sizeof(ImU64),            "%I64u","%I64u" },
 #else
-    { sizeof(ImS64),        "%lld", "%lld"  },
-    { sizeof(ImU64),        "%llu", "%llu"  },
+    { sizeof(ImS64),            "%lld", "%lld"  },  // ImGuiDataType_S64
+    { sizeof(ImU64),            "%llu", "%llu"  },
 #endif
-    { sizeof(float),        "%f",   "%f"    },  // float are promoted to double in va_arg
-    { sizeof(double),       "%f",   "%lf"   },
+    { sizeof(float),            "%f",   "%f"    },  // ImGuiDataType_Float (float are promoted to double in va_arg)
+    { sizeof(double),           "%f",   "%lf"   },  // ImGuiDataType_Double
 };
 IM_STATIC_ASSERT(IM_ARRAYSIZE(GDataTypeInfo) == ImGuiDataType_COUNT);
 
@@ -1535,14 +1547,23 @@ static const char* PatchFormatStringFloatToInt(const char* fmt)
 
 static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* format)
 {
-    if (data_type == ImGuiDataType_S32 || data_type == ImGuiDataType_U32)   // Signedness doesn't matter when pushing the argument
+    // Signedness doesn't matter when pushing integer arguments
+    if (data_type == ImGuiDataType_S32 || data_type == ImGuiDataType_U32)
         return ImFormatString(buf, buf_size, format, *(const ImU32*)data_ptr);
-    if (data_type == ImGuiDataType_S64 || data_type == ImGuiDataType_U64)   // Signedness doesn't matter when pushing the argument
+    if (data_type == ImGuiDataType_S64 || data_type == ImGuiDataType_U64)
         return ImFormatString(buf, buf_size, format, *(const ImU64*)data_ptr);
     if (data_type == ImGuiDataType_Float)
         return ImFormatString(buf, buf_size, format, *(const float*)data_ptr);
     if (data_type == ImGuiDataType_Double)
         return ImFormatString(buf, buf_size, format, *(const double*)data_ptr);
+    if (data_type == ImGuiDataType_S8)
+        return ImFormatString(buf, buf_size, format, *(const ImS8*)data_ptr);
+    if (data_type == ImGuiDataType_U8)
+        return ImFormatString(buf, buf_size, format, *(const ImU8*)data_ptr);
+    if (data_type == ImGuiDataType_S16)
+        return ImFormatString(buf, buf_size, format, *(const ImS16*)data_ptr);
+    if (data_type == ImGuiDataType_U16)
+        return ImFormatString(buf, buf_size, format, *(const ImU16*)data_ptr);
     IM_ASSERT(0);
     return 0;
 }
@@ -1553,13 +1574,29 @@ static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void*
     IM_ASSERT(op == '+' || op == '-');
     switch (data_type)
     {
+        case ImGuiDataType_S8:
+            if (op == '+')      *(ImS8*)output = *(const ImS8*)arg1 + *(const ImS8*)arg2;
+            else if (op == '-') *(ImS8*)output = *(const ImS8*)arg1 - *(const ImS8*)arg2;
+            return;
+        case ImGuiDataType_U8:
+            if (op == '+')      *(ImU8*)output = *(const ImU8*)arg1 + *(const ImU8*)arg2;
+            else if (op == '-') *(ImU8*)output = *(const ImU8*)arg1 - *(const ImU8*)arg2;
+            return;
+        case ImGuiDataType_S16:
+            if (op == '+')      *(ImS16*)output = *(const ImS16*)arg1 + *(const ImS16*)arg2;
+            else if (op == '-') *(ImS16*)output = *(const ImS16*)arg1 - *(const ImS16*)arg2;
+            return;
+        case ImGuiDataType_U16:
+            if (op == '+')      *(ImU16*)output = *(const ImU16*)arg1 + *(const ImU16*)arg2;
+            else if (op == '-') *(ImU16*)output = *(const ImU16*)arg1 - *(const ImU16*)arg2;
+            return;
         case ImGuiDataType_S32:
-            if (op == '+')      *(int*)output = *(const int*)arg1 + *(const int*)arg2;
-            else if (op == '-') *(int*)output = *(const int*)arg1 - *(const int*)arg2;
+            if (op == '+')      *(ImS32*)output = *(const ImS32*)arg1 + *(const ImS32*)arg2;
+            else if (op == '-') *(ImS32*)output = *(const ImS32*)arg1 - *(const ImS32*)arg2;
             return;
         case ImGuiDataType_U32:
-            if (op == '+')      *(unsigned int*)output = *(const unsigned int*)arg1 + *(const ImU32*)arg2;
-            else if (op == '-') *(unsigned int*)output = *(const unsigned int*)arg1 - *(const ImU32*)arg2;
+            if (op == '+')      *(ImU32*)output = *(const ImU32*)arg1 + *(const ImU32*)arg2;
+            else if (op == '-') *(ImU32*)output = *(const ImU32*)arg1 - *(const ImU32*)arg2;
             return;
         case ImGuiDataType_S64:
             if (op == '+')      *(ImS64*)output = *(const ImS64*)arg1 + *(const ImS64*)arg2;
@@ -1614,6 +1651,7 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     if (format == NULL)
         format = GDataTypeInfo[data_type].ScanFmt;
 
+    // FIXME-LEGACY: The aim is to remove those operators and write a proper expression evaluator at some point..
     int arg1i = 0;
     if (data_type == ImGuiDataType_S32)
     {
@@ -1627,12 +1665,6 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         else if (op == '*') { if (sscanf(buf, "%f", &arg1f)) *v = (int)(arg0i * arg1f); }                   // Multiply
         else if (op == '/') { if (sscanf(buf, "%f", &arg1f) && arg1f != 0.0f) *v = (int)(arg0i / arg1f); }  // Divide
         else                { if (sscanf(buf, format, &arg1i) == 1) *v = arg1i; }                           // Assign constant
-    }
-    else if (data_type == ImGuiDataType_U32 || data_type == ImGuiDataType_S64 || data_type == ImGuiDataType_U64)
-    {
-        // Assign constant
-        // FIXME: We don't bother handling support for legacy operators since they are a little too crappy. Instead we may implement a proper expression evaluator in the future.
-        sscanf(buf, format, data_ptr);
     }
     else if (data_type == ImGuiDataType_Float)
     {
@@ -1663,6 +1695,29 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         else if (op == '/') { if (arg1f != 0.0f) *v = arg0f / arg1f; } // Divide
         else                { *v = arg1f; }                            // Assign constant
     }
+    else if (data_type == ImGuiDataType_U32 || data_type == ImGuiDataType_S64 || data_type == ImGuiDataType_U64)
+    {
+        // All other types assign constant
+        // We don't bother handling support for legacy operators since they are a little too crappy. Instead we will later implement a proper expression evaluator in the future.
+        sscanf(buf, format, data_ptr);
+    }
+    else
+    {
+        // Small types need a 32-bit buffer to receive the result from scanf()
+        int v32;
+        sscanf(buf, format, &v32);
+        if (data_type == ImGuiDataType_S8)
+            *(ImS8*)data_ptr = (ImS8)ImClamp(v32, (int)IM_S8_MIN, (int)IM_S8_MAX);
+        else if (data_type == ImGuiDataType_U8)
+            *(ImU8*)data_ptr = (ImU8)ImClamp(v32, (int)IM_U8_MIN, (int)IM_U8_MAX);
+        else if (data_type == ImGuiDataType_S16)
+            *(ImS16*)data_ptr = (ImS16)ImClamp(v32, (int)IM_S16_MIN, (int)IM_S16_MAX);
+        else if (data_type == ImGuiDataType_U16)
+            *(ImU16*)data_ptr = (ImU16)ImClamp(v32, (int)IM_U16_MIN, (int)IM_U16_MAX);
+        else
+            IM_ASSERT(0);
+    }
+
     return memcmp(data_backup, data_ptr, GDataTypeInfo[data_type].Size) != 0;
 }
 
@@ -1845,6 +1900,10 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* v, float v_s
 
     switch (data_type)
     {
+    case ImGuiDataType_S8:     { ImS32 v32 = (ImS32)*(ImS8*)v;  bool r = DragBehaviorT<ImS32, ImS32, float >(ImGuiDataType_S32, &v32, v_speed, v_min ? *(const ImS8*) v_min : IM_S8_MIN,  v_max ? *(const ImS8*)v_max  : IM_S8_MAX,  format, power, flags); if (r) *(ImS8*)v = (ImS8)v32; return r; }
+    case ImGuiDataType_U8:     { ImU32 v32 = (ImU32)*(ImU8*)v;  bool r = DragBehaviorT<ImU32, ImS32, float >(ImGuiDataType_U32, &v32, v_speed, v_min ? *(const ImU8*) v_min : IM_U8_MIN,  v_max ? *(const ImU8*)v_max  : IM_U8_MAX,  format, power, flags); if (r) *(ImU8*)v = (ImU8)v32; return r; }
+    case ImGuiDataType_S16:    { ImS32 v32 = (ImS32)*(ImS16*)v; bool r = DragBehaviorT<ImS32, ImS32, float >(ImGuiDataType_S32, &v32, v_speed, v_min ? *(const ImS16*)v_min : IM_S16_MIN, v_max ? *(const ImS16*)v_max : IM_S16_MAX, format, power, flags); if (r) *(ImS16*)v = (ImS16)v32; return r; }
+    case ImGuiDataType_U16:    { ImU32 v32 = (ImU32)*(ImU16*)v; bool r = DragBehaviorT<ImU32, ImS32, float >(ImGuiDataType_U32, &v32, v_speed, v_min ? *(const ImU16*)v_min : IM_U16_MIN, v_max ? *(const ImU16*)v_max : IM_U16_MAX, format, power, flags); if (r) *(ImU16*)v = (ImU16)v32; return r; }
     case ImGuiDataType_S32:    return DragBehaviorT<ImS32, ImS32, float >(data_type, (ImS32*)v,  v_speed, v_min ? *(const ImS32* )v_min : IM_S32_MIN, v_max ? *(const ImS32* )v_max : IM_S32_MAX, format, power, flags);
     case ImGuiDataType_U32:    return DragBehaviorT<ImU32, ImS32, float >(data_type, (ImU32*)v,  v_speed, v_min ? *(const ImU32* )v_min : IM_U32_MIN, v_max ? *(const ImU32* )v_max : IM_U32_MAX, format, power, flags);
     case ImGuiDataType_S64:    return DragBehaviorT<ImS64, ImS64, double>(data_type, (ImS64*)v,  v_speed, v_min ? *(const ImS64* )v_min : IM_S64_MIN, v_max ? *(const ImS64* )v_max : IM_S64_MAX, format, power, flags);
@@ -2269,6 +2328,10 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
 {
     switch (data_type)
     {
+    case ImGuiDataType_S8:  { ImS32 v32 = (ImS32)*(ImS8*)v;  bool r = SliderBehaviorT<ImS32, ImS32, float >(bb, id, ImGuiDataType_S32, &v32, *(const ImS8*)v_min,  *(const ImS8*)v_max,  format, power, flags, out_grab_bb); if (r) *(ImS8*)v  = (ImS8)v32;  return r; }
+    case ImGuiDataType_U8:  { ImU32 v32 = (ImU32)*(ImU8*)v;  bool r = SliderBehaviorT<ImU32, ImS32, float >(bb, id, ImGuiDataType_U32, &v32, *(const ImU8*)v_min,  *(const ImU8*)v_max,  format, power, flags, out_grab_bb); if (r) *(ImU8*)v  = (ImU8)v32;  return r; }
+    case ImGuiDataType_S16: { ImS32 v32 = (ImS32)*(ImS16*)v; bool r = SliderBehaviorT<ImS32, ImS32, float >(bb, id, ImGuiDataType_S32, &v32, *(const ImS16*)v_min, *(const ImS16*)v_max, format, power, flags, out_grab_bb); if (r) *(ImS16*)v = (ImS16)v32; return r; }
+    case ImGuiDataType_U16: { ImU32 v32 = (ImU32)*(ImU16*)v; bool r = SliderBehaviorT<ImU32, ImS32, float >(bb, id, ImGuiDataType_U32, &v32, *(const ImU16*)v_min, *(const ImU16*)v_max, format, power, flags, out_grab_bb); if (r) *(ImU16*)v = (ImU16)v32; return r; }
     case ImGuiDataType_S32:
         IM_ASSERT(*(const ImS32*)v_min >= IM_S32_MIN/2 && *(const ImS32*)v_max <= IM_S32_MAX/2);
         return SliderBehaviorT<ImS32, ImS32, float >(bb, id, data_type, (ImS32*)v,  *(const ImS32*)v_min,  *(const ImS32*)v_max,  format, power, flags, out_grab_bb);

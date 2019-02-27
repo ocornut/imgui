@@ -42,6 +42,8 @@ Breaking Changes:
 Other Changes:
 
 - Nav: Fixed a tap on AltGR (e.g. German keyboard) from navigation to the menu layer.
+- DragScalar, InputScalar, SliderScalar: Added support for u8/s8/u16/s16 data types.
+  We are reusing function instances for larger types to reduce code size. (#643, #320, #708, #1011)
 - InputInt, InputFloat, InputScalar: Fix to keep the label of the +/- buttons centered when
   style.FramePadding.x is abnormally larger than style.FramePadding.y. Since the buttons are
   meant to be square (to align with e.g. color button) we always use FramePadding.y. (#2367)

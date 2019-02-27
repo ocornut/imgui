@@ -150,6 +150,10 @@ typedef int (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
 
 // Scalar data types
+typedef char                ImS8;   // 8-bit signed integer == char
+typedef unsigned char       ImU8;   // 8-bit unsigned integer
+typedef short               ImS16;  // 16-bit signed integer
+typedef unsigned short      ImU16;  // 16-bit unsigned integer
 typedef signed int          ImS32;  // 32-bit signed integer == int
 typedef unsigned int        ImU32;  // 32-bit unsigned integer (often used to store packed colors)
 #if defined(_MSC_VER) && !defined(__clang__)
@@ -884,10 +888,14 @@ enum ImGuiDragDropFlags_
 // A primary data type
 enum ImGuiDataType_
 {
+    ImGuiDataType_S8,       // char
+    ImGuiDataType_U8,       // unsigned char
+    ImGuiDataType_S16,      // short
+    ImGuiDataType_U16,      // unsigned short
     ImGuiDataType_S32,      // int
     ImGuiDataType_U32,      // unsigned int
-    ImGuiDataType_S64,      // long long, __int64
-    ImGuiDataType_U64,      // unsigned long long, unsigned __int64
+    ImGuiDataType_S64,      // long long / __int64
+    ImGuiDataType_U64,      // unsigned long long / unsigned __int64
     ImGuiDataType_Float,    // float
     ImGuiDataType_Double,   // double
     ImGuiDataType_COUNT
