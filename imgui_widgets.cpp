@@ -3284,7 +3284,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         ClearActiveID();
 
     // Release focus when we click outside
-    if (g.ActiveId == id && io.MouseClicked[0] && !init_state && !init_make_active)
+    if (g.ActiveId == id && io.MouseClicked[0] && !init_state && !init_make_active) //-V560
         clear_active_id = true;
 
     bool value_changed = false;
@@ -3295,8 +3295,8 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // FIXME-OPT: Because our selection/cursor code currently needs the wide text we need to convert it when active, which is not ideal :(
     if (is_readonly && state != NULL)
     {
-        const bool will_render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
-        const bool will_render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || will_render_cursor);
+        const bool will_render_cursor = (g.ActiveId == id) || (user_scroll_active);
+        const bool will_render_selection = state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || will_render_cursor);
         if (will_render_cursor || will_render_selection)
         {
             const char* buf_end = NULL;
