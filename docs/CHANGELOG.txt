@@ -33,6 +33,12 @@ HOW TO UPDATE?
  VERSION 1.69 (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
+  ImGuiColorEditFlags_DisplayRGB/_DisplayHSV/_DisplayHex. This is anticipation of adding new
+  flags to ColorEdit/ColorPicker functions which would make those ambiguous. (#2384) [@haldean]
+
 Other Changes:
 
 - Nav: Fixed a tap on AltGR (e.g. German keyboard) from navigation to the menu layer.
