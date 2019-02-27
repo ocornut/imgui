@@ -145,7 +145,7 @@ Frameworks:
 - Ogre: [ogreimgui](https://bitbucket.org/LMCrashy/ogreimgui/src)
 - OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
 - OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
-- ORX: [#1843](https://github.com/ocornut/imgui/pull/1843)
+- ORX: [ImGuiOrx](https://github.com/thegwydd/ImGuiOrx), [#1843](https://github.com/ocornut/imgui/pull/1843)
 - LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
 - Magnum: [ImGuiIntegration](https://doc.magnum.graphics/magnum/namespaceMagnum_1_1ImGuiIntegration.html) ([example](https://doc.magnum.graphics/magnum/examples-imgui.html))
 - NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
