@@ -54,6 +54,8 @@ Other Changes:
 - InputText: Fixed various display corruption related to swapping the underlying buffer while
   a input widget is active (both for writable and read-only paths). Often they would manifest
   when manipulating the scrollbar of a multi-line input text.
+- ColorPicker: Fixed a bug/assertion when displaying a color picker in a collapsed window
+  while dragging its title bar. (#2389)
 - TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
 - TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
