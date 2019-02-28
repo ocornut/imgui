@@ -41,7 +41,7 @@ Breaking Changes:
 
 Other Changes:
 
-- Nav: Fixed a tap on AltGR (e.g. German keyboard) from navigation to the menu layer.
+- Nav: Fixed a tap on AltGR (e.g. German keyboard) from navigating to the menu layer.
 - DragScalar, InputScalar, SliderScalar: Added support for u8/s8/u16/s16 data types.
   We are reusing function instances for larger types to reduce code size. (#643, #320, #708, #1011)
 - InputInt, InputFloat, InputScalar: Fix to keep the label of the +/- buttons centered when
@@ -63,6 +63,7 @@ Other Changes:
 - Log/Capture: Fixed LogXXX functions 'auto_open_depth' parameter being treated as an absolute
   tree depth instead of a relative one.
 - Log/Capture: Fixed CollapsingHeader trailing ascii representation being "#" instead of "##".
+- Misc: Asserting in NewFrame() if style.WindowMinSize is zero or smaller than (1.0f,1.0f).
 - Examples: OpenGL: Fix for OSX not supporting OpenGL 4.5, we don't try to read GL_CLIP_ORIGIN
   even if the OpenGL headers/loader happens to define the value. (#2366, #2186)
 - Examples: Allegro: Added support for touch events (emulating mouse). (#2219) [@dos1]
