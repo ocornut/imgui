@@ -74,6 +74,56 @@ static void ImGui_ImplSDL2_SetClipboardText(void*, const char* text)
     SDL_SetClipboardText(text);
 }
 
+static void ImGui_ImplSDL2_ImeSetInputScreenPos(int x, int y)
+{
+    SDL_Rect rect = { x, y, 0, 0 };
+    SDL_SetTextInputRect(&rect);
+}
+
+#ifdef _WIN32
+static LRESULT CALLBACK ImGui_ImplSDL2_HookIme_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
+{
+    WNDPROC wndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA);
+    switch (msg)
+    {
+    case WM_KEYDOWN:
+    case WM_SYSKEYDOWN:
+    case WM_KEYUP:
+    case WM_SYSKEYUP:
+        if (wParam == VK_PROCESSKEY)
+        {
+            wndProc = DefWindowProc;
+        }
+    }
+    return CallWindowProc(wndProc, hwnd, msg, wParam, lParam);
+}
+#endif
+
+void ImGui_ImplSDL2_Init()
+{
+#ifdef _WIN32
+    SDL_EventState(SDL_TEXTINPUT, SDL_DISABLE);
+#endif
+}
+
+void ImGui_ImplSDL2_HookIme(SDL_Window* window)
+{
+#ifdef _WIN32
+    SDL_SysWMinfo wmInfo;
+    SDL_VERSION(&wmInfo.version);
+    SDL_GetWindowWMInfo(window, &wmInfo);
+    HWND hwnd = (HWND)wmInfo.info.win.window;
+    if (!GetWindowLongPtr(hwnd, GWLP_USERDATA)) {
+        SetWindowLongPtr(hwnd, GWLP_USERDATA, GetWindowLongPtr(hwnd, GWLP_WNDPROC));
+        SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplSDL2_HookIme_WndProc);
+    }
+    ImmAssociateContext(hwnd, 0);
+    SDL_StartTextInput();
+    ImmAssociateContextEx(hwnd, 0, IACE_DEFAULT);
+    SDL_EventState(SDL_TEXTINPUT, SDL_ENABLE);
+#endif
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -116,6 +166,20 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
             io.KeySuper = ((SDL_GetModState() & KMOD_GUI) != 0);
             return true;
         }
+#ifdef _WIN32
+    case SDL_WINDOWEVENT:
+        if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+        {
+            SDL_Window* window = SDL_GetWindowFromID(event->window.windowID);
+            if (window)
+            {
+                SDL_SysWMinfo wmInfo;
+                SDL_VERSION(&wmInfo.version);
+                SDL_GetWindowWMInfo(window, &wmInfo);
+                ImmAssociateContextEx((HWND)wmInfo.info.win.window, 0, IACE_DEFAULT);
+            }
+        }
+#endif
     }
     return false;
 }
@@ -156,6 +220,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window)
     io.SetClipboardTextFn = ImGui_ImplSDL2_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
     io.ClipboardUserData = NULL;
+    io.ImeSetInputScreenPosFn = ImGui_ImplSDL2_ImeSetInputScreenPos;
 
     g_MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     g_MouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
