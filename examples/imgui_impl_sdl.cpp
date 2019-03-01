@@ -92,7 +92,11 @@ static LRESULT CALLBACK ImGui_ImplSDL2_HookIme_WndProc(HWND hwnd, UINT msg, WPAR
     case WM_SYSKEYUP:
         if (wParam == VK_PROCESSKEY)
         {
-            wndProc = DefWindowProc;
+            ImGuiIO& io = ImGui::GetIO();
+            if (io.WantTextInput)
+            {
+                wndProc = DefWindowProc;
+            }
         }
     }
     return CallWindowProc(wndProc, hwnd, msg, wParam, lParam);
