@@ -396,7 +396,7 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
     glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
     glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
 #ifdef GL_VERTEX_ARRAY_BINDING
-    Glint last_vertex_array;
+    GLint last_vertex_array;
     glGetIntegerv(GL_VERTEX_ARRAY_BINDING, &last_vertex_array);
 #endif
 
