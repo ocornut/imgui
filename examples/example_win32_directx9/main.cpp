@@ -11,7 +11,49 @@
 
 // Data
 static LPDIRECT3DDEVICE9        g_pd3dDevice = NULL;
+static LPDIRECT3D9              g_pD3D = NULL;
 static D3DPRESENT_PARAMETERS    g_d3dpp;
+
+HRESULT CreateDeviceD3D(HWND hWnd)
+{
+    if ((g_pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
+        return E_FAIL;
+
+    ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
+    g_d3dpp.Windowed = TRUE;
+    g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+    g_d3dpp.EnableAutoDepthStencil = TRUE;
+    g_d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
+    g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE; // Present with vsync
+    //g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE; // Present without vsync, maximum unthrottled framerate
+
+    // Create the D3DDevice
+    if (g_pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hWnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &g_d3dpp, &g_pd3dDevice) < 0)
+        return E_FAIL;
+
+    return S_OK;
+}
+
+void CleanupDeviceD3D()
+{
+    if (g_pd3dDevice) g_pd3dDevice->Release();
+    if (g_pD3D) g_pD3D->Release();
+}
+
+void ResetDevice()
+{
+    ImGui_ImplDX9_InvalidateDeviceObjects();
+    HRESULT hr = g_pd3dDevice->Reset(&g_d3dpp);
+    if (hr == D3DERR_INVALIDCALL)
+        IM_ASSERT(0);
+    ImGui_ImplDX9_CreateDeviceObjects();
+}
+
+
+#ifndef WM_DPICHANGED
+#define WM_DPICHANGED 0x02E0 // From Windows SDK 8.1+ headers
+#endif
 
 extern LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -24,13 +66,9 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
         {
-            ImGui_ImplDX9_InvalidateDeviceObjects();
-            g_d3dpp.BackBufferWidth  = LOWORD(lParam);
+            g_d3dpp.BackBufferWidth = LOWORD(lParam);
             g_d3dpp.BackBufferHeight = HIWORD(lParam);
-            HRESULT hr = g_pd3dDevice->Reset(&g_d3dpp);
-            if (hr == D3DERR_INVALIDCALL)
-                IM_ASSERT(0);
-            ImGui_ImplDX9_CreateDeviceObjects();
+            ResetDevice();
         }
         return 0;
     case WM_SYSCOMMAND:
@@ -40,40 +78,38 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_DESTROY:
         PostQuitMessage(0);
         return 0;
+    case WM_DPICHANGED:
+        if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
+        {
+            //const int dpi = HIWORD(wParam);
+            //printf("WM_DPICHANGED to %d (%.0f%%)\n", dpi, (float)dpi / 96.0f * 100.0f);
+            const RECT* suggested_rect = (RECT*)lParam;
+            ::SetWindowPos(hWnd, NULL, suggested_rect->left, suggested_rect->top, suggested_rect->right - suggested_rect->left, suggested_rect->bottom - suggested_rect->top, SWP_NOZORDER | SWP_NOACTIVATE);
+        }
     }
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
 int main(int, char**)
 {
+    ImGui_ImplWin32_EnableDpiAwareness();
+
     // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
     RegisterClassEx(&wc);
-    HWND hwnd = CreateWindow(wc.lpszClassName, _T("Dear ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    HWND hWnd = CreateWindow(wc.lpszClassName, _T("Dear ImGui DirectX9 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
-    LPDIRECT3D9 pD3D;
-    if ((pD3D = Direct3DCreate9(D3D_SDK_VERSION)) == NULL)
+    if (CreateDeviceD3D(hWnd) < 0)
     {
+        CleanupDeviceD3D();
         UnregisterClass(wc.lpszClassName, wc.hInstance);
-        return 0;
+        return 1;
     }
-    ZeroMemory(&g_d3dpp, sizeof(g_d3dpp));
-    g_d3dpp.Windowed = TRUE;
-    g_d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    g_d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
-    g_d3dpp.EnableAutoDepthStencil = TRUE;
-    g_d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
-    g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE; // Present with vsync
-    //g_d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE; // Present without vsync, maximum unthrottled framerate
 
-    // Create the D3DDevice
-    if (pD3D->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, hwnd, D3DCREATE_HARDWARE_VERTEXPROCESSING, &g_d3dpp, &g_pd3dDevice) < 0)
-    {
-        pD3D->Release();
-        UnregisterClass(wc.lpszClassName, wc.hInstance);
-        return 0;
-    }
+    // Show the window
+    ShowWindow(hWnd, SW_SHOWDEFAULT);
+    UpdateWindow(hWnd);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -84,13 +120,27 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
     //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
+    io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleFonts;     // FIXME-DPI: THIS CURRENTLY DOESN'T WORK AS EXPECTED. DON'T USE IN USER APP!
+    io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports; // FIXME-DPI
+    //io.ConfigViewportsNoAutoMerge = true;
+    //io.ConfigViewportsNoTaskBarIcon = false;
+    //io.ConfigDockingTabBarOnSingleWindows = true;
+    //io.ConfigDockingTransparentPayload = true;
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
+    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
+    ImGuiStyle& style = ImGui::GetStyle();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        style.WindowRounding = 0.0f;
+        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
+    }
+
     // Setup Platform/Renderer bindings
-    ImGui_ImplWin32_Init(hwnd);
+    ImGui_ImplWin32_Init(hWnd);
     ImGui_ImplDX9_Init(g_pd3dDevice);
 
     // Load Fonts
@@ -115,8 +165,6 @@ int main(int, char**)
     // Main loop
     MSG msg;
     ZeroMemory(&msg, sizeof(msg));
-    ShowWindow(hwnd, SW_SHOWDEFAULT);
-    UpdateWindow(hwnd);
     while (msg.message != WM_QUIT)
     {
         // Poll and handle messages (inputs, window resize, etc.)
@@ -186,14 +234,20 @@ int main(int, char**)
             ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
             g_pd3dDevice->EndScene();
         }
+
+        // Update and Render additional Platform Windows
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
+        }
+
         HRESULT result = g_pd3dDevice->Present(NULL, NULL, NULL, NULL);
 
         // Handle loss of D3D9 device
         if (result == D3DERR_DEVICELOST && g_pd3dDevice->TestCooperativeLevel() == D3DERR_DEVICENOTRESET)
         {
-            ImGui_ImplDX9_InvalidateDeviceObjects();
-            g_pd3dDevice->Reset(&g_d3dpp);
-            ImGui_ImplDX9_CreateDeviceObjects();
+            ResetDevice();
         }
     }
 
@@ -201,9 +255,8 @@ int main(int, char**)
     ImGui_ImplWin32_Shutdown();
     ImGui::DestroyContext();
 
-    if (g_pd3dDevice) g_pd3dDevice->Release();
-    if (pD3D) pD3D->Release();
-    DestroyWindow(hwnd);
+    CleanupDeviceD3D();
+    DestroyWindow(hWnd);
     UnregisterClass(wc.lpszClassName, wc.hInstance);
 
     return 0;

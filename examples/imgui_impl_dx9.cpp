@@ -22,6 +22,7 @@
 #include "imgui_impl_dx9.h"
 
 // DirectX
+#include <stdio.h>
 #include <d3d9.h>
 #define DIRECTINPUT_VERSION 0x0800
 #include <dinput.h>
@@ -40,6 +41,10 @@ struct CUSTOMVERTEX
     float    uv[2];
 };
 #define D3DFVF_CUSTOMVERTEX (D3DFVF_XYZ|D3DFVF_DIFFUSE|D3DFVF_TEX1)
+
+// Forward Declarations
+static void ImGui_ImplDX9_InitPlatformInterface();
+static void ImGui_ImplDX9_ShutdownPlatformInterface();
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -203,15 +208,22 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
 {
     ImGuiIO& io = ImGui::GetIO();
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;    // We can create multi-viewports on the Renderer side (optional)
     io.BackendRendererName = "imgui_impl_dx9";
 
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        ImGui_ImplDX9_InitPlatformInterface();
+
     g_pd3dDevice = device;
+
     return true;
 }
 
 void ImGui_ImplDX9_Shutdown()
 {
+    ImGui_ImplDX9_ShutdownPlatformInterface();
     ImGui_ImplDX9_InvalidateDeviceObjects();
+    if (g_pd3dDevice) g_pd3dDevice->Release();
     g_pd3dDevice = NULL;
 }
 
@@ -277,4 +289,114 @@ void ImGui_ImplDX9_NewFrame()
 {
     if (!g_FontTexture)
         ImGui_ImplDX9_CreateDeviceObjects();
+}
+
+//--------------------------------------------------------------------------------------------------------
+// MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
+// This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
+// If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
+//--------------------------------------------------------------------------------------------------------
+
+struct ImGuiViewportDataDx9
+{
+    IDirect3DSwapChain9 *    SwapChain;
+    D3DPRESENT_PARAMETERS    d3dpp;
+
+    ImGuiViewportDataDx9() { SwapChain = NULL; ZeroMemory(&d3dpp, sizeof(D3DPRESENT_PARAMETERS)); }
+    ~ImGuiViewportDataDx9() { IM_ASSERT(SwapChain == NULL); }
+};
+
+static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataDx9* data = IM_NEW(ImGuiViewportDataDx9)();
+    viewport->RendererUserData = data;
+
+    HWND hWnd = (HWND)viewport->PlatformHandle;
+    IM_ASSERT(hWnd != NULL);
+
+    ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
+    data->d3dpp.Windowed = TRUE;
+    data->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
+    data->d3dpp.hDeviceWindow = hWnd;
+    data->d3dpp.EnableAutoDepthStencil = TRUE;
+    data->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
+    data->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_ONE; // Present with vsync
+    
+    g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain);
+    IM_ASSERT(data->SwapChain != NULL);
+}
+
+static void ImGui_ImplDX9_DestroyWindow(ImGuiViewport* viewport)
+{
+    // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
+    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+    if (data)
+    {
+        if (data->SwapChain)
+            data->SwapChain->Release();
+        data->SwapChain = NULL;
+        ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
+        IM_DELETE(data);
+    }
+    viewport->RendererUserData = NULL;
+}
+
+static void ImGui_ImplDX9_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
+{
+    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+    if (data->SwapChain)
+    {
+        data->SwapChain->Release();
+        data->SwapChain = NULL;
+        data->d3dpp.BackBufferWidth = (UINT)size.x;
+        data->d3dpp.BackBufferHeight = (UINT)size.y;
+        g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain);
+    }
+}
+
+static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+    ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
+
+    LPDIRECT3DSURFACE9 RT = NULL, RTBak = NULL;
+    data->SwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &RT);
+    g_pd3dDevice->GetRenderTarget(0, &RTBak);
+    g_pd3dDevice->SetRenderTarget(0, RT);
+
+    if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
+    {
+        D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(clear_color.x*255.0f), (int)(clear_color.y*255.0f), (int)(clear_color.z*255.0f), (int)(clear_color.w*255.0f));
+        g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
+    }
+
+    ImGui_ImplDX9_RenderDrawData(viewport->DrawData);
+
+    // Restore render target
+    g_pd3dDevice->SetRenderTarget(0, RTBak);
+
+    RT->Release();
+    RTBak->Release();
+}
+
+static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
+{
+    ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+    data->SwapChain->Present(NULL, NULL, data->d3dpp.hDeviceWindow, NULL, NULL);
+}
+
+static void ImGui_ImplDX9_InitPlatformInterface()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.Renderer_CreateWindow = ImGui_ImplDX9_CreateWindow;
+    platform_io.Renderer_DestroyWindow = ImGui_ImplDX9_DestroyWindow;
+    platform_io.Renderer_SetWindowSize = ImGui_ImplDX9_SetWindowSize;
+    platform_io.Renderer_RenderWindow = ImGui_ImplDX9_RenderWindow;
+    platform_io.Renderer_SwapBuffers = ImGui_ImplDX9_SwapBuffers;
+}
+
+static void ImGui_ImplDX9_ShutdownPlatformInterface()
+{
+    ImGui::DestroyPlatformWindows();
 }

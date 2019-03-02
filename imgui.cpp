@@ -8362,14 +8362,15 @@ void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* render
     for (int i = 1; i < platform_io.Viewports.Size; i++)
     {
         ImGuiViewport* viewport = platform_io.Viewports[i];
-        if (platform_io.Platform_RenderWindow) platform_io.Platform_RenderWindow(viewport, platform_render_arg);
-        if (platform_io.Renderer_RenderWindow) platform_io.Renderer_RenderWindow(viewport, renderer_render_arg);
-    }
-    for (int i = 1; i < platform_io.Viewports.Size; i++)
-    {
-        ImGuiViewport* viewport = platform_io.Viewports[i];
-        if (platform_io.Platform_SwapBuffers) platform_io.Platform_SwapBuffers(viewport, platform_render_arg);
-        if (platform_io.Renderer_SwapBuffers) platform_io.Renderer_SwapBuffers(viewport, renderer_render_arg);
+        if (platform_io.Platform_RenderWindow)
+            platform_io.Platform_RenderWindow(viewport, platform_render_arg);
+        if (platform_io.Renderer_RenderWindow)
+            platform_io.Renderer_RenderWindow(viewport, renderer_render_arg);
+
+        if (platform_io.Platform_SwapBuffers)
+            platform_io.Platform_SwapBuffers(viewport, platform_render_arg);
+        if (platform_io.Renderer_SwapBuffers)
+            platform_io.Renderer_SwapBuffers(viewport, renderer_render_arg);
     }
 }
 
