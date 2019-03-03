@@ -1,6 +1,7 @@
-// dear imgui: Renderer for OpenGL3 / OpenGL ES2 / OpenGL ES3 (modern OpenGL with shaders / programmatic pipeline)
+// dear imgui: Renderer for modern OpenGL with shaders / programmatic pipeline
+// - Desktop GL: 3.x 4.x
+// - Embedded GL: ES 2.0 (WebGL 1.0), ES 3.0 (WebGL 2.0)
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
-// (Note: We are using GL3W as a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc..)
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
@@ -39,17 +40,17 @@
 // version   version   string
 //----------------------------------------
 //  2.0       110       "#version 110"
-//  2.1       120
-//  3.0       130
-//  3.1       140
+//  2.1       110       "#version 120"
+//  3.0       130       "#version 130"
+//  3.1       140       "#version 140"
 //  3.2       150       "#version 150"
-//  3.3       330
-//  4.0       400
+//  3.3       330       "#version 330 core"
+//  4.0       400       "#version 400 core"
 //  4.1       410       "#version 410 core"
-//  4.2       420
-//  4.3       430
-//  ES 2.0    100       "#version 100"
-//  ES 3.0    300       "#version 300 es"
+//  4.2       420       "#version 410 core"
+//  4.3       430       "#version 430 core"
+//  ES 2.0    100       "#version 100"      = WebGL 1.0
+//  ES 3.0    300       "#version 300 es"   = WebGL 2.0
 //----------------------------------------
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
@@ -78,10 +79,10 @@
 // OpenGL ES 3
 #include <GLES3/gl3.h>  // Use GL ES 3
 #else
-// Regular OpenGL
-// About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually.
-// Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
-// You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
+// About Desktop OpenGL function loaders:
+//  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
+//  Helper libraries are often used for this purpose! Here we are supporting a few common ones (gl3w, glew, glad).
+//  You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
