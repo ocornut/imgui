@@ -393,106 +393,106 @@ bool ImGui_ImplGL_CreateDeviceObjects() {
 
 #if defined(IMGUI_IMPL_OPENGL_ES_2)
     const GLchar *vertex_shader =
-            "precision mediump float;\n"
-            "uniform mat4 ProjMtx;\n"
-            "attribute vec2 Position;\n"
-            "attribute vec2 UV;\n"
-            "attribute lowp vec4 Color;\n"
-            "varying vec2 Frag_UV;\n"
-            "varying lowp vec4 Frag_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Frag_UV = UV;\n"
-            "    Frag_Color = Color;\n"
-            "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-            "}\n";
+        "precision mediump float;\n"
+        "uniform mat4 ProjMtx;\n"
+        "attribute vec2 Position;\n"
+        "attribute vec2 UV;\n"
+        "attribute lowp vec4 Color;\n"
+        "varying vec2 Frag_UV;\n"
+        "varying lowp vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Frag_UV = UV;\n"
+        "    Frag_Color = Color;\n"
+        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+        "}\n";
 
     const GLchar *fragment_shader =
-            "precision mediump float;\n"
-            "uniform sampler2D Texture;\n"
-            "varying vec2 Frag_UV;\n"
-            "varying lowp vec4 Frag_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
-            "}\n";
+        "precision mediump float;\n"
+        "uniform sampler2D Texture;\n"
+        "varying vec2 Frag_UV;\n"
+        "varying lowp vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    gl_FragColor = Frag_Color * texture2D(Texture, Frag_UV.st);\n"
+        "}\n";
 
 #elif defined(IMGUI_IMPL_OPENGL_ES_3)
     const GLchar *vertex_shader =
-            "precision mediump float;\n"
-            "layout (location = 0) in vec2 Position;\n"
-            "layout (location = 1) in vec2 UV;\n"
-            "layout (location = 2) in vec4 Color;\n"
-            "uniform mat4 ProjMtx;\n"
-            "out vec2 Frag_UV;\n"
-            "out vec4 Frag_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Frag_UV = UV;\n"
-            "    Frag_Color = Color;\n"
-            "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-            "}\n";
+        "precision mediump float;\n"
+        "layout (location = 0) in vec2 Position;\n"
+        "layout (location = 1) in vec2 UV;\n"
+        "layout (location = 2) in vec4 Color;\n"
+        "uniform mat4 ProjMtx;\n"
+        "out vec2 Frag_UV;\n"
+        "out vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Frag_UV = UV;\n"
+        "    Frag_Color = Color;\n"
+        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+        "}\n";
 
     const GLchar *fragment_shader =
-            "precision mediump float;\n"
-            "uniform sampler2D Texture;\n"
-            "in vec2 Frag_UV;\n"
-            "in vec4 Frag_Color;\n"
-            "layout (location = 0) out vec4 Out_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-            "}\n";
+        "precision mediump float;\n"
+        "uniform sampler2D Texture;\n"
+        "in vec2 Frag_UV;\n"
+        "in vec4 Frag_Color;\n"
+        "layout (location = 0) out vec4 Out_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "}\n";
 
 #elif defined(IMGUI_IMPL_OPENGL_3)
     const GLchar *vertex_shader =
-            "uniform mat4 ProjMtx;\n"
-            "in vec2 Position;\n"
-            "in vec2 UV;\n"
-            "in vec4 Color;\n"
-            "out vec2 Frag_UV;\n"
-            "out vec4 Frag_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Frag_UV = UV;\n"
-            "    Frag_Color = Color;\n"
-            "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-            "}\n";
+        "uniform mat4 ProjMtx;\n"
+        "in vec2 Position;\n"
+        "in vec2 UV;\n"
+        "in vec4 Color;\n"
+        "out vec2 Frag_UV;\n"
+        "out vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Frag_UV = UV;\n"
+        "    Frag_Color = Color;\n"
+        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+        "}\n";
 
     const GLchar *fragment_shader =
-            "uniform sampler2D Texture;\n"
-            "in vec2 Frag_UV;\n"
-            "in vec4 Frag_Color;\n"
-            "out vec4 Out_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-            "}\n";
+        "uniform sampler2D Texture;\n"
+        "in vec2 Frag_UV;\n"
+        "in vec4 Frag_Color;\n"
+        "out vec4 Out_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "}\n";
 
 #elif defined(IMGUI_IMPL_OPENGL_4)
     const GLchar *vertex_shader =
-            "layout (location = 0) in vec2 Position;\n"
-            "layout (location = 1) in vec2 UV;\n"
-            "layout (location = 2) in vec4 Color;\n"
-            "uniform mat4 ProjMtx;\n"
-            "out vec2 Frag_UV;\n"
-            "out vec4 Frag_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Frag_UV = UV;\n"
-            "    Frag_Color = Color;\n"
-            "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
-            "}\n";
+        "layout (location = 0) in vec2 Position;\n"
+        "layout (location = 1) in vec2 UV;\n"
+        "layout (location = 2) in vec4 Color;\n"
+        "uniform mat4 ProjMtx;\n"
+        "out vec2 Frag_UV;\n"
+        "out vec4 Frag_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Frag_UV = UV;\n"
+        "    Frag_Color = Color;\n"
+        "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
+        "}\n";
 
     const GLchar *fragment_shader =
-            "in vec2 Frag_UV;\n"
-            "in vec4 Frag_Color;\n"
-            "uniform sampler2D Texture;\n"
-            "layout (location = 0) out vec4 Out_Color;\n"
-            "void main()\n"
-            "{\n"
-            "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
-            "}\n";
+        "in vec2 Frag_UV;\n"
+        "in vec4 Frag_Color;\n"
+        "uniform sampler2D Texture;\n"
+        "layout (location = 0) out vec4 Out_Color;\n"
+        "void main()\n"
+        "{\n"
+        "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+        "}\n";
 #endif
 
     // Create shaders
