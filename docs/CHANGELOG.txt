@@ -38,10 +38,11 @@ Breaking Changes:
 - Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
   ImGuiColorEditFlags_DisplayRGB/_DisplayHSV/_DisplayHex. This is anticipation of adding new
   flags to ColorEdit/ColorPicker functions which would make those ambiguous. (#2384) [@haldean]
+- Renamed GetOverlayDrawList() to GetForegroundDrawList(). Kept redirection function (will obsolete). (#2391)
 
 Other Changes:
 
-- Added GetBackgroundDrawList() helper to quickly get access to a ImDrawList that will be rendered 
+- Added GetBackgroundDrawList() helper to quickly get access to a ImDrawList that will be rendered
   behind every other windows. (#2391)
 - Nav: Fixed a tap on AltGR (e.g. German keyboard) from navigating to the menu layer.
 - DragScalar, InputScalar, SliderScalar: Added support for u8/s8/u16/s16 data types.
@@ -68,6 +69,7 @@ Other Changes:
   tree depth instead of a relative one.
 - Log/Capture: Fixed CollapsingHeader trailing ascii representation being "#" instead of "##".
 - Misc: Asserting in NewFrame() if style.WindowMinSize is zero or smaller than (1.0f,1.0f).
+- Demo: Using GetBackgroundDrawList() and GetForegroundDrawList() in "Custom Rendering" demo.
 - Examples: OpenGL: Fix to be able to run on ES 2.0 / WebGL 1.0. [@rmitton, @gabrielcuvillier]
 - Examples: OpenGL: Fix for OSX not supporting OpenGL 4.5, we don't try to read GL_CLIP_ORIGIN
   even if the OpenGL headers/loader happens to define the value. (#2366, #2186)

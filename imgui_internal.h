@@ -888,8 +888,8 @@ struct ImGuiContext
     ImDrawData              DrawData;                           // Main ImDrawData instance to pass render information to the user
     ImDrawDataBuilder       DrawDataBuilder;
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)
-    ImDrawList              BackgroundDrawList;
-    ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
+    ImDrawList              BackgroundDrawList;                 // First draw list to be rendered.
+    ImDrawList              ForegroundDrawList;                 // Last draw list to be rendered. This is where we the render software mouse cursor (if io.MouseDrawCursor is set) and most debug overlays.
     ImGuiMouseCursor        MouseCursor;
 
     // Drag and Drop
@@ -963,7 +963,7 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
-    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(NULL), OverlayDrawList(NULL)
+    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(NULL), ForegroundDrawList(NULL)
     {
         Initialized = false;
         FrameScopeActive = FrameScopePushedImplicitWindow = false;
@@ -1033,8 +1033,8 @@ struct ImGuiContext
         DimBgRatio = 0.0f;
         BackgroundDrawList._Data = &DrawListSharedData;
         BackgroundDrawList._OwnerName = "##Background"; // Give it a name for debugging
-        OverlayDrawList._Data = &DrawListSharedData;
-        OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
+        ForegroundDrawList._Data = &DrawListSharedData;
+        ForegroundDrawList._OwnerName = "##Foreground"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
 
         DragDropActive = DragDropWithinSourceOrTarget = false;
