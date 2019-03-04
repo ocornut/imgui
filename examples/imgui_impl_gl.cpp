@@ -140,7 +140,8 @@ void ImGui_ImplGL_NewFrame()
 // GL Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 // Note that this implementation is little overcomplicated because we are saving/setting up/restoring every OpenGL state explicitly, in order to be able to run within any OpenGL engine that doesn't do so.
-void ImGui_ImplGL_RenderDrawData(ImDrawData *draw_data) {
+void ImGui_ImplGL_RenderDrawData(ImDrawData *draw_data)
+{
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
     int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
@@ -215,7 +216,6 @@ void ImGui_ImplGL_RenderDrawData(ImDrawData *draw_data) {
 #ifdef GL_SAMPLER_BINDING
     glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
 #endif
-
     // Recreate the VAO every time
     // (This is to easily allow multiple GL contexts. VAO are not shared among GL contexts, and we don't track creation/deletion of windows so we don't have an obvious key to use to cache them.)
 #if defined(IMGUI_IMPL_OPENGL_ES_2)
@@ -316,7 +316,8 @@ void ImGui_ImplGL_RenderDrawData(ImDrawData *draw_data) {
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
 }
 
-bool ImGui_ImplGL_CreateFontsTexture() {
+bool ImGui_ImplGL_CreateFontsTexture()
+{
     // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
@@ -556,7 +557,8 @@ bool ImGui_ImplGL_CreateDeviceObjects() {
     return true;
 }
 
-void ImGui_ImplGL_DestroyDeviceObjects() {
+void ImGui_ImplGL_DestroyDeviceObjects()
+{
     if (g_VboHandle) glDeleteBuffers(1, &g_VboHandle);
     if (g_ElementsHandle) glDeleteBuffers(1, &g_ElementsHandle);
     g_VboHandle = g_ElementsHandle = 0;
