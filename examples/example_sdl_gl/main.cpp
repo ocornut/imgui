@@ -11,6 +11,23 @@
 #include "emscripten.h"
 #endif
 
+// GL headers and/or loaders
+#if defined(IMGUI_IMPL_OPENGL_DESKTOP)
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+#include <GL/gl3w.h>
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+#include <GL/glew.h>
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+#include <glad/glad.h>
+#else
+#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#endif
+#elif defined(IMGUI_IMPL_OPENGL_ES_3)
+#include <GLES3/gl3.h>
+#elif defined(IMGUI_IMPL_OPENGL_ES_2)
+#include <GLES2/gl2.h>
+#endif
+
 static bool g_show_demo_window = true;
 static bool g_show_another_window = false;
 static ImVec4 g_clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);

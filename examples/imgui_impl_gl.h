@@ -93,23 +93,6 @@
  #endif
 #endif
 
-// GL headers
-#if defined(IMGUI_IMPL_OPENGL_DESKTOP)
- #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-  #include <GL/gl3w.h>
- #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-  #include <GL/glew.h>
- #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-  #include <glad/glad.h>
- #else
-  #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
- #endif
-#elif defined(IMGUI_IMPL_OPENGL_ES_3)
- #include <GLES3/gl3.h>
-#elif defined(IMGUI_IMPL_OPENGL_ES_2)
- #include <GLES2/gl2.h>
-#endif
-
 IMGUI_IMPL_API bool ImGui_ImplGL_Init(const char* glsl_version = NULL);
 IMGUI_IMPL_API void ImGui_ImplGL_Shutdown();
 IMGUI_IMPL_API void ImGui_ImplGL_NewFrame();

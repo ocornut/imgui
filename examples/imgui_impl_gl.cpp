@@ -52,6 +52,23 @@
 #include "TargetConditionals.h"
 #endif
 
+// GL headers and/or loaders
+#if defined(IMGUI_IMPL_OPENGL_DESKTOP)
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+#include <GL/gl3w.h>
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+#include <GL/glew.h>
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+#include <glad/glad.h>
+#else
+#include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#endif
+#elif defined(IMGUI_IMPL_OPENGL_ES_3)
+#include <GLES3/gl3.h>
+#elif defined(IMGUI_IMPL_OPENGL_ES_2)
+#include <GLES2/gl2.h>
+#endif
+
 // OpenGL Data
 static char         g_GlslVersionString[32] = "";
 static GLuint       g_FontTexture = 0;
