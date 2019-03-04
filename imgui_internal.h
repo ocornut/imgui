@@ -737,7 +737,7 @@ struct ImGuiViewportP : public ImGuiViewport
 {
     int                 Idx;
     int                 LastFrameActive;          // Last frame number this viewport was activated by a window
-    int                 LastFrameOverlayDrawList;
+    int                 LastFrameDrawLists[2];    // Last frame number the background (0) and foreground (1) draw lists were used
     int                 LastFrontMostStampCount;  // Last stamp number from when a window hosted by this viewport was made front-most (by comparing this value between two viewport we have an implicit viewport z-order
     ImGuiID             LastNameHash;
     ImVec2              LastPos;
@@ -747,15 +747,15 @@ struct ImGuiViewportP : public ImGuiViewport
     bool                PlatformWindowCreated;
     bool                PlatformWindowMinimized;  // When minimized we tend to avoid using the viewport pos/size for clipping window or testing if they are contained in the viewport
     ImGuiWindow*        Window;                   // Set when the viewport is owned by a window (and ImGuiViewportFlags_CanHostOtherWindows is NOT set)
-    ImDrawList*         OverlayDrawList;          // For convenience, a draw list we can render to that's always rendered last (we use it to draw software mouse cursor when io.MouseDrawCursor is set)
+    ImDrawList*         DrawLists[2];             // Convenience background (0) and foreground (1) draw lists. We use them to draw software mouser cursor when io.MouseDrawCursor is set and to draw most debug overlays.
     ImDrawData          DrawDataP;
     ImDrawDataBuilder   DrawDataBuilder;
     ImVec2              LastPlatformPos;
     ImVec2              LastPlatformSize;
     ImVec2              LastRendererSize;
 
-    ImGuiViewportP()            { Idx = -1; LastFrameActive = LastFrameOverlayDrawList = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = -1; PlatformWindowCreated = PlatformWindowMinimized = false; Window = NULL; OverlayDrawList = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
-    ~ImGuiViewportP()           { if (OverlayDrawList) IM_DELETE(OverlayDrawList); }
+    ImGuiViewportP()            { Idx = -1; LastFrameActive = LastFrameDrawLists[0] = LastFrameDrawLists[1] = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = -1; PlatformWindowCreated = PlatformWindowMinimized = false; Window = NULL; DrawLists[0] = DrawLists[1] = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
+    ~ImGuiViewportP()           { if (DrawLists[0]) IM_DELETE(DrawLists[0]); if (DrawLists[1]) IM_DELETE(DrawLists[1]); }
     ImRect  GetRect() const     { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
     ImVec2  GetCenter() const   { return ImVec2(Pos.x + Size.x * 0.5f, Pos.y + Size.y * 0.5f); }
     void    ClearRequestFlags() { PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; }
@@ -1547,7 +1547,7 @@ namespace ImGui
 
     IMGUI_API void          SetCurrentFont(ImFont* font);
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
-    inline ImDrawList*      GetOverlayDrawList(ImGuiWindow* window) { return GetOverlayDrawList(window->Viewport); }
+    inline ImDrawList*      GetForegroundDrawList(ImGuiWindow* window) { return GetForegroundDrawList(window->Viewport); }
 
     // Init
     IMGUI_API void          Initialize(ImGuiContext* context);
