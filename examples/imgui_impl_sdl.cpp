@@ -60,6 +60,9 @@ static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 static char*        g_ClipboardTextData = NULL;
+static bool         g_PrevWantInputText = true;
+static int          g_ImeInputScreenPos[2] = { 0 , 0 };
+static int          g_NextImeInputScreenPos[2] = { 0 , 0 };
 
 static const char* ImGui_ImplSDL2_GetClipboardText(void*)
 {
@@ -76,11 +79,19 @@ static void ImGui_ImplSDL2_SetClipboardText(void*, const char* text)
 
 static void ImGui_ImplSDL2_ImeSetInputScreenPos(int x, int y)
 {
-    SDL_Rect rect = { x, y, 0, 0 };
-    SDL_SetTextInputRect(&rect);
+    g_NextImeInputScreenPos[0] = x;
+    g_NextImeInputScreenPos[1] = y;
 }
 
 #ifdef _WIN32
+static HWND ImGui_ImplSDL2_GetHWND(SDL_Window* window)
+{
+    SDL_SysWMinfo wmInfo;
+    SDL_VERSION(&wmInfo.version);
+    SDL_GetWindowWMInfo(window, &wmInfo);
+    return (HWND)wmInfo.info.win.window;
+}
+
 static LRESULT CALLBACK ImGui_ImplSDL2_HookIme_WndProc(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     WNDPROC wndProc = (WNDPROC)GetWindowLongPtr(hwnd, GWLP_USERDATA);
@@ -91,13 +102,7 @@ static LRESULT CALLBACK ImGui_ImplSDL2_HookIme_WndProc(HWND hwnd, UINT msg, WPAR
     case WM_KEYUP:
     case WM_SYSKEYUP:
         if (wParam == VK_PROCESSKEY)
-        {
-            ImGuiIO& io = ImGui::GetIO();
-            if (io.WantTextInput)
-            {
-                wndProc = DefWindowProc;
-            }
-        }
+            wndProc = DefWindowProc;
     }
     return CallWindowProc(wndProc, hwnd, msg, wParam, lParam);
 }
@@ -113,10 +118,7 @@ void ImGui_ImplSDL2_Init()
 void ImGui_ImplSDL2_HookIme(SDL_Window* window)
 {
 #ifdef _WIN32
-    SDL_SysWMinfo wmInfo;
-    SDL_VERSION(&wmInfo.version);
-    SDL_GetWindowWMInfo(window, &wmInfo);
-    HWND hwnd = (HWND)wmInfo.info.win.window;
+    HWND hwnd = ImGui_ImplSDL2_GetHWND(window);
     if (!GetWindowLongPtr(hwnd, GWLP_USERDATA)) {
         SetWindowLongPtr(hwnd, GWLP_USERDATA, GetWindowLongPtr(hwnd, GWLP_WNDPROC));
         SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)ImGui_ImplSDL2_HookIme_WndProc);
@@ -124,7 +126,6 @@ void ImGui_ImplSDL2_HookIme(SDL_Window* window)
     ImmAssociateContext(hwnd, 0);
     SDL_StartTextInput();
     ImmAssociateContextEx(hwnd, 0, IACE_DEFAULT);
-    SDL_EventState(SDL_TEXTINPUT, SDL_ENABLE);
 #endif
 }
 
@@ -172,16 +173,11 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
         }
 #ifdef _WIN32
     case SDL_WINDOWEVENT:
-        if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED)
+        if (event->window.event == SDL_WINDOWEVENT_FOCUS_GAINED && SDL_EventState(SDL_TEXTINPUT, SDL_QUERY))
         {
             SDL_Window* window = SDL_GetWindowFromID(event->window.windowID);
             if (window)
-            {
-                SDL_SysWMinfo wmInfo;
-                SDL_VERSION(&wmInfo.version);
-                SDL_GetWindowWMInfo(window, &wmInfo);
-                ImmAssociateContextEx((HWND)wmInfo.info.win.window, 0, IACE_DEFAULT);
-            }
+                ImmAssociateContextEx(ImGui_ImplSDL2_GetHWND(window), 0, IACE_DEFAULT);
         }
 #endif
     }
@@ -236,10 +232,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window)
     g_MouseCursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
 
 #ifdef _WIN32
-    SDL_SysWMinfo wmInfo;
-    SDL_VERSION(&wmInfo.version);
-    SDL_GetWindowWMInfo(window, &wmInfo);
-    io.ImeWindowHandle = wmInfo.info.win.window;
+    io.ImeWindowHandle = ImGui_ImplSDL2_GetHWND(window);
 #else
     (void)window;
 #endif
@@ -337,6 +330,31 @@ static void ImGui_ImplSDL2_UpdateMouseCursor()
     }
 }
 
+static void ImGui_ImplSDL2_UpdateTextInput(SDL_Window* window)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.WantTextInput != g_PrevWantInputText)
+    {
+        g_PrevWantInputText = io.WantTextInput;
+        if (io.WantTextInput)
+        {
+            SDL_StartTextInput();
+#ifdef _WIN32
+            ImmAssociateContextEx(ImGui_ImplSDL2_GetHWND(window), 0, IACE_DEFAULT);
+#endif
+        }
+        else
+            SDL_StopTextInput();
+    }
+    if (io.WantTextInput && (g_NextImeInputScreenPos[0] != g_ImeInputScreenPos[0] || g_NextImeInputScreenPos[1] != g_ImeInputScreenPos[1]))
+    {
+        g_ImeInputScreenPos[0] = g_NextImeInputScreenPos[0];
+        g_ImeInputScreenPos[1] = g_NextImeInputScreenPos[1];
+        SDL_Rect rect = { g_ImeInputScreenPos[0], g_ImeInputScreenPos[1], 0, 0 };
+        SDL_SetTextInputRect(&rect);
+    }
+}
+
 void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -358,4 +376,5 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 
     ImGui_ImplSDL2_UpdateMousePosAndButtons();
     ImGui_ImplSDL2_UpdateMouseCursor();
+    ImGui_ImplSDL2_UpdateTextInput(window);
 }
