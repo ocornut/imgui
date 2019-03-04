@@ -888,6 +888,7 @@ struct ImGuiContext
     ImDrawData              DrawData;                           // Main ImDrawData instance to pass render information to the user
     ImDrawDataBuilder       DrawDataBuilder;
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)
+    ImDrawList              BackgroundDrawList;
     ImDrawList              OverlayDrawList;                    // Optional software render of mouse cursors, if io.MouseDrawCursor is set + a few debug overlays
     ImGuiMouseCursor        MouseCursor;
 
@@ -962,7 +963,7 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
-    ImGuiContext(ImFontAtlas* shared_font_atlas) : OverlayDrawList(NULL)
+    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(NULL), OverlayDrawList(NULL)
     {
         Initialized = false;
         FrameScopeActive = FrameScopePushedImplicitWindow = false;
@@ -1030,6 +1031,8 @@ struct ImGuiContext
         NavMoveDir = NavMoveDirLast = NavMoveClipDir = ImGuiDir_None;
 
         DimBgRatio = 0.0f;
+        BackgroundDrawList._Data = &DrawListSharedData;
+        BackgroundDrawList._OwnerName = "##Background"; // Give it a name for debugging
         OverlayDrawList._Data = &DrawListSharedData;
         OverlayDrawList._OwnerName = "##Overlay"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;

@@ -874,7 +874,8 @@ CODE
  A: - You can create a dummy window. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags.
       (The ImGuiWindowFlags_NoDecoration flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse)
       Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
-    - You can call ImGui::GetOverlayDrawList() and use this draw list to display contents over every other imgui windows.
+    - You can call ImGui::GetBackgroundDrawList() or ImGui::GetOverlayDrawList() and use those draw list to display contents 
+      behind or over every other imgui windows.
     - You can create your own ImDrawList instance. You'll need to initialize them ImGui::GetDrawListSharedData(), or create
       your own ImDrawListSharedData, and then call your rendered code with your own ImDrawList or ImDrawData data.
 
@@ -3067,9 +3068,14 @@ int ImGui::GetFrameCount()
     return GImGui->FrameCount;
 }
 
+ImDrawList* ImGui::GetBackgroundDrawList()
+{
+    return &GImGui->BackgroundDrawList;
+}
+
 static ImDrawList* GetOverlayDrawList(ImGuiWindow*)
 {
-    // This seemingly unnecessary wrapper simplifies compatibility between the 'master' and 'viewport' branches.
+    // This seemingly unnecessary wrapper simplifies compatibility between the 'master' and 'docking' branches.
     return &GImGui->OverlayDrawList;
 }
 
@@ -3422,6 +3428,11 @@ void ImGui::NewFrame()
     g.DrawListSharedData.ClipRectFullscreen = ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
     g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
 
+    g.BackgroundDrawList.Clear();
+    g.BackgroundDrawList.PushTextureID(g.IO.Fonts->TexID);
+    g.BackgroundDrawList.PushClipRectFullScreen();
+    g.BackgroundDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
+
     g.OverlayDrawList.Clear();
     g.OverlayDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.OverlayDrawList.PushClipRectFullScreen();
@@ -3603,6 +3614,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.OpenPopupStack.clear();
     g.BeginPopupStack.clear();
     g.DrawDataBuilder.ClearFreeMemory();
+    g.BackgroundDrawList.ClearFreeMemory();
     g.OverlayDrawList.ClearFreeMemory();
     g.PrivateClipboard.clear();
     g.InputTextState.ClearFreeMemory();
@@ -3860,6 +3872,9 @@ void ImGui::Render()
     // Gather ImDrawList to render (for each active window)
     g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsRenderWindows = 0;
     g.DrawDataBuilder.Clear();
+    if (!g.BackgroundDrawList.VtxBuffer.empty())
+        AddDrawListToDrawData(&g.DrawDataBuilder.Layers[0], &g.BackgroundDrawList);
+
     ImGuiWindow* windows_to_render_front_most[2];
     windows_to_render_front_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
     windows_to_render_front_most[1] = g.NavWindowingTarget ? g.NavWindowingList : NULL;
