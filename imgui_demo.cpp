@@ -481,10 +481,14 @@ static void ShowDemoWindowWidgets()
 
         {
             static char str0[128] = "Hello, world!";
-            static int i0 = 123;
             ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
             ImGui::SameLine(); ShowHelpMarker("USER:\nHold SHIFT or use mouse to select text.\n" "CTRL+Left/Right to word jump.\n" "CTRL+A or double-click to select all.\n" "CTRL+X,CTRL+C,CTRL+V clipboard.\n" "CTRL+Z,CTRL+Y undo/redo.\n" "ESCAPE to revert.\n\nPROGRAMMER:\nYou can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputText() to a dynamic string type. See misc/cpp/imgui_stdlib.h for an example (this is not demonstrated in imgui_demo.cpp).");
 
+            static char str1[128] = "";
+            static bool is_user_data{false};
+            ImGui::InputTextHinted("hinted input text", "type text here", str1, IM_ARRAYSIZE(str1), &is_user_data);
+
+            static int i0 = 123;
             ImGui::InputInt("input int", &i0);
             ImGui::SameLine(); ShowHelpMarker("You can apply arithmetic operators +,*,/ on numerical values.\n  e.g. [ 100 ], input \'*2\', result becomes [ 200 ]\nUse +- to subtract.\n");
 

@@ -2882,10 +2882,11 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 }
 
 //-------------------------------------------------------------------------
-// [SECTION] Widgets: InputText, InputTextMultiline
+// [SECTION] Widgets: InputText, InputTextMultiline, InputTextHinted
 //-------------------------------------------------------------------------
 // - InputText()
 // - InputTextMultiline()
+// - InputTextHinted()
 // - InputTextEx() [Internal]
 //-------------------------------------------------------------------------
 
@@ -2898,6 +2899,41 @@ bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputT
 bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
     return InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
+}
+
+bool ImGui::InputTextHinted(const char* label, const char* hint, char* buf, size_t buf_size, bool* is_user_data, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    const ImGuiID id = window->GetID(label);
+
+    if (id != GetActiveID()) {
+        if (buf_size > 0 && !*buf) {
+            unsigned int len = (unsigned int)strlen(hint) + 1;
+            IM_ASSERT(buf_size >= len);
+            memcpy(buf, hint, len);
+            *is_user_data = false;
+        }
+    } else {
+        if (!*is_user_data) {
+            ImGuiInputTextState& state = GImGui->InputTextState;
+            state.TextW[0] = '\0';
+            state.CurLenW = 0;
+            state.TextA[0] = '\0';
+            state.CurLenA = 0;
+            state.InitialTextA[0] = '\0';
+            state.Stb.cursor = 0;
+            *is_user_data = true;
+        }
+    }
+
+    if (!*is_user_data) {
+        ImGuiInputTextFlags CallbackFlags = ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_CallbackHistory | ImGuiInputTextFlags_CallbackAlways | ImGuiInputTextFlags_CallbackCharFilter;
+
+        InputTextEx(label, buf, (int) buf_size, ImVec2(0, 0), (flags | ImGuiInputTextFlags_ShowTextAsDisabled) & ~CallbackFlags, NULL, NULL);
+        return false;
+    } else {
+        return InputTextEx(label, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
+    }
 }
 
 static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
@@ -3859,8 +3895,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // We test for 'buf_display_max_length' as a way to avoid some pathological cases (e.g. single-line 1 MB string) which would make ImDrawList crash.
         buf_display = (!is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
         buf_display_end = buf_display + state->CurLenA;
-        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length) {
+            ImGuiCol text_color = flags & ImGuiInputTextFlags_ShowTextAsDisabled ? ImGuiCol_TextDisabled : ImGuiCol_Text;
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(text_color), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        }
 
         // Draw blinking cursor
         if (render_cursor)
@@ -3869,8 +3907,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
             ImVec2 cursor_screen_pos = draw_pos + cursor_offset - draw_scroll;
             ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
-            if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-                draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+            if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect)) {
+                ImGuiCol text_color = flags & ImGuiInputTextFlags_ShowTextAsDisabled ? ImGuiCol_TextDisabled : ImGuiCol_Text;
+                draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(text_color));
+            }
 
             // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
             if (!is_readonly)
@@ -3887,8 +3927,10 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
             buf_display_end = buf_display + state->CurLenA;
         else
             buf_display_end = buf_display + strlen(buf_display);
-        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length) {
+            ImGuiCol text_color = flags & ImGuiInputTextFlags_ShowTextAsDisabled ? ImGuiCol_TextDisabled : ImGuiCol_Text;
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(text_color), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        }
     }
 
     if (is_multiline)
