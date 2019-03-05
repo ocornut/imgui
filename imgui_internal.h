@@ -83,6 +83,7 @@ struct ImGuiWindowSettings;         // Storage for window settings stored in .in
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;        // -> enum ImGuiLayoutType_        // Enum: Horizontal or vertical
 typedef int ImGuiButtonFlags;       // -> enum ImGuiButtonFlags_       // Flags: for ButtonEx(), ButtonBehavior()
+typedef int ImGuiDragFlags;         // -> enum ImGuiDragFlags_         // Flags: for DragBehavior()
 typedef int ImGuiItemFlags;         // -> enum ImGuiItemFlags_         // Flags: for PushItemFlag()
 typedef int ImGuiItemStatusFlags;   // -> enum ImGuiItemStatusFlags_   // Flags: for DC.LastItemStatusFlags
 typedef int ImGuiNavHighlightFlags; // -> enum ImGuiNavHighlightFlags_ // Flags: for RenderNavHighlight()
@@ -90,7 +91,7 @@ typedef int ImGuiNavDirSourceFlags; // -> enum ImGuiNavDirSourceFlags_ // Flags:
 typedef int ImGuiNavMoveFlags;      // -> enum ImGuiNavMoveFlags_      // Flags: for navigation requests
 typedef int ImGuiSeparatorFlags;    // -> enum ImGuiSeparatorFlags_    // Flags: for Separator() - internal
 typedef int ImGuiSliderFlags;       // -> enum ImGuiSliderFlags_       // Flags: for SliderBehavior()
-typedef int ImGuiDragFlags;         // -> enum ImGuiDragFlags_         // Flags: for DragBehavior()
+typedef int ImGuiTextFlags;         // -> enum ImGuiTextFlags_         // Flags: for TextEx()
 
 //-------------------------------------------------------------------------
 // STB libraries includes
@@ -379,6 +380,12 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_Checkable          = 1 << 12,  //
     ImGuiItemStatusFlags_Checked            = 1 << 13   //
 #endif
+};
+
+enum ImGuiTextFlags_
+{
+    ImGuiTextFlags_None = 0,
+    ImGuiTextFlags_NoWidthForLargeClippedText = 1 << 0
 };
 
 // FIXME: this is in development, not exposed/functional as a generic feature yet.
@@ -1501,6 +1508,7 @@ namespace ImGui
     IMGUI_API void          RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, int count, ImU32 col);
 
     // Widgets
+    IMGUI_API void          TextEx(const char* text, const char* text_end = NULL, ImGuiTextFlags flags = 0);
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos, float radius);
     IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos);

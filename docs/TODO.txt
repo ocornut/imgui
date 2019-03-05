@@ -138,6 +138,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - image button: not taking an explicit id is odd.
+ - slider/drag: ctrl+click when format doesn't include a % character.. disable? display underlying value in default format? (see InputScalarAsWidgetReplacement)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar). (#1946)
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
@@ -249,6 +250,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
+ - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
  - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.
  - font/demo: demonstrate use of ImFontGlyphRangesBuilder.
  - font/atlas: add a missing Glyphs.reserve()

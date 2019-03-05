@@ -132,7 +132,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 // - BulletTextV()
 //-------------------------------------------------------------------------
 
-void ImGui::TextUnformatted(const char* text, const char* text_end)
+void ImGui::TextEx(const char* text, const char* text_end, ImGuiTextFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -146,7 +146,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
 
     const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrentLineTextBaseOffset);
     const float wrap_pos_x = window->DC.TextWrapPos;
-    const bool wrap_enabled = wrap_pos_x >= 0.0f;
+    const bool wrap_enabled = (wrap_pos_x >= 0.0f);
     if (text_end - text > 2000 && !wrap_enabled)
     {
         // Long text!
@@ -156,14 +156,13 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         // - We use memchr(), pay attention that well optimized versions of those str/mem functions are much faster than a casually written loop.
         const char* line = text;
         const float line_height = GetTextLineHeight();
-        const ImRect clip_rect = window->ClipRect;
         ImVec2 text_size(0,0);
 
         // Lines to skip (can't skip when logging text)
         ImVec2 pos = text_pos;
         if (!g.LogEnabled)
         {
-            int lines_skippable = (int)((clip_rect.Min.y - text_pos.y) / line_height);
+            int lines_skippable = (int)((window->ClipRect.Min.y - text_pos.y) / line_height);
             if (lines_skippable > 0)
             {
                 int lines_skipped = 0;
@@ -172,6 +171,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                     const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                     if (!line_end)
                         line_end = text_end;
+                    if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
+                        text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
                     line = line_end + 1;
                     lines_skipped++;
                 }
@@ -191,8 +192,7 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                 if (!line_end)
                     line_end = text_end;
-                const ImVec2 line_size = CalcTextSize(line, line_end, false);
-                text_size.x = ImMax(text_size.x, line_size.x);
+                text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
                 RenderText(pos, line, line_end, false);
                 line = line_end + 1;
                 line_rect.Min.y += line_height;
@@ -207,6 +207,8 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                 if (!line_end)
                     line_end = text_end;
+                if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
+                    text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
                 line = line_end + 1;
                 lines_skipped++;
             }
@@ -223,7 +225,6 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
         const ImVec2 text_size = CalcTextSize(text_begin, text_end, false, wrap_width);
 
-        // Account of baseline offset
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(text_size);
         if (!ItemAdd(bb, 0))
@@ -232,6 +233,11 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         // Render (we don't hide text after ## in this end-user function)
         RenderTextWrapped(bb.Min, text_begin, text_end, wrap_width);
     }
+}
+
+void ImGui::TextUnformatted(const char* text, const char* text_end)
+{
+    TextEx(text, text_end, ImGuiTextFlags_NoWidthForLargeClippedText);
 }
 
 void ImGui::Text(const char* fmt, ...)
@@ -250,7 +256,7 @@ void ImGui::TextV(const char* fmt, va_list args)
 
     ImGuiContext& g = *GImGui;
     const char* text_end = g.TempBuffer + ImFormatStringV(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), fmt, args);
-    TextUnformatted(g.TempBuffer, text_end);
+    TextEx(g.TempBuffer, text_end, ImGuiTextFlags_NoWidthForLargeClippedText);
 }
 
 void ImGui::TextColored(const ImVec4& col, const char* fmt, ...)
@@ -2009,7 +2015,7 @@ bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* v, int
     }
     PopID();
 
-    TextUnformatted(label, FindRenderedTextEnd(label));
+    TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     return value_changed;
 }
@@ -2052,7 +2058,7 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    TextUnformatted(label, FindRenderedTextEnd(label));
+    TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     PopID();
     return value_changed;
@@ -2097,7 +2103,7 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    TextUnformatted(label, FindRenderedTextEnd(label));
+    TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     PopID();
 
@@ -2450,7 +2456,7 @@ bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, i
     }
     PopID();
 
-    TextUnformatted(label, FindRenderedTextEnd(label));
+    TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     return value_changed;
 }
@@ -2749,7 +2755,7 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
             value_changed = true;
         }
         SameLine(0, style.ItemInnerSpacing.x);
-        TextUnformatted(label, FindRenderedTextEnd(label));
+        TextEx(label, FindRenderedTextEnd(label));
         style.FramePadding = backup_frame_padding;
 
         PopID();
@@ -2787,7 +2793,7 @@ bool ImGui::InputScalarN(const char* label, ImGuiDataType data_type, void* v, in
     }
     PopID();
 
-    TextUnformatted(label, FindRenderedTextEnd(label));
+    TextEx(label, FindRenderedTextEnd(label));
     EndGroup();
     return value_changed;
 }
@@ -4078,7 +4084,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             picker_active_window = g.CurrentWindow;
             if (label != label_display_end)
             {
-                TextUnformatted(label, label_display_end);
+                TextEx(label, label_display_end);
                 Spacing();
             }
             ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags__DataTypeMask | ImGuiColorEditFlags__PickerMask | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar;
@@ -4093,7 +4099,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if (label != label_display_end && !(flags & ImGuiColorEditFlags_NoLabel))
     {
         SameLine(0, style.ItemInnerSpacing.x);
-        TextUnformatted(label, label_display_end);
+        TextEx(label, label_display_end);
     }
 
     // Convert back
@@ -4353,7 +4359,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         {
             if ((flags & ImGuiColorEditFlags_NoSidePreview))
                 SameLine(0, style.ItemInnerSpacing.x);
-            TextUnformatted(label, label_display_end);
+            TextEx(label, label_display_end);
         }
     }
 
@@ -4581,7 +4587,7 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
             SetDragDropPayload(IMGUI_PAYLOAD_TYPE_COLOR_4F, &col, sizeof(float) * 4, ImGuiCond_Once);
         ColorButton(desc_id, col, flags);
         SameLine();
-        TextUnformatted("Color");
+        TextEx("Color");
         EndDragDropSource();
     }
 
@@ -4622,7 +4628,7 @@ void ImGui::ColorTooltip(const char* text, const float* col, ImGuiColorEditFlags
     const char* text_end = text ? FindRenderedTextEnd(text, NULL) : text;
     if (text_end > text)
     {
-        TextUnformatted(text, text_end);
+        TextEx(text, text_end);
         Separator();
     }
 
