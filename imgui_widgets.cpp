@@ -5179,7 +5179,20 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     bb.Min.y -= spacing_U;
     bb.Max.x += spacing_R;
     bb.Max.y += spacing_D;
-    if (!ItemAdd(bb, id))
+
+    bool item_add;
+    if (flags & ImGuiSelectableFlags_Disabled)
+    {
+        ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
+        window->DC.ItemFlags |= ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus;
+        item_add = ItemAdd(bb, id);
+        window->DC.ItemFlags = backup_item_flags;
+    }
+    else
+    {
+        item_add = ItemAdd(bb, id);
+    }        
+    if (!item_add)
     {
         if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsSet)
             PushColumnClipRect();

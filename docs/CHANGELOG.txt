@@ -60,6 +60,7 @@ Other Changes:
   when manipulating the scrollbar of a multi-line input text.
 - ColorPicker: Fixed a bug/assertion when displaying a color picker in a collapsed window
   while dragging its title bar. (#2389)
+- MenuItem, Selectable: Fixed disabled widget interfering with navigation (fix c2db7f63 in 1.67).
 - TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
 - TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
