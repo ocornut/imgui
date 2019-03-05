@@ -162,6 +162,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - image button: not taking an explicit id is odd.
+ - slider/drag: ctrl+click when format doesn't include a % character.. disable? display underlying value in default format? (see InputScalarAsWidgetReplacement)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar). (#1946)
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
@@ -215,6 +216,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
+ - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
 
  - tree node / optimization: avoid formatting when clipped.
@@ -246,7 +248,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons() all together.
  - log: LogButtons() options for specifying depth and/or hiding depth slider
- 
+
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
@@ -272,6 +274,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
+ - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
  - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.
  - font/demo: demonstrate use of ImFontGlyphRangesBuilder.
  - font/atlas: add a missing Glyphs.reserve()
