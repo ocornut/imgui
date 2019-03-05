@@ -2891,6 +2891,7 @@ bool ImGui::IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged
     return false;
 }
 
+// Process TAB/Shift+TAB. Be mindful that this function may _clear_ the ActiveID when tabbing out.
 bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -2919,6 +2920,10 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id)
             g.NavJustTabbedId = id;
             return true;
         }
+
+        // If another item is about to be focused, we clear our own active id
+        if (g.ActiveId == id)
+            ClearActiveID();
     }
 
     return false;
