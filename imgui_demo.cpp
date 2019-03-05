@@ -940,7 +940,6 @@ static void ShowDemoWindowWidgets()
     {
         // Note: we are using a fixed-sized buffer for simplicity here. See ImGuiInputTextFlags_CallbackResize
         // and the code in misc/cpp/imgui_stdlib.h for how to setup InputText() for dynamically resizing strings.
-        static bool read_only = false;
         static char text[1024*16] =
             "/*\n"
             " The Pentium F00F bug, shorthand for F0 0F C7 C8,\n"
@@ -953,9 +952,11 @@ static void ShowDemoWindowWidgets()
             "label:\n"
             "\tlock cmpxchg8b eax\n";
 
+        static ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput;
         ShowHelpMarker("You can use the ImGuiInputTextFlags_CallbackResize facility if you need to wire InputTextMultiline() to a dynamic string type. See misc/cpp/imgui_stdlib.h for an example. (This is not demonstrated in imgui_demo.cpp)");
-        ImGui::Checkbox("Read-only", &read_only);
-        ImGuiInputTextFlags flags = ImGuiInputTextFlags_AllowTabInput | (read_only ? ImGuiInputTextFlags_ReadOnly : 0);
+        ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", (unsigned int*)&flags, ImGuiInputTextFlags_ReadOnly);
+        ImGui::CheckboxFlags("ImGuiInputTextFlags_AllowTabInput", (unsigned int*)&flags, ImGuiInputTextFlags_AllowTabInput);
+        ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", (unsigned int*)&flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
         ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 16), flags);
         ImGui::TreePop();
     }
