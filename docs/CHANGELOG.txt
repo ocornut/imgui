@@ -45,6 +45,7 @@ Other Changes:
 - Added GetBackgroundDrawList() helper to quickly get access to a ImDrawList that will be rendered
   behind every other windows. (#2391)
 - Nav: Fixed a tap on AltGR (e.g. German keyboard) from navigating to the menu layer.
+- Nav: Fixed Ctrl+Tab keeping active InputText() of a previous window active after the switch. (#2380)
 - DragScalar, InputScalar, SliderScalar: Added support for u8/s8/u16/s16 data types.
   We are reusing function instances for larger types to reduce code size. (#643, #320, #708, #1011)
 - InputInt, InputFloat, InputScalar: Fix to keep the label of the +/- buttons centered when
