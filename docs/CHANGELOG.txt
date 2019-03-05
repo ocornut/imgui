@@ -63,6 +63,10 @@ Other Changes:
 - TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
 - TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
+- Text: Fixed large Text/TextUnformatted call not declaring its size when starting below the
+  lower point of the current clipping rectangle. Somehow this bug has been there since v1.0!
+  It was hardly noticeable but would affect the scrolling range, which in turn would affect
+  some scrolling request functions when called during the opening frame of a window.
 - Plot: Fixed divide-by-zero in PlotLines() when passing a count of 1. (#2387) [@Lectem]
 - Log/Capture: Fixed extraneous leading carriage return.
 - Log/Capture: Fixed an issue when empty string on a new line would not emit a carriage return.

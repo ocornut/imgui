@@ -191,6 +191,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
+ - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
 
  - tree node / optimization: avoid formatting when clipped.
@@ -222,7 +223,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons() all together.
  - log: LogButtons() options for specifying depth and/or hiding depth slider
- 
+
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)

@@ -159,53 +159,15 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
         const ImRect clip_rect = window->ClipRect;
         ImVec2 text_size(0,0);
 
-        if (text_pos.y <= clip_rect.Max.y)
+        // Lines to skip (can't skip when logging text)
+        ImVec2 pos = text_pos;
+        if (!g.LogEnabled)
         {
-            ImVec2 pos = text_pos;
-
-            // Lines to skip (can't skip when logging text)
-            if (!g.LogEnabled)
+            int lines_skippable = (int)((clip_rect.Min.y - text_pos.y) / line_height);
+            if (lines_skippable > 0)
             {
-                int lines_skippable = (int)((clip_rect.Min.y - text_pos.y) / line_height);
-                if (lines_skippable > 0)
-                {
-                    int lines_skipped = 0;
-                    while (line < text_end && lines_skipped < lines_skippable)
-                    {
-                        const char* line_end = (const char*)memchr(line, '\n', text_end - line);
-                        if (!line_end)
-                            line_end = text_end;
-                        line = line_end + 1;
-                        lines_skipped++;
-                    }
-                    pos.y += lines_skipped * line_height;
-                }
-            }
-
-            // Lines to render
-            if (line < text_end)
-            {
-                ImRect line_rect(pos, pos + ImVec2(FLT_MAX, line_height));
-                while (line < text_end)
-                {
-                    if (IsClippedEx(line_rect, 0, false))
-                        break;
-
-                    const char* line_end = (const char*)memchr(line, '\n', text_end - line);
-                    if (!line_end)
-                        line_end = text_end;
-                    const ImVec2 line_size = CalcTextSize(line, line_end, false);
-                    text_size.x = ImMax(text_size.x, line_size.x);
-                    RenderText(pos, line, line_end, false);
-                    line = line_end + 1;
-                    line_rect.Min.y += line_height;
-                    line_rect.Max.y += line_height;
-                    pos.y += line_height;
-                }
-
-                // Count remaining lines
                 int lines_skipped = 0;
-                while (line < text_end)
+                while (line < text_end && lines_skipped < lines_skippable)
                 {
                     const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                     if (!line_end)
@@ -215,9 +177,42 @@ void ImGui::TextUnformatted(const char* text, const char* text_end)
                 }
                 pos.y += lines_skipped * line_height;
             }
-
-            text_size.y += (pos - text_pos).y;
         }
+
+        // Lines to render
+        if (line < text_end)
+        {
+            ImRect line_rect(pos, pos + ImVec2(FLT_MAX, line_height));
+            while (line < text_end)
+            {
+                if (IsClippedEx(line_rect, 0, false))
+                    break;
+
+                const char* line_end = (const char*)memchr(line, '\n', text_end - line);
+                if (!line_end)
+                    line_end = text_end;
+                const ImVec2 line_size = CalcTextSize(line, line_end, false);
+                text_size.x = ImMax(text_size.x, line_size.x);
+                RenderText(pos, line, line_end, false);
+                line = line_end + 1;
+                line_rect.Min.y += line_height;
+                line_rect.Max.y += line_height;
+                pos.y += line_height;
+            }
+
+            // Count remaining lines
+            int lines_skipped = 0;
+            while (line < text_end)
+            {
+                const char* line_end = (const char*)memchr(line, '\n', text_end - line);
+                if (!line_end)
+                    line_end = text_end;
+                line = line_end + 1;
+                lines_skipped++;
+            }
+            pos.y += lines_skipped * line_height;
+        }
+        text_size.y = (pos - text_pos).y;
 
         ImRect bb(text_pos, text_pos + text_size);
         ItemSize(text_size);
