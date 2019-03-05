@@ -2552,10 +2552,6 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     NavLastIds[0] = NavLastIds[1] = 0;
     NavRectRel[0] = NavRectRel[1] = ImRect();
     NavLastChildNavWindow = NULL;
-
-    FocusIdxAllCounter = FocusIdxTabCounter = -1;
-    FocusIdxAllRequestCurrent = FocusIdxTabRequestCurrent = INT_MAX;
-    FocusIdxAllRequestNext = FocusIdxTabRequestNext = INT_MAX;
 }
 
 ImGuiWindow::~ImGuiWindow()
@@ -2901,22 +2897,28 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id)
 
     // Increment counters
     const bool is_tab_stop = (window->DC.ItemFlags & (ImGuiItemFlags_NoTabStop | ImGuiItemFlags_Disabled)) == 0;
-    window->FocusIdxAllCounter++;
+    window->DC.FocusCounterAll++;
     if (is_tab_stop)
-        window->FocusIdxTabCounter++;
+        window->DC.FocusCounterTab++;
 
     // Process TAB/Shift-TAB to tab *OUT* of the currently focused item.
     // (Note that we can always TAB out of a widget that doesn't allow tabbing in)
-    if (g.ActiveId == id && g.FocusTabPressed && !(g.ActiveIdBlockNavInputFlags & (1 << ImGuiNavInput_KeyTab_)))
-        if (window->FocusIdxAllRequestNext == INT_MAX && window->FocusIdxTabRequestNext == INT_MAX)
-            window->FocusIdxTabRequestNext = window->FocusIdxTabCounter + (g.IO.KeyShift ? (is_tab_stop ? -1 : 0) : +1); // Modulo on index will be applied at the end of frame once we've got the total counter of items.
-
-    if (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent)
-        return true;
-    if (is_tab_stop && window->FocusIdxTabCounter == window->FocusIdxTabRequestCurrent)
+    if (g.ActiveId == id && g.FocusTabPressed && !(g.ActiveIdBlockNavInputFlags & (1 << ImGuiNavInput_KeyTab_)) && g.FocusRequestNextWindow == NULL)
     {
-        g.NavJustTabbedId = id;
-        return true;
+        g.FocusRequestNextWindow = window;
+        g.FocusRequestNextCounterTab = window->DC.FocusCounterTab + (g.IO.KeyShift ? (is_tab_stop ? -1 : 0) : +1); // Modulo on index will be applied at the end of frame once we've got the total counter of items.
+    }
+
+    // Handle focus requests
+    if (g.FocusRequestCurrWindow == window)
+    {
+        if (window->DC.FocusCounterAll == g.FocusRequestCurrCounterAll)
+            return true;
+        if (is_tab_stop && window->DC.FocusCounterTab == g.FocusRequestCurrCounterTab)
+        {
+            g.NavJustTabbedId = id;
+            return true;
+        }
     }
 
     return false;
@@ -2924,8 +2926,8 @@ bool ImGui::FocusableItemRegister(ImGuiWindow* window, ImGuiID id)
 
 void ImGui::FocusableItemUnregister(ImGuiWindow* window)
 {
-    window->FocusIdxAllCounter--;
-    window->FocusIdxTabCounter--;
+    window->DC.FocusCounterAll--;
+    window->DC.FocusCounterTab--;
 }
 
 ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_x, float default_y)
@@ -3515,15 +3517,34 @@ void ImGui::NewFrame()
     UpdateMouseWheel();
 
     // Pressing TAB activate widget focus
-    // (This code is old and will be redesigned for Nav. In the meanwhile we use g.NavTabRequest as storage but this doesn't need ImGuiConfigFlags_NavEnableKeyboard to work!)
     g.FocusTabPressed = (g.NavWindow && g.NavWindow->Active && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.IO.KeyCtrl && IsKeyPressedMap(ImGuiKey_Tab));
     if (g.ActiveId == 0 && g.FocusTabPressed)
     {
+        // Note that SetKeyboardFocusHere() sets the Next fields mid-frame. To be consistent we also
+        // manipulate the Next fields even, even though they will be turned into Curr fields by the code below.
+        g.FocusRequestNextWindow = g.NavWindow;
+        g.FocusRequestNextCounterAll = INT_MAX;
         if (g.NavId != 0 && g.NavIdTabCounter != INT_MAX)
-            g.NavWindow->FocusIdxTabRequestNext = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
+            g.FocusRequestNextCounterTab = g.NavIdTabCounter + 1 + (g.IO.KeyShift ? -1 : 1);
         else
-            g.NavWindow->FocusIdxTabRequestNext = g.IO.KeyShift ? -1 : 0;
+            g.FocusRequestNextCounterTab = g.IO.KeyShift ? -1 : 0;
     }
+
+    // Turn queued focus request into current one
+    g.FocusRequestCurrWindow = NULL;
+    g.FocusRequestCurrCounterAll = g.FocusRequestCurrCounterTab = INT_MAX;
+    if (g.FocusRequestNextWindow != NULL)
+    {
+        ImGuiWindow* window = g.FocusRequestNextWindow;
+        g.FocusRequestCurrWindow = window;
+        if (g.FocusRequestNextCounterAll != INT_MAX && window->DC.FocusCounterAll != -1)
+            g.FocusRequestCurrCounterAll = ImModPositive(g.FocusRequestNextCounterAll, window->DC.FocusCounterAll + 1);
+        if (g.FocusRequestNextCounterTab != INT_MAX && window->DC.FocusCounterTab != -1)
+            g.FocusRequestCurrCounterTab = ImModPositive(g.FocusRequestNextCounterTab, window->DC.FocusCounterTab + 1);
+        g.FocusRequestNextWindow = NULL;
+        g.FocusRequestNextCounterAll = g.FocusRequestNextCounterTab = INT_MAX;
+    }
+
     g.NavIdTabCounter = INT_MAX;
 
     // Mark all windows as not visible
@@ -5170,12 +5191,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Lock window rounding for the frame (so that altering them doesn't cause inconsistencies)
         window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
 
-        // Prepare for item focus requests
-        window->FocusIdxAllRequestCurrent = (window->FocusIdxAllRequestNext == INT_MAX || window->FocusIdxAllCounter == -1) ? INT_MAX : ImModPositive(window->FocusIdxAllRequestNext, window->FocusIdxAllCounter + 1);
-        window->FocusIdxTabRequestCurrent = (window->FocusIdxTabRequestNext == INT_MAX || window->FocusIdxTabCounter == -1) ? INT_MAX : ImModPositive(window->FocusIdxTabRequestNext, window->FocusIdxTabCounter + 1);
-        window->FocusIdxAllCounter = window->FocusIdxTabCounter = -1;
-        window->FocusIdxAllRequestNext = window->FocusIdxTabRequestNext = INT_MAX;
-
         // Apply scrolling
         window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window, true);
         window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
@@ -5350,6 +5365,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.ChildWindows.resize(0);
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
+        window->DC.FocusCounterAll = window->DC.FocusCounterTab = -1;
         window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
@@ -6462,9 +6478,11 @@ void ImGui::ActivateItem(ImGuiID id)
 void ImGui::SetKeyboardFocusHere(int offset)
 {
     IM_ASSERT(offset >= -1);    // -1 is allowed but not below
-    ImGuiWindow* window = GetCurrentWindow();
-    window->FocusIdxAllRequestNext = window->FocusIdxAllCounter + 1 + offset;
-    window->FocusIdxTabRequestNext = INT_MAX;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    g.FocusRequestNextWindow = window;
+    g.FocusRequestNextCounterAll = window->DC.FocusCounterAll + 1 + offset;
+    g.FocusRequestNextCounterTab = INT_MAX;
 }
 
 void ImGui::SetItemDefaultFocus()
@@ -7373,7 +7391,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
         g.NavWindow = window;                                           // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
         g.NavLayer = window->DC.NavLayerCurrent;
         g.NavIdIsAlive = true;
-        g.NavIdTabCounter = window->FocusIdxTabCounter;
+        g.NavIdTabCounter = window->DC.FocusCounterTab;
         window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
     }
 }

@@ -892,7 +892,13 @@ struct ImGuiContext
     ImGuiNavMoveResult      NavMoveResultLocalVisibleSet;       // Best move request candidate within NavWindow that are mostly visible (when using ImGuiNavMoveFlags_AlsoScoreVisibleSet flag)
     ImGuiNavMoveResult      NavMoveResultOther;                 // Best move request candidate within NavWindow's flattened hierarchy (when using ImGuiWindowFlags_NavFlattened flag)
 
-    // Tabbing system (older than Nav, active when Nav is disabled. Probably needs a redesign)
+    // Tabbing system (older than Nav, active even if Nav is disabled. FIXME-NAV: This needs a redesign!)
+    ImGuiWindow*            FocusRequestCurrWindow;             //
+    ImGuiWindow*            FocusRequestNextWindow;             //
+    int                     FocusRequestCurrCounterAll;         // Any item being requested for focus, stored as an index (we on layout to be stable between the frame pressing TAB and the next frame, semi-ouch)
+    int                     FocusRequestCurrCounterTab;         // Tab item being requested for focus, stored as an index
+    int                     FocusRequestNextCounterAll;         // Stored for next frame
+    int                     FocusRequestNextCounterTab;         // "
     bool                    FocusTabPressed;                    //
 
     // Render
@@ -1040,6 +1046,10 @@ struct ImGuiContext
         NavMoveRequestFlags = 0;
         NavMoveRequestForward = ImGuiNavForward_None;
         NavMoveDir = NavMoveDirLast = NavMoveClipDir = ImGuiDir_None;
+
+        FocusRequestCurrWindow = FocusRequestNextWindow = NULL;
+        FocusRequestCurrCounterAll = FocusRequestCurrCounterTab = INT_MAX;
+        FocusRequestNextCounterAll = FocusRequestNextCounterTab = INT_MAX;
         FocusTabPressed = false;
 
         DimBgRatio = 0.0f;
@@ -1127,6 +1137,8 @@ struct IMGUI_API ImGuiWindowTempData
     ImGuiStorage*           StateStorage;
     ImGuiLayoutType         LayoutType;
     ImGuiLayoutType         ParentLayoutType;       // Layout type of parent window at the time of Begin()
+    int                     FocusCounterAll;        // Counter for focus/tabbing system. Start at -1 and increase as assigned via FocusableItemRegister() (FIXME-NAV: Needs redesign)
+    int                     FocusCounterTab;        // (same, but only count widgets which you can Tab through)
 
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
     ImGuiItemFlags          ItemFlags;              // == ItemFlagsStack.back() [empty == ImGuiItemFlags_Default]
@@ -1162,8 +1174,10 @@ struct IMGUI_API ImGuiWindowTempData
         MenuBarOffset = ImVec2(0.0f, 0.0f);
         StateStorage = NULL;
         LayoutType = ParentLayoutType = ImGuiLayoutType_Vertical;
-        ItemWidth = 0.0f;
+        FocusCounterAll = FocusCounterTab = -1;
+
         ItemFlags = ImGuiItemFlags_Default_;
+        ItemWidth = 0.0f;
         TextWrapPos = -1.0f;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
@@ -1247,15 +1261,6 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindow*            NavLastChildNavWindow;              // When going to the menu bar, we remember the child window we came from. (This could probably be made implicit if we kept g.Windows sorted by last focused including child window.)
     ImGuiID                 NavLastIds[ImGuiNavLayer_COUNT];    // Last known NavId for this window, per layer (0/1)
     ImRect                  NavRectRel[ImGuiNavLayer_COUNT];    // Reference rectangle, in window relative space
-
-    // Navigation / Focus
-    // FIXME-NAV: Merge all this with the new Nav system, at least the request variables should be moved to ImGuiContext
-    int                     FocusIdxAllCounter;                 // Start at -1 and increase as assigned via FocusItemRegister()
-    int                     FocusIdxTabCounter;                 // (same, but only count widgets which you can Tab through)
-    int                     FocusIdxAllRequestCurrent;          // Item being requested for focus
-    int                     FocusIdxTabRequestCurrent;          // Tab-able item being requested for focus
-    int                     FocusIdxAllRequestNext;             // Item being requested for focus, for next update (relies on layout to be stable between the frame pressing TAB and the next frame)
-    int                     FocusIdxTabRequestNext;             // "
 
 public:
     ImGuiWindow(ImGuiContext* context, const char* name);

@@ -3275,7 +3275,7 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         state = &g.InputTextState;
 
     const bool focus_requested = FocusableItemRegister(window, id);
-    const bool focus_requested_by_code = focus_requested && (window->FocusIdxAllCounter == window->FocusIdxAllRequestCurrent);
+    const bool focus_requested_by_code = focus_requested && (g.FocusRequestCurrWindow == window && g.FocusRequestCurrCounterAll == window->DC.FocusCounterAll);
     const bool focus_requested_by_tab = focus_requested && !focus_requested_by_code;
 
     const bool user_clicked = hovered && io.MouseClicked[0];
