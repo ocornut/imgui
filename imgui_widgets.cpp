@@ -2903,7 +2903,7 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
 
 bool ImGui::InputTextHinted(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
-    return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
+	return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
 }
 
 static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
@@ -3871,8 +3871,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         }
         else
         {
-            buf_display = hint;
-            buf_display_end = hint + strlen(hint);
+	        buf_display = hint;
+	        buf_display_end = hint + strlen(hint);
             text_color = ImGuiCol_TextDisabled;
         }
 
@@ -3904,7 +3904,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         // Render text only (no selection, no cursor)
         text_color = ImGuiCol_Text;
         buf_display = (g.ActiveId == id && !is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
-        if (is_multiline && buf_display)
+        if (is_multiline)
             text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_display_end) * g.FontSize); // We don't need width
         else if (g.ActiveId == id)
             buf_display_end = buf_display + state->CurLenA;
