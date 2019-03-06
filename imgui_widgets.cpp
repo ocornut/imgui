@@ -1186,7 +1186,7 @@ void ImGui::Separator()
 
     // Those flags should eventually be overridable by the user
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical))));   // Check that only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)));   // Check that only 1 option is selected
     if (flags & ImGuiSeparatorFlags_Vertical)
     {
         VerticalSeparator();
@@ -2723,7 +2723,7 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     DataTypeFormatString(data_buf, IM_ARRAYSIZE(data_buf), data_type, data_ptr, format);
     ImStrTrimBlanks(data_buf);
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
-    bool value_changed = InputTextEx(label, data_buf, IM_ARRAYSIZE(data_buf), bb.GetSize(), flags);
+    bool value_changed = InputTextEx(label, NULL, data_buf, IM_ARRAYSIZE(data_buf), bb.GetSize(), flags);
     if (g.ScalarAsInputTextId == 0)
     {
         // First frame we started displaying the InputText widget, we expect it to take the active id.
@@ -2914,9 +2914,10 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 }
 
 //-------------------------------------------------------------------------
-// [SECTION] Widgets: InputText, InputTextMultiline
+// [SECTION] Widgets: InputText, InputTextMultiline, InputTextWithHint
 //-------------------------------------------------------------------------
 // - InputText()
+// - InputTextWithHint()
 // - InputTextMultiline()
 // - InputTextEx() [Internal]
 //-------------------------------------------------------------------------
@@ -2924,12 +2925,18 @@ bool ImGui::InputDouble(const char* label, double* v, double step, double step_f
 bool ImGui::InputText(const char* label, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
     IM_ASSERT(!(flags & ImGuiInputTextFlags_Multiline)); // call InputTextMultiline()
-    return InputTextEx(label, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
+    return InputTextEx(label, NULL, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
 }
 
 bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, const ImVec2& size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
-    return InputTextEx(label, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
+    return InputTextEx(label, NULL, buf, (int)buf_size, size, flags | ImGuiInputTextFlags_Multiline, callback, user_data);
+}
+
+bool ImGui::InputTextWithHint(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
+{
+    IM_ASSERT(!(flags & ImGuiInputTextFlags_Multiline)); // call InputTextMultiline()
+    return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0, 0), flags, callback, user_data);
 }
 
 static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
@@ -3224,7 +3231,7 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 // - If you want to use ImGui::InputText() with std::string, see misc/cpp/imgui_stdlib.h
 // (FIXME: Rather confusing and messy function, among the worse part of our codebase, expecting to rewrite a V2 at some point.. Partly because we are
 //  doing UTF8 > U16 > UTF8 conversions on the go to easily interface with stb_textedit. Ideally should stay in UTF-8 all the time. See https://github.com/nothings/stb/issues/188)
-bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* callback_user_data)
+bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* callback_user_data)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3282,23 +3289,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     const bool hovered = ItemHoverable(frame_bb, id);
     if (hovered)
         g.MouseCursor = ImGuiMouseCursor_TextInput;
-
-    // Password pushes a temporary font with only a fallback glyph
-    if (is_password)
-    {
-        const ImFontGlyph* glyph = g.Font->FindGlyph('*');
-        ImFont* password_font = &g.InputTextPasswordFont;
-        password_font->FontSize = g.Font->FontSize;
-        password_font->Scale = g.Font->Scale;
-        password_font->DisplayOffset = g.Font->DisplayOffset;
-        password_font->Ascent = g.Font->Ascent;
-        password_font->Descent = g.Font->Descent;
-        password_font->ContainerAtlas = g.Font->ContainerAtlas;
-        password_font->FallbackGlyph = glyph;
-        password_font->FallbackAdvanceX = glyph->AdvanceX;
-        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexAdvanceX.empty() && password_font->IndexLookup.empty());
-        PushFont(password_font);
-    }
 
     // NB: we are only allowed to access 'edit_state' if we are the active widget.
     ImGuiInputTextState* state = NULL;
@@ -3384,10 +3374,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     if (g.ActiveId == id && io.MouseClicked[0] && !init_state && !init_make_active) //-V560
         clear_active_id = true;
 
-    bool value_changed = false;
-    bool enter_pressed = false;
-    int backup_current_text_length = 0;
-
     // When read-only we always use the live data passed to the function
     // FIXME-OPT: Because our selection/cursor code currently needs the wide text we need to convert it when active, which is not ideal :(
     if (is_readonly && state != NULL)
@@ -3404,7 +3390,41 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
     }
 
+    // Lock the decision of whether we are going to take the path displaying the cursor or selection
+    const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
+    const bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
+    bool value_changed = false;
+    bool enter_pressed = false;
+
+    // Select the buffer to render.
+    const char* buf_display = ((render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state && state->TextAIsValid) ? state->TextA.Data : buf;
+    const char* buf_display_end = NULL; // We have specialized paths below for setting the length
+    const bool is_displaying_hint = (hint != NULL && buf_display[0] == 0);
+    if (is_displaying_hint)
+    {
+        buf_display = hint;
+        buf_display_end = hint + strlen(hint);
+    }
+
+    // Password pushes a temporary font with only a fallback glyph
+    if (is_password && !is_displaying_hint)
+    {
+        const ImFontGlyph* glyph = g.Font->FindGlyph('*');
+        ImFont* password_font = &g.InputTextPasswordFont;
+        password_font->FontSize = g.Font->FontSize;
+        password_font->Scale = g.Font->Scale;
+        password_font->DisplayOffset = g.Font->DisplayOffset;
+        password_font->Ascent = g.Font->Ascent;
+        password_font->Descent = g.Font->Descent;
+        password_font->ContainerAtlas = g.Font->ContainerAtlas;
+        password_font->FallbackGlyph = glyph;
+        password_font->FallbackAdvanceX = glyph->AdvanceX;
+        IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexAdvanceX.empty() && password_font->IndexLookup.empty());
+        PushFont(password_font);
+    }
+
     // Process mouse inputs and character inputs
+    int backup_current_text_length = 0;
     if (g.ActiveId == id)
     {
         IM_ASSERT(state != NULL);
@@ -3751,15 +3771,15 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
     // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
     const int buf_display_max_length = 2 * 1024 * 1024;
-    const char* buf_display = NULL;
-    const char* buf_display_end = NULL;
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
-    const bool render_cursor = (g.ActiveId == id) || (state && user_scroll_active);
-    const bool render_selection = state && state->HasSelection() && (RENDER_SELECTION_WHEN_INACTIVE || render_cursor);
     if (render_cursor || render_selection)
     {
+        IM_ASSERT(state != NULL);
+        if (!is_displaying_hint)
+            buf_display_end = buf_display + state->CurLenA;
+
         // Render text (with cursor and selection)
         // This is going to be messy. We need to:
         // - Display the text (this alone can be more easily clipped)
@@ -3767,7 +3787,6 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         // - Measure text height (for scrollbar)
         // We are attempting to do most of that in **one main pass** to minimize the computation cost (non-negligible for large amount of text) + 2nd pass for selection rendering (we could merge them by an extra refactoring effort)
         // FIXME: This should occur on buf_display but we'd need to maintain cursor/select_start/select_end for UTF-8.
-        IM_ASSERT(state != NULL);
         const ImWchar* text_begin = state->TextW.Data;
         ImVec2 cursor_offset, select_start_offset;
 
@@ -3892,10 +3911,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         }
 
         // We test for 'buf_display_max_length' as a way to avoid some pathological cases (e.g. single-line 1 MB string) which would make ImDrawList crash.
-        buf_display = (!is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
-        buf_display_end = buf_display + state->CurLenA;
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        {
+            ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        }
 
         // Draw blinking cursor
         if (render_cursor)
@@ -3918,15 +3938,18 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
     else
     {
         // Render text only (no selection, no cursor)
-        buf_display = (g.ActiveId == id && !is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
         if (is_multiline)
             text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_display_end) * g.FontSize); // We don't need width
-        else if (g.ActiveId == id)
+        else if (!is_displaying_hint && g.ActiveId == id)
             buf_display_end = buf_display + state->CurLenA;
-        else
+        else if (!is_displaying_hint)
             buf_display_end = buf_display + strlen(buf_display);
+
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(ImGuiCol_Text), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        {
+            ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+        }
     }
 
     if (is_multiline)
@@ -3936,11 +3959,11 @@ bool ImGui::InputTextEx(const char* label, char* buf, int buf_size, const ImVec2
         EndGroup();
     }
 
-    if (is_password)
+    if (is_password && !is_displaying_hint)
         PopFont();
 
     // Log as text
-    if (g.LogEnabled && !is_password)
+    if (g.LogEnabled && !(is_password && !is_displaying_hint))
         LogRenderedText(&draw_pos, buf_display, buf_display_end);
 
     if (label_size.x > 0)
@@ -4033,14 +4056,14 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         const float w_item_last = ImMax(1.0f, (float)(int)(w_items_all - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
 
         const bool hide_prefix = (w_item_one <= CalcTextSize((flags & ImGuiColorEditFlags_Float) ? "M:0.000" : "M:000").x);
-        const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
-        const char* fmt_table_int[3][4] =
+        static const char* ids[4] = { "##X", "##Y", "##Z", "##W" };
+        static const char* fmt_table_int[3][4] =
         {
             {   "%3d",   "%3d",   "%3d",   "%3d" }, // Short display
             { "R:%3d", "G:%3d", "B:%3d", "A:%3d" }, // Long display for RGBA
             { "H:%3d", "S:%3d", "V:%3d", "A:%3d" }  // Long display for HSVA
         };
-        const char* fmt_table_float[3][4] =
+        static const char* fmt_table_float[3][4] =
         {
             {   "%0.3f",   "%0.3f",   "%0.3f",   "%0.3f" }, // Short display
             { "R:%0.3f", "G:%0.3f", "B:%0.3f", "A:%0.3f" }, // Long display for RGBA
@@ -4140,21 +4163,19 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     }
 
     // Convert back
-    if (picker_active_window == NULL)
+    if (value_changed && picker_active_window == NULL)
     {
         if (!value_changed_as_float)
             for (int n = 0; n < 4; n++)
                 f[n] = i[n] / 255.0f;
         if (flags & ImGuiColorEditFlags_DisplayHSV)
             ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
-        if (value_changed)
-        {
-            col[0] = f[0];
-            col[1] = f[1];
-            col[2] = f[2];
-            if (alpha)
-                col[3] = f[3];
-        }
+
+        col[0] = f[0];
+        col[1] = f[1];
+        col[2] = f[2];
+        if (alpha)
+            col[3] = f[3];
     }
 
     PopID();
@@ -4277,7 +4298,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     // Read stored options
     if (!(flags & ImGuiColorEditFlags__PickerMask))
         flags |= ((g.ColorEditOptions & ImGuiColorEditFlags__PickerMask) ? g.ColorEditOptions : ImGuiColorEditFlags__OptionsDefault) & ImGuiColorEditFlags__PickerMask;
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags__PickerMask))); // Check that only 1 is selected
+    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags__PickerMask)); // Check that only 1 is selected
     if (!(flags & ImGuiColorEditFlags_NoOptions))
         flags |= (g.ColorEditOptions & ImGuiColorEditFlags_AlphaBar);
 
@@ -4406,12 +4427,14 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         ImVec4 col_v4(col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
         if ((flags & ImGuiColorEditFlags_NoLabel))
             Text("Current");
-        ColorButton("##current", col_v4, (flags & (ImGuiColorEditFlags_HDR|ImGuiColorEditFlags_AlphaPreview|ImGuiColorEditFlags_AlphaPreviewHalf|ImGuiColorEditFlags_NoTooltip)), ImVec2(square_sz * 3, square_sz * 2));
+
+        ImGuiColorEditFlags sub_flags_to_forward = ImGuiColorEditFlags_HDR|ImGuiColorEditFlags_AlphaPreview|ImGuiColorEditFlags_AlphaPreviewHalf|ImGuiColorEditFlags_NoTooltip;
+        ColorButton("##current", col_v4, (flags & sub_flags_to_forward), ImVec2(square_sz * 3, square_sz * 2));
         if (ref_col != NULL)
         {
             Text("Original");
             ImVec4 ref_col_v4(ref_col[0], ref_col[1], ref_col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : ref_col[3]);
-            if (ColorButton("##original", ref_col_v4, (flags & (ImGuiColorEditFlags_HDR|ImGuiColorEditFlags_AlphaPreview|ImGuiColorEditFlags_AlphaPreviewHalf|ImGuiColorEditFlags_NoTooltip)), ImVec2(square_sz * 3, square_sz * 2)))
+            if (ColorButton("##original", ref_col_v4, (flags & sub_flags_to_forward), ImVec2(square_sz * 3, square_sz * 2)))
             {
                 memcpy(col, ref_col, components * sizeof(float));
                 value_changed = true;
@@ -4648,9 +4671,9 @@ void ImGui::SetColorEditOptions(ImGuiColorEditFlags flags)
         flags |= ImGuiColorEditFlags__OptionsDefault & ImGuiColorEditFlags__DataTypeMask;
     if ((flags & ImGuiColorEditFlags__PickerMask) == 0)
         flags |= ImGuiColorEditFlags__OptionsDefault & ImGuiColorEditFlags__PickerMask;
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags__DisplayMask)));  // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags__DataTypeMask))); // Check only 1 option is selected
-    IM_ASSERT(ImIsPowerOfTwo((int)(flags & ImGuiColorEditFlags__PickerMask)));   // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags__DisplayMask));    // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags__DataTypeMask));   // Check only 1 option is selected
+    IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags__PickerMask));     // Check only 1 option is selected
     g.ColorEditOptions = flags;
 }
 
