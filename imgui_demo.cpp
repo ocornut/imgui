@@ -770,6 +770,7 @@ static void ShowDemoWindowWidgets()
         // Expose flags as checkbox for the demo
         static ImGuiComboFlags flags = 0;
         ImGui::CheckboxFlags("ImGuiComboFlags_PopupAlignLeft", (unsigned int*)&flags, ImGuiComboFlags_PopupAlignLeft);
+        ImGui::SameLine(); ShowHelpMarker("Only makes a difference if the popup is larger than the combo");
         if (ImGui::CheckboxFlags("ImGuiComboFlags_NoArrowButton", (unsigned int*)&flags, ImGuiComboFlags_NoArrowButton))
             flags &= ~ImGuiComboFlags_NoPreview;     // Clear the other flag, as we cannot combine both
         if (ImGui::CheckboxFlags("ImGuiComboFlags_NoPreview", (unsigned int*)&flags, ImGuiComboFlags_NoPreview))
@@ -934,6 +935,7 @@ static void ShowDemoWindowWidgets()
         static char bufpass[64] = "password123";
         ImGui::InputText("password", bufpass, 64, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
         ImGui::SameLine(); ShowHelpMarker("Display all characters as '*'.\nDisable clipboard cut and copy.\nDisable logging.\n");
+        ImGui::InputTextWithHint("password (w/ hint)", "<password>", bufpass, 64, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
         ImGui::InputText("password (clear)", bufpass, 64, ImGuiInputTextFlags_CharsNoBlank);
 
         ImGui::TreePop();
@@ -2177,7 +2179,7 @@ static void ShowDemoWindowPopups()
 
         // We can also use OpenPopupOnItemClick() which is the same as BeginPopupContextItem() but without the Begin call.
         // So here we will make it that clicking on the text field with the right mouse button (1) will toggle the visibility of the popup above.
-        ImGui::Text("(You can also right-click me to the same popup as above.)");
+        ImGui::Text("(You can also right-click me to open the same popup as above.)");
         ImGui::OpenPopupOnItemClick("item context menu", 1);
 
         // When used after an item that has an ID (here the Button), we can skip providing an ID to BeginPopupContextItem().

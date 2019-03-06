@@ -2904,7 +2904,8 @@ bool ImGui::InputTextMultiline(const char* label, char* buf, size_t buf_size, co
 
 bool ImGui::InputTextWithHint(const char* label, const char* hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data)
 {
-    return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0,0), flags, callback, user_data);
+    IM_ASSERT(!(flags & ImGuiInputTextFlags_Multiline)); // call InputTextMultiline()
+    return InputTextEx(label, hint, buf, (int)buf_size, ImVec2(0, 0), flags, callback, user_data);
 }
 
 static int InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end)
@@ -3364,8 +3365,18 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     bool value_changed = false;
     bool enter_pressed = false;
 
+    // Select the buffer to render.
+    const char* buf_display = ((render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
+    const char* buf_display_end = NULL; // We have specialized paths below for setting the length
+    const bool is_displaying_hint = (hint != NULL && buf_display[0] == 0);
+    if (is_displaying_hint)
+    {
+        buf_display = hint;
+        buf_display_end = hint + strlen(hint);
+    }
+
     // Password pushes a temporary font with only a fallback glyph
-    if (is_password)
+    if (is_password && !is_displaying_hint)
     {
         const ImFontGlyph* glyph = g.Font->FindGlyph('*');
         ImFont* password_font = &g.InputTextPasswordFont;
@@ -3729,14 +3740,14 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
     // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
     const int buf_display_max_length = 2 * 1024 * 1024;
-    const char* buf_display = NULL;
-    const char* buf_display_end = NULL;
-    ImGuiCol text_color = ImGuiCol_COUNT;
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
     if (render_cursor || render_selection)
     {
+        if (!is_displaying_hint)
+            buf_display_end = buf_display + state->CurLenA;
+
         // Render text (with cursor and selection)
         // This is going to be messy. We need to:
         // - Display the text (this alone can be more easily clipped)
@@ -3868,25 +3879,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
         }
 
-        if (state->CurLenA != 0 || hint == NULL)
-        {
-            buf_display = (!is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
-            buf_display_end = buf_display + state->CurLenA;
-            text_color = ImGuiCol_Text;
-        }
-        else
-        {
-            buf_display = hint;
-            buf_display_end = hint + strlen(hint);
-            text_color = ImGuiCol_TextDisabled;
-        }
-
-
         // We test for 'buf_display_max_length' as a way to avoid some pathological cases (e.g. single-line 1 MB string) which would make ImDrawList crash.
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
-            IM_ASSERT(text_color != ImGuiCol_COUNT);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, GetColorU32(text_color), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos - draw_scroll, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
         }
 
         // Draw blinking cursor
@@ -3907,26 +3904,17 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     else
     {
         // Render text only (no selection, no cursor)
-        text_color = ImGuiCol_Text;
-        buf_display = (g.ActiveId == id && !is_readonly && state->TextAIsValid) ? state->TextA.Data : buf;
         if (is_multiline)
             text_size = ImVec2(size.x, InputTextCalcTextLenAndLineCount(buf_display, &buf_display_end) * g.FontSize); // We don't need width
-        else if (g.ActiveId == id)
+        else if (!is_displaying_hint && g.ActiveId == id)
             buf_display_end = buf_display + state->CurLenA;
-        else
+        else if (!is_displaying_hint)
             buf_display_end = buf_display + strlen(buf_display);
-
-        if (buf_display_end == buf_display && hint != NULL)
-        {
-            buf_display = hint;
-            buf_display_end = buf_display + strlen(buf_display);
-            text_color = ImGuiCol_TextDisabled;
-        }
 
         if (is_multiline || (buf_display_end - buf_display) < buf_display_max_length)
         {
-            IM_ASSERT(text_color != ImGuiCol_COUNT);
-            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, GetColorU32(text_color), buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
+            ImU32 col = GetColorU32(is_displaying_hint ? ImGuiCol_TextDisabled : ImGuiCol_Text);
+            draw_window->DrawList->AddText(g.Font, g.FontSize, draw_pos, col, buf_display, buf_display_end, 0.0f, is_multiline ? NULL : &clip_rect);
         }
     }
 
@@ -3937,11 +3925,11 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         EndGroup();
     }
 
-    if (is_password)
+    if (is_password && !is_displaying_hint)
         PopFont();
 
     // Log as text
-    if (g.LogEnabled && !is_password)
+    if (g.LogEnabled && !(is_password && !is_displaying_hint))
         LogRenderedText(&draw_pos, buf_display, buf_display_end);
 
     if (label_size.x > 0)
