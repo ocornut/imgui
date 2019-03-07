@@ -7788,107 +7788,6 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 
 
 //-----------------------------------------------------------------------------
-// [SECTION] VIEWPORTS, PLATFORM WINDOWS
-//-----------------------------------------------------------------------------
-
-// This is a default/basic function for performing the rendering/swap of multiple Platform Windows.
-// Custom renderers may prefer to not call this function at all, and instead iterate the publicly exposed platform data and handle rendering/sync themselves.
-// The Render/Swap functions stored in ImGuiPlatformIO are merely here to allow for this helper to exist, but you can do it yourself:
-//
-//    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-//    for (int i = 1; i < platform_io.Viewports.Size; i++)
-//        MyRenderFunction(platform_io.Viewports[i], my_args);
-//    for (int i = 1; i < platform_io.Viewports.Size; i++)
-//        MySwapBufferFunction(platform_io.Viewports[i], my_args);
-//
-void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
-{
-    // Skip the main viewport (index 0), which is always fully handled by the application!
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    for (int i = 1; i < platform_io.Viewports.Size; i++)
-    {
-        ImGuiViewport* viewport = platform_io.Viewports[i];
-        if (platform_io.Platform_RenderWindow) platform_io.Platform_RenderWindow(viewport, platform_render_arg);
-        if (platform_io.Renderer_RenderWindow) platform_io.Renderer_RenderWindow(viewport, renderer_render_arg);
-    }
-    for (int i = 1; i < platform_io.Viewports.Size; i++)
-    {
-        ImGuiViewport* viewport = platform_io.Viewports[i];
-        if (platform_io.Platform_SwapBuffers) platform_io.Platform_SwapBuffers(viewport, platform_render_arg);
-        if (platform_io.Renderer_SwapBuffers) platform_io.Renderer_SwapBuffers(viewport, renderer_render_arg);
-    }
-}
-
-static int ImGui::FindPlatformMonitorForPos(const ImVec2& pos)
-{
-    ImGuiContext& g = *GImGui;
-    for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
-    {
-        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
-        if (ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize).Contains(pos))
-            return monitor_n;
-    }
-    return -1;
-}
-
-// Search for the monitor with the largest intersection area with the given rectangle
-// We generally try to avoid searching loops but the monitor count should be very small here
-static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
-{
-    ImGuiContext& g = *GImGui;
-
-    // Use a minimum threshold of 1.0f so a zero-sized rect will still find its monitor given its position. 
-    // This is necessary for tooltips which always resize down to zero at first.
-    const float surface_threshold = ImMax(rect.GetWidth() * rect.GetHeight() * 0.5f, 1.0f);
-    int best_monitor_n = -1;
-    float best_monitor_surface = 0.001f;
-
-    for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size && best_monitor_surface < surface_threshold; monitor_n++)
-    {
-        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
-        const ImRect monitor_rect = ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize);
-        if (monitor_rect.Contains(rect))
-            return monitor_n;
-        ImRect overlapping_rect = rect;
-        overlapping_rect.ClipWithFull(monitor_rect);
-        float overlapping_surface = overlapping_rect.GetWidth() * overlapping_rect.GetHeight();
-        if (overlapping_surface < best_monitor_surface)
-            continue;
-        best_monitor_surface = overlapping_surface;
-        best_monitor_n = monitor_n;
-    }
-    return best_monitor_n;
-}
-
-void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
-{
-    ImGuiContext& g = *GImGui;
-    if (g.PlatformIO.Renderer_DestroyWindow)
-        g.PlatformIO.Renderer_DestroyWindow(viewport);
-    if (g.PlatformIO.Platform_DestroyWindow)
-        g.PlatformIO.Platform_DestroyWindow(viewport);
-    IM_ASSERT(viewport->RendererUserData == NULL);
-    IM_ASSERT(viewport->PlatformUserData == NULL);
-    viewport->PlatformHandle = NULL;
-    viewport->RendererUserData = viewport->PlatformHandle = NULL;
-    viewport->PlatformWindowCreated = false;
-    viewport->ClearRequestFlags();
-}
-
-void ImGui::DestroyPlatformWindows()
-{
-    // We call the destroy window on every viewport (including the main viewport, index 0) to give a chance to the back-end 
-    // to clear any data they may have stored in e.g. PlatformUserData, RendererUserData. 
-    // It is convenient for the platform back-end code to store something in the main viewport, in order for e.g. the mouse handling 
-    // code to operator a consistent manner.
-    // It is expected that the back-end can handle calls to Renderer_DestroyWindow/Platform_DestroyWindow without
-    // crashing if it doesn't have data stored. 
-    ImGuiContext& g = *GImGui;
-    for (int i = 0; i < g.Viewports.Size; i++)
-        DestroyPlatformWindow(g.Viewports[i]);
-}
-
-//-----------------------------------------------------------------------------
 // [SECTION] KEYBOARD/GAMEPAD NAVIGATION
 //-----------------------------------------------------------------------------
 
@@ -10611,6 +10510,103 @@ void ImGui::UpdatePlatformWindows()
             g.PlatformLastFocusedViewport = focused_viewport->ID;
         }
     }
+}
+
+// This is a default/basic function for performing the rendering/swap of multiple Platform Windows.
+// Custom renderers may prefer to not call this function at all, and instead iterate the publicly exposed platform data and handle rendering/sync themselves.
+// The Render/Swap functions stored in ImGuiPlatformIO are merely here to allow for this helper to exist, but you can do it yourself:
+//
+//    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+//    for (int i = 1; i < platform_io.Viewports.Size; i++)
+//        MyRenderFunction(platform_io.Viewports[i], my_args);
+//    for (int i = 1; i < platform_io.Viewports.Size; i++)
+//        MySwapBufferFunction(platform_io.Viewports[i], my_args);
+//
+void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
+{
+    // Skip the main viewport (index 0), which is always fully handled by the application!
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+    {
+        ImGuiViewport* viewport = platform_io.Viewports[i];
+        if (platform_io.Platform_RenderWindow) platform_io.Platform_RenderWindow(viewport, platform_render_arg);
+        if (platform_io.Renderer_RenderWindow) platform_io.Renderer_RenderWindow(viewport, renderer_render_arg);
+    }
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+    {
+        ImGuiViewport* viewport = platform_io.Viewports[i];
+        if (platform_io.Platform_SwapBuffers) platform_io.Platform_SwapBuffers(viewport, platform_render_arg);
+        if (platform_io.Renderer_SwapBuffers) platform_io.Renderer_SwapBuffers(viewport, renderer_render_arg);
+    }
+}
+
+static int ImGui::FindPlatformMonitorForPos(const ImVec2& pos)
+{
+    ImGuiContext& g = *GImGui;
+    for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
+    {
+        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
+        if (ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize).Contains(pos))
+            return monitor_n;
+    }
+    return -1;
+}
+
+// Search for the monitor with the largest intersection area with the given rectangle
+// We generally try to avoid searching loops but the monitor count should be very small here
+static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
+{
+    ImGuiContext& g = *GImGui;
+
+    // Use a minimum threshold of 1.0f so a zero-sized rect will still find its monitor given its position. 
+    // This is necessary for tooltips which always resize down to zero at first.
+    const float surface_threshold = ImMax(rect.GetWidth() * rect.GetHeight() * 0.5f, 1.0f);
+    int best_monitor_n = -1;
+    float best_monitor_surface = 0.001f;
+
+    for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size && best_monitor_surface < surface_threshold; monitor_n++)
+    {
+        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[monitor_n];
+        const ImRect monitor_rect = ImRect(monitor.MainPos, monitor.MainPos + monitor.MainSize);
+        if (monitor_rect.Contains(rect))
+            return monitor_n;
+        ImRect overlapping_rect = rect;
+        overlapping_rect.ClipWithFull(monitor_rect);
+        float overlapping_surface = overlapping_rect.GetWidth() * overlapping_rect.GetHeight();
+        if (overlapping_surface < best_monitor_surface)
+            continue;
+        best_monitor_surface = overlapping_surface;
+        best_monitor_n = monitor_n;
+    }
+    return best_monitor_n;
+}
+
+void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.PlatformIO.Renderer_DestroyWindow)
+        g.PlatformIO.Renderer_DestroyWindow(viewport);
+    if (g.PlatformIO.Platform_DestroyWindow)
+        g.PlatformIO.Platform_DestroyWindow(viewport);
+    IM_ASSERT(viewport->RendererUserData == NULL);
+    IM_ASSERT(viewport->PlatformUserData == NULL);
+    viewport->PlatformHandle = NULL;
+    viewport->RendererUserData = viewport->PlatformHandle = NULL;
+    viewport->PlatformWindowCreated = false;
+    viewport->ClearRequestFlags();
+}
+
+void ImGui::DestroyPlatformWindows()
+{
+    // We call the destroy window on every viewport (including the main viewport, index 0) to give a chance to the back-end 
+    // to clear any data they may have stored in e.g. PlatformUserData, RendererUserData. 
+    // It is convenient for the platform back-end code to store something in the main viewport, in order for e.g. the mouse handling 
+    // code to operator a consistent manner.
+    // It is expected that the back-end can handle calls to Renderer_DestroyWindow/Platform_DestroyWindow without
+    // crashing if it doesn't have data stored. 
+    ImGuiContext& g = *GImGui;
+    for (int i = 0; i < g.Viewports.Size; i++)
+        DestroyPlatformWindow(g.Viewports[i]);
 }
 
 
