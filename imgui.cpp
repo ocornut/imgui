@@ -10684,7 +10684,7 @@ struct ImGuiDockNodeSettings
     ImGuiID         ID;
     ImGuiID         ParentID;
     ImGuiID         SelectedTabID;
-    char            SplitAxis;
+    signed char     SplitAxis;
     char            Depth;
     char            IsDockSpace;
     char            IsCentralNode;
