@@ -74,12 +74,12 @@ Index of this file:
 //-------------------------------------------------------------------------
 
 // Those MIN/MAX values are not define because we need to point to them
-static const char           IM_S8_MIN  = -128;
-static const char           IM_S8_MAX  = 127;
+static const signed char    IM_S8_MIN  = -128;
+static const signed char    IM_S8_MAX  = 127;
 static const unsigned char  IM_U8_MIN  = 0;
 static const unsigned char  IM_U8_MAX  = 0xFF;
-static const short          IM_S16_MIN = -32768;
-static const short          IM_S16_MAX = 32767;
+static const signed short   IM_S16_MIN = -32768;
+static const signed short   IM_S16_MAX = 32767;
 static const unsigned short IM_U16_MIN = 0;
 static const unsigned short IM_U16_MAX = 0xFFFF;
 static const ImS32          IM_S32_MIN = INT_MIN;    // (-2147483647 - 1), (0x80000000);

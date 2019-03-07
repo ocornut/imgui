@@ -150,9 +150,9 @@ typedef int (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
 
 // Scalar data types
-typedef char                ImS8;   // 8-bit signed integer == char
+typedef signed char         ImS8;   // 8-bit signed integer == char
 typedef unsigned char       ImU8;   // 8-bit unsigned integer
-typedef short               ImS16;  // 16-bit signed integer
+typedef signed short        ImS16;  // 16-bit signed integer
 typedef unsigned short      ImU16;  // 16-bit unsigned integer
 typedef signed int          ImS32;  // 32-bit signed integer == int
 typedef unsigned int        ImU32;  // 32-bit unsigned integer (often used to store packed colors)
