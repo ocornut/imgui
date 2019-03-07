@@ -1,13 +1,14 @@
 // dear imgui: standalone example application for DirectX 12
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// FIXME: 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*))
 
-#include "imgui.h"
-#include "imgui_impl_win32.h"
-#include "imgui_impl_dx12.h"
 #include <d3d12.h>
 #include <dxgi1_4.h>
 #include <tchar.h>
+
+#define ImTextureID D3D12_GPU_DESCRIPTOR_HANDLE *
+#include "imgui.h"
+#include "imgui_impl_win32.h"
+#include "imgui_impl_dx12.h"
 
 #define DX12_ENABLE_DEBUG_LAYER     0
 

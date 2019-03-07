@@ -3,8 +3,6 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-// Issues:
-//  [ ] 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*)). See github.com/ocornut/imgui/pull/301
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -12,6 +10,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-03-07: DirectX12: Allow x32-bit compilation of DirectX-12 example. (#301, #1641)
 //  2018-12-03: Misc: Added #pragma comment statement to automatically link with d3dcompiler.lib when using D3DCompile().
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-06-12: DirectX12: Moved the ID3D12GraphicsCommandList* parameter from NewFrame() to RenderDrawData().
@@ -369,7 +368,6 @@ static void ImGui_ImplDX12_CreateFontsTexture()
     }
 
     // Store our identifier
-    static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
     io.Fonts->TexID = (ImTextureID)g_hFontSrvGpuDescHandle.ptr;
 }
 

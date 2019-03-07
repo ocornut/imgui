@@ -3,8 +3,6 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
-// Issues:
-//  [ ] 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*)). See github.com/ocornut/imgui/pull/301
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.

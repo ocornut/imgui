@@ -85,6 +85,7 @@ Other Changes:
   even if the OpenGL headers/loader happens to define the value. (#2366, #2186)
 - Examples: Allegro: Added support for touch events (emulating mouse). (#2219) [@dos1]
 - Examples: DirectX9: Minor changes to match the other DirectX examples more closely. (#2394)
+- Examples: DirectX12: Allow x32-bit compilation of DirectX-12 example. (#301, #1641)
 
 
 -----------------------------------------------------------------------
