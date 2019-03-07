@@ -62,6 +62,9 @@ Other Changes:
 - InputText: Fixed various display corruption related to swapping the underlying buffer while
   a input widget is active (both for writable and read-only paths). Often they would manifest
   when manipulating the scrollbar of a multi-line input text.
+- ColorEdit, ColorPicker, ColorButton: Added ImGuiColorEditFlags_InputHSV to manipulate color
+  values encoded as HSV (in order to avoid HSV<>RGB round trips and associated singularities).
+  (#2383, #2384) [@haldean]
 - ColorPicker: Fixed a bug/assertion when displaying a color picker in a collapsed window
   while dragging its title bar. (#2389)
 - ColorEdit: Fixed tooltip not honoring the ImGuiColorEditFlags_NoAlpha contract of never
