@@ -8850,10 +8850,18 @@ void ImGui::NextColumn()
         return;
 
     ImGuiContext& g = *GImGui;
+    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+
+    if (columns->Count == 1)
+    {
+        window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
+        IM_ASSERT(columns->Current == 0);
+        return;
+    }
+
     PopItemWidth();
     PopClipRect();
 
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (++columns->Current < columns->Count)
     {
@@ -8863,6 +8871,7 @@ void ImGui::NextColumn()
     }
     else
     {
+        // New line
         window->DC.ColumnsOffset.x = 0.0f;
         window->DrawList->ChannelsSetCurrent(0);
         columns->Current = 0;
@@ -9017,7 +9026,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    IM_ASSERT(columns_count > 1);
+    IM_ASSERT(columns_count >= 1);
     IM_ASSERT(window->DC.ColumnsSet == NULL); // Nested columns are currently not supported
 
     // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget.
@@ -9071,8 +9080,11 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
         column->ClipRect.ClipWith(window->ClipRect);
     }
 
-    window->DrawList->ChannelsSplit(columns->Count);
-    PushColumnClipRect();
+    if (columns->Count > 1)
+    {
+        window->DrawList->ChannelsSplit(columns->Count);
+        PushColumnClipRect();
+    }
     PushItemWidth(GetColumnWidth() * 0.65f);
 }
 
@@ -9084,8 +9096,11 @@ void ImGui::EndColumns()
     IM_ASSERT(columns != NULL);
 
     PopItemWidth();
-    PopClipRect();
-    window->DrawList->ChannelsMerge();
+    if (columns->Count > 1)
+    {
+        PopClipRect();
+        window->DrawList->ChannelsMerge();
+    }
 
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     window->DC.CursorPos.y = columns->LineMaxY;
