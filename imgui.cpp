@@ -1025,7 +1025,7 @@ static void             NavUpdateWindowingList();
 static void             NavUpdateMoveResult();
 static float            NavUpdatePageUpPageDown(int allowed_dir_flags);
 static inline void      NavUpdateAnyRequestFlag();
-static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, const ImGuiID id);
+static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
 static void             NavSaveLastChildNavWindow(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
