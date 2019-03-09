@@ -283,7 +283,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 - (_Nullable id<MTLRenderPipelineState>)renderPipelineStateForFrameAndDevice:(id<MTLDevice>)device
 {
     // Try to retrieve a render pipeline state that is compatible with the framebuffer config for this frame
-    // Thie hit rate for this cache should be very near 100%.
+    // The hit rate for this cache should be very near 100%.
     id<MTLRenderPipelineState> renderPipelineState = self.renderPipelineStateCache[self.framebufferDescriptor];
 
     if (renderPipelineState == nil)
