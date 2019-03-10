@@ -11432,7 +11432,7 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
         }
     }
 
-    if (node->Windows.Size == 0 && !node->IsCentralNode && window->DockId != node->ID)
+    if (node->Windows.Size == 0 && !node->IsCentralNode && !node->IsDockSpace() && window->DockId != node->ID)
     {
         // Automatic dock node delete themselves if they are not holding at least one tab
         DockContextRemoveNode(&g, node, true);
@@ -11631,7 +11631,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
 static void ImGui::DockNodeUpdateVisibleFlag(ImGuiDockNode* node)
 {
     // Update visibility flag
-    bool is_visible = (node->ParentNode == 0) ? node->IsDockSpace() : node->IsCentralNode;
+    bool is_visible = (node->ParentNode == NULL) ? node->IsDockSpace() : node->IsCentralNode;
     is_visible |= (node->Windows.Size > 0);
     is_visible |= (node->ChildNodes[0] && node->ChildNodes[0]->IsVisible);
     is_visible |= (node->ChildNodes[1] && node->ChildNodes[1]->IsVisible);
