@@ -173,7 +173,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - knob: rotating knob widget (#942)
  - drag float: power/logarithmic slider and drags are weird. (#1316)
  - drag float: up/down axis
- - drag float: power != 0.0f with current value being outside the the range keeps the value stuck.
+ - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
@@ -354,7 +354,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
- - demo: find a way to demonstrate textures in the examples application, as it such a a common issue for new users.
+ - demo: find a way to demonstrate textures in the examples application, as it such a common issue for new users.
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
  - demo: demonstrate Plot offset
