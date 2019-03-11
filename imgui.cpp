@@ -11536,8 +11536,8 @@ static void ImGui::DockNodeApplyPosSizeToWindows(ImGuiDockNode* node)
 {
     for (int n = 0; n < node->Windows.Size; n++)
     {
-        node->Windows[n]->Pos = node->Pos;
-        node->Windows[n]->SizeFull = node->Size;
+        SetWindowPos(node->Windows[n], node->Pos, ImGuiCond_Always); // We don't assign directly to Pos because it can break the calculation of SizeContents on next frame
+        SetWindowSize(node->Windows[n], node->Size, ImGuiCond_Always);
     }
 }
 
