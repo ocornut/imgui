@@ -2346,6 +2346,23 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesThai()
     return &ranges[0];
 }
 
+const ImWchar*  ImFontAtlas::GetGlyphRangesVietnamese()
+{
+    static const ImWchar ranges[] =
+    {
+        0x0020, 0x00FF, // Basic Latin
+        0x0102, 0x0103,
+        0x0110, 0x0111,
+        0x0128, 0x0129,
+        0x0168, 0x0169,
+        0x01A0, 0x01A1,
+        0x01AF, 0x01B0,
+        0x1EA0, 0x1EF9,
+        0,
+    };
+    return &ranges[0];
+}
+
 //-----------------------------------------------------------------------------
 // [SECTION] ImFontGlyphRangesBuilder
 //-----------------------------------------------------------------------------

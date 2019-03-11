@@ -85,6 +85,7 @@ Other Changes:
 - Log/Capture: Fixed LogXXX functions 'auto_open_depth' parameter being treated as an absolute
   tree depth instead of a relative one.
 - Log/Capture: Fixed CollapsingHeader trailing ascii representation being "#" instead of "##".
+- ImFont: Added GetGlyphRangesVietnamese() helper. (#2403)
 - Misc: Asserting in NewFrame() if style.WindowMinSize is zero or smaller than (1.0f,1.0f).
 - Demo: Using GetBackgroundDrawList() and GetForegroundDrawList() in "Custom Rendering" demo.
 - Examples: OpenGL: Fix to be able to run on ES 2.0 / WebGL 1.0. [@rmitton, @gabrielcuvillier]
