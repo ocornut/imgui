@@ -17,10 +17,21 @@
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 //#define IM_ASSERT(_EXPR)  ((void)(_EXPR))     // Disable asserts
 
+#ifdef IM_DISABLE_ASSERTS
+    #define IM_ASSERT(_EXPR)  ((void)(_EXPR))
+#endif
+
 //---- Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 //#define IMGUI_API __declspec( dllexport )
 //#define IMGUI_API __declspec( dllimport )
 
+#if defined(IM_PLATFORM_WINDOWS)
+    #define IMGUI_API __declspec(dllexport)
+#elif defined(__GNUC__)
+    #define IMGUI_API __attribute__((visibility("default")))
+#else
+    #define IMGUI_API
+#endif
 //---- Don't define obsolete functions/enums names. Consider enabling from time to time after updating to avoid using soon-to-be obsolete function/names.
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
