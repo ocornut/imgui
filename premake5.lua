@@ -1,4 +1,4 @@
--- PREMAKE FOR WIZZY
+-- PREMAKE FOR IMGUI
 
 project "imgui"
     kind "StaticLib"
@@ -18,13 +18,23 @@ project "imgui"
     "imstb_rectpack.h",
     "imstb_textedit.h",
     "imstb_truetype.h",
-    "imgui_demo.cpp"
+    "imgui_demo.cpp",
+    "imgui_impl_opengl3.h",
+    "imgui_impl_opengl3.cpp",
+    "imgui_impl_glfw.h",
+    "imgui_impl_glfw.cpp"
   }
   
 	filter "system:windows"
     systemversion "latest"
     cppdialect "C++17"
     staticruntime "On"
+
+  filter "system:linux"
+    systemversion "latest"
+    cppdialect "C++17"
+    staticruntime "On"
+    pic "On"
 
     filter { "system:windows", "configurations:Release" }
         buildoptions "/MT"
