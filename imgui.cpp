@@ -1061,6 +1061,7 @@ static void             SetCurrentViewport(ImGuiWindow* window, ImGuiViewportP* 
 static bool             GetWindowAlwaysWantOwnViewport(ImGuiWindow* window);
 static int              FindPlatformMonitorForPos(const ImVec2& pos);
 static int              FindPlatformMonitorForRect(const ImRect& r);
+static void             UpdateViewportPlatformMonitor(ImGuiViewportP* viewport);
 
 }
 
@@ -5581,13 +5582,31 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 SetCurrentWindow(window);
             }
 
+        bool viewport_rect_changed = false;
         if (window->ViewportOwned)
         {
+            // Synchronize window --> viewport in most situations
             // Synchronize viewport -> window in case the platform window has been moved or resized from the OS/WM
             if (window->Viewport->PlatformRequestMove)
                 window->Pos = window->Viewport->Pos;
+            else if (memcmp(&window->Viewport->Pos, &window->Pos, sizeof(window->Pos)) != 0)
+            {
+                viewport_rect_changed = true;
+                window->Viewport->Pos = window->Pos;
+            }
+
             if (window->Viewport->PlatformRequestResize)
                 window->Size = window->SizeFull = window->Viewport->Size;
+            else if (memcmp(&window->Viewport->Size, &window->Size, sizeof(window->Size)) != 0)
+            {
+                viewport_rect_changed = true;
+                window->Viewport->Size = window->Size;
+            }
+
+            // The viewport may have changed monitor since the global update in UpdateViewportsNewFrame()
+            // Either a SetNextWindowPos() call in the current frame or a SetWindowPos() call in the previous frame may have this effect.
+            if (viewport_rect_changed)
+                UpdateViewportPlatformMonitor(window->Viewport);
 
             // Update common viewport flags
             ImGuiViewportFlags viewport_flags = (window->Viewport->Flags) & ~(ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration);
@@ -5669,7 +5688,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]);
         window->ResizeBorderHeld = (signed char)border_held;
 
-        // Synchronize window --> viewport
+        // Synchronize window --> viewport again and one last time (clamping and manual resize may have affected either)
         if (window->ViewportOwned)
         {
             if (!window->Viewport->PlatformRequestMove)
@@ -10115,8 +10134,7 @@ static void ImGui::UpdateViewportsNewFrame()
                     viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
             }
 
-            // Update monitor (we'll use this info to clamp windows and save windows lost in a removed monitor)
-            viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
+            UpdateViewportPlatformMonitor(viewport);
         }
 
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
@@ -10261,7 +10279,7 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport->Idx = g.Viewports.Size;
         viewport->Pos = viewport->LastPos = pos;
         viewport->Size = size;
-        viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
+        UpdateViewportPlatformMonitor(viewport);
         g.Viewports.push_back(viewport);
         //IMGUI_DEBUG_LOG("Add Viewport %08X (%s)\n", id, window->Name);
 
@@ -10569,11 +10587,12 @@ static int ImGui::FindPlatformMonitorForPos(const ImVec2& pos)
 
 // Search for the monitor with the largest intersection area with the given rectangle
 // We generally try to avoid searching loops but the monitor count should be very small here
+// FIXME-OPT: We could test the last monitor used for that viewport first..
 static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 {
     ImGuiContext& g = *GImGui;
 
-    // Use a minimum threshold of 1.0f so a zero-sized rect will still find its monitor given its position. 
+    // Use a minimum threshold of 1.0f so a zero-sized rect won't false positive, and will still find the correct monitor given its position. 
     // This is necessary for tooltips which always resize down to zero at first.
     const float surface_threshold = ImMax(rect.GetWidth() * rect.GetHeight() * 0.5f, 1.0f);
     int best_monitor_n = -1;
@@ -10594,6 +10613,12 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
         best_monitor_n = monitor_n;
     }
     return best_monitor_n;
+}
+
+// Update monitor from viewport rectangle (we'll use this info to clamp windows and save windows lost in a removed monitor)
+static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
+{
+    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
 }
 
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
