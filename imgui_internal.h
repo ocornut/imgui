@@ -1340,6 +1340,8 @@ struct ImGuiTabBar
     float               OffsetNextTab;          // Distance from BarRect.Min.x, incremented with each BeginTabItem() call, not used if ImGuiTabBarFlags_Reorderable if set.
     float               ScrollingAnim;
     float               ScrollingTarget;
+    float               ScrollingTargetDistToVisibility;
+    float               ScrollingSpeed;
     ImGuiTabBarFlags    Flags;
     ImGuiID             ReorderRequestTabId;
     int                 ReorderRequestDir;

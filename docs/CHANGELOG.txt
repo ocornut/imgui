@@ -77,6 +77,9 @@ Other Changes:
   scrolling policy enabled) or if is currently appearing.
 - TabBar: Fixed Tab tooltip code making drag and drop tooltip disappear during the frame where
   the drag payload activate a tab.
+- TabBar: Reworked scrolling policy (when ImGuiTabBarFlags_FittingPolicyScroll is set) to
+  teleport the view when aiming at a tab far away the visible section, and otherwise accelerate
+  the scrolling speed to cap the scrolling time to 0.3 seconds.
 - Text: Fixed large Text/TextUnformatted call not declaring its size when starting below the
   lower point of the current clipping rectangle. Somehow this bug has been there since v1.0!
   It was hardly noticeable but would affect the scrolling range, which in turn would affect

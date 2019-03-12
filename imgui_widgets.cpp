@@ -6064,7 +6064,7 @@ ImGuiTabBar::ImGuiTabBar()
     CurrFrameVisible = PrevFrameVisible = -1;
     ContentsHeight = 0.0f;
     OffsetMax = OffsetNextTab = 0.0f;
-    ScrollingAnim = ScrollingTarget = 0.0f;
+    ScrollingAnim = ScrollingTarget = ScrollingTargetDistToVisibility = ScrollingSpeed = 0.0f;
     Flags = ImGuiTabBarFlags_None;
     ReorderRequestTabId = 0;
     ReorderRequestDir = 0;
@@ -6358,9 +6358,19 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
             TabBarScrollToTab(tab_bar, scroll_track_selected_tab);
     tab_bar->ScrollingAnim = TabBarScrollClamp(tab_bar, tab_bar->ScrollingAnim);
     tab_bar->ScrollingTarget = TabBarScrollClamp(tab_bar, tab_bar->ScrollingTarget);
-    const float scrolling_speed = (tab_bar->PrevFrameVisible + 1 < g.FrameCount) ? FLT_MAX : (g.IO.DeltaTime * g.FontSize * 70.0f);
     if (tab_bar->ScrollingAnim != tab_bar->ScrollingTarget)
-        tab_bar->ScrollingAnim = ImLinearSweep(tab_bar->ScrollingAnim, tab_bar->ScrollingTarget, scrolling_speed);
+    {
+        // Scrolling speed adjust itself so we can always reach our target in 1/3 seconds.
+        // Teleport if we are aiming far off the visible line
+        tab_bar->ScrollingSpeed = ImMax(tab_bar->ScrollingSpeed, 70.0f * g.FontSize);
+        tab_bar->ScrollingSpeed = ImMax(tab_bar->ScrollingSpeed, ImFabs(tab_bar->ScrollingTarget - tab_bar->ScrollingAnim) / 0.3f);
+        const bool teleport = (tab_bar->PrevFrameVisible + 1 < g.FrameCount) || (tab_bar->ScrollingTargetDistToVisibility > 10.0f * g.FontSize);
+        tab_bar->ScrollingAnim = teleport ? tab_bar->ScrollingTarget : ImLinearSweep(tab_bar->ScrollingAnim, tab_bar->ScrollingTarget, g.IO.DeltaTime * tab_bar->ScrollingSpeed);
+    }
+    else
+    {
+        tab_bar->ScrollingSpeed = 0.0f;
+    }
 
     // Clear name buffers
     if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0)
@@ -6438,10 +6448,17 @@ static void ImGui::TabBarScrollToTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     int order = tab_bar->GetTabOrder(tab);
     float tab_x1 = tab->Offset + (order > 0 ? -margin : 0.0f);
     float tab_x2 = tab->Offset + tab->Width + (order + 1 < tab_bar->Tabs.Size ? margin : 1.0f);
+    tab_bar->ScrollingTargetDistToVisibility = 0.0f;
     if (tab_bar->ScrollingTarget > tab_x1)
+    {
+        tab_bar->ScrollingTargetDistToVisibility = ImMax(tab_bar->ScrollingAnim - tab_x2, 0.0f);
         tab_bar->ScrollingTarget = tab_x1;
-    if (tab_bar->ScrollingTarget + tab_bar->BarRect.GetWidth() < tab_x2)
+    }
+    else if (tab_bar->ScrollingTarget < tab_x2 - tab_bar->BarRect.GetWidth())
+    {
+        tab_bar->ScrollingTargetDistToVisibility = ImMax((tab_x1 - tab_bar->BarRect.GetWidth()) - tab_bar->ScrollingAnim, 0.0f);
         tab_bar->ScrollingTarget = tab_x2 - tab_bar->BarRect.GetWidth();
+    }
 }
 
 void ImGui::TabBarQueueChangeTabOrder(ImGuiTabBar* tab_bar, const ImGuiTabItem* tab, int dir)
