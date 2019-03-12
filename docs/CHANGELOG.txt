@@ -75,6 +75,8 @@ Other Changes:
   hard crashes any more, facilitating integration with scripting languages. (#1651)
 - TabBar: Fixed ImGuiTabItemFlags_SetSelected being ignored if the tab is not visible (with
   scrolling policy enabled) or if is currently appearing.
+- TabBar: Fixed Tab tooltip code making drag and drop tooltip disappear during the frame where
+  the drag payload activate a tab.
 - Text: Fixed large Text/TextUnformatted call not declaring its size when starting below the
   lower point of the current clipping rectangle. Somehow this bug has been there since v1.0!
   It was hardly noticeable but would affect the scrolling range, which in turn would affect
