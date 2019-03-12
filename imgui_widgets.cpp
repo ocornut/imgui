@@ -3366,14 +3366,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     bool enter_pressed = false;
 
     // Select the buffer to render.
-    const char* buf_display = ((render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state && state->TextAIsValid) ? state->TextA.Data : buf;
-    const char* buf_display_end = NULL; // We have specialized paths below for setting the length
-    const bool is_displaying_hint = (hint != NULL && buf_display[0] == 0);
-    if (is_displaying_hint)
-    {
-        buf_display = hint;
-        buf_display_end = hint + strlen(hint);
-    }
+    const bool buf_display_from_state = ((render_cursor || render_selection || g.ActiveId == id) && !is_readonly && state && state->TextAIsValid);
+    const bool is_displaying_hint = (hint != NULL && (buf_display_from_state ? state->TextA.Data : buf)[0] == 0);
 
     // Password pushes a temporary font with only a fallback glyph
     if (is_password && !is_displaying_hint)
@@ -3740,6 +3734,13 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // without any carriage return, which would makes ImFont::RenderText() reserve too many vertices and probably crash. Avoid it altogether.
     // Note that we only use this limit on single-line InputText(), so a pathologically large line on a InputTextMultiline() would still crash.
     const int buf_display_max_length = 2 * 1024 * 1024;
+    const char* buf_display = buf_display_from_state ? state->TextA.Data : buf;
+    const char* buf_display_end = NULL; // We have specialized paths below for setting the length
+    if (is_displaying_hint)
+    {
+        buf_display = hint;
+        buf_display_end = hint + strlen(hint);
+    }
 
     // Render text. We currently only render selection when the widget is active or while scrolling.
     // FIXME: We could remove the '&& render_cursor' to keep rendering selection when inactive.
