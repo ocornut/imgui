@@ -88,6 +88,7 @@ Other Changes:
 - ImFont: Added GetGlyphRangesVietnamese() helper. (#2403)
 - Misc: Asserting in NewFrame() if style.WindowMinSize is zero or smaller than (1.0f,1.0f).
 - Demo: Using GetBackgroundDrawList() and GetForegroundDrawList() in "Custom Rendering" demo.
+- Demo: InputText: Demonstrating use of ImGuiInputTextFlags_CallbackResize. (#2006, #1443, #1008).
 - Examples: OpenGL: Fix to be able to run on ES 2.0 / WebGL 1.0. [@rmitton, @gabrielcuvillier]
 - Examples: OpenGL: Fix for OSX not supporting OpenGL 4.5, we don't try to read GL_CLIP_ORIGIN
   even if the OpenGL headers/loader happens to define the value. (#2366, #2186)

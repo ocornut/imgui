@@ -294,6 +294,9 @@ MONOSPACE FONTS
   https://github.com/kmar/Sweet16Font
   Also include .inl file to use directly in dear imgui.
 
+  Google Noto Mono Fonts
+  https://www.google.com/get/noto/
+
   Typefaces for source code beautification
   https://github.com/chrissimpkins/codeface
 
