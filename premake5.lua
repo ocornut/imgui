@@ -47,6 +47,11 @@ project "imgui"
     staticruntime "On"
     pic "On"
 
+  filter "system:macosx"
+    systemversion "latest"
+    cppdialect "C++17"
+    staticruntime "On"
+
     filter { "system:windows", "configurations:Release" }
         buildoptions "/MT"
         
