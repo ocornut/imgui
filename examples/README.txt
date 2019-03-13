@@ -1,4 +1,6 @@
 -----------------------------------------------------------------------
+ dear imgui, v1.69
+-----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
 -----------------------------------------------------------------------
@@ -27,7 +29,7 @@ This folder contains two things:
    They are the in the XXXX_example/ sub-folders.
 
 You can find binaries of some of those example applications at:
-  http://www.miracleworld.net/imgui/binaries
+  http://www.dearimgui.org/binaries
 
 
 ---------------------------------------

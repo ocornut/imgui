@@ -1,4 +1,4 @@
-// dear imgui, v1.69 WIP
+// dear imgui, v1.69
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -1508,6 +1508,8 @@ struct ImGuiTabBar
     float               OffsetNextTab;          // Distance from BarRect.Min.x, incremented with each BeginTabItem() call, not used if ImGuiTabBarFlags_Reorderable if set.
     float               ScrollingAnim;
     float               ScrollingTarget;
+    float               ScrollingTargetDistToVisibility;
+    float               ScrollingSpeed;
     ImGuiTabBarFlags    Flags;
     ImGuiID             ReorderRequestTabId;
     int                 ReorderRequestDir;

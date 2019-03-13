@@ -1,3 +1,7 @@
+dear imgui, v1.69
+(Font Readme)
+
+---------------------------------------
 
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default.
@@ -5,7 +9,6 @@ We embed it font in source code so you can use Dear ImGui without any file syste
 
 You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
-(Note: .OTF support in imstb_truetype.h currently doesn't appear to load every font)
 
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
@@ -32,7 +35,8 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
  README FIRST / FAQ
 ---------------------------------------
 
-- You can use the style editor ImGui::ShowStyleEditor() to browse your fonts and understand what's going on if you have an issue.
+- You can use the style editor ImGui::ShowStyleEditor() in the "Fonts" section to browse your fonts
+  and understand what's going on if you have an issue.
 - Make sure your font ranges data are persistent (available during the call to GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 - Use C++11 u8"my text" syntax to encode literal strings as UTF-8. e.g.:
       u8"hello"
@@ -201,7 +205,8 @@ For example: for a game where your script is known, if you can feed your entire 
 Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array that you can embed in source code.
 See the documentation in binary_to_compressed_c.cpp for instruction on how to use the tool.
 You may find a precompiled version binary_to_compressed_c.exe for Windows instead of demo binaries package (see README).
-The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger.
+The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the
+actual binary will be about 20% bigger.
 
 Then load the font with:
   ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
