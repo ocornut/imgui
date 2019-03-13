@@ -30,21 +30,22 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.69 (In Progress)
+ VERSION 1.69 (Released 2019-03-13)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
 - Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
-  ImGuiColorEditFlags_DisplayRGB/_DisplayHSV/_DisplayHex. This is anticipation of adding new
-  flags to ColorEdit/ColorPicker functions which would make those ambiguous. (#2384) [@haldean]
+  ImGuiColorEditFlags_DisplayRGB/_DisplayHSV/_DisplayHex. This is because the addition of
+  new flag ImGuiColorEditFlags_InputHSV makes the earlier one ambiguous.
+  Keep redirection enum values (will obsolete). (#2384) [@haldean]
 - Renamed GetOverlayDrawList() to GetForegroundDrawList(). Kept redirection function (will obsolete). (#2391)
 
 Other Changes:
 
 - Added GetBackgroundDrawList() helper to quickly get access to a ImDrawList that will be rendered
-  behind every other windows. (#2391)
-- DragScalar, InputScalar, SliderScalar: Added support for u8/s8/u16/s16 data types.
+  behind every other windows. (#2391, #545)
+- DragScalar, InputScalar, SliderScalar: Added support for u8/s8/u16/s16 data types (ImGuiDataType_S8, etc.)
   We are reusing function instances of larger types to reduce code size. (#643, #320, #708, #1011)
 - Added InputTextWithHint() to display a description/hint in the text box when no text
   has been entered. (#2400) [@Organic-Code, @ocornut]
@@ -70,7 +71,7 @@ Other Changes:
 - ColorEdit: Fixed tooltip not honoring the ImGuiColorEditFlags_NoAlpha contract of never
   reading the 4th float in the array (value was read and discarded). (#2384) [@haldean]
 - MenuItem, Selectable: Fixed disabled widget interfering with navigation (fix c2db7f63 in 1.67).
-- TabBar: Fixed a crash when using BeginTabBar() recursively (didn't affect docking). (#2371)
+- TabBar: Fixed a crash when using many BeginTabBar() recursively (didn't affect docking). (#2371)
 - TabBar: Added extra mis-usage error recovery. Past the assert, common mis-usage don't lead to
   hard crashes any more, facilitating integration with scripting languages. (#1651)
 - TabBar: Fixed ImGuiTabItemFlags_SetSelected being ignored if the tab is not visible (with
@@ -80,12 +81,12 @@ Other Changes:
 - TabBar: Reworked scrolling policy (when ImGuiTabBarFlags_FittingPolicyScroll is set) to
   teleport the view when aiming at a tab far away the visible section, and otherwise accelerate
   the scrolling speed to cap the scrolling time to 0.3 seconds.
-- Text: Fixed large Text/TextUnformatted call not declaring its size when starting below the
-  lower point of the current clipping rectangle. Somehow this bug has been there since v1.0!
+- Text: Fixed large Text/TextUnformatted calls not feeding their size into layout when starting
+  below the lower point of the current clipping rectangle. This bug has been there since v1.0!
   It was hardly noticeable but would affect the scrolling range, which in turn would affect
-  some scrolling request functions when called during the opening frame of a window.
+  some scrolling request functions when called during the appearing frame of a window.
 - Plot: Fixed divide-by-zero in PlotLines() when passing a count of 1. (#2387) [@Lectem]
-- Log/Capture: Fixed extraneous leading carriage return.
+- Log/Capture: Fixed LogXXX functions emitting extraneous leading carriage return.
 - Log/Capture: Fixed an issue when empty string on a new line would not emit a carriage return.
 - Log/Capture: Fixed LogXXX functions 'auto_open_depth' parameter being treated as an absolute
   tree depth instead of a relative one.
@@ -572,7 +573,7 @@ Other Changes:
 - InputFloat,InputFloat2,InputFloat3,InputFloat4: Added variations taking a more flexible and consistent optional
   "const char* format" parameter instead of "int decimal_precision". This allow using custom formats to display values
   in scientific notation, and is generally more consistent with other API.
-  Obsoleted functions using the optional "int decimal_precision" parameter. (#648)
+  Obsoleted functions using the optional "int decimal_precision" parameter. (#648, #712)
 - DragFloat, DragInt: Cancel mouse tweak when current value is initially past the min/max boundaries and mouse is pushing
   in the same direction (keyboard/gamepad version already did this).
 - DragFloat, DragInt: Honor natural type limits (e.g. INT_MAX, FLT_MAX) instead of wrapping around. (#708, #320)
