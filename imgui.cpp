@@ -3790,6 +3790,7 @@ void ImGui::Initialize(ImGuiContext* context)
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
     viewport->Idx = 0;
+    viewport->PlatformWindowCreated = true;
     g.Viewports.push_back(viewport);
     g.PlatformIO.MainViewport = g.Viewports[0]; // Make it accessible in public-facing GetPlatformIO() immediately (before the first call to EndFrame)
     g.PlatformIO.Viewports.push_back(g.Viewports[0]);
@@ -10078,7 +10079,7 @@ static void ImGui::UpdateViewportsNewFrame()
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
-        const bool platform_funcs_available = (n == 0 || viewport->PlatformWindowCreated);
+        const bool platform_funcs_available = viewport->PlatformWindowCreated;
         if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
             if (g.PlatformIO.Platform_GetWindowMinimized && platform_funcs_available)
                 viewport->PlatformWindowMinimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
@@ -10124,7 +10125,7 @@ static void ImGui::UpdateViewportsNewFrame()
             continue;
         }
 
-        const bool platform_funcs_available = (n == 0 || viewport->PlatformWindowCreated);
+        const bool platform_funcs_available = viewport->PlatformWindowCreated;
         if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
         {
             // Update Position and Size (from Platform Window to ImGui) if requested. 
@@ -10535,7 +10536,7 @@ void ImGui::UpdatePlatformWindows()
         for (int n = 0; n < g.Viewports.Size && focused_viewport == NULL; n++)
         {
             ImGuiViewportP* viewport = g.Viewports[n];
-            if (n == 0 || viewport->PlatformWindowCreated)
+            if (viewport->PlatformWindowCreated)
                 if (g.PlatformIO.Platform_GetWindowFocus(viewport))
                     focused_viewport = viewport;
         }
