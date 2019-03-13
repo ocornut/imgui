@@ -24,7 +24,7 @@
 //---- Define attributes of all API symbols declarations, e.g. for DLL under Windows.
 //#define IMGUI_API __declspec( dllexport )
 //#define IMGUI_API __declspec( dllimport )
-
+#undef IMGUI_API
 #if defined(IM_PLATFORM_WINDOWS)
     #define IMGUI_API __declspec(dllexport)
 #elif defined(__GNUC__)
