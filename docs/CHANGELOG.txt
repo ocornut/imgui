@@ -36,6 +36,8 @@ HOW TO UPDATE?
 Breaking Changes:
 
 Other Changes:
+- GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
+- GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
   GL function loaders early, and help users understand what they are missing. (#2421)
 
