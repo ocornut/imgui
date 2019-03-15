@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-03-15: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized GL function loaders early.
 //  2019-03-03: OpenGL: Fix support for ES 2.0 (WebGL 1.0).
 //  2019-02-20: OpenGL: Fix for OSX not supporting OpenGL 4.5, we don't try to read GL_CLIP_ORIGIN even if defined by the headers/loader.
 //  2019-02-11: OpenGL: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
@@ -89,11 +90,11 @@
 //  Helper libraries are often used for this purpose! Here we are supporting a few common ones (gl3w, glew, glad).
 //  You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
 #if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
-#include <GL/gl3w.h>
+#include <GL/gl3w.h>    // Needs to be initialized with gl3wInit() in user's code
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
-#include <GL/glew.h>
+#include <GL/glew.h>    // Needs to be initialized with glewInit() in user's code
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
-#include <glad/glad.h>
+#include <glad/glad.h>  // Needs to be initialized with gladLoadGL() in user's code
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
@@ -127,6 +128,12 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(g_GlslVersionString));
     strcpy(g_GlslVersionString, glsl_version);
     strcat(g_GlslVersionString, "\n");
+
+    // Make a dummy GL call (we don't actually need the result)
+    // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.
+    // Desktop OpenGL 3/4 need a function loader. See the IMGUI_IMPL_OPENGL_LOADER_xxx explanation above.
+    GLint current_texture;
+    glGetIntegerv(GL_TEXTURE_BINDING_2D, &current_texture);
 
     return true;
 }
