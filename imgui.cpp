@@ -12873,7 +12873,7 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
 
 // Create an explicit dockspace node within an existing window. Also expose dock node flags and creates a CentralNode by default.
 // The Central Node is always displayed even when empty and shrink/extend according to the requested size of its neighbors.
-void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags dockspace_flags, const ImGuiWindowClass* window_class)
+void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags flags, const ImGuiWindowClass* window_class)
 {
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
@@ -12881,18 +12881,19 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
         return;
 
+    IM_ASSERT((flags & ImGuiDockNodeFlags_Dockspace) == 0);
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
     if (!node)
     {
         node = DockContextAddNode(ctx, id);
         node->IsCentralNode = true;
     }
-    node->Flags = dockspace_flags;
+    node->Flags = flags;
     node->WindowClass = window_class ? *window_class : ImGuiWindowClass();
 
     // When a Dockspace transitioned form implicit to explicit this may be called a second time
     // It is possible that the node has already been claimed by a docked window which appeared before the DockSpace() node, so we overwrite IsDockSpace again.
-    if (node->LastFrameActive == g.FrameCount && !(dockspace_flags & ImGuiDockNodeFlags_KeepAliveOnly))
+    if (node->LastFrameActive == g.FrameCount && !(flags & ImGuiDockNodeFlags_KeepAliveOnly))
     {
         IM_ASSERT(node->IsDockSpace() == false && "Cannot call DockSpace() twice a frame with the same ID");
         node->Flags |= ImGuiDockNodeFlags_Dockspace;
@@ -12901,7 +12902,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags doc
     node->Flags |= ImGuiDockNodeFlags_Dockspace;
 
     // Keep alive mode, this is allow windows docked into this node so stay docked even if they are not visible
-    if (dockspace_flags & ImGuiDockNodeFlags_KeepAliveOnly)
+    if (flags & ImGuiDockNodeFlags_KeepAliveOnly)
     {
         node->LastFrameAlive = g.FrameCount;
         return;
@@ -13421,12 +13422,14 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         g.NextWindowData.PosUndock = false;
     }
 
+#if 0
     // Undock if the ImGuiDockNodeFlags_NoDockingInCentralNode got set
     if (node->IsCentralNode && (node->Flags & ImGuiDockNodeFlags_NoDockingInCentralNode))
     {
         DockContextProcessUndockWindow(ctx, window);
         return;
     }
+#endif
 
     // Undock if our dockspace node disappeared
     // Note how we are testing for LastFrameAlive and NOT LastFrameActive. A DockSpace node can be maintained alive while being inactive with ImGuiDockNodeFlags_KeepAliveOnly.
