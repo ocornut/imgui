@@ -13475,7 +13475,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         return;
 
     // When the window is selected we mark it as visible.
-    if (node->TabBar && node->TabBar->VisibleTabId == window->ID)
+    if (node->VisibleWindow == window)
         window->DockTabIsVisible = true;
 
     // When we are about to select this tab (which will only be visible on the _next frame_), flag it with a non-zero HiddenFramesForResize.
