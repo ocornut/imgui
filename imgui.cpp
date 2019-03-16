@@ -3296,6 +3296,13 @@ void ImGui::UpdateMouseWheel()
             window->Size *= scale;
             window->SizeFull *= scale;
         }
+        else if (!g.IO.KeyCtrl && g.IO.KeyShift && scroll_allowed)
+        {
+            // Mouse wheel horizontal scrolling
+            float scroll_amount = 5 * scroll_window->CalcFontSize();
+            scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetWidth() + scroll_window->WindowPadding.x * 2.0f) * 0.67f);
+            SetWindowScrollX(scroll_window, scroll_window->Scroll.x - g.IO.MouseWheel * scroll_amount);
+        }
         else if (!g.IO.KeyCtrl && scroll_allowed)
         {
             // Mouse wheel vertical scrolling
