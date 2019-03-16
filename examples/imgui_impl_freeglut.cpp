@@ -1,8 +1,10 @@
 // dear imgui: Platform Binding for FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
+// GLUT IS OBSOLETE SOFTWARE. AVOID USING GLUT IN 2019.
 
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
+//  [ ] Platform: Missing clipboard support (not supported by Glut).
 //  [ ] Platform: Missing gamepad support.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
