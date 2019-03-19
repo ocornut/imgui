@@ -979,6 +979,8 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
+    ImGuiArrowCallback      ArrowCallback;
+
     ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(NULL), ForegroundDrawList(NULL)
     {
         Initialized = false;
