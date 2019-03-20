@@ -1,4 +1,6 @@
 -----------------------------------------------------------------------
+ dear imgui, v1.69
+-----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
 -----------------------------------------------------------------------
@@ -26,7 +28,7 @@ This folder contains two things:
    They are the in the XXXX_example/ sub-folders.
 
 You can find binaries of some of those example applications at:
-  http://www.miracleworld.net/imgui/binaries
+  http://www.dearimgui.org/binaries
 
 
 ---------------------------------------
@@ -111,8 +113,8 @@ List of Renderer Bindings in this repository:
     imgui_impl_dx11.cpp       ; DirectX11
     imgui_impl_dx12.cpp       ; DirectX12
     imgui_impl_metal.mm       ; Metal (with ObjC)
-    imgui_impl_opengl2.cpp    ; OpenGL2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
-    imgui_impl_opengl3.cpp    ; OpenGL3, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
+    imgui_impl_opengl2.cpp    ; OpenGL 2 (legacy, fixed pipeline <- don't use with modern OpenGL context)
+    imgui_impl_opengl3.cpp    ; OpenGL 3/4, OpenGL ES 2, OpenGL ES 3 (modern programmable pipeline)
     imgui_impl_vulkan.cpp     ; Vulkan
 
 List of high-level Frameworks Bindings in this repository: (combine Platform + Renderer)

@@ -59,6 +59,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
  - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
+ - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
+ - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
@@ -72,8 +74,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
  - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
- - input text: what's the easiest way to implement a nice IP/Mac address input editor?
- - input text: Global callback system so user can plug in an expression evaluator easily.
+ - input text: decorrelate layout from inputs - e.g. what's the easiest way to implement a nice IP/Mac address input editor?
+ - input text: global callback system so user can plug in an expression evaluator easily.
+ - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
+ - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
+ - input text: a way for the user to provide syntax coloring.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)
@@ -135,6 +140,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - image button: not taking an explicit id is odd.
+ - slider/drag: ctrl+click when format doesn't include a % character.. disable? display underlying value in default format? (see InputScalarAsWidgetReplacement)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar). (#1946)
  - slider: add dragging-based widgets to edit values with mouse (on 2 axises), saving screen real-estate.
@@ -145,7 +151,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - knob: rotating knob widget (#942)
  - drag float: power/logarithmic slider and drags are weird. (#1316)
  - drag float: up/down axis
- - drag float: power != 0.0f with current value being outside the the range keeps the value stuck.
+ - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
 
  - combo: use clipper: make it easier to disable clipper with a single flag.
@@ -188,6 +194,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
+ - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
 
  - tree node / optimization: avoid formatting when clipped.
@@ -214,10 +221,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
  - style editor: color child window height expressed in multiple of line height.
 
- - log: LogButtons() options for specifying depth and/or hiding depth slider
  - log: have more control over the log scope (e.g. stop logging when leaving current tree node scope)
  - log: be able to log anything (e.g. right-click on a window/tree-node, shows context menu? log into tty/file/clipboard)
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
+ - log: obsolete LogButtons() all together.
+ - log: LogButtons() options for specifying depth and/or hiding depth slider
 
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
@@ -244,6 +252,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
+ - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
  - font/demo: add tools to show glyphs used by a text blob, display U16 value, list missing glyphs.
  - font/demo: demonstrate use of ImFontGlyphRangesBuilder.
  - font/atlas: add a missing Glyphs.reserve()
@@ -308,7 +317,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
- - demo: find a way to demonstrate textures in the examples application, as it such a a common issue for new users.
+ - demo: find a way to demonstrate textures in the examples application, as it such a common issue for new users.
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
  - demo: demonstrate Plot offset
