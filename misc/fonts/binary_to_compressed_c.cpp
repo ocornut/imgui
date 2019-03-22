@@ -56,7 +56,7 @@ int main(int argc, char** argv)
     return binary_to_compressed_c(argv[argn], argv[argn+1], use_base85_encoding, use_compression) ? 0 : 1;
 }
 
-char Encode85Byte(unsigned int x) 
+char Encode85Byte(unsigned int x)
 {
     x = (x % 85) + 35;
     return (x>='\\') ? x+1 : x;
@@ -71,7 +71,7 @@ bool binary_to_compressed_c(const char* filename, const char* symbol, bool use_b
     if (fseek(f, 0, SEEK_END) || (data_sz = (int)ftell(f)) == -1 || fseek(f, 0, SEEK_SET)) { fclose(f); return false; }
     char* data = new char[data_sz+4];
     if (fread(data, 1, data_sz, f) != (size_t)data_sz) { fclose(f); delete[] data; return false; }
-    memset((void *)(((char*)data) + data_sz), 0, 4);
+    memset((void*)(((char*)data) + data_sz), 0, 4);
     fclose(f);
 
     // Compress
@@ -214,7 +214,7 @@ static int stb__window = 0x40000; // 256K
 
 static int stb_not_crap(int best, int dist)
 {
-    return   ((best > 2  &&  dist <= 0x00100)     
+    return   ((best > 2  &&  dist <= 0x00100)
         || (best > 5  &&  dist <= 0x04000)
         || (best > 7  &&  dist <= 0x80000));
 }
@@ -296,15 +296,15 @@ static int stb_compress_chunk(stb_uchar *history,
             stb_out(dist-1);
         } else if (best > 5  &&  best <= 0x100   &&  dist <= 0x4000) {
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
-            stb_out2(0x4000 + dist-1);       
+            stb_out2(0x4000 + dist-1);
             stb_out(best-1);
         } else if (best > 7  &&  best <= 0x100   &&  dist <= 0x80000) {
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
-            stb_out3(0x180000 + dist-1);     
+            stb_out3(0x180000 + dist-1);
             stb_out(best-1);
         } else if (best > 8  &&  best <= 0x10000 &&  dist <= 0x80000) {
             outliterals(lit_start, q-lit_start); lit_start = (q += best);
-            stb_out3(0x100000 + dist-1);     
+            stb_out3(0x100000 + dist-1);
             stb_out2(best-1);
         } else if (best > 9                      &&  dist <= 0x1000000) {
             if (best > 65536) best = 65536;

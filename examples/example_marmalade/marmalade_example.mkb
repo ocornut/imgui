@@ -1,0 +1,46 @@
+#!/usr/bin/env mkb
+
+# ImGui - standalone example application for Marmalade
+# Copyright (C) 2015 by Giovanni Zito
+# This file is part of ImGui
+# https://github.com/ocornut/imgui
+
+define IMGUI_DISABLE_INCLUDE_IMCONFIG_H
+define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS
+define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS
+define _snprintf=snprintf
+
+options
+{
+    optimise-speed=1
+}
+
+includepaths
+{
+    ..
+    ../..
+}
+
+subprojects
+{
+    iwgx
+}
+
+files
+{
+    (.)
+    ["imgui"]
+    ../../imgui.cpp
+    ../../imgui_demo.cpp
+    ../../imgui_draw.cpp
+    ../../imgui_widgets.cpp
+    ../../imconfig.h
+    ../../imgui.h
+    ../../imgui_internal.h
+
+    ["imgui","Marmalade binding"]
+    ../imgui_impl_marmalade.h
+    ../imgui_impl_marmalade.cpp
+    main.cpp
+
+}

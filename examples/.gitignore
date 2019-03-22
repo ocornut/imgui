@@ -1,49 +1,38 @@
 build/*
-Debug/*
-Release/*
-ipch/*
-x64/*
-directx9_example/Debug/*
-directx9_example/Release/*
-directx9_example/ipch/*
-directx9_example/x64/*
-directx10_example/Debug/*
-directx10_example/Release/*
-directx10_example/ipch/*
-directx10_example/x64/*
-directx11_example/Debug/*
-directx11_example/Release/*
-directx11_example/ipch/*
-directx11_example/x64/*
-opengl2_example/Debug/*
-opengl2_example/Release/*
-opengl2_example/ipch/*
-opengl2_example/x64/*
-opengl2_example/opengl_example
-opengl3_example/Debug/*
-opengl3_example/Release/*
-opengl3_example/ipch/*
-opengl3_example/x64/*
-opengl3_example/opengl3_example
-sdl_opengl2_example/Debug/*
-sdl_opengl2_example/Release/*
-sdl_opengl2_example/ipch/*
-sdl_opengl2_example/x64/*
-sdl_opengl3_example/Debug/*
-sdl_opengl3_example/Release/*
-sdl_opengl3_example/ipch/*
-sdl_opengl3_example/x64/*
-*.opensdf
-*.sdf
-*.suo
-*.vcxproj.user
+*/Debug/*
+*/Release/*
+*/x64/*
 *.o
 *.obj
 *.exe
+
+## Visual Studio cruft
+.vs/*
+*/ipch/*
+*.opensdf
+*.log
 *.pdb
 *.ilk
+*.user
+*.sdf
+*.suo
 *.VC.db
 *.VC.VC.opendb
 
-## Ini files
+## Xcode cruft
+.DS_Store
+project.xcworkspace
+xcuserdata
+
+## Emscripten output
+*.out.js
+*.out.wasm
+
+## Unix executables
+example_glfw_opengl2/example_glfw_opengl2
+example_glfw_opengl3/example_glfw_opengl3
+example_sdl_opengl2/example_sdl_opengl2
+example_sdl_opengl3/example_sdl_opengl3
+
+## Dear ImGui Ini files
 imgui.ini
