@@ -94,6 +94,22 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.70 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+- InputText: Fixed selection background starts rendering one frame after the cursor movement
+  when first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
+- GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
+- GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
+- Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
+  GL function loaders early, and help users understand what they are missing. (#2421)
+>>>>>>> master
+
+
+-----------------------------------------------------------------------
  VERSION 1.69 (Released 2019-03-13)
 -----------------------------------------------------------------------
 
