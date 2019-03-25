@@ -36,6 +36,8 @@ HOW TO UPDATE?
 Breaking Changes:
 
 Other Changes:
+- InputText: Fixed selection background starts rendering one frame after the cursor movement
+  when first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
