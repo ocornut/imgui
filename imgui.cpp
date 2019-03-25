@@ -3274,48 +3274,52 @@ void ImGui::UpdateMouseWheel()
         return;
     if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
         return;
-
-    // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
     ImGuiWindow* window = g.HoveredWindow;
-    ImGuiWindow* scroll_window = window;
-    while ((scroll_window->Flags & ImGuiWindowFlags_ChildWindow) && (scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoScrollbar) && !(scroll_window->Flags & ImGuiWindowFlags_NoMouseInputs) && scroll_window->ParentWindow)
-        scroll_window = scroll_window->ParentWindow;
-    const bool scroll_allowed = !(scroll_window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(scroll_window->Flags & ImGuiWindowFlags_NoMouseInputs);
 
-    if (g.IO.MouseWheel != 0.0f)
+    // Zoom / Scale window
+    // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
+    if (g.IO.MouseWheel != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
     {
-        if (g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
+        const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
+        const float scale = new_font_scale / window->FontWindowScale;
+        window->FontWindowScale = new_font_scale;
+        if (!(window->Flags & ImGuiWindowFlags_ChildWindow))
         {
-            // Zoom / Scale window
-            const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
-            const float scale = new_font_scale / window->FontWindowScale;
-            window->FontWindowScale = new_font_scale;
-
             const ImVec2 offset = window->Size * (1.0f - scale) * (g.IO.MousePos - window->Pos) / window->Size;
-            window->Pos += offset;
-            window->Size *= scale;
-            window->SizeFull *= scale;
+            window->Pos = ImFloor(window->Pos + offset);
+            window->Size = ImFloor(window->Size * scale);
+            window->SizeFull = ImFloor(window->SizeFull * scale);
         }
-        else if (!g.IO.KeyCtrl && g.IO.KeyShift && scroll_allowed)
-        {
-            // Mouse wheel horizontal scrolling
-            float scroll_amount = 5 * scroll_window->CalcFontSize();
-            scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetWidth() + scroll_window->WindowPadding.x * 2.0f) * 0.67f);
-            SetWindowScrollX(scroll_window, scroll_window->Scroll.x - g.IO.MouseWheel * scroll_amount);
-        }
-        else if (!g.IO.KeyCtrl && scroll_allowed)
-        {
-            // Mouse wheel vertical scrolling
-            float scroll_amount = 5 * scroll_window->CalcFontSize();
-            scroll_amount = (float)(int)ImMin(scroll_amount, (scroll_window->ContentsRegionRect.GetHeight() + scroll_window->WindowPadding.y * 2.0f) * 0.67f);
-            SetWindowScrollY(scroll_window, scroll_window->Scroll.y - g.IO.MouseWheel * scroll_amount);
-        }
+        return;
     }
-    if (g.IO.MouseWheelH != 0.0f && scroll_allowed && !g.IO.KeyCtrl)
+
+    // Mouse wheel scrolling
+    // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent (unless either ImGuiWindowFlags_NoInputs or ImGuiWindowFlags_NoScrollbar are also set).
+    while ((window->Flags & ImGuiWindowFlags_ChildWindow) && (window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoScrollbar) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs) && window->ParentWindow)
+        window = window->ParentWindow;
+    const bool scroll_allowed = !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
+    if (scroll_allowed && (g.IO.MouseWheel != 0.0f || g.IO.MouseWheelH != 0.0f) && !g.IO.KeyCtrl)
     {
-        // Mouse wheel horizontal scrolling (for hardware that supports it)
-        float scroll_amount = scroll_window->CalcFontSize();
-        SetWindowScrollX(scroll_window, scroll_window->Scroll.x - g.IO.MouseWheelH * scroll_amount);
+        ImVec2 max_step = (window->ContentsRegionRect.GetSize() + window->WindowPadding * 2.0f) * 0.67f;
+
+        // Vertical Mouse Wheel Scrolling (hold Shift to scroll horizontally)
+        if (g.IO.MouseWheel != 0.0f && !g.IO.KeyShift)
+        {
+            float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step.y));
+            SetWindowScrollY(window, window->Scroll.y - g.IO.MouseWheel * scroll_step);
+        }
+        else if (g.IO.MouseWheel != 0.0f && g.IO.KeyShift)
+        {
+            float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step.x));
+            SetWindowScrollX(window, window->Scroll.x - g.IO.MouseWheel * scroll_step);
+        }
+
+        // Horizontal Mouse Wheel Scrolling (for hardware that supports it)
+        if (g.IO.MouseWheelH != 0.0f && !g.IO.KeyShift)
+        {
+            float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step.x));
+            SetWindowScrollX(window, window->Scroll.x - g.IO.MouseWheelH * scroll_step);
+        }
     }
 }
 
