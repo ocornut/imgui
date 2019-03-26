@@ -10791,6 +10791,8 @@ namespace ImGui
     static void             DockNodeUpdate(ImGuiDockNode* node);
     static void             DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
+    static void             DockNodeAddTabBar(ImGuiDockNode* node);
+    static void             DockNodeRemoveTabBar(ImGuiDockNode* node);
     static ImGuiID          DockNodeUpdateTabListMenu(ImGuiDockNode* node, ImGuiTabBar* tab_bar);
     static void             DockNodeUpdateVisibleFlag(ImGuiDockNode* node);
     static void             DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWindow* window);
@@ -11231,7 +11233,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
         // Create tab bar before we call DockNodeMoveWindows (which would attempt to move the old tab-bar, which would lead us to payload tabs wrongly appearing before target tabs!)
         if (target_node->Windows.Size > 0 && target_node->TabBar == NULL)
         {
-            target_node->TabBar = IM_NEW(ImGuiTabBar)();
+            DockNodeAddTabBar(target_node);
             for (int n = 0; n < target_node->Windows.Size; n++)
                 TabBarAddTab(target_node->TabBar, ImGuiTabItemFlags_None, target_node->Windows[n]);
         }
@@ -11418,7 +11420,7 @@ static void ImGui::DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, b
     {
         if (node->TabBar == NULL)
         {
-            node->TabBar = IM_NEW(ImGuiTabBar)();
+            DockNodeAddTabBar(node);
             node->TabBar->SelectedTabId = node->TabBar->NextSelectedTabId = node->SelectedTabID;
             
             // Add existing windows
@@ -11468,10 +11470,7 @@ static void ImGui::DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window
         TabBarRemoveTab(node->TabBar, window->ID);
         const int tab_count_threshold_for_tab_bar = node->IsCentralNode ? 1 : 2;
         if (node->Windows.Size < tab_count_threshold_for_tab_bar)
-        {
-            IM_DELETE(node->TabBar);
-            node->TabBar = NULL;
-        }
+            DockNodeRemoveTabBar(node);
     }
 
     if (node->Windows.Size == 0 && !node->IsCentralNode && !node->IsDockSpace() && window->DockId != node->ID)
@@ -11541,8 +11540,7 @@ static void ImGui::DockNodeMoveWindows(ImGuiDockNode* dst_node, ImGuiDockNode* s
     {
         if (dst_node->TabBar)
             dst_node->TabBar->SelectedTabId = src_node->TabBar->SelectedTabId;
-        IM_DELETE(src_node->TabBar);
-        src_node->TabBar = NULL;
+        DockNodeRemoveTabBar(src_node);
     }
 }
 
@@ -11571,10 +11569,7 @@ static void ImGui::DockNodeHideHostWindow(ImGuiDockNode* node)
     }
 
     if (node->TabBar)
-    {
-        IM_DELETE(node->TabBar);
-        node->TabBar = NULL;
-    }
+        DockNodeRemoveTabBar(node);
 }
 
 struct ImGuiDockNodeUpdateScanResults
@@ -12042,7 +12037,10 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     ImGuiTabBar* tab_bar = node->TabBar;
     bool tab_bar_is_recreated = (tab_bar == NULL); // Tab bar are automatically destroyed when a node gets hidden
     if (tab_bar == NULL)
-        tab_bar = node->TabBar = IM_NEW(ImGuiTabBar)();
+    {
+        DockNodeAddTabBar(node);
+        tab_bar = node->TabBar;
+    }
 
     ImGuiID focus_tab_id = 0;
     node->IsFocused = is_focused;
@@ -12207,6 +12205,20 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         host_window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
         host_window->SkipItems = backup_skip_item;
     }
+}
+
+static void ImGui::DockNodeAddTabBar(ImGuiDockNode* node)
+{
+    IM_ASSERT(node->TabBar == NULL);
+    node->TabBar = IM_NEW(ImGuiTabBar);
+}
+
+static void ImGui::DockNodeRemoveTabBar(ImGuiDockNode* node)
+{
+    if (node->TabBar == NULL)
+        return;
+    IM_DELETE(node->TabBar);
+    node->TabBar = NULL;
 }
 
 static bool DockNodeIsDropAllowedOne(ImGuiWindow* payload, ImGuiWindow* host_window)
