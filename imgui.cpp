@@ -11915,17 +11915,17 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     if (host_window && node->Windows.Size > 0)
     {
         DockNodeUpdateTabBar(node, host_window);
-        if (node->TabBar->SelectedTabId)
-            node->SelectedTabID = node->TabBar->SelectedTabId;
     }
     else
     {
         node->WantCloseAll = false;
         node->WantCloseTabID = 0;
         node->IsFocused = false;
-        if (node->Windows.Size > 0)
-            node->SelectedTabID = node->Windows[0]->ID;
     }
+    if (node->TabBar && node->TabBar->SelectedTabId)
+        node->SelectedTabID = node->TabBar->SelectedTabId;
+    else if (node->Windows.Size > 0)
+        node->SelectedTabID = node->Windows[0]->ID;
 
     // Draw payload drop target
     if (host_window && node->IsVisible)

@@ -4241,8 +4241,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 void ShowExampleAppDockSpace(bool* p_open)
 {
     static bool opt_fullscreen_persistant = true;
-    static ImGuiDockNodeFlags opt_flags = ImGuiDockNodeFlags_None;
     bool opt_fullscreen = opt_fullscreen_persistant;
+    static ImGuiDockNodeFlags dockspace_flags = ImGuiDockNodeFlags_None;
 
     // We are using the ImGuiWindowFlags_NoDocking flag to make the parent window not dockable into,
     // because it would be confusing to have two docking targets within each others.
@@ -4260,7 +4260,7 @@ void ShowExampleAppDockSpace(bool* p_open)
     }
 
     // When using ImGuiDockNodeFlags_PassthruDockspace, DockSpace() will render our background and handle the pass-thru hole, so we ask Begin() to not render a background.
-    if (opt_flags & ImGuiDockNodeFlags_PassthruDockspace)
+    if (dockspace_flags & ImGuiDockNodeFlags_PassthruDockspace)
         window_flags |= ImGuiWindowFlags_NoBackground;
 
     ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
@@ -4275,7 +4275,7 @@ void ShowExampleAppDockSpace(bool* p_open)
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
     {
         ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
-        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), opt_flags);
+        ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
     }
     else
     {
@@ -4290,11 +4290,11 @@ void ShowExampleAppDockSpace(bool* p_open)
             // which we can't undo at the moment without finer window depth/z control.
             //ImGui::MenuItem("Fullscreen", NULL, &opt_fullscreen_persistant);
 
-            if (ImGui::MenuItem("Flag: NoSplit",                "", (opt_flags & ImGuiDockNodeFlags_NoSplit) != 0))                 opt_flags ^= ImGuiDockNodeFlags_NoSplit;
-            if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (opt_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))  opt_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode;
-            if (ImGui::MenuItem("Flag: NoResize",               "", (opt_flags & ImGuiDockNodeFlags_NoResize) != 0))                opt_flags ^= ImGuiDockNodeFlags_NoResize;
-            if (ImGui::MenuItem("Flag: PassthruDockspace",      "", (opt_flags & ImGuiDockNodeFlags_PassthruDockspace) != 0))       opt_flags ^= ImGuiDockNodeFlags_PassthruDockspace;
-            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (opt_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))          opt_flags ^= ImGuiDockNodeFlags_AutoHideTabBar;
+            if (ImGui::MenuItem("Flag: NoSplit",                "", (dockspace_flags & ImGuiDockNodeFlags_NoSplit) != 0))                 dockspace_flags ^= ImGuiDockNodeFlags_NoSplit;
+            if (ImGui::MenuItem("Flag: NoDockingInCentralNode", "", (dockspace_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) != 0))  dockspace_flags ^= ImGuiDockNodeFlags_NoDockingInCentralNode;
+            if (ImGui::MenuItem("Flag: NoResize",               "", (dockspace_flags & ImGuiDockNodeFlags_NoResize) != 0))                dockspace_flags ^= ImGuiDockNodeFlags_NoResize;
+            if (ImGui::MenuItem("Flag: PassthruDockspace",      "", (dockspace_flags & ImGuiDockNodeFlags_PassthruDockspace) != 0))       dockspace_flags ^= ImGuiDockNodeFlags_PassthruDockspace;
+            if (ImGui::MenuItem("Flag: AutoHideTabBar",         "", (dockspace_flags & ImGuiDockNodeFlags_AutoHideTabBar) != 0))          dockspace_flags ^= ImGuiDockNodeFlags_AutoHideTabBar;
             ImGui::Separator();
             if (ImGui::MenuItem("Close DockSpace", NULL, false, p_open != NULL))
                 *p_open = false;
