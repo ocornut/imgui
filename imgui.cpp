@@ -11937,14 +11937,14 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (node->ChildNodes[1])
             DockNodeUpdate(node->ChildNodes[1]);
 
-        // End host window
-        if (beginned_into_host_window)
-            End();
+        // Render outer borders last (after the tab bar)
+        if (node->IsRootNode())
+            RenderOuterBorders(host_window);
     }
 
-    // Render outer borders last (after the tab bar)
-    if (node->IsRootNode() && host_window)
-        RenderOuterBorders(host_window);
+    // End host window
+    if (beginned_into_host_window) //-V1020
+        End();
 }
 
 // Compare TabItem nodes given the last known DockOrder (will persist in .ini file as hint), used to sort tabs when multiple tabs are added on the same frame.
