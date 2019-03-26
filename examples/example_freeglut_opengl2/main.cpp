@@ -1,6 +1,8 @@
 // dear imgui: standalone example application for FreeGLUT + OpenGL2, using legacy fixed pipeline
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// (Using GLUT or FreeGLUT is not recommended unless you really miss the 90's)
+
+// !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
 
 #include "imgui.h"
 #include "../imgui_impl_freeglut.h"
