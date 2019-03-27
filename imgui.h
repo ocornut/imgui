@@ -591,7 +591,8 @@ namespace ImGui
     // Docking 
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.
     // Note: you DO NOT need to call DockSpace() to use most Docking facilities! 
-    // To dock windows: hold SHIFT anywhere while moving windows (if io.ConfigDockingWithShift == true) or drag windows from their title bar (if io.ConfigDockingWithShift = false)
+    // To dock windows: if io.ConfigDockingWithShift == false: drag window from their title bar.
+    // To dock windows: if io.ConfigDockingWithShift == true: hold SHIFT anywhere while moving windows.
     // Use DockSpace() to create an explicit dock node _within_ an existing window. See Docking demo for details.
     IMGUI_API void          DockSpace(ImGuiID id, const ImVec2& size = ImVec2(0, 0), ImGuiDockNodeFlags flags = 0, const ImGuiWindowClass* window_class = NULL);
     IMGUI_API ImGuiID       DockSpaceOverViewport(ImGuiViewport* viewport = NULL, ImGuiDockNodeFlags flags = 0, const ImGuiWindowClass* window_class = NULL);
@@ -882,13 +883,12 @@ enum ImGuiDockNodeFlags_
 {
     ImGuiDockNodeFlags_None                         = 0,
     ImGuiDockNodeFlags_KeepAliveOnly                = 1 << 0,   // Don't display the dockspace node but keep it alive. Windows docked into this dockspace node won't be undocked.
-    ImGuiDockNodeFlags_NoSplit                      = 1 << 1,   // Disable splitting the node into smaller nodes. Useful e.g. when embedding dockspaces into a main root one (the root one may have splitting disabled to reduce confusion). Note: when turned off, existing splits will be preserved.
-    //ImGuiDockNodeFlags_NoCentralNode              = 1 << 2,   // Disable Central Node (the node which can stay empty)
-    ImGuiDockNodeFlags_NoDockingInCentralNode       = 1 << 3,   // Disable docking inside the Central Node, which will be always kept empty. Note: when turned off, existing docked nodes will be preserved.
-    //ImGuiDockNodeFlags_NoLayoutChanges            = 1 << 4,   // Disable adding/removing nodes interactively. Useful with programatically setup dockspaces.
-    ImGuiDockNodeFlags_NoResize                     = 1 << 5,   // Disable resizing child nodes using the splitter/separators. Useful with programatically setup dockspaces. 
-    ImGuiDockNodeFlags_PassthruDockspace            = 1 << 6,   // Enable passthru dockspace: 1) DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node when empty. Meaning the host window should probably use SetNextWindowBgAlpha(0.0f) prior to Begin() when using this. 2) When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background.
-    ImGuiDockNodeFlags_AutoHideTabBar               = 1 << 7    // Tab bar will automatically hide when there is a single window in the dock node.
+    //ImGuiDockNodeFlags_NoCentralNode              = 1 << 1,   // Disable Central Node (the node which can stay empty)
+    ImGuiDockNodeFlags_NoDockingInCentralNode       = 1 << 2,   // Disable docking inside the Central Node, which will be always kept empty. Note: when turned off, existing docked nodes will be preserved.
+    ImGuiDockNodeFlags_NoSplit                      = 1 << 3,   // Disable splitting the node into smaller nodes. Useful e.g. when embedding dockspaces into a main root one (the root one may have splitting disabled to reduce confusion). Note: when turned off, existing splits will be preserved.
+    ImGuiDockNodeFlags_NoResize                     = 1 << 4,   // Disable resizing child nodes using the splitter/separators. Useful with programatically setup dockspaces. 
+    ImGuiDockNodeFlags_PassthruCentralNode          = 1 << 5,   // Enable passthru dockspace: 1) DockSpace() will render a ImGuiCol_WindowBg background covering everything excepted the Central Node when empty. Meaning the host window should probably use SetNextWindowBgAlpha(0.0f) prior to Begin() when using this. 2) When Central Node is empty: let inputs pass-through + won't display a DockingEmptyBg background. See demo for details.
+    ImGuiDockNodeFlags_AutoHideTabBar               = 1 << 6    // Tab bar will automatically hide when there is a single window in the dock node.
 };
 
 // Flags for ImGui::IsWindowFocused()

@@ -903,12 +903,12 @@ struct ImGuiDockNode
 
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();
-    bool                    IsRootNode() const  { return ParentNode == NULL; }
-    bool                    IsDockSpace() const { return (Flags & ImGuiDockNodeFlags_Dockspace) != 0; }
-    bool                    IsSplitNode() const { return ChildNodes[0] != NULL; }
-    bool                    IsLeafNode() const  { return ChildNodes[0] == NULL; }
-    bool                    IsEmpty() const     { return ChildNodes[0] == NULL && Windows.Size == 0; }
-    ImRect                  Rect() const        { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
+    bool                    IsRootNode() const      { return ParentNode == NULL; }
+    bool                    IsDockSpace() const     { return (Flags & ImGuiDockNodeFlags_Dockspace) != 0; }
+    bool                    IsSplitNode() const     { return ChildNodes[0] != NULL; }
+    bool                    IsLeafNode() const      { return ChildNodes[0] == NULL; }
+    bool                    IsEmpty() const         { return ChildNodes[0] == NULL && Windows.Size == 0; }
+    ImRect                  Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
 };
 
 //-----------------------------------------------------------------------------

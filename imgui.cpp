@@ -2605,7 +2605,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
 
     DockNode = DockNodeAsHost = NULL;
     DockId = 0;
-    DockTabItemStatusFlags = 0;
+    DockTabItemStatusFlags = ImGuiItemStatusFlags_None;
     DockOrder = -1;
     DockIsActive = DockTabIsVisible = DockTabWantClose = false;
 }
@@ -11343,7 +11343,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
 ImGuiDockNode::ImGuiDockNode(ImGuiID id)
 {
     ID = id;
-    Flags = 0;
+    Flags = ImGuiDockNodeFlags_None;
     ParentNode = ChildNodes[0] = ChildNodes[1] = NULL;
     TabBar = NULL;
     SplitAxis = ImGuiAxis_None;
@@ -11613,7 +11613,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
     IM_ASSERT(node->ParentNode == NULL || node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
 
     // Inherit most flags
-    ImGuiDockNodeFlags flags_to_inherit = ~0 & ~ImGuiDockNodeFlags_Dockspace;
+    ImGuiDockNodeFlags flags_to_inherit = ~ImGuiDockNodeFlags_Dockspace;
     if (node->ParentNode)
         node->Flags = node->ParentNode->Flags & flags_to_inherit;
 
@@ -11854,9 +11854,9 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (g.NavWindow && g.NavWindow->RootWindowDockStop->DockNode && g.NavWindow->RootWindowDockStop->ParentWindow == host_window)
             node->LastFocusedNodeID = g.NavWindow->RootWindowDockStop->DockNode->ID;
 
-    // We need to draw a background if requested by ImGuiDockNodeFlags_PassthruDockspace, but we will only know the correct pos/size after
+    // We need to draw a background at the root level if requested by ImGuiDockNodeFlags_PassthruCentralNode, but we will only know the correct pos/size after
     // processing the resizing splitters. So we are using the DrawList channel splitting facility to submit drawing primitives out of order!
-    const bool render_dockspace_bg = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruDockspace) != 0;
+    const bool render_dockspace_bg = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0;
     if (render_dockspace_bg)
     {
         host_window->DrawList->ChannelsSplit(2);
@@ -11865,7 +11865,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
     // Register a hit-test hole in the window unless we are currently dragging a window that is compatible with our dockspace
     const ImGuiDockNode* central_node = node->CentralNode;
-    const bool central_node_hole = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruDockspace) != 0 && central_node != NULL && central_node->IsEmpty();
+    const bool central_node_hole = node->IsRootNode() && host_window && (node->Flags & ImGuiDockNodeFlags_PassthruCentralNode) != 0 && central_node != NULL && central_node->IsEmpty();
     bool central_node_hole_register_hit_test_hole = central_node_hole;
     if (central_node_hole)
         if (const ImGuiPayload* payload = ImGui::GetDragDropPayload())
@@ -11892,10 +11892,10 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     }
 
     // Draw empty node background (currently can only be the Central Node)
-    if (host_window && node->IsEmpty() && node->IsVisible && !(node->Flags & ImGuiDockNodeFlags_PassthruDockspace))
+    if (host_window && node->IsEmpty() && node->IsVisible && !(node->Flags & ImGuiDockNodeFlags_PassthruCentralNode))
         host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
 
-    // Draw whole dockspace background if ImGuiDockNodeFlags_PassthruDockspace if set.
+    // Draw whole dockspace background if ImGuiDockNodeFlags_PassthruCentralNode if set.
     if (render_dockspace_bg && node->IsVisible)
     {
         host_window->DrawList->ChannelsSetCurrent(0);
@@ -12566,6 +12566,7 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     DockNodeMoveWindows(parent_node->ChildNodes[split_inheritor_child_idx], parent_node);
     DockNodeTreeUpdatePosSize(parent_node, parent_node->Pos, parent_node->Size);
 
+    // Flags transfer
     child_inheritor->IsCentralNode = parent_node->IsCentralNode;
     child_inheritor->IsHiddenTabBar = parent_node->IsHiddenTabBar;
     parent_node->IsCentralNode = false;
@@ -12599,9 +12600,11 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     DockNodeApplyPosSizeToWindows(parent_node);
     parent_node->AutorityForPos = parent_node->AutorityForSize = parent_node->AutorityForViewport = ImGuiDataAutority_Auto;
     parent_node->VisibleWindow = merge_lead_child->VisibleWindow;
+    parent_node->SizeRef = backup_last_explicit_size;
+
+    // Flags transfer
     parent_node->IsCentralNode = (child_0 && child_0->IsCentralNode) || (child_1 && child_1->IsCentralNode);
     parent_node->IsHiddenTabBar = merge_lead_child->IsHiddenTabBar;
-    parent_node->SizeRef = backup_last_explicit_size;
 
     if (child_0)
     {
@@ -12961,7 +12964,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
     End();
 }
 
-// Tips: Use with ImGuiDockNodeFlags_PassthruDockspace!
+// Tips: Use with ImGuiDockNodeFlags_PassthruCentralNode!
 // The limitation with this call is that your window won't have a menu bar. 
 // Even though we could pass window flags, it would also require the user to be able to call BeginMenuBar() somehow meaning we can't Begin/End in a single function.
 // So if you want a menu bar you need to repeat this code manually ourselves. As with advanced other Docking API, we may change this function signature.
@@ -12977,7 +12980,7 @@ ImGuiID ImGui::DockSpaceOverViewport(ImGuiViewport* viewport, ImGuiDockNodeFlags
     ImGuiWindowFlags host_window_flags = 0;
     host_window_flags |= ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking;
     host_window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
-    if (dockspace_flags & ImGuiDockNodeFlags_PassthruDockspace)
+    if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
         host_window_flags |= ImGuiWindowFlags_NoBackground;
 
     char label[32];
@@ -14186,6 +14189,7 @@ void ImGui::ShowDockingDebug()
     {
         static void NodeDockNode(ImGuiDockNode* node, const char* label)
         {
+            ImGuiContext& g = *GImGui;
             ImGui::SetNextTreeNodeOpen(true, ImGuiCond_Once);
             bool open; 
             if (node->Windows.Size > 0)
@@ -14203,7 +14207,7 @@ void ImGui::ShowDockingDebug()
                 ImGui::BulletText("LastFocusedNodeID: 0x%08X", node->LastFocusedNodeID);
                 ImGui::BulletText("Flags 0x%02X%s%s%s%s",
                     node->Flags, node->IsDockSpace() ? ", IsDockSpace" : "", node->IsCentralNode ? ", IsCentralNode" : "",
-                    (GImGui->FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (GImGui->FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
+                    (g.FrameCount - node->LastFrameAlive < 2) ? ", IsAlive" : "", (g.FrameCount - node->LastFrameActive < 2) ? ", IsActive" : "");
                 if (node->ChildNodes[0])
                     NodeDockNode(node->ChildNodes[0], "Child[0]");
                 if (node->ChildNodes[1])
