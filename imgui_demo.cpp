@@ -4270,11 +4270,11 @@ void ShowExampleAppDockSpace(bool* p_open)
     if (opt_fullscreen)
         ImGui::PopStyleVar(2);
 
-    // Dockspace
+    // DockSpace
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_DockingEnable)
     {
-        ImGuiID dockspace_id = ImGui::GetID("MyDockspace");
+        ImGuiID dockspace_id = ImGui::GetID("MyDockSpace");
         ImGui::DockSpace(dockspace_id, ImVec2(0.0f, 0.0f), dockspace_flags);
     }
     else
@@ -4420,13 +4420,13 @@ void ShowExampleAppDocuments(bool* p_open)
     {
         Target_None,
         Target_Tab,                 // Create documents as local tab into a local tab bar
-        Target_DockspaceAndWindow   // Create documents as regular windows, and create an embedded dockspace
+        Target_DockSpaceAndWindow   // Create documents as regular windows, and create an embedded dockspace
     };
     static Target opt_target = Target_Tab;
     static bool   opt_reorderable = true;
     static ImGuiTabBarFlags opt_fitting_flags = ImGuiTabBarFlags_FittingPolicyDefault_;
 
-    // When (opt_target == Target_DockspaceAndWindow) there is the possibily that one of our child Document window (e.g. "Eggplant")
+    // When (opt_target == Target_DockSpaceAndWindow) there is the possibily that one of our child Document window (e.g. "Eggplant")
     // that we emit gets docked into the same spot as the parent window ("Example: Documents").
     // This would create a problematic feedback loop because selecting the "Eggplant" tab would make the "Example: Documents" tab
     // not visible, which in turn would stop submitting the "Eggplant" window.
@@ -4434,7 +4434,7 @@ void ShowExampleAppDocuments(bool* p_open)
     // Another solution may be to make the "Example: Documents" window use the ImGuiWindowFlags_NoDocking.
 
     bool window_contents_visible = ImGui::Begin("Example: Documents", p_open, ImGuiWindowFlags_MenuBar);
-    if (!window_contents_visible && opt_target != Target_DockspaceAndWindow)
+    if (!window_contents_visible && opt_target != Target_DockSpaceAndWindow)
     {
         ImGui::End();
         return;
@@ -4486,7 +4486,7 @@ void ShowExampleAppDocuments(bool* p_open)
     ImGui::PopItemWidth();
     bool redock_all = false;
     if (opt_target == Target_Tab)                { ImGui::SameLine(); ImGui::Checkbox("Reorderable Tabs", &opt_reorderable); }
-    if (opt_target == Target_DockspaceAndWindow) { ImGui::SameLine(); redock_all = ImGui::Button("Redock all"); }
+    if (opt_target == Target_DockSpaceAndWindow) { ImGui::SameLine(); redock_all = ImGui::Button("Redock all"); }
 
     ImGui::Separator();
 
@@ -4531,7 +4531,7 @@ void ShowExampleAppDocuments(bool* p_open)
             ImGui::EndTabBar();
         }
     }
-    else if (opt_target == Target_DockspaceAndWindow)
+    else if (opt_target == Target_DockSpaceAndWindow)
     {
         if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_DockingEnable)
         {
@@ -4548,9 +4548,6 @@ void ShowExampleAppDocuments(bool* p_open)
                 if (!doc->Open)
                     continue;
 
-                // FIXME-DOCK: SetNextWindowDock()
-                //ImGuiID default_dock_id = GetDockspaceRootDocumentDockID();
-                //ImGuiID default_dock_id = GetDockspacePreferedDocumentDockID();
                 ImGui::SetNextWindowDockID(dockspace_id, redock_all ? ImGuiCond_Always : ImGuiCond_FirstUseEver);
                 ImGuiWindowFlags window_flags = (doc->Dirty ? ImGuiWindowFlags_UnsavedDocument : 0);
                 bool visible = ImGui::Begin(doc->Name, &doc->Open, window_flags);
