@@ -9,6 +9,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
 
+ - window: preserve/restore relative focus ordering (persistent or not) (#2304) -> also see docking reference to same #.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
  - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
@@ -130,6 +131,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
  - dock: merge docking branch (#2109)
+ - dock: B: ordering currently held in tab bar should be implicitly held by windows themselves (also see #2304)
+ - dock: B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
  - dock: B~ rework code to be able to lazily create tab bar instance in a single place. The _Unsorted tab flag could be replacing a trailing-counter in DockNode?
  - dock: B~ fully track windows/settings reference in dock nodes. perhaps find a representation that allows facilitate use of dock builder functions.
  - dock: B~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete). this is mostly working but the DockBuilderXXX api are not exposed/finished.
@@ -148,7 +151,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: B- dpi: look at interaction with the hi-dpi and multi-dpi stuff.
  - dock: B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
  - dock: B- tab bar: make selected tab always shows its full title?
- - dock: B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
  - dock: B- nav: design interactions so nav controls can dock/undock
  - dock: B- dockspace: flag to lock the dock tree and/or sizes (ImGuiDockNodeFlags_Locked?)
  - dock: B- reintroduce collapsing a floating dock node. also collapsing a docked dock node!
