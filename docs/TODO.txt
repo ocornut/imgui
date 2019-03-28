@@ -130,7 +130,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
  - dock: merge docking branch (#2109)
- - dock: A~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete). this is mostly working but the DockBuilderXXX api are not exposed/finished.
+ - dock: B~ rework code to be able to lazily create tab bar instance in a single place. The _Unsorted tab flag could be replacing a trailing-counter in DockNode?
+ - dock: B~ fully track windows/settings reference in dock nodes. perhaps find a representation that allows facilitate use of dock builder functions.
+ - dock: B~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete). this is mostly working but the DockBuilderXXX api are not exposed/finished.
  - dock: B: when docking outer, perform size locking on neighbors nodes the same way we do it with splitters, so other nodes are not resized.
  - dock: B~ central node resizing behavior incorrect.
  - dock: B: changing title font/style per-window is not supported as dock nodes are created in NewFrame.
