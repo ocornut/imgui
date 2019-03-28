@@ -1,6 +1,8 @@
 // dear imgui: Platform Binding for FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
-// GLUT IS OBSOLETE SOFTWARE. AVOID USING GLUT IN 2019.
+
+// !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
 
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I

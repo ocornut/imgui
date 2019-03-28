@@ -1377,7 +1377,7 @@ struct IMGUI_API ImGuiWindow
     bool                    WantCollapseToggle;
     bool                    SkipItems;                          // Set when items can safely be all clipped (e.g. window not visible or collapsed)
     bool                    Appearing;                          // Set during the frame where the window is appearing (or re-appearing)
-    bool                    Hidden;                             // Do not display (== (HiddenFramesForResize > 0) ||
+    bool                    Hidden;                             // Do not display (== (HiddenFrames*** > 0))
     bool                    HasCloseButton;                     // Set when the window has a close button (p_open != NULL)
     signed char             ResizeBorderHeld;                   // Current border being held for resize (-1: none, otherwise 0-3)
     short                   BeginCount;                         // Number of Begin() during the current frame (generally 0 or 1, 1+ if appending via multiple Begin/End pairs)
@@ -1388,8 +1388,8 @@ struct IMGUI_API ImGuiWindow
     bool                    AutoFitOnlyGrows;
     int                     AutoFitChildAxises;
     ImGuiDir                AutoPosLastDirection;
-    int                     HiddenFramesRegular;                // Hide the window for N frames
-    int                     HiddenFramesForResize;              // Hide the window for N frames while allowing items to be submitted so we can measure their size
+    int                     HiddenFramesCanSkipItems;           // Hide the window for N frames
+    int                     HiddenFramesCannotSkipItems;        // Hide the window for N frames while allowing items to be submitted so we can measure their size
     ImGuiCond               SetWindowPosAllowFlags;             // store acceptable condition flags for SetNextWindowPos() use.
     ImGuiCond               SetWindowSizeAllowFlags;            // store acceptable condition flags for SetNextWindowSize() use.
     ImGuiCond               SetWindowCollapsedAllowFlags;       // store acceptable condition flags for SetNextWindowCollapsed() use.
