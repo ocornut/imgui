@@ -664,6 +664,10 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 #define IM_NORMALIZE2F_OVER_ZERO(VX,VY)                         { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = 1.0f / ImSqrt(d2); VX *= inv_len; VY *= inv_len; } }
 #define IM_NORMALIZE2F_OVER_EPSILON_CLAMP(VX,VY,EPS,INVLENMAX)  { float d2 = VX*VX + VY*VY; if (d2 > EPS)  { float inv_len = 1.0f / ImSqrt(d2); if (inv_len > INVLENMAX) inv_len = INVLENMAX; VX *= inv_len; VY *= inv_len; } }
 
+// The next two functions are going to use alloca(). Disabling this warning for smoother compilation experience.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wstack-protector"
+
 // TODO: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
@@ -934,6 +938,9 @@ void ImDrawList::AddConvexPolyFilled(const ImVec2* points, const int points_coun
         _VtxCurrentIdx += (ImDrawIdx)vtx_count;
     }
 }
+
+// Restores the stack protector warning status
+#pragma GCC diagnostic pop
 
 void ImDrawList::PathArcToFast(const ImVec2& centre, float radius, int a_min_of_12, int a_max_of_12)
 {
