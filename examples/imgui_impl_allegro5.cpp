@@ -154,7 +154,7 @@ bool ImGui_ImplAllegro5_CreateDeviceObjects()
 {
     // Build texture atlas
     ImGuiIO &io = ImGui::GetIO();
-    unsigned char *pixels;
+    unsigned char* pixels;
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
 
