@@ -43,7 +43,8 @@ while (true)
    if (freetype_test.UpdateRebuild())
    {
       // REUPLOAD FONT TEXTURE TO GPU
-      // e.g ImGui_ImplOpenGL3_DestroyDeviceObjects() + ImGui_ImplOpenGL3_CreateDeviceObjects()
+      ImGui_ImplXXX_DestroyDeviceObjects();
+      ImGui_ImplXXX_CreateDeviceObjects();
    }
    ImGui::NewFrame();
    freetype_test.ShowFreetypeOptionsWindow();
@@ -85,10 +86,10 @@ struct FreeTypeTest
         if (!WantRebuild)
             return false;
         ImGuiIO& io = ImGui::GetIO();
-        for (int n = 0; n < io.Fonts->Fonts.Size; n++)
+        io.Fonts->TexGlyphPadding = FontsPadding;
+        for (int n = 0; n < io.Fonts->ConfigData.Size; n++)
         {
-            ImFontConfig* font_config = (ImFontConfig*)io.Fonts->Fonts[n]->ConfigData;
-            io.Fonts->TexGlyphPadding = FontsPadding;
+            ImFontConfig* font_config = (ImFontConfig*)&io.Fonts->ConfigData[n];
             font_config->RasterizerMultiply = FontsMultiply;
             font_config->RasterizerFlags = (BuildMode == FontBuildMode_FreeType) ? FontsFlags : 0x00;
         }

@@ -10,6 +10,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-03-29: Misc: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects().
 //  2019-01-16: Misc: Disabled fog before drawing UI's. Fixes issue #2288.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-06-08: Misc: Extracted imgui_impl_dx9.cpp/.h away from the old combined DX9+Win32 example.
@@ -253,24 +254,9 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
 {
     if (!g_pd3dDevice)
         return;
-    if (g_pVB)
-    {
-        g_pVB->Release();
-        g_pVB = NULL;
-    }
-    if (g_pIB)
-    {
-        g_pIB->Release();
-        g_pIB = NULL;
-    }
-
-    // At this point note that we set ImGui::GetIO().Fonts->TexID to be == g_FontTexture, so clear both.
-    ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(g_FontTexture == io.Fonts->TexID);
-    if (g_FontTexture)
-        g_FontTexture->Release();
-    g_FontTexture = NULL;
-    io.Fonts->TexID = NULL;
+    if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
+    if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
+    if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 }
 
 void ImGui_ImplDX9_NewFrame()
