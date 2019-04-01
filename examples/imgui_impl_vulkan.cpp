@@ -212,7 +212,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     VkResult err;
     FrameDataForRender* fd = &g_FramesDataBuffers[g_FrameIndex];
-    g_FrameIndex = (g_FrameIndex + 1) % IMGUI_VK_QUEUED_FRAMES;
+    g_FrameIndex = (g_FrameIndex + 1) % IM_ARRAYSIZE(g_FramesDataBuffers);
 
     // Create the Vertex and Index buffers:
     size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
@@ -694,7 +694,7 @@ void    ImGui_ImplVulkan_InvalidateDeviceObjects()
 {
     ImGui_ImplVulkan_InvalidateFontUploadObjects();
 
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < IM_ARRAYSIZE(g_FramesDataBuffers); i++)
     {
         FrameDataForRender* fd = &g_FramesDataBuffers[i];
         if (fd->VertexBuffer)       { vkDestroyBuffer   (g_Device, fd->VertexBuffer,        g_Allocator); fd->VertexBuffer = VK_NULL_HANDLE; }
@@ -867,7 +867,7 @@ void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_
 
     // Create Command Buffers
     VkResult err;
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < IM_ARRAYSIZE(wd->Frames); i++)
     {
         ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
         {
@@ -1068,7 +1068,7 @@ void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, I
     vkDeviceWaitIdle(device); // FIXME: We could wait on the Queue if we had the queue in wd-> (otherwise VulkanH functions can't use globals)
     //vkQueueWaitIdle(g_Queue);
 
-    for (int i = 0; i < IMGUI_VK_QUEUED_FRAMES; i++)
+    for (int i = 0; i < IM_ARRAYSIZE(wd->Frames); i++)
     {
         ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
         vkDestroyFence(device, fd->Fence, allocator);
