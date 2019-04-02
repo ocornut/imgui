@@ -7,7 +7,11 @@
 #include "imgui.h"
 #include "../imgui_impl_freeglut.h"
 #include "../imgui_impl_opengl2.h"
-#include <GL/freeglut.h>
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/freeglut.h>
+#endif
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed
@@ -87,7 +91,9 @@ int main(int argc, char** argv)
 {
     // Create GLUT window
     glutInit(&argc, argv);
+#ifndef __APPLE__
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+#endif
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
     glutInitWindowSize(1280, 720);
     glutCreateWindow("Dear ImGui FreeGLUT+OpenGL2 Example");
