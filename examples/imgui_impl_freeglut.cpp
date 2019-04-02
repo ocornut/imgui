@@ -72,7 +72,7 @@ void ImGui_ImplFreeGLUT_InstallFuncs()
     glutMotionFunc(ImGui_ImplFreeGLUT_MotionFunc);
     glutPassiveMotionFunc(ImGui_ImplFreeGLUT_MotionFunc);
     glutMouseFunc(ImGui_ImplFreeGLUT_MouseFunc);
-#ifndef __APPLE__
+#ifdef __FREEGLUT_EXT_H__
     glutMouseWheelFunc(ImGui_ImplFreeGLUT_MouseWheelFunc);
 #endif
     glutKeyboardFunc(ImGui_ImplFreeGLUT_KeyboardFunc);
@@ -181,6 +181,7 @@ void ImGui_ImplFreeGLUT_MouseFunc(int glut_button, int state, int x, int y)
         io.MouseDown[button] = false;
 }
 
+#ifdef __FREEGLUT_EXT_H__
 void ImGui_ImplFreeGLUT_MouseWheelFunc(int button, int dir, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -191,6 +192,7 @@ void ImGui_ImplFreeGLUT_MouseWheelFunc(int button, int dir, int x, int y)
         io.MouseWheel -= 1.0;
     (void)button; // Unused
 }
+#endif
 
 void ImGui_ImplFreeGLUT_ReshapeFunc(int w, int h)
 {

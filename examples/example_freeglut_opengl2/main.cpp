@@ -91,7 +91,7 @@ int main(int argc, char** argv)
 {
     // Create GLUT window
     glutInit(&argc, argv);
-#ifndef __APPLE__
+#ifdef __FREEGLUT_EXT_H__
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
 #endif
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
