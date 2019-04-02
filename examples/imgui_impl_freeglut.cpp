@@ -21,7 +21,11 @@
 
 #include "imgui.h"
 #include "imgui_impl_freeglut.h"
-#include <GL/freeglut.h>
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/freeglut.h>
+#endif
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
@@ -68,7 +72,9 @@ void ImGui_ImplFreeGLUT_InstallFuncs()
     glutMotionFunc(ImGui_ImplFreeGLUT_MotionFunc);
     glutPassiveMotionFunc(ImGui_ImplFreeGLUT_MotionFunc);
     glutMouseFunc(ImGui_ImplFreeGLUT_MouseFunc);
+#ifndef __APPLE__
     glutMouseWheelFunc(ImGui_ImplFreeGLUT_MouseWheelFunc);
+#endif
     glutKeyboardFunc(ImGui_ImplFreeGLUT_KeyboardFunc);
     glutKeyboardUpFunc(ImGui_ImplFreeGLUT_KeyboardUpFunc);
     glutSpecialFunc(ImGui_ImplFreeGLUT_SpecialFunc);
