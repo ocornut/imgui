@@ -33,6 +33,7 @@ example_glfw_opengl2/example_glfw_opengl2
 example_glfw_opengl3/example_glfw_opengl3
 example_sdl_opengl2/example_sdl_opengl2
 example_sdl_opengl3/example_sdl_opengl3
+example_freeglut_opengl2/example_freeglut_opengl2
 
 ## Dear ImGui Ini files
 imgui.ini
