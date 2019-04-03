@@ -81,6 +81,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
+ - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput could eat preceding blanks, up to tab_count.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)
@@ -165,7 +166,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - button: provide a button that looks framed. (?)
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
- - image button: not taking an explicit id is odd.
+ - image button: not taking an explicit id can be problematic. (#2464, #1390)
  - slider/drag: ctrl+click when format doesn't include a % character.. disable? display underlying value in default format? (see InputScalarAsWidgetReplacement)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar). (#1946)
@@ -371,6 +372,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - examples: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
  - examples: opengl: could use a single vertex buffer and glBufferSubData for uploads?
+ - examples: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
