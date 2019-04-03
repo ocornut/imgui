@@ -15,8 +15,6 @@
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
-static uint32_t                     g_MinImageCount = 2;
-static bool                         g_PendingSwapchainRebuild = false;
 static VkAllocationCallbacks*       g_Allocator = NULL;
 static VkInstance                   g_Instance = VK_NULL_HANDLE;
 static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
@@ -28,6 +26,8 @@ static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
 static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
 
 static ImGui_ImplVulkanH_WindowData g_WindowData;
+static uint32_t                     g_MinImageCount = 2;
+static bool                         g_WantSwapChainRebuild = false;
 
 static void check_vk_result(VkResult err)
 {
@@ -205,6 +205,7 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
     // Create SwapChain, RenderPass, Framebuffer, etc.
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, width, height, g_MinImageCount);
     ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
+    IM_ASSERT(wd->BackBufferCount > 0);
 }
 
 static void CleanupVulkan()
@@ -298,15 +299,6 @@ static void FramePresent(ImGui_ImplVulkanH_WindowData* wd)
     check_vk_result(err);
 }
 
-static void RebuildSwapChain(int width, int height)
-{
-    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, width, height, g_MinImageCount);
-    ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, &g_WindowData, g_Allocator);
-    ImGui_ImplVulkan_SetQueuedFramesCount(g_WindowData.BackBufferCount);
-    g_WindowData.FrameIndex = 0;
-    g_PendingSwapchainRebuild = false;
-}
-
 int main(int, char**)
 {
     // Setup SDL
@@ -365,7 +357,7 @@ int main(int, char**)
     init_info.PipelineCache = g_PipelineCache;
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
-    init_info.QueuedFrames = wd->BackBufferCount;
+    init_info.QueuedFramesCount = wd->BackBufferCount;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
@@ -434,11 +426,21 @@ int main(int, char**)
             if (event.type == SDL_QUIT)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window))
-                RebuildSwapChain((int)event.window.data1, (int)event.window.data2);
+            {
+                g_WindowData.Width = (int)event.window.data1;
+                g_WindowData.Height = (int)event.window.data2;
+                g_WantSwapChainRebuild = true;
+            }
         }
 
-        if (g_PendingSwapchainRebuild)
-            RebuildSwapChain(g_WindowData.Width, g_WindowData.Height);
+        if (g_WantSwapChainRebuild)
+        {
+            ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, g_WindowData.Width, g_WindowData.Height, g_MinImageCount);
+            ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, &g_WindowData, g_Allocator);
+            ImGui_ImplVulkan_SetQueuedFramesCount(g_WindowData.BackBufferCount);
+            g_WindowData.FrameIndex = 0;
+            g_WantSwapChainRebuild = false;
+        }
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
@@ -479,28 +481,6 @@ int main(int, char**)
             ImGui::Text("Hello from another window!");
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
-
-            if (ImGui::Button("Increase"))
-            {
-                g_MinImageCount++;
-                g_PendingSwapchainRebuild = true;
-            }
-
-            ImGui::SameLine();
-            if (ImGui::Button("Decrease"))
-            {
-                if (g_MinImageCount != 2)
-                {
-                    g_MinImageCount--;
-                    g_PendingSwapchainRebuild = true;
-                }
-            }
-
-            ImGui::SameLine();
-            ImGui::Text("Back Buffers: %i", g_MinImageCount);
-
-            ImGui::Text("Frame Index %i", wd->FrameIndex);
-
             ImGui::End();
         }
 
