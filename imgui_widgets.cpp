@@ -3455,6 +3455,8 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                 {
                     // Insert character if they pass filtering
                     unsigned int c = (unsigned int)io.InputQueueCharacters[n];
+                    if (c == '\t' && io.KeyShift)
+                        continue;
                     if (InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                         state->OnKeyPressed((int)c);
                 }

@@ -80,7 +80,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
- - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput works inconsistently depending on whether back-end emits actual Tab Key + \t Char or not (SDL doesn't).
+ - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput could eat preceding blanks, up to tab_count.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)
