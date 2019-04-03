@@ -104,7 +104,7 @@ List of Platforms Bindings in this repository:
     imgui_impl_osx.mm         ; macOS native API
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
     imgui_impl_win32.cpp      ; Win32 native API (Windows)
-    imgui_impl_freeglut.cpp   ; FreeGLUT (if you really miss the 90's)
+    imgui_impl_glut.cpp       ; GLUT (if you really miss the 90's)
 
 List of Renderer Bindings in this repository:
 
@@ -223,9 +223,9 @@ example_allegro5/
     Allegro 5 example.
     = main.cpp + imgui_impl_allegro5.cpp
 
-example_freeglut_opengl2/
-    FreeGLUT + OpenGL2.
-    = main.cpp + imgui_impl_freeglut.cpp + imgui_impl_opengl2.cpp
+example_glut_opengl2/
+    GLUT (E.g., FreeGLUT on Linux/Windows, GLUT framework on OSX) + OpenGL2.
+    = main.cpp + imgui_impl_glut.cpp + imgui_impl_opengl2.cpp
 
 example_marmalade/
     Marmalade example using IwGx.

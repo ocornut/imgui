@@ -9,9 +9,9 @@
 #CXX = g++
 #CXX = clang++
 
-EXE = example_freeglut_opengl2
+EXE = example_glut_opengl2
 SOURCES = main.cpp 
-SOURCES += ../imgui_impl_freeglut.cpp ../imgui_impl_opengl2.cpp
+SOURCES += ../imgui_impl_glut.cpp ../imgui_impl_opengl2.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp 
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
