@@ -1,7 +1,7 @@
-// dear imgui: Platform Binding for GLUT
+// dear imgui: Platform Binding for GLUT/FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
 
-// !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
 
 // Issues:

@@ -1,7 +1,7 @@
-// dear imgui: Platform Binding for GLUT
+// dear imgui: Platform Binding for GLUT/FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
 
-// !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
 
 // Issues:
@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-04-03: Misc: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h.
 //  2019-03-25: Misc: Made io.DeltaTime always above zero.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-03-22: Added GLUT Platform binding.

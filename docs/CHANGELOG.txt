@@ -49,7 +49,9 @@ Other Changes:
 - Examples: OpenGL3: Minor tweaks + not calling glBindBuffer more than necessary in the render loop.
 - Examples: Vulkan: Added missing support for 32-bit indices (#define ImDrawIdx unsigned int).
 - Examples: DirectX9: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects(). (#2454)
-- Examples: FreeGLUT: Made io.DeltaTime always > 0. (#2430)
+- Examples: GLUT: Fixed existing FreeGLUT example to work with regular GLUT. (#2465) [@andrewwillmott]
+- Examples: GLUT: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h. (#2465) [@andrewwillmott]
+- Examples: GLUT: Made io.DeltaTime always > 0. (#2430)
 
 
 -----------------------------------------------------------------------
