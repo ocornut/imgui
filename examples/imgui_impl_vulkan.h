@@ -11,11 +11,19 @@
 // The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
+// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
+// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+//   You will use those if you want to use this rendering back-end in your engine/app.
+// - Helper ImGui_ImplVulkanH_XXXX functions and structures are only used by this example (main.cpp) and by 
+//   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
+// Read comments in imgui_impl_vulkan.h.
+
 #pragma once
 
 #include <vulkan/vulkan.h>
 
-// Please zero-clear before use.
+// Initialization data, for ImGui_ImplVulkan_Init()
+// [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
     VkInstance                      Instance;
@@ -37,16 +45,16 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_SetFramesQueueSize(int frames_queue_size); // To override FramesQueueSize after initialization
 IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
 
 // Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyDeviceObjects();
 
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
-// (Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own app.)
+// (Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own engine/app.)
 //-------------------------------------------------------------------------
 // You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
@@ -55,7 +63,7 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 // Generally we avoid exposing any kind of superfluous high-level helpers in the bindings,
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
 //
-// Your application/engine will likely _already_ have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+// Your engine/app will likely _already_ have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
 // You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
 // (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
@@ -78,8 +86,8 @@ struct ImGui_ImplVulkanH_FrameData
     VkFence             Fence;
     VkSemaphore         ImageAcquiredSemaphore;
     VkSemaphore         RenderCompleteSemaphore;
-    VkImage             BackBuffer;
-    VkImageView         BackBufferView;
+    VkImage             Backbuffer;
+    VkImageView         BackbufferView;
     VkFramebuffer       Framebuffer;
 
     IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();

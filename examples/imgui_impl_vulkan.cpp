@@ -11,6 +11,13 @@
 // The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
+// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
+// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+//   You will use those if you want to use this rendering back-end in your engine/app.
+// - Helper ImGui_ImplVulkanH_XXXX functions and structures are only used by this example (main.cpp) and by 
+//   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
+// Read comments in imgui_impl_vulkan.h.
+
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2019-XX-XX: Vulkan: Added FramesQueueSize field in ImGui_ImplVulkan_InitInfo, required for initialization (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). Added ImGui_ImplVulkan_SetFramesQueueSize() to override FramesQueueSize while running.
@@ -726,7 +733,7 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     return true;
 }
 
-void    ImGui_ImplVulkan_InvalidateFontUploadObjects()
+void    ImGui_ImplVulkan_DestroyFontUploadObjects()
 {
     if (g_UploadBuffer)
     {
@@ -753,10 +760,10 @@ static void    ImGui_ImplVulkan_InvalidateFrameDeviceObjects()
     g_FramesDataBuffers.clear();
 }
 
-void    ImGui_ImplVulkan_InvalidateDeviceObjects()
+void    ImGui_ImplVulkan_DestroyDeviceObjects()
 {
     ImGui_ImplVulkan_InvalidateFrameDeviceObjects();
-    ImGui_ImplVulkan_InvalidateFontUploadObjects();
+    ImGui_ImplVulkan_DestroyFontUploadObjects();
 
     if (g_FontView)             { vkDestroyImageView(g_Device, g_FontView, g_Allocator); g_FontView = VK_NULL_HANDLE; }
     if (g_FontImage)            { vkDestroyImage(g_Device, g_FontImage, g_Allocator); g_FontImage = VK_NULL_HANDLE; }
@@ -802,7 +809,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 
 void ImGui_ImplVulkan_Shutdown()
 {
-    ImGui_ImplVulkan_InvalidateDeviceObjects();
+    ImGui_ImplVulkan_DestroyDeviceObjects();
 }
 
 void ImGui_ImplVulkan_NewFrame()
@@ -847,8 +854,8 @@ ImGui_ImplVulkanH_FrameData::ImGui_ImplVulkanH_FrameData()
     Fence = VK_NULL_HANDLE;
     ImageAcquiredSemaphore = VK_NULL_HANDLE;
     RenderCompleteSemaphore = VK_NULL_HANDLE;
-    BackBuffer = VK_NULL_HANDLE;
-    BackBufferView = VK_NULL_HANDLE;
+    Backbuffer = VK_NULL_HANDLE;
+    BackbufferView = VK_NULL_HANDLE;
     Framebuffer = VK_NULL_HANDLE;
 }
 
@@ -1056,7 +1063,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkPhysicalDevice physical_devic
         for (int i = 0; i < (int)wd->FramesQueueSize; i++)
         {
             wd->Frames.push_back(ImGui_ImplVulkanH_FrameData());
-            wd->Frames[i].BackBuffer = backbuffers[i];
+            wd->Frames[i].Backbuffer = backbuffers[i];
         }
     }
     if (old_swapchain)
@@ -1114,8 +1121,8 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkPhysicalDevice physical_devic
         for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
         {
             ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
-            info.image = fd->BackBuffer;
-            err = vkCreateImageView(device, &info, allocator, &fd->BackBufferView);
+            info.image = fd->Backbuffer;
+            err = vkCreateImageView(device, &info, allocator, &fd->BackbufferView);
             check_vk_result(err);
         }
     }
@@ -1134,7 +1141,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkPhysicalDevice physical_devic
         for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
         {
             ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
-            attachment[0] = fd->BackBufferView;
+            attachment[0] = fd->BackbufferView;
             err = vkCreateFramebuffer(device, &info, allocator, &fd->Framebuffer);
             check_vk_result(err);
         }
@@ -1173,6 +1180,6 @@ void ImGui_ImplVulkanH_DestroyFrameData(VkInstance instance, VkDevice device, Im
     fd->CommandPool = VK_NULL_HANDLE;
     fd->ImageAcquiredSemaphore = fd->RenderCompleteSemaphore = VK_NULL_HANDLE;
 
-    vkDestroyImageView(device, fd->BackBufferView, allocator);
+    vkDestroyImageView(device, fd->BackbufferView, allocator);
     vkDestroyFramebuffer(device, fd->Framebuffer, allocator);
 }
