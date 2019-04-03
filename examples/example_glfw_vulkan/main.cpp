@@ -1,6 +1,11 @@
 // dear imgui: standalone example application for Glfw + Vulkan
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 
+// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own application.
+// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+// - Helper ImGui_ImplVulkanH_XXXX functions and structures are used by this example (main.cpp) and by imgui_impl_vulkan.cpp,
+//   but should PROBABLY NOT be used by your own app code. Read comments in imgui_impl_vulkan.h.
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
@@ -212,8 +217,7 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
     //printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
-    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, width, height, g_MinImageCount);
-    ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
+    ImGui_ImplVulkanH_CreateWindowData(g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
     IM_ASSERT(wd->FramesQueueSize >= 2);
 }
 
@@ -438,8 +442,7 @@ int main(int, char**)
         glfwPollEvents();
         if (g_WantSwapChainRebuild)
         {
-            ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, g_ResizeWidth, g_ResizeHeight, g_MinImageCount);
-            ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, &g_WindowData, g_Allocator);
+            ImGui_ImplVulkanH_CreateWindowData(g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_ResizeWidth, g_ResizeHeight, g_MinImageCount);
             ImGui_ImplVulkan_SetFramesQueueSize(g_WindowData.FramesQueueSize);
             g_WindowData.FrameIndex = 0;
             g_WantSwapChainRebuild = false;

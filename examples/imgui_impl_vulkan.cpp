@@ -78,6 +78,15 @@ static VkImageView            g_FontView = VK_NULL_HANDLE;
 static VkDeviceMemory         g_UploadBufferMemory = VK_NULL_HANDLE;
 static VkBuffer               g_UploadBuffer = VK_NULL_HANDLE;
 
+// Forward Declarations
+void ImGui_ImplVulkanH_DestroyFrameData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_FrameData* fd, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
+
+//-----------------------------------------------------------------------------
+// SHADERS
+//-----------------------------------------------------------------------------
+
 // glsl_shader.vert, compiled with:
 // # glslangValidator -V -x -o glsl_shader.vert.u32 glsl_shader.vert
 /*
@@ -182,6 +191,10 @@ static uint32_t __glsl_shader_frag_spv[] =
     0x00000007,0x0000001d,0x00000012,0x0000001c,0x0003003e,0x00000009,0x0000001d,0x000100fd,
     0x00010038
 };
+
+//-----------------------------------------------------------------------------
+// FUNCTIONS
+//-----------------------------------------------------------------------------
 
 static uint32_t ImGui_ImplVulkan_MemoryType(VkMemoryPropertyFlags properties, uint32_t type_bits)
 {
@@ -727,20 +740,7 @@ void    ImGui_ImplVulkan_InvalidateFontUploadObjects()
     }
 }
 
-void    ImGui_ImplVulkan_InvalidateDeviceObjects()
-{
-    ImGui_ImplVulkan_InvalidateFontUploadObjects();
-
-    if (g_FontView)             { vkDestroyImageView(g_Device, g_FontView, g_Allocator); g_FontView = VK_NULL_HANDLE; }
-    if (g_FontImage)            { vkDestroyImage(g_Device, g_FontImage, g_Allocator); g_FontImage = VK_NULL_HANDLE; }
-    if (g_FontMemory)           { vkFreeMemory(g_Device, g_FontMemory, g_Allocator); g_FontMemory = VK_NULL_HANDLE; }
-    if (g_FontSampler)          { vkDestroySampler(g_Device, g_FontSampler, g_Allocator); g_FontSampler = VK_NULL_HANDLE; }
-    if (g_DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(g_Device, g_DescriptorSetLayout, g_Allocator); g_DescriptorSetLayout = VK_NULL_HANDLE; }
-    if (g_PipelineLayout)       { vkDestroyPipelineLayout(g_Device, g_PipelineLayout, g_Allocator); g_PipelineLayout = VK_NULL_HANDLE; }
-    if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
-}
-
-void ImGui_ImplVulkan_InvalidateFrameDeviceObjects()
+static void    ImGui_ImplVulkan_InvalidateFrameDeviceObjects()
 {
     for (int i = 0; i < g_FramesDataBuffers.Size; i++)
     {
@@ -751,6 +751,20 @@ void ImGui_ImplVulkan_InvalidateFrameDeviceObjects()
         if (fd->IndexBufferMemory)  { vkFreeMemory   (g_Device, fd->IndexBufferMemory,  g_Allocator); fd->IndexBufferMemory = VK_NULL_HANDLE; }
     }
     g_FramesDataBuffers.clear();
+}
+
+void    ImGui_ImplVulkan_InvalidateDeviceObjects()
+{
+    ImGui_ImplVulkan_InvalidateFrameDeviceObjects();
+    ImGui_ImplVulkan_InvalidateFontUploadObjects();
+
+    if (g_FontView)             { vkDestroyImageView(g_Device, g_FontView, g_Allocator); g_FontView = VK_NULL_HANDLE; }
+    if (g_FontImage)            { vkDestroyImage(g_Device, g_FontImage, g_Allocator); g_FontImage = VK_NULL_HANDLE; }
+    if (g_FontMemory)           { vkFreeMemory(g_Device, g_FontMemory, g_Allocator); g_FontMemory = VK_NULL_HANDLE; }
+    if (g_FontSampler)          { vkDestroySampler(g_Device, g_FontSampler, g_Allocator); g_FontSampler = VK_NULL_HANDLE; }
+    if (g_DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(g_Device, g_DescriptorSetLayout, g_Allocator); g_DescriptorSetLayout = VK_NULL_HANDLE; }
+    if (g_PipelineLayout)       { vkDestroyPipelineLayout(g_Device, g_PipelineLayout, g_Allocator); g_PipelineLayout = VK_NULL_HANDLE; }
+    if (g_Pipeline)             { vkDestroyPipeline(g_Device, g_Pipeline, g_Allocator); g_Pipeline = VK_NULL_HANDLE; }
 }
 
 bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass)
@@ -788,7 +802,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 
 void ImGui_ImplVulkan_Shutdown()
 {
-    ImGui_ImplVulkan_InvalidateFrameDeviceObjects();
     ImGui_ImplVulkan_InvalidateDeviceObjects();
 }
 
@@ -811,6 +824,7 @@ void ImGui_ImplVulkan_SetFramesQueueSize(int frames_queue_size)
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
+// (Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own app.)
 //-------------------------------------------------------------------------
 // You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
@@ -818,9 +832,10 @@ void ImGui_ImplVulkan_SetFramesQueueSize(int frames_queue_size)
 //   2) the upcoming multi-viewport feature will need them internally.
 // Generally we avoid exposing any kind of superfluous high-level helpers in the bindings,
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
-// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+//
+// Your application/engine will likely _already_ have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
 // You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
-// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
+// (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
 #include <stdlib.h> // malloc
@@ -917,7 +932,7 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
     return VK_PRESENT_MODE_FIFO_KHR; // Always available
 }
 
-void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator)
+void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator)
 {
     IM_ASSERT(physical_device != VK_NULL_HANDLE && device != VK_NULL_HANDLE);
     (void)physical_device;
@@ -975,7 +990,7 @@ int ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_m
     return 1;
 }
 
-void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count)
+void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = wd->Swapchain;
@@ -1124,6 +1139,12 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice 
             check_vk_result(err);
         }
     }
+}
+
+void ImGui_ImplVulkanH_CreateWindowData(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int width, int height, uint32_t min_image_count)
+{
+    ImGui_ImplVulkanH_CreateWindowDataSwapChain(physical_device, device, wd, allocator, width, height, min_image_count);
+    ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(physical_device, device, wd, queue_family, allocator);
 }
 
 void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator)

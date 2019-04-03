@@ -15,8 +15,6 @@
 
 #include <vulkan/vulkan.h>
 
-//#define IMGUI_VK_QUEUED_FRAMES      2
-
 // Please zero-clear before use.
 struct ImGui_ImplVulkan_InitInfo
 {
@@ -41,15 +39,14 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, V
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
 
-// Called by ImGui_ImplVulkan_Init() might be useful elsewhere.
+// Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFrameDeviceObjects();
 
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
-// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
+// (Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own app.)
 //-------------------------------------------------------------------------
 // You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
@@ -57,18 +54,17 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFrameDeviceObjects();
 //   2) the upcoming multi-viewport feature will need them internally.
 // Generally we avoid exposing any kind of superfluous high-level helpers in the bindings,
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
-// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+//
+// Your application/engine will likely _already_ have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
 // You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
-// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
+// (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
 struct ImGui_ImplVulkanH_FrameData;
 struct ImGui_ImplVulkanH_WindowData;
 
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowData(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
 IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyFrameData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_FrameData* fd, const VkAllocationCallbacks* allocator);
 IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
