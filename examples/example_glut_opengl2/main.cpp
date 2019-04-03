@@ -1,11 +1,11 @@
-// dear imgui: standalone example application for FreeGLUT + OpenGL2, using legacy fixed pipeline
+// dear imgui: standalone example application for GLUT + OpenGL2, using legacy fixed pipeline
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 // !!! GLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
 // !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
 
 #include "imgui.h"
-#include "../imgui_impl_freeglut.h"
+#include "../imgui_impl_glut.h"
 #include "../imgui_impl_opengl2.h"
 #ifdef __APPLE__
     #include <GLUT/glut.h>
@@ -65,7 +65,7 @@ void glut_display_func()
 {
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL2_NewFrame();
-    ImGui_ImplFreeGLUT_NewFrame();
+    ImGui_ImplGLUT_NewFrame();
 
     my_display_code();
 
@@ -96,11 +96,11 @@ int main(int argc, char** argv)
 #endif
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
     glutInitWindowSize(1280, 720);
-    glutCreateWindow("Dear ImGui FreeGLUT+OpenGL2 Example");
+    glutCreateWindow("Dear ImGui GLUT+OpenGL2 Example");
 
     // Setup GLUT display function
-    // We will also call ImGui_ImplFreeGLUT_InstallFuncs() to get all the other functions installed for us,
-    // otherwise it is possible to install our own functions and call the imgui_impl_freeglut.h functions ourselves.
+    // We will also call ImGui_ImplGLUT_InstallFuncs() to get all the other functions installed for us,
+    // otherwise it is possible to install our own functions and call the imgui_impl_glut.h functions ourselves.
     glutDisplayFunc(glut_display_func);
 
     // Setup Dear ImGui context
@@ -113,8 +113,8 @@ int main(int argc, char** argv)
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplFreeGLUT_Init();
-    ImGui_ImplFreeGLUT_InstallFuncs();
+    ImGui_ImplGLUT_Init();
+    ImGui_ImplGLUT_InstallFuncs();
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
@@ -136,7 +136,7 @@ int main(int argc, char** argv)
 
     // Cleanup
     ImGui_ImplOpenGL2_Shutdown();
-    ImGui_ImplFreeGLUT_Shutdown();
+    ImGui_ImplGLUT_Shutdown();
     ImGui::DestroyContext();
 
     return 0;
