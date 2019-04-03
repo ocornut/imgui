@@ -46,6 +46,7 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
 //-------------------------------------------------------------------------
 // You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
@@ -69,6 +70,7 @@ IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysic
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 // Helper structure to hold the data needed by one rendering frame
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
 struct ImGui_ImplVulkanH_FrameData
 {
     uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
@@ -82,6 +84,7 @@ struct ImGui_ImplVulkanH_FrameData
 };
 
 // Helper structure to hold the data needed by one rendering context into one OS window
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
 struct ImGui_ImplVulkanH_WindowData
 {
     int                 Width;
