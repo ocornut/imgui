@@ -38,6 +38,7 @@ Breaking Changes:
 Other Changes:
 - InputText: Fixed selection background starts rendering one frame after the cursor movement
   when first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
+- InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
