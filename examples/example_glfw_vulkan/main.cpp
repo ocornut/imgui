@@ -214,7 +214,7 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
     // Create SwapChain, RenderPass, Framebuffer, etc.
     ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, width, height, g_MinImageCount);
     ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
-    IM_ASSERT(wd->BackBufferCount > 0);
+    IM_ASSERT(wd->FramesQueueSize >= 2);
 }
 
 static void CleanupVulkan()
@@ -262,7 +262,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = wd->RenderPass;
-        info.framebuffer = wd->Framebuffer[wd->FrameIndex];
+        info.framebuffer = fd->Framebuffer;
         info.renderArea.extent.width = wd->Width;
         info.renderArea.extent.height = wd->Height;
         info.clearValueCount = 1;
@@ -374,7 +374,7 @@ int main(int, char**)
     init_info.PipelineCache = g_PipelineCache;
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
-    init_info.QueuedFramesCount = (int)wd->BackBufferCount;
+    init_info.FramesQueueSize = wd->FramesQueueSize;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
@@ -440,7 +440,7 @@ int main(int, char**)
         {
             ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, g_ResizeWidth, g_ResizeHeight, g_MinImageCount);
             ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, &g_WindowData, g_Allocator);
-            ImGui_ImplVulkan_SetQueuedFramesCount(g_WindowData.BackBufferCount);
+            ImGui_ImplVulkan_SetFramesQueueSize(g_WindowData.FramesQueueSize);
             g_WindowData.FrameIndex = 0;
             g_WantSwapChainRebuild = false;
         }

@@ -27,7 +27,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkQueue                         Queue;
     VkPipelineCache                 PipelineCache;
     VkDescriptorPool                DescriptorPool;
-    int                             QueuedFramesCount;
+    int                             FramesQueueSize;        // >= 2, generally matches the image count returned by vkGetSwapchainImagesKHR
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
 };
@@ -36,7 +36,7 @@ struct ImGui_ImplVulkan_InitInfo
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_SetQueuedFramesCount(int queued_frames_count); // To override QueuedFramesCount after initialization
+IMGUI_IMPL_API void     ImGui_ImplVulkan_SetFramesQueueSize(int frames_queue_size); // To override FramesQueueSize after initialization
 IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
@@ -77,12 +77,14 @@ IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresen
 // (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
 struct ImGui_ImplVulkanH_FrameData
 {
-    uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
     VkFence             Fence;
     VkSemaphore         ImageAcquiredSemaphore;
     VkSemaphore         RenderCompleteSemaphore;
+    VkImage             BackBuffer;
+    VkImageView         BackBufferView;
+    VkFramebuffer       Framebuffer;
 
     IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
 };
@@ -100,11 +102,8 @@ struct ImGui_ImplVulkanH_WindowData
     VkRenderPass        RenderPass;
     bool                ClearEnable;
     VkClearValue        ClearValue;
-    uint32_t            BackBufferCount;
-    VkImage             BackBuffer[16];
-    VkImageView         BackBufferView[16];
-    VkFramebuffer       Framebuffer[16];
-    uint32_t            FrameIndex;
+    uint32_t            FramesQueueSize;            // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR)
+    uint32_t            FrameIndex;                 // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
     ImVector<ImGui_ImplVulkanH_FrameData> Frames;
 
     IMGUI_IMPL_API ImGui_ImplVulkanH_WindowData();

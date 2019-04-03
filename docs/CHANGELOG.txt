@@ -49,9 +49,9 @@ Other Changes:
 - Examples: OpenGL3: Minor tweaks + not calling glBindBuffer more than necessary in the render loop.
 - Examples: Vulkan: Added missing support for 32-bit indices (#define ImDrawIdx unsigned int).
 - Examples: Vulkan: Avoid passing negative coordinates to vkCmdSetScissor, which debug validation layers do not like.
-- Examples: Vulkan: Added QueuedFramesCount field in ImGui_ImplVulkan_InitInfo, required during
+- Examples: Vulkan: Added FramesQueueSize field in ImGui_ImplVulkan_InitInfo, required during
   initialization (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). (#2071) [@nathanvoglsam]
-  Added ImGui_ImplVulkan_SetQueuedFramesCount() to override QueuedFramesCount while running.
+  Added ImGui_ImplVulkan_SetFramesQueueSize() to override FramesQueueSize while running.
 - Examples: DirectX9: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects(). (#2454)
 - Examples: GLUT: Fixed existing FreeGLUT example to work with regular GLUT. (#2465) [@andrewwillmott]
 - Examples: GLUT: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h. (#2465) [@andrewwillmott]
