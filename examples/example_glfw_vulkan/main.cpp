@@ -1,6 +1,13 @@
 // dear imgui: standalone example application for Glfw + Vulkan
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 
+// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
+// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+//   You will use those if you want to use this rendering back-end in your engine/app.
+// - Helper ImGui_ImplVulkanH_XXXX functions and structures are only used by this example (main.cpp) and by 
+//   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
+// Read comments in imgui_impl_vulkan.h.
+
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_vulkan.h"
@@ -23,19 +30,21 @@
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
-static VkAllocationCallbacks*       g_Allocator = NULL;
-static VkInstance                   g_Instance = VK_NULL_HANDLE;
-static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
-static VkDevice                     g_Device = VK_NULL_HANDLE;
-static uint32_t                     g_QueueFamily = (uint32_t)-1;
-static VkQueue                      g_Queue = VK_NULL_HANDLE;
-static VkDebugReportCallbackEXT     g_DebugReport = VK_NULL_HANDLE;
-static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
-static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
+static VkAllocationCallbacks*   g_Allocator = NULL;
+static VkInstance               g_Instance = VK_NULL_HANDLE;
+static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
+static VkDevice                 g_Device = VK_NULL_HANDLE;
+static uint32_t                 g_QueueFamily = (uint32_t)-1;
+static VkQueue                  g_Queue = VK_NULL_HANDLE;
+static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
+static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
+static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-static ImGui_ImplVulkanH_WindowData g_WindowData;
-static bool                         g_ResizeWanted = false;
-static int                          g_ResizeWidth = 0, g_ResizeHeight = 0;
+static ImGui_ImplVulkanH_Window g_WindowData;
+static int                      g_MinImageCount = 2;
+static bool                     g_SwapChainRebuild = false;
+static int                      g_SwapChainResizeWidth = 0;
+static int                      g_SwapChainResizeHeight = 0;
 
 static void check_vk_result(VkResult err)
 {
@@ -107,6 +116,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
         uint32_t gpu_count;
         err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, NULL);
         check_vk_result(err);
+        IM_ASSERT(gpu_count > 0);
 
         VkPhysicalDevice* gpus = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
         err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, gpus);
@@ -183,7 +193,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
     }
 }
 
-static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR surface, int width, int height)
+static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
 
@@ -211,14 +221,12 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
     //printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
-    ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(g_PhysicalDevice, g_Device, g_QueueFamily, wd, g_Allocator);
-    ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, wd, g_Allocator, width, height);
+    IM_ASSERT(g_MinImageCount >= 2);
+    ImGui_ImplVulkanH_CreateWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
 }
 
 static void CleanupVulkan()
 {
-    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
-    ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -231,7 +239,16 @@ static void CleanupVulkan()
     vkDestroyInstance(g_Instance, g_Allocator);
 }
 
-static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
+static void CleanupVulkanWindow()
+{
+    // In a normal engine/app integration, you wouldn't use the ImGui_ImplVulkanH_Window helpers,
+    // however you would instead need to call ImGui_ImplVulkan_DestroyFrameRenderBuffers() on each 
+    // ImGui_ImplVulkan_FrameRenderBuffers structure that you own.
+    ImGui_ImplVulkanH_Window* wd = &g_WindowData;
+    ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, wd, g_Allocator);
+}
+
+static void FrameRender(ImGui_ImplVulkanH_Window* wd)
 {
     VkResult err;
 
@@ -239,7 +256,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
     err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
     check_vk_result(err);
 
-    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {
         err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
         check_vk_result(err);
@@ -260,7 +277,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
         VkRenderPassBeginInfo info = {};
         info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
         info.renderPass = wd->RenderPass;
-        info.framebuffer = wd->Framebuffer[wd->FrameIndex];
+        info.framebuffer = fd->Framebuffer;
         info.renderArea.extent.width = wd->Width;
         info.renderArea.extent.height = wd->Height;
         info.clearValueCount = 1;
@@ -269,7 +286,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
     }
 
     // Record Imgui Draw Data and draw funcs into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer, &fd->RenderBuffers);
 
     // Submit command buffer
     vkCmdEndRenderPass(fd->CommandBuffer);
@@ -292,9 +309,9 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
     }
 }
 
-static void FramePresent(ImGui_ImplVulkanH_WindowData* wd)
+static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
-    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
@@ -313,14 +330,14 @@ static void glfw_error_callback(int error, const char* description)
 
 static void glfw_resize_callback(GLFWwindow*, int w, int h)
 {
-    g_ResizeWanted = true;
-    g_ResizeWidth = w;
-    g_ResizeHeight = h;
+    g_SwapChainRebuild = true;
+    g_SwapChainResizeWidth = w;
+    g_SwapChainResizeHeight = h;
 }
 
 int main(int, char**)
 {
-    // Setup window
+    // Setup GLFW window
     glfwSetErrorCallback(glfw_error_callback);
     if (!glfwInit())
         return 1;
@@ -347,8 +364,8 @@ int main(int, char**)
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
     glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
-    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
-    SetupVulkanWindowData(wd, surface, w, h);
+    ImGui_ImplVulkanH_Window* wd = &g_WindowData;
+    SetupVulkanWindow(wd, surface, w, h);
 
     // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
@@ -384,6 +401,7 @@ int main(int, char**)
     init_info.PipelineCache = g_PipelineCache;
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
+    init_info.MinImageCount = g_MinImageCount;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
@@ -429,7 +447,7 @@ int main(int, char**)
 
         err = vkDeviceWaitIdle(g_Device);
         check_vk_result(err);
-        ImGui_ImplVulkan_InvalidateFontUploadObjects();
+        ImGui_ImplVulkan_DestroyFontUploadObjects();
     }
 
     bool show_demo_window = true;
@@ -445,10 +463,13 @@ int main(int, char**)
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
-        if (g_ResizeWanted)
+
+        if (g_SwapChainRebuild)
         {
-            ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(g_PhysicalDevice, g_Device, &g_WindowData, g_Allocator, g_ResizeWidth, g_ResizeHeight);
-            g_ResizeWanted = false;
+            g_SwapChainRebuild = false;
+            ImGui_ImplVulkanH_CreateWindow(g_Instance, g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
+            ImGui_ImplVulkan_SetSwapChainMinImageCount(g_MinImageCount);
+            g_WindowData.FrameIndex = 0;
         }
 
         // Start the Dear ImGui frame
@@ -514,6 +535,8 @@ int main(int, char**)
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
+
+    CleanupVulkanWindow();
     CleanupVulkan();
 
     glfwDestroyWindow(window);

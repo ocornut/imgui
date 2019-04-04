@@ -12,42 +12,65 @@
 // The aim of imgui_impl_vulkan.h/.cpp is to be usable in your engine without any modification.
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
+// Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
+// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+//   You will use those if you want to use this rendering back-end in your engine/app.
+// - Helper ImGui_ImplVulkanH_XXXX functions and structures are only used by this example (main.cpp) and by 
+//   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
+// Read comments in imgui_impl_vulkan.h.
+
 #pragma once
 
 #include <vulkan/vulkan.h>
 
-#define IMGUI_VK_QUEUED_FRAMES      2
-
-// Please zero-clear before use.
+// Initialization data, for ImGui_ImplVulkan_Init()
+// [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance                      Instance;
-    VkPhysicalDevice                PhysicalDevice;
-    VkDevice                        Device;
-    uint32_t                        QueueFamily;
-    VkQueue                         Queue;
-    VkPipelineCache                 PipelineCache;
-    VkDescriptorPool                DescriptorPool;
-    const VkAllocationCallbacks*    Allocator;
-    void                            (*CheckVkResultFn)(VkResult err);
+    VkInstance          Instance;
+    VkPhysicalDevice    PhysicalDevice;
+    VkDevice            Device;
+    uint32_t            QueueFamily;
+    VkQueue             Queue;
+    VkPipelineCache     PipelineCache;
+    VkDescriptorPool    DescriptorPool;
+    int                 MinImageCount;          // >= 2
+    const VkAllocationCallbacks* Allocator;
+    void                (*CheckVkResultFn)(VkResult err);
+};
+
+// Reusable buffers used for rendering by current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
+// [Please zero-clear before use!]
+// In the examples we store those in the helper ImGui_ImplVulkanH_FrameData structure, however as your own engine/app likely won't use the ImGui_Impl_VulkanH_XXXX helpers,
+// you are expected to hold on as many ImGui_ImplVulkan_FrameRenderBuffers structures on your side as you have in-flight frames (== init_info.FramesQueueSize)
+struct ImGui_ImplVulkan_FrameRenderBuffers
+{
+    VkDeviceMemory      VertexBufferMemory;
+    VkDeviceMemory      IndexBufferMemory;
+    VkDeviceSize        VertexBufferSize;
+    VkDeviceSize        IndexBufferSize;
+    VkBuffer            VertexBuffer;
+    VkBuffer            IndexBuffer;
 };
 
 // Called by user code
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* buffers);
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateFontUploadObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkInstance instance, VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int frames_queue_size); // To override MinImageCount after initialization
 
-// Called by ImGui_ImplVulkan_Init() might be useful elsewhere.
+// Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyDeviceObjects();
 
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
-// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
+// (Used by example's main.cpp. Used by multi-viewport features. PROBABLY NOT used by your own engine/app.)
 //-------------------------------------------------------------------------
 // You probably do NOT need to use or care about those functions.
 // Those functions only exist because:
@@ -55,38 +78,42 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_InvalidateDeviceObjects();
 //   2) the multi-viewport / platform window implementation needs them internally.
 // Generally we avoid exposing any kind of superfluous high-level helpers in the bindings,
 // but it is too much code to duplicate everywhere so we exceptionally expose them.
-// Your application/engine will likely already have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
+//
+// Your engine/app will likely _already_ have code to setup all that stuff (swap chain, render pass, frame buffers, etc.).
 // You may read this code to learn about Vulkan, but it is recommended you use you own custom tailored code to do equivalent work.
-// (those functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
+// (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
-struct ImGui_ImplVulkanH_FrameData;
-struct ImGui_ImplVulkanH_WindowData;
+struct ImGui_ImplVulkanH_Frame;
+struct ImGui_ImplVulkanH_Window;
 
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, uint32_t queue_family, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowDataSwapChainAndFramebuffer(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h);
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
+// Helpers
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wnd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wnd, const VkAllocationCallbacks* allocator);
 IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 // Helper structure to hold the data needed by one rendering frame
-// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
-struct ImGui_ImplVulkanH_FrameData
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
+// [Please zero-clear before use!]
+struct ImGui_ImplVulkanH_Frame
 {
-    uint32_t            BackbufferIndex;        // Keep track of recently rendered swapchain frame indices
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
     VkFence             Fence;
     VkSemaphore         ImageAcquiredSemaphore;
     VkSemaphore         RenderCompleteSemaphore;
-
-    IMGUI_IMPL_API ImGui_ImplVulkanH_FrameData();
+    VkImage             Backbuffer;
+    VkImageView         BackbufferView;
+    uint32_t            BackbufferCurrentIndex;
+    VkFramebuffer       Framebuffer;
+    ImGui_ImplVulkan_FrameRenderBuffers RenderBuffers;
 };
 
 // Helper structure to hold the data needed by one rendering context into one OS window
-// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
-struct ImGui_ImplVulkanH_WindowData
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
+struct ImGui_ImplVulkanH_Window
 {
     int                 Width;
     int                 Height;
@@ -97,13 +124,15 @@ struct ImGui_ImplVulkanH_WindowData
     VkRenderPass        RenderPass;
     bool                ClearEnable;
     VkClearValue        ClearValue;
-    uint32_t            BackBufferCount;
-    VkImage             BackBuffer[16];
-    VkImageView         BackBufferView[16];
-    VkFramebuffer       Framebuffer[16];
-    uint32_t            FrameIndex;
-    ImGui_ImplVulkanH_FrameData Frames[IMGUI_VK_QUEUED_FRAMES];
+    uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
+    uint32_t            FramesQueueSize;        // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
+    ImGui_ImplVulkanH_Frame* Frames;
 
-    IMGUI_IMPL_API ImGui_ImplVulkanH_WindowData();
+    ImGui_ImplVulkanH_Window() 
+    { 
+        memset(this, 0, sizeof(*this)); 
+        PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
+        ClearEnable = true;
+    }
 };
 
