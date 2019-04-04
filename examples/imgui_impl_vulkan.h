@@ -61,7 +61,7 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, V
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkInstance instance, VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
-IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int frames_queue_size); // To override MinImageCount after initialization
+IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int min_image_count); // To override MinImageCount after initialization
 
 // Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();

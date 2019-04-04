@@ -783,10 +783,12 @@ void ImGui_ImplVulkan_NewFrame()
 {
 }
 
-// FIXME-VIEWPORT: Need to recreate all swap chains?
 void ImGui_ImplVulkan_SetSwapChainMinImageCount(int min_image_count)
 {
     IM_ASSERT(min_image_count >= 2);
+    if (g_VulkanInitInfo.MinImageCount == min_image_count)
+        return;
+    IM_ASSERT(0); // FIXME-VIEWPORT: Need to recreate all swap chains?
     g_VulkanInitInfo.MinImageCount = min_image_count;
 }
 
