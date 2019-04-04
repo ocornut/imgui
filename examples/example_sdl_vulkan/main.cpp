@@ -22,19 +22,21 @@
 #define IMGUI_VULKAN_DEBUG_REPORT
 #endif
 
-static VkAllocationCallbacks*       g_Allocator = NULL;
-static VkInstance                   g_Instance = VK_NULL_HANDLE;
-static VkPhysicalDevice             g_PhysicalDevice = VK_NULL_HANDLE;
-static VkDevice                     g_Device = VK_NULL_HANDLE;
-static uint32_t                     g_QueueFamily = (uint32_t)-1;
-static VkQueue                      g_Queue = VK_NULL_HANDLE;
-static VkDebugReportCallbackEXT     g_DebugReport = VK_NULL_HANDLE;
-static VkPipelineCache              g_PipelineCache = VK_NULL_HANDLE;
-static VkDescriptorPool             g_DescriptorPool = VK_NULL_HANDLE;
+static VkAllocationCallbacks*   g_Allocator = NULL;
+static VkInstance               g_Instance = VK_NULL_HANDLE;
+static VkPhysicalDevice         g_PhysicalDevice = VK_NULL_HANDLE;
+static VkDevice                 g_Device = VK_NULL_HANDLE;
+static uint32_t                 g_QueueFamily = (uint32_t)-1;
+static VkQueue                  g_Queue = VK_NULL_HANDLE;
+static VkDebugReportCallbackEXT g_DebugReport = VK_NULL_HANDLE;
+static VkPipelineCache          g_PipelineCache = VK_NULL_HANDLE;
+static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
-static ImGui_ImplVulkanH_WindowData g_WindowData;
-static uint32_t                     g_MinImageCount = 2;
-static bool                         g_WantSwapChainRebuild = false;
+static ImGui_ImplVulkanH_Window g_WindowData;
+static uint32_t                 g_MinImageCount = 2;
+static bool                     g_SwapChainRebuild = false;
+static int                      g_SwapChainResizeWidth = 0;
+static int                      g_SwapChainResizeHeight = 0;
 
 static void check_vk_result(VkResult err)
 {
@@ -183,7 +185,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
     }
 }
 
-static void SetupVulkanWindow(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR surface, int width, int height)
+static void SetupVulkanWindow(ImGui_ImplVulkanH_Window* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
 
@@ -211,8 +213,8 @@ static void SetupVulkanWindow(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR sur
     //printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
-    ImGui_ImplVulkanH_CreateWindowData(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
-    IM_ASSERT(wd->FramesQueueSize >= 2);
+    IM_ASSERT(g_MinImageCount >= 2);
+    ImGui_ImplVulkanH_CreateWindow(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
 }
 
 static void CleanupVulkan()
@@ -231,14 +233,14 @@ static void CleanupVulkan()
 
 static void CleanupVulkanWindow()
 {
-    // In a normal engine/app integration, you wouldn't use the ImGui_ImplVulkanH_WindowData helpers,
+    // In a normal engine/app integration, you wouldn't use the ImGui_ImplVulkanH_Window helpers,
     // however you would instead need to call ImGui_ImplVulkan_DestroyFrameRenderBuffers() on each 
     // ImGui_ImplVulkan_FrameRenderBuffers structure that you own.
-    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
-    ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
+    ImGui_ImplVulkanH_Window* wd = &g_WindowData;
+    ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, wd, g_Allocator);
 }
 
-static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
+static void FrameRender(ImGui_ImplVulkanH_Window* wd)
 {
     VkResult err;
 
@@ -246,7 +248,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
     err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
     check_vk_result(err);
 
-    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {
         err = vkWaitForFences(g_Device, 1, &fd->Fence, VK_TRUE, UINT64_MAX);    // wait indefinitely instead of periodically checking
         check_vk_result(err);
@@ -299,9 +301,9 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
     }
 }
 
-static void FramePresent(ImGui_ImplVulkanH_WindowData* wd)
+static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
-    ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
@@ -348,7 +350,7 @@ int main(int, char**)
     // Create Framebuffers
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
-    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkanH_Window* wd = &g_WindowData;
     SetupVulkanWindow(wd, surface, w, h);
 
     // Setup Dear ImGui context
@@ -441,18 +443,18 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window))
             {
-                g_WindowData.Width = (int)event.window.data1;
-                g_WindowData.Height = (int)event.window.data2;
-                g_WantSwapChainRebuild = true;
+                g_SwapChainResizeWidth = (int)event.window.data1;
+                g_SwapChainResizeHeight = (int)event.window.data2;
+                g_SwapChainRebuild = true;
             }
         }
 
-        if (g_WantSwapChainRebuild)
+        if (g_SwapChainRebuild)
         {
-            ImGui_ImplVulkanH_CreateWindowData(g_Instance, g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_WindowData.Width, g_WindowData.Height, g_MinImageCount);
+            g_SwapChainRebuild = false;
+            ImGui_ImplVulkanH_CreateWindow(g_Instance, g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
             ImGui_ImplVulkan_SetSwapChainMinImageCount(g_MinImageCount);
             g_WindowData.FrameIndex = 0;
-            g_WantSwapChainRebuild = false;
         }
 
         // Start the Dear ImGui frame

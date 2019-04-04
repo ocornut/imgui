@@ -20,9 +20,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2019-XX-XX: *BREAKING CHANGE*: Vulkan: Added extra parameter to ImGui_ImplVulkan_RenderDrawData(). Engine/app is in charge of owning/storing 1 ImGui_ImplVulkan_FrameRenderBuffers per in-flight rendering frame. (The demo helper ImGui_ImplVulkanH_WindowData structure carries them.)
+//  2019-XX-XX: *BREAKING CHANGE*: Vulkan: Added extra parameter to ImGui_ImplVulkan_RenderDrawData(). Engine/app is in charge of owning/storing 1 ImGui_ImplVulkan_FrameRenderBuffers per in-flight rendering frame. (The demo helper ImGui_ImplVulkanH_Window structure carries them.)
 //  2019-XX-XX: *BREAKING CHANGE*: Vulkan: Added MinImageCount field in ImGui_ImplVulkan_InitInfo, required for initialization (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). Added ImGui_ImplVulkan_SetSwapChainMinImageCount().
-//  2019-XX-XX: Vulkan: Added VkInstance argument to ImGui_ImplVulkanH_CreateWindowData() optional helper.
+//  2019-XX-XX: Vulkan: Added VkInstance argument to ImGui_ImplVulkanH_CreateWindow() optional helper.
 //  2019-04-04: Vulkan: Avoid passing negative coordinates to vkCmdSetScissor, which debug validation layers do not like.
 //  2019-04-01: Vulkan: Support for 32-bit index buffer (#define ImDrawIdx unsigned int).
 //  2019-02-16: Vulkan: Viewport and clipping rectangles correctly using draw_data->FramebufferScale to allow retina display.
@@ -63,9 +63,9 @@ static VkDeviceMemory           g_UploadBufferMemory = VK_NULL_HANDLE;
 static VkBuffer                 g_UploadBuffer = VK_NULL_HANDLE;
 
 // Forward Declarations
-void ImGui_ImplVulkanH_DestroyFrameData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_FrameData* fd, const VkAllocationCallbacks* allocator);
-void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
-void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_DestroyFrame(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
 
 //-----------------------------------------------------------------------------
 // SHADERS
@@ -877,7 +877,7 @@ VkPresentModeKHR ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_d
     return VK_PRESENT_MODE_FIFO_KHR; // Always available
 }
 
-void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator)
+void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator)
 {
     IM_ASSERT(instance != VK_NULL_HANDLE && physical_device != VK_NULL_HANDLE && device != VK_NULL_HANDLE);
     (void)instance;
@@ -888,7 +888,7 @@ void ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(VkInstance instance, VkPhy
     VkResult err;
     for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
     {
-        ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
+        ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
         {
             VkCommandPoolCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -937,17 +937,17 @@ int ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_m
 }
 
 // Also destroy old swap chain and in-flight frames data, if any.
-void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count)
+void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count)
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = wd->Swapchain;
     err = vkDeviceWaitIdle(device);
     check_vk_result(err);
 
-    // We don't use ImGui_ImplVulkanH_DestroyWindowData() because we want to preserve the old swapchain to create the new one.
+    // We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
     // Destroy old Framebuffer
     for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
-        ImGui_ImplVulkanH_DestroyFrameData(instance, device, &wd->Frames[i], allocator);
+        ImGui_ImplVulkanH_DestroyFrame(instance, device, &wd->Frames[i], allocator);
     delete[] wd->Frames;
     wd->Frames = NULL;
     wd->FramesQueueSize = 0;
@@ -1003,7 +1003,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkInstance instance, VkPhysical
         check_vk_result(err);
 
         IM_ASSERT(wd->Frames == NULL);
-        wd->Frames = new ImGui_ImplVulkanH_FrameData[wd->FramesQueueSize];
+        wd->Frames = new ImGui_ImplVulkanH_Frame[wd->FramesQueueSize];
         memset(wd->Frames, 0, sizeof(wd->Frames[0]) * wd->FramesQueueSize);
         for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
             wd->Frames[i].Backbuffer = backbuffers[i];
@@ -1062,7 +1062,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkInstance instance, VkPhysical
         info.subresourceRange = image_range;
         for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
         {
-            ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
+            ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
             info.image = fd->Backbuffer;
             err = vkCreateImageView(device, &info, allocator, &fd->BackbufferView);
             check_vk_result(err);
@@ -1082,7 +1082,7 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkInstance instance, VkPhysical
         info.layers = 1;
         for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
         {
-            ImGui_ImplVulkanH_FrameData* fd = &wd->Frames[i];
+            ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
             attachment[0] = fd->BackbufferView;
             err = vkCreateFramebuffer(device, &info, allocator, &fd->Framebuffer);
             check_vk_result(err);
@@ -1090,29 +1090,29 @@ void ImGui_ImplVulkanH_CreateWindowDataSwapChain(VkInstance instance, VkPhysical
     }
 }
 
-void ImGui_ImplVulkanH_CreateWindowData(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int width, int height, uint32_t min_image_count)
+void ImGui_ImplVulkanH_CreateWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int width, int height, uint32_t min_image_count)
 {
-    ImGui_ImplVulkanH_CreateWindowDataSwapChain(instance, physical_device, device, wd, allocator, width, height, min_image_count);
-    ImGui_ImplVulkanH_CreateWindowDataCommandBuffers(instance, physical_device, device, wd, queue_family, allocator);
+    ImGui_ImplVulkanH_CreateWindowSwapChain(instance, physical_device, device, wd, allocator, width, height, min_image_count);
+    ImGui_ImplVulkanH_CreateWindowCommandBuffers(instance, physical_device, device, wd, queue_family, allocator);
 }
 
-void ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator)
+void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator)
 {
     vkDeviceWaitIdle(device); // FIXME: We could wait on the Queue if we had the queue in wd-> (otherwise VulkanH functions can't use globals)
     //vkQueueWaitIdle(g_Queue);
 
     for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
-        ImGui_ImplVulkanH_DestroyFrameData(instance, device, &wd->Frames[i], allocator);
+        ImGui_ImplVulkanH_DestroyFrame(instance, device, &wd->Frames[i], allocator);
     delete[] wd->Frames;
     wd->Frames = NULL;
     vkDestroyRenderPass(device, wd->RenderPass, allocator);
     vkDestroySwapchainKHR(device, wd->Swapchain, allocator);
     vkDestroySurfaceKHR(instance, wd->Surface, allocator);
 
-    *wd = ImGui_ImplVulkanH_WindowData();
+    *wd = ImGui_ImplVulkanH_Window();
 }
 
-void ImGui_ImplVulkanH_DestroyFrameData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_FrameData* fd, const VkAllocationCallbacks* allocator)
+void ImGui_ImplVulkanH_DestroyFrame(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator)
 {
     (void)instance;
     vkDestroyFence(device, fd->Fence, allocator);

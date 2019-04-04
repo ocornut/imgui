@@ -26,16 +26,16 @@
 // [Please zero-clear before use!]
 struct ImGui_ImplVulkan_InitInfo
 {
-    VkInstance                      Instance;
-    VkPhysicalDevice                PhysicalDevice;
-    VkDevice                        Device;
-    uint32_t                        QueueFamily;
-    VkQueue                         Queue;
-    VkPipelineCache                 PipelineCache;
-    VkDescriptorPool                DescriptorPool;
-    int                             MinImageCount;      // >= 2
-    const VkAllocationCallbacks*    Allocator;
-    void                            (*CheckVkResultFn)(VkResult err);
+    VkInstance          Instance;
+    VkPhysicalDevice    PhysicalDevice;
+    VkDevice            Device;
+    uint32_t            QueueFamily;
+    VkQueue             Queue;
+    VkPipelineCache     PipelineCache;
+    VkDescriptorPool    DescriptorPool;
+    int                 MinImageCount;          // >= 2
+    const VkAllocationCallbacks* Allocator;
+    void                (*CheckVkResultFn)(VkResult err);
 };
 
 // Reusable buffers used for rendering by current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
@@ -83,19 +83,20 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyDeviceObjects();
 // (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
-struct ImGui_ImplVulkanH_FrameData;
-struct ImGui_ImplVulkanH_WindowData;
+struct ImGui_ImplVulkanH_Frame;
+struct ImGui_ImplVulkanH_Window;
 
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindowData(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
-IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindowData(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_WindowData* wd, const VkAllocationCallbacks* allocator);
+// Helpers
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_CreateWindow(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wnd, uint32_t queue_family, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
+IMGUI_IMPL_API void                 ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Window* wnd, const VkAllocationCallbacks* allocator);
 IMGUI_IMPL_API VkSurfaceFormatKHR   ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space);
 IMGUI_IMPL_API VkPresentModeKHR     ImGui_ImplVulkanH_SelectPresentMode(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkPresentModeKHR* request_modes, int request_modes_count);
 IMGUI_IMPL_API int                  ImGui_ImplVulkanH_GetMinImageCountFromPresentMode(VkPresentModeKHR present_mode);
 
 // Helper structure to hold the data needed by one rendering frame
-// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
 // [Please zero-clear before use!]
-struct ImGui_ImplVulkanH_FrameData
+struct ImGui_ImplVulkanH_Frame
 {
     VkCommandPool       CommandPool;
     VkCommandBuffer     CommandBuffer;
@@ -109,8 +110,8 @@ struct ImGui_ImplVulkanH_FrameData
 };
 
 // Helper structure to hold the data needed by one rendering context into one OS window
-// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own app.)
-struct ImGui_ImplVulkanH_WindowData
+// (Used by example's main.cpp. Used by multi-viewport features. Probably NOT used by your own engine/app.)
+struct ImGui_ImplVulkanH_Window
 {
     int                 Width;
     int                 Height;
@@ -123,9 +124,9 @@ struct ImGui_ImplVulkanH_WindowData
     VkClearValue        ClearValue;
     uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
     uint32_t            FramesQueueSize;        // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
-    ImGui_ImplVulkanH_FrameData* Frames;
+    ImGui_ImplVulkanH_Frame* Frames;
 
-    ImGui_ImplVulkanH_WindowData() 
+    ImGui_ImplVulkanH_Window() 
     { 
         memset(this, 0, sizeof(*this)); 
         PresentMode = VK_PRESENT_MODE_MAX_ENUM_KHR;
