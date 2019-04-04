@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-04-04: Vulkan: Avoid passing negative coordinates to vkCmdSetScissor, which debug validation layers do not like.
 //  2019-04-01: Vulkan: Support for 32-bit index buffer (#define ImDrawIdx unsigned int).
 //  2019-02-16: Vulkan: Viewport and clipping rectangles correctly using draw_data->FramebufferScale to allow retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
@@ -347,6 +348,12 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
                 if (clip_rect.x < fb_width && clip_rect.y < fb_height && clip_rect.z >= 0.0f && clip_rect.w >= 0.0f)
                 {
+                    // Negative offsets are illegal for vkCmdSetScissor
+                    if (clip_rect.x < 0.0f)
+                        clip_rect.x = 0.0f;
+                    if (clip_rect.y < 0.0f)
+                        clip_rect.y = 0.0f;
+
                     // Apply scissor/clipping rectangle
                     VkRect2D scissor;
                     scissor.offset.x = (int32_t)(clip_rect.x);
