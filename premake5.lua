@@ -37,39 +37,30 @@ project "imgui"
 	filter "system:windows"
     systemversion "latest"
     cppdialect "C++17"
-    staticruntime "On"
+    staticruntime "on"
     
     defines "IM_PLATFORM_WINDOWS"
 
   filter "system:linux"
     systemversion "latest"
     cppdialect "C++17"
-    staticruntime "On"
-    pic "On"
+    staticruntime "on"
+    pic "on"
 
   filter "system:macosx"
     systemversion "latest"
     cppdialect "C++17"
-    staticruntime "On"
+    staticruntime "on"
 
-    filter { "system:windows", "configurations:Release" }
-        buildoptions "/MT"
-        
- filter "configurations:Debug*"
-    defines "IM_CONFIG_DEBUG"
+  filter "configurations:Debug*"
     runtime "Debug"
-    symbols "On"
+    symbols "on"
 
   filter "configurations:Release*"
-    defines "IM_CONFIG_RELEASE"
     runtime "Release"
-    optimize "On"
+    symbols "on"
+    optimize "on"
 
   filter "configurations:Dist*"
-    defines 
-    {
-      "IM_CONFIG_DIST",
-      "IM_DISABLE_ASSERTS"
-    }
     runtime "Release"
-    optimize "On"
+    optimize "on"
