@@ -106,7 +106,6 @@ struct ImGui_ImplVulkanH_Frame
     VkSemaphore         RenderCompleteSemaphore;
     VkImage             Backbuffer;
     VkImageView         BackbufferView;
-    uint32_t            BackbufferCurrentIndex;
     VkFramebuffer       Framebuffer;
     ImGui_ImplVulkan_FrameRenderBuffers RenderBuffers;
 };

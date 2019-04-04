@@ -783,7 +783,7 @@ void ImGui_ImplVulkan_NewFrame()
 {
 }
 
-// Note: this has no effect in the 'master' branch, but multi-viewports needs this to recreate swap-chains.
+// FIXME-VIEWPORT: Need to recreate all swap chains?
 void ImGui_ImplVulkan_SetSwapChainMinImageCount(int min_image_count)
 {
     IM_ASSERT(min_image_count >= 2);
@@ -1225,8 +1225,8 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
     VkResult err;
 
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     {
-        ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
         for (;;)
         {
             err = vkWaitForFences(v->Device, 1, &fd->Fence, VK_TRUE, 100);
@@ -1235,10 +1235,10 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             check_vk_result(err);
         }
         {
-            err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &fd->BackbufferCurrentIndex);
+            err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
             check_vk_result(err);
+            fd = &wd->Frames[wd->FrameIndex];
         }
-        IM_ASSERT(wd->FrameIndex == fd->BackbufferCurrentIndex); // FIXME
         {
             err = vkResetCommandPool(v->Device, fd->CommandPool, 0);
             check_vk_result(err);
@@ -1255,7 +1255,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             VkRenderPassBeginInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
             info.renderPass = wd->RenderPass;
-            info.framebuffer = wd->Frames[fd->BackbufferCurrentIndex].Framebuffer;
+            info.framebuffer = fd->Framebuffer;
             info.renderArea.extent.width = wd->Width;
             info.renderArea.extent.height = wd->Height;
             info.clearValueCount = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? 0 : 1;
@@ -1264,7 +1264,6 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
         }
     }
 
-    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
     ImGui_ImplVulkan_RenderDrawData(viewport->DrawData, fd->CommandBuffer, &fd->RenderBuffers);
 
     {
@@ -1298,19 +1297,20 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
 
     VkResult err;
-    uint32_t PresentIndex = wd->FrameIndex;
+    uint32_t present_index = wd->FrameIndex;
 
-    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[PresentIndex];
+    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[present_index];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
     info.pWaitSemaphores = &fd->RenderCompleteSemaphore;
     info.swapchainCount = 1;
     info.pSwapchains = &wd->Swapchain;
-    info.pImageIndices = &fd->BackbufferCurrentIndex;
+    info.pImageIndices = &present_index;
     err = vkQueuePresentKHR(v->Queue, &info);
     check_vk_result(err);
-    wd->FrameIndex = (wd->FrameIndex + 1) % wd->FramesQueueSize;
+
+    wd->FrameIndex = (wd->FrameIndex + 1) % wd->FramesQueueSize; // This is for the next vkWaitForFences()
 }
 
 void ImGui_ImplVulkan_InitPlatformInterface()
