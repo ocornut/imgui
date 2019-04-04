@@ -115,6 +115,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
         uint32_t gpu_count;
         err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, NULL);
         check_vk_result(err);
+        IM_ASSERT(gpu_count > 0);
 
         VkPhysicalDevice* gpus = (VkPhysicalDevice*)malloc(sizeof(VkPhysicalDevice) * gpu_count);
         err = vkEnumeratePhysicalDevices(g_Instance, &gpu_count, gpus);
@@ -219,7 +220,7 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
     //printf("[vulkan] Selected PresentMode = %d\n", wd->PresentMode);
 
     // Create SwapChain, RenderPass, Framebuffer, etc.
-    ImGui_ImplVulkanH_CreateWindowData(g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
+    ImGui_ImplVulkanH_CreateWindowData(g_Instance, g_PhysicalDevice, g_Device, wd, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
     IM_ASSERT(wd->FramesQueueSize >= 2);
 }
 
@@ -277,7 +278,7 @@ static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
     }
 
     // Record Imgui Draw Data and draw funcs into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer, &fd->RenderBuffers);
 
     // Submit command buffer
     vkCmdEndRenderPass(fd->CommandBuffer);
@@ -444,7 +445,7 @@ int main(int, char**)
         glfwPollEvents();
         if (g_WantSwapChainRebuild)
         {
-            ImGui_ImplVulkanH_CreateWindowData(g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_ResizeWidth, g_ResizeHeight, g_MinImageCount);
+            ImGui_ImplVulkanH_CreateWindowData(g_Instance, g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_ResizeWidth, g_ResizeHeight, g_MinImageCount);
             ImGui_ImplVulkan_SetFramesQueueSize(g_WindowData.FramesQueueSize);
             g_WindowData.FrameIndex = 0;
             g_WantSwapChainRebuild = false;
