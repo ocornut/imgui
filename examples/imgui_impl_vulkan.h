@@ -33,7 +33,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkQueue                         Queue;
     VkPipelineCache                 PipelineCache;
     VkDescriptorPool                DescriptorPool;
-    int                             FramesQueueSize;        // >= 2, generally matches the image count returned by vkGetSwapchainImagesKHR
+    int                             MinImageCount;      // >= 2
     const VkAllocationCallbacks*    Allocator;
     void                            (*CheckVkResultFn)(VkResult err);
 };
@@ -56,10 +56,11 @@ struct ImGui_ImplVulkan_FrameRenderBuffers
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_SetFramesQueueSize(int frames_queue_size); // To override FramesQueueSize after initialization
 IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* buffers);
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
+IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkInstance instance, VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int frames_queue_size); // To override MinImageCount after initialization
 
 // Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();

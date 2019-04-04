@@ -183,7 +183,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
     }
 }
 
-static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR surface, int width, int height)
+static void SetupVulkanWindow(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR surface, int width, int height)
 {
     wd->Surface = surface;
 
@@ -217,8 +217,6 @@ static void SetupVulkanWindowData(ImGui_ImplVulkanH_WindowData* wd, VkSurfaceKHR
 
 static void CleanupVulkan()
 {
-    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
-    ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
     vkDestroyDescriptorPool(g_Device, g_DescriptorPool, g_Allocator);
 
 #ifdef IMGUI_VULKAN_DEBUG_REPORT
@@ -229,6 +227,15 @@ static void CleanupVulkan()
 
     vkDestroyDevice(g_Device, g_Allocator);
     vkDestroyInstance(g_Instance, g_Allocator);
+}
+
+static void CleanupVulkanWindow()
+{
+    // In a normal engine/app integration, you wouldn't use the ImGui_ImplVulkanH_WindowData helpers,
+    // however you would instead need to call ImGui_ImplVulkan_DestroyFrameRenderBuffers() on each 
+    // ImGui_ImplVulkan_FrameRenderBuffers structure that you own.
+    ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
+    ImGui_ImplVulkanH_DestroyWindowData(g_Instance, g_Device, wd, g_Allocator);
 }
 
 static void FrameRender(ImGui_ImplVulkanH_WindowData* wd)
@@ -342,7 +349,7 @@ int main(int, char**)
     int w, h;
     SDL_GetWindowSize(window, &w, &h);
     ImGui_ImplVulkanH_WindowData* wd = &g_WindowData;
-    SetupVulkanWindowData(wd, surface, w, h);
+    SetupVulkanWindow(wd, surface, w, h);
 
     // Setup Dear ImGui context
     ImGui::CreateContext();
@@ -364,7 +371,7 @@ int main(int, char**)
     init_info.PipelineCache = g_PipelineCache;
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
-    init_info.FramesQueueSize = wd->FramesQueueSize;
+    init_info.MinImageCount = g_MinImageCount;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
@@ -443,7 +450,7 @@ int main(int, char**)
         if (g_WantSwapChainRebuild)
         {
             ImGui_ImplVulkanH_CreateWindowData(g_Instance, g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_WindowData.Width, g_WindowData.Height, g_MinImageCount);
-            ImGui_ImplVulkan_SetFramesQueueSize(g_WindowData.FramesQueueSize);
+            ImGui_ImplVulkan_SetSwapChainMinImageCount(g_MinImageCount);
             g_WindowData.FrameIndex = 0;
             g_WantSwapChainRebuild = false;
         }
@@ -504,6 +511,8 @@ int main(int, char**)
     ImGui_ImplVulkan_Shutdown();
     ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
+
+    CleanupVulkanWindow();
     CleanupVulkan();
 
     SDL_DestroyWindow(window);

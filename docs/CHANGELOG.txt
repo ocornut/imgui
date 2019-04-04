@@ -37,8 +37,8 @@ Breaking Changes:
 - Examples: Vulkan: Added extra parameter to ImGui_ImplVulkan_RenderDrawData(). Engine/app is
   in charge of owning/storing 1 ImGui_ImplVulkan_FrameRenderBuffers per in-flight rendering frame.
   (The demo helper ImGui_ImplVulkanH_WindowData structure carries them.) (#2461, #2348, #2378, #2097)
-- Examples: Vulkan: Added FramesQueueSize field in ImGui_ImplVulkan_InitInfo, required during
-  initialization to specify the number of in-flight image required by the swap chain.
+- Examples: Vulkan: Added MinImageCount field in ImGui_ImplVulkan_InitInfo, required during
+  initialization to specify the number of in-flight image requested by swap chains.
   (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). (#2071, #1677) [@nathanvoglsam]
 
 
