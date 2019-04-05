@@ -252,7 +252,8 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd)
 {
     VkResult err;
 
-    VkSemaphore& image_acquired_semaphore  = wd->Frames[wd->FrameIndex].ImageAcquiredSemaphore;
+    VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
+    VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
     check_vk_result(err);
 
@@ -300,7 +301,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd)
         info.commandBufferCount = 1;
         info.pCommandBuffers = &fd->CommandBuffer;
         info.signalSemaphoreCount = 1;
-        info.pSignalSemaphores = &fd->RenderCompleteSemaphore;
+        info.pSignalSemaphores = &render_complete_semaphore;
 
         err = vkEndCommandBuffer(fd->CommandBuffer);
         check_vk_result(err);
@@ -311,11 +312,11 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd)
 
 static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
-    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_FrameSemaphores* fsd = &wd->FrameSemaphores[wd->SemaphoreIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores = &fd->RenderCompleteSemaphore;
+    info.pWaitSemaphores = &fsd->RenderCompleteSemaphore;
     info.swapchainCount = 1;
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &wd->FrameIndex;
@@ -501,6 +502,22 @@ int main(int, char**)
             ImGui::Text("counter = %d", counter);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("Min Image Count %d", g_MinImageCount);
+            ImGui::SameLine();
+            if (ImGui::SmallButton("+"))
+            {
+                g_MinImageCount += 1;
+                g_SwapChainRebuild = true;
+            }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("-"))
+            {
+                if (g_MinImageCount > 2)
+                {
+                    g_MinImageCount -= 1;
+                    g_SwapChainRebuild = true;
+                }
+            }
             ImGui::End();
         }
 
