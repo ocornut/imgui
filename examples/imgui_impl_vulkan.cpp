@@ -1217,7 +1217,7 @@ static void ImGui_ImplVulkan_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
         return;
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
     data->Window.ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
-    ImGui_ImplVulkanH_CreateWindowSwapChain(v->Instance, v->PhysicalDevice, v->Device, &data->Window, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount);
+    ImGui_ImplVulkanH_CreateWindow(v->Instance, v->PhysicalDevice, v->Device, &data->Window, v->QueueFamily, v->Allocator, (int)size.x, (int)size.y, v->MinImageCount);
 }
 
 static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
