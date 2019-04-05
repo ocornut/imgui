@@ -65,6 +65,17 @@ struct ImGui_ImplVulkanH_WindowRenderBuffers
     ImGui_ImplVulkanH_FrameRenderBuffers*   FrameRenderBuffers;
 };
 
+// For multi-viewport support
+struct ImGuiViewportDataVulkan
+{
+    bool                                    WindowOwned;
+    ImGui_ImplVulkanH_Window                Window;             // Used by secondary viewports only
+    ImGui_ImplVulkanH_WindowRenderBuffers   RenderBuffers;      // Used by all viewports
+
+    ImGuiViewportDataVulkan() { WindowOwned = false; memset(&RenderBuffers, 0, sizeof(RenderBuffers)); }
+    ~ImGuiViewportDataVulkan() { }
+};
+
 // Vulkan data
 static ImGui_ImplVulkan_InitInfo g_VulkanInitInfo = {};
 static VkRenderPass             g_RenderPass = VK_NULL_HANDLE;
@@ -83,14 +94,14 @@ static VkImageView              g_FontView = VK_NULL_HANDLE;
 static VkDeviceMemory           g_UploadBufferMemory = VK_NULL_HANDLE;
 static VkBuffer                 g_UploadBuffer = VK_NULL_HANDLE;
 
-// Render buffers
-static ImGui_ImplVulkanH_WindowRenderBuffers    g_MainWindowRenderBuffers;
-
 // Forward Declarations
+bool ImGui_ImplVulkan_CreateDeviceObjects();
+void ImGui_ImplVulkan_DestroyDeviceObjects();
 void ImGui_ImplVulkanH_DestroyFrame(VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkDevice device, ImGui_ImplVulkanH_FrameSemaphores* fsd, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkanH_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_DestroyWindowRenderBuffers(VkDevice device, ImGui_ImplVulkanH_WindowRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_DestroyAllViewportsRenderBuffers(VkDevice device, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
 void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
 
@@ -274,8 +285,10 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
 
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
 
-    // Allocate array to store enough vertex/index buffers
-    ImGui_ImplVulkanH_WindowRenderBuffers* wrb = &g_MainWindowRenderBuffers;
+    // Allocate array to store enough vertex/index buffers. Each unique viewport gets its own storage.
+    ImGuiViewportDataVulkan* viewport_renderer_data = (ImGuiViewportDataVulkan*)draw_data->OwnerViewport->RendererUserData;
+    IM_ASSERT(viewport_renderer_data != NULL);
+    ImGui_ImplVulkanH_WindowRenderBuffers* wrb = &viewport_renderer_data->RenderBuffers;
     if (wrb->FrameRenderBuffers == NULL)
     {
         wrb->Index = 0;
@@ -777,7 +790,7 @@ void    ImGui_ImplVulkan_DestroyFontUploadObjects()
 void    ImGui_ImplVulkan_DestroyDeviceObjects()
 {
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
-    ImGui_ImplVulkanH_DestroyWindowRenderBuffers(v->Device, &g_MainWindowRenderBuffers, v->Allocator);
+    ImGui_ImplVulkanH_DestroyAllViewportsRenderBuffers(v->Device, v->Allocator);
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 
     if (g_FontView)             { vkDestroyImageView(v->Device, g_FontView, v->Allocator); g_FontView = VK_NULL_HANDLE; }
@@ -809,6 +822,10 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     g_RenderPass = render_pass;
     ImGui_ImplVulkan_CreateDeviceObjects();
 
+    // Our render function expect RendererUserData to be storing the window render buffer we need (for the main viewport we won't use ->Window)
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataVulkan)();
+
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplVulkan_InitPlatformInterface();
 
@@ -830,11 +847,13 @@ void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
     IM_ASSERT(min_image_count >= 2);
     if (g_VulkanInitInfo.MinImageCount == min_image_count)
         return;
-    IM_ASSERT(0); // FIXME-VIEWPORT: Need to recreate all swap chains?
+
+    IM_ASSERT(0); // FIXME-VIEWPORT: Unsupported. Need to recreate all swap chains!
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
     VkResult err = vkDeviceWaitIdle(v->Device);
     check_vk_result(err);
-    ImGui_ImplVulkanH_DestroyWindowRenderBuffers(v->Device, &g_MainWindowRenderBuffers, v->Allocator);
+
+    ImGui_ImplVulkanH_DestroyAllViewportsRenderBuffers(v->Device, v->Allocator);
     g_VulkanInitInfo.MinImageCount = min_image_count;
 }
 
@@ -1211,22 +1230,19 @@ void ImGui_ImplVulkanH_DestroyWindowRenderBuffers(VkDevice device, ImGui_ImplVul
     buffers->Count = 0;
 }
 
+void ImGui_ImplVulkanH_DestroyAllViewportsRenderBuffers(VkDevice device, const VkAllocationCallbacks* allocator)
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int n = 0; n < platform_io.Viewports.Size; n++)
+        if (ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)platform_io.Viewports[n]->RendererUserData)
+            ImGui_ImplVulkanH_DestroyWindowRenderBuffers(device, &data->RenderBuffers, allocator);
+}
 
 //--------------------------------------------------------------------------------------------------------
 // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
 // This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
-// FIXME-PLATFORM: Vulkan support unfinished
-//--------------------------------------------------------------------------------------------------------
-
-struct ImGuiViewportDataVulkan
-{
-    ImGui_ImplVulkanH_Window Window;
-
-    ImGuiViewportDataVulkan() { }
-    ~ImGuiViewportDataVulkan() { }
-};
 
 static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
 {
@@ -1263,6 +1279,7 @@ static void ImGui_ImplVulkan_CreateWindow(ImGuiViewport* viewport)
     // Create SwapChain, RenderPass, Framebuffer, etc.
     wd->ClearEnable = (viewport->Flags & ImGuiViewportFlags_NoRendererClear) ? false : true;
     ImGui_ImplVulkanH_CreateWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, (int)viewport->Size.x, (int)viewport->Size.y, v->MinImageCount);
+    data->WindowOwned = true;
 }
 
 static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
@@ -1271,7 +1288,9 @@ static void ImGui_ImplVulkan_DestroyWindow(ImGuiViewport* viewport)
     if (ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData)
     {
         ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
-        ImGui_ImplVulkanH_DestroyWindow(v->Instance, v->Device, &data->Window, v->Allocator);
+        if (data->WindowOwned)
+            ImGui_ImplVulkanH_DestroyWindow(v->Instance, v->Device, &data->Window, v->Allocator);
+        ImGui_ImplVulkanH_DestroyWindowRenderBuffers(v->Device, &data->RenderBuffers, v->Allocator);
         IM_DELETE(data);
     }
     viewport->RendererUserData = NULL;
@@ -1380,7 +1399,7 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     err = vkQueuePresentKHR(v->Queue, &info);
     check_vk_result(err);
 
-    wd->FrameIndex = (wd->FrameIndex + 1) % wd->ImageCount; // This is for the next vkWaitForFences()
+    wd->FrameIndex = (wd->FrameIndex + 1) % wd->ImageCount;         // This is for the next vkWaitForFences()
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
 

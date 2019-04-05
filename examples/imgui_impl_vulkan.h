@@ -49,10 +49,6 @@ IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer comm
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
 
-// Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
-IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyDeviceObjects();
-
 
 //-------------------------------------------------------------------------
 // Internal / Miscellaneous Vulkan Helpers
