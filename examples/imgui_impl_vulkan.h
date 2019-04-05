@@ -33,7 +33,8 @@ struct ImGui_ImplVulkan_InitInfo
     VkQueue             Queue;
     VkPipelineCache     PipelineCache;
     VkDescriptorPool    DescriptorPool;
-    int                 MinImageCount;          // >= 2
+    uint32_t            MinImageCount;          // >= 2
+    uint32_t            ImageCount;             // >= MinImageCount
     const VkAllocationCallbacks* Allocator;
     void                (*CheckVkResultFn)(VkResult err);
 };
@@ -60,7 +61,7 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, V
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkInstance instance, VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
-IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int frames_queue_size); // To override MinImageCount after initialization
+IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int min_image_count); // To override MinImageCount after initialization
 
 // Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
@@ -127,12 +128,11 @@ struct ImGui_ImplVulkanH_Window
     bool                ClearEnable;
     VkClearValue        ClearValue;
     uint32_t            FrameIndex;             // Current frame being rendered to (0 <= FrameIndex < FrameInFlightCount)
-    uint32_t            FramesQueueSize;        // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
+    uint32_t            ImageCount;             // Number of simultaneous in-flight frames (returned by vkGetSwapchainImagesKHR, usually derived from min_image_count)
     uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
-    ImGui_ImplVulkanH_Frame* Frames;
-    ImGui_ImplVulkanH_FrameSemaphores* FrameSemaphores;
-
-
+    ImGui_ImplVulkanH_Frame*            Frames;
+    ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
+    
     ImGui_ImplVulkanH_Window() 
     { 
         memset(this, 0, sizeof(*this)); 

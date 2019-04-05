@@ -391,6 +391,7 @@ int main(int, char**)
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
     init_info.MinImageCount = g_MinImageCount;
+    init_info.ImageCount = wd->ImageCount;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 

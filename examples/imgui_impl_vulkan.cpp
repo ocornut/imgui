@@ -755,6 +755,7 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->Queue != VK_NULL_HANDLE);
     IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
     IM_ASSERT(info->MinImageCount >= 2);
+    IM_ASSERT(info->ImageCount >= info->MinImageCount);
     IM_ASSERT(render_pass != VK_NULL_HANDLE);
 
     g_VulkanInitInfo = *info;
@@ -887,7 +888,7 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkInstance instance, VkPhysica
 
     // Create Command Buffers
     VkResult err;
-    for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+    for (uint32_t i = 0; i < wd->ImageCount; i++)
     {
         ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
         ImGui_ImplVulkanH_FrameSemaphores* fsd = &wd->FrameSemaphores[i];
@@ -948,7 +949,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
 
     // We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
     // Destroy old Framebuffer
-    for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+    for (uint32_t i = 0; i < wd->ImageCount; i++)
     {
         ImGui_ImplVulkanH_DestroyFrame(instance, device, &wd->Frames[i], allocator);
         ImGui_ImplVulkanH_DestroyFrameSemaphores(instance, device, &wd->FrameSemaphores[i], allocator);
@@ -957,7 +958,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
     delete[] wd->FrameSemaphores;
     wd->Frames = NULL;
     wd->FrameSemaphores = NULL;
-    wd->FramesQueueSize = 0;
+    wd->ImageCount = 0;
     if (wd->RenderPass)
         vkDestroyRenderPass(device, wd->RenderPass, allocator);
 
@@ -1001,20 +1002,20 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
         }
         err = vkCreateSwapchainKHR(device, &info, allocator, &wd->Swapchain);
         check_vk_result(err);
-        err = vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->FramesQueueSize, NULL);
+        err = vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->ImageCount, NULL);
         check_vk_result(err);
         VkImage backbuffers[16] = {};
-        IM_ASSERT(wd->FramesQueueSize >= min_image_count);
-        IM_ASSERT(wd->FramesQueueSize < IM_ARRAYSIZE(backbuffers));
-        err = vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->FramesQueueSize, backbuffers);
+        IM_ASSERT(wd->ImageCount >= min_image_count);
+        IM_ASSERT(wd->ImageCount < IM_ARRAYSIZE(backbuffers));
+        err = vkGetSwapchainImagesKHR(device, wd->Swapchain, &wd->ImageCount, backbuffers);
         check_vk_result(err);
 
         IM_ASSERT(wd->Frames == NULL);
-        wd->Frames = new ImGui_ImplVulkanH_Frame[wd->FramesQueueSize];
-        wd->FrameSemaphores = new ImGui_ImplVulkanH_FrameSemaphores[wd->FramesQueueSize];
-        memset(wd->Frames, 0, sizeof(wd->Frames[0]) * wd->FramesQueueSize);
-        memset(wd->FrameSemaphores, 0, sizeof(wd->FrameSemaphores[0]) * wd->FramesQueueSize);
-        for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+        wd->Frames = new ImGui_ImplVulkanH_Frame[wd->ImageCount];
+        wd->FrameSemaphores = new ImGui_ImplVulkanH_FrameSemaphores[wd->ImageCount];
+        memset(wd->Frames, 0, sizeof(wd->Frames[0]) * wd->ImageCount);
+        memset(wd->FrameSemaphores, 0, sizeof(wd->FrameSemaphores[0]) * wd->ImageCount);
+        for (uint32_t i = 0; i < wd->ImageCount; i++)
             wd->Frames[i].Backbuffer = backbuffers[i];
     }
     if (old_swapchain)
@@ -1069,7 +1070,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
         info.components.a = VK_COMPONENT_SWIZZLE_A;
         VkImageSubresourceRange image_range = { VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1 };
         info.subresourceRange = image_range;
-        for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+        for (uint32_t i = 0; i < wd->ImageCount; i++)
         {
             ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
             info.image = fd->Backbuffer;
@@ -1089,7 +1090,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
         info.width = wd->Width;
         info.height = wd->Height;
         info.layers = 1;
-        for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+        for (uint32_t i = 0; i < wd->ImageCount; i++)
         {
             ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
             attachment[0] = fd->BackbufferView;
@@ -1110,7 +1111,7 @@ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui
     vkDeviceWaitIdle(device); // FIXME: We could wait on the Queue if we had the queue in wd-> (otherwise VulkanH functions can't use globals)
     //vkQueueWaitIdle(g_Queue);
 
-    for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+    for (uint32_t i = 0; i < wd->ImageCount; i++)
     {
         ImGui_ImplVulkanH_DestroyFrame(instance, device, &wd->Frames[i], allocator);
         ImGui_ImplVulkanH_DestroyFrameSemaphores(instance, device, &wd->FrameSemaphores[i], allocator);
