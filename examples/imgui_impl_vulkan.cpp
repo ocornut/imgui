@@ -12,9 +12,9 @@
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
 // Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
-// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+// - Common ImGui_ImplVulkan_XXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
 //   You will use those if you want to use this rendering back-end in your engine/app.
-// - Helper ImGui_ImplVulkanH_XXXX functions and structures are only used by this example (main.cpp) and by 
+// - Helper ImGui_ImplVulkanH_XXX functions and structures are only used by this example (main.cpp) and by 
 //   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
 // Read comments in imgui_impl_vulkan.h.
 
@@ -86,6 +86,8 @@ static VkBuffer                 g_UploadBuffer = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_WindowRenderBuffers    g_MainWindowRenderBuffers;
 
 // Forward Declarations
+bool ImGui_ImplVulkan_CreateDeviceObjects();
+void ImGui_ImplVulkan_DestroyDeviceObjects();
 void ImGui_ImplVulkanH_DestroyFrame(VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkDevice device, ImGui_ImplVulkanH_FrameSemaphores* fsd, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_DestroyFrameRenderBuffers(VkDevice device, ImGui_ImplVulkanH_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
@@ -230,7 +232,7 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     VkResult err;
     if (buffer != VK_NULL_HANDLE)
         vkDestroyBuffer(v->Device, buffer, v->Allocator);
-    if (buffer_memory)
+    if (buffer_memory != VK_NULL_HANDLE)
         vkFreeMemory(v->Device, buffer_memory, v->Allocator);
 
     VkDeviceSize vertex_buffer_size_aligned = ((new_size - 1) / g_BufferMemoryAlignment + 1) * g_BufferMemoryAlignment;
@@ -275,7 +277,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     {
         wrb->Index = 0;
         wrb->Count = v->ImageCount;
-        wrb->FrameRenderBuffers = new ImGui_ImplVulkanH_FrameRenderBuffers[wrb->Count];
+        wrb->FrameRenderBuffers = (ImGui_ImplVulkanH_FrameRenderBuffers*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_FrameRenderBuffers) * wrb->Count);
         memset(wrb->FrameRenderBuffers, 0, sizeof(ImGui_ImplVulkanH_FrameRenderBuffers) * wrb->Count);
     }
     IM_ASSERT(wrb->Count == v->ImageCount);
@@ -844,8 +846,6 @@ void ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count)
 // (The ImGui_ImplVulkanH_XXX functions do not interact with any of the state used by the regular ImGui_ImplVulkan_XXX functions)
 //-------------------------------------------------------------------------
 
-#include <stdlib.h> // malloc
-
 VkSurfaceFormatKHR ImGui_ImplVulkanH_SelectSurfaceFormat(VkPhysicalDevice physical_device, VkSurfaceKHR surface, const VkFormat* request_formats, int request_formats_count, VkColorSpaceKHR request_color_space)
 {
     IM_ASSERT(request_formats != NULL);
@@ -986,8 +986,8 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         ImGui_ImplVulkanH_DestroyFrame(device, &wd->Frames[i], allocator);
         ImGui_ImplVulkanH_DestroyFrameSemaphores(device, &wd->FrameSemaphores[i], allocator);
     }
-    delete[] wd->Frames;
-    delete[] wd->FrameSemaphores;
+    IM_FREE(wd->Frames);
+    IM_FREE(wd->FrameSemaphores);
     wd->Frames = NULL;
     wd->FrameSemaphores = NULL;
     wd->ImageCount = 0;
@@ -1043,8 +1043,8 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         check_vk_result(err);
 
         IM_ASSERT(wd->Frames == NULL);
-        wd->Frames = new ImGui_ImplVulkanH_Frame[wd->ImageCount];
-        wd->FrameSemaphores = new ImGui_ImplVulkanH_FrameSemaphores[wd->ImageCount];
+        wd->Frames = (ImGui_ImplVulkanH_Frame*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_Frame) * wd->ImageCount);
+        wd->FrameSemaphores = (ImGui_ImplVulkanH_FrameSemaphores*)IM_ALLOC(sizeof(ImGui_ImplVulkanH_FrameSemaphores) * wd->ImageCount);
         memset(wd->Frames, 0, sizeof(wd->Frames[0]) * wd->ImageCount);
         memset(wd->FrameSemaphores, 0, sizeof(wd->FrameSemaphores[0]) * wd->ImageCount);
         for (uint32_t i = 0; i < wd->ImageCount; i++)
@@ -1149,8 +1149,8 @@ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui
         ImGui_ImplVulkanH_DestroyFrame(device, &wd->Frames[i], allocator);
         ImGui_ImplVulkanH_DestroyFrameSemaphores(device, &wd->FrameSemaphores[i], allocator);
     }
-    delete[] wd->Frames;
-    delete[] wd->FrameSemaphores;
+    IM_FREE(wd->Frames);
+    IM_FREE(wd->FrameSemaphores);
     wd->Frames = NULL;
     wd->FrameSemaphores = NULL;
     vkDestroyRenderPass(device, wd->RenderPass, allocator);
@@ -1194,7 +1194,7 @@ void ImGui_ImplVulkanH_DestroyWindowRenderBuffers(VkDevice device, ImGui_ImplVul
 {
     for (uint32_t n = 0; n < buffers->Count; n++)
         ImGui_ImplVulkanH_DestroyFrameRenderBuffers(device, &buffers->FrameRenderBuffers[n], allocator);
-    delete[] buffers->FrameRenderBuffers;
+    IM_FREE(buffers->FrameRenderBuffers);
     buffers->FrameRenderBuffers = NULL;
     buffers->Index = 0;
     buffers->Count = 0;

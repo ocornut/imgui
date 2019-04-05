@@ -12,9 +12,9 @@
 // IF YOU FEEL YOU NEED TO MAKE ANY CHANGE TO THIS CODE, please share them and your feedback at https://github.com/ocornut/imgui/
 
 // Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
-// - Common ImGui_ImplVulkan_XXXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
+// - Common ImGui_ImplVulkan_XXX functions and structures are used to interface with imgui_impl_vulkan.cpp/.h.
 //   You will use those if you want to use this rendering back-end in your engine/app.
-// - Helper ImGui_ImplVulkanH_XXXX functions and structures are only used by this example (main.cpp) and by 
+// - Helper ImGui_ImplVulkanH_XXX functions and structures are only used by this example (main.cpp) and by 
 //   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
 // Read comments in imgui_impl_vulkan.h.
 
@@ -47,10 +47,6 @@ IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, V
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
-
-// Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
-IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyDeviceObjects();
 
 
 //-------------------------------------------------------------------------
