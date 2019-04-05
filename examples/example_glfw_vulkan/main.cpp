@@ -287,7 +287,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd)
     }
 
     // Record Imgui Draw Data and draw funcs into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer, &fd->RenderBuffers);
+    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer);
 
     // Submit command buffer
     vkCmdEndRenderPass(fd->CommandBuffer);
@@ -403,6 +403,7 @@ int main(int, char**)
     init_info.DescriptorPool = g_DescriptorPool;
     init_info.Allocator = g_Allocator;
     init_info.MinImageCount = g_MinImageCount;
+    init_info.ImageCount = wd->ImageCount;
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
@@ -468,8 +469,8 @@ int main(int, char**)
         if (g_SwapChainRebuild)
         {
             g_SwapChainRebuild = false;
+            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
             ImGui_ImplVulkanH_CreateWindow(g_Instance, g_PhysicalDevice, g_Device, &g_WindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
-            ImGui_ImplVulkan_SetSwapChainMinImageCount(g_MinImageCount);
             g_WindowData.FrameIndex = 0;
         }
 
