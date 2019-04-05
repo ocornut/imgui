@@ -587,6 +587,7 @@ namespace ImGui
     IMGUI_API bool          BeginTabItem(const char* label, bool* p_open = NULL, ImGuiTabItemFlags flags = 0);// create a Tab. Returns true if the Tab is selected.
     IMGUI_API void          EndTabItem();                                                       // only call EndTabItem() if BeginTabItem() returns true!
     IMGUI_API void          SetTabItemClosed(const char* tab_or_docked_window_label);           // notify TabBar or Docking system of a closed tab/window ahead (useful to reduce visual flicker on reorderable tab bars). For tab-bar: call after BeginTabBar() and before Tab submissions. Otherwise call with a window name.
+    IMGUI_API void          SetTabItemSelected(const char* tab_or_docked_window_label);         // force a specific tab to be focused. Call between BeginTabBar and EndTabBar. Note: If trying to set a selected tab on the first render pass then you should call this after adding all the tabs instead of before otherwise it will fail.
 
     // Docking 
     // [BETA API] Enable with io.ConfigFlags |= ImGuiConfigFlags_DockingEnable.

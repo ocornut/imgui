@@ -6947,8 +6947,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     return tab_contents_visible;
 }
 
-// [Public] This is call is 100% optional but it allows to remove some one-frame glitches when a tab has been unexpectedly removed.
-// To use it to need to call the function SetTabItemClosed() after BeginTabBar() and before any call to BeginTabItem()
+// [Public] This is 100% optional but it allows to remove some one-frame glitches when a tab has been unexpectedly removed.
+// This function needs to be called after BeginTabBar() and before any call to BeginTabItem()
 void    ImGui::SetTabItemClosed(const char* label)
 {
     ImGuiContext& g = *GImGui;
@@ -6970,6 +6970,19 @@ void    ImGui::SetTabItemClosed(const char* label)
                 window->DockTabWantClose = true;
             }
     }
+}
+
+// [Public] This is 100% optional but can allow non-user control of selected tabs like setting focus when it first appears
+// This function needs to be called between BeginTabBar() and EndTabBar()
+// Due to how tabs are managed, if you call this before the tab exists then the action will get lost. This means
+// you need to add all the tabs first, then call this, which may cause the wrong tab to render on the first frame.
+// An easy way around this is only setup the tab headers but don't draw any tab content on the first frame until
+// the selected tab has been applied.
+void    ImGui::SetTabItemSelected(const char* label)
+{
+    ImGuiTabBar* tab_bar = GImGui->CurrentTabBar;
+    IM_ASSERT(tab_bar);
+    tab_bar->NextSelectedTabId = TabBarCalcTabID(tab_bar, label);
 }
 
 ImVec2 ImGui::TabItemCalcSize(const char* label, bool has_close_button)
