@@ -65,6 +65,7 @@ static VkBuffer                 g_UploadBuffer = VK_NULL_HANDLE;
 
 // Forward Declarations
 void ImGui_ImplVulkanH_DestroyFrame(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator);
+void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_FrameSemaphores* fsd, const VkAllocationCallbacks* allocator);
 void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, const VkAllocationCallbacks* allocator, int w, int h, uint32_t min_image_count);
 void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkInstance instance, VkPhysicalDevice physical_device, VkDevice device, ImGui_ImplVulkanH_Window* wd, uint32_t queue_family, const VkAllocationCallbacks* allocator);
 
@@ -902,6 +903,7 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkInstance instance, VkPhysica
     for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
     {
         ImGui_ImplVulkanH_Frame* fd = &wd->Frames[i];
+        ImGui_ImplVulkanH_FrameSemaphores* fsd = &wd->FrameSemaphores[i];
         {
             VkCommandPoolCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
@@ -929,9 +931,9 @@ void ImGui_ImplVulkanH_CreateWindowCommandBuffers(VkInstance instance, VkPhysica
         {
             VkSemaphoreCreateInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
-            err = vkCreateSemaphore(device, &info, allocator, &fd->ImageAcquiredSemaphore);
+            err = vkCreateSemaphore(device, &info, allocator, &fsd->ImageAcquiredSemaphore);
             check_vk_result(err);
-            err = vkCreateSemaphore(device, &info, allocator, &fd->RenderCompleteSemaphore);
+            err = vkCreateSemaphore(device, &info, allocator, &fsd->RenderCompleteSemaphore);
             check_vk_result(err);
         }
     }
@@ -960,9 +962,14 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
     // We don't use ImGui_ImplVulkanH_DestroyWindow() because we want to preserve the old swapchain to create the new one.
     // Destroy old Framebuffer
     for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+    {
         ImGui_ImplVulkanH_DestroyFrame(instance, device, &wd->Frames[i], allocator);
+        ImGui_ImplVulkanH_DestroyFrameSemaphores(instance, device, &wd->FrameSemaphores[i], allocator);
+    }
     delete[] wd->Frames;
+    delete[] wd->FrameSemaphores;
     wd->Frames = NULL;
+    wd->FrameSemaphores = NULL;
     wd->FramesQueueSize = 0;
     if (wd->RenderPass)
         vkDestroyRenderPass(device, wd->RenderPass, allocator);
@@ -1017,7 +1024,9 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkInstance instance, VkPhysicalDevi
 
         IM_ASSERT(wd->Frames == NULL);
         wd->Frames = new ImGui_ImplVulkanH_Frame[wd->FramesQueueSize];
+        wd->FrameSemaphores = new ImGui_ImplVulkanH_FrameSemaphores[wd->FramesQueueSize];
         memset(wd->Frames, 0, sizeof(wd->Frames[0]) * wd->FramesQueueSize);
+        memset(wd->FrameSemaphores, 0, sizeof(wd->FrameSemaphores[0]) * wd->FramesQueueSize);
         for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
             wd->Frames[i].Backbuffer = backbuffers[i];
     }
@@ -1115,14 +1124,27 @@ void ImGui_ImplVulkanH_DestroyWindow(VkInstance instance, VkDevice device, ImGui
     //vkQueueWaitIdle(g_Queue);
 
     for (uint32_t i = 0; i < wd->FramesQueueSize; i++)
+    {
         ImGui_ImplVulkanH_DestroyFrame(instance, device, &wd->Frames[i], allocator);
+        ImGui_ImplVulkanH_DestroyFrameSemaphores(instance, device, &wd->FrameSemaphores[i], allocator);
+    }
     delete[] wd->Frames;
+    delete[] wd->FrameSemaphores;
     wd->Frames = NULL;
+    wd->FrameSemaphores = NULL;
     vkDestroyRenderPass(device, wd->RenderPass, allocator);
     vkDestroySwapchainKHR(device, wd->Swapchain, allocator);
     vkDestroySurfaceKHR(instance, wd->Surface, allocator);
 
     *wd = ImGui_ImplVulkanH_Window();
+}
+
+void ImGui_ImplVulkanH_DestroyFrameSemaphores(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_FrameSemaphores* fsd, const VkAllocationCallbacks* allocator)
+{
+    (void)instance;
+    vkDestroySemaphore(device, fsd->ImageAcquiredSemaphore, allocator);
+    vkDestroySemaphore(device, fsd->RenderCompleteSemaphore, allocator);
+    fsd->ImageAcquiredSemaphore = fsd->RenderCompleteSemaphore = VK_NULL_HANDLE;
 }
 
 void ImGui_ImplVulkanH_DestroyFrame(VkInstance instance, VkDevice device, ImGui_ImplVulkanH_Frame* fd, const VkAllocationCallbacks* allocator)
@@ -1131,12 +1153,9 @@ void ImGui_ImplVulkanH_DestroyFrame(VkInstance instance, VkDevice device, ImGui_
     vkDestroyFence(device, fd->Fence, allocator);
     vkFreeCommandBuffers(device, fd->CommandPool, 1, &fd->CommandBuffer);
     vkDestroyCommandPool(device, fd->CommandPool, allocator);
-    vkDestroySemaphore(device, fd->ImageAcquiredSemaphore, allocator);
-    vkDestroySemaphore(device, fd->RenderCompleteSemaphore, allocator);
     fd->Fence = VK_NULL_HANDLE;
     fd->CommandBuffer = VK_NULL_HANDLE;
     fd->CommandPool = VK_NULL_HANDLE;
-    fd->ImageAcquiredSemaphore = fd->RenderCompleteSemaphore = VK_NULL_HANDLE;
 
     vkDestroyImageView(device, fd->BackbufferView, allocator);
     vkDestroyFramebuffer(device, fd->Framebuffer, allocator);
@@ -1228,6 +1247,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     VkResult err;
 
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
+    ImGui_ImplVulkanH_FrameSemaphores* fsd = &wd->FrameSemaphores[wd->SemaphoreIndex];
     {
         for (;;)
         {
@@ -1237,7 +1257,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             check_vk_result(err);
         }
         {
-            err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+            err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fsd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
             check_vk_result(err);
             fd = &wd->Frames[wd->FrameIndex];
         }
@@ -1275,12 +1295,12 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
             VkSubmitInfo info = {};
             info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
             info.waitSemaphoreCount = 1;
-            info.pWaitSemaphores = &fd->ImageAcquiredSemaphore;
+            info.pWaitSemaphores = &fsd->ImageAcquiredSemaphore;
             info.pWaitDstStageMask = &wait_stage;
             info.commandBufferCount = 1;
             info.pCommandBuffers = &fd->CommandBuffer;
             info.signalSemaphoreCount = 1;
-            info.pSignalSemaphores = &fd->RenderCompleteSemaphore;
+            info.pSignalSemaphores = &fsd->RenderCompleteSemaphore;
 
             err = vkEndCommandBuffer(fd->CommandBuffer);
             check_vk_result(err);
@@ -1301,11 +1321,11 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     VkResult err;
     uint32_t present_index = wd->FrameIndex;
 
-    ImGui_ImplVulkanH_Frame* fd = &wd->Frames[present_index];
+    ImGui_ImplVulkanH_FrameSemaphores* fsd = &wd->FrameSemaphores[wd->SemaphoreIndex];
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.waitSemaphoreCount = 1;
-    info.pWaitSemaphores = &fd->RenderCompleteSemaphore;
+    info.pWaitSemaphores = &fsd->RenderCompleteSemaphore;
     info.swapchainCount = 1;
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &present_index;
@@ -1313,6 +1333,7 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     check_vk_result(err);
 
     wd->FrameIndex = (wd->FrameIndex + 1) % wd->FramesQueueSize; // This is for the next vkWaitForFences()
+    wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->FramesQueueSize; // Now we can use the next set of semaphores
 }
 
 void ImGui_ImplVulkan_InitPlatformInterface()
