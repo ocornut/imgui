@@ -39,29 +39,14 @@ struct ImGui_ImplVulkan_InitInfo
     void                (*CheckVkResultFn)(VkResult err);
 };
 
-// Reusable buffers used for rendering by current in-flight frame, for ImGui_ImplVulkan_RenderDrawData()
-// [Please zero-clear before use!]
-// In the examples we store those in the helper ImGui_ImplVulkanH_FrameData structure, however as your own engine/app likely won't use the ImGui_Impl_VulkanH_XXXX helpers,
-// you are expected to hold on as many ImGui_ImplVulkan_FrameRenderBuffers structures on your side as you have in-flight frames (== init_info.FramesQueueSize)
-struct ImGui_ImplVulkan_FrameRenderBuffers
-{
-    VkDeviceMemory      VertexBufferMemory;
-    VkDeviceMemory      IndexBufferMemory;
-    VkDeviceSize        VertexBufferSize;
-    VkDeviceSize        IndexBufferSize;
-    VkBuffer            VertexBuffer;
-    VkBuffer            IndexBuffer;
-};
-
 // Called by user code
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass render_pass);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplVulkan_NewFrame();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer, ImGui_ImplVulkan_FrameRenderBuffers* buffers);
+IMGUI_IMPL_API void     ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer);
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer);
 IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFontUploadObjects();
-IMGUI_IMPL_API void     ImGui_ImplVulkan_DestroyFrameRenderBuffers(VkInstance instance, VkDevice device, ImGui_ImplVulkan_FrameRenderBuffers* buffers, const VkAllocationCallbacks* allocator);
-IMGUI_IMPL_API void     ImGui_ImplVulkan_SetSwapChainMinImageCount(int min_image_count); // To override MinImageCount after initialization
+IMGUI_IMPL_API void     ImGui_ImplVulkan_SetMinImageCount(uint32_t min_image_count); // To override MinImageCount after initialization (e.g. if swap chain is recreated)
 
 // Called by ImGui_ImplVulkan_Init(), might be useful elsewhere.
 IMGUI_IMPL_API bool     ImGui_ImplVulkan_CreateDeviceObjects();
@@ -105,7 +90,6 @@ struct ImGui_ImplVulkanH_Frame
     VkImage             Backbuffer;
     VkImageView         BackbufferView;
     VkFramebuffer       Framebuffer;
-    ImGui_ImplVulkan_FrameRenderBuffers RenderBuffers;
 };
 
 struct ImGui_ImplVulkanH_FrameSemaphores
@@ -132,7 +116,7 @@ struct ImGui_ImplVulkanH_Window
     uint32_t            SemaphoreIndex;         // Current set of swapchain wait semaphores we're using (needs to be distinct from per frame data)
     ImGui_ImplVulkanH_Frame*            Frames;
     ImGui_ImplVulkanH_FrameSemaphores*  FrameSemaphores;
-    
+
     ImGui_ImplVulkanH_Window() 
     { 
         memset(this, 0, sizeof(*this)); 

@@ -34,15 +34,11 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
-- Examples: Vulkan: Added extra parameter to ImGui_ImplVulkan_RenderDrawData(). Engine/app is
-  in charge of owning/storing 1 ImGui_ImplVulkan_FrameRenderBuffers per in-flight rendering frame.
-  (The demo helper ImGui_ImplVulkanH_Window structure carries them.) (#2461, #2348, #2378, #2097)
 - Examples: Vulkan: Added MinImageCount/ImageCount fields in ImGui_ImplVulkan_InitInfo, required
   during initialization to specify the number of in-flight image requested by swap chains.
   (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). (#2071, #1677) [@nathanvoglsam]
 - Examples: Vulkan: Tidying up the demo/internals helpers (most engine/app should not rely
   on them but it is possible you have!).
-
 
 Other Changes:
 - InputText: Fixed selection background starts rendering one frame after the cursor movement
@@ -56,8 +52,10 @@ Other Changes:
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
   GL function loaders early, and help users understand what they are missing. (#2421)
 - Examples: OpenGL3: Minor tweaks + not calling glBindBuffer more than necessary in the render loop.
+- Examples: Vulkan: Fixed in-flight buffers issues when using multi-viewports. (#2461, #2348, #2378, #2097)
 - Examples: Vulkan: Added missing support for 32-bit indices (#define ImDrawIdx unsigned int).
 - Examples: Vulkan: Avoid passing negative coordinates to vkCmdSetScissor, which debug validation layers do not like.
+- Examples: Vulkan: Added ImGui_ImplVulkan_SetMinImageCount() to change min image count at runtime. (#2071) [@nathanvoglsam]
 - Examples: DirectX9: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects(). (#2454)
 - Examples: GLUT: Fixed existing FreeGLUT example to work with regular GLUT. (#2465) [@andrewwillmott]
 - Examples: GLUT: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h. (#2465) [@andrewwillmott]
