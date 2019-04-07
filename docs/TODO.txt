@@ -34,6 +34,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - scrolling/style: shadows on scrollable areas to denote that there is more contents
 
  - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
+ - drawlist: add calctextsize func to facilitate consistent code from user pov
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
  - drawlist: primitives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
