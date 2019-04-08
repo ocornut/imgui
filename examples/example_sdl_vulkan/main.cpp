@@ -100,6 +100,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
         // Create Vulkan Instance without any debug feature
         err = vkCreateInstance(&create_info, g_Allocator, &g_Instance);
         check_vk_result(err);
+        IM_UNUSED(g_DebugReport);
 #endif
     }
 
@@ -134,7 +135,7 @@ static void SetupVulkan(const char** extensions, uint32_t extensions_count)
                 break;
             }
         free(queues);
-        IM_ASSERT(g_QueueFamily != -1);
+        IM_ASSERT(g_QueueFamily != (uint32_t)-1);
     }
 
     // Create Logical Device (with 1 queue)

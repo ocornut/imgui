@@ -15,40 +15,49 @@
 #CXX = clang++
 
 EXE = example_sdl_opengl2
-SOURCES = main.cpp ../imgui_impl_sdl.cpp ../imgui_impl_opengl2.cpp
+SOURCES = main.cpp
+SOURCES += ../imgui_impl_sdl.cpp ../imgui_impl_opengl2.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
-
 UNAME_S := $(shell uname -s)
 
+CXXFLAGS = -I../ -I../../
+CXXFLAGS += -g -Wall -Wformat
+LIBS =
+
+##---------------------------------------------------------------------
+## BUILD FLAGS PER PLATFORM
+##---------------------------------------------------------------------
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS = -lGL -ldl `sdl2-config --libs`
+	LIBS += -lGL -ldl `sdl2-config --libs`
 
-	CXXFLAGS = -I ../ -I../../  `sdl2-config --cflags`
-	CXXFLAGS += -Wall -Wformat
+	CXXFLAGS += `sdl2-config --cflags`
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	LIBS += -L/usr/local/lib -L/opt/local/lib
 
-	CXXFLAGS = -I ../ -I../../ -I/usr/local/include `sdl2-config --cflags`
-	CXXFLAGS += -Wall -Wformat
+	CXXFLAGS += `sdl2-config --cflags`
+	CXXFLAGS += -I/usr/local/include -I/opt/local/include
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
-   ECHO_MESSAGE = "Windows"
-   LIBS = -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
+	ECHO_MESSAGE = "MinGW"
+	LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
-   CXXFLAGS = -I ../ -I../../ `pkg-config --cflags sdl2`
-   CXXFLAGS += -Wall -Wformat
-   CFLAGS = $(CXXFLAGS)
+	CXXFLAGS += `pkg-config --cflags sdl2`
+	CFLAGS = $(CXXFLAGS)
 endif
 
+##---------------------------------------------------------------------
+## BUILD RULES
+##---------------------------------------------------------------------
 
 %.o:%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
