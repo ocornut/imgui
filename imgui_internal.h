@@ -344,7 +344,8 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 10,
     ImGuiSelectableFlags_PressedOnClick     = 1 << 11,
     ImGuiSelectableFlags_PressedOnRelease   = 1 << 12,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 13
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 13,
+    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 14
 };
 
 enum ImGuiSeparatorFlags_
