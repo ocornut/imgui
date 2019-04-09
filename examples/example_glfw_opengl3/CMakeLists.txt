@@ -1,15 +1,15 @@
 cmake_minimum_required(VERSION 3.1)
 
-project(example_glfw_vulkan
-    LANGUAGES CXX)
+project(example_glfw_opengl3
+    LANGUAGES C CXX)
 
 find_package(ImGui CONFIG REQUIRED
-    COMPONENTS ImplGlfw ImplVulkan)
+    COMPONENTS ImplGlfw ImplOpenGL3)
 
 add_executable(${PROJECT_NAME} main.cpp)
 
 target_link_libraries(${PROJECT_NAME}
-    PRIVATE ImGui::ImplGlfw ImGui::ImplVulkan)
+    PRIVATE ImGui::ImplGlfw ImGui::ImplOpenGL3)
 
 include(GNUInstallDirs)
 install(TARGETS ${PROJECT_NAME}
