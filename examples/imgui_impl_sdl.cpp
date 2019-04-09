@@ -193,7 +193,7 @@ bool ImGui_ImplSDL2_InitForVulkan(SDL_Window* window)
     return ImGui_ImplSDL2_Init(window);
 }
 
-bool ImGui_ImplSDL2_InitForD3D()
+bool ImGui_ImplSDL2_InitForD3D(SDL_Window* window)
 {
     return ImGui_ImplSDL2_Init(window);
 }
