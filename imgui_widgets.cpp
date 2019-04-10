@@ -6387,6 +6387,9 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 // - MultiSelectItemHeader() [Internal]
 // - MultiSelectItemFooter() [Internal]
 //-------------------------------------------------------------------------
+// FIXME: Shift+click on an item that has no multi-select data could treat selection the same as the last item with such data?
+// The problem is that this may conflict with other behaviors of those items?
+//-------------------------------------------------------------------------
 
 ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void* range_ref, bool range_ref_is_selected)
 {
@@ -6453,8 +6456,9 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
 void ImGui::SetNextItemMultiSelectData(void* item_data)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT(g.MultiSelectScopeId != 0);
     g.NextItemData.MultiSelectData = item_data;
-    g.NextItemData.MultiSelectDataIsSet = true;
+    g.NextItemData.MultiSelectScopeId = g.MultiSelectScopeId;
 }
 
 void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
@@ -6462,7 +6466,7 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     ImGuiContext& g = *GImGui;
     ImGuiMultiSelectState* state = &g.MultiSelectState;
 
-    IM_ASSERT(g.NextItemData.MultiSelectDataIsSet && "Forgot to call SetNextItemMultiSelectData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
+    IM_ASSERT(g.NextItemData.MultiSelectScopeId == g.MultiSelectScopeId && "Forgot to call SetNextItemMultiSelectData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
     void* item_data = g.NextItemData.MultiSelectData;
 
     // Apply Clear/SelectAll requests requested by BeginMultiSelect().
@@ -6503,7 +6507,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     ImGuiMultiSelectState* state = &g.MultiSelectState;
 
     void* item_data = g.NextItemData.MultiSelectData;
-    g.NextItemData.MultiSelectDataIsSet = false;
+    g.NextItemData.MultiSelectScopeId = 0;
 
     bool selected = *p_selected;
     bool pressed = *p_pressed;

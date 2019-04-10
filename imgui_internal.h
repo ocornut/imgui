@@ -1096,7 +1096,7 @@ struct ImGuiNextItemData
     ImGuiID                     FocusScopeId;   // Set by SetNextItemMultiSelectData() (!= 0 signify value has been set, so it's an alternate version of HasSelectionData, we don't use Flags for this because they are cleared too early. This is mostly used for debugging)
     ImGuiCond                   OpenCond;
     bool                        OpenVal;        // Set by SetNextItemOpen()
-    bool                        MultiSelectDataIsSet;
+    ImGuiID                     MultiSelectScopeId;
     void*                       MultiSelectData;
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
