@@ -494,7 +494,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     // Gamepad/Keyboard navigation
     // We report navigated item as hovered but we don't set g.HoveredId to not interfere with mouse.
     if (g.NavId == id && !g.NavDisableHighlight && g.NavDisableMouseHover && (g.ActiveId == 0 || g.ActiveId == id || g.ActiveId == window->MoveId))
-        hovered = true;
+        if (!(flags & ImGuiButtonFlags_NoHoveredOnNav))
+            hovered = true;
 
     if (g.NavActivateDownId == id)
     {
@@ -5049,6 +5050,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
         button_flags |= ImGuiButtonFlags_PressedOnDragDropHold;
 
     bool selected = (flags & ImGuiTreeNodeFlags_Selected) != 0;
+    const bool was_selected = selected;
+
     bool hovered, held;
     bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
     bool toggled = false;
@@ -5084,6 +5087,10 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
     if (flags & ImGuiTreeNodeFlags_AllowItemOverlap)
         SetItemAllowOverlap();
+
+    // In this branch, TreeNodeBehavior() cannot toggle the selection so this will never trigger.
+    if (selected != was_selected)
+        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
 
     // Render
     const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
@@ -5272,15 +5279,15 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (size_arg.x == 0.0f || (flags & ImGuiSelectableFlags_DrawFillAvailWidth))
         bb.Max.x += window_padding.x;
 
-    // Selectables are tightly packed together, we extend the box to cover spacing between selectable.
-    float spacing_L = (float)(int)(style.ItemSpacing.x * 0.5f);
-    float spacing_U = (float)(int)(style.ItemSpacing.y * 0.5f);
-    float spacing_R = style.ItemSpacing.x - spacing_L;
-    float spacing_D = style.ItemSpacing.y - spacing_U;
+    // Selectables are tightly packed together so we extend the box to cover spacing between selectable.
+    const float spacing_x = style.ItemSpacing.x;
+    const float spacing_y = style.ItemSpacing.y;
+    const float spacing_L = (float)(int)(spacing_x * 0.50f);
+    const float spacing_U = (float)(int)(spacing_y * 0.50f);
     bb.Min.x -= spacing_L;
     bb.Min.y -= spacing_U;
-    bb.Max.x += spacing_R;
-    bb.Max.y += spacing_D;
+    bb.Max.x += (spacing_x - spacing_L);
+    bb.Max.y += (spacing_y - spacing_U);
 
     bool item_add;
     if (flags & ImGuiSelectableFlags_Disabled)
@@ -5313,6 +5320,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (flags & ImGuiSelectableFlags_Disabled)
         selected = false;
 
+    const bool was_selected = selected;
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
     // Hovering selectable with mouse updates NavId accordingly so navigation can be resumed with gamepad/keyboard (this doesn't happen on most widgets)
@@ -5327,6 +5335,10 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     if (flags & ImGuiSelectableFlags_AllowItemOverlap)
         SetItemAllowOverlap();
+
+    // In this branch, Selectable() cannot toggle the selection so this will never trigger.
+    if (selected != was_selected)
+        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_ToggledSelection;
 
     // Render
     if (hovered || selected)
