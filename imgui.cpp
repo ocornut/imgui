@@ -11171,6 +11171,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         node->Pos = ImVec2(settings->Pos.x, settings->Pos.y);
         node->Size = ImVec2(settings->Size.x, settings->Size.y);
         node->SizeRef = ImVec2(settings->SizeRef.x, settings->SizeRef.y);
+        node->AutorityForPos = node->AutorityForSize = node->AutorityForViewport = ImGuiDataAutority_DockNode;
         if (node->ParentNode && node->ParentNode->ChildNodes[0] == NULL)
             node->ParentNode->ChildNodes[0] = node;
         else if (node->ParentNode && node->ParentNode->ChildNodes[1] == NULL)
@@ -11792,7 +11793,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
             node->LastFocusedNodeID = results.FirstNodeWithWindows->ID;
 
         // Copy the window class from of our first window so it can be used for proper dock filtering.
-        // When node has mixed windows, prioritize the class with the most constraint (CompatibleWithClassZero = false) as the reference to copy.
+        // When node has mixed windows, prioritize the class with the most constraint (DockingAllowUnclassed = false) as the reference to copy.
         // FIXME-DOCK: We don't recurse properly, this code could be reworked to work from DockNodeUpdateScanRec.
         if (ImGuiDockNode* first_node_with_windows = results.FirstNodeWithWindows)
         {
@@ -11836,7 +11837,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         }
 
         DockNodeHideHostWindow(node);
-        node->AutorityForPos = node->AutorityForSize = node->AutorityForViewport = ImGuiDataAutority_Auto;
+        node->AutorityForPos = node->AutorityForSize = node->AutorityForViewport = ImGuiDataAutority_Window;
         node->WantCloseAll = false;
         node->WantCloseTabID = 0;
         node->HasCloseButton = node->HasCollapseButton = false;
@@ -13516,18 +13517,13 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         if (node == NULL)
         {
             node = DockContextAddNode(ctx, window->DockId);
+            node->AutorityForPos = node->AutorityForSize = node->AutorityForViewport = ImGuiDataAutority_Window;
             if (auto_dock_node)
                 node->LastFrameAlive = g.FrameCount;
         }
 
         DockNodeAddWindow(node, window, true);
         IM_ASSERT(node == window->DockNode);
-
-        // Fix an edge case with auto-resizing windows: if they are created on the same frame they are creating their dock node, 
-        // we don't want their initial zero-size to spread to the DockNode. We preserve their size.
-        SetNextWindowPos(window->Pos);
-        SetNextWindowSize(window->SizeFull);
-        g.NextWindowData.PosUndock = false;
     }
 
 #if 0
