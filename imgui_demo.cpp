@@ -179,6 +179,8 @@ static void ShowDemoWindowMisc();
 // You may execute this function to experiment with the UI and understand what it does. You may then search for keywords in the code when you are interested by a specific feature.
 void ImGui::ShowDemoWindow(bool* p_open)
 {
+    IM_ASSERT(ImGui::GetCurrentContext() != NULL && "Missing dear imgui context. Refer to examples app!"); // Exceptionally add an extra assert here for people confused with initial dear imgui setup
+
     // Examples Apps (accessible from the "Examples" menu)
     static bool show_app_documents = false;
     static bool show_app_main_menu_bar = false;
@@ -1531,7 +1533,9 @@ static void ShowDemoWindowWidgets()
         ImGui::RadioButton("SliderFloat", &item_type, 3);
         ImGui::RadioButton("InputText", &item_type, 4);
         ImGui::RadioButton("ColorEdit4", &item_type, 5);
-        ImGui::RadioButton("ListBox", &item_type, 6);
+        ImGui::RadioButton("MenuItem", &item_type, 6);
+        ImGui::RadioButton("TreeNode (w/ double-click)", &item_type, 7);
+        ImGui::RadioButton("ListBox", &item_type, 8);
         ImGui::Separator();
         bool ret = false;
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
@@ -1540,7 +1544,9 @@ static void ShowDemoWindowWidgets()
         if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
         if (item_type == 4) { ret = ImGui::InputText("ITEM: InputText", &str[0], IM_ARRAYSIZE(str)); }  // Testing input text (which handles tabbing)
         if (item_type == 5) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
-        if (item_type == 6) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
+        if (item_type == 6) { ret = ImGui::MenuItem("ITEM: MenuItem"); }                                // Testing menu item (they use ImGuiButtonFlags_PressedOnRelease button policy)
+        if (item_type == 7) { ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
+        if (item_type == 8) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
         ImGui::BulletText(
             "Return value = %d\n"
             "IsItemFocused() = %d\n"
@@ -1555,6 +1561,7 @@ static void ShowDemoWindowWidgets()
             "IsItemDeactivated() = %d\n"
             "IsItemDeactivatedAfterEdit() = %d\n"
             "IsItemVisible() = %d\n"
+            "IsItemClicked() = %d\n"
             "GetItemRectMin() = (%.1f, %.1f)\n"
             "GetItemRectMax() = (%.1f, %.1f)\n"
             "GetItemRectSize() = (%.1f, %.1f)",
@@ -1571,6 +1578,7 @@ static void ShowDemoWindowWidgets()
             ImGui::IsItemDeactivated(),
             ImGui::IsItemDeactivatedAfterEdit(),
             ImGui::IsItemVisible(),
+            ImGui::IsItemClicked(),
             ImGui::GetItemRectMin().x, ImGui::GetItemRectMin().y,
             ImGui::GetItemRectMax().x, ImGui::GetItemRectMax().y,
             ImGui::GetItemRectSize().x, ImGui::GetItemRectSize().y

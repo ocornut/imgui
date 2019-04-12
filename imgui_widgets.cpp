@@ -394,6 +394,56 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - Bullet()
 //-------------------------------------------------------------------------
 
+// The ButtonBehavior() function is key to many interactions and used by many/most widgets.
+// Because we handle so many cases (keyboard/gamepad navigation, drag and drop) and many specific behavior (via ImGuiButtonFlags_),
+// this code is a little complex.
+// By far the most common path is interacting with the Mouse using the default ImGuiButtonFlags_PressedOnClickRelease button behavior.
+// See the series of events below and the corresponding state reported by dear imgui:
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnClickRelease:             return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+0 (mouse is outside bb)        -             -                -               -                  -                    -    
+//   Frame N+1 (mouse moves inside bb)      -             true             -               -                  -                    -    
+//   Frame N+2 (mouse button is down)       -             true             true            true               -                    true
+//   Frame N+3 (mouse button is down)       -             true             true            -                  -                    -    
+//   Frame N+4 (mouse moves outside bb)     -             -                true            -                  -                    -
+//   Frame N+5 (mouse moves inside bb)      -             true             true            -                  -                    -
+//   Frame N+6 (mouse button is released)   true          true             -               -                  true                 -    
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -    
+//   Frame N+8 (mouse moves outside bb)     -             -                -               -                  -                    -    
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnClick:                    return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+2 (mouse button is down)       true          true             true            true               -                    true
+//   Frame N+3 (mouse button is down)       -             true             true            -                  -                    -    
+//   Frame N+6 (mouse button is released)   -             true             -               -                  true                 -    
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -    
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnRelease:                  return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+2 (mouse button is down)       -             true             -               -                  -                    true
+//   Frame N+3 (mouse button is down)       -             true             -               -                  -                    -    
+//   Frame N+6 (mouse button is released)   true          true             -               -                  -                    -
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -    
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// with PressedOnDoubleClick:              return-value  IsItemHovered()  IsItemActive()  IsItemActivated()  IsItemDeactivated()  IsItemClicked()
+//   Frame N+0 (mouse button is down)       -             true             -               -                  -                    true
+//   Frame N+1 (mouse button is down)       -             true             -               -                  -                    -    
+//   Frame N+2 (mouse button is released)   -             true             -               -                  -                    -
+//   Frame N+3 (mouse button is released)   -             true             -               -                  -                    -    
+//   Frame N+4 (mouse button is down)       true          true             true            true               -                    true
+//   Frame N+5 (mouse button is down)       -             true             true            -                  -                    -    
+//   Frame N+6 (mouse button is released)   -             true             -               -                  true                 -
+//   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -    
+//------------------------------------------------------------------------------------------------------------------------------------------------
+// The behavior of the return-value changes when ImGuiButtonFlags_Repeat is set:
+//                                         Repeat+                  Repeat+           Repeat+             Repeat+
+//                                         PressedOnClickRelease    PressedOnClick    PressedOnRelease    PressedOnDoubleClick
+//-------------------------------------------------------------------------------------------------------------------------------------------------
+//   Frame N+0 (mouse button is down)       -                        true              -                   true 
+//   ...                                    -                        -                 -                   -
+//   Frame N + RepeatDelay                  true                     true              -                   true
+//   ...                                    -                        -                 -                   -
+//   Frame N + RepeatDelay + RepeatRate*N   true                     true              -                   true
+//-------------------------------------------------------------------------------------------------------------------------------------------------
+
 bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool* out_held, ImGuiButtonFlags flags)
 {
     ImGuiContext& g = *GImGui;
@@ -452,12 +502,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     {
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            //                        | CLICKING        | HOLDING with ImGuiButtonFlags_Repeat
-            // PressedOnClickRelease  |  <on release>*  |  <on repeat> <on repeat> .. (NOT on release)  <-- MOST COMMON! (*) only if both click/release were over bounds
-            // PressedOnClick         |  <on click>     |  <on click> <on repeat> <on repeat> ..
-            // PressedOnRelease       |  <on release>   |  <on repeat> <on repeat> .. (NOT on release)
-            // PressedOnDoubleClick   |  <on dclick>    |  <on dclick> <on repeat> <on repeat> ..
-            // FIXME-NAV: We don't honor those different behaviors.
             if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])
             {
                 SetActiveID(id, window);
