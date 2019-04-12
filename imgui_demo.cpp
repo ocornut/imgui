@@ -789,7 +789,7 @@ static void ShowDemoWindowWidgets()
 
         ImGui::Text("%.0fx%.0f", my_tex_w, my_tex_h);
         ImVec2 pos = ImGui::GetCursorScreenPos();
-        ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), ImVec2(0,0), ImVec2(1,1), ImColor(255,255,255,255), ImColor(255,255,255,128));
+        ImGui::Image(my_tex_id, ImVec2(my_tex_w, my_tex_h), IMUV_00, IMUV_11, ImColor(255,255,255,255), ImColor(255,255,255,128));
         if (ImGui::IsItemHovered())
         {
             ImGui::BeginTooltip();
@@ -801,7 +801,7 @@ static void ShowDemoWindowWidgets()
             ImGui::Text("Max: (%.2f, %.2f)", region_x + region_sz, region_y + region_sz);
             ImVec2 uv0 = ImVec2((region_x) / my_tex_w, (region_y) / my_tex_h);
             ImVec2 uv1 = ImVec2((region_x + region_sz) / my_tex_w, (region_y + region_sz) / my_tex_h);
-            ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, region_sz * zoom), uv0, uv1, ImColor(255,255,255,255), ImColor(255,255,255,128));
+            ImGui::Image(my_tex_id, ImVec2(region_sz * zoom, region_sz * zoom), ImV2UV(uv0), ImV2UV(uv1), ImColor(255,255,255,255), ImColor(255,255,255,128));
             ImGui::EndTooltip();
         }
         ImGui::TextWrapped("And now some textured buttons..");
@@ -810,7 +810,7 @@ static void ShowDemoWindowWidgets()
         {
             ImGui::PushID(i);
             int frame_padding = -1 + i;     // -1 = uses default padding
-            if (ImGui::ImageButton(my_tex_id, ImVec2(32,32), ImVec2(0,0), ImVec2(32.0f/my_tex_w,32/my_tex_h), frame_padding, ImColor(0,0,0,255)))
+            if (ImGui::ImageButton(my_tex_id, ImVec2(32,32), IMUV_00, ImV2UV(ImVec2(32.0f/my_tex_w,32/my_tex_h)), frame_padding, ImColor(0,0,0,255)))
                 pressed_count += 1;
             ImGui::PopID();
             ImGui::SameLine();
@@ -3102,7 +3102,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             }
             if (ImGui::TreeNode("Atlas texture", "Atlas texture (%dx%d pixels)", atlas->TexWidth, atlas->TexHeight))
             {
-                ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0, 0), ImVec2(1, 1), ImColor(255, 255, 255, 255), ImColor(255, 255, 255, 128));
+                ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), IMUV_00, IMUV_11, ImColor(255, 255, 255, 255), ImColor(255, 255, 255, 128));
                 ImGui::TreePop();
             }
 
