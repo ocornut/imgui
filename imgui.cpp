@@ -2899,7 +2899,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
-        ImGuiTestEngineHook_ItemAdd(&g, nav_bb_arg ? *nav_bb_arg : bb, id);
+        IMGUI_TEST_ENGINE_ITEM_ADD(nav_bb_arg ? *nav_bb_arg : bb, id);
 #endif
 
     // Clipping test
@@ -6099,6 +6099,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->DC.LastItemStatusFlags = IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max, false) ? ImGuiItemStatusFlags_HoveredRect : 0;
             window->DC.LastItemRect = title_bar_rect;
         }
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+        if (!(window->Flags & ImGuiWindowFlags_NoTitleBar))
+            IMGUI_TEST_ENGINE_ITEM_ADD(window->DC.LastItemRect, window->DC.LastItemId);
+#endif
     }
     else
     {
