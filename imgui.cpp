@@ -6073,7 +6073,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             // Docking: Dragging a dockable window (or any of its child) turns it into a drag and drop source.
             // We need to do this _before_ we overwrite window->DC.LastItemId below because BeginAsDockableDragDropSource() also overwrites it.
-            if ((g.ActiveId == window->MoveId) && ((g.IO.ConfigDockingWithShift && g.IO.KeyShift) || (!g.IO.ConfigDockingWithShift)))
+            if ((g.ActiveId == window->MoveId) && (g.IO.ConfigDockingWithShift == g.IO.KeyShift))
                 if ((window->Flags & ImGuiWindowFlags_NoMove) == 0)
                     if ((window->RootWindow->Flags & (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking)) == 0)
                         BeginAsDockableDragDropSource(window);
@@ -10862,7 +10862,6 @@ namespace ImGui
     static ImGuiDockNode*   DockContextAddNode(ImGuiContext* ctx, ImGuiID id);
     static ImGuiID          DockContextGenNodeID(ImGuiContext* ctx);
     static void             DockContextRemoveNode(ImGuiContext* ctx, ImGuiDockNode* node, bool merge_sibling_into_parent_node);
-    static void             DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer);
     static void             DockContextQueueNotifyRemovedNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req);
     static void             DockContextProcessUndockWindow(ImGuiContext* ctx, ImGuiWindow* window, bool clear_persistent_docking_ref = true);
@@ -13635,6 +13634,7 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
 
+    //IM_ASSERT(window->RootWindow == window); // May also be a DockSpace
     IM_ASSERT((window->Flags & ImGuiWindowFlags_NoDocking) == 0);
     if (!g.DragDropActive)
         return;
