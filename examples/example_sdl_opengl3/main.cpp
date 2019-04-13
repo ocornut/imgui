@@ -12,7 +12,11 @@
 // About OpenGL function loaders: modern OpenGL doesn't have a standard header file and requires individual function pointers to be loaded manually.
 // Helper libraries are often used for this purpose! Here we are supporting a few common ones: gl3w, glew, glad.
 // You may use another loader/header of your choice (glext, glLoadGen, etc.), or chose to manually implement your own.
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+// When compiling with emscripten however, no specific loader is necessary, since the webgl wrapper will do it for you.
+#if defined(__EMSCRIPTEN__)
+#include <emscripten.h>
+#include <SDL_opengles2.h>
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
 #include <GL/gl3w.h>    // Initialize with gl3wInit()
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
 #include <GL/glew.h>    // Initialize with glewInit()
@@ -20,6 +24,17 @@
 #include <glad/glad.h>  // Initialize with gladLoadGL()
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#endif
+
+#if defined(__EMSCRIPTEN__)
+// Emscripten wants to run the mainloop because of the way the browser is single threaded.
+// For this, it requires a void() function. In order to avoid breaking the flow of the
+// readability of this example, we're going to use a C++11 lambda to keep the mainloop code
+// within the rest of the main function. This hack isn't needed in production, and one may
+// simply have an actual main loop function to give to emscripten instead.
+#include <functional>
+static std::function<void()> loop;
+static void main_loop() { loop(); }
 #endif
 
 int main(int, char**)
@@ -32,7 +47,17 @@ int main(int, char**)
     }
 
     // Decide GL+GLSL versions
-#if __APPLE__
+#if defined(__EMSCRIPTEN__)
+    // GLES 3.0
+    // For the browser using emscripten, we are going to use WebGL2 with GLES3. See the Makefile.emscripten for requirement details.
+    // It is very likely the generated file won't work in many browsers. Firefox is the only sure bet, but I have successfully
+    // run this code on Chrome for Android for example.
+    const char* glsl_version = "#version 300 es";
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, 0);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
+#elif __APPLE__
     // GL 3.2 Core + GLSL 150
     const char* glsl_version = "#version 150";
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG); // Always required on Mac
@@ -60,7 +85,9 @@ int main(int, char**)
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
     // Initialize OpenGL loader
-#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+#if defined(__EMSCRIPTEN__)
+    bool err = false; // Emscripten loads everything during SDL_GL_CreateContext
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
     bool err = gl3wInit() != 0;
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
     bool err = glewInit() != GLEW_OK;
@@ -110,7 +137,16 @@ int main(int, char**)
 
     // Main loop
     bool done = false;
+#if defined(__EMSCRIPTEN__)
+    // See comments around line 30.
+    loop = [&]()
+    // Note that this doesn't process the 'done' boolean anymore. The function emscripten_set_main_loop will
+    // in effect not return, and will set an infinite loop, that is going to be impossible to break. The
+    // application can then only stop when the brower's tab is closed, and you will NOT get any notification
+    // about exitting. The browser will then cleanup all resources on its own.
+#else
     while (!done)
+#endif
     {
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -177,7 +213,14 @@ int main(int, char**)
         glClear(GL_COLOR_BUFFER_BIT);
         ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
         SDL_GL_SwapWindow(window);
-    }
+    };
+#if defined(__EMSCRIPTEN__)
+    // See comments around line 30.
+    // This function call will not return.
+    emscripten_set_main_loop(main_loop, 0, true);
+    // A fully portable version of this code that doesn't use the lambda hack might have an #else that does:
+    //    while (!done) main_loop();
+#endif
 
     // Cleanup
     ImGui_ImplOpenGL3_Shutdown();

@@ -1,0 +1,60 @@
+#
+# Makefile to use with emscripten
+# See https://emscripten.org/docs/getting_started/downloads.html
+# for installation instructions. This Makefile assumes you have
+# loaded emscripten's environment.
+#
+# Running make -f Makefile.emscripten will produce three files:
+#  - example_sdl_opengl3.html
+#  - example_sdl_opengl3.js
+#  - example_sdl_opengl3.wasm
+#
+# All three are needed to run the demo.
+
+CC = emcc
+CXX = em++
+
+EXE = example_sdl_opengl3.html
+SOURCES = main.cpp
+SOURCES += ../imgui_impl_sdl.cpp ../imgui_impl_opengl3.cpp
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
+OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
+UNAME_S := $(shell uname -s)
+
+EMS = -s USE_SDL=2 -s USE_WEBGL2=1 -s WASM=1 -s FULL_ES3=1
+EMS += -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
+EMS += -s DISABLE_EXCEPTION_CATCHING=1 -s EXIT_RUNTIME=1
+EMS += -s ASSERTIONS=1 -s SAFE_HEAP=1
+
+# for the std::functional hack
+CXXFLAGS = -std=c++11
+
+CPPFLAGS = -I../ -I../../
+CPPFLAGS += -g -Wall -Wformat -O3
+CPPFLAGS += $(EMS)
+LIBS = $(EMS)
+
+##---------------------------------------------------------------------
+## BUILD RULES
+##---------------------------------------------------------------------
+
+%.o:%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../../%.cpp
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../libs/gl3w/GL/%.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ $<
+
+all: $(EXE)
+	@echo Build complete for $(EXE)
+
+$(EXE): $(OBJS)
+	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
+
+clean:
+	rm -f $(EXE) $(OBJS)
