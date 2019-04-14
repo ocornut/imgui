@@ -122,13 +122,15 @@ List of high-level Frameworks Bindings in this repository: (combine Platform + R
     imgui_impl_allegro5.cpp
     imgui_impl_marmalade.cpp
 
+Note that Dear ImGui works with Emscripten. 
+The examples_emscripten/ app uses sdl.cpp + opengl3.cpp but other combinations are possible.
 Third-party framework, graphics API and languages bindings are listed at:
 
     https://github.com/ocornut/imgui/wiki/Bindings
 
     Languages: C, C#, ChaiScript, D, Go, Haxe, Java, Lua, Odin, Pascal, PureBasic, Python, Rust, Swift...
-    Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, Emscripten, SFML, GML/GameMaker Studio, Irrlicht, Ogre,
-    OpenSceneGraph, openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
+    Frameworks: Cinder, Cocoa (OSX), Cocos2d-x, SFML, GML/GameMaker Studio, Irrlicht, Ogre, OpenSceneGraph,
+    openFrameworks, LOVE, NanoRT, Nim Game Lib, Qt3d, SFML, Unreal Engine 4...
     Miscellaneous: Software Renderer, RemoteImgui, etc.
 
 
@@ -176,6 +178,12 @@ example_apple_opengl2/
     OSX + OpenGL2.
     = main.mm + imgui_impl_osx.mm + imgui_impl_opengl2.cpp
     (NB: you may still want to use GLFW or SDL which will also support Windows, Linux along with OSX.)
+
+example_empscripten:
+    Emcripten + SDL2 + OpenGL3+/ES2/ES3 example.
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp
+    Note that other examples based on SDL or GLFW + GL could easily be modified to work with Emscripten.
+    We provide this to make the Emscripten differences obvious, and have them not pollute all other examples.
 
 example_glfw_opengl2/
     GLFW + OpenGL2 example (legacy, fixed pipeline).

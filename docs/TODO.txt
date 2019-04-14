@@ -316,8 +316,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: possible compile-time support for wchar_t instead of char*?
 
  - backend: bgfx? https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
- - web/emscriptem: refactor some examples to facilitate integration with emscripten main loop system. (#1713, #336)
- - web/emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
+ - emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 

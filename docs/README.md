@@ -135,8 +135,7 @@ Languages: (third-party bindings)
 Frameworks:
 - Renderers: DirectX 9/10/11/12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Platform: GLFW, SDL, Win32, OSX, GLUT: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Framework: Allegro 5, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Unmerged PR: SDL2 + OpenGLES + Emscripten: [#336](https://github.com/ocornut/imgui/pull/336)
+- Framework: Allegro 5, Emscripten, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
@@ -221,8 +220,8 @@ Frequently Asked Question (FAQ)
 
  This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.
  - Run the examples/ applications and explore them.
- - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. 
- - The demo covers most features of Dear ImGui, so you can read the code and see its output. 
+ - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function.
+ - The demo covers most features of Dear ImGui, so you can read the code and see its output.
  - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
  - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder to explain how to integrate Dear ImGui with your own engine/application.
  - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.

@@ -21,9 +21,9 @@ SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
-EMS = -s USE_SDL=2 -s USE_WEBGL2=1 -s WASM=1 -s FULL_ES3=1
+EMS = -s USE_SDL=2 -s WASM=1
 EMS += -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
-EMS += -s DISABLE_EXCEPTION_CATCHING=1 -s EXIT_RUNTIME=1
+EMS += -s DISABLE_EXCEPTION_CATCHING=1 -s NO_EXIT_RUNTIME=0
 EMS += -s ASSERTIONS=1 -s SAFE_HEAP=1
 
 CPPFLAGS = -I../ -I../../
@@ -55,4 +55,4 @@ $(EXE): $(OBJS)
 	$(CXX) -o $@ $^ $(LIBS) $(LDFLAGS)
 
 clean:
-	rm -f $(EXE) $(OBJS) *.js *.wasm
+	rm -f $(EXE) $(OBJS) *.js *.wasm *.wasm.pre
