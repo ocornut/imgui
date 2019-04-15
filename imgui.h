@@ -2722,6 +2722,8 @@ struct ImColor
 // [SECTION] Multi-Select API flags and structures (ImGuiMultiSelectFlags, ImGuiMultiSelectData)
 //-----------------------------------------------------------------------------
 
+#define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
+
 // Flags for BeginMultiSelect().
 // This system is designed to allow mouse/keyboard multi-selection, including support for range-selection (SHIFT + click) which is difficult to re-implement manually.
 // If you disable multi-selection with ImGuiMultiSelectFlags_NoMultiSelect (which is provided for consistency and flexibility), the whole BeginMultiSelect() system

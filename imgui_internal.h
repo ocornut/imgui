@@ -1709,7 +1709,6 @@ struct ImGuiOldColumns
 // We always assume that -1 is an invalid value (which works for indices and pointers)
 #define ImGuiSelectionUserData_Invalid        ((ImGuiSelectionUserData)-1)
 
-#define IMGUI_HAS_MULTI_SELECT 1
 #ifdef IMGUI_HAS_MULTI_SELECT
 
 struct IMGUI_API ImGuiMultiSelectState
