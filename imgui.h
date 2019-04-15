@@ -2366,6 +2366,7 @@ struct ImGuiListClipper
 //   5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
 //   6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
 // If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
+#define IMGUI_HAS_MULTI_SELECT      // Multi-Select/Range-Select WIP branch // <-- This is currently _not_ in the top of imgui.h to prevent merge conflicts.
 struct ImGuiMultiSelectData
 {
     bool    RequestClear;           // Begin, End   // Request user to clear selection
