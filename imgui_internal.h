@@ -63,7 +63,7 @@ struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
 struct ImGuiColorMod;               // Stacked color modifier, backup of modified data so we can restore it
 struct ImGuiColumnData;             // Storage data for a single column
-struct ImGuiColumnsSet;             // Storage data for a columns set
+struct ImGuiColumns;                // Storage data for a columns set
 struct ImGuiContext;                // Main imgui context
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiInputTextState;         // Internal state of the currently focused/edited text input box
@@ -661,7 +661,7 @@ struct ImGuiColumnData
     ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; Flags = 0; }
 };
 
-struct ImGuiColumnsSet
+struct ImGuiColumns
 {
     ImGuiID             ID;
     ImGuiColumnsFlags   Flags;
@@ -675,7 +675,7 @@ struct ImGuiColumnsSet
     float               StartMaxPosX;       // Copy of CursorMaxPos
     ImVector<ImGuiColumnData> Columns;
 
-    ImGuiColumnsSet()   { Clear(); }
+    ImGuiColumns()      { Clear(); }
     void Clear()
     {
         ID = 0;
@@ -1156,7 +1156,7 @@ struct IMGUI_API ImGuiWindowTempData
     ImVec1                  Indent;                 // Indentation / start position from left of window (increased by TreePush/TreePop, etc.)
     ImVec1                  GroupOffset;
     ImVec1                  ColumnsOffset;          // Offset to the current column (if ColumnsCurrent > 0). FIXME: This and the above should be a stack to allow use cases like Tree->Column->Tree. Need revamp columns API.
-    ImGuiColumnsSet*        ColumnsSet;             // Current columns set
+    ImGuiColumns*           CurrentColumns;         // Current columns set
 
     ImGuiWindowTempData()
     {
@@ -1187,7 +1187,7 @@ struct IMGUI_API ImGuiWindowTempData
         Indent = ImVec1(0.0f);
         GroupOffset = ImVec1(0.0f);
         ColumnsOffset = ImVec1(0.0f);
-        ColumnsSet = NULL;
+        CurrentColumns = NULL;
     }
 };
 
@@ -1250,7 +1250,7 @@ struct IMGUI_API ImGuiWindow
     float                   ItemWidthDefault;
     ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
-    ImVector<ImGuiColumnsSet> ColumnsStorage;
+    ImVector<ImGuiColumns>  ColumnsStorage;
     float                   FontWindowScale;                    // User scale multiplier per-window
     int                     SettingsIdx;                        // Index into SettingsWindow[] (indices are always valid as we only grow the array from the back)
 
@@ -1488,6 +1488,8 @@ namespace ImGui
     IMGUI_API void          BeginColumns(const char* str_id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
     IMGUI_API void          EndColumns();                                                             // close columns
     IMGUI_API void          PushColumnClipRect(int column_index = -1);
+    IMGUI_API ImGuiID       GetColumnsID(const char* str_id, int count);
+    IMGUI_API ImGuiColumns* FindOrCreateColumns(ImGuiWindow* window, ImGuiID id);
 
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);
