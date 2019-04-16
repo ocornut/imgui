@@ -4267,15 +4267,15 @@ void ShowExampleAppDocuments(bool* p_open)
 {
     static ExampleAppDocuments app;
 
+    // Options
+    static bool opt_reorderable = true;
+    static ImGuiTabBarFlags opt_fitting_flags = ImGuiTabBarFlags_FittingPolicyDefault_;
+
     if (!ImGui::Begin("Example: Documents", p_open, ImGuiWindowFlags_MenuBar))
     {
         ImGui::End();
         return;
     }
-
-    // Options
-    static bool opt_reorderable = true;
-    static ImGuiTabBarFlags opt_fitting_flags = ImGuiTabBarFlags_FittingPolicyDefault_;
 
     // Menu
     if (ImGui::BeginMenuBar())
