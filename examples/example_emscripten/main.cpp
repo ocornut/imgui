@@ -14,7 +14,7 @@
 #include <SDL.h>
 #include <SDL_opengles2.h>
 
-// Emscripten requires to have full control over the main loop. We're going to store our SDL book-keeping variables globally. 
+// Emscripten requires to have full control over the main loop. We're going to store our SDL book-keeping variables globally.
 // Having a single function that acts as a loop prevents us to store state in the stack of said function. So we need some location for this.
 SDL_Window*     g_Window = NULL;
 SDL_GLContext   g_GLContext = NULL;
@@ -63,6 +63,10 @@ int main(int, char**)
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
 
+    // For an Emscripten build we are disabling file-system access, so let's not attempt to do a fopen() of the imgui.ini file.
+    // You may manually call LoadIniSettingsFromMemory() to load settings from your own storage.
+    io.IniFilename = NULL;
+
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
@@ -90,7 +94,7 @@ int main(int, char**)
     emscripten_set_main_loop_arg(main_loop, NULL, 0, true);
 }
 
-void main_loop(void* arg) 
+void main_loop(void* arg)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_UNUSED(arg); // We can pass this argument as the second parameter of emscripten_set_main_loop_arg(), but we don't use that.

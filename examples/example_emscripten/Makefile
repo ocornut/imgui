@@ -24,10 +24,12 @@ UNAME_S := $(shell uname -s)
 EMS = -s USE_SDL=2 -s WASM=1
 EMS += -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
 EMS += -s DISABLE_EXCEPTION_CATCHING=1 -s NO_EXIT_RUNTIME=0
-EMS += -s ASSERTIONS=1 -s SAFE_HEAP=1
+EMS += -s ASSERTIONS=1 -s NO_FILESYSTEM=1
+#EMS += -s SAFE_HEAP=1    ## Adds overhead
 
 CPPFLAGS = -I../ -I../../
-CPPFLAGS += -g -Wall -Wformat -O3
+#CPPFLAGS += -g
+CPPFLAGS += -Wall -Wformat -Os
 CPPFLAGS += $(EMS)
 LIBS = $(EMS)
 LDFLAGS = --shell-file shell_minimal.html

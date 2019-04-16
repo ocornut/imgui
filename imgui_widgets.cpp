@@ -1240,7 +1240,7 @@ void ImGui::Separator()
     }
 
     // Horizontal Separator
-    if (window->DC.ColumnsSet)
+    if (window->DC.CurrentColumns)
         PopClipRect();
 
     float x1 = window->Pos.x;
@@ -1252,7 +1252,7 @@ void ImGui::Separator()
     ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
     if (!ItemAdd(bb, 0))
     {
-        if (window->DC.ColumnsSet)
+        if (window->DC.CurrentColumns)
             PushColumnClipRect();
         return;
     }
@@ -1262,10 +1262,10 @@ void ImGui::Separator()
     if (g.LogEnabled)
         LogRenderedText(&bb.Min, "--------------------------------");
 
-    if (window->DC.ColumnsSet)
+    if (window->DC.CurrentColumns)
     {
         PushColumnClipRect();
-        window->DC.ColumnsSet->LineMinY = window->DC.CursorPos.y;
+        window->DC.CurrentColumns->LineMinY = window->DC.CursorPos.y;
     }
 }
 
@@ -5337,7 +5337,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
 
-    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsSet) // FIXME-OPT: Avoid if vertically clipped.
+    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns) // FIXME-OPT: Avoid if vertically clipped.
         PopClipRect();
 
     ImGuiID id = window->GetID(label);
@@ -5381,7 +5381,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     }
     if (!item_add)
     {
-        if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsSet)
+        if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns)
             PushColumnClipRect();
         return false;
     }
@@ -5426,7 +5426,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
     }
 
-    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.ColumnsSet)
+    if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns)
     {
         PushColumnClipRect();
         bb.Max.x -= (GetContentRegionMax().x - max_x);

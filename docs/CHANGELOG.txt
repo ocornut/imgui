@@ -114,6 +114,7 @@ Other Changes:
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
 - PlotLines, PlotHistogram: Ignore NaN values when calculating min/max bounds. (#2485)
+- Window: Window close button is horizontally aligned with style.FramePadding.x.
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
@@ -125,6 +126,7 @@ Other Changes:
 - Examples: Vulkan: Avoid passing negative coordinates to vkCmdSetScissor, which debug validation layers do not like.
 - Examples: Vulkan: Added ImGui_ImplVulkan_SetMinImageCount() to change min image count at runtime. (#2071) [@nathanvoglsam]
 - Examples: DirectX9: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects(). (#2454)
+- Examples: DirectX10/11/12, Allegro, Marmalade: Render functions early out when display size is zero (minimized). (#2496)
 - Examples: GLUT: Fixed existing FreeGLUT example to work with regular GLUT. (#2465) [@andrewwillmott]
 - Examples: GLUT: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h. (#2465) [@andrewwillmott]
 - Examples: GLUT: Made io.DeltaTime always > 0. (#2430)

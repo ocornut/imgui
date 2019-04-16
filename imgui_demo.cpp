@@ -1697,7 +1697,6 @@ static void ShowDemoWindowWidgets()
                 if (ImGui::MenuItem("Close")) { test_window = false; }
                 ImGui::EndPopup();
             }
-            //if (IsItemHovered() || IsItemActive()) { printf("[%05d] Hovered %d Active %d\n", GetFrameCount(), IsItemHovered(), IsItemActive()); } // [DEBUG]
             ImGui::Text(
                 "IsItemHovered() after begin = %d (== is title bar hovered)\n"
                 "IsItemActive() after begin = %d (== is window being clicked/moved)\n",
@@ -4051,7 +4050,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
 // Demonstrate creating a simple static window with no decoration + a context-menu to choose which corner of the screen to use.
 static void ShowExampleAppSimpleOverlay(bool* p_open)
 {
-    // FIXME-VIEWPORT-ABS: Select a default viewport
+    // FIXME-VIEWPORT: Select a default viewport
     const float DISTANCE = 10.0f;
     static int corner = 0;
     ImGuiIO& io = ImGui::GetIO();

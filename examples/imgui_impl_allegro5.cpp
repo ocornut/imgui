@@ -64,6 +64,10 @@ struct ImDrawVertAllegro
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 {
+    // Avoid rendering when minimized
+    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+        return;
+
     // Backup Allegro state that will be modified
     ALLEGRO_TRANSFORM last_transform = *al_get_current_transform();
     ALLEGRO_TRANSFORM last_projection_transform = *al_get_current_projection_transform();

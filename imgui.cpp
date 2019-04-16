@@ -925,7 +925,7 @@ CODE
       (The ImGuiWindowFlags_NoDecoration flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse)
       Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
     - You can call ImGui::GetBackgroundDrawList() or ImGui::GetForegroundDrawList() and use those draw list to display
-      contents behind or over every other imgui windows. (1 bg/fg drawlist per viewport)
+      contents behind or over every other imgui windows (one bg/fg drawlist per viewport).
     - You can create your own ImDrawList instance. You'll need to initialize them ImGui::GetDrawListSharedData(), or create
       your own ImDrawListSharedData, and then call your rendered code with your own ImDrawList or ImDrawData data.
 
@@ -2277,8 +2277,8 @@ static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;      // Setting those fields so that SetScrollHereY() can properly function after the end of our clipper usage.
     window->DC.PrevLineSize.y = (line_height - GImGui->Style.ItemSpacing.y);    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
-    if (window->DC.ColumnsSet)
-        window->DC.ColumnsSet->LineMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
+    if (window->DC.CurrentColumns)
+        window->DC.CurrentColumns->LineMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
 }
 
 // Use case A: Begin() called from constructor with items_height<0, then called again from Sync() in StepNo 1
@@ -2654,7 +2654,7 @@ ImGuiWindow::~ImGuiWindow()
     IM_ASSERT(DrawList == &DrawListInst);
     IM_DELETE(Name);
     for (int i = 0; i != ColumnsStorage.Size; i++)
-        ColumnsStorage[i].~ImGuiColumnsSet();
+        ColumnsStorage[i].~ImGuiColumns();
 }
 
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
@@ -5957,7 +5957,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.ColumnsSet = NULL;
+        window->DC.CurrentColumns = NULL;
         window->DC.TreeDepth = 0;
         window->DC.TreeDepthMayJumpToParentOnPop = 0x00;
         window->DC.StateStorage = &window->StateStorage;
@@ -6093,7 +6093,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                         BeginAsDockableDragDropTarget(window);
         }
 
-        // We fill last item data based on Title Bar or Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
+        // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
         // This is useful to allow creating context menus on title bar only, etc.
         if (window->DockIsActive)
         {
@@ -6202,7 +6202,7 @@ void ImGui::End()
 
     ImGuiWindow* window = g.CurrentWindow;
 
-    if (window->DC.ColumnsSet != NULL)
+    if (window->DC.CurrentColumns != NULL)
         EndColumns();
     if (!(window->Flags & ImGuiWindowFlags_DockNodeHost))   // Pop inner window clip rectangle
         PopClipRect();
@@ -6991,8 +6991,8 @@ ImVec2 ImGui::GetContentRegionMax()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     ImVec2 mx = window->ContentsRegionRect.Max - window->Pos;
-    if (window->DC.ColumnsSet)
-        mx.x = GetColumnOffset(window->DC.ColumnsSet->Current + 1) - window->WindowPadding.x;
+    if (window->DC.CurrentColumns)
+        mx.x = GetColumnOffset(window->DC.CurrentColumns->Current + 1) - window->WindowPadding.x;
     return mx;
 }
 
@@ -8630,8 +8630,8 @@ static void ImGui::NavUpdate()
     if (g.NavWindow)
     {
         ImDrawList* draw_list = GetForegroundDrawList(g.NavWindow);
-        if (1) { for (int layer = 0; layer < 2; layer++) draw_list->AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255, 200, 0, 255)); } // [DEBUG]
-        if (1) { ImU32 col = (!g.NavWindow->Hidden) ? IM_COL32(255, 0, 255, 255) : IM_COL32(255, 0, 0, 255); ImVec2 p = NavCalcPreferredRefPos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); draw_list->AddCircleFilled(p, 3.0f, col); draw_list->AddText(NULL, 13.0f, p + ImVec2(8, -4), col, buf); }
+        if (1) { for (int layer = 0; layer < 2; layer++) draw_list->AddRect(g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Min, g.NavWindow->Pos + g.NavWindow->NavRectRel[layer].Max, IM_COL32(255,200,0,255)); } // [DEBUG]
+        if (1) { ImU32 col = (!g.NavWindow->Hidden) ? IM_COL32(255,0,255,255) : IM_COL32(255,0,0,255); ImVec2 p = NavCalcPreferredRefPos(); char buf[32]; ImFormatString(buf, 32, "%d", g.NavLayer); draw_list->AddCircleFilled(p, 3.0f, col); draw_list->AddText(NULL, 13.0f, p + ImVec2(8,-4), col, buf); }
     }
 #endif
 }
@@ -8973,11 +8973,11 @@ void ImGui::NavUpdateWindowingList()
 void ImGui::NextColumn()
 {
     ImGuiWindow* window = GetCurrentWindow();
-    if (window->SkipItems || window->DC.ColumnsSet == NULL)
+    if (window->SkipItems || window->DC.CurrentColumns == NULL)
         return;
 
     ImGuiContext& g = *GImGui;
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
 
     if (columns->Count == 1)
     {
@@ -9016,28 +9016,28 @@ void ImGui::NextColumn()
 int ImGui::GetColumnIndex()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.ColumnsSet ? window->DC.ColumnsSet->Current : 0;
+    return window->DC.CurrentColumns ? window->DC.CurrentColumns->Current : 0;
 }
 
 int ImGui::GetColumnsCount()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    return window->DC.ColumnsSet ? window->DC.ColumnsSet->Count : 1;
+    return window->DC.CurrentColumns ? window->DC.CurrentColumns->Count : 1;
 }
 
-static float OffsetNormToPixels(const ImGuiColumnsSet* columns, float offset_norm)
+static float OffsetNormToPixels(const ImGuiColumns* columns, float offset_norm)
 {
     return offset_norm * (columns->MaxX - columns->MinX);
 }
 
-static float PixelsToOffsetNorm(const ImGuiColumnsSet* columns, float offset)
+static float PixelsToOffsetNorm(const ImGuiColumns* columns, float offset)
 {
     return offset / (columns->MaxX - columns->MinX);
 }
 
 static inline float GetColumnsRectHalfWidth() { return 4.0f; }
 
-static float GetDraggedColumnOffset(ImGuiColumnsSet* columns, int column_index)
+static float GetDraggedColumnOffset(ImGuiColumns* columns, int column_index)
 {
     // Active (dragged) column always follow mouse. The reason we need this is that dragging a column to the right edge of an auto-resizing
     // window creates a feedback loop because we store normalized positions. So while dragging we enforce absolute positioning.
@@ -9057,7 +9057,7 @@ static float GetDraggedColumnOffset(ImGuiColumnsSet* columns, int column_index)
 float ImGui::GetColumnOffset(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
     if (column_index < 0)
@@ -9069,7 +9069,7 @@ float ImGui::GetColumnOffset(int column_index)
     return x_offset;
 }
 
-static float GetColumnWidthEx(ImGuiColumnsSet* columns, int column_index, bool before_resize = false)
+static float GetColumnWidthEx(ImGuiColumns* columns, int column_index, bool before_resize = false)
 {
     if (column_index < 0)
         column_index = columns->Current;
@@ -9085,7 +9085,7 @@ static float GetColumnWidthEx(ImGuiColumnsSet* columns, int column_index, bool b
 float ImGui::GetColumnWidth(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
     if (column_index < 0)
@@ -9097,7 +9097,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
     if (column_index < 0)
@@ -9118,7 +9118,7 @@ void ImGui::SetColumnOffset(int column_index, float offset)
 void ImGui::SetColumnWidth(int column_index, float width)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
     if (column_index < 0)
@@ -9129,23 +9129,38 @@ void ImGui::SetColumnWidth(int column_index, float width)
 void ImGui::PushColumnClipRect(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
     if (column_index < 0)
         column_index = columns->Current;
 
-    PushClipRect(columns->Columns[column_index].ClipRect.Min, columns->Columns[column_index].ClipRect.Max, false);
+    ImGuiColumnData* column = &columns->Columns[column_index];
+    PushClipRect(column->ClipRect.Min, column->ClipRect.Max, false);
 }
 
-static ImGuiColumnsSet* FindOrAddColumnsSet(ImGuiWindow* window, ImGuiID id)
+ImGuiColumns* ImGui::FindOrCreateColumns(ImGuiWindow* window, ImGuiID id)
 {
+    // We have few columns per window so for now we don't need bother much with turning this into a faster lookup.
     for (int n = 0; n < window->ColumnsStorage.Size; n++)
         if (window->ColumnsStorage[n].ID == id)
             return &window->ColumnsStorage[n];
 
-    window->ColumnsStorage.push_back(ImGuiColumnsSet());
-    ImGuiColumnsSet* columns = &window->ColumnsStorage.back();
+    window->ColumnsStorage.push_back(ImGuiColumns());
+    ImGuiColumns* columns = &window->ColumnsStorage.back();
     columns->ID = id;
     return columns;
+}
+
+ImGuiID ImGui::GetColumnsID(const char* str_id, int columns_count)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+
+    // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget.
+    // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
+    PushID(0x11223347 + (str_id ? 0 : columns_count));
+    ImGuiID id = window->GetID(str_id ? str_id : "columns");
+    PopID();
+
+    return id;
 }
 
 void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlags flags)
@@ -9154,21 +9169,17 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     ImGuiWindow* window = GetCurrentWindow();
 
     IM_ASSERT(columns_count >= 1);
-    IM_ASSERT(window->DC.ColumnsSet == NULL); // Nested columns are currently not supported
+    IM_ASSERT(window->DC.CurrentColumns == NULL); // Nested columns are currently not supported
 
-    // Differentiate column ID with an arbitrary prefix for cases where users name their columns set the same as another widget.
-    // In addition, when an identifier isn't explicitly provided we include the number of columns in the hash to make it uniquer.
-    PushID(0x11223347 + (str_id ? 0 : columns_count));
-    ImGuiID id = window->GetID(str_id ? str_id : "columns");
-    PopID();
+    ImGuiID id = GetColumnsID(str_id, columns_count);
 
     // Acquire storage for the columns set
-    ImGuiColumnsSet* columns = FindOrAddColumnsSet(window, id);
+    ImGuiColumns* columns = FindOrCreateColumns(window, id);
     IM_ASSERT(columns->ID == id);
     columns->Current = 0;
     columns->Count = columns_count;
     columns->Flags = flags;
-    window->DC.ColumnsSet = columns;
+    window->DC.CurrentColumns = columns;
 
     // Set state for first column
     const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->InnerClipRect.Max.x - window->Pos.x);
@@ -9219,7 +9230,7 @@ void ImGui::EndColumns()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
-    ImGuiColumnsSet* columns = window->DC.ColumnsSet;
+    ImGuiColumns* columns = window->DC.CurrentColumns;
     IM_ASSERT(columns != NULL);
 
     PopItemWidth();
@@ -9280,7 +9291,7 @@ void ImGui::EndColumns()
     }
     columns->IsBeingResized = is_being_resized;
 
-    window->DC.ColumnsSet = NULL;
+    window->DC.CurrentColumns = NULL;
     window->DC.ColumnsOffset.x = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
 }
@@ -9293,10 +9304,10 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
     //flags |= ImGuiColumnsFlags_NoPreserveWidths; // NB: Legacy behavior
-    if (window->DC.ColumnsSet != NULL && window->DC.ColumnsSet->Count == columns_count && window->DC.ColumnsSet->Flags == flags)
+    if (window->DC.CurrentColumns != NULL && window->DC.CurrentColumns->Count == columns_count && window->DC.CurrentColumns->Flags == flags)
         return;
 
-    if (window->DC.ColumnsSet != NULL)
+    if (window->DC.CurrentColumns != NULL)
         EndColumns();
 
     if (columns_count != 1)
@@ -14189,7 +14200,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 for (int n = 0; n < window->ColumnsStorage.Size; n++)
                 {
-                    const ImGuiColumnsSet* columns = &window->ColumnsStorage[n];
+                    const ImGuiColumns* columns = &window->ColumnsStorage[n];
                     if (ImGui::TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
                     {
                         ImGui::BulletText("Width: %.1f (MinX: %.1f, MaxX: %.1f)", columns->MaxX - columns->MinX, columns->MinX, columns->MaxX);
@@ -14295,9 +14306,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             char buf[64] = "";
             char* p = buf;
             p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Order: %d\n", window->BeginOrderWithinContext);
-            ImDrawList* overlay_draw_list = GetForegroundDrawList(window->Viewport);
-            overlay_draw_list->AddRectFilled(window->Pos - ImVec2(1, 1), window->Pos + CalcTextSize(buf) + ImVec2(1, 1), IM_COL32(200, 100, 100, 255));
-            overlay_draw_list->AddText(NULL, 0.0f, window->Pos, IM_COL32(255, 255, 255, 255), buf);
+            ImDrawList* fg_draw_list = GetForegroundDrawList(window->Viewport);
+            fg_draw_list->AddRectFilled(window->Pos - ImVec2(1, 1), window->Pos + CalcTextSize(buf) + ImVec2(1, 1), IM_COL32(200, 100, 100, 255));
+            fg_draw_list->AddText(NULL, 0.0f, window->Pos, IM_COL32(255, 255, 255, 255), buf);
         }
     }
     ImGui::End();
