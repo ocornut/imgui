@@ -6740,21 +6740,21 @@ void ImGui::EndGroup()
 }
 
 // Gets back to previous line and continue with horizontal layout
-//      pos_x == 0      : follow right after previous item
-//      pos_x != 0      : align to specified x position (relative to window/group left)
-//      spacing_w < 0   : use default spacing if pos_x == 0, no spacing if pos_x != 0
-//      spacing_w >= 0  : enforce spacing amount
-void ImGui::SameLine(float pos_x, float spacing_w)
+//      offset_from_start_x == 0 : follow right after previous item
+//      offset_from_start_x != 0 : align to specified x position (relative to window/group left)
+//      spacing_w < 0            : use default spacing if pos_x == 0, no spacing if pos_x != 0
+//      spacing_w >= 0           : enforce spacing amount
+void ImGui::SameLine(float offset_from_start_x, float spacing_w)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
 
     ImGuiContext& g = *GImGui;
-    if (pos_x != 0.0f)
+    if (offset_from_start_x != 0.0f)
     {
         if (spacing_w < 0.0f) spacing_w = 0.0f;
-        window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + pos_x + spacing_w + window->DC.GroupOffset.x + window->DC.ColumnsOffset.x;
+        window->DC.CursorPos.x = window->Pos.x - window->Scroll.x + offset_from_start_x + spacing_w + window->DC.GroupOffset.x + window->DC.ColumnsOffset.x;
         window->DC.CursorPos.y = window->DC.CursorPosPrevLine.y;
     }
     else
@@ -8322,13 +8322,13 @@ void ImGui::NextColumn()
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (++columns->Current < columns->Count)
     {
-        // Columns 1+ cancel out IndentX
+        // New column (columns 1+ cancels out IndentX)
         window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + g.Style.ItemSpacing.x;
         window->DrawList->ChannelsSetCurrent(columns->Current);
     }
     else
     {
-        // New line
+        // New row/line
         window->DC.ColumnsOffset.x = 0.0f;
         window->DrawList->ChannelsSetCurrent(0);
         columns->Current = 0;
@@ -8340,7 +8340,7 @@ void ImGui::NextColumn()
     window->DC.CurrentLineTextBaseOffset = 0.0f;
 
     PushColumnClipRect();
-    PushItemWidth(GetColumnWidth() * 0.65f);  // FIXME: Move on columns setup
+    PushItemWidth(GetColumnWidth() * 0.65f);  // FIXME-COLUMNS: Move on columns setup
 }
 
 int ImGui::GetColumnIndex()
@@ -8365,7 +8365,7 @@ static float PixelsToOffsetNorm(const ImGuiColumns* columns, float offset)
     return offset / (columns->MaxX - columns->MinX);
 }
 
-static inline float GetColumnsRectHalfWidth() { return 4.0f; }
+static const float COLUMNS_HIT_RECT_HALF_WIDTH = 4.0f;
 
 static float GetDraggedColumnOffset(ImGuiColumns* columns, int column_index)
 {
@@ -8376,7 +8376,7 @@ static float GetDraggedColumnOffset(ImGuiColumns* columns, int column_index)
     IM_ASSERT(column_index > 0); // We are not supposed to drag column 0.
     IM_ASSERT(g.ActiveId == columns->ID + ImGuiID(column_index));
 
-    float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x + GetColumnsRectHalfWidth() - window->Pos.x;
+    float x = g.IO.MousePos.x - g.ActiveIdClickOffset.x + COLUMNS_HIT_RECT_HALF_WIDTH - window->Pos.x;
     x = ImMax(x, ImGui::GetColumnOffset(column_index - 1) + g.Style.ColumnsMinSpacing);
     if ((columns->Flags & ImGuiColumnsFlags_NoPreserveWidths))
         x = ImMin(x, ImGui::GetColumnOffset(column_index + 1) - g.Style.ColumnsMinSpacing);
@@ -8515,8 +8515,8 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->InnerClipRect.Max.x - window->Pos.x);
     columns->MinX = window->DC.Indent.x - g.Style.ItemSpacing.x; // Lock our horizontal range
     columns->MaxX = ImMax(content_region_width - window->Scroll.x, columns->MinX + 1.0f);
-    columns->StartPosY = window->DC.CursorPos.y;
-    columns->StartMaxPosX = window->DC.CursorMaxPos.x;
+    columns->BackupCursorPosY = window->DC.CursorPos.y;
+    columns->BackupCursorMaxPosX = window->DC.CursorMaxPos.x;
     columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffset.x = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
@@ -8573,39 +8573,41 @@ void ImGui::EndColumns()
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     window->DC.CursorPos.y = columns->LineMaxY;
     if (!(columns->Flags & ImGuiColumnsFlags_GrowParentContentsSize))
-        window->DC.CursorMaxPos.x = columns->StartMaxPosX;  // Restore cursor max pos, as columns don't grow parent
+        window->DC.CursorMaxPos.x = columns->BackupCursorMaxPosX;  // Restore cursor max pos, as columns don't grow parent
 
     // Draw columns borders and handle resize
     bool is_being_resized = false;
     if (!(columns->Flags & ImGuiColumnsFlags_NoBorder) && !window->SkipItems)
     {
-        const float y1 = columns->StartPosY;
-        const float y2 = window->DC.CursorPos.y;
+        // We clip Y boundaries CPU side because very long triangles are mishandled by some GPU drivers.
+        const float y1 = ImMax(columns->BackupCursorPosY, window->ClipRect.Min.y);
+        const float y2 = ImMin(window->DC.CursorPos.y, window->ClipRect.Max.y);
         int dragging_column = -1;
         for (int n = 1; n < columns->Count; n++)
         {
+            ImGuiColumnData* column = &columns->Columns[n];
             float x = window->Pos.x + GetColumnOffset(n);
             const ImGuiID column_id = columns->ID + ImGuiID(n);
-            const float column_hw = GetColumnsRectHalfWidth(); // Half-width for interaction
-            const ImRect column_rect(ImVec2(x - column_hw, y1), ImVec2(x + column_hw, y2));
+            const float column_hit_hw = COLUMNS_HIT_RECT_HALF_WIDTH;
+            const ImRect column_hit_rect(ImVec2(x - column_hit_hw, y1), ImVec2(x + column_hit_hw, y2));
             KeepAliveID(column_id);
-            if (IsClippedEx(column_rect, column_id, false))
+            if (IsClippedEx(column_hit_rect, column_id, false))
                 continue;
 
             bool hovered = false, held = false;
             if (!(columns->Flags & ImGuiColumnsFlags_NoResize))
             {
-                ButtonBehavior(column_rect, column_id, &hovered, &held);
+                ButtonBehavior(column_hit_rect, column_id, &hovered, &held);
                 if (hovered || held)
                     g.MouseCursor = ImGuiMouseCursor_ResizeEW;
-                if (held && !(columns->Columns[n].Flags & ImGuiColumnsFlags_NoResize))
+                if (held && !(column->Flags & ImGuiColumnsFlags_NoResize))
                     dragging_column = n;
             }
 
-            // Draw column (we clip the Y boundaries CPU side because very long triangles are mishandled by some GPU drivers.)
+            // Draw column
             const ImU32 col = GetColorU32(held ? ImGuiCol_SeparatorActive : hovered ? ImGuiCol_SeparatorHovered : ImGuiCol_Separator);
             const float xi = (float)(int)x;
-            window->DrawList->AddLine(ImVec2(xi, ImMax(y1 + 1.0f, window->ClipRect.Min.y)), ImVec2(xi, ImMin(y2, window->ClipRect.Max.y)), col);
+            window->DrawList->AddLine(ImVec2(xi, y1 + 1.0f), ImVec2(xi, y2), col);
         }
 
         // Apply dragging after drawing the column lines, so our rendered lines are in sync with how items were displayed during the frame.
@@ -8634,10 +8636,11 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 
     ImGuiColumnsFlags flags = (border ? 0 : ImGuiColumnsFlags_NoBorder);
     //flags |= ImGuiColumnsFlags_NoPreserveWidths; // NB: Legacy behavior
-    if (window->DC.CurrentColumns != NULL && window->DC.CurrentColumns->Count == columns_count && window->DC.CurrentColumns->Flags == flags)
+    ImGuiColumns* columns = window->DC.CurrentColumns;
+    if (columns != NULL && columns->Count == columns_count && columns->Flags == flags)
         return;
 
-    if (window->DC.CurrentColumns != NULL)
+    if (columns != NULL)
         EndColumns();
 
     if (columns_count != 1)
@@ -9608,15 +9611,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         static void NodeWindow(ImGuiWindow* window, const char* label)
         {
-            bool node_open = ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window);
-            if (show_windows_rects && ImGui::IsItemHovered())
-                if (ImDrawList* fg_draw_list = GetForegroundDrawList(window))
-                {
-                }
-
-            if (!node_open)
+            if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
                 return;
-
             ImGuiWindowFlags flags = window->Flags;
             NodeDrawList(window, window->DrawList, "DrawList");
             ImGui::BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
@@ -9733,7 +9729,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         for (int n = 0; n < g.Windows.Size; n++)
         {
             ImGuiWindow* window = g.Windows[n];
-            if ((window->Flags & ImGuiWindowFlags_ChildWindow) || !window->WasActive)
+            if (!window->WasActive)
                 continue;
             ImDrawList* draw_list = GetForegroundDrawList(window);
             if (show_windows_rects)
@@ -9746,7 +9742,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 else if (show_windows_rect_type == RT_ContentsRegionRect)   { r = window->ContentsRegionRect; }
                 draw_list->AddRect(r.Min, r.Max, IM_COL32(255, 0, 128, 255));
             }
-            if (show_windows_begin_order)
+            if (show_windows_begin_order && !(window->Flags & ImGuiWindowFlags_ChildWindow))
             {
                 char buf[32];
                 ImFormatString(buf, IM_ARRAYSIZE(buf), "%d", window->BeginOrderWithinContext);

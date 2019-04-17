@@ -252,7 +252,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::End();
         return;
     }
-    ImGui::Text("dear imgui says hello. (%s)", IMGUI_VERSION);
 
     // Most "big" widgets share a common width settings by default.
     //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);    // Use 2/3 of the space for widgets and 1/3 for labels (default)
@@ -292,7 +291,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::EndMenuBar();
     }
 
+    ImGui::Text("dear imgui says hello. (%s)", IMGUI_VERSION);
     ImGui::Spacing();
+
     if (ImGui::CollapsingHeader("Help"))
     {
         ImGui::Text("PROGRAMMER GUIDE:");

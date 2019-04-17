@@ -658,7 +658,7 @@ struct ImGuiColumnData
     ImGuiColumnsFlags   Flags;              // Not exposed
     ImRect              ClipRect;
 
-    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; Flags = 0; }
+    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; Flags = ImGuiColumnsFlags_None; }
 };
 
 struct ImGuiColumns
@@ -671,23 +671,23 @@ struct ImGuiColumns
     int                 Count;
     float               MinX, MaxX;
     float               LineMinY, LineMaxY;
-    float               StartPosY;          // Copy of CursorPos
-    float               StartMaxPosX;       // Copy of CursorMaxPos
+    float               BackupCursorPosY;       // Backup of CursorPos at the time of BeginColumns()
+    float               BackupCursorMaxPosX;    // Backup of CursorMaxPos at the time of BeginColumns()
     ImVector<ImGuiColumnData> Columns;
 
     ImGuiColumns()      { Clear(); }
     void Clear()
     {
         ID = 0;
-        Flags = 0;
+        Flags = ImGuiColumnsFlags_None;
         IsFirstFrame = false;
         IsBeingResized = false;
         Current = 0;
         Count = 1;
         MinX = MaxX = 0.0f;
         LineMinY = LineMaxY = 0.0f;
-        StartPosY = 0.0f;
-        StartMaxPosX = 0.0f;
+        BackupCursorPosY = 0.0f;
+        BackupCursorMaxPosX = 0.0f;
         Columns.clear();
     }
 };
