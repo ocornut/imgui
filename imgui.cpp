@@ -3091,13 +3091,13 @@ void ImGui::DestroyContext(ImGuiContext* ctx)
 
 ImGuiIO& ImGui::GetIO()
 {
-    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     return GImGui->IO;
 }
 
 ImGuiStyle& ImGui::GetStyle()
 {
-    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     return GImGui->Style;
 }
 
@@ -3424,7 +3424,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
 
 void ImGui::NewFrame()
 {
-    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() or ImGui::SetCurrentContext()?");
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     ImGuiContext& g = *GImGui;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE

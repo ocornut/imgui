@@ -87,7 +87,7 @@ void ImGui_ImplMetal_Shutdown()
 
 void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor)
 {
-    IM_ASSERT(g_sharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init?");
+    IM_ASSERT(g_sharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
 
     g_sharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 }

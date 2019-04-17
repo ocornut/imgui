@@ -28,13 +28,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
+ - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents
 
  - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
- - drawlist: add calctextsize func to facilitate consistent code from user pov
+ ! drawlist: add calctextsize func to facilitate consistent code from user pov (currently need to use ImGui or ImFont alternatives!)
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
  - drawlist: primitives/helpers to manipulate vertices post submission, so e.g. a quad/rect can be resized to fit later submitted content, _without_ using the ChannelSplit api
@@ -44,6 +45,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: rendering: provide a way for imgui to output to a single/global vertex buffer, re-order indices only at the end of the frame (ref: https://gist.github.com/floooh/10388a0afbe08fce9e617d8aefa7d302)
  - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
  - drawlist: AddRect vs AddLine position confusing (#2441)
+ - drawlist: channel splitter should be external helper and not stored in ImDrawList.
  - drawlist/opt: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding. (#1962)
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
  - drawlist/opt: thick AA line could be doable in same number of triangles as 1.0 AA line by storing gradient+full color in atlas.
@@ -330,6 +332,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - examples: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
  - examples: opengl: could use a single vertex buffer and glBufferSubData for uploads?
+ - examples: opengl: explicitly disable GL_STENCIL_TEST in bindings.
  - examples: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
