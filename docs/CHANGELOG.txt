@@ -51,6 +51,7 @@ Other Changes:
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
 - PlotLines, PlotHistogram: Ignore NaN values when calculating min/max bounds. (#2485)
 - Window: Window close button is horizontally aligned with style.FramePadding.x.
+- Columns: Fixed boundary of clipping being off by 1 pixel within the left column.
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
