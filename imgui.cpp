@@ -5779,8 +5779,8 @@ float ImGui::CalcItemWidth()
     float w = window->DC.ItemWidth;
     if (w < 0.0f)
     {
-        float width_to_right_edge = GetContentRegionAvail().x;
-        w = ImMax(1.0f, width_to_right_edge + w);
+        float region_max_x = GetContentRegionMaxScreen().x;
+        w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
     }
     w = (float)(int)w;
     return w;
@@ -5792,13 +5792,21 @@ float ImGui::CalcItemWidth()
 ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    ImVec2 content_max;
+
+    ImVec2 region_max;
     if (size.x < 0.0f || size.y < 0.0f)
-        content_max = GetContentRegionMaxScreen();
-    if (size.x <= 0.0f)
-        size.x = (size.x == 0.0f) ? default_w : ImMax(content_max.x - window->DC.CursorPos.x, 4.0f) + size.x;
-    if (size.y <= 0.0f)
-        size.y = (size.y == 0.0f) ? default_h : ImMax(content_max.y - window->DC.CursorPos.y, 4.0f) + size.y;
+        region_max = GetContentRegionMaxScreen();
+
+    if (size.x == 0.0f)
+        size.x = default_w;
+    else if (size.x < 0.0f)
+        size.x = ImMax(4.0f, region_max.x - window->DC.CursorPos.x) + size.x;
+
+    if (size.y == 0.0f)
+        size.y = default_h;
+    else if (size.y < 0.0f)
+        size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y) + size.y;
+
     return size;
 }
 
