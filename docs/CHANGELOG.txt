@@ -46,6 +46,10 @@ Other Changes:
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
 - InputText: Fixed ImGuiInputTextFlags_AllowTabInput leading to two tabs characters being inserted
   if the back-end provided both Key and Character input. (#2467, #1336)
+- Added SetNextItemWidth() helper to avoid using PushItemWidth/PopItemWidth() for single items.
+  Note that SetNextItemWidth() currently only affect the same subset of items as PushItemWidth(),
+  generally referred to as the large framed+labeled items.
+  Because the new SetNextItemWidth() function is explicit
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
