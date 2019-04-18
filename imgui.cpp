@@ -5789,6 +5789,7 @@ float ImGui::CalcItemWidth()
 // [Internal] Calculate full item size given user provided 'size' parameter and default width/height. Default width is often == CalcItemWidth().
 // Those two functions CalcItemWidth vs CalcItemSize are awkwardly named because they are not fully symmetrical.
 // Note that only CalcItemWidth() is publicly exposed.
+// The 4.0f here may be changed to match CalcItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
 ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
@@ -5800,12 +5801,12 @@ ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
     if (size.x == 0.0f)
         size.x = default_w;
     else if (size.x < 0.0f)
-        size.x = ImMax(4.0f, region_max.x - window->DC.CursorPos.x) + size.x;
+        size.x = ImMax(4.0f, region_max.x - window->DC.CursorPos.x + size.x);
 
     if (size.y == 0.0f)
         size.y = default_h;
     else if (size.y < 0.0f)
-        size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y) + size.y;
+        size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y + size.y);
 
     return size;
 }

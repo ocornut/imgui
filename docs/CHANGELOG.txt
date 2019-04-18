@@ -53,6 +53,8 @@ Other Changes:
 - Window: Window close button is horizontally aligned with style.FramePadding.x.
 - Columns: Fixed boundary of clipping being off by 1 pixel within the left column.
 - Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
+- Misc: Fixed PushItemWidth(-width) (for right-side alignment) laying out certain items (button, listbox, etc.)
+  with negative sizes if the 'width' argument was smaller than the available width at the time of item submission,
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
