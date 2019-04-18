@@ -5440,6 +5440,9 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 // - ListBoxHeader()
 // - ListBoxFooter()
 //-------------------------------------------------------------------------
+// FIXME: This is an old API. We should redesign some of it, rename ListBoxHeader->BeginListBox, ListBoxFooter->EndListBox
+// and promote using them over existing ListBox() functions, similarly to change with combo boxes.
+//-------------------------------------------------------------------------
 
 // FIXME: In principle this function should be called BeginListBox(). We should rename it after re-evaluating if we want to keep the same signature.
 // Helper to calculate the size of a listbox and display a label on the right.
