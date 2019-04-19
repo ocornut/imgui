@@ -2535,7 +2535,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     : DrawListInst(&context->DrawListSharedData)
 {
     Name = ImStrdup(name);
-    ID = ImHashStr(name, 0);
+    ID = ImHashStr(name);
     IDStack.push_back(ID);
     Flags = ImGuiWindowFlags_None;
     Pos = ImVec2(0.0f, 0.0f);
@@ -3629,7 +3629,7 @@ void ImGui::Initialize(ImGuiContext* context)
     // Add .ini handle for ImGuiWindow type
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Window";
-    ini_handler.TypeHash = ImHashStr("Window", 0);
+    ini_handler.TypeHash = ImHashStr("Window");
     ini_handler.ReadOpenFn = SettingsHandlerWindow_ReadOpen;
     ini_handler.ReadLineFn = SettingsHandlerWindow_ReadLine;
     ini_handler.WriteAllFn = SettingsHandlerWindow_WriteAll;
@@ -4562,7 +4562,7 @@ ImGuiWindow* ImGui::FindWindowByID(ImGuiID id)
 
 ImGuiWindow* ImGui::FindWindowByName(const char* name)
 {
-    ImGuiID id = ImHashStr(name, 0);
+    ImGuiID id = ImHashStr(name);
     return FindWindowByID(id);
 }
 
@@ -8769,7 +8769,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
     else
     {
         window = NULL;
-        source_id = ImHashStr("#SourceExtern", 0);
+        source_id = ImHashStr("#SourceExtern");
         source_drag_active = true;
     }
 
@@ -9210,7 +9210,7 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
     g.SettingsWindows.push_back(ImGuiWindowSettings());
     ImGuiWindowSettings* settings = &g.SettingsWindows.back();
     settings->Name = ImStrdup(name);
-    settings->ID = ImHashStr(name, 0);
+    settings->ID = ImHashStr(name);
     return settings;
 }
 
@@ -9225,7 +9225,7 @@ ImGuiWindowSettings* ImGui::FindWindowSettings(ImGuiID id)
 
 ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name)
 {
-    if (ImGuiWindowSettings* settings = FindWindowSettings(ImHashStr(name, 0)))
+    if (ImGuiWindowSettings* settings = FindWindowSettings(ImHashStr(name)))
         return settings;
     return CreateNewWindowSettings(name);
 }
@@ -9243,7 +9243,7 @@ void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
 ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiID type_hash = ImHashStr(type_name, 0);
+    const ImGuiID type_hash = ImHashStr(type_name);
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
         if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
             return &g.SettingsHandlers[handler_n];
@@ -9347,7 +9347,7 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
 
 static void* SettingsHandlerWindow_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
-    ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHashStr(name, 0));
+    ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHashStr(name));
     if (!settings)
         settings = ImGui::CreateNewWindowSettings(name);
     return (void*)settings;

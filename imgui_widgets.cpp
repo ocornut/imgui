@@ -6468,7 +6468,7 @@ static ImU32   ImGui::TabBarCalcTabID(ImGuiTabBar* tab_bar, const char* label)
 {
     if (tab_bar->Flags & ImGuiTabBarFlags_DockNode)
     {
-        ImGuiID id = ImHashStr(label, 0);
+        ImGuiID id = ImHashStr(label);
         KeepAliveID(id);
         return id;
     }
