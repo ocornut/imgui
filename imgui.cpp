@@ -11421,9 +11421,11 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                     // Central node property needs to be moved to a leaf node, pick the last focused one.
                     // FIXME-DOCKING: If we had to transfer other flags here, what would the policy be?
                     ImGuiDockNode* last_focused_node = DockContextFindNodeByID(ctx, payload_node->LastFocusedNodeID);
-                    IM_ASSERT(last_focused_node != NULL && DockNodeGetRootNode(last_focused_node) == DockNodeGetRootNode(payload_node));
+                    ImGuiDockNode* last_focused_root_node = DockNodeGetRootNode(last_focused_node);
+                    IM_ASSERT(last_focused_node != NULL && last_focused_root_node == DockNodeGetRootNode(payload_node));
                     last_focused_node->LocalFlags |= ImGuiDockNodeFlags_CentralNode;
                     node->LocalFlags &= ~ImGuiDockNodeFlags_CentralNode;
+                    last_focused_root_node->CentralNode = last_focused_node;
                 }
 
                 IM_ASSERT(node->Windows.Size == 0);
@@ -11752,17 +11754,18 @@ static void ImGui::DockNodeHideHostWindow(ImGuiDockNode* node)
         DockNodeRemoveTabBar(node);
 }
 
-struct ImGuiDockNodeUpdateScanResults
+// Search function called once by root node in DockNodeUpdate()
+struct ImGuiDockNodeFindInfoResults
 {
     ImGuiDockNode*      CentralNode;
     ImGuiDockNode*      FirstNodeWithWindows;
     int                 CountNodesWithWindows;
     //ImGuiWindowClass  WindowClassForMerges;
 
-    ImGuiDockNodeUpdateScanResults() { CentralNode = FirstNodeWithWindows = NULL; CountNodesWithWindows = 0; }
+    ImGuiDockNodeFindInfoResults() { CentralNode = FirstNodeWithWindows = NULL; CountNodesWithWindows = 0; }
 };
 
-static void DockNodeUpdateScanRec(ImGuiDockNode* node, ImGuiDockNodeUpdateScanResults* results)
+static void DockNodeFindInfo(ImGuiDockNode* node, ImGuiDockNodeFindInfoResults* results)
 {
     if (node->Windows.Size > 0)
     {
@@ -11779,9 +11782,9 @@ static void DockNodeUpdateScanRec(ImGuiDockNode* node, ImGuiDockNodeUpdateScanRe
     if (results->CountNodesWithWindows > 1 && results->CentralNode != NULL)
         return;
     if (node->ChildNodes[0])
-        DockNodeUpdateScanRec(node->ChildNodes[0], results);
+        DockNodeFindInfo(node->ChildNodes[0], results);
     if (node->ChildNodes[1])
-        DockNodeUpdateScanRec(node->ChildNodes[1], results);
+        DockNodeFindInfo(node->ChildNodes[1], results);
 }
 
 // - Remove inactive windows/nodes.
@@ -11880,8 +11883,8 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         // FIXME-DOCK: Merge this scan into the one above.
         // - Setup central node pointers
         // - Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
-        ImGuiDockNodeUpdateScanResults results;
-        DockNodeUpdateScanRec(node, &results);
+        ImGuiDockNodeFindInfoResults results;
+        DockNodeFindInfo(node, &results);
         node->CentralNode = results.CentralNode;
         node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1) ? results.FirstNodeWithWindows : NULL;
         if (node->LastFocusedNodeID == 0 && results.FirstNodeWithWindows != NULL)
@@ -12754,11 +12757,13 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     DockNodeMoveWindows(parent_node->ChildNodes[split_inheritor_child_idx], parent_node);
     DockNodeTreeUpdatePosSize(parent_node, parent_node->Pos, parent_node->Size);
 
-    // Flags transfer
+    // Flags transfer (e.g. this is where we transfer the ImGuiDockNodeFlags_CentralNode property)
     child_0->SharedFlags = parent_node->SharedFlags & ImGuiDockNodeFlags_SharedFlagsInheritMask_;
     child_1->SharedFlags = parent_node->SharedFlags & ImGuiDockNodeFlags_SharedFlagsInheritMask_;
     child_inheritor->LocalFlags = parent_node->LocalFlags & ImGuiDockNodeFlags_LocalFlagsTransferMask_;
     parent_node->LocalFlags &= ~ImGuiDockNodeFlags_LocalFlagsTransferMask_;
+    if (child_inheritor->IsCentralNode())
+        DockNodeGetRootNode(parent_node)->CentralNode = child_inheritor;
 }
 
 void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImGuiDockNode* merge_lead_child)
@@ -13062,10 +13067,15 @@ void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
             // Policy: Find central node or latest focused node. We first move back to our root node.
             new_node = DockNodeGetRootNode(new_node);
             if (new_node->CentralNode)
+            {
+                IM_ASSERT(new_node->CentralNode->IsCentralNode());
                 dock_id = new_node->CentralNode->ID;
+            }
             else
+            {
                 dock_id = new_node->LastFocusedNodeID;
             }
+        }
 
     if (window->DockId == dock_id)
         return;
@@ -13340,6 +13350,7 @@ void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
     else if (has_central_node)
     {
         root_node->LocalFlags |= ImGuiDockNodeFlags_CentralNode;
+        root_node->CentralNode = root_node;
     }
 }
 
