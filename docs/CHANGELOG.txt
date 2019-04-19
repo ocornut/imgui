@@ -110,13 +110,22 @@ Other Changes:
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
 - InputText: Fixed ImGuiInputTextFlags_AllowTabInput leading to two tabs characters being inserted
   if the back-end provided both Key and Character input. (#2467, #1336)
+- Added SetNextItemWidth() helper to avoid using PushItemWidth/PopItemWidth() for single items.
+  Note that SetNextItemWidth() currently only affect the same subset of items as PushItemWidth(),
+  generally referred to as the large framed+labeled items.
+  Because the new SetNextItemWidth() function is explicit
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
 - PlotLines, PlotHistogram: Ignore NaN values when calculating min/max bounds. (#2485)
 - Window: Window close button is horizontally aligned with style.FramePadding.x.
+- Columns: Fixed boundary of clipping being off by 1 pixel within the left column.
+- Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
+- Misc: Fixed PushItemWidth(-width) (for right-side alignment) laying out certain items (button, listbox, etc.)
+  with negative sizes if the 'width' argument was smaller than the available width at the time of item submission,
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
+- Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
   GL function loaders early, and help users understand what they are missing. (#2421)
 - Examples: Emscripten: Added Emscripten+SDL+GLES2 example. (#2494, #2492, #2351, #336) [@nicolasnoble]
