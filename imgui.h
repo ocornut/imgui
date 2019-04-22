@@ -726,7 +726,7 @@ namespace ImGui
     IMGUI_API ImGuiPlatformIO&  GetPlatformIO();                                                // platform/renderer functions, for back-end to setup + viewports list.
     IMGUI_API ImGuiViewport*    GetMainViewport();                                              // main viewport. same as GetPlatformIO().MainViewport == GetPlatformIO().Viewports[0].
     IMGUI_API void              UpdatePlatformWindows();                                        // call in main loop. will call CreateWindow/ResizeWindow/etc. platform functions for each secondary viewport, and DestroyWindow for each inactive viewport.
-    IMGUI_API void              RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport. may be reimplemented by user for custom rendering needs.
+    IMGUI_API void              RenderPlatformWindowsDefault(void* platform_arg = NULL, void* renderer_arg = NULL); // call in main loop. will call RenderWindow/SwapBuffers platform functions for each secondary viewport which doesn't have the ImGuiViewportFlags_Minimized flag set. May be reimplemented by user for custom rendering needs.
     IMGUI_API void              DestroyPlatformWindows();                                       // call DestroyWindow platform functions for all viewports. call from back-end Shutdown() if you need to close platform windows before imgui shutdown. otherwise will be called by DestroyContext().
     IMGUI_API ImGuiViewport*    FindViewportByID(ImGuiID id);                                   // this is a helper for back-ends.
     IMGUI_API ImGuiViewport*    FindViewportByPlatformHandle(void* platform_handle);            // this is a helper for back-ends. the type platform_handle is decided by the back-end (e.g. HWND, MyWindow*, GLFWwindow* etc.)
@@ -2347,7 +2347,8 @@ enum ImGuiViewportFlags_
     ImGuiViewportFlags_NoFocusOnClick           = 1 << 3,   // Platform Window: Don't take focus when clicked on.
     ImGuiViewportFlags_NoInputs                 = 1 << 4,   // Platform Window: Make mouse pass through so we can drag this window while peaking behind it.
     ImGuiViewportFlags_NoRendererClear          = 1 << 5,   // Platform Window: Renderer doesn't need to clear the framebuffer ahead (because we will fill it entirely).
-    ImGuiViewportFlags_TopMost                  = 1 << 6    // Platform Window: Display on top (for tooltips only)
+    ImGuiViewportFlags_TopMost                  = 1 << 6,   // Platform Window: Display on top (for tooltips only)
+    ImGuiViewportFlags_Minimized                = 1 << 7    // Platform Window: Window is minimized, can skip render. When minimized we tend to avoid using the viewport pos/size for clipping window or testing if they are contained in the viewport.
 };
 
 // The viewports created and managed by imgui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.
