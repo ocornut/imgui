@@ -325,6 +325,6 @@ void ImGui_ImplGlfw_NewFrame()
     ImGui_ImplGlfw_UpdateMousePosAndButtons();
     ImGui_ImplGlfw_UpdateMouseCursor();
 
-    // Gamepad navigation mapping
+    // Update game controllers (if enabled and available)
     ImGui_ImplGlfw_UpdateGamepads();
 }
