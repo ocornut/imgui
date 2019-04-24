@@ -207,6 +207,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
+ - tree node: _NoIndentOnOpen flag? would require to store a per-depth bit mask to store info for pop (or whatever is cheaper)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
