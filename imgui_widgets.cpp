@@ -2000,9 +2000,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
         format = PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
-    bool start_text_input = false;
+    bool temp_input_is_active = TempInputTextIsActive(id);
+    bool temp_input_start = false;
     const bool focus_requested = FocusableItemRegister(window, id);
-    if (focus_requested || (hovered && (g.IO.MouseClicked[0] || g.IO.MouseDoubleClicked[0])) || g.NavActivateId == id || (g.NavInputId == id && g.ScalarAsInputTextId != id))
+    if (focus_requested || (hovered && (g.IO.MouseClicked[0] || g.IO.MouseDoubleClicked[0])) || g.NavActivateId == id || (g.NavInputId == id && !temp_input_is_active))
     {
         SetActiveID(id, window);
         SetFocusID(id, window);
@@ -2010,15 +2011,15 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
         g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         if (focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0] || g.NavInputId == id)
         {
-            start_text_input = true;
-            g.ScalarAsInputTextId = 0;
+            temp_input_start = true;
+            g.TempInputTextId = 0;
         }
     }
-    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
+    if (temp_input_is_active || temp_input_start)
     {
         window->DC.CursorPos = frame_bb.Min;
         FocusableItemUnregister(window);
-        return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
+        return TempInputTextScalar(frame_bb, id, label, data_type, v, format);
     }
 
     // Actual drag behavior
@@ -2442,10 +2443,11 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         format = PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
-    bool start_text_input = false;
+    bool temp_input_is_active = TempInputTextIsActive(id);
+    bool temp_input_start = false;
     const bool focus_requested = FocusableItemRegister(window, id);
     const bool hovered = ItemHoverable(frame_bb, id);
-    if (focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || (g.NavInputId == id && g.ScalarAsInputTextId != id))
+    if (focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || (g.NavInputId == id && !temp_input_is_active))
     {
         SetActiveID(id, window);
         SetFocusID(id, window);
@@ -2453,15 +2455,15 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         if (focus_requested || g.IO.KeyCtrl || g.NavInputId == id)
         {
-            start_text_input = true;
-            g.ScalarAsInputTextId = 0;
+            temp_input_start = true;
+            g.TempInputTextId = 0;
         }
     }
-    if (start_text_input || (g.ActiveId == id && g.ScalarAsInputTextId == id))
+    if (temp_input_is_active || temp_input_start)
     {
         window->DC.CursorPos = frame_bb.Min;
         FocusableItemUnregister(window);
-        return InputScalarAsWidgetReplacement(frame_bb, id, label, data_type, v, format);
+        return TempInputTextScalar(frame_bb, id, label, data_type, v, format);
     }
 
     // Draw frame
@@ -2648,7 +2650,7 @@ bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min,
 // - ImParseFormatFindEnd() [Internal]
 // - ImParseFormatTrimDecorations() [Internal]
 // - ImParseFormatPrecision() [Internal]
-// - InputScalarAsWidgetReplacement() [Internal]
+// - TempInputTextScalar() [Internal]
 // - InputScalar()
 // - InputScalarN()
 // - InputFloat()
@@ -2734,16 +2736,16 @@ int ImParseFormatPrecision(const char* fmt, int default_precision)
     return (precision == INT_MAX) ? default_precision : precision;
 }
 
-// Create text input in place of an active drag/slider (used when doing a CTRL+Click on drag/slider widgets)
+// Create text input in place of another active widget (e.g. used when doing a CTRL+Click on drag/slider widgets)
 // FIXME: Facilitate using this in variety of other situations.
-bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format)
+bool ImGui::TempInputTextScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
     IM_UNUSED(id);
     ImGuiContext& g = *GImGui;
 
-    // On the first frame, g.ScalarAsInputTextId == 0, then on subsequent frames it becomes == id.
+    // On the first frame, g.TempInputTextId == 0, then on subsequent frames it becomes == id.
     // We clear ActiveID on the first frame to allow the InputText() taking it back.
-    if (g.ScalarAsInputTextId == 0)
+    if (g.TempInputTextId == 0)
         ClearActiveID();
 
     char fmt_buf[32];
@@ -2753,11 +2755,11 @@ bool ImGui::InputScalarAsWidgetReplacement(const ImRect& bb, ImGuiID id, const c
     ImStrTrimBlanks(data_buf);
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
     bool value_changed = InputTextEx(label, NULL, data_buf, IM_ARRAYSIZE(data_buf), bb.GetSize(), flags);
-    if (g.ScalarAsInputTextId == 0)
+    if (g.TempInputTextId == 0)
     {
         // First frame we started displaying the InputText widget, we expect it to take the active id.
         IM_ASSERT(g.ActiveId == id);
-        g.ScalarAsInputTextId = g.ActiveId;
+        g.TempInputTextId = g.ActiveId;
     }
     if (value_changed)
         return DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialTextA.Data, data_type, data_ptr, NULL);
