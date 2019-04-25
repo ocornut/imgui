@@ -46,31 +46,36 @@ Other Changes:
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
 - InputText: Fixed ImGuiInputTextFlags_AllowTabInput leading to two tabs characters being inserted
   if the back-end provided both Key and Character input. (#2467, #1336)
-- Added SetNextItemWidth() helper to avoid using PushItemWidth/PopItemWidth() for single items.
+- Layout: Added SetNextItemWidth() helper to avoid using PushItemWidth/PopItemWidth() for single items.
   Note that SetNextItemWidth() currently only affect the same subset of items as PushItemWidth(),
-  generally referred to as the large framed+labeled items.
-  Because the new SetNextItemWidth() function is explicit
+  generally referred to as the large framed+labeled items. Because the new SetNextItemWidth()
+  function is explicit we may later extend its effect to more items.
+- Layout: Fixed PushItemWidth(-width) for right-side alignment laying out some items (button, listbox, etc.)
+  with negative sizes if the 'width' argument was smaller than the available width at the time of item
+  submission.
+- Window: Fixed window with the AlwaysAutoResize flag unnecessarily extending their hovering boundaries
+  by a few pixels (this is used to facilitate resizing from borders when available for a given window).
+  One of the noticeable minor side effect was that navigating menus would have had a tendency to disable
+  highlight from parent menu items earlier than necessary while approaching the child menu.
+- Window: Close button is horizontally aligned with style.FramePadding.x.
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
 - PlotLines, PlotHistogram: Ignore NaN values when calculating min/max bounds. (#2485)
-- Window: Window close button is horizontally aligned with style.FramePadding.x.
 - Columns: Fixed boundary of clipping being off by 1 pixel within the left column.
 - Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
-- Misc: Fixed PushItemWidth(-width) (for right-side alignment) laying out certain items (button, listbox, etc.)
-  with negative sizes if the 'width' argument was smaller than the available width at the time of item submission,
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
   GL function loaders early, and help users understand what they are missing. (#2421)
-- Examples: Emscripten: Added Emscripten+SDL+GLES2 example. (#2494, #2492, #2351, #336) [@nicolasnoble]
+- Examples: Emscripten: Added Emscripten+SDL+GLES2 example. (#2494, #2492, #2351, #336) [@nicolasnoble, @redblobgames]
+- Examples: SDL: Added support for SDL_GameController gamepads (enable with ImGuiConfigFlags_NavEnableGamepad). (#2509) [@DJLink]
 - Examples: OpenGL3: Minor tweaks + not calling glBindBuffer more than necessary in the render loop.
 - Examples: Vulkan: Fixed in-flight buffers issues when using multi-viewports. (#2461, #2348, #2378, #2097)
 - Examples: Vulkan: Added missing support for 32-bit indices (#define ImDrawIdx unsigned int).
 - Examples: Vulkan: Avoid passing negative coordinates to vkCmdSetScissor, which debug validation layers do not like.
 - Examples: Vulkan: Added ImGui_ImplVulkan_SetMinImageCount() to change min image count at runtime. (#2071) [@nathanvoglsam]
-- Examples: SDL: Added support for SDL_GameController gamepads (enable with ImGuiConfigFlags_NavEnableGamepad). (#2509) [@DJLink]
 - Examples: DirectX9: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects(). (#2454)
 - Examples: DirectX10/11/12, Allegro, Marmalade: Render functions early out when display size is zero (minimized). (#2496)
 - Examples: GLUT: Fixed existing FreeGLUT example to work with regular GLUT. (#2465) [@andrewwillmott]

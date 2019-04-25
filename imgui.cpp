@@ -4067,7 +4067,7 @@ static void FindHoveredWindow()
 
         // Using the clipped AABB, a child window will typically be clipped by its parent (not always)
         ImRect bb(window->OuterRectClipped);
-        if ((window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_NoResize))
+        if (window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize))
             bb.Expand(padding_regular);
         else
             bb.Expand(padding_for_resize_from_edges);
