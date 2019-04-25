@@ -64,6 +64,7 @@ Other Changes:
 - PlotLines, PlotHistogram: Ignore NaN values when calculating min/max bounds. (#2485)
 - Columns: Fixed boundary of clipping being off by 1 pixel within the left column.
 - Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
+- Nav: Fixed Drag/Slider functions going into text input mode when keyboard CTRL is held while pressing NavActivate.
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.

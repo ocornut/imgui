@@ -2004,13 +2004,15 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
     if (!temp_input_is_active)
     {
         const bool focus_requested = FocusableItemRegister(window, id);
-        if (focus_requested || (hovered && (g.IO.MouseClicked[0] || g.IO.MouseDoubleClicked[0])) || g.NavActivateId == id || g.NavInputId == id)
+        const bool clicked = (hovered && g.IO.MouseClicked[0]);
+        const bool double_clicked = (hovered && g.IO.MouseDoubleClicked[0]);
+        if (focus_requested || clicked || double_clicked || g.NavActivateId == id || g.NavInputId == id)
         {
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-            if (focus_requested || g.IO.KeyCtrl || g.IO.MouseDoubleClicked[0] || g.NavInputId == id)
+            if (focus_requested || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavInputId == id)
             {
                 temp_input_start = true;
                 FocusableItemUnregister(window);
@@ -2447,13 +2449,14 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
     if (!temp_input_is_active)
     {
         const bool focus_requested = FocusableItemRegister(window, id);
-        if (focus_requested || (hovered && g.IO.MouseClicked[0]) || g.NavActivateId == id || g.NavInputId == id)
+        const bool clicked = (hovered && g.IO.MouseClicked[0]);
+        if (focus_requested || clicked || g.NavActivateId == id || g.NavInputId == id)
         {
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
-            if (focus_requested || g.IO.KeyCtrl || g.NavInputId == id)
+            if (focus_requested || (clicked && g.IO.KeyCtrl) || g.NavInputId == id)
             {
                 temp_input_start = true;
                 FocusableItemUnregister(window);
