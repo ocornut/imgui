@@ -5082,7 +5082,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     if (!item_add)
     {
         if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
-            TreePushRawID(id);
+            TreePushOverrideID(id);
         IMGUI_TEST_ENGINE_ITEM_INFO(window->DC.LastItemId, label, window->DC.ItemFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
         return is_open;
     }
@@ -5186,7 +5186,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
 
     if (is_open && !(flags & ImGuiTreeNodeFlags_NoTreePushOnOpen))
-        TreePushRawID(id);
+        TreePushOverrideID(id);
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | (is_leaf ? 0 : ImGuiItemStatusFlags_Openable) | (is_open ? ImGuiItemStatusFlags_Opened : 0));
     return is_open;
 }
@@ -5207,7 +5207,7 @@ void ImGui::TreePush(const void* ptr_id)
     PushID(ptr_id ? ptr_id : (const void*)"#TreePush");
 }
 
-void ImGui::TreePushRawID(ImGuiID id)
+void ImGui::TreePushOverrideID(ImGuiID id)
 {
     ImGuiWindow* window = GetCurrentWindow();
     Indent();
@@ -6211,7 +6211,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
         return false;
 
     if ((flags & ImGuiTabBarFlags_DockNode) == 0)
-        window->IDStack.push_back(tab_bar->ID);
+        PushOverrideID(tab_bar->ID);
 
     // Add to stack
     g.CurrentTabBarStack.push_back(GetTabBarRefFromTabBar(tab_bar));
@@ -6663,7 +6663,8 @@ static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
 bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (g.CurrentWindow->SkipItems)
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->SkipItems)
         return false;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
@@ -6676,7 +6677,7 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
     if (ret && !(flags & ImGuiTabItemFlags_NoPushId))
     {
         ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
-        g.CurrentWindow->IDStack.push_back(tab->ID);    // We already hashed 'label' so push into the ID stack directly instead of doing another hash through PushID(label)
+        PushOverrideID(tab->ID); // We already hashed 'label' so push into the ID stack directly instead of doing another hash through PushID(label)
     }
     return ret;
 }
@@ -6684,7 +6685,8 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
 void    ImGui::EndTabItem()
 {
     ImGuiContext& g = *GImGui;
-    if (g.CurrentWindow->SkipItems)
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->SkipItems)
         return;
 
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
@@ -6696,7 +6698,7 @@ void    ImGui::EndTabItem()
     IM_ASSERT(tab_bar->LastTabItemIdx >= 0);
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
-        g.CurrentWindow->IDStack.pop_back();
+        window->IDStack.pop_back();
 }
 
 bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, ImGuiTabItemFlags flags)

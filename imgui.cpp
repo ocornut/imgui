@@ -6682,6 +6682,13 @@ void ImGui::PushID(int int_id)
     window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
 }
 
+// Push a given id value ignoring the ID stack as a seed.
+void ImGui::PushOverrideID(ImGuiID id)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    window->IDStack.push_back(id);
+}
+
 void ImGui::PopID()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
