@@ -8101,14 +8101,14 @@ static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
             {
                 // Fallback manual-scroll when window has no navigable item
                 if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                    SetWindowScrollY(window, window->Scroll.y - window->InnerClipRect.GetHeight());
+                    SetWindowScrollY(window, window->Scroll.y - window->InnerMainRect.GetHeight());
                 else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                    SetWindowScrollY(window, window->Scroll.y + window->InnerClipRect.GetHeight());
+                    SetWindowScrollY(window, window->Scroll.y + window->InnerMainRect.GetHeight());
             }
             else
             {
                 const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
-                const float page_offset_y = ImMax(0.0f, window->InnerClipRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
+                const float page_offset_y = ImMax(0.0f, window->InnerMainRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
                 float nav_scoring_rect_offset_y = 0.0f;
                 if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
                 {
