@@ -1203,7 +1203,7 @@ void ImGui::Separator()
         return;
     ImGuiContext& g = *GImGui;
 
-    // Those flags should eventually be overridable by the user
+    // Those flags should eventually be overrideable by the user
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     IM_ASSERT(ImIsPowerOfTwo(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)));   // Check that only 1 option is selected
     if (flags & ImGuiSeparatorFlags_Vertical)
@@ -1222,7 +1222,7 @@ void ImGui::Separator()
         x1 += window->DC.Indent.x;
 
     const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
-    ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
+    ItemSize(ImVec2(0.0f, 1.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
     if (!ItemAdd(bb, 0))
     {
         if (window->DC.CurrentColumns)
@@ -1252,7 +1252,7 @@ void ImGui::VerticalSeparator()
     float y1 = window->DC.CursorPos.y;
     float y2 = window->DC.CursorPos.y + window->DC.CurrentLineSize.y;
     const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
-    ItemSize(ImVec2(bb.GetWidth(), 0.0f));
+    ItemSize(ImVec2(1.0f, 0.0f));
     if (!ItemAdd(bb, 0))
         return;
 
