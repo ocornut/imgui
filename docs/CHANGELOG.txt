@@ -58,6 +58,7 @@ Other Changes:
   One of the noticeable minor side effect was that navigating menus would have had a tendency to disable
   highlight from parent menu items earlier than necessary while approaching the child menu.
 - Window: Close button is horizontally aligned with style.FramePadding.x.
+- Window: Fixed contents region being off by WindowBorderSize amount on the right when scrollbar is active.
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
