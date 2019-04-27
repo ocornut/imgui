@@ -4095,6 +4095,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col32, 10.0f, ImDrawCornerFlags_All, th); x += sz + spacing;
                 draw_list->AddRect(ImVec2(x, y), ImVec2(x + sz, y + sz), col32, 10.0f, ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotRight, th); x += sz + spacing;
                 draw_list->AddTriangle(ImVec2(x + sz*0.5f, y), ImVec2(x + sz, y + sz - 0.5f), ImVec2(x, y + sz - 0.5f), col32, th); x += sz + spacing;
+                draw_list->AddTriangle(ImVec2(x + sz*0.5f, y), ImVec2(x + sz*0.6f, y + sz - 0.5f), ImVec2(x + sz*0.4f, y + sz - 0.5f), col32, th); x += sz + spacing;
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y), col32, th); x += sz + spacing;                  // Horizontal line (note: drawing a filled rectangle will be faster!)
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x, y + sz), col32, th); x += spacing;                       // Vertical line (note: drawing a filled rectangle will be faster!)
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col32, th); x += sz + spacing;             // Diagonal line
@@ -4108,6 +4109,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + sz, y + sz), col32, 10.0f); x += sz + spacing;
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + sz, y + sz), col32, 10.0f, ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotRight); x += sz + spacing;
             draw_list->AddTriangleFilled(ImVec2(x + sz*0.5f, y), ImVec2(x + sz, y + sz - 0.5f), ImVec2(x, y + sz - 0.5f), col32); x += sz + spacing;
+            draw_list->AddTriangleFilled(ImVec2(x + sz*0.5f, y), ImVec2(x + sz*0.6f, y + sz - 0.5f), ImVec2(x + sz*0.4f, y + sz - 0.5f), col32); x += sz + spacing;
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + sz, y + thickness), col32); x += sz + spacing;        // Horizontal line (faster than AddLine, but only handle integer thickness)
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + thickness, y + sz), col32); x += spacing + spacing;   // Vertical line (faster than AddLine, but only handle integer thickness)
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + 1, y + 1), col32);          x += sz;                  // Pixel (faster than AddLine)
