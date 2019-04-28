@@ -291,6 +291,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/menus: allow pressing Menu to leave a sub-menu.
  - nav/menus: a way to access the main menu bar with Alt? (currently needs CTRL+TAB)
  - nav/menus: when using the main menu bar, even though we restore focus after, the underlying window loses its title bar highlight during menu manipulation. could we prevent it?
+ - nav/menus: main menu bar currently cannot restore a NULL focus. Could save NavWindow at the time of being focused, similarly to what popup do?
  - nav: simulate right-click or context activation? (SHIFT+F10)
  - nav: tabs should go through most/all widgets (in submission order?).
  - nav: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.

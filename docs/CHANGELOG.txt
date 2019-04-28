@@ -59,6 +59,10 @@ Other Changes:
   highlight from parent menu items earlier than necessary while approaching the child menu.
 - Window: Close button is horizontally aligned with style.FramePadding.x.
 - Window: Fixed contents region being off by WindowBorderSize amount on the right when scrollbar is active.
+- Popups: Closing a popup restores the focused/nav window in place at the time of the popup opening,
+  instead of restoring the window that was in the window stack at the time of the OpenPopup call. (#2517)
+  Among other things, this allows opening a popup while no window are focused, and pressing Escape to
+  clear the focus again.
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
