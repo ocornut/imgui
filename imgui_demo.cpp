@@ -2209,6 +2209,13 @@ static void ShowDemoWindowPopups()
                 if (ImGui::BeginMenu("Sub-menu"))
                 {
                     ImGui::MenuItem("Click me");
+                    if (ImGui::Button("Stacked Popup"))
+                        ImGui::OpenPopup("another popup");
+                    if (ImGui::BeginPopup("another popup"))
+                    {
+                        ImGui::Text("I am the last one here.");
+                        ImGui::EndPopup();
+                    }
                     ImGui::EndMenu();
                 }
                 ImGui::EndPopup();

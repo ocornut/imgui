@@ -2880,7 +2880,8 @@ bool ImGui::IsItemHovered(ImGuiHoveredFlags flags)
         if (g.ActiveId != 0 && g.ActiveId != window->DC.LastItemId && !g.ActiveIdAllowOverlap && g.ActiveId != window->MoveId)
             return false;
 
-    // Test if interactions on this window are blocked by an active popup or modal
+    // Test if interactions on this window are blocked by an active popup or modal.
+    // The ImGuiHoveredFlags_AllowWhenBlockedByPopup flag will be tested here.
     if (!IsWindowContentHoverable(window, flags))
         return false;
 
@@ -3213,8 +3214,9 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         }
     }
 
-    // With right mouse button we close popups without changing focus
-    // (The left mouse button path calls FocusWindow which will lead NewFrame->ClosePopupsOverWindow to trigger)
+    // With right mouse button we close popups without changing focus based on where the mouse is aimed
+    // Instead, focus will be restored to the window under the bottom-most closed popup.
+    // (The left mouse button path calls FocusWindow on the hovered window, which will lead NewFrame->ClosePopupsOverWindow to trigger)
     if (g.IO.MouseClicked[1])
     {
         // Find the top-most window between HoveredWindow and the front most Modal Window.
@@ -3231,7 +3233,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
             if (window == g.HoveredWindow)
                 hovered_window_above_modal = true;
         }
-        ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal);
+        ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal, true);
     }
 }
 
@@ -3609,7 +3611,7 @@ void ImGui::NewFrame()
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
     g.BeginPopupStack.resize(0);
-    ClosePopupsOverWindow(g.NavWindow);
+    ClosePopupsOverWindow(g.NavWindow, false);
 
     // Create implicit/fallback window - which we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
@@ -5707,6 +5709,9 @@ void ImGui::FocusWindow(ImGuiWindow* window)
         //IMGUI_DEBUG_LOG("FocusWindow(\"%s\")\n", window ? window->Name : NULL);
     }
 
+    // Close popups if any
+    ClosePopupsOverWindow(window, false);
+
     // Passing NULL allow to disable keyboard focus
     if (!window)
         return;
@@ -7005,7 +7010,7 @@ bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
     return false;
 }
 
-void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
+void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup)
 {
     ImGuiContext& g = *GImGui;
     if (g.OpenPopupStack.empty())
@@ -7026,23 +7031,23 @@ void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window)
             if (popup.Window->Flags & ImGuiWindowFlags_ChildWindow)
                 continue;
 
-            // Trim the stack if popups are not direct descendant of the reference window (which is often the NavWindow)
-            bool popup_or_descendent_has_focus = false;
-            for (int m = popup_count_to_keep; m < g.OpenPopupStack.Size && !popup_or_descendent_has_focus; m++)
+            // Trim the stack when popups are not direct descendant of the reference window (the reference window is often the NavWindow)
+            bool popup_or_descendent_is_ref_window = false;
+            for (int m = popup_count_to_keep; m < g.OpenPopupStack.Size && !popup_or_descendent_is_ref_window; m++)
                 if (g.OpenPopupStack[m].Window && g.OpenPopupStack[m].Window->RootWindow == ref_window->RootWindow)
-                    popup_or_descendent_has_focus = true;
-            if (!popup_or_descendent_has_focus)
+                    popup_or_descendent_is_ref_window = true;
+            if (!popup_or_descendent_is_ref_window)
                 break;
         }
     }
     if (popup_count_to_keep < g.OpenPopupStack.Size) // This test is not required but it allows to set a convenient breakpoint on the statement below
     {
         //IMGUI_DEBUG_LOG("ClosePopupsOverWindow(%s) -> ClosePopupToLevel(%d)\n", ref_window->Name, popup_count_to_keep);
-        ClosePopupToLevel(popup_count_to_keep, false);
+        ClosePopupToLevel(popup_count_to_keep, restore_focus_to_window_under_popup);
     }
 }
 
-void ImGui::ClosePopupToLevel(int remaining, bool apply_focus_to_window_under)
+void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(remaining >= 0 && remaining < g.OpenPopupStack.Size);
@@ -7050,7 +7055,7 @@ void ImGui::ClosePopupToLevel(int remaining, bool apply_focus_to_window_under)
     ImGuiWindow* popup_window = g.OpenPopupStack[remaining].Window;
     g.OpenPopupStack.resize(remaining);
 
-    if (apply_focus_to_window_under)
+    if (restore_focus_to_window_under_popup)
     {
         if (focus_window && !focus_window->WasActive && popup_window)
         {
@@ -8278,11 +8283,11 @@ static void ImGui::NavUpdateWindowing()
     // Apply final focus
     if (apply_focus_window && (g.NavWindow == NULL || apply_focus_window != g.NavWindow->RootWindow))
     {
+        ClearActiveID();
         g.NavDisableHighlight = false;
         g.NavDisableMouseHover = true;
         apply_focus_window = NavRestoreLastChildNavWindow(apply_focus_window);
-        ClosePopupsOverWindow(apply_focus_window);
-        ClearActiveID();
+        ClosePopupsOverWindow(apply_focus_window, false);
         FocusWindow(apply_focus_window);
         if (apply_focus_window->NavLastIds[0] == 0)
             NavInitWindow(apply_focus_window, false);

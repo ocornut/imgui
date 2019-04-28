@@ -1466,8 +1466,8 @@ namespace ImGui
 
     // Popups, Modals, Tooltips
     IMGUI_API void          OpenPopupEx(ImGuiID id);
-    IMGUI_API void          ClosePopupToLevel(int remaining, bool apply_focus_to_window_under);
-    IMGUI_API void          ClosePopupsOverWindow(ImGuiWindow* ref_window);
+    IMGUI_API void          ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup);
+    IMGUI_API void          ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup);
     IMGUI_API bool          IsPopupOpen(ImGuiID id); // Test for id within current popup stack level (currently begin-ed into); this doesn't scan the whole popup stack!
     IMGUI_API bool          BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
     IMGUI_API void          BeginTooltipEx(ImGuiWindowFlags extra_flags, bool override_previous_tooltip = true);

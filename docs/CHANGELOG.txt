@@ -63,6 +63,8 @@ Other Changes:
   instead of restoring the window that was in the window stack at the time of the OpenPopup call. (#2517)
   Among other things, this allows opening a popup while no window are focused, and pressing Escape to
   clear the focus again.
+- Popups: Fixed right-click from closing all popups instead of aiming at the hovered popup level
+  (regression in 1.67).
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
