@@ -5824,7 +5824,7 @@ void ImGui::EndMainMenuBar()
     // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == 0)
-        FocusPreviousWindowIgnoringOne(g.NavWindow);
+        FocusTopMostWindowIgnoringOne(g.NavWindow);
 
     End();
 }
