@@ -104,11 +104,6 @@ static const ImU64          IM_U64_MAX = (2ULL * 9223372036854775807LL + 1);
 // [SECTION] Forward Declarations
 //-------------------------------------------------------------------------
 
-// Data Type helpers
-static inline int       DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* format);
-static void             DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg_1, const void* arg_2);
-static bool             DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* format);
-
 // For InputTextEx()
 static bool             InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback, void* user_data);
 static int              InputTextCalcTextLenAndLineCount(const char* text_begin, const char** out_text_end);
@@ -1234,7 +1229,7 @@ void ImGui::Separator()
         return;
     ImGuiContext& g = *GImGui;
 
-    // Those flags should eventually be overridable by the user
+    // Those flags should eventually be overrideable by the user
     ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
     IM_ASSERT(ImIsPowerOfTwo(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)));   // Check that only 1 option is selected
     if (flags & ImGuiSeparatorFlags_Vertical)
@@ -1253,7 +1248,7 @@ void ImGui::Separator()
         x1 += window->DC.Indent.x;
 
     const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
-    ItemSize(ImVec2(0.0f, 0.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit, we don't provide height to not alter layout.
+    ItemSize(ImVec2(0.0f, 1.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
     if (!ItemAdd(bb, 0))
     {
         if (window->DC.CurrentColumns)
@@ -1283,7 +1278,7 @@ void ImGui::VerticalSeparator()
     float y1 = window->DC.CursorPos.y;
     float y2 = window->DC.CursorPos.y + window->DC.CurrentLineSize.y;
     const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
-    ItemSize(ImVec2(bb.GetWidth(), 0.0f));
+    ItemSize(ImVec2(1.0f, 0.0f));
     if (!ItemAdd(bb, 0))
         return;
 
@@ -1570,19 +1565,13 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
 // [SECTION] Data Type and Data Formatting Helpers [Internal]
 //-------------------------------------------------------------------------
 // - PatchFormatStringFloatToInt()
+// - DataTypeGetInfo()
 // - DataTypeFormatString()
 // - DataTypeApplyOp()
 // - DataTypeApplyOpFromText()
 // - GetMinimumStepAtDecimalPrecision
 // - RoundScalarWithFormat<>()
 //-------------------------------------------------------------------------
-
-struct ImGuiDataTypeInfo
-{
-    size_t      Size;
-    const char* PrintFmt;   // Unused
-    const char* ScanFmt;
-};
 
 static const ImGuiDataTypeInfo GDataTypeInfo[] =
 {
@@ -1628,7 +1617,13 @@ static const char* PatchFormatStringFloatToInt(const char* fmt)
     return fmt;
 }
 
-static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* format)
+const ImGuiDataTypeInfo* ImGui::DataTypeGetInfo(ImGuiDataType data_type)
+{
+    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
+    return &GDataTypeInfo[data_type];
+}
+
+int ImGui::DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* data_ptr, const char* format)
 {
     // Signedness doesn't matter when pushing integer arguments
     if (data_type == ImGuiDataType_S32 || data_type == ImGuiDataType_U32)
@@ -1651,7 +1646,7 @@ static inline int DataTypeFormatString(char* buf, int buf_size, ImGuiDataType da
     return 0;
 }
 
-static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg1, const void* arg2)
+void ImGui::DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg1, const void* arg2)
 {
     IM_ASSERT(op == '+' || op == '-');
     switch (data_type)
@@ -1703,7 +1698,7 @@ static void DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void*
 
 // User can input math operators (e.g. +100) to edit a numerical values.
 // NB: This is _not_ a full expression evaluator. We should probably add one and replace this dumb mess..
-static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* format)
+bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* data_ptr, const char* format)
 {
     while (ImCharIsBlankA(*buf))
         buf++;
@@ -1727,11 +1722,12 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     // Copy the value in an opaque buffer so we can compare at the end of the function if it changed at all.
     IM_ASSERT(data_type < ImGuiDataType_COUNT);
     int data_backup[2];
-    IM_ASSERT(GDataTypeInfo[data_type].Size <= sizeof(data_backup));
-    memcpy(data_backup, data_ptr, GDataTypeInfo[data_type].Size);
+    const ImGuiDataTypeInfo* type_info = ImGui::DataTypeGetInfo(data_type);
+    IM_ASSERT(type_info->Size <= sizeof(data_backup));
+    memcpy(data_backup, data_ptr, type_info->Size);
 
     if (format == NULL)
-        format = GDataTypeInfo[data_type].ScanFmt;
+        format = type_info->ScanFmt;
 
     // FIXME-LEGACY: The aim is to remove those operators and write a proper expression evaluator at some point..
     int arg1i = 0;
@@ -1800,7 +1796,7 @@ static bool DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
             IM_ASSERT(0);
     }
 
-    return memcmp(data_backup, data_ptr, GDataTypeInfo[data_type].Size) != 0;
+    return memcmp(data_backup, data_ptr, type_info->Size) != 0;
 }
 
 static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
@@ -2021,11 +2017,9 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
         return false;
 
     // Default format string when passing NULL
-    // Patch old "%.0f" format string to use "%d", read function comments for more details.
-    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
     if (format == NULL)
-        format = GDataTypeInfo[data_type].PrintFmt;
-    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
+        format = DataTypeGetInfo(data_type)->PrintFmt;
+    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
@@ -2466,11 +2460,9 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
         return false;
 
     // Default format string when passing NULL
-    // Patch old "%.0f" format string to use "%d", read function comments for more details.
-    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
     if (format == NULL)
-        format = GDataTypeInfo[data_type].PrintFmt;
-    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
+        format = DataTypeGetInfo(data_type)->PrintFmt;
+    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
@@ -2622,11 +2614,9 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
         return false;
 
     // Default format string when passing NULL
-    // Patch old "%.0f" format string to use "%d", read function comments for more details.
-    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
     if (format == NULL)
-        format = GDataTypeInfo[data_type].PrintFmt;
-    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0)
+        format = DataTypeGetInfo(data_type)->PrintFmt;
+    else if (data_type == ImGuiDataType_S32 && strcmp(format, "%d") != 0) // (FIXME-LEGACY: Patch old "%.0f" format string to use "%d", read function more details.)
         format = PatchFormatStringFloatToInt(format);
 
     const bool hovered = ItemHoverable(frame_bb, id);
@@ -2808,9 +2798,8 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
 
-    IM_ASSERT(data_type >= 0 && data_type < ImGuiDataType_COUNT);
     if (format == NULL)
-        format = GDataTypeInfo[data_type].PrintFmt;
+        format = DataTypeGetInfo(data_type)->PrintFmt;
 
     char buf[64];
     DataTypeFormatString(buf, IM_ARRAYSIZE(buf), data_type, data_ptr, format);
@@ -5865,9 +5854,10 @@ void ImGui::EndMainMenuBar()
     EndMenuBar();
 
     // When the user has left the menu layer (typically: closed menus through activation of an item), we restore focus to the previous window
+    // FIXME: With this strategy we won't be able to restore a NULL focus.
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow == g.NavWindow && g.NavLayer == 0)
-        FocusPreviousWindowIgnoringOne(g.NavWindow);
+        FocusTopMostWindowUnderOne(g.NavWindow, NULL);
 
     End();
 }
@@ -5993,31 +5983,36 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     if (menuset_is_open)
         g.NavWindow = backed_nav_window;
 
-    bool want_open = false, want_close = false;
+    bool want_open = false;
+    bool want_close = false;
     if (window->DC.LayoutType == ImGuiLayoutType_Vertical) // (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
     {
+        // Close menu when not hovering it anymore unless we are moving roughly in the direction of the menu
         // Implement http://bjk5.com/post/44698559168/breaking-down-amazons-mega-dropdown to avoid using timers, so menus feels more reactive.
-        bool moving_within_opened_triangle = false;
-        if (g.HoveredWindow == window && g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].ParentWindow == window && !(window->Flags & ImGuiWindowFlags_MenuBar))
-        {
-            if (ImGuiWindow* next_window = g.OpenPopupStack[g.BeginPopupStack.Size].Window)
-            {
-                // FIXME-DPI: Values should be derived from a master "scale" factor.
-                ImRect next_window_rect = next_window->Rect();
-                ImVec2 ta = g.IO.MousePos - g.IO.MouseDelta;
-                ImVec2 tb = (window->Pos.x < next_window->Pos.x) ? next_window_rect.GetTL() : next_window_rect.GetTR();
-                ImVec2 tc = (window->Pos.x < next_window->Pos.x) ? next_window_rect.GetBL() : next_window_rect.GetBR();
-                float extra = ImClamp(ImFabs(ta.x - tb.x) * 0.30f, 5.0f, 30.0f); // add a bit of extra slack.
-                ta.x += (window->Pos.x < next_window->Pos.x) ? -0.5f : +0.5f;    // to avoid numerical issues
-                tb.y = ta.y + ImMax((tb.y - extra) - ta.y, -100.0f);             // triangle is maximum 200 high to limit the slope and the bias toward large sub-menus // FIXME: Multiply by fb_scale?
-                tc.y = ta.y + ImMin((tc.y + extra) - ta.y, +100.0f);
-                moving_within_opened_triangle = ImTriangleContainsPoint(ta, tb, tc, g.IO.MousePos);
-                //window->DrawList->PushClipRectFullScreen(); window->DrawList->AddTriangleFilled(ta, tb, tc, moving_within_opened_triangle ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); window->DrawList->PopClipRect(); // Debug
-            }
-        }
+        bool moving_toward_other_child_menu = false;
 
-        want_close = (menu_is_open && !hovered && g.HoveredWindow == window && g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrame != id && !moving_within_opened_triangle);
-        want_open = (!menu_is_open && hovered && !moving_within_opened_triangle) || (!menu_is_open && hovered && pressed);
+        ImGuiWindow* child_menu_window = (g.BeginPopupStack.Size < g.OpenPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].SourceWindow == window) ? g.OpenPopupStack[g.BeginPopupStack.Size].Window : NULL;
+        if (g.HoveredWindow == window && child_menu_window != NULL && !(window->Flags & ImGuiWindowFlags_MenuBar))
+        {
+            // FIXME-DPI: Values should be derived from a master "scale" factor.
+            ImRect next_window_rect = child_menu_window->Rect();
+            ImVec2 ta = g.IO.MousePos - g.IO.MouseDelta;
+            ImVec2 tb = (window->Pos.x < child_menu_window->Pos.x) ? next_window_rect.GetTL() : next_window_rect.GetTR();
+            ImVec2 tc = (window->Pos.x < child_menu_window->Pos.x) ? next_window_rect.GetBL() : next_window_rect.GetBR();
+            float extra = ImClamp(ImFabs(ta.x - tb.x) * 0.30f, 5.0f, 30.0f);    // add a bit of extra slack.
+            ta.x += (window->Pos.x < child_menu_window->Pos.x) ? -0.5f : +0.5f; // to avoid numerical issues
+            tb.y = ta.y + ImMax((tb.y - extra) - ta.y, -100.0f);                // triangle is maximum 200 high to limit the slope and the bias toward large sub-menus // FIXME: Multiply by fb_scale?
+            tc.y = ta.y + ImMin((tc.y + extra) - ta.y, +100.0f);
+            moving_toward_other_child_menu = ImTriangleContainsPoint(ta, tb, tc, g.IO.MousePos);
+            //GetForegroundDrawList()->AddTriangleFilled(ta, tb, tc, moving_within_opened_triangle ? IM_COL32(0,128,0,128) : IM_COL32(128,0,0,128)); // [DEBUG]
+        }
+        if (menu_is_open && !hovered && g.HoveredWindow == window && g.HoveredIdPreviousFrame != 0 && g.HoveredIdPreviousFrame != id && !moving_toward_other_child_menu)
+            want_close = true;
+
+        if (!menu_is_open && hovered && pressed) // Click to open
+            want_open = true;
+        else if (!menu_is_open && hovered && !moving_toward_other_child_menu) // Hover to open
+            want_open = true;
 
         if (g.NavActivateId == id)
         {
