@@ -10883,7 +10883,7 @@ void ImGui::DestroyPlatformWindows()
 // Docking: Internal Types
 //-----------------------------------------------------------------------------
 
-static float IMGUI_DOCK_SPLITTER_SIZE = 2.0f;
+#define IMGUI_DOCK_SPLITTER_SIZE GetStyle().WindowBorderSize
 
 enum ImGuiDockRequestType
 {
