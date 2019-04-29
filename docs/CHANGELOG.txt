@@ -34,6 +34,8 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
+- ImDrawList: Fixed rectangles with thick lines (>1.0f) not being as thick as requested. (#2518)
+  If you have custom rendering using thick lines, they will appear thicker now.
 - Examples: Vulkan: Added MinImageCount/ImageCount fields in ImGui_ImplVulkan_InitInfo, required
   during initialization to specify the number of in-flight image requested by swap chains.
   (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). (#2071, #1677) [@nathanvoglsam]
@@ -73,6 +75,8 @@ Other Changes:
 - Separator: Declare its thickness (1.0f) to the layout, making items around separator more symmetrical.
 - Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
 - Nav: Fixed Drag/Slider functions going into text input mode when keyboard CTRL is held while pressing NavActivate.
+- ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness up to 90 degrees
+  angles, also faster to output. (#2518) [@rmitton]
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
