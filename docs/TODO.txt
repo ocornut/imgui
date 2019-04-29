@@ -235,6 +235,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
+ - drag and drop: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers.
  - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov.
  - drag and drop: allow preview tooltip to be submitted from a different place than the drag source. (#1725)

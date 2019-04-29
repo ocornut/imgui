@@ -75,6 +75,8 @@ Other Changes:
 - Separator: Declare its thickness (1.0f) to the layout, making items around separator more symmetrical.
 - Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
 - Nav: Fixed Drag/Slider functions going into text input mode when keyboard CTRL is held while pressing NavActivate.
+- Drag and Drop: Fixed drag source with ImGuiDragDropFlags_SourceAllowNullID and null ID from receiving click
+  regardless of being covered by another window (it didn't honor correct hovering rules). (#2521)
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness up to 90 degrees
   angles, also faster to output. (#2518) [@rmitton]
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
