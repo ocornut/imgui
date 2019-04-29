@@ -47,6 +47,8 @@ struct CUSTOMVERTEX
 // Forward Declarations
 static void ImGui_ImplDX9_InitPlatformInterface();
 static void ImGui_ImplDX9_ShutdownPlatformInterface();
+static void ImGui_ImplDX9_CleanWindowSwapChain();
+static void ImGui_ImplDX9_RecreateWindowSwapChain();
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -259,6 +261,7 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
         return false;
     if (!ImGui_ImplDX9_CreateFontsTexture())
         return false;
+	ImGui_ImplDX9_RecreateWindowSwapChain();
     return true;
 }
 
@@ -269,6 +272,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
     if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+	ImGui_ImplDX9_CleanWindowSwapChain();
 }
 
 void ImGui_ImplDX9_NewFrame()
@@ -343,6 +347,8 @@ static void ImGui_ImplDX9_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+	if (data->SwapChain == NULL)
+		return;
     ImVec4 clear_color = ImVec4(0.0f, 0.0f, 0.0f, 1.0f);
 
     LPDIRECT3DSURFACE9 render_target = NULL;
@@ -368,6 +374,8 @@ static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
+	if (data->SwapChain == NULL)
+		return;
     data->SwapChain->Present(NULL, NULL, data->d3dpp.hDeviceWindow, NULL, NULL);
 }
 
@@ -379,6 +387,35 @@ static void ImGui_ImplDX9_InitPlatformInterface()
     platform_io.Renderer_SetWindowSize = ImGui_ImplDX9_SetWindowSize;
     platform_io.Renderer_RenderWindow = ImGui_ImplDX9_RenderWindow;
     platform_io.Renderer_SwapBuffers = ImGui_ImplDX9_SwapBuffers;
+}
+
+static void ImGui_ImplDX9_CleanWindowSwapChain()
+{
+	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+	for (int i = 1; i < platform_io.Viewports.Size; i++)
+	{
+		ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)platform_io.Viewports[i]->RendererUserData;
+		if (data && data->SwapChain)
+		{
+			data->SwapChain->Release();
+			data->SwapChain = NULL;
+		}
+	}
+}
+
+static void ImGui_ImplDX9_RecreateWindowSwapChain()
+{
+	ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+	for (int i = 1; i < platform_io.Viewports.Size; i++)
+	{
+		ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)platform_io.Viewports[i]->RendererUserData;
+		if (data && data->SwapChain)
+		{
+			data->d3dpp.BackBufferWidth = (UINT)platform_io.Viewports[i]->Size.x;
+			data->d3dpp.BackBufferHeight = (UINT)platform_io.Viewports[i]->Size.y;
+			g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain);
+		}
+	}
 }
 
 static void ImGui_ImplDX9_ShutdownPlatformInterface()
