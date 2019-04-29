@@ -36,6 +36,8 @@ HOW TO UPDATE?
 Breaking Changes:
 - ImDrawList: Fixed rectangles with thick lines (>1.0f) not being as thick as requested. (#2518)
   If you have custom rendering using thick lines, they will appear thicker now.
+- Obsoleted GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead.
+  Kept inline redirection function.
 - Examples: Vulkan: Added MinImageCount/ImageCount fields in ImGui_ImplVulkan_InitInfo, required
   during initialization to specify the number of in-flight image requested by swap chains.
   (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). (#2071, #1677) [@nathanvoglsam]

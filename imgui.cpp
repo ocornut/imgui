@@ -370,6 +370,7 @@ CODE
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
  - 2019/04/29 (1.70) - fixed ImDrawList rectangles with thick lines (>1.0f) not being as thick as requested. If you have custom rendering using rectangles with thick lines, they will appear thicker now.
+ - 2019/04/29 (1.70) - removed GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead. Kept inline redirection function (will obsolete).
  - 2019/03/04 (1.69) - renamed GetOverlayDrawList() to GetForegroundDrawList(). Kept redirection function (will obsolete).
  - 2019/02/26 (1.69) - renamed ImGuiColorEditFlags_RGB/ImGuiColorEditFlags_HSV/ImGuiColorEditFlags_HEX to ImGuiColorEditFlags_DisplayRGB/ImGuiColorEditFlags_DisplayHSV/ImGuiColorEditFlags_DisplayHex. Kept redirection enums (will obsolete).
  - 2019/02/14 (1.68) - made it illegal/assert when io.DisplayTime == 0.0f (with an exception for the first frame). If for some reason your time step calculation gives you a zero value, replace it with a dummy small value!
@@ -6436,11 +6437,6 @@ ImVec2 ImGui::GetContentRegionAvail()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     return GetContentRegionMaxScreen() - window->DC.CursorPos;
-}
-
-float ImGui::GetContentRegionAvailWidth()
-{
-    return GetContentRegionAvail().x;
 }
 
 // In window space (not screen space!)

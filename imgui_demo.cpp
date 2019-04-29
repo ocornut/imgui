@@ -1752,9 +1752,9 @@ static void ShowDemoWindowLayout()
         ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.5f);
         ImGui::DragFloat("float##2", &f);
 
-        ImGui::Text("SetNextItemWidth/PushItemWidth(GetContentRegionAvailWidth() * 0.5f)");
+        ImGui::Text("SetNextItemWidth/PushItemWidth(GetContentRegionAvail().x * 0.5f)");
         ImGui::SameLine(); HelpMarker("Half of available width.\n(~ right-cursor_pos)\n(works within a column set)");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvailWidth() * 0.5f);
+        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
         ImGui::DragFloat("float##3", &f);
 
         ImGui::Text("SetNextItemWidth/PushItemWidth(-100)");
