@@ -45,6 +45,11 @@ Breaking Changes:
   on them but it is possible you have!).
 
 Other Changes:
+- ImDrawList: Added ImDrawCallback_ResetRenderState, a special ImDrawList::AddCallback() value
+  to request the renderer back-end to reset its render state. (#2037, #1639, #2452)
+- Examples: Added support for ImDrawCallback_ResetRenderState in all renderer back-ends.
+  Each renderer code setting up initial render state has been moved to a function so it could
+  be called at the start of rendering and when a ResetRenderState is requested. (#2037, #1639, #2452)
 - InputText: Fixed selection background starts rendering one frame after the cursor movement
   when first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
