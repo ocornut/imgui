@@ -225,7 +225,7 @@ void ImGui_ImplDX9_Shutdown()
 {
     ImGui_ImplDX9_ShutdownPlatformInterface();
     ImGui_ImplDX9_InvalidateDeviceObjects();
-    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
+    g_pd3dDevice = NULL;
 }
 
 static bool ImGui_ImplDX9_CreateFontsTexture()
