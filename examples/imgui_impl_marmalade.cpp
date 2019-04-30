@@ -28,7 +28,6 @@
 
 // Data
 static double       g_Time = 0.0f;
-static bool         g_MousePressed[3] = { false, false, false };
 static CIwTexture*  g_FontTexture = NULL;
 static char*        g_ClipboardText = NULL;
 static bool         g_osdKeyboardEnabled = false;
@@ -130,16 +129,23 @@ int32 ImGui_Marmalade_PointerButtonEventCallback(void* system_data, void* user_d
 
     if (pEvent->m_Pressed == 1)
     {
-        if (pEvent->m_Button == S3E_POINTER_BUTTON_LEFTMOUSE)
-            g_MousePressed[0] = true;
-        if (pEvent->m_Button == S3E_POINTER_BUTTON_RIGHTMOUSE)
-            g_MousePressed[1] = true;
-        if (pEvent->m_Button == S3E_POINTER_BUTTON_MIDDLEMOUSE)
-            g_MousePressed[2] = true;
-        if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELUP)
-            io.MouseWheel += pEvent->m_y;
-        if (pEvent->m_Button == S3E_POINTER_BUTTON_MOUSEWHEELDOWN)
-            io.MouseWheel += pEvent->m_y;
+        switch(pEvent->m_Button)
+        {
+        case S3E_POINTER_BUTTON_LEFTMOUSE: { io.InputMouseClicked[0] = true; } break;
+        case S3E_POINTER_BUTTON_RIGHTMOUSE: { io.InputMouseClicked[1] = true; } break;
+        case S3E_POINTER_BUTTON_MIDDLEMOUSE: { io.InputMouseClicked[2] = true; } break;
+        case S3E_POINTER_BUTTON_MOUSEWHEELUP: { io.MouseWheel += pEvent->m_y; } break;
+        case S3E_POINTER_BUTTON_MOUSEWHEELDOWN: { io.MouseWheel += pEvent->m_y; } break;
+        }
+    }
+    else if(pEvent->m_Pressed == 0)
+    {
+        switch(pEvent->m_Button)
+        {
+        case S3E_POINTER_BUTTON_LEFTMOUSE: { io.InputMouseReleased[0] = true; } break;
+        case S3E_POINTER_BUTTON_RIGHTMOUSE: { io.InputMouseReleased[1] = true; } break;
+        case S3E_POINTER_BUTTON_MIDDLEMOUSE: { io.InputMouseReleased[2] = true; } break;
+        }
     }
 
     return 0;
@@ -282,12 +288,6 @@ void ImGui_Marmalade_NewFrame()
     mouse_x = s3ePointerGetX();
     mouse_y = s3ePointerGetY();
     io.MousePos = ImVec2((float)mouse_x/g_scale.x, (float)mouse_y/g_scale.y);   // Mouse position (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)
-
-    for (int i = 0; i < 3; i++)
-    {
-        io.MouseDown[i] = g_MousePressed[i] || s3ePointerGetState((s3ePointerButton)i) != S3E_POINTER_STATE_UP;    // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        g_MousePressed[i] = false;
-    }
 
     // TODO: Hide OS mouse cursor if ImGui is drawing it
     // s3ePointerSetInt(S3E_POINTER_HIDE_CURSOR,(io.MouseDrawCursor ? 0 : 1));

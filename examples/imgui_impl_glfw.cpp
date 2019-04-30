@@ -58,7 +58,6 @@ enum GlfwClientApi
 static GLFWwindow*          g_Window = NULL;
 static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
 static double               g_Time = 0.0;
-static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
 static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 
 // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
@@ -79,11 +78,19 @@ static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
 
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
+    ImGuiIO& io = ImGui::GetIO();
+
     if (g_PrevUserCallbackMousebutton != NULL)
         g_PrevUserCallbackMousebutton(window, button, action, mods);
 
-    if (action == GLFW_PRESS && button >= 0 && button < IM_ARRAYSIZE(g_MouseJustPressed))
-        g_MouseJustPressed[button] = true;
+    // Test mouse button is valid
+    if(button < 0 || button >= IM_ARRAYSIZE(io.InputMouseClicked))
+      return;
+
+    if (action == GLFW_PRESS)
+        io.InputMouseClicked[button] = true;
+    else if(action == GLFW_RELEASE)
+        io.InputMouseReleased[button] = true;
 }
 
 void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
@@ -211,16 +218,10 @@ void ImGui_ImplGlfw_Shutdown()
     g_ClientApi = GlfwClientApi_Unknown;
 }
 
-static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
+static void ImGui_ImplGlfw_UpdateMousePos()
 {
     // Update buttons
     ImGuiIO& io = ImGui::GetIO();
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
-    {
-        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;
-        g_MouseJustPressed[i] = false;
-    }
 
     // Update mouse position
     const ImVec2 mouse_pos_backup = io.MousePos;
@@ -322,7 +323,7 @@ void ImGui_ImplGlfw_NewFrame()
     io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
     g_Time = current_time;
 
-    ImGui_ImplGlfw_UpdateMousePosAndButtons();
+    ImGui_ImplGlfw_UpdateMousePos();
     ImGui_ImplGlfw_UpdateMouseCursor();
 
     // Update game controllers (if enabled and available)

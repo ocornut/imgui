@@ -263,13 +263,16 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK:
     {
         int button = 0;
-        if (msg == WM_LBUTTONDOWN || msg == WM_LBUTTONDBLCLK) { button = 0; }
-        if (msg == WM_RBUTTONDOWN || msg == WM_RBUTTONDBLCLK) { button = 1; }
-        if (msg == WM_MBUTTONDOWN || msg == WM_MBUTTONDBLCLK) { button = 2; }
-        if (msg == WM_XBUTTONDOWN || msg == WM_XBUTTONDBLCLK) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
+        switch(msg)
+        {
+        case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK: { button = 0; } break;
+        case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK: { button = 1; } break;
+        case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK: { button = 2; } break;
+        case WM_XBUTTONDOWN: case WM_XBUTTONDBLCLK: { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; } break;
+        }
         if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
             ::SetCapture(hwnd);
-        io.MouseDown[button] = true;
+        io.InputMouseClicked[button] = true;
         return 0;
     }
     case WM_LBUTTONUP:
@@ -278,11 +281,14 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     case WM_XBUTTONUP:
     {
         int button = 0;
-        if (msg == WM_LBUTTONUP) { button = 0; }
-        if (msg == WM_RBUTTONUP) { button = 1; }
-        if (msg == WM_MBUTTONUP) { button = 2; }
-        if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
-        io.MouseDown[button] = false;
+        switch (msg)
+        {
+        case WM_LBUTTONUP: { button = 0; } break;
+        case WM_RBUTTONUP: { button = 1; } break;
+        case WM_MBUTTONUP: { button = 2; } break;
+        case WM_XBUTTONUP: { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; } break;
+        }
+        io.InputMouseReleased[button] = true;
         if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
             ::ReleaseCapture();
         return 0;

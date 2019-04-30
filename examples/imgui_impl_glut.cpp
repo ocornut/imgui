@@ -178,9 +178,9 @@ void ImGui_ImplGLUT_MouseFunc(int glut_button, int state, int x, int y)
     if (glut_button == GLUT_RIGHT_BUTTON) button = 1;
     if (glut_button == GLUT_MIDDLE_BUTTON) button = 2;
     if (button != -1 && state == GLUT_DOWN)
-        io.MouseDown[button] = true;
+        io.InputMouseClicked[button] = true;
     if (button != -1 && state == GLUT_UP)
-        io.MouseDown[button] = false;
+        io.InputMouseReleased[button] = true;
 }
 
 #ifdef __FREEGLUT_EXT_H__

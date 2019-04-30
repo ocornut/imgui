@@ -247,8 +247,10 @@ CODE
         io.DisplaySize.x = 1920.0f;             // set the current display width
         io.DisplaySize.y = 1280.0f;             // set the current display height here
         io.MousePos = my_mouse_pos;             // set the mouse position
-        io.MouseDown[0] = my_mouse_buttons[0];  // set the mouse button states
-        io.MouseDown[1] = my_mouse_buttons[1];
+        io.InputMouseClicked[0] = my_mouse_clicked[0];  // set the mouse button states
+        io.InputMouseClicked[1] = my_mouse_clicked[1];
+        io.InputMouseReleased[0] = my_mouse_released[0];
+        io.InputMouseReleased[1] = my_mouse_released[1];
 
         // Call NewFrame(), after this point you can use ImGui::* functions anytime
         // (So you want to try calling NewFrame() as early as you can in your mainloop to be able to use imgui everywhere)
@@ -562,17 +564,17 @@ CODE
  Q: Where is the documentation?
  A: This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.
     - Run the examples/ and explore them.
-    - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. 
-    - The demo covers most features of Dear ImGui, so you can read the code and see its output. 
+    - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function.
+    - The demo covers most features of Dear ImGui, so you can read the code and see its output.
     - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
-    - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ 
+    - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/
       folder to explain how to integrate Dear ImGui with your own engine/application.
-    - Your programming IDE is your friend, find the type or function declaration to find comments 
+    - Your programming IDE is your friend, find the type or function declaration to find comments
       associated to it.
 
  Q: Which version should I get?
- A: I occasionally tag Releases (https://github.com/ocornut/imgui/releases) but it is generally safe 
-    and recommended to sync to master/latest. The library is fairly stable and regressions tend to be 
+ A: I occasionally tag Releases (https://github.com/ocornut/imgui/releases) but it is generally safe
+    and recommended to sync to master/latest. The library is fairly stable and regressions tend to be
     fixed fast when reported. You may also peak at the 'docking' branch which includes:
     - Docking/Merging features (https://github.com/ocornut/imgui/issues/2109)
     - Multi-viewport features (https://github.com/ocornut/imgui/issues/1542)
@@ -584,11 +586,11 @@ CODE
     for a list of games/software which are publicly known to use dear imgui. Please add yours if you can!
 
  Q: Why the odd dual naming, "Dear ImGui" vs "ImGui"?
- A: The library started its life as "ImGui" due to the fact that I didn't give it a proper name when 
-    when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI 
-    (immediate-mode graphical user interface) was coined before and is being used in variety of other 
-    situations (e.g. Unity uses it own implementation of the IMGUI paradigm). 
-    To reduce the ambiguity without affecting existing code bases, I have decided on an alternate, 
+ A: The library started its life as "ImGui" due to the fact that I didn't give it a proper name when
+    when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI
+    (immediate-mode graphical user interface) was coined before and is being used in variety of other
+    situations (e.g. Unity uses it own implementation of the IMGUI paradigm).
+    To reduce the ambiguity without affecting existing code bases, I have decided on an alternate,
     longer name "Dear ImGui" that people can use to refer to this specific library.
     Please try to refer to this library as "Dear ImGui".
 
@@ -3262,6 +3264,17 @@ static void ImGui::UpdateMouseInputs()
     g.IO.MousePosPrev = g.IO.MousePos;
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
+        // If the button was clicked, load to the current state
+        if (g.IO.InputMouseClicked[i]) {
+            g.IO.MouseDown[i] = true;
+            g.IO.InputMouseClicked[i] = false;
+        }
+        // If we have no click and a release, load to the current state
+        else if (g.IO.InputMouseReleased[i]) {
+            g.IO.MouseDown[i] = false;
+            g.IO.InputMouseReleased[i] = false;
+        }
+
         g.IO.MouseClicked[i] = g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] < 0.0f;
         g.IO.MouseReleased[i] = !g.IO.MouseDown[i] && g.IO.MouseDownDuration[i] >= 0.0f;
         g.IO.MouseDownDurationPrev[i] = g.IO.MouseDownDuration[i];
@@ -5791,7 +5804,7 @@ void ImGui::PopItemWidth()
 }
 
 // Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth(),
-// Then consume the 
+// Then consume the
 float ImGui::GetNextItemWidth()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
