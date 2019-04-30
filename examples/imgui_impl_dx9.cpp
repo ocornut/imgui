@@ -409,7 +409,7 @@ static void ImGui_ImplDX9_RecreateWindowSwapChain()
     for (int i = 1; i < platform_io.Viewports.Size; i++)
     {
         ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)platform_io.Viewports[i]->RendererUserData;
-        if (data && data->SwapChain)
+        if (data)
         {
             data->d3dpp.BackBufferWidth = (UINT)platform_io.Viewports[i]->Size.x;
             data->d3dpp.BackBufferHeight = (UINT)platform_io.Viewports[i]->Size.y;
