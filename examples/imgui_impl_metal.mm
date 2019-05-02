@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-04-30: Metal: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: Metal: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-07-05: Metal: Added new Metal backend implementation.
@@ -58,6 +59,12 @@
 - (void)enqueueReusableBuffer:(MetalBuffer *)buffer;
 - (id<MTLRenderPipelineState>)renderPipelineStateForFrameAndDevice:(id<MTLDevice>)device;
 - (void)emptyRenderPipelineStateCache;
+- (void)setupRenderState:(ImDrawData *)drawData
+           commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+          commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+     renderPipelineState:(id<MTLRenderPipelineState>)renderPipelineState
+            vertexBuffer:(MetalBuffer *)vertexBuffer
+      vertexBufferOffset:(size_t)vertexBufferOffset;
 - (void)renderDrawData:(ImDrawData *)drawData
          commandBuffer:(id<MTLCommandBuffer>)commandBuffer
         commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder;
@@ -399,16 +406,13 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     [self.renderPipelineStateCache removeAllObjects];
 }
 
-- (void)renderDrawData:(ImDrawData *)drawData
-         commandBuffer:(id<MTLCommandBuffer>)commandBuffer
-        commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+- (void)setupRenderState:(ImDrawData *)drawData
+           commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+          commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+     renderPipelineState:(id<MTLRenderPipelineState>)renderPipelineState
+            vertexBuffer:(MetalBuffer *)vertexBuffer
+      vertexBufferOffset:(size_t)vertexBufferOffset
 {
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
-        return;
-
     [commandEncoder setCullMode:MTLCullModeNone];
     [commandEncoder setDepthStencilState:g_sharedMetalContext.depthStencilState];
 
@@ -419,12 +423,13 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     {
         .originX = 0.0,
         .originY = 0.0,
-        .width = double(fb_width),
-        .height = double(fb_height),
+        .width = (double)(drawData->DisplaySize.x * drawData->FramebufferScale.x),
+        .height = (double)(drawData->DisplaySize.y * drawData->FramebufferScale.y),
         .znear = 0.0,
         .zfar = 1.0
     };
     [commandEncoder setViewport:viewport];
+
     float L = drawData->DisplayPos.x;
     float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
     float T = drawData->DisplayPos.y;
@@ -438,18 +443,32 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         { 0.0f,         0.0f,        1/(F-N),   0.0f },
         { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
     };
-
     [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
+
+    [commandEncoder setRenderPipelineState:renderPipelineState];
+
+    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
+    [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
+}
+
+- (void)renderDrawData:(ImDrawData *)drawData
+         commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+        commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+{
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+    if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
+        return;
+
+    id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
 
     size_t vertexBufferLength = drawData->TotalVtxCount * sizeof(ImDrawVert);
     size_t indexBufferLength = drawData->TotalIdxCount * sizeof(ImDrawIdx);
     MetalBuffer* vertexBuffer = [self dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
     MetalBuffer* indexBuffer = [self dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
-    id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
-    [commandEncoder setRenderPipelineState:renderPipelineState];
-
-    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
+    [self setupRenderState:drawData commandBuffer:commandBuffer commandEncoder:commandEncoder renderPipelineState:renderPipelineState vertexBuffer:vertexBuffer vertexBufferOffset:0];
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
@@ -473,8 +492,12 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
-                // User callback (registered via ImDrawList::AddCallback)
-                pcmd->UserCallback(cmd_list, pcmd);
+                // User callback, registered via ImDrawList::AddCallback()
+                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                    [self setupRenderState:drawData commandBuffer:commandBuffer commandEncoder:commandEncoder renderPipelineState:renderPipelineState vertexBuffer:vertexBuffer vertexBufferOffset:vertexBufferOffset];
+                else
+                    pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {

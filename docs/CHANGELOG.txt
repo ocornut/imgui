@@ -100,6 +100,8 @@ Other changes:
 Breaking Changes:
 - ImDrawList: Fixed rectangles with thick lines (>1.0f) not being as thick as requested. (#2518)
   If you have custom rendering using thick lines, they will appear thicker now.
+- Obsoleted GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead.
+  Kept inline redirection function.
 - Examples: Vulkan: Added MinImageCount/ImageCount fields in ImGui_ImplVulkan_InitInfo, required
   during initialization to specify the number of in-flight image requested by swap chains.
   (was previously a hard #define IMGUI_VK_QUEUED_FRAMES 2). (#2071, #1677) [@nathanvoglsam]
@@ -107,6 +109,11 @@ Breaking Changes:
   on them but it is possible you have!).
 
 Other Changes:
+- ImDrawList: Added ImDrawCallback_ResetRenderState, a special ImDrawList::AddCallback() value
+  to request the renderer back-end to reset its render state. (#2037, #1639, #2452)
+  Examples: Added support for ImDrawCallback_ResetRenderState in all renderer back-ends. Each
+  renderer code setting up initial render state has been moved to a function so it could be
+  called at the start of rendering and when a ResetRenderState is requested. [@ocornut, @bear24rw]
 - InputText: Fixed selection background starts rendering one frame after the cursor movement
   when first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
@@ -139,6 +146,8 @@ Other Changes:
 - Separator: Declare its thickness (1.0f) to the layout, making items around separator more symmetrical.
 - Combo, Slider, Scrollbar: Improve rendering in situation when there's only a few pixels available (<3 pixels).
 - Nav: Fixed Drag/Slider functions going into text input mode when keyboard CTRL is held while pressing NavActivate.
+- Drag and Drop: Fixed drag source with ImGuiDragDropFlags_SourceAllowNullID and null ID from receiving click
+  regardless of being covered by another window (it didn't honor correct hovering rules). (#2521)
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness up to 90 degrees
   angles, also faster to output. (#2518) [@rmitton]
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
