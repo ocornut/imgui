@@ -3282,6 +3282,7 @@ static void ImGui::UpdateMouseInputs()
                 g.IO.MouseClickedTime[i] = g.Time;
             }
             g.IO.MouseClickedPos[i] = g.IO.MousePos;
+            g.IO.MouseDownWasDoubleClick[i] = g.IO.MouseDoubleClicked[i];
             g.IO.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
             g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
         }
@@ -3293,6 +3294,8 @@ static void ImGui::UpdateMouseInputs()
             g.IO.MouseDragMaxDistanceAbs[i].x = ImMax(g.IO.MouseDragMaxDistanceAbs[i].x, delta_from_click_pos.x < 0.0f ? -delta_from_click_pos.x : delta_from_click_pos.x);
             g.IO.MouseDragMaxDistanceAbs[i].y = ImMax(g.IO.MouseDragMaxDistanceAbs[i].y, delta_from_click_pos.y < 0.0f ? -delta_from_click_pos.y : delta_from_click_pos.y);
         }
+        if (!g.IO.MouseDown[i] && !g.IO.MouseReleased[i])
+            g.IO.MouseDownWasDoubleClick[i] = false;
         if (g.IO.MouseClicked[i]) // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
             g.NavDisableMouseHover = false;
     }

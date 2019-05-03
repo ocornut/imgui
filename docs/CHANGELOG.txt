@@ -74,6 +74,9 @@ Other Changes:
   clear the focus again.
 - Popups: Fixed right-click from closing all popups instead of aiming at the hovered popup level
   (regression in 1.67).
+- Selectable: With ImGuiSelectableFlags_AllowDoubleClick doesn't return true on the mouse button release
+  following the double-click. Only first mouse release + second mouse down (double-click) returns true.
+  Likewise for internal ButtonBehavior() with both _PressedOnClickRelease | _PressedOnDoubleClick. (#2503)
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
