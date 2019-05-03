@@ -68,6 +68,7 @@ Other Changes:
   highlight from parent menu items earlier than necessary while approaching the child menu.
 - Window: Close button is horizontally aligned with style.FramePadding.x.
 - Window: Fixed contents region being off by WindowBorderSize amount on the right when scrollbar is active.
+- Window: Fixed SetNextWindowSizeConstraints() with non-rounded positions making windows drift. (#2067, 2530)
 - Popups: Closing a popup restores the focused/nav window in place at the time of the popup opening,
   instead of restoring the window that was in the window stack at the time of the OpenPopup call. (#2517)
   Among other things, this allows opening a popup while no window are focused, and pressing Escape to
