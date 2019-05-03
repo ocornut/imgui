@@ -7,12 +7,14 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		5A1A00AB2768052600AB6805 /* imgui_stacklayout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A002D257677DB0038A28D /* imgui_stacklayout.cpp */; };
 		050450AB2768052600AB6805 /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5079822D257677DB0038A28D /* imgui_tables.cpp */; };
 		050450AD276863B000AB6805 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 050450AC276863B000AB6805 /* QuartzCore.framework */; };
 		05318E0F274C397200A8DE2E /* GameController.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05318E0E274C397200A8DE2E /* GameController.framework */; };
 		05A275442773BEA20084EF39 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 05A275432773BEA20084EF39 /* QuartzCore.framework */; };
 		07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
 		07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 07A82ED72139413C0078D120 /* imgui_widgets.cpp */; };
+		5A1A002E257677DB0038A28D /* imgui_stacklayout.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5A1A002D257677DB0038A28D /* imgui_stacklayout.cpp */; };
 		5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 5079822D257677DB0038A28D /* imgui_tables.cpp */; };
 		8309BD8F253CCAAA0045E2A1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 8309BD8E253CCAAA0045E2A1 /* UIKit.framework */; };
 		8309BDA5253CCC070045E2A1 /* main.mm in Sources */ = {isa = PBXBuildFile; fileRef = 8309BDA0253CCBC10045E2A1 /* main.mm */; };
@@ -43,6 +45,7 @@
 		05A275432773BEA20084EF39 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = Platforms/iPhoneOS.platform/Developer/SDKs/iPhoneOS15.2.sdk/System/Library/Frameworks/QuartzCore.framework; sourceTree = DEVELOPER_DIR; };
 		07A82ED62139413C0078D120 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = ../../imgui_internal.h; sourceTree = "<group>"; };
 		07A82ED72139413C0078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
+		5A1A002D257677DB0038A28D /* imgui_stacklayout.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_stacklayout.cpp; path = ../../imgui_stacklayout.cpp; sourceTree = "<group>"; };
 		5079822D257677DB0038A28D /* imgui_tables.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_tables.cpp; path = ../../imgui_tables.cpp; sourceTree = "<group>"; };
 		8307E7C420E9F9C900473790 /* example_apple_metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_apple_metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		8307E7DA20E9F9C900473790 /* example_apple_metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_apple_metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -163,6 +166,7 @@
 		83BBE9F020EB544400295997 /* imgui */ = {
 			isa = PBXGroup;
 			children = (
+				5A1A002D257677DB0038A28D /* imgui_stacklayout.cpp */,
 				5079822D257677DB0038A28D /* imgui_tables.cpp */,
 				05A2754027728F5B0084EF39 /* imgui_impl_metal4.h */,
 				8309BDB5253CCC9D0045E2A1 /* imgui_impl_metal4.mm */,
@@ -283,6 +287,7 @@
 				83BBEA0920EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0720EB54E700295997 /* imgui_demo.cpp in Sources */,
 				83BBEA0520EB54E700295997 /* imgui_draw.cpp in Sources */,
+				5A1A002E257677DB0038A28D /* imgui_stacklayout.cpp in Sources */,
 				5079822E257677DB0038A28D /* imgui_tables.cpp in Sources */,
 				07A82ED82139413D0078D120 /* imgui_widgets.cpp in Sources */,
 				8309BDA5253CCC070045E2A1 /* main.mm in Sources */,
@@ -298,6 +303,7 @@
 				83BBEA0A20EB54E700295997 /* imgui.cpp in Sources */,
 				83BBEA0820EB54E700295997 /* imgui_demo.cpp in Sources */,
 				83BBEA0620EB54E700295997 /* imgui_draw.cpp in Sources */,
+				5A1A00AB2768052600AB6805 /* imgui_stacklayout.cpp in Sources */,
 				050450AB2768052600AB6805 /* imgui_tables.cpp in Sources */,
 				07A82ED92139418F0078D120 /* imgui_widgets.cpp in Sources */,
 				8309BDA8253CCC080045E2A1 /* main.mm in Sources */,
