@@ -91,6 +91,7 @@ Other Changes:
   angles, also faster to output. (#2518) [@rmitton]
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
+- Misc: Made IMGUI_CHECKVERSION() macro also check for matching size of ImDrawIdx.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
 - Demo: Improved trees in columns demo.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized

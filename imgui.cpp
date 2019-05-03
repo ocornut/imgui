@@ -3039,9 +3039,12 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
 #endif
 }
 
-// Helper function to verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
-// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. you may see different structures from what imgui.cpp sees which is highly problematic.
-bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert)
+// Helper function to verify ABI compatibility between caller code and compiled version of Dear ImGui.
+// Verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
+// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. your user code
+// may see different structures thanwhat imgui.cpp sees, which is problematic.
+// We usually require settings to be in imconfig.h to make sure that they are accessible to all compilation units involved with Dear ImGui.
+bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx)
 {
     bool error = false;
     if (strcmp(version, IMGUI_VERSION)!=0) { error = true; IM_ASSERT(strcmp(version,IMGUI_VERSION)==0 && "Mismatched version string!");  }
@@ -3050,6 +3053,7 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
     if (sz_vec2  != sizeof(ImVec2))        { error = true; IM_ASSERT(sz_vec2  == sizeof(ImVec2)       && "Mismatched struct layout!"); }
     if (sz_vec4  != sizeof(ImVec4))        { error = true; IM_ASSERT(sz_vec4  == sizeof(ImVec4)       && "Mismatched struct layout!"); }
     if (sz_vert  != sizeof(ImDrawVert))    { error = true; IM_ASSERT(sz_vert  == sizeof(ImDrawVert)   && "Mismatched struct layout!"); }
+    if (sz_idx   != sizeof(ImDrawIdx))     { error = true; IM_ASSERT(sz_idx   == sizeof(ImDrawIdx)    && "Mismatched struct layout!"); }
     return !error;
 }
 
