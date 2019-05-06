@@ -2603,16 +2603,39 @@ static void ShowDemoWindowColumns()
         ImGui::TreePop();
     }
 
-    bool node_open = ImGui::TreeNode("Tree within single cell");
-    ImGui::SameLine(); HelpMarker("NB: Tree node must be poped before ending the cell. There's no storage of state per-cell.");
-    if (node_open)
+    if (ImGui::TreeNode("Tree"))
     {
-        ImGui::Columns(2, "tree items");
-        ImGui::Separator();
-        if (ImGui::TreeNode("Hello")) { ImGui::BulletText("Sailor"); ImGui::TreePop(); } ImGui::NextColumn();
-        if (ImGui::TreeNode("Bonjour")) { ImGui::BulletText("Marin"); ImGui::TreePop(); } ImGui::NextColumn();
+        ImGui::Columns(2, "tree", true);
+        for (int x = 0; x < 3; x++)
+        {
+            bool open1 = ImGui::TreeNode((void*)(intptr_t)x, "Node%d", x);
+            ImGui::NextColumn();
+            ImGui::Text("Node contents");
+            ImGui::NextColumn();
+            if (open1)
+            {
+                for (int y = 0; y < 5; y++)
+                {
+                    bool open2 = ImGui::TreeNode((void*)(intptr_t)y, "Node%d.%d", x, y);
+                    ImGui::NextColumn();
+                    ImGui::Text("Node contents");
+                    if (open2)
+                    {
+                        ImGui::Text("Even more contents");
+                        if (ImGui::TreeNode("Tree in column"))
+                        {
+                            ImGui::Text("The quick brown fox jumps over the lazy dog");
+                            ImGui::TreePop();
+                        }
+                    }
+                    ImGui::NextColumn();
+                    if (open2)
+                        ImGui::TreePop();
+                }
+                ImGui::TreePop();
+            }
+        }
         ImGui::Columns(1);
-        ImGui::Separator();
         ImGui::TreePop();
     }
 

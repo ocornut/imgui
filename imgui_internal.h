@@ -354,7 +354,7 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 10,
     ImGuiSelectableFlags_PressedOnClick     = 1 << 11,
     ImGuiSelectableFlags_PressedOnRelease   = 1 << 12,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 13,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 13,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
     ImGuiSelectableFlags_AllowItemOverlap   = 1 << 14
 };
 
@@ -1646,7 +1646,7 @@ namespace ImGui
     IMGUI_API void          PushItemFlag(ImGuiItemFlags option, bool enabled);
     IMGUI_API void          PopItemFlag();
     IMGUI_API bool          IsItemToggledSelection();                                           // was the last item selection toggled? (after Selectable(), TreeNode() etc. We only returns toggle _event_ in order to handle clipping correctly)
-    IMGUI_API ImVec2        GetContentRegionMaxScreen();
+    IMGUI_API ImVec2        GetWorkRectMax();
 
     // Logging/Capture
     IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);   // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.

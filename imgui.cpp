@@ -371,7 +371,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- (Viewport Branch)
+ (Docking/Viewport Branch)
  - 2018/XX/XX (1.XX) - when multi-viewports are enabled, all positions will be in your natural OS coordinates space. It means that:
                         - reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are probably not what you want anymore. 
                           you may use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos)
@@ -380,7 +380,7 @@ CODE
  - 2018/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
  
 
- - 2019/04/29 (1.70) - fixed ImDrawList rectangles with thick lines (>1.0f) not being as thick as requested. If you have custom rendering using rectangles with thick lines, they will appear thicker now.
+ - 2019/04/29 (1.70) - improved ImDrawList thick strokes (>1.0f) preserving correct thickness up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines, they will appear thicker now.
  - 2019/04/29 (1.70) - removed GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead. Kept inline redirection function (will obsolete).
  - 2019/03/04 (1.69) - renamed GetOverlayDrawList() to GetForegroundDrawList(). Kept redirection function (will obsolete).
  - 2019/02/26 (1.69) - renamed ImGuiColorEditFlags_RGB/ImGuiColorEditFlags_HSV/ImGuiColorEditFlags_HEX to ImGuiColorEditFlags_DisplayRGB/ImGuiColorEditFlags_DisplayHSV/ImGuiColorEditFlags_DisplayHex. Kept redirection enums (will obsolete).
@@ -3045,7 +3045,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (wrap_pos_x == 0.0f)
-        wrap_pos_x = GetContentRegionMaxScreen().x;
+        wrap_pos_x = GetWorkRectMax().x;
     else if (wrap_pos_x > 0.0f)
         wrap_pos_x += window->Pos.x - window->Scroll.x; // wrap_pos_x is provided is window local space
 
@@ -3101,9 +3101,12 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
 #endif
 }
 
-// Helper function to verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
-// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. you may see different structures from what imgui.cpp sees which is highly problematic.
-bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert)
+// Helper function to verify ABI compatibility between caller code and compiled version of Dear ImGui.
+// Verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
+// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. your user code
+// may see different structures thanwhat imgui.cpp sees, which is problematic.
+// We usually require settings to be in imconfig.h to make sure that they are accessible to all compilation units involved with Dear ImGui.
+bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx)
 {
     bool error = false;
     if (strcmp(version, IMGUI_VERSION)!=0) { error = true; IM_ASSERT(strcmp(version,IMGUI_VERSION)==0 && "Mismatched version string!");  }
@@ -3112,6 +3115,7 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
     if (sz_vec2  != sizeof(ImVec2))        { error = true; IM_ASSERT(sz_vec2  == sizeof(ImVec2)       && "Mismatched struct layout!"); }
     if (sz_vec4  != sizeof(ImVec4))        { error = true; IM_ASSERT(sz_vec4  == sizeof(ImVec4)       && "Mismatched struct layout!"); }
     if (sz_vert  != sizeof(ImDrawVert))    { error = true; IM_ASSERT(sz_vert  == sizeof(ImDrawVert)   && "Mismatched struct layout!"); }
+    if (sz_idx   != sizeof(ImDrawIdx))     { error = true; IM_ASSERT(sz_idx   == sizeof(ImDrawIdx)    && "Mismatched struct layout!"); }
     return !error;
 }
 
@@ -3420,6 +3424,7 @@ static void ImGui::UpdateMouseInputs()
                 g.IO.MouseClickedTime[i] = g.Time;
             }
             g.IO.MouseClickedPos[i] = g.IO.MousePos;
+            g.IO.MouseDownWasDoubleClick[i] = g.IO.MouseDoubleClicked[i];
             g.IO.MouseDragMaxDistanceAbs[i] = ImVec2(0.0f, 0.0f);
             g.IO.MouseDragMaxDistanceSqr[i] = 0.0f;
         }
@@ -3431,6 +3436,8 @@ static void ImGui::UpdateMouseInputs()
             g.IO.MouseDragMaxDistanceAbs[i].x = ImMax(g.IO.MouseDragMaxDistanceAbs[i].x, delta_from_click_pos.x < 0.0f ? -delta_from_click_pos.x : delta_from_click_pos.x);
             g.IO.MouseDragMaxDistanceAbs[i].y = ImMax(g.IO.MouseDragMaxDistanceAbs[i].y, delta_from_click_pos.y < 0.0f ? -delta_from_click_pos.y : delta_from_click_pos.y);
         }
+        if (!g.IO.MouseDown[i] && !g.IO.MouseReleased[i])
+            g.IO.MouseDownWasDoubleClick[i] = false;
         if (g.IO.MouseClicked[i]) // Clicking any mouse button reactivate mouse hovering which may have been deactivated by gamepad/keyboard navigation
             g.NavDisableMouseHover = false;
     }
@@ -4503,8 +4510,9 @@ bool ImGui::IsMouseClicked(int button, bool repeat)
 
     if (repeat && t > g.IO.KeyRepeatDelay)
     {
-        float delay = g.IO.KeyRepeatDelay, rate = g.IO.KeyRepeatRate;
-        if ((ImFmod(t - delay, rate) > rate*0.5f) != (ImFmod(t - delay - g.IO.DeltaTime, rate) > rate*0.5f))
+        // FIXME: 2019/05/03: Our old repeat code was wrong here and led to doubling the repeat rate, which made it an ok rate for repeat on mouse hold.
+        int amount = CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate * 0.5f);
+        if (amount > 0)
             return true;
     }
 
@@ -4974,6 +4982,8 @@ static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
             g.NextWindowData.SizeCallback(&data);
             new_size = data.DesiredSize;
         }
+        new_size.x = ImFloor(new_size.x);
+        new_size.y = ImFloor(new_size.y);
     }
 
     // Minimum size
@@ -6383,7 +6393,7 @@ float ImGui::GetNextItemWidth()
     }
     if (w < 0.0f)
     {
-        float region_max_x = GetContentRegionMaxScreen().x;
+        float region_max_x = GetWorkRectMax().x;
         w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
     }
     w = (float)(int)w;
@@ -6411,7 +6421,7 @@ ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
 
     ImVec2 region_max;
     if (size.x < 0.0f || size.y < 0.0f)
-        region_max = GetContentRegionMaxScreen();
+        region_max = GetWorkRectMax();
 
     if (size.x == 0.0f)
         size.x = default_w;
@@ -7050,7 +7060,7 @@ ImVec2 ImGui::GetContentRegionMax()
 }
 
 // [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
-ImVec2 ImGui::GetContentRegionMaxScreen()
+ImVec2 ImGui::GetWorkRectMax()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImVec2 mx = window->ContentsRegionRect.Max;
@@ -7062,7 +7072,7 @@ ImVec2 ImGui::GetContentRegionMaxScreen()
 ImVec2 ImGui::GetContentRegionAvail()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    return GetContentRegionMaxScreen() - window->DC.CursorPos;
+    return GetWorkRectMax() - window->DC.CursorPos;
 }
 
 // In window space (not screen space!)

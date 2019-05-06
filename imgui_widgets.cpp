@@ -429,6 +429,10 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 //   Frame N+6 (mouse button is released)   -             true             -               -                  true                 -
 //   Frame N+7 (mouse button is released)   -             true             -               -                  -                    -    
 //------------------------------------------------------------------------------------------------------------------------------------------------
+// Note that some combinations are supported,
+// - PressedOnDragDropHold can generally be associated with any flag.
+// - PressedOnDoubleClick can be associated by PressedOnClickRelease/PressedOnRelease, in which case the second release event won't be reported.
+//------------------------------------------------------------------------------------------------------------------------------------------------
 // The behavior of the return-value changes when ImGuiButtonFlags_Repeat is set:
 //                                         Repeat+                  Repeat+           Repeat+             Repeat+
 //                                         PressedOnClickRelease    PressedOnClick    PressedOnRelease    PressedOnDoubleClick
@@ -570,10 +574,13 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
             else
             {
-                if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease))
-                    if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
-                        if (!g.DragDropActive)
-                            pressed = true;
+                if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease) && !g.DragDropActive)
+                {
+                    bool is_double_click_release = (flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDownWasDoubleClick[0];
+                    bool is_repeating_already = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay; // Repeat mode trumps <on release>
+                    if (!is_double_click_release && !is_repeating_already)
+                        pressed = true;
+                }
                 ClearActiveID();
             }
             if (!(flags & ImGuiButtonFlags_NoNavFocus))
@@ -5078,7 +5085,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(padding.y, window->DC.CurrentLineTextBaseOffset); // Latch before ItemSize changes it
     const float frame_height = ImMax(ImMin(window->DC.CurrentLineSize.y, g.FontSize + style.FramePadding.y*2), label_size.y + padding.y*2);
-    ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(GetContentRegionMaxScreen().x, window->DC.CursorPos.y + frame_height));
+    ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(GetWorkRectMax().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
         // Framed header expand a little outside the default padding

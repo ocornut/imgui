@@ -98,8 +98,9 @@ Other changes:
 -----------------------------------------------------------------------
 
 Breaking Changes:
-- ImDrawList: Fixed rectangles with thick lines (>1.0f) not being as thick as requested. (#2518)
-  If you have custom rendering using thick lines, they will appear thicker now.
+- ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness
+  up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines,
+  they will appear a little thicker now. (#2518) [@rmitton]
 - Obsoleted GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead.
   Kept inline redirection function.
 - Examples: Vulkan: Added MinImageCount/ImageCount fields in ImGui_ImplVulkan_InitInfo, required
@@ -114,8 +115,8 @@ Other Changes:
   Examples: Added support for ImDrawCallback_ResetRenderState in all renderer back-ends. Each
   renderer code setting up initial render state has been moved to a function so it could be
   called at the start of rendering and when a ResetRenderState is requested. [@ocornut, @bear24rw]
-- InputText: Fixed selection background starts rendering one frame after the cursor movement
-  when first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
+- InputText: Fixed selection background rendering one frame after the cursor movement when
+  first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
 - InputText: Fixed ImGuiInputTextFlags_AllowTabInput leading to two tabs characters being inserted
   if the back-end provided both Key and Character input. (#2467, #1336)
@@ -132,12 +133,16 @@ Other Changes:
   highlight from parent menu items earlier than necessary while approaching the child menu.
 - Window: Close button is horizontally aligned with style.FramePadding.x.
 - Window: Fixed contents region being off by WindowBorderSize amount on the right when scrollbar is active.
+- Window: Fixed SetNextWindowSizeConstraints() with non-rounded positions making windows drift. (#2067, #2530)
 - Popups: Closing a popup restores the focused/nav window in place at the time of the popup opening,
   instead of restoring the window that was in the window stack at the time of the OpenPopup call. (#2517)
   Among other things, this allows opening a popup while no window are focused, and pressing Escape to
   clear the focus again.
 - Popups: Fixed right-click from closing all popups instead of aiming at the hovered popup level
   (regression in 1.67).
+- Selectable: With ImGuiSelectableFlags_AllowDoubleClick doesn't return true on the mouse button release
+  following the double-click. Only first mouse release + second mouse down (double-click) returns true.
+  Likewise for internal ButtonBehavior() with both _PressedOnClickRelease | _PressedOnDoubleClick. (#2503)
 - GetMouseDragDelta(): also returns the delta on the mouse button released frame. (#2419)
 - GetMouseDragDelta(): verify that mouse positions are valid otherwise returns zero.
 - Inputs: Also add support for horizontal scroll with Shift+Mouse Wheel. (#2424, #1463) [@LucaRood]
@@ -152,11 +157,14 @@ Other Changes:
   angles, also faster to output. (#2518) [@rmitton]
 - Misc: Added IM_MALLOC/IM_FREE macros mimicking IM_NEW/IM_DELETE so user doesn't need to revert
   to using the ImGui::MemAlloc()/MemFree() calls directly.
+- Misc: Made IMGUI_CHECKVERSION() macro also check for matching size of ImDrawIdx.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
+- Demo: Improved trees in columns demo.
 - Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
   GL function loaders early, and help users understand what they are missing. (#2421)
-- Examples: Emscripten: Added Emscripten+SDL+GLES2 example. (#2494, #2492, #2351, #336) [@nicolasnoble, @redblobgames]
 - Examples: SDL: Added support for SDL_GameController gamepads (enable with ImGuiConfigFlags_NavEnableGamepad). (#2509) [@DJLink]
+- Examples: Emscripten: Added Emscripten+SDL+GLES2 example. (#2494, #2492, #2351, #336) [@nicolasnoble, @redblobgames]
+- Examples: Metal: Added Glfw+Metal example. (#2527) [@bear24rw]
 - Examples: OpenGL3: Minor tweaks + not calling glBindBuffer more than necessary in the render loop.
 - Examples: Vulkan: Fixed in-flight buffers issues when using multi-viewports. (#2461, #2348, #2378, #2097)
 - Examples: Vulkan: Added missing support for 32-bit indices (#define ImDrawIdx unsigned int).

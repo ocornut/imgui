@@ -508,6 +508,7 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
             }
     if (pDXGIDevice) pDXGIDevice->Release();
     if (pDXGIAdapter) pDXGIAdapter->Release();
+    g_pd3dDevice->AddRef();
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplDX10_InitPlatformInterface();
@@ -519,7 +520,7 @@ void ImGui_ImplDX10_Shutdown()
     ImGui_ImplDX10_ShutdownPlatformInterface();
     ImGui_ImplDX10_InvalidateDeviceObjects();
     if (g_pFactory) { g_pFactory->Release(); g_pFactory = NULL; }
-    g_pd3dDevice = NULL;
+    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
 }
 
 void ImGui_ImplDX10_NewFrame()

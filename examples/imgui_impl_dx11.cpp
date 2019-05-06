@@ -516,6 +516,8 @@ bool    ImGui_ImplDX11_Init(ID3D11Device* device, ID3D11DeviceContext* device_co
             }
     if (pDXGIDevice) pDXGIDevice->Release();
     if (pDXGIAdapter) pDXGIAdapter->Release();
+    g_pd3dDevice->AddRef();
+    g_pd3dDeviceContext->AddRef();
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplDX11_InitPlatformInterface();
@@ -528,8 +530,8 @@ void ImGui_ImplDX11_Shutdown()
     ImGui_ImplDX11_ShutdownPlatformInterface();
     ImGui_ImplDX11_InvalidateDeviceObjects();
     if (g_pFactory) { g_pFactory->Release(); g_pFactory = NULL; }
-    g_pd3dDevice = NULL;
-    g_pd3dDeviceContext = NULL;
+    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
+    if (g_pd3dDeviceContext) { g_pd3dDeviceContext->Release(); g_pd3dDeviceContext = NULL; }
 }
 
 void ImGui_ImplDX11_NewFrame()

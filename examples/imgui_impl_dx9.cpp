@@ -226,6 +226,7 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     io.BackendRendererName = "imgui_impl_dx9";
 
     g_pd3dDevice = device;
+    g_pd3dDevice->AddRef();
 
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplDX9_InitPlatformInterface();
