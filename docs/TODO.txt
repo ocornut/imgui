@@ -27,6 +27,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: investigate better auto-positioning for new windows.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
+ - window/child: border could be emitted in parent as well.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
@@ -65,6 +66,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
  - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
  - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
+ - widgets: checkbox with custom glyph inside frame.
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
@@ -170,6 +172,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: keyboard navigation.
  - listbox: disable capturing mouse wheel if the listbox has no scrolling. (#1681)
  - listbox: scrolling should track modified selection.
+ - listbox: future api should allow to enable horizontal scrolling (#2510)
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
  - popups/modal: make modal title bar blink when trying to click outside the modal
@@ -236,15 +239,19 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
  - drag and drop: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers.
+ - drag and drop: fix/support/options for overlapping drag sources.
  - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
+ - drag and drop: drag source on a group object (would need e.g. an invisible button covering group in EndGroup) https://twitter.com/paniq/status/1121446364909535233
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov.
  - drag and drop: allow preview tooltip to be submitted from a different place than the drag source. (#1725)
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
  - drag and drop: make it easier and provide a demo to have tooltip both are source and target site, with a more detailed one on target site (tooltip ordering problem)
- - drag and drop: test with reordering nodes (in a list, or a tree node). (#143)
+ - drag and drop: demo with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop (make it easy to do a naive WM_DROPFILE integration)
+ - drag and drop: allow for multiple payload types. (#143)
  - drag and drop: make payload optional? (#143)
- - drag and drop: feedback when hovering a modal (cursor?)
+ - drag and drop: (#143) "both an in-process pointer and a promise to generate a serialized version, for whether the drag ends inside or outside the same process"
+ - drag and drop: feedback when hovering a region blocked by modal (mouse cursor "NO"?)
  - node/graph editor (#306)
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)
@@ -267,6 +274,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
  - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
+ - font/draw: underline, squiggle line rendering helpers.
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct), would save on cache line.
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
@@ -309,6 +317,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs: support track pad style scrolling & slider edit.
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
+ - inputs: add mouse cursor for unavailable/no? IDC_NO/SDL_SYSTEM_CURSOR_NO.
 
  - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
@@ -326,6 +335,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
  - demo: find a way to demonstrate textures in the examples application, as it such a common issue for new users.
+ - demo: demonstrate using PushStyleVar() in more details.
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
  - demo: demonstrate Plot offset
