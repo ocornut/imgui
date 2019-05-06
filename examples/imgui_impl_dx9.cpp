@@ -324,7 +324,7 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     data->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
     data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
     data->d3dpp.hDeviceWindow = hWnd;
-    data->d3dpp.EnableAutoDepthStencil = TRUE;
+    data->d3dpp.EnableAutoDepthStencil = FALSE;
     data->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
     data->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync
     
@@ -368,22 +368,27 @@ static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 
     LPDIRECT3DSURFACE9 render_target = NULL;
     LPDIRECT3DSURFACE9 last_render_target = NULL;
+    LPDIRECT3DSURFACE9 last_depth_stencil = NULL;
     data->SwapChain->GetBackBuffer(0, D3DBACKBUFFER_TYPE_MONO, &render_target);
     g_pd3dDevice->GetRenderTarget(0, &last_render_target);
+    g_pd3dDevice->GetDepthStencilSurface(&last_depth_stencil);
     g_pd3dDevice->SetRenderTarget(0, render_target);
+    g_pd3dDevice->SetDepthStencilSurface(NULL);
 
     if (!(viewport->Flags & ImGuiViewportFlags_NoRendererClear))
     {
         D3DCOLOR clear_col_dx = D3DCOLOR_RGBA((int)(clear_color.x*255.0f), (int)(clear_color.y*255.0f), (int)(clear_color.z*255.0f), (int)(clear_color.w*255.0f));
-        g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET | D3DCLEAR_ZBUFFER, clear_col_dx, 1.0f, 0);
+        g_pd3dDevice->Clear(0, NULL, D3DCLEAR_TARGET, clear_col_dx, 1.0f, 0);
     }
 
     ImGui_ImplDX9_RenderDrawData(viewport->DrawData);
 
     // Restore render target
     g_pd3dDevice->SetRenderTarget(0, last_render_target);
+    g_pd3dDevice->SetDepthStencilSurface(last_depth_stencil);
     render_target->Release();
     last_render_target->Release();
+    if (last_depth_stencil) last_depth_stencil->Release();
 }
 
 static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
