@@ -219,13 +219,14 @@ bool ImGui_ImplDX9_Init(IDirect3DDevice9* device)
     io.BackendRendererName = "imgui_impl_dx9";
 
     g_pd3dDevice = device;
+    g_pd3dDevice->AddRef();
     return true;
 }
 
 void ImGui_ImplDX9_Shutdown()
 {
     ImGui_ImplDX9_InvalidateDeviceObjects();
-    g_pd3dDevice = NULL;
+    if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
 }
 
 static bool ImGui_ImplDX9_CreateFontsTexture()
