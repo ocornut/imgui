@@ -11,7 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2018-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2019-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
 //  2019-04-30: DirectX9: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-03-29: Misc: Fixed erroneous assert in ImGui_ImplDX9_InvalidateDeviceObjects().
 //  2019-01-16: Misc: Disabled fog before drawing UI's. Fixes issue #2288.
@@ -48,6 +48,8 @@ struct CUSTOMVERTEX
 // Forward Declarations
 static void ImGui_ImplDX9_InitPlatformInterface();
 static void ImGui_ImplDX9_ShutdownPlatformInterface();
+static void ImGui_ImplDX9_CreateDeviceObjectsForPlatformWindows();
+static void ImGui_ImplDX9_InvalidateDeviceObjectsForPlatformWindows();
 
 static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 {
@@ -272,6 +274,7 @@ bool ImGui_ImplDX9_CreateDeviceObjects()
         return false;
     if (!ImGui_ImplDX9_CreateFontsTexture())
         return false;
+    ImGui_ImplDX9_CreateDeviceObjectsForPlatformWindows();
     return true;
 }
 
@@ -282,6 +285,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
     if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    ImGui_ImplDX9_InvalidateDeviceObjectsForPlatformWindows();
 }
 
 void ImGui_ImplDX9_NewFrame()
@@ -316,13 +320,16 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
     data->d3dpp.Windowed = TRUE;
     data->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
+    data->d3dpp.BackBufferWidth = (UINT)viewport->Size.x;
+    data->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
     data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
     data->d3dpp.hDeviceWindow = hWnd;
     data->d3dpp.EnableAutoDepthStencil = TRUE;
     data->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
     data->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync
     
-    g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain);
+    HRESULT hr = g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain); IM_UNUSED(hr);
+    IM_ASSERT(hr == D3D_OK);
     IM_ASSERT(data->SwapChain != NULL);
 }
 
@@ -349,7 +356,8 @@ static void ImGui_ImplDX9_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
         data->SwapChain = NULL;
         data->d3dpp.BackBufferWidth = (UINT)size.x;
         data->d3dpp.BackBufferHeight = (UINT)size.y;
-        g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain);
+        HRESULT hr = g_pd3dDevice->CreateAdditionalSwapChain(&data->d3dpp, &data->SwapChain); IM_UNUSED(hr);
+        IM_ASSERT(hr == D3D_OK);
     }
 }
 
@@ -381,7 +389,8 @@ static void ImGui_ImplDX9_RenderWindow(ImGuiViewport* viewport, void*)
 static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
-    data->SwapChain->Present(NULL, NULL, data->d3dpp.hDeviceWindow, NULL, NULL);
+    HRESULT hr = data->SwapChain->Present(NULL, NULL, data->d3dpp.hDeviceWindow, NULL, NULL);
+    IM_ASSERT(hr == D3D_OK);
 }
 
 static void ImGui_ImplDX9_InitPlatformInterface()
@@ -397,4 +406,20 @@ static void ImGui_ImplDX9_InitPlatformInterface()
 static void ImGui_ImplDX9_ShutdownPlatformInterface()
 {
     ImGui::DestroyPlatformWindows();
+}
+
+static void ImGui_ImplDX9_CreateDeviceObjectsForPlatformWindows()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+        if (!platform_io.Viewports[i]->RendererUserData)
+            ImGui_ImplDX9_CreateWindow(platform_io.Viewports[i]);
+}
+
+static void ImGui_ImplDX9_InvalidateDeviceObjectsForPlatformWindows()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    for (int i = 1; i < platform_io.Viewports.Size; i++)
+        if (platform_io.Viewports[i]->RendererUserData)
+            ImGui_ImplDX9_DestroyWindow(platform_io.Viewports[i]);
 }
