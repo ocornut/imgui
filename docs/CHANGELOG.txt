@@ -28,6 +28,14 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.71 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+
 
 -----------------------------------------------------------------------
  VERSION 1.70 (Released 2019-05-06)

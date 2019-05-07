@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
- dear imgui, v1.70
+ dear imgui, v1.71 WIP
 -----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
@@ -175,7 +175,7 @@ example_empscripten:
     We provide this to make the Emscripten differences obvious, and have them not pollute all other examples.
 
 example_glfw_metal/
-    GLFW (Mac) + Vulkan example.
+    GLFW (Mac) + Metal example.
     = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm.
 
 example_glfw_opengl2/
