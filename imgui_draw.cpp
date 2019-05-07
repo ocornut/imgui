@@ -1666,7 +1666,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
 
 int ImFontAtlas::AddCustomRectRegular(unsigned int id, int width, int height)
 {
-    IM_ASSERT(id >= 0x10000);
+    IM_ASSERT(id > 0x10FFFF);
     IM_ASSERT(width > 0 && width <= 0xFFFF);
     IM_ASSERT(height > 0 && height <= 0xFFFF);
     CustomRect r;
@@ -1850,6 +1850,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             {
                 if (dst_tmp.GlyphsSet.GetBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option for MergeMode (e.g. MergeOverwrite==true)
                     continue;
+
                 if (!stbtt_FindGlyphIndex(&src_tmp.FontInfo, codepoint))    // It is actually in the font?
                     continue;
 
@@ -2130,7 +2131,7 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
     for (int i = 0; i < atlas->CustomRects.Size; i++)
     {
         const ImFontAtlas::CustomRect& r = atlas->CustomRects[i];
-        if (r.Font == NULL || r.ID > 0x10000)
+        if (r.Font == NULL || r.ID > 0x10FFFF)
             continue;
 
         IM_ASSERT(r.Font->ContainerAtlas == atlas);
@@ -2377,8 +2378,7 @@ void ImFontGlyphRangesBuilder::AddText(const char* text, const char* text_end)
         text += c_len;
         if (c_len == 0)
             break;
-        if (c < 0x10000)
-            AddChar((ImWchar)c);
+        AddChar((ImWchar)c);
     }
 }
 
@@ -2391,11 +2391,11 @@ void ImFontGlyphRangesBuilder::AddRanges(const ImWchar* ranges)
 
 void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 {
-    for (int n = 0; n < 0x10000; n++)
+    for (int n = 0; n <= 0x10FFFF; n++)
         if (GetBit(n))
         {
             out_ranges->push_back((ImWchar)n);
-            while (n < 0x10000 && GetBit(n + 1))
+            while (n <= 0x10FFFF && GetBit(n + 1))
                 n++;
             out_ranges->push_back((ImWchar)n);
         }
@@ -2542,6 +2542,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
     const ImWchar i = IndexLookup.Data[c];
     if (i == (ImWchar)-1)
         return FallbackGlyph;
+
     return &Glyphs.Data[i];
 }
 

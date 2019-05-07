@@ -1255,7 +1255,7 @@ void ImGuiIO::AddInputCharacter(ImWchar c)
 }
 
 // UTF16 string use Surrogate to encode unicode > 0x10000, so we should save the Surrogate.
-void ImGuiIO::AddInputCharacterUTF16(ImWchar c)
+void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
 {
     if (c >= 0xD800 && c <= 0xDBFF)
     {
@@ -1282,7 +1282,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
     {
         unsigned int c = 0;
         utf8_chars += ImTextCharFromUtf8(&c, utf8_chars, NULL);
-        if (c > 0 && c <= 0xFFFF)
+        if (c > 0)
             InputQueueCharacters.push_back((ImWchar)c);
     }
 }
@@ -1690,6 +1690,8 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
         c += (*str++ & 0x3f);
         // utf-8 encodings of values used in surrogate pairs are invalid
         if ((c & 0xFFFFF800) == 0xD800) return 4;
+        // If ImWchar is 16bit, use replacement character U+FFFD instead
+        if (sizeof(ImWchar) == 2 && c >= 0x10000) c = 0xFFFD;
         *out_char = c;
         return 4;
     }
@@ -1707,8 +1709,7 @@ int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const cha
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
         if (c == 0)
             break;
-        if (c < 0x10000)    // FIXME: Losing characters that don't fit in 2 bytes
-            *buf_out++ = (ImWchar)c;
+        *buf_out++ = (ImWchar)c;
     }
     *buf_out = 0;
     if (in_text_remaining)
@@ -1725,8 +1726,7 @@ int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end)
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
         if (c == 0)
             break;
-        if (c < 0x10000)
-            char_count++;
+        char_count++;
     }
     return char_count;
 }

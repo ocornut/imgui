@@ -166,8 +166,8 @@ int32 ImGui_Marmalade_CharCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
     s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)system_data;
-    if ((e->m_Char > 0 && e->m_Char < 0x10000))
-        io.AddInputCharacter((unsigned short)e->m_Char);
+    if ((e->m_Char > 0 && e->m_Char <= 0x10FFFF))
+        io.AddInputCharacter(e->m_Char);
 
     return 0;
 }

@@ -120,8 +120,8 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
         g_PrevUserCallbackChar(window, c);
 
     ImGuiIO& io = ImGui::GetIO();
-    if (c > 0 && c < 0x10000)
-        io.AddInputCharacter((unsigned short)c);
+    if (c > 0 && c <= 0x10FFFF)
+        io.AddInputCharacter(c);
 }
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
