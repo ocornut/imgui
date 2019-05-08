@@ -9484,6 +9484,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 #else
 #include <windows.h>
 #endif
+#include <stringapiset.h>
 #endif
 
 // Win32 API clipboard implementation
@@ -9491,6 +9492,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 
 #ifdef _MSC_VER
 #pragma comment(lib, "user32")
+#pragma comment(lib, "kernel32")
 #endif
 
 static const char* GetClipboardTextFn_DefaultImpl(void*)
