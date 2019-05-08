@@ -10552,11 +10552,13 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         }
     }
 
+    bool lock_viewport = false;
     if (g.NextWindowData.ViewportCond)
     {
         // Code explicitly request a viewport
         window->Viewport = (ImGuiViewportP*)FindViewportByID(g.NextWindowData.ViewportId);
         window->ViewportId = g.NextWindowData.ViewportId; // Store ID even if Viewport isn't resolved yet.
+        lock_viewport = true;
     }
     else if ((flags & ImGuiWindowFlags_ChildWindow) || (flags & ImGuiWindowFlags_ChildMenu))
     {
@@ -10590,40 +10592,45 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
         window->Viewport = main_viewport;
 
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
-    if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+    if (!lock_viewport)
     {
-        // We need to take account of the possibility that mouse may become invalid.
-        // Popups/Tooltip always set ViewportAllowPlatformMonitorExtend so GetWindowAllowedExtentRect() will return full monitor bounds.
-        ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.BeginPopupStack.back().OpenMousePos;
-        bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
-        bool mouse_valid = IsMousePosValid(&mouse_ref);
-        if ((window->Appearing || (flags & ImGuiWindowFlags_Tooltip)) && (!use_mouse_ref || mouse_valid))
-            window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
-        else 
+        if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
+        {
+            // We need to take account of the possibility that mouse may become invalid.
+            // Popups/Tooltip always set ViewportAllowPlatformMonitorExtend so GetWindowAllowedExtentRect() will return full monitor bounds.
+            ImVec2 mouse_ref = (flags & ImGuiWindowFlags_Tooltip) ? g.IO.MousePos : g.BeginPopupStack.back().OpenMousePos;
+            bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
+            bool mouse_valid = IsMousePosValid(&mouse_ref);
+            if ((window->Appearing || (flags & ImGuiWindowFlags_Tooltip)) && (!use_mouse_ref || mouse_valid))
+                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
+            else
+                window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
+        }
+        else if (window->Viewport && window != window->Viewport->Window && window->Viewport->Window && !(flags & ImGuiWindowFlags_ChildWindow))
+        {
+            // When called from Begin() we don't have access to a proper version of the Hidden flag yet, so we replicate this code.
+            const bool will_be_visible = (window->DockIsActive && !window->DockTabIsVisible) ? false : true;
+            if ((window->Flags & ImGuiWindowFlags_DockNodeHost) && window->Viewport->LastFrameActive < g.FrameCount && will_be_visible)
+            {
+                // Steal/transfer ownership
+                //IMGUI_DEBUG_LOG("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, window->Name, window->Viewport->ID, window->Viewport->Window->Name);
+                window->Viewport->Window = window;
+                window->Viewport->ID = window->ID;
+                window->Viewport->LastNameHash = 0;
+            }
+            else if (!UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0])) // Merge?
+            {
+                // New viewport
+                window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoFocusOnAppearing);
+            }
+        }
+        else if (window->ViewportAllowPlatformMonitorExtend < 0 && (flags & ImGuiWindowFlags_ChildWindow) == 0)
+        {
+            // Regular (non-child, non-popup) windows by default are also allowed to protrude
+            // Child windows are kept contained within their parent.
             window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
-    }
-    else if (window->Viewport && window != window->Viewport->Window && window->Viewport->Window && !(flags & ImGuiWindowFlags_ChildWindow))
-    {
-        // When called from Begin() we don't have access to a proper version of the Hidden flag yet, so we replicate this code.
-        const bool will_be_visible = (window->DockIsActive && !window->DockTabIsVisible) ? false : true;
-        if ((window->Flags & ImGuiWindowFlags_DockNodeHost) && window->Viewport->LastFrameActive < g.FrameCount && will_be_visible)
-        {
-            // Steal/transfer ownership
-            //IMGUI_DEBUG_LOG("[%05d] Window '%s' steal Viewport %08X from Window '%s'\n", g.FrameCount, window->Name, window->Viewport->ID, window->Viewport->Window->Name);
-            window->Viewport->Window = window;
-            window->Viewport->ID = window->ID;
-            window->Viewport->LastNameHash = 0;
-        }
-        else if (!UpdateTryMergeWindowIntoHostViewport(window, g.Viewports[0])) // Merge?
-        {
-            // New viewport
-            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_NoFocusOnAppearing);
         }
     }
-    // Regular (non-child, non-popup) windows by default are also allowed to protrude
-    // Child windows are kept contained within their parent.
-    else if (window->ViewportAllowPlatformMonitorExtend < 0 && (flags & ImGuiWindowFlags_ChildWindow) == 0)
-        window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
 
     // Update flags
     window->ViewportOwned = (window == window->Viewport->Window);
