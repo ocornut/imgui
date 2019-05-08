@@ -2550,8 +2550,7 @@ void ImFontGlyphRangesBuilder::AddText(const char* text, const char* text_end)
         text += c_len;
         if (c_len == 0)
             break;
-        if (c <= IM_UNICODE_CODEPOINT_MAX)
-            AddChar((ImWchar)c);
+        AddChar((ImWchar)c);
     }
 }
 
