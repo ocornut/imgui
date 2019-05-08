@@ -1254,6 +1254,28 @@ void ImGuiIO::AddInputCharacter(ImWchar c)
     InputQueueCharacters.push_back(c);
 }
 
+// UTF16 string use Surrogate to encode unicode > 0x10000, so we should save the Surrogate.
+void ImGuiIO::AddInputCharacterUTF16(ImWchar c)
+{
+    if (c >= 0xD800 && c <= 0xDBFF)
+    {
+        Surrogate = c;
+    }
+    else
+    {
+        ImWchar cp = c;
+        if (c >= 0xDC00 && c <= 0xDFFF)
+        {
+            if (sizeof(ImWchar) == 2)
+                cp = 0xFFFD;
+            else
+                cp = ((ImWchar)(Surrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000;
+            Surrogate = 0;
+        }
+        InputQueueCharacters.push_back(cp);
+    }
+}
+
 void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
 {
     while (*utf8_chars != 0)
