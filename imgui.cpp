@@ -1556,13 +1556,13 @@ FILE* ImFileOpen(const char* filename, const char* mode)
 {
 #if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames. Converting both strings from UTF-8 to wchar format (using a single allocation, because we can)
-    const int filename_wsize = ImTextCountCharsFromUtf8(filename, NULL) + 1;
-    const int mode_wsize = ImTextCountCharsFromUtf8(mode, NULL) + 1;
-    ImVector<ImWchar> buf;
+    const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, NULL, 0);
+    const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
+    ImVector<wchar_t> buf;
     buf.resize(filename_wsize + mode_wsize);
-    ImTextStrFromUtf8(&buf[0], filename_wsize, filename, NULL);
-    ImTextStrFromUtf8(&buf[filename_wsize], mode_wsize, mode, NULL);
-    return _wfopen((wchar_t*)&buf[0], (wchar_t*)&buf[filename_wsize]);
+    ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, &buf[0], filename_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, mode, -1,&buf[filename_wsize], mode_wsize);
+    return _wfopen(&buf[0], &buf[filename_wsize]);
 #else
     return fopen(filename, mode);
 #endif
