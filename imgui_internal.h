@@ -748,11 +748,6 @@ struct ImDrawDataBuilder
     IMGUI_API void FlattenIntoSingleLayer();
 };
 
-enum ImGuiViewportFlagsPrivate_
-{
-    ImGuiViewportFlags_CanHostOtherWindows  = 1 << 10   // Normal viewports are associated to a single window. The main viewport can host multiple windows.
-};
-
 // ImGuiViewport Private/Internals fields (cardinal sin: we are using inheritance!)
 // Note that every instance of ImGuiViewport is in fact a ImGuiViewportP.
 struct ImGuiViewportP : public ImGuiViewport
