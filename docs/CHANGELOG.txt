@@ -41,6 +41,8 @@ Other Changes:
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
   but it breaks existing some layout patterns. Will return back to it when we expose Separator flags.
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
+  Combine with RasterizerFlags::MonoHinting for best results.
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)
