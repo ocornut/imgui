@@ -133,7 +133,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - clipper: ability to disable the clipping through a simple flag/bool.
  - clipper: ability to run without knowing full count in advance.
 
- - splitter/separator: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
+ - separator: expose flags (#759)
+ - separator: width, thickness, centering (#1643)
+ - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
  - dock: merge docking branch (#2109)
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.

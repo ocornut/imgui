@@ -1146,8 +1146,8 @@ void ImGui::Bullet()
 // - Dummy()
 // - NewLine()
 // - AlignTextToFramePadding()
+// - SeparatorEx() [Internal]
 // - Separator()
-// - VerticalSeparator() [Internal]
 // - SplitterBehavior() [Internal]
 //-------------------------------------------------------------------------
 
@@ -1198,69 +1198,75 @@ void ImGui::AlignTextToFramePadding()
 }
 
 // Horizontal/vertical separating line
-void ImGui::Separator()
+void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return;
-    ImGuiContext& g = *GImGui;
 
-    // Those flags should eventually be overrideable by the user
-    ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
+    ImGuiContext& g = *GImGui;
     IM_ASSERT(ImIsPowerOfTwo(flags & (ImGuiSeparatorFlags_Horizontal | ImGuiSeparatorFlags_Vertical)));   // Check that only 1 option is selected
+
     if (flags & ImGuiSeparatorFlags_Vertical)
     {
-        VerticalSeparator();
-        return;
+        // Vertical separator, for menu bars (use current line height). Not exposed because it is misleading and it doesn't have an effect on regular layout.
+        float y1 = window->DC.CursorPos.y;
+        float y2 = window->DC.CursorPos.y + window->DC.CurrentLineSize.y;
+        const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
+        ItemSize(ImVec2(1.0f, 0.0f));
+        if (!ItemAdd(bb, 0))
+            return;
+
+        // Draw
+        window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
+        if (g.LogEnabled)
+            LogText(" |");
     }
-
-    // Horizontal Separator
-    if (window->DC.CurrentColumns)
-        PushColumnsBackground();
-
-    float x1 = window->Pos.x;
-    float x2 = window->Pos.x + window->Size.x;
-    if (!window->DC.GroupStack.empty())
-        x1 += window->DC.Indent.x;
-
-    const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y+1.0f));
-    ItemSize(ImVec2(0.0f, 1.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
-    if (!ItemAdd(bb, 0))
+    else if (flags & ImGuiSeparatorFlags_Horizontal)
     {
-        if (window->DC.CurrentColumns)
+        // Horizontal Separator
+        float x1 = window->Pos.x;
+        float x2 = window->Pos.x + window->Size.x;
+        if (!window->DC.GroupStack.empty())
+            x1 += window->DC.Indent.x;
+
+        ImGuiColumns* columns = (flags & ImGuiSeparatorFlags_SpanAllColumns) ? window->DC.CurrentColumns : NULL;
+        if (columns)
+            PushColumnsBackground();
+
+        const ImRect bb(ImVec2(x1, window->DC.CursorPos.y), ImVec2(x2, window->DC.CursorPos.y + 1.0f));
+        ItemSize(ImVec2(0.0f, 1.0f)); // NB: we don't provide our width so that it doesn't get feed back into AutoFit
+        if (!ItemAdd(bb, 0))
+        {
+            if (columns)
+                PopColumnsBackground();
+            return;
+        }
+
+        // Draw
+        window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x, bb.Min.y), GetColorU32(ImGuiCol_Separator));
+        if (g.LogEnabled)
+            LogRenderedText(&bb.Min, "--------------------------------");
+
+        if (columns)
+        {
             PopColumnsBackground();
-        return;
-    }
-
-    window->DrawList->AddLine(bb.Min, ImVec2(bb.Max.x,bb.Min.y), GetColorU32(ImGuiCol_Separator));
-
-    if (g.LogEnabled)
-        LogRenderedText(&bb.Min, "--------------------------------");
-
-    if (window->DC.CurrentColumns)
-    {
-        PopColumnsBackground();
-        window->DC.CurrentColumns->LineMinY = window->DC.CursorPos.y;
+            columns->LineMinY = window->DC.CursorPos.y;
+        }
     }
 }
 
-void ImGui::VerticalSeparator()
+void ImGui::Separator()
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     if (window->SkipItems)
         return;
-    ImGuiContext& g = *GImGui;
 
-    float y1 = window->DC.CursorPos.y;
-    float y2 = window->DC.CursorPos.y + window->DC.CurrentLineSize.y;
-    const ImRect bb(ImVec2(window->DC.CursorPos.x, y1), ImVec2(window->DC.CursorPos.x + 1.0f, y2));
-    ItemSize(ImVec2(1.0f, 0.0f));
-    if (!ItemAdd(bb, 0))
-        return;
-
-    window->DrawList->AddLine(ImVec2(bb.Min.x, bb.Min.y), ImVec2(bb.Min.x, bb.Max.y), GetColorU32(ImGuiCol_Separator));
-    if (g.LogEnabled)
-        LogText(" |");
+    // Those flags should eventually be overridable by the user
+    ImGuiSeparatorFlags flags = (window->DC.LayoutType == ImGuiLayoutType_Horizontal) ? ImGuiSeparatorFlags_Vertical : ImGuiSeparatorFlags_Horizontal;
+    flags |= ImGuiSeparatorFlags_SpanAllColumns;
+    SeparatorEx(flags);
 }
 
 // Using 'hover_visibility_delay' allows us to hide the highlight and mouse cursor for a short time, which can be convenient to reduce visual noise.
