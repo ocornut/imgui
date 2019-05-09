@@ -35,6 +35,8 @@ HOW TO UPDATE?
 Breaking Changes:
 
 Other Changes:
+- Columns: Fixed Separator from creating an extraneous draw command. (#125)
+- Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 
 
 -----------------------------------------------------------------------
