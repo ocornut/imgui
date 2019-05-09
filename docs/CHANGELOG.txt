@@ -39,6 +39,7 @@ Other Changes:
 - Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
   but it breaks existing some layout patterns. Will return back to it when we expose Separator flags.
+- Scrollbar: Very minor bounding box adjustment to cope with various border size.
 
 
 -----------------------------------------------------------------------

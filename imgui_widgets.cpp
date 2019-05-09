@@ -875,36 +875,27 @@ void ImGui::Scrollbar(ImGuiAxis axis)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    const bool horizontal = (axis == ImGuiAxis_X);
-    const ImGuiStyle& style = g.Style;
     const ImGuiID id = GetScrollbarID(window, axis);
     KeepAliveID(id);
 
-    // Calculate our bounding box (FIXME: This is messy, should be made simpler using e.g. InnerRect/WorkRect data).
+    // Calculate scrollbar bounding box
+    const ImRect outer_rect = window->Rect();
     const float other_scrollbar_size = window->ScrollbarSizes[axis];
-    const ImRect win_rect = window->Rect();
-    const float border_size = window->WindowBorderSize;
-    ImRect bb = horizontal
-        ? ImRect(win_rect.Min.x + border_size, win_rect.Max.y - style.ScrollbarSize, win_rect.Max.x - other_scrollbar_size - border_size, win_rect.Max.y - border_size)
-        : ImRect(win_rect.Max.x - style.ScrollbarSize, win_rect.Min.y + border_size, win_rect.Max.x - border_size, win_rect.Max.y - other_scrollbar_size - border_size);
-    bb.Min.x = ImMax(win_rect.Min.x, bb.Min.x); // Handle case where the host rectangle is smaller than the scrollbar
-    bb.Min.y = ImMax(win_rect.Min.y, bb.Min.y);
-    if (!horizontal)
-        bb.Min.y += window->TitleBarHeight() + ((window->Flags & ImGuiWindowFlags_MenuBar) ? window->MenuBarHeight() : 0.0f); // FIXME: InnerRect?
-
-    // Select rounding
-    ImDrawCornerFlags rounding_corners;
-    if (horizontal)
-        rounding_corners = ImDrawCornerFlags_BotLeft;
+    ImDrawCornerFlags rounding_corners = (other_scrollbar_size <= 0.0f) ? ImDrawCornerFlags_BotRight : 0;
+    ImRect bb;
+    if (axis == ImGuiAxis_X)
+    {
+        bb.Min = ImVec2(window->InnerMainRect.Min.x, window->InnerMainRect.Max.y);
+        bb.Max = ImVec2(window->InnerMainRect.Max.x, outer_rect.Max.y - window->WindowBorderSize);
+        rounding_corners |= ImDrawCornerFlags_BotLeft;
+    }
     else
-        rounding_corners = ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
-    if (other_scrollbar_size <= 0.0f)
-        rounding_corners |= ImDrawCornerFlags_BotRight;
-
-    if (horizontal)
-        ScrollbarEx(bb, id, axis, &window->Scroll.x, window->SizeFull.x - other_scrollbar_size, window->SizeContents.x, rounding_corners);
-    else
-        ScrollbarEx(bb, id, axis, &window->Scroll.y, window->SizeFull.y - other_scrollbar_size, window->SizeContents.y, rounding_corners);
+    {
+        bb.Min = ImVec2(window->InnerMainRect.Max.x, window->InnerMainRect.Min.y);
+        bb.Max = ImVec2(outer_rect.Max.x - window->WindowBorderSize, window->InnerMainRect.Max.y);
+        rounding_corners |= ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
+    }
+    ScrollbarEx(bb, id, axis, &window->Scroll[axis], window->SizeFull[axis] - other_scrollbar_size, window->SizeContents[axis], rounding_corners);
 }
 
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
