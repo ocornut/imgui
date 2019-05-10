@@ -1076,7 +1076,8 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static void             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
-static void             RenderOuterBorders(ImGuiWindow* window);
+static void             RenderWindowOuterBorders(ImGuiWindow* window);
+static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
 
 }
 
@@ -4926,7 +4927,7 @@ static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& rect, cons
     window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos + size_for_clamping, rect.Min + padding) - size_for_clamping);
 }
 
-static void ImGui::RenderOuterBorders(ImGuiWindow* window)
+static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     float rounding = window->WindowRounding;
@@ -4963,6 +4964,58 @@ static void ImGui::RenderOuterBorders(ImGuiWindow* window)
     }
 }
 
+void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiStyle& style = g.Style;
+    ImGuiWindowFlags flags = window->Flags;
+
+    // Close & collapse button are on layer 1 (same as menus) and don't default focus
+    const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
+    window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
+    window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
+    window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Menu);
+
+    // Collapse button
+    if (!(flags & ImGuiWindowFlags_NoCollapse))
+        if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
+            window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
+
+    // Close button
+    if (p_open != NULL)
+    {
+        const float rad = g.FontSize * 0.5f;
+        if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x - rad, window->Pos.y + style.FramePadding.y + rad), rad + 1))
+            *p_open = false;
+    }
+
+    window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
+    window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
+    window->DC.ItemFlags = item_flags_backup;
+
+    // Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
+    // FIXME: Refactor text alignment facilities along with RenderText helpers, this is WAY too much messy code..
+    const char* UNSAVED_DOCUMENT_MARKER = "*";
+    const float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, NULL, false).x : 0.0f;
+    const ImVec2 text_size = CalcTextSize(name, NULL, true) + ImVec2(marker_size_x, 0.0f);
+    ImRect text_r = title_bar_rect;
+    float pad_left = (flags & ImGuiWindowFlags_NoCollapse) ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
+    float pad_right = (p_open == NULL) ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
+    if (style.WindowTitleAlign.x > 0.0f)
+        pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
+    text_r.Min.x += pad_left;
+    text_r.Max.x -= pad_right;
+    ImRect clip_rect = text_r;
+    clip_rect.Max.x = window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x); // Match the size of CloseButton()
+    RenderTextClipped(text_r.Min, text_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
+    if (flags & ImGuiWindowFlags_UnsavedDocument)
+    {
+        ImVec2 marker_pos = ImVec2(ImMax(text_r.Min.x, text_r.Min.x + (text_r.GetWidth() - text_size.x) * style.WindowTitleAlign.x) + text_size.x, text_r.Min.y) + ImVec2(2 - marker_size_x, 0.0f);
+        ImVec2 off = ImVec2(0.0f, (float)(int)(-g.FontSize * 0.25f));
+        RenderTextClipped(marker_pos + off, text_r.Max + off, UNSAVED_DOCUMENT_MARKER, NULL, NULL, ImVec2(0, style.WindowTitleAlign.y), &clip_rect);
+    }
+}
+
 void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags flags, ImGuiWindow* parent_window)
 {
     window->ParentWindow = parent_window;
@@ -4978,7 +5031,7 @@ void ImGui::UpdateWindowParentAndRootLinks(ImGuiWindow* window, ImGuiWindowFlags
     }
 }
 
-// Push a new ImGui window to add widgets to.
+// Push a new Dear ImGui window to add widgets to.
 // - A default window called "Debug" is automatically stacked at the beginning of every frame so you can use widgets without explicitly calling a Begin/End pair.
 // - Begin/End can be called multiple times during the frame with the same window name to append content.
 // - The window name is used as a unique identifier to preserve window information across frames (and save rudimentary information to the .ini file).
@@ -5438,7 +5491,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
 
             // Borders
-            RenderOuterBorders(window);
+            RenderWindowOuterBorders(window);
         }
 
         // Draw navigation selection/windowing rectangle border
@@ -5508,52 +5561,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Title bar
         if (!(flags & ImGuiWindowFlags_NoTitleBar))
-        {
-            // Close & collapse button are on layer 1 (same as menus) and don't default focus
-            const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
-            window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
-            window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
-            window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Menu);
-
-            // Collapse button
-            if (!(flags & ImGuiWindowFlags_NoCollapse))
-                if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos))
-                    window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
-
-            // Close button
-            if (p_open != NULL)
-            {
-                const float rad = g.FontSize * 0.5f;
-                if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x - rad, window->Pos.y + style.FramePadding.y + rad), rad + 1))
-                    *p_open = false;
-            }
-
-            window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
-            window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
-            window->DC.ItemFlags = item_flags_backup;
-
-            // Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
-            // FIXME: Refactor text alignment facilities along with RenderText helpers, this is too much code..
-            const char* UNSAVED_DOCUMENT_MARKER = "*";
-            float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, NULL, false).x : 0.0f;
-            ImVec2 text_size = CalcTextSize(name, NULL, true) + ImVec2(marker_size_x, 0.0f);
-            ImRect text_r = title_bar_rect;
-            float pad_left = (flags & ImGuiWindowFlags_NoCollapse) ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
-            float pad_right = (p_open == NULL)                     ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
-            if (style.WindowTitleAlign.x > 0.0f)
-                pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
-            text_r.Min.x += pad_left;
-            text_r.Max.x -= pad_right;
-            ImRect clip_rect = text_r;
-            clip_rect.Max.x = window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x); // Match the size of CloseButton()
-            RenderTextClipped(text_r.Min, text_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
-            if (flags & ImGuiWindowFlags_UnsavedDocument)
-            {
-                ImVec2 marker_pos = ImVec2(ImMax(text_r.Min.x, text_r.Min.x + (text_r.GetWidth() - text_size.x) * style.WindowTitleAlign.x) + text_size.x, text_r.Min.y) + ImVec2(2 - marker_size_x, 0.0f);
-                ImVec2 off = ImVec2(0.0f, (float)(int)(-g.FontSize * 0.25f));
-                RenderTextClipped(marker_pos + off, text_r.Max + off, UNSAVED_DOCUMENT_MARKER, NULL, NULL, ImVec2(0, style.WindowTitleAlign.y), &clip_rect);
-            }
-        }
+            RenderWindowTitleBarContents(window, title_bar_rect, name, p_open);
 
         // Pressing CTRL+C while holding on a window copy its content to the clipboard
         // This works but 1. doesn't handle multiple Begin/End pairs, 2. recursing into another Begin/End pair - so we need to work that out and add better logging scope.
