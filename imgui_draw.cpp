@@ -1213,7 +1213,7 @@ void ImDrawListSplitter::ClearFreeMemory()
 
 void ImDrawListSplitter::Split(ImDrawList* draw_list, int channels_count)
 {
-    IM_ASSERT(_Current == 0 && _Count == 1);
+    IM_ASSERT(_Current == 0 && _Count <= 1);
     int old_channels_count = _Channels.Size;
     if (old_channels_count < channels_count)
         _Channels.resize(channels_count);
@@ -1244,6 +1244,11 @@ void ImDrawListSplitter::Split(ImDrawList* draw_list, int channels_count)
     }
 }
 
+static inline bool CanMergeDrawCommands(ImDrawCmd* a, ImDrawCmd* b)
+{
+    return memcmp(&a->ClipRect, &b->ClipRect, sizeof(a->ClipRect)) == 0 && a->TextureId == b->TextureId && !a->UserCallback && !b->UserCallback;
+}
+
 void ImDrawListSplitter::Merge(ImDrawList* draw_list)
 {
     // Note that we never use or rely on channels.Size because it is merely a buffer that we never shrink back to 0 to keep all sub-buffers ready for use.
@@ -1257,12 +1262,21 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
     // Calculate our final buffer sizes. Also fix the incorrect IdxOffset values in each command.
     int new_cmd_buffer_count = 0;
     int new_idx_buffer_count = 0;
-    int idx_offset = (draw_list->CmdBuffer.Size != 0) ? (draw_list->CmdBuffer.back().IdxOffset + draw_list->CmdBuffer.back().ElemCount) : 0;
+    ImDrawCmd* last_cmd = (_Count > 0 && _Channels[0].CmdBuffer.Size > 0) ? &_Channels[0].CmdBuffer.back() : NULL;
+    int idx_offset = last_cmd ? last_cmd->IdxOffset + last_cmd->ElemCount : 0;
     for (int i = 1; i < _Count; i++)
     {
         ImDrawChannel& ch = _Channels[i];
         if (ch.CmdBuffer.Size && ch.CmdBuffer.back().ElemCount == 0)
             ch.CmdBuffer.pop_back();
+        else if (ch.CmdBuffer.Size > 0 && last_cmd != NULL && CanMergeDrawCommands(last_cmd, &ch.CmdBuffer[0]))
+        {
+            // Merge previous channel last draw command with current channel first draw command if matching.
+            last_cmd->ElemCount += ch.CmdBuffer[0].ElemCount;
+            ch.CmdBuffer.erase(ch.CmdBuffer.Data);
+        }
+        if (ch.CmdBuffer.Size > 0)
+            last_cmd = &ch.CmdBuffer.back();
         new_cmd_buffer_count += ch.CmdBuffer.Size;
         new_idx_buffer_count += ch.IdxBuffer.Size;
         for (int cmd_n = 0; cmd_n < ch.CmdBuffer.Size; cmd_n++)
