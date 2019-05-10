@@ -521,6 +521,7 @@ static void ImGui_ImplGlfw_ShowWindow(ImGuiViewport* viewport)
     ::SetWindowLongPtr(hwnd, GWLP_WNDPROC, (LONG_PTR)WndProcNoInputs);
 #endif
 
+#if !GLFW_HAS_FOCUS_ON_SHOW
     // GLFW hack: GLFW 3.2 has a bug where glfwShowWindow() also activates/focus the window.
     // The fix was pushed to GLFW repository on 2018/01/09 and should be included in GLFW 3.3 via a GLFW_FOCUS_ON_SHOW window attribute.
     // See https://github.com/glfw/glfw/issues/1189
@@ -530,6 +531,7 @@ static void ImGui_ImplGlfw_ShowWindow(ImGuiViewport* viewport)
         ::ShowWindow(hwnd, SW_SHOWNA);
         return;
     }
+#endif
 #endif
 
     glfwShowWindow(data->Window);
