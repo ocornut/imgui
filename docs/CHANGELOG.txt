@@ -28,6 +28,19 @@ HOW TO UPDATE?
   and API updates have been a little more frequent lately. They are documented below and in imgui.cpp and should not affect all users.
 - Please report any issue!
 
+-----------------------------------------------------------------------
+ VERSION 1.71 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+Other Changes:
+- Columns: Fixed Separator from creating an extraneous draw command. (#125)
+- Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
+- Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
+  but it breaks existing some layout patterns. Will return back to it when we expose Separator flags.
+- Scrollbar: Very minor bounding box adjustment to cope with various border size.
+
 
 -----------------------------------------------------------------------
  DOCKING BRANCH (In Progress)
@@ -94,7 +107,7 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.70 WIP (In Progress)
+ VERSION 1.70 (Released 2019-05-06)
 -----------------------------------------------------------------------
 
 Breaking Changes:
