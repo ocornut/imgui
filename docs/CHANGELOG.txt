@@ -35,6 +35,12 @@ HOW TO UPDATE?
 Breaking Changes:
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
+- Window: rendering of child windows outer decorations (e.g. bg color, border, scrollbars) is now
+  performed as part of their parent window, avoiding the creation of an extraneous draw commands.
+  If you have overlapping child windows with decorations, and relied on their relative z-order to be
+  mapped to submission their order, this will affect your rendering. The optimization is disabled
+  if the parent window has no visual output because it appears to be the most common situation leading
+  to the creation of overlapping child windows. Please reach out if you are affected by this change!
 
 Other Changes:
 - Window: clarified behavior of SetNextWindowContentSize(). Content size is defined as the size available
@@ -44,8 +50,6 @@ Other Changes:
 - Window: Fixed auto-resize with AlwaysVerticalScrollbar or AlwaysHorizontalScrollbar flags.
 - Window: Fixed one case where auto-resize by double-clicking the resize grip would make either scrollbar
   appear for a single frame after the resize.
-- Columns: Fixed Separator from creating an extraneous draw command. (#125)
-- Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
   but it breaks existing some layout patterns. Will return back to it when we expose Separator flags.
 - Fixed InputScalar, InputScalarN, SliderScalarN, DragScalarN with non-visible label from inserting
@@ -74,6 +78,8 @@ Other Changes:
   loop with the horizontal contents size.
 - Columns: Fixed Columns() within a window with horizontal scrolling from not covering the full
   horizontal area (previously only worked with an explicit contents size). (#125)
+- Columns: Fixed Separator from creating an extraneous draw command. (#125)
+- Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
