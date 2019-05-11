@@ -1402,7 +1402,7 @@ struct ImGuiIO
     float       NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
 
     // Functions
-    IMGUI_API void  AddInputCharacter(ImWchar c);               // Queue new character input
+    IMGUI_API void  AddInputCharacter(unsigned int c);          // Queue new character input
     IMGUI_API void  AddInputCharactersUTF8(const char* str);    // Queue new characters input from an UTF-8 string
     IMGUI_API void  ClearInputCharacters();                     // Clear the text input buffer manually
 

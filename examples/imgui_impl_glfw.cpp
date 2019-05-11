@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2019-03-12: Misc: Preserve DisplayFramebufferScale when main window is minimized.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-11-07: Inputs: When installing our GLFW callbacks, we save user's previously installed ones - if any - and chain call them.
@@ -120,8 +121,7 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
         g_PrevUserCallbackChar(window, c);
 
     ImGuiIO& io = ImGui::GetIO();
-    if (c > 0 && c < 0x10000)
-        io.AddInputCharacter((unsigned short)c);
+    io.AddInputCharacter(c);
 }
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)

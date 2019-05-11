@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_Marmalade_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
@@ -166,8 +167,7 @@ int32 ImGui_Marmalade_CharCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
     s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)system_data;
-    if ((e->m_Char > 0 && e->m_Char < 0x10000))
-        io.AddInputCharacter((unsigned short)e->m_Char);
+    io.AddInputCharacter((unsigned int)e->m_Char);
 
     return 0;
 }

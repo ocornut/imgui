@@ -369,6 +369,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2019/05/11 (1.71) - changed io.AddInputCharacter(unsigned short c) signature to io.AddInputCharacter(unsigned int c).
  - 2019/04/29 (1.70) - improved ImDrawList thick strokes (>1.0f) preserving correct thickness up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines, they will appear thicker now.
  - 2019/04/29 (1.70) - removed GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead. Kept inline redirection function (will obsolete).
  - 2019/03/04 (1.69) - renamed GetOverlayDrawList() to GetForegroundDrawList(). Kept redirection function (will obsolete).
@@ -1251,9 +1252,10 @@ ImGuiIO::ImGuiIO()
 // Pass in translated ASCII characters for text input.
 // - with glfw you can get those from the callback set in glfwSetCharCallback()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
-void ImGuiIO::AddInputCharacter(ImWchar c)
+void ImGuiIO::AddInputCharacter(unsigned int c)
 {
-    InputQueueCharacters.push_back(c);
+    if (c > 0 && c < 0x10000)
+        InputQueueCharacters.push_back((ImWchar)c);
 }
 
 void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
@@ -1262,7 +1264,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
     {
         unsigned int c = 0;
         utf8_chars += ImTextCharFromUtf8(&c, utf8_chars, NULL);
-        if (c > 0 && c <= 0xFFFF)
+        if (c > 0 && c < 0x10000)
             InputQueueCharacters.push_back((ImWchar)c);
     }
 }

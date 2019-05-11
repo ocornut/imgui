@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-11: Inputs: Don't filter character value from ALLEGRO_EVENT_KEY_CHAR before calling AddInputCharacter().
 //  2019-04-30: Renderer: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2018-11-30: Platform: Added touchscreen support.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
@@ -353,8 +354,7 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT *ev)
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display)
-            if (ev->keyboard.unichar > 0 && ev->keyboard.unichar < 0x10000)
-                io.AddInputCharacter((unsigned short)ev->keyboard.unichar);
+            io.AddInputCharacter((unsigned int)ev->keyboard.unichar);
         return true;
     case ALLEGRO_EVENT_KEY_DOWN:
     case ALLEGRO_EVENT_KEY_UP:

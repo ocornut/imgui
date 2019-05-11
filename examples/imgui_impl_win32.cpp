@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-11: Inputs: Don't filter value from WM_CHAR before calling AddInputCharacter().
 //  2019-01-17: Misc: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created in a different thread or parent.
 //  2019-01-17: Inputs: Added support for mouse buttons 4 and 5 via WM_XBUTTON* messages.
 //  2019-01-15: Inputs: Added support for XInput gamepads (if ImGuiConfigFlags_NavEnableGamepad is set by user application).
@@ -305,8 +306,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
-        if (wParam > 0 && wParam < 0x10000)
-            io.AddInputCharacter((unsigned short)wParam);
+        io.AddInputCharacter((unsigned int)wParam);
         return 0;
     case WM_SETCURSOR:
         if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())
