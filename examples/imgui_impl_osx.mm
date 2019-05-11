@@ -132,7 +132,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     {
         int button = (int)[event buttonNumber];
         if (button >= 0 && button < IM_ARRAYSIZE(io.MouseDown))
-            io.MouseDown[button] = true;
+            io.InputMouseClicked[button] = true;
         return io.WantCaptureMouse;
     }
 
@@ -140,7 +140,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     {
         int button = (int)[event buttonNumber];
         if (button >= 0 && button < IM_ARRAYSIZE(io.MouseDown))
-            io.MouseDown[button] = false;
+            io.InputMouseReleased[button] = false;
         return io.WantCaptureMouse;
     }
 
