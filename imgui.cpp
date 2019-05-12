@@ -3623,6 +3623,7 @@ void ImGui::NewFrame()
         for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
         {
             ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[monitor_n];
+            IM_UNUSED(mon);
             IM_ASSERT(mon.MainSize.x > 0.0f && mon.MainSize.y > 0.0f && "Monitor bounds not setup properly.");
             IM_ASSERT(mon.WorkSize.x > 0.0f && mon.WorkSize.y > 0.0f && "Monitor bounds not setup properly. If you don't have work area information, just copy Min/Max into them.");
             IM_ASSERT(mon.DpiScale != 0.0f);
@@ -9242,7 +9243,8 @@ void ImGui::PushColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     window->DrawList->ChannelsSetCurrent(0);
     int cmd_size = window->DrawList->CmdBuffer.Size;
-    PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false); 
+    PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false);
+    IM_UNUSED(cmd_size);
     IM_ASSERT(cmd_size == window->DrawList->CmdBuffer.Size); // Being in channel 0 this should not have created an ImDrawCmd
 }
 
@@ -11130,6 +11132,7 @@ void ImGui::DockContextOnLoadSettings(ImGuiContext* ctx)
 
 void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
 {
+    IM_UNUSED(ctx);
     IM_ASSERT(ctx == GImGui);
     DockBuilderRemoveNodeDockedWindows(root_id, clear_persistent_docking_references);
     DockBuilderRemoveNodeChildNodes(root_id);
@@ -11439,6 +11442,8 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
     IM_ASSERT(req->DockTargetWindow != NULL || req->DockTargetNode != NULL);
 
     ImGuiContext& g = *ctx;
+    IM_UNUSED(g);
+
     ImGuiWindow* payload_window = req->DockPayload;     // Optional
     ImGuiWindow* target_window = req->DockTargetWindow;
     ImGuiDockNode* node = req->DockTargetNode;
