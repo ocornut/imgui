@@ -381,7 +381,9 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
     ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1,
     ImGuiItemStatusFlags_Edited             = 1 << 2,   // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
-    ImGuiItemStatusFlags_ToggledSelection   = 1 << 3    // Set when Selectable(), TreeNode() reports toggling a selection. We can't report "Selected" because reporting the change allows us to handle clipping with less issues.
+    ImGuiItemStatusFlags_ToggledSelection   = 1 << 3,   // Set when Selectable(), TreeNode() reports toggling a selection. We can't report "Selected" because reporting the change allows us to handle clipping with less issues.
+    ImGuiItemStatusFlags_HasDeactivated     = 1 << 4,   // Set if the widget/group is able to provide data for the ImGuiItemStatusFlags_Deactivated flag.
+    ImGuiItemStatusFlags_Deactivated        = 1 << 5    // Only valid if ImGuiItemStatusFlags_HasDeactivated is set.
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     , // [imgui-test only]
@@ -863,6 +865,7 @@ struct ImGuiContext
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
     bool                    ActiveIdHasBeenPressedBefore;       // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease without pressing twice). Used by range_select branch.
     bool                    ActiveIdHasBeenEditedBefore;        // Was the value associated to the widget Edited over the course of the Active state.
+    bool                    ActiveIdHasBeenEditedThisFrame;
     int                     ActiveIdAllowNavDirFlags;           // Active widget allows using directional navigation (e.g. can activate a button and move away from it)
     int                     ActiveIdBlockNavInputFlags;
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
@@ -1046,6 +1049,7 @@ struct ImGuiContext
         ActiveIdAllowOverlap = false;
         ActiveIdHasBeenPressedBefore = false;
         ActiveIdHasBeenEditedBefore = false;
+        ActiveIdHasBeenEditedThisFrame = false;
         ActiveIdAllowNavDirFlags = 0x00;
         ActiveIdBlockNavInputFlags = 0x00;
         ActiveIdClickOffset = ImVec2(-1,-1);

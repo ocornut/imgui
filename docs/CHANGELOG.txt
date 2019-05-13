@@ -44,6 +44,8 @@ Other Changes:
 - Fixed InputFloatX, SliderFloatX, DragFloatX functions erroneously reporting IsItemEdited() multiple
   times when the text input doesn't match the formatted output value (e.g. input "1" shows "1.000").
   It wasn't much of a problem because we typically use the return value instead of IsItemEdited() here.
+- Fixed uses of IsItemDeactivated(), IsItemDeactivatedAfterEdit() on multi-components widgets and
+  after EndGroup(). (#2550, #1875)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.

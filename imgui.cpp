@@ -2692,6 +2692,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     g.ActiveIdBlockNavInputFlags = 0;
     g.ActiveIdAllowOverlap = false;
     g.ActiveIdWindow = window;
+    g.ActiveIdHasBeenEditedThisFrame = false;
     if (id)
     {
         g.ActiveIdIsAlive = id;
@@ -2759,6 +2760,7 @@ void ImGui::MarkItemEdited(ImGuiID id)
     IM_ASSERT(g.ActiveId == id || g.ActiveId == 0 || g.DragDropActive);
     IM_UNUSED(id); // Avoid unused variable warnings when asserts are compiled out.
     //IM_ASSERT(g.CurrentWindow->DC.LastItemId == id);
+    g.ActiveIdHasBeenEditedThisFrame = true;
     g.ActiveIdHasBeenEditedBefore = true;
     g.CurrentWindow->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Edited;
 }
@@ -3532,6 +3534,7 @@ void ImGui::NewFrame()
     g.ActiveIdPreviousFrameWindow = g.ActiveIdWindow;
     g.ActiveIdPreviousFrameHasBeenEditedBefore = g.ActiveIdHasBeenEditedBefore;
     g.ActiveIdIsAlive = 0;
+    g.ActiveIdHasBeenEditedThisFrame = false;
     g.ActiveIdPreviousFrameIsAlive = false;
     g.ActiveIdIsJustActivated = false;
     if (g.TempInputTextId != 0 && g.ActiveId != g.TempInputTextId)
@@ -4336,6 +4339,8 @@ bool ImGui::IsItemDeactivated()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
+    if (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_HasDeactivated)
+        return (window->DC.LastItemStatusFlags & ImGuiItemStatusFlags_Deactivated) != 0;
     return (g.ActiveIdPreviousFrame == window->DC.LastItemId && g.ActiveIdPreviousFrame != 0 && g.ActiveId != window->DC.LastItemId);
 }
 
@@ -6831,6 +6836,15 @@ void ImGui::EndGroup()
     else if (group_contains_prev_active_id)
         window->DC.LastItemId = g.ActiveIdPreviousFrame;
     window->DC.LastItemRect = group_bb;
+
+    // Forward Edited flag
+    if (group_contains_curr_active_id && g.ActiveIdHasBeenEditedThisFrame)
+        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Edited;
+
+    // Forward Deactivated flag
+    window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_HasDeactivated;
+    if (group_contains_prev_active_id && g.ActiveId != g.ActiveIdPreviousFrame)
+        window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Deactivated;
 
     window->DC.GroupStack.pop_back();
     //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
