@@ -67,7 +67,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
  - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
  - widgets: checkbox with custom glyph inside frame.
- - widgets: IsItemEdited() on InputScalar keeps returning true because InputText vs formatted output are mismatched.
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
