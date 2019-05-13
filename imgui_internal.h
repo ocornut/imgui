@@ -71,7 +71,7 @@ struct ImGuiInputTextState;         // Internal state of the currently focused/e
 struct ImGuiItemHoveredDataBackup;  // Backup and restore IsItemHovered() internal data
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
 struct ImGuiNavMoveResult;          // Result of a directional navigation move query result
-struct ImGuiNextWindowData;         // Storage for SetNexWindow** functions
+struct ImGuiNextWindowData;         // Storage for SetNextWindow** functions
 struct ImGuiPopupData;              // Storage for current popup stack
 struct ImGuiSettingsHandler;        // Storage for one type registered in the .ini file
 struct ImGuiStyleMod;               // Stacked style modifier, backup of modified data so we can restore it
@@ -82,17 +82,18 @@ struct ImGuiWindowTempData;         // Temporary storage for one window (that's 
 struct ImGuiWindowSettings;         // Storage for window settings stored in .ini file (we keep one of those even if the actual window wasn't instanced during this session)
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
-typedef int ImGuiLayoutType;        // -> enum ImGuiLayoutType_        // Enum: Horizontal or vertical
-typedef int ImGuiButtonFlags;       // -> enum ImGuiButtonFlags_       // Flags: for ButtonEx(), ButtonBehavior()
-typedef int ImGuiDragFlags;         // -> enum ImGuiDragFlags_         // Flags: for DragBehavior()
-typedef int ImGuiItemFlags;         // -> enum ImGuiItemFlags_         // Flags: for PushItemFlag()
-typedef int ImGuiItemStatusFlags;   // -> enum ImGuiItemStatusFlags_   // Flags: for DC.LastItemStatusFlags
-typedef int ImGuiNavHighlightFlags; // -> enum ImGuiNavHighlightFlags_ // Flags: for RenderNavHighlight()
-typedef int ImGuiNavDirSourceFlags; // -> enum ImGuiNavDirSourceFlags_ // Flags: for GetNavInputAmount2d()
-typedef int ImGuiNavMoveFlags;      // -> enum ImGuiNavMoveFlags_      // Flags: for navigation requests
-typedef int ImGuiSeparatorFlags;    // -> enum ImGuiSeparatorFlags_    // Flags: for Separator() - internal
-typedef int ImGuiSliderFlags;       // -> enum ImGuiSliderFlags_       // Flags: for SliderBehavior()
-typedef int ImGuiTextFlags;         // -> enum ImGuiTextFlags_         // Flags: for TextEx()
+typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
+typedef int ImGuiButtonFlags;           // -> enum ImGuiButtonFlags_        // Flags: for ButtonEx(), ButtonBehavior()
+typedef int ImGuiDragFlags;             // -> enum ImGuiDragFlags_          // Flags: for DragBehavior()
+typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag()
+typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for DC.LastItemStatusFlags
+typedef int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
+typedef int ImGuiNavDirSourceFlags;     // -> enum ImGuiNavDirSourceFlags_  // Flags: for GetNavInputAmount2d()
+typedef int ImGuiNavMoveFlags;          // -> enum ImGuiNavMoveFlags_       // Flags: for navigation requests
+typedef int ImGuiNextWindowDataFlags;   // -> enum ImGuiNextWindowDataFlags_// Flags: for SetNextWindowXXX() functions
+typedef int ImGuiSeparatorFlags;        // -> enum ImGuiSeparatorFlags_     // Flags: for SeparatorEx()
+typedef int ImGuiSliderFlags;           // -> enum ImGuiSliderFlags_        // Flags: for SliderBehavior()
+typedef int ImGuiTextFlags;             // -> enum ImGuiTextFlags_          // Flags: for TextEx()
 
 //-------------------------------------------------------------------------
 // STB libraries includes
@@ -743,44 +744,38 @@ struct ImGuiNavMoveResult
     void Clear()         { ID = SelectScopeId = 0; Window = NULL; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
 };
 
+enum ImGuiNextWindowDataFlags_
+{
+    ImGuiNextWindowDataFlags_None               = 0,
+    ImGuiNextWindowDataFlags_HasPos             = 1 << 0,
+    ImGuiNextWindowDataFlags_HasSize            = 1 << 1,
+    ImGuiNextWindowDataFlags_HasContentSize     = 1 << 2,
+    ImGuiNextWindowDataFlags_HasCollapsed       = 1 << 3,
+    ImGuiNextWindowDataFlags_HasSizeConstraint  = 1 << 4,
+    ImGuiNextWindowDataFlags_HasFocus           = 1 << 5,
+    ImGuiNextWindowDataFlags_HasBgAlpha         = 1 << 6
+};
+
 // Storage for SetNexWindow** functions
 struct ImGuiNextWindowData
 {
-    ImGuiCond               PosCond;
-    ImGuiCond               SizeCond;
-    ImGuiCond               ContentSizeCond;
-    ImGuiCond               CollapsedCond;
-    ImGuiCond               SizeConstraintCond;
-    ImGuiCond               FocusCond;
-    ImGuiCond               BgAlphaCond;
-    ImVec2                  PosVal;
-    ImVec2                  PosPivotVal;
-    ImVec2                  SizeVal;
-    ImVec2                  ContentSizeVal;
-    bool                    CollapsedVal;
-    ImRect                  SizeConstraintRect;
-    ImGuiSizeCallback       SizeCallback;
-    void*                   SizeCallbackUserData;
-    float                   BgAlphaVal;
-    ImVec2                  MenuBarOffsetMinVal;                // This is not exposed publicly, so we don't clear it.
-
-    ImGuiNextWindowData()
-    {
-        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = 0;
-        PosVal = PosPivotVal = SizeVal = ImVec2(0.0f, 0.0f);
-        ContentSizeVal = ImVec2(0.0f, 0.0f);
-        CollapsedVal = false;
-        SizeConstraintRect = ImRect();
-        SizeCallback = NULL;
-        SizeCallbackUserData = NULL;
-        BgAlphaVal = FLT_MAX;
-        MenuBarOffsetMinVal = ImVec2(0.0f, 0.0f);
-    }
-
-    void    Clear()
-    {
-        PosCond = SizeCond = ContentSizeCond = CollapsedCond = SizeConstraintCond = FocusCond = BgAlphaCond = 0;
-    }
+    ImGuiNextWindowDataFlags    Flags;
+    ImGuiCond                   PosCond;
+    ImGuiCond                   SizeCond;
+    ImGuiCond                   CollapsedCond;
+    ImVec2                      PosVal;
+    ImVec2                      PosPivotVal;
+    ImVec2                      SizeVal;
+    ImVec2                      ContentSizeVal;
+    bool                        CollapsedVal;
+    ImRect                      SizeConstraintRect;
+    ImGuiSizeCallback           SizeCallback;
+    void*                       SizeCallbackUserData;
+    float                       BgAlphaVal;
+    ImVec2                      MenuBarOffsetMinVal;    // This is not exposed publicly, so we don't clear it.
+        
+    ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
+    inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
 
 //-----------------------------------------------------------------------------
