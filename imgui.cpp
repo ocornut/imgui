@@ -369,6 +369,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2019/05/13 (1.71) - renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
  - 2019/05/11 (1.71) - changed io.AddInputCharacter(unsigned short c) signature to io.AddInputCharacter(unsigned int c).
  - 2019/04/29 (1.70) - improved ImDrawList thick strokes (>1.0f) preserving correct thickness up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines, they will appear thicker now.
  - 2019/04/29 (1.70) - removed GetContentRegionAvailWidth(), use GetContentRegionAvail().x instead. Kept inline redirection function (will obsolete).
@@ -2840,6 +2841,7 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     window->DC.LastItemId = id;
     window->DC.LastItemRect = bb;
     window->DC.LastItemStatusFlags = ImGuiItemStatusFlags_None;
+    g.NextItemData.Flags = ImGuiNextItemDataFlags_None;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     if (id != 0)
@@ -5794,8 +5796,9 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
 
 void ImGui::SetNextItemWidth(float item_width)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.NextItemWidth = item_width;
+    ImGuiContext& g = *GImGui;
+    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasWidth;
+    g.NextItemData.Width = item_width;
 }
 
 void ImGui::PushItemWidth(float item_width)
@@ -5825,15 +5828,16 @@ void ImGui::PopItemWidth()
 }
 
 // Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth(),
-// Then consume the 
+// Then _consume_ the SetNextItemWidth() data.
 float ImGui::GetNextItemWidth()
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     float w;
-    if (window->DC.NextItemWidth != FLT_MAX)
+    if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth)
     {
-        w = window->DC.NextItemWidth;
-        window->DC.NextItemWidth = FLT_MAX;
+        w = g.NextItemData.Width;
+        g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
     }
     else
     {
@@ -5852,10 +5856,10 @@ float ImGui::GetNextItemWidth()
 // (rarely used, which is why we avoid calling this from GetNextItemWidth() and instead do a backup/restore here)
 float ImGui::CalcItemWidth()
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    float backup_next_item_width = window->DC.NextItemWidth;
+    ImGuiContext& g = *GImGui;
+    ImGuiNextItemDataFlags backup_flags = g.NextItemData.Flags;
     float w = GetNextItemWidth();
-    window->DC.NextItemWidth = backup_next_item_width;
+    g.NextItemData.Flags = backup_flags;
     return w;
 }
 

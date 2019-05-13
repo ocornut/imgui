@@ -72,6 +72,7 @@ struct ImGuiItemHoveredDataBackup;  // Backup and restore IsItemHovered() intern
 struct ImGuiMenuColumns;            // Simple column measurement, currently used for MenuItem() only
 struct ImGuiNavMoveResult;          // Result of a directional navigation move query result
 struct ImGuiNextWindowData;         // Storage for SetNextWindow** functions
+struct ImGuiNextItemData;           // Storage for SetNextItem** functions
 struct ImGuiPopupData;              // Storage for current popup stack
 struct ImGuiSettingsHandler;        // Storage for one type registered in the .ini file
 struct ImGuiStyleMod;               // Stacked style modifier, backup of modified data so we can restore it
@@ -90,6 +91,7 @@ typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // F
 typedef int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
 typedef int ImGuiNavDirSourceFlags;     // -> enum ImGuiNavDirSourceFlags_  // Flags: for GetNavInputAmount2d()
 typedef int ImGuiNavMoveFlags;          // -> enum ImGuiNavMoveFlags_       // Flags: for navigation requests
+typedef int ImGuiNextItemDataFlags;     // -> enum ImGuiNextItemDataFlags_  // Flags: for SetNextItemXXX() functions
 typedef int ImGuiNextWindowDataFlags;   // -> enum ImGuiNextWindowDataFlags_// Flags: for SetNextWindowXXX() functions
 typedef int ImGuiSeparatorFlags;        // -> enum ImGuiSeparatorFlags_     // Flags: for SeparatorEx()
 typedef int ImGuiSliderFlags;           // -> enum ImGuiSliderFlags_        // Flags: for SliderBehavior()
@@ -778,6 +780,24 @@ struct ImGuiNextWindowData
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
 
+enum ImGuiNextItemDataFlags_
+{
+    ImGuiNextItemDataFlags_None     = 0,
+    ImGuiNextItemDataFlags_HasWidth = 1 << 0,
+    ImGuiNextItemDataFlags_HasOpen  = 1 << 1
+};
+
+struct ImGuiNextItemData
+{
+    ImGuiNextItemDataFlags      Flags;
+    float                       Width;          // Set by SetNextItemWidth().
+    bool                        OpenVal;        // Set by SetNextItemOpen() function.
+    ImGuiCond                   OpenCond;
+
+    ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
+    inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; }
+};
+
 //-----------------------------------------------------------------------------
 // Tabs
 //-----------------------------------------------------------------------------
@@ -858,8 +878,7 @@ struct ImGuiContext
 
     // Next window/item data
     ImGuiNextWindowData     NextWindowData;                     // Storage for SetNextWindow** functions
-    bool                    NextTreeNodeOpenVal;                // Storage for SetNextTreeNode** functions
-    ImGuiCond               NextTreeNodeOpenCond;
+    ImGuiNextItemData       NextItemData;                       // Storage for SetNextItem** functions
 
     // Shared stacks
     ImVector<ImGuiColorMod> ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
@@ -1041,9 +1060,6 @@ struct ImGuiContext
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
 
-        NextTreeNodeOpenVal = false;
-        NextTreeNodeOpenCond = 0;
-
         NavWindow = NULL;
         NavId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
         NavJustTabbedId = NavJustMovedToId = NavJustMovedToMultiSelectScopeId = NavNextActivateId = 0;
@@ -1166,7 +1182,6 @@ struct IMGUI_API ImGuiWindowTempData
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
     ImGuiItemFlags          ItemFlags;              // == ItemFlagsStack.back() [empty == ImGuiItemFlags_Default]
     float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
-    float                   NextItemWidth;
     float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
     ImVector<ImGuiItemFlags>ItemFlagsStack;
     ImVector<float>         ItemWidthStack;
@@ -1202,7 +1217,6 @@ struct IMGUI_API ImGuiWindowTempData
 
         ItemFlags = ImGuiItemFlags_Default_;
         ItemWidth = 0.0f;
-        NextItemWidth = +FLT_MAX;
         TextWrapPos = -1.0f;
         memset(StackSizesBackup, 0, sizeof(StackSizesBackup));
 
@@ -1569,7 +1583,7 @@ namespace ImGui
     IMGUI_API bool          SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* v, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb);
     IMGUI_API bool          SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f, float hover_visibility_delay = 0.0f);
     IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
-    IMGUI_API bool          TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextTreeNodeOpened() data, if any. May return true when logging
+    IMGUI_API bool          TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextItemOpen() data, if any. May return true when logging
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
 
     // Template functions are instantiated in imgui_widgets.cpp for a finite number of types.

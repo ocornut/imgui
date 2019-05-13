@@ -34,6 +34,7 @@ HOW TO UPDATE?
 
 Breaking Changes:
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
+- Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
 
 Other Changes:
 - Columns: Fixed Separator from creating an extraneous draw command. (#125)

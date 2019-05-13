@@ -4906,7 +4906,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
 // - TreePop()
 // - TreeAdvanceToLabelPos()
 // - GetTreeNodeToLabelSpacing()
-// - SetNextTreeNodeOpen()
+// - SetNextItemOpen()
 // - CollapsingHeader()
 //-------------------------------------------------------------------------
 
@@ -5000,17 +5000,17 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
     if (flags & ImGuiTreeNodeFlags_Leaf)
         return true;
 
-    // We only write to the tree storage if the user clicks (or explicitly use SetNextTreeNode*** functions)
+    // We only write to the tree storage if the user clicks (or explicitly use the SetNextItemOpen function)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiStorage* storage = window->DC.StateStorage;
 
     bool is_open;
-    if (g.NextTreeNodeOpenCond != 0)
+    if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasOpen)
     {
-        if (g.NextTreeNodeOpenCond & ImGuiCond_Always)
+        if (g.NextItemData.OpenCond & ImGuiCond_Always)
         {
-            is_open = g.NextTreeNodeOpenVal;
+            is_open = g.NextItemData.OpenVal;
             storage->SetInt(id, is_open);
         }
         else
@@ -5019,7 +5019,7 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
             const int stored_value = storage->GetInt(id, -1);
             if (stored_value == -1)
             {
-                is_open = g.NextTreeNodeOpenVal;
+                is_open = g.NextItemData.OpenVal;
                 storage->SetInt(id, is_open);
             }
             else
@@ -5027,7 +5027,6 @@ bool ImGui::TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags)
                 is_open = stored_value != 0;
             }
         }
-        g.NextTreeNodeOpenCond = 0;
     }
     else
     {
@@ -5256,13 +5255,14 @@ float ImGui::GetTreeNodeToLabelSpacing()
     return g.FontSize + (g.Style.FramePadding.x * 2.0f);
 }
 
-void ImGui::SetNextTreeNodeOpen(bool is_open, ImGuiCond cond)
+void ImGui::SetNextItemOpen(bool is_open, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow->SkipItems)
         return;
-    g.NextTreeNodeOpenVal = is_open;
-    g.NextTreeNodeOpenCond = cond ? cond : ImGuiCond_Always;
+    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasOpen;
+    g.NextItemData.OpenVal = is_open;
+    g.NextItemData.OpenCond = cond ? cond : ImGuiCond_Always;
 }
 
 // CollapsingHeader returns true when opened but do not indent nor push into the ID stack (because of the ImGuiTreeNodeFlags_NoTreePushOnOpen flag).
