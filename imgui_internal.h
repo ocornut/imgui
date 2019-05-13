@@ -574,8 +574,8 @@ struct ImGuiGroupData
     ImVec2      BackupCursorMaxPos;
     ImVec1      BackupIndent;
     ImVec1      BackupGroupOffset;
-    ImVec2      BackupCurrentLineSize;
-    float       BackupCurrentLineTextBaseOffset;
+    ImVec2      BackupCurrLineSize;
+    float       BackupCurrLineTextBaseOffset;
     ImGuiID     BackupActiveIdIsAlive;
     bool        BackupActiveIdPreviousFrameIsAlive;
     bool        EmitItem;
@@ -774,7 +774,7 @@ struct ImGuiNextWindowData
     ImGuiSizeCallback           SizeCallback;
     void*                       SizeCallbackUserData;
     float                       BgAlphaVal;
-    ImVec2                      MenuBarOffsetMinVal;    // This is not exposed publicly, so we don't clear it.
+    ImVec2                      MenuBarOffsetMinVal;    // *Always on* This is not exposed publicly, so we don't clear it.
         
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
@@ -861,8 +861,8 @@ struct ImGuiContext
     float                   ActiveIdTimer;
     bool                    ActiveIdIsJustActivated;            // Set at the time of activation for one frame
     bool                    ActiveIdAllowOverlap;               // Active widget allows another widget to steal active id (generally for overlapping widgets, but not always)
-    bool                    ActiveIdHasBeenPressed;             // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease without pressing twice). Used by range_select branch.
-    bool                    ActiveIdHasBeenEdited;              // Was the value associated to the widget Edited over the course of the Active state.
+    bool                    ActiveIdHasBeenPressedBefore;       // Track whether the active id led to a press (this is to allow changing between PressOnClick and PressOnRelease without pressing twice). Used by range_select branch.
+    bool                    ActiveIdHasBeenEditedBefore;        // Was the value associated to the widget Edited over the course of the Active state.
     int                     ActiveIdAllowNavDirFlags;           // Active widget allows using directional navigation (e.g. can activate a button and move away from it)
     int                     ActiveIdBlockNavInputFlags;
     ImVec2                  ActiveIdClickOffset;                // Clicked offset from upper-left corner, if applicable (currently only set by ButtonBehavior)
@@ -870,7 +870,7 @@ struct ImGuiContext
     ImGuiInputSource        ActiveIdSource;                     // Activating with mouse or nav (gamepad/keyboard)
     ImGuiID                 ActiveIdPreviousFrame;
     bool                    ActiveIdPreviousFrameIsAlive;
-    bool                    ActiveIdPreviousFrameHasBeenEdited;
+    bool                    ActiveIdPreviousFrameHasBeenEditedBefore;
     ImGuiWindow*            ActiveIdPreviousFrameWindow;
 
     ImGuiID                 LastActiveId;                       // Store the last non-zero ActiveId, useful for animation.
@@ -1044,8 +1044,8 @@ struct ImGuiContext
         ActiveIdTimer = 0.0f;
         ActiveIdIsJustActivated = false;
         ActiveIdAllowOverlap = false;
-        ActiveIdHasBeenPressed = false;
-        ActiveIdHasBeenEdited = false;
+        ActiveIdHasBeenPressedBefore = false;
+        ActiveIdHasBeenEditedBefore = false;
         ActiveIdAllowNavDirFlags = 0x00;
         ActiveIdBlockNavInputFlags = 0x00;
         ActiveIdClickOffset = ImVec2(-1,-1);
@@ -1054,7 +1054,7 @@ struct ImGuiContext
 
         ActiveIdPreviousFrame = 0;
         ActiveIdPreviousFrameIsAlive = false;
-        ActiveIdPreviousFrameHasBeenEdited = false;
+        ActiveIdPreviousFrameHasBeenEditedBefore = false;
         ActiveIdPreviousFrameWindow = NULL;
 
         LastActiveId = 0;
@@ -1154,9 +1154,9 @@ struct IMGUI_API ImGuiWindowTempData
     ImVec2                  CursorPosPrevLine;
     ImVec2                  CursorStartPos;         // Initial position in client area with padding
     ImVec2                  CursorMaxPos;           // Used to implicitly calculate the size of our contents, always growing during the frame. Turned into window->SizeContents at the beginning of next frame
-    ImVec2                  CurrentLineSize;
-    float                   CurrentLineTextBaseOffset;
+    ImVec2                  CurrLineSize;
     ImVec2                  PrevLineSize;
+    float                   CurrLineTextBaseOffset;
     float                   PrevLineTextBaseOffset;
     int                     TreeDepth;
     ImU32                   TreeStoreMayJumpToParentOnPop; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31.. Could be turned into a ImU64 if necessary.
@@ -1197,8 +1197,8 @@ struct IMGUI_API ImGuiWindowTempData
     ImGuiWindowTempData()
     {
         CursorPos = CursorPosPrevLine = CursorStartPos = CursorMaxPos = ImVec2(0.0f, 0.0f);
-        CurrentLineSize = PrevLineSize = ImVec2(0.0f, 0.0f);
-        CurrentLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
+        CurrLineSize = PrevLineSize = ImVec2(0.0f, 0.0f);
+        CurrLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
         TreeDepth = 0;
         TreeStoreMayJumpToParentOnPop = 0x00;
         LastItemId = 0;
