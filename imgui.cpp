@@ -5803,14 +5803,17 @@ void ImGui::SetNextItemWidth(float item_width)
 
 void ImGui::PushItemWidth(float item_width)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     window->DC.ItemWidth = (item_width == 0.0f ? window->ItemWidthDefault : item_width);
     window->DC.ItemWidthStack.push_back(window->DC.ItemWidth);
+    g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
 }
 
 void ImGui::PushMultiItemsWidths(int components, float w_full)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     const ImGuiStyle& style = GImGui->Style;
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
@@ -5818,6 +5821,7 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
     for (int i = 0; i < components-1; i++)
         window->DC.ItemWidthStack.push_back(w_item_one);
     window->DC.ItemWidth = window->DC.ItemWidthStack.back();
+    g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
 }
 
 void ImGui::PopItemWidth()
@@ -5827,22 +5831,17 @@ void ImGui::PopItemWidth()
     window->DC.ItemWidth = window->DC.ItemWidthStack.empty() ? window->ItemWidthDefault : window->DC.ItemWidthStack.back();
 }
 
-// Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth(),
-// Then _consume_ the SetNextItemWidth() data.
-float ImGui::GetNextItemWidth()
+// Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth().
+// The SetNextItemWidth() data is generally cleared/consumed by ItemAdd() or NextItemData.ClearFlags()
+float ImGui::CalcItemWidth()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     float w;
     if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth)
-    {
         w = g.NextItemData.Width;
-        g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
-    }
     else
-    {
         w = window->DC.ItemWidth;
-    }
     if (w < 0.0f)
     {
         float region_max_x = GetWorkRectMax().x;
@@ -5852,21 +5851,10 @@ float ImGui::GetNextItemWidth()
     return w;
 }
 
-// Calculate item width *without* popping/consuming NextItemWidth if it was set.
-// (rarely used, which is why we avoid calling this from GetNextItemWidth() and instead do a backup/restore here)
-float ImGui::CalcItemWidth()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiNextItemDataFlags backup_flags = g.NextItemData.Flags;
-    float w = GetNextItemWidth();
-    g.NextItemData.Flags = backup_flags;
-    return w;
-}
-
-// [Internal] Calculate full item size given user provided 'size' parameter and default width/height. Default width is often == GetNextItemWidth().
+// [Internal] Calculate full item size given user provided 'size' parameter and default width/height. Default width is often == CalcItemWidth().
 // Those two functions CalcItemWidth vs CalcItemSize are awkwardly named because they are not fully symmetrical.
 // Note that only CalcItemWidth() is publicly exposed.
-// The 4.0f here may be changed to match GetNextItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
+// The 4.0f here may be changed to match CalcItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
 ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
