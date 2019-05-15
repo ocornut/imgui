@@ -568,13 +568,20 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("Basic trees"))
         {
             for (int i = 0; i < 5; i++)
+            {
+                // Use SetNextItemOpen() so set the default state of a node to be open. 
+                // We could also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
+                if (i == 0)
+                    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+
                 if (ImGui::TreeNode((void*)(intptr_t)i, "Child %d", i))
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
-                    if (ImGui::SmallButton("button")) { };
+                    if (ImGui::SmallButton("button")) {};
                     ImGui::TreePop();
                 }
+            }
             ImGui::TreePop();
         }
 
@@ -1533,10 +1540,11 @@ static void ShowDemoWindowWidgets()
         ImGui::RadioButton("Checkbox", &item_type, 2);
         ImGui::RadioButton("SliderFloat", &item_type, 3);
         ImGui::RadioButton("InputText", &item_type, 4);
-        ImGui::RadioButton("ColorEdit4", &item_type, 5);
-        ImGui::RadioButton("MenuItem", &item_type, 6);
-        ImGui::RadioButton("TreeNode (w/ double-click)", &item_type, 7);
-        ImGui::RadioButton("ListBox", &item_type, 8);
+        ImGui::RadioButton("InputFloat3", &item_type, 5);
+        ImGui::RadioButton("ColorEdit4", &item_type, 6);
+        ImGui::RadioButton("MenuItem", &item_type, 7);
+        ImGui::RadioButton("TreeNode (w/ double-click)", &item_type, 8);
+        ImGui::RadioButton("ListBox", &item_type, 9);
         ImGui::Separator();
         bool ret = false;
         if (item_type == 0) { ImGui::Text("ITEM: Text"); }                                              // Testing text items with no identifier/interaction
@@ -1544,10 +1552,11 @@ static void ShowDemoWindowWidgets()
         if (item_type == 2) { ret = ImGui::Checkbox("ITEM: Checkbox", &b); }                            // Testing checkbox
         if (item_type == 3) { ret = ImGui::SliderFloat("ITEM: SliderFloat", &col4f[0], 0.0f, 1.0f); }   // Testing basic item
         if (item_type == 4) { ret = ImGui::InputText("ITEM: InputText", &str[0], IM_ARRAYSIZE(str)); }  // Testing input text (which handles tabbing)
-        if (item_type == 5) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
-        if (item_type == 6) { ret = ImGui::MenuItem("ITEM: MenuItem"); }                                // Testing menu item (they use ImGuiButtonFlags_PressedOnRelease button policy)
-        if (item_type == 7) { ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
-        if (item_type == 8) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
+        if (item_type == 5) { ret = ImGui::InputFloat3("ITEM: InputFloat3", col4f); }                   // Testing multi-component items (IsItemXXX flags are reported merged)
+        if (item_type == 6) { ret = ImGui::ColorEdit4("ITEM: ColorEdit4", col4f); }                     // Testing multi-component items (IsItemXXX flags are reported merged)
+        if (item_type == 7) { ret = ImGui::MenuItem("ITEM: MenuItem"); }                                // Testing menu item (they use ImGuiButtonFlags_PressedOnRelease button policy)
+        if (item_type == 8) { ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
+        if (item_type == 9) { const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
         ImGui::BulletText(
             "Return value = %d\n"
             "IsItemFocused() = %d\n"
@@ -1627,6 +1636,9 @@ static void ShowDemoWindowWidgets()
         ImGui::EndChild();
         if (embed_all_inside_a_child_window)
             ImGui::EndChild();
+
+        static char dummy_str[] = "This is a dummy field to be able to tab-out of the widgets above.";
+        ImGui::InputText("dummy", dummy_str, IM_ARRAYSIZE(dummy_str), ImGuiInputTextFlags_ReadOnly);
 
         // Calling IsItemHovered() after begin returns the hovered status of the title bar.
         // This is useful in particular if you want to create a context menu (with BeginPopupContextItem) associated to the title bar of a window.
@@ -2426,6 +2438,32 @@ static void ShowDemoWindowColumns()
         ImGui::TreePop();
     }
 
+    if (ImGui::TreeNode("Borders"))
+    {
+        // NB: Future columns API should allow automatic horizontal borders.
+        static bool h_borders = true;
+        static bool v_borders = true;
+        ImGui::Checkbox("horizontal", &h_borders);
+        ImGui::SameLine();
+        ImGui::Checkbox("vertical", &v_borders);
+        ImGui::Columns(4, NULL, v_borders);
+        for (int i = 0; i < 4 * 3; i++)
+        {
+            if (h_borders && ImGui::GetColumnIndex() == 0)
+                ImGui::Separator();
+            ImGui::Text("%c%c%c", 'a' + i, 'a' + i, 'a' + i);
+            ImGui::Text("Width %.2f", ImGui::GetColumnWidth());
+            ImGui::Text("Offset %.2f", ImGui::GetColumnOffset());
+            ImGui::Text("Long text that is likely to clip");
+            ImGui::Button("Button", ImVec2(-1.0f, 0.0f));
+            ImGui::NextColumn();
+        }
+        ImGui::Columns(1);
+        if (h_borders)
+            ImGui::Separator();
+        ImGui::TreePop();
+    }
+
     // Create multiple items in a same cell before switching to next column
     if (ImGui::TreeNode("Mixed items"))
     {
@@ -2469,32 +2507,6 @@ static void ShowDemoWindowColumns()
         ImGui::TextWrapped("Hello Right");
         ImGui::Columns(1);
         ImGui::Separator();
-        ImGui::TreePop();
-    }
-
-    if (ImGui::TreeNode("Borders"))
-    {
-        // NB: Future columns API should allow automatic horizontal borders.
-        static bool h_borders = true;
-        static bool v_borders = true;
-        ImGui::Checkbox("horizontal", &h_borders);
-        ImGui::SameLine();
-        ImGui::Checkbox("vertical", &v_borders);
-        ImGui::Columns(4, NULL, v_borders);
-        for (int i = 0; i < 4*3; i++)
-        {
-            if (h_borders && ImGui::GetColumnIndex() == 0)
-                ImGui::Separator();
-            ImGui::Text("%c%c%c", 'a'+i, 'a'+i, 'a'+i);
-            ImGui::Text("Width %.2f", ImGui::GetColumnWidth());
-            ImGui::Text("Offset %.2f", ImGui::GetColumnOffset());
-            ImGui::Text("Long text that is likely to clip");
-            ImGui::Button("Button", ImVec2(-1.0f, 0.0f));
-            ImGui::NextColumn();
-        }
-        ImGui::Columns(1);
-        if (h_borders)
-            ImGui::Separator();
         ImGui::TreePop();
     }
 

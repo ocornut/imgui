@@ -33,8 +33,25 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
+- IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
+- Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
 
 Other Changes:
+- Columns: Fixed Separator from creating an extraneous draw command. (#125)
+- Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
+- Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
+  but it breaks existing some layout patterns. Will return back to it when we expose Separator flags.
+- Fixed InputFloatX, SliderFloatX, DragFloatX functions erroneously reporting IsItemEdited() multiple
+  times when the text input doesn't match the formatted output value (e.g. input "1" shows "1.000").
+  It wasn't much of a problem because we typically use the return value instead of IsItemEdited() here.
+- Fixed uses of IsItemDeactivated(), IsItemDeactivatedAfterEdit() on multi-components widgets and
+  after EndGroup(). (#2550, #1875)
+- Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
+  Combine with RasterizerFlags::MonoHinting for best results.
+- Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
+  the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
+  support. (#2538, #2541)
 
 
 -----------------------------------------------------------------------
