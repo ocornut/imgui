@@ -82,7 +82,7 @@ static GLFWkeyfun           g_PrevUserCallbackKey = NULL;
 static GLFWcharfun          g_PrevUserCallbackChar = NULL;
 
 // Forward Declarations
-static void ImGui_ImplGlfw_InitPlatformInterface();
+static void ImGui_ImplGlfw_InitPlatformInterface(GLFWwindow* window_handle);
 static void ImGui_ImplGlfw_ShutdownPlatformInterface();
 static void ImGui_ImplGlfw_UpdateMonitors();
 
@@ -198,8 +198,8 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     io.SetClipboardTextFn = ImGui_ImplGlfw_SetClipboardText;
     io.GetClipboardTextFn = ImGui_ImplGlfw_GetClipboardText;
-    io.ClipboardUserData = g_Window;
-
+    io.ClipboardUserData = window;
+    
     g_MouseCursors[ImGuiMouseCursor_Arrow] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);
     g_MouseCursors[ImGuiMouseCursor_TextInput] = glfwCreateStandardCursor(GLFW_IBEAM_CURSOR);
     g_MouseCursors[ImGuiMouseCursor_ResizeAll] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);   // FIXME: GLFW doesn't have this.
@@ -224,9 +224,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = (void*)g_Window;
+    main_viewport->PlatformHandle = (void*)window;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplGlfw_InitPlatformInterface();
+        ImGui_ImplGlfw_InitPlatformInterface(window);
 
     g_ClientApi = client_api;
     return true;
@@ -265,7 +265,7 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
     for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
         // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;
+        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton((GLFWwindow*)ImGui::GetMainViewport()->PlatformHandle, i) != 0;
         g_MouseJustPressed[i] = false;
     }
 
@@ -326,7 +326,7 @@ static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
 static void ImGui_ImplGlfw_UpdateMouseCursor()
 {
     ImGuiIO& io = ImGui::GetIO();
-    if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode(g_Window, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
+    if ((io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange) || glfwGetInputMode((GLFWwindow*)ImGui::GetMainViewport()->PlatformHandle, GLFW_CURSOR) == GLFW_CURSOR_DISABLED)
         return;
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
@@ -394,8 +394,9 @@ void ImGui_ImplGlfw_NewFrame()
     // Setup display size (every frame to accommodate for window resizing)
     int w, h;
     int display_w, display_h;
-    glfwGetWindowSize(g_Window, &w, &h);
-    glfwGetFramebufferSize(g_Window, &display_w, &display_h);
+    GLFWwindow* window_handle = (GLFWwindow*)ImGui::GetMainViewport()->PlatformHandle;
+    glfwGetWindowSize(window_handle, &w, &h);
+    glfwGetFramebufferSize(window_handle, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
     if (w > 0 && h > 0)
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
@@ -467,7 +468,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 #if GLFW_HAS_WINDOW_TOPMOST
     glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost) ? true : false);
 #endif
-    GLFWwindow* share_window = (g_ClientApi == GlfwClientApi_OpenGL) ? g_Window : NULL;
+    GLFWwindow* share_window = (g_ClientApi == GlfwClientApi_OpenGL) ? (GLFWwindow*)ImGui::GetMainViewport()->PlatformHandle : NULL;
     data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, share_window);
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
@@ -740,7 +741,7 @@ static void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
     g_WantUpdateMonitors = true;
 }
 
-static void ImGui_ImplGlfw_InitPlatformInterface()
+static void ImGui_ImplGlfw_InitPlatformInterface(GLFWwindow* window_handle)
 {
     // Register platform interface (will be coupled with a renderer interface)
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -774,10 +775,10 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     // Register main window handle (which is owned by the main application, not by us)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataGlfw* data = IM_NEW(ImGuiViewportDataGlfw)();
-    data->Window = g_Window;
+    data->Window = window_handle;
     data->WindowOwned = false;
     main_viewport->PlatformUserData = data;
-    main_viewport->PlatformHandle = (void*)g_Window;
+    main_viewport->PlatformHandle = (void*)window_handle;
 }
 
 static void ImGui_ImplGlfw_ShutdownPlatformInterface()
