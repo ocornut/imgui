@@ -13,6 +13,13 @@
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
+// Several macros can help you to "override" some parts of this plaform binding:
+//  - IMGUI_GLFW_CUSTOM_MOUSE_BUTTON_CALLBACK: replaces the content of the function ImGui_ImplGlfw_MouseButtonCallback
+//  - IMGUI_GLFW_CUSTOM_SCROLL_CALLBACK:       replaces the content of the function ImGui_ImplGlfw_ScrollCallback
+//  - IMGUI_GLFW_CUSTOM_KEY_CALLBACK:          replaces the content of the function ImGui_ImplGlfw_ScrollCallback
+//  - IMGUI_GLFW_CUSTOM_CHAR_CALLBACK:         replaces the content of the function ImGui_ImplGlfw_CharCallback
+//  - IMGUI_GLFW_CUSTOM_DELTA_TIME:            replace the original code to compute the delta time. The GLFWWindow pointer associated with the main viewport is passed to this macro.
+//                                             (e.g. the GLFW user data can contain a structure to compute the delta time)
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
@@ -91,25 +98,36 @@ static void ImGui_ImplGlfw_SetClipboardText(void* user_data, const char* text)
 
 void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int action, int mods)
 {
+#if defined(IMGUI_GLFW_CUSTOM_MOUSE_BUTTON_CALLBACK)
+    IMGUI_GLFW_CUSTOM_MOUSE_BUTTON_CALLBACK(window, button, action, mods);
+#elif defined(IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS)
     if (g_PrevUserCallbackMousebutton != NULL && window == g_Window)
         g_PrevUserCallbackMousebutton(window, button, action, mods);
 
     if (action == GLFW_PRESS && button >= 0 && button < IM_ARRAYSIZE(g_MouseJustPressed))
         g_MouseJustPressed[button] = true;
+#endif
 }
 
 void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
 {
+#if defined(IMGUI_GLFW_CUSTOM_SCROLL_CALLBACK)
+    IMGUI_GLFW_CUSTOM_SCROLL_CALLBACK(window, xoffset, yoffset);
+#else
     if (g_PrevUserCallbackScroll != NULL && window == g_Window)
         g_PrevUserCallbackScroll(window, xoffset, yoffset);
 
     ImGuiIO& io = ImGui::GetIO();
     io.MouseWheelH += (float)xoffset;
     io.MouseWheel += (float)yoffset;
+#endif
 }
 
 void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int action, int mods)
 {
+#if defined(IMGUI_GLFW_CUSTOM_KEY_CALLBACK)
+    IMGUI_GLFW_CUSTOM_KEY_CALLBACK(window, key, scancode, action, mods);
+#else
     if (g_PrevUserCallbackKey != NULL && window == g_Window)
         g_PrevUserCallbackKey(window, key, scancode, action, mods);
 
@@ -124,15 +142,20 @@ void ImGui_ImplGlfw_KeyCallback(GLFWwindow* window, int key, int scancode, int a
     io.KeyShift = io.KeysDown[GLFW_KEY_LEFT_SHIFT] || io.KeysDown[GLFW_KEY_RIGHT_SHIFT];
     io.KeyAlt = io.KeysDown[GLFW_KEY_LEFT_ALT] || io.KeysDown[GLFW_KEY_RIGHT_ALT];
     io.KeySuper = io.KeysDown[GLFW_KEY_LEFT_SUPER] || io.KeysDown[GLFW_KEY_RIGHT_SUPER];
+#endif
 }
 
 void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
 {
+#if defined(IMGUI_GLFW_CUSTOM_CHAR_CALLBACK)
+    IMGUI_GLFW_CUSTOM_CHAR_CALLBACK(window, c);
+#else
     if (g_PrevUserCallbackChar != NULL && window == g_Window)
         g_PrevUserCallbackChar(window, c);
 
     ImGuiIO& io = ImGui::GetIO();
     io.AddInputCharacter(c);
+#endif
 }
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
@@ -380,9 +403,13 @@ void ImGui_ImplGlfw_NewFrame()
         ImGui_ImplGlfw_UpdateMonitors();
 
     // Setup time step
+#if defined(IMGUI_GLFW_CUSTOM_DELTA_TIME)
+    io.DeltaTime = IMGUI_GLFW_CUSTOM_DELTA_TIME(window_handle);
+#else
     double current_time = glfwGetTime();
     io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
     g_Time = current_time;
+#endif
 
     ImGui_ImplGlfw_UpdateMousePosAndButtons();
     ImGui_ImplGlfw_UpdateMouseCursor();
