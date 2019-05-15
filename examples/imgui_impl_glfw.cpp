@@ -14,6 +14,12 @@
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 // Several macros can help you to "override" some parts of this plaform binding:
+//  - IMGUI_GLFW_GLOBAL_THREAD_SAFE_INTERNALS: gives the possibility to not declare some internals in this file. You can decide to declare somewhere else
+//                                             (e.g. in case you want to reuse these variables but still hiding the platform binding definition)
+//  - IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS:      gives the possibility to discard global variables used to store windown handle information
+//                                             (e.g. storing these variables localy in a structure)
+//                                             WARNING: The definition of this symbol requires the definition of other symbols below (mostly for custom callbacks).
+//                                                      This gives the possibility to set your internal but keeping the orignal API for this platform binding
 //  - IMGUI_GLFW_CUSTOM_MOUSE_BUTTON_CALLBACK: replaces the content of the function ImGui_ImplGlfw_MouseButtonCallback
 //  - IMGUI_GLFW_CUSTOM_SCROLL_CALLBACK:       replaces the content of the function ImGui_ImplGlfw_ScrollCallback
 //  - IMGUI_GLFW_CUSTOM_KEY_CALLBACK:          replaces the content of the function ImGui_ImplGlfw_ScrollCallback
@@ -68,18 +74,47 @@ enum GlfwClientApi
     GlfwClientApi_OpenGL,
     GlfwClientApi_Vulkan
 };
-static GLFWwindow*          g_Window = NULL;    // Main window
+
+#if !defined(IMGUI_GLFW_GLOBAL_THREAD_SAFE_INTERNALS)
 static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
-static double               g_Time = 0.0;
 static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
 static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 static bool                 g_WantUpdateMonitors = true;
+#endif
 
+#if !defined(IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS)
+static GLFWwindow*          g_Window = NULL;    // Main window
+static double               g_Time = 0.0;
 // Chain GLFW callbacks for main viewport: our callbacks will call the user's previously installed callbacks, if any.
 static GLFWmousebuttonfun   g_PrevUserCallbackMousebutton = NULL;
 static GLFWscrollfun        g_PrevUserCallbackScroll = NULL;
 static GLFWkeyfun           g_PrevUserCallbackKey = NULL;
 static GLFWcharfun          g_PrevUserCallbackChar = NULL;
+#endif
+
+#if defined(IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS)
+
+#if !defined(IMGUI_GLFW_CUSTOM_MOUSE_BUTTON_CALLBACK)
+#error Missing IMGUI_GLFW_CUSTOM_MOUSE_BUTTON_CALLBACK definition when IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS is defined
+#endif
+
+#if !defined(IMGUI_GLFW_CUSTOM_SCROLL_CALLBACK)
+#error Missing IMGUI_GLFW_CUSTOM_SCROLL_CALLBACK definition when IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS is defined
+#endif
+
+#if !defined(IMGUI_GLFW_CUSTOM_KEY_CALLBACK)
+#error Missing IMGUI_GLFW_CUSTOM_KEY_CALLBACK definition when IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS is defined
+#endif
+
+#if !defined(IMGUI_GLFW_CUSTOM_CHAR_CALLBACK)
+#error Missing IMGUI_GLFW_CUSTOM_CHAR_CALLBACK definition when IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS is defined
+#endif
+
+#if !defined(IMGUI_GLFW_CUSTOM_DELTA_TIME)
+#error Missing IMGUI_GLFW_CUSTOM_DELTA_TIME definition when IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS is defined
+#endif
+
+#endif //!defined(IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS)
 
 // Forward Declarations
 static void ImGui_ImplGlfw_InitPlatformInterface(GLFWwindow* window_handle);
@@ -160,8 +195,10 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
 {
+#if !defined(IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS)
     g_Window = window;
     g_Time = 0.0;
+#endif
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
@@ -209,6 +246,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = glfwCreateStandardCursor(GLFW_ARROW_CURSOR);  // FIXME: GLFW doesn't have this.
     g_MouseCursors[ImGuiMouseCursor_Hand] = glfwCreateStandardCursor(GLFW_HAND_CURSOR);
 
+#if !defined(IMGUI_GLFW_CUSTOM_WINDOW_INTERNALS)
     // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
     g_PrevUserCallbackMousebutton = NULL;
     g_PrevUserCallbackScroll = NULL;
@@ -221,6 +259,15 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
         g_PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
         g_PrevUserCallbackChar = glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
     }
+#else
+    if (install_callbacks)
+    {
+      glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
+      glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
+      glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
+      glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+    }
+#endif
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
