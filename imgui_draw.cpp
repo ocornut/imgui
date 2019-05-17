@@ -1779,7 +1779,7 @@ static void UnpackBoolVectorToFlatIndexList(const ImBoolVector* in, ImVector<int
     for (const int* it = it_begin; it < it_end; it++)
         if (int entries_32 = *it)
             for (int bit_n = 0; bit_n < 32; bit_n++)
-                if (entries_32 & (1 << bit_n))
+                if (entries_32 & (1u << bit_n))
                     out->push_back((int)((it - it_begin) << 5) + bit_n);
 }
 
