@@ -2775,7 +2775,7 @@ bool ImGui::TempInputTextScalar(const ImRect& bb, ImGuiID id, const char* label,
         if (value_changed)
             MarkItemEdited(id);
     }
-    return false;
+    return value_changed;
 }
 
 bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_ptr, const void* step, const void* step_fast, const char* format, ImGuiInputTextFlags flags)
