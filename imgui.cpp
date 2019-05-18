@@ -9524,6 +9524,8 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 #else
 #include <windows.h>
 #endif
+#elif defined(__APPLE__)
+#include <TargetConditionals.h>
 #endif
 
 // Win32 API clipboard implementation
@@ -9574,6 +9576,58 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
     if (::SetClipboardData(CF_UNICODETEXT, wbuf_handle) == NULL)
         ::GlobalFree(wbuf_handle);
     ::CloseClipboard();
+}
+
+#elif defined(__APPLE__) && TARGET_OS_OSX && !defined(IMGUI_DISABLE_OSX_FUNCTIONS)
+#include <Carbon/Carbon.h>  // use ye olde worlde API to avoid need for separate .mm file
+static PasteboardRef main_clipboard = 0;
+
+static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
+{
+    if (!main_clipboard)
+        PasteboardCreate(kPasteboardClipboard, &main_clipboard);
+    PasteboardClear(main_clipboard);
+    CFDataRef cf_data = CFDataCreate(kCFAllocatorDefault, (const UInt8*) text, strlen(text));
+    if (cf_data)
+    {
+        PasteboardPutItemFlavor(main_clipboard, (PasteboardItemID) 1, CFSTR("public.utf8-plain-text"), cf_data, 0);
+        CFRelease(cf_data);
+    }
+}
+
+static const char* GetClipboardTextFn_DefaultImpl(void*)
+{
+    if (!main_clipboard)
+        PasteboardCreate(kPasteboardClipboard, &main_clipboard);
+    PasteboardSynchronize(main_clipboard);
+
+    ItemCount item_count = 0;
+    PasteboardGetItemCount(main_clipboard, &item_count);
+
+    for (int i = 0; i < item_count; i++)
+    {
+        PasteboardItemID item_id = 0;
+        PasteboardGetItemIdentifier(main_clipboard, i + 1, &item_id);
+        CFArrayRef flavor_type_array = 0;
+        PasteboardCopyItemFlavors(main_clipboard, item_id, &flavor_type_array);
+        for (CFIndex j = 0, nj = CFArrayGetCount(flavor_type_array); j < nj; j++)
+        {
+            CFDataRef cf_data;
+            if (PasteboardCopyItemFlavorData(main_clipboard, item_id, CFSTR("public.utf8-plain-text"), &cf_data) == noErr)
+            {
+                static ImVector<char> clipboard_text;
+
+                int length = (int) CFDataGetLength(cf_data);
+                clipboard_text.resize(length + 1);
+                CFDataGetBytes(cf_data, CFRangeMake(0, length), (UInt8*) clipboard_text.Data);
+                clipboard_text[length] = 0;
+
+                CFRelease(cf_data);
+                return clipboard_text.Data;
+            }
+        }
+    }
+    return "";
 }
 
 #else
