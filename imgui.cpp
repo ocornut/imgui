@@ -11609,6 +11609,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         DockSettingsRenameNodeReferences(node->ID, new_node->ID);
         for (int n = 0; n < new_node->Windows.Size; n++)
             UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
+        new_node->AuthorityForPos = new_node->AuthorityForSize = ImGuiDataAuthority_Window;
         new_node->WantMouseMove = true;
     }
     else
@@ -12348,7 +12349,10 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
         host_window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Menu);
     }
 
-    PushID(node->ID);
+    // Use PushOverrideID() instead of PushID() to use the node id _without_ the host window ID.
+    // This is to facilitate computing those ID from the outside, and will affect more or less only the ID of the collapse button, popup and tabs,
+    // as docked windows themselves will override the stack with their own root ID.
+    PushOverrideID(node->ID);
     ImGuiTabBar* tab_bar = node->TabBar;
     bool tab_bar_is_recreated = (tab_bar == NULL); // Tab bar are automatically destroyed when a node gets hidden
     if (tab_bar == NULL)
@@ -12361,6 +12365,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     node->IsFocused = is_focused;
 
     // Collapse button changes shape and display a list
+    // FIXME-DOCK: Could we recycle popups id?
     if (IsPopupOpen("#TabListMenu"))
     {
         if (ImGuiID tab_id = DockNodeUpdateTabListMenu(node, tab_bar))
