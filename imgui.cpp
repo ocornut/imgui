@@ -12929,7 +12929,9 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->SizeRef = backup_last_explicit_size;
 
     // Flags transfer
-    parent_node->LocalFlags = ((child_0 ? child_0->LocalFlags : 0) | (child_1 ? child_1->LocalFlags : 0)) & ImGuiDockNodeFlags_LocalFlagsTransferMask_;
+    parent_node->LocalFlags &= ~ImGuiDockNodeFlags_LocalFlagsTransferMask_; // Preserve Dockspace flag
+    parent_node->LocalFlags |= (child_0 ? child_0->LocalFlags : 0) & ImGuiDockNodeFlags_LocalFlagsTransferMask_;
+    parent_node->LocalFlags |= (child_1 ? child_1->LocalFlags : 0) & ImGuiDockNodeFlags_LocalFlagsTransferMask_;
 
     if (child_0)
     {
