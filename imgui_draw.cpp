@@ -3123,7 +3123,7 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
 // FIXME: Rendering an ellipsis "..." is a surprisingly tricky problem for us... we cannot rely on font glyph having it,
 // and regular dot are typically too wide. If we render a dot/shape ourselves it comes with the risk that it wouldn't match
 // the boldness or positioning of what the font uses...
-void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, int count, ImU32 col)
+void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, ImU32 col, int count)
 {
     ImFont* font = draw_list->_Data->Font;
     const float font_scale = draw_list->_Data->FontSize / font->FontSize;
