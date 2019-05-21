@@ -46,6 +46,7 @@ Other Changes:
   It wasn't much of a problem because we typically use the return value instead of IsItemEdited() here.
 - Fixed uses of IsItemDeactivated(), IsItemDeactivatedAfterEdit() on multi-components widgets and
   after EndGroup(). (#2550, #1875)
+- Fixed crash when appending with BeginMainMenuBar() more than once and no other window are showing. (#2567)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.
