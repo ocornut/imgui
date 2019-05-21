@@ -52,7 +52,7 @@ Index of this file:
 #endif
 
 // Clang/GCC warnings with -Weverything
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
 #pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants ok.
 #pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference is.
@@ -100,7 +100,7 @@ namespace IMGUI_STB_NAMESPACE
 #pragma warning (disable: 4456)                             // declaration of 'xx' hides previous local declaration
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wunused-function"
 #pragma clang diagnostic ignored "-Wmissing-prototypes"
@@ -108,7 +108,7 @@ namespace IMGUI_STB_NAMESPACE
 #pragma clang diagnostic ignored "-Wcast-qual"              // warning : cast from 'const xxxx *' to 'xxx *' drops const qualifier //
 #endif
 
-#ifdef __GNUC__
+#if defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wtype-limits"              // warning: comparison is always true due to limited range of data type [-Wtype-limits]
 #pragma GCC diagnostic ignored "-Wcast-qual"                // warning: cast from type 'const xxxx *' to type 'xxxx *' casts away qualifiers
@@ -151,15 +151,15 @@ namespace IMGUI_STB_NAMESPACE
 #endif
 #endif
 
-#ifdef __GNUC__
+#if defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
 #endif
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER)
 #pragma warning (pop)
 #endif
 
@@ -1785,7 +1785,7 @@ static void UnpackBoolVectorToFlatIndexList(const ImBoolVector* in, ImVector<int
     for (const int* it = it_begin; it < it_end; it++)
         if (int entries_32 = *it)
             for (int bit_n = 0; bit_n < 32; bit_n++)
-                if (entries_32 & (1 << bit_n))
+                if (entries_32 & (1u << bit_n))
                     out->push_back((int)((it - it_begin) << 5) + bit_n);
 }
 
@@ -2397,11 +2397,12 @@ void ImFontGlyphRangesBuilder::AddRanges(const ImWchar* ranges)
 
 void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 {
-    for (int n = 0; n < 0x10000; n++)
+    int max_codepoint = 0x10000;
+    for (int n = 0; n < max_codepoint; n++)
         if (GetBit(n))
         {
             out_ranges->push_back((ImWchar)n);
-            while (n < 0x10000 && GetBit(n + 1))
+            while (n < max_codepoint - 1 && GetBit(n + 1))
                 n++;
             out_ranges->push_back((ImWchar)n);
         }

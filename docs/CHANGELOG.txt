@@ -46,9 +46,14 @@ Other Changes:
   It wasn't much of a problem because we typically use the return value instead of IsItemEdited() here.
 - Fixed uses of IsItemDeactivated(), IsItemDeactivatedAfterEdit() on multi-components widgets and
   after EndGroup(). (#2550, #1875)
+- Fixed crash when appending with BeginMainMenuBar() more than once and no other window are showing. (#2567)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.
+- ImFontGlyphRangesBuilder: Fixed unnecessarily over-sized buffer, which incidentally was also not
+  fully cleared. Fixed edge case overflow when adding character 0xFFFF. (#2568). [@NIKE3500]
+- Add native Mac clipboard copy/paste default implementation in core library to match what we are
+  dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)

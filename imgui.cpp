@@ -1007,7 +1007,7 @@ CODE
 #endif
 
 // Clang/GCC warnings with -Weverything
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic ignored "-Wunknown-pragmas"        // warning : unknown warning group '-Wformat-pedantic *'        // not all warnings are known by all clang versions.. so ignoring warnings triggers new warnings on some configuration. great!
 #pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
 #pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants (typically 0.0f) is ok.
@@ -2894,9 +2894,13 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     {
         // Navigation processing runs prior to clipping early-out
         //  (a) So that NavInitRequest can be honored, for newly opened windows to select a default widget
-        //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests unfortunately, but it is still limited to one window.
-        //      it may not scale very well for windows with ten of thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
-        //      We could early out with "if (is_clipped && !g.NavInitRequest) return false;" but when we wouldn't be able to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick)
+        //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests 
+        //      unfortunately, but it is still limited to one window. It may not scale very well for windows with ten of 
+        //      thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
+        //      We could early out with "if (is_clipped && !g.NavInitRequest) return false;" but when we wouldn't be able
+        //      to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick).
+        // We intentionally don't check if g.NavWindow != NULL because g.NavAnyRequest should only be set when it is non null.
+        // If we crash on a NULL g.NavWindow we need to fix the bug elsewhere.
         window->DC.NavLayerActiveMaskNext |= window->DC.NavLayerCurrentMask;
         if (g.NavId == id || g.NavAnyRequest)
             if (g.NavWindow->RootWindowForNav == window->RootWindowForNav)
@@ -7872,6 +7876,8 @@ void ImGui::EndPopup()
 bool ImGui::BeginPopupContextItem(const char* str_id, int mouse_button)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
+    if (window->SkipItems)
+        return false;
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
@@ -9109,7 +9115,8 @@ void ImGui::NextColumn()
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (++columns->Current < columns->Count)
     {
-        // New column (columns 1+ cancels out IndentX)
+        // Columns 1+ cancel out IndentX
+        // FIXME-COLUMNS: Unnecessary, could be locked?
         window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + g.Style.ItemSpacing.x;
         window->DrawList->ChannelsSetCurrent(columns->Current + 1);
     }
@@ -9126,7 +9133,7 @@ void ImGui::NextColumn()
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     window->DC.CurrLineTextBaseOffset = 0.0f;
 
-    PushColumnClipRect(columns->Current);
+    PushColumnClipRect(columns->Current);     // FIXME-COLUMNS: Could it be an overwrite?
     PushItemWidth(GetColumnWidth() * 0.65f);  // FIXME-COLUMNS: Move on columns setup
 }
 
@@ -14120,15 +14127,17 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
 #else
 #include <windows.h>
 #endif
+#elif defined(__APPLE__)
+#include <TargetConditionals.h>
 #endif
 
-// Win32 API clipboard implementation
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS)
 
 #ifdef _MSC_VER
 #pragma comment(lib, "user32")
 #endif
 
+// Win32 clipboard implementation
 static const char* GetClipboardTextFn_DefaultImpl(void*)
 {
     static ImVector<char> buf_local;
@@ -14172,16 +14181,66 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
     ::CloseClipboard();
 }
 
+#elif defined(__APPLE__) && TARGET_OS_OSX && !defined(IMGUI_DISABLE_OSX_FUNCTIONS)
+
+#include <Carbon/Carbon.h>  // Use old API to avoid need for separate .mm file
+static PasteboardRef main_clipboard = 0;
+
+// OSX clipboard implementation
+static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
+{
+    if (!main_clipboard)
+        PasteboardCreate(kPasteboardClipboard, &main_clipboard);
+    PasteboardClear(main_clipboard);
+    CFDataRef cf_data = CFDataCreate(kCFAllocatorDefault, (const UInt8*)text, strlen(text));
+    if (cf_data)
+    {
+        PasteboardPutItemFlavor(main_clipboard, (PasteboardItemID)1, CFSTR("public.utf8-plain-text"), cf_data, 0);
+        CFRelease(cf_data);
+    }
+}
+
+static const char* GetClipboardTextFn_DefaultImpl(void*)
+{
+    if (!main_clipboard)
+        PasteboardCreate(kPasteboardClipboard, &main_clipboard);
+    PasteboardSynchronize(main_clipboard);
+
+    ItemCount item_count = 0;
+    PasteboardGetItemCount(main_clipboard, &item_count);
+    for (int i = 0; i < item_count; i++)
+    {
+        PasteboardItemID item_id = 0;
+        PasteboardGetItemIdentifier(main_clipboard, i + 1, &item_id);
+        CFArrayRef flavor_type_array = 0;
+        PasteboardCopyItemFlavors(main_clipboard, item_id, &flavor_type_array);
+        for (CFIndex j = 0, nj = CFArrayGetCount(flavor_type_array); j < nj; j++)
+        {
+            CFDataRef cf_data;
+            if (PasteboardCopyItemFlavorData(main_clipboard, item_id, CFSTR("public.utf8-plain-text"), &cf_data) == noErr)
+            {
+                static ImVector<char> clipboard_text;
+                int length = (int)CFDataGetLength(cf_data);
+                clipboard_text.resize(length + 1);
+                CFDataGetBytes(cf_data, CFRangeMake(0, length), (UInt8*)clipboard_text.Data);
+                clipboard_text[length] = 0;
+                CFRelease(cf_data);
+                return clipboard_text.Data;
+            }
+        }
+    }
+    return NULL;
+}
+
 #else
 
-// Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
+// Local Dear ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers.
 static const char* GetClipboardTextFn_DefaultImpl(void*)
 {
     ImGuiContext& g = *GImGui;
     return g.PrivateClipboard.empty() ? NULL : g.PrivateClipboard.begin();
 }
 
-// Local ImGui-only clipboard implementation, if user hasn't defined better clipboard handlers
 static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 {
     ImGuiContext& g = *GImGui;
