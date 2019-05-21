@@ -2391,11 +2391,12 @@ void ImFontGlyphRangesBuilder::AddRanges(const ImWchar* ranges)
 
 void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
 {
-    for (int n = 0; n < 0x10000; n++)
+    int max_codepoint = 0x10000;
+    for (int n = 0; n < max_codepoint; n++)
         if (GetBit(n))
         {
             out_ranges->push_back((ImWchar)n);
-            while (n < 0x10000 && GetBit(n + 1))
+            while (n < max_codepoint - 1 && GetBit(n + 1))
                 n++;
             out_ranges->push_back((ImWchar)n);
         }
