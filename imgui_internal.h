@@ -1292,7 +1292,8 @@ struct IMGUI_API ImGuiWindow
     ImRect                  ClipRect;                           // Current clipping rectangle. = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImRect                  OuterRectClipped;                   // == WindowRect just after setup in Begin(). == window->Rect() for root window.
     ImRect                  InnerMainRect;                      //
-    ImRect                  InnerClipRect;                      // == InnerMainRect, minus WindowPadding on each side, clipped within viewport or parent.
+    ImRect                  InnerWorkRect;                      // == InnerMainRect minus WindowPadding.x
+    ImRect                  InnerWorkRectClipped;               // == InnerMainRect minus WindowPadding.x, clipped within viewport or parent clip rect.
     ImRect                  ContentsRegionRect;                 // FIXME: This is currently confusing/misleading. Maximum visible content position ~~ Pos + (SizeContentsExplicit ? SizeContentsExplicit : Size - ScrollbarSizes) - CursorStartPos, per axis
     int                     LastFrameActive;                    // Last frame number the window was Active.
     float                   ItemWidthDefault;

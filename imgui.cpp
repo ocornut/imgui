@@ -5479,16 +5479,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->OuterRectClipped = window->Rect();
         window->OuterRectClipped.ClipWith(host_rect);
 
-        // Inner clipping rectangle will extend a little bit outside the work region.
+        // Inner work/clipping rectangle will extend a little bit outside the work region.
         // This is to allow e.g. Selectable or CollapsingHeader or some separators to cover that space.
         // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
-        // FIXME: This is currently not clipped by the host rectangle, which is misleading because our call to PushClipRect() below will do it anyway.
-        // If we fix the value in InnerClipRect, which is desirable, we need to fix the two lines of code relying on it.
-        window->InnerClipRect.Min.x = ImFloor(0.5f + window->InnerMainRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
-        window->InnerClipRect.Min.y = ImFloor(0.5f + window->InnerMainRect.Min.y);
-        window->InnerClipRect.Max.x = ImFloor(0.5f + window->InnerMainRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
-        window->InnerClipRect.Max.y = ImFloor(0.5f + window->InnerMainRect.Max.y);
-        //window->InnerClipRect.ClipWithFull(host_rect);
+        window->InnerWorkRect.Min.x = ImFloor(0.5f + window->InnerMainRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
+        window->InnerWorkRect.Min.y = ImFloor(0.5f + window->InnerMainRect.Min.y);
+        window->InnerWorkRect.Max.x = ImFloor(0.5f + window->InnerMainRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
+        window->InnerWorkRect.Max.y = ImFloor(0.5f + window->InnerMainRect.Max.y);
+        window->InnerWorkRectClipped = window->InnerWorkRect;
+        window->InnerWorkRectClipped.ClipWithFull(host_rect);
 
         // DRAWING
 
@@ -5614,7 +5613,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetCurrentWindow(window);
     }
 
-    PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
+    PushClipRect(window->InnerWorkRectClipped.Min, window->InnerWorkRectClipped.Max, true);
 
     // Clear 'accessed' flag last thing (After PushClipRect which will set the flag. We want the flag to stay false when the default "Debug" window is unused)
     if (first_begin_of_the_frame)
@@ -8653,7 +8652,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     window->DC.CurrentColumns = columns;
 
     // Set state for first column
-    const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->InnerClipRect.Max.x - window->Pos.x);
+    const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->InnerWorkRect.Max.x - window->Pos.x);
     columns->OffMinX = window->DC.Indent.x - g.Style.ItemSpacing.x; // Lock our horizontal range
     columns->OffMaxX = ImMax(content_region_width - window->Scroll.x, columns->OffMinX + 1.0f);
     columns->HostCursorPosY = window->DC.CursorPos.y;
@@ -9701,10 +9700,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
-    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerMainRect, RT_InnerClipRect, RT_ContentsRegionRect, RT_ContentsFullRect };
+    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerMainRect, RT_InnerWorkRect, RT_InnerWorkRectClipped, RT_ContentsRegionRect, RT_ContentsFullRect };
     static bool show_windows_begin_order = false;
     static bool show_windows_rects = false;
-    static int  show_windows_rect_type = RT_ContentsRegionRect;
+    static int  show_windows_rect_type = RT_InnerWorkRect;
     static bool show_drawcmd_clip_rects = true;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -9918,7 +9917,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, "OuterRect\0" "OuterRectClipped\0" "InnerMainRect\0" "InnerClipRect\0" "ContentsRegionRect\0");
+        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, "OuterRect\0" "OuterRectClipped\0" "InnerMainRect\0" "InnerWorkRect\0" "InnerWorkRectClipped\0" "ContentsRegionRect\0");
         ImGui::Checkbox("Show clipping rectangle when hovering ImDrawCmd node", &show_drawcmd_clip_rects);
         ImGui::TreePop();
     }
@@ -9937,7 +9936,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (show_windows_rect_type == RT_OuterRect)                 { r = window->Rect(); }
                 else if (show_windows_rect_type == RT_OuterRectClipped)     { r = window->OuterRectClipped; }
                 else if (show_windows_rect_type == RT_InnerMainRect)        { r = window->InnerMainRect; }
-                else if (show_windows_rect_type == RT_InnerClipRect)        { r = window->InnerClipRect; }
+                else if (show_windows_rect_type == RT_InnerWorkRect)        { r = window->InnerWorkRect; }
+                else if (show_windows_rect_type == RT_InnerWorkRectClipped) { r = window->InnerWorkRectClipped; }
                 else if (show_windows_rect_type == RT_ContentsRegionRect)   { r = window->ContentsRegionRect; }
                 draw_list->AddRect(r.Min, r.Max, IM_COL32(255, 0, 128, 255));
             }
