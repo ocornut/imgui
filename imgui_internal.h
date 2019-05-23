@@ -811,7 +811,7 @@ struct ImGuiNextItemData
 // Tabs
 //-----------------------------------------------------------------------------
 
-struct ImGuiTabBarSortItem
+struct ImGuiShrinkWidthItem
 {
     int             Index;
     float           Width;
@@ -976,7 +976,7 @@ struct ImGuiContext
     ImPool<ImGuiTabBar>             TabBars;
     ImGuiTabBar*                    CurrentTabBar;
     ImVector<ImGuiTabBarRef>        CurrentTabBarStack;
-    ImVector<ImGuiTabBarSortItem>   TabSortByWidthBuffer;
+    ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Widget state
     ImVec2                  LastValidMousePos;
@@ -1495,6 +1495,7 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
     IMGUI_API bool          IsItemToggledSelection();                                           // was the last item selection toggled? (after Selectable(), TreeNode() etc. We only returns toggle _event_ in order to handle clipping correctly)
     IMGUI_API ImVec2        GetWorkRectMax();
+    IMGUI_API void          ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_excess);
 
     // Logging/Capture
     IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);   // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
