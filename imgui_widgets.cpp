@@ -793,7 +793,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_no
         }
         else
         {
-            ImVec2 backup_active_click_offset = g.ActiveIdClickOffset;
+            ImVec2 backup_active_click_offset = g.ActiveIdClickOffset + (pos - window->Pos);
             StartMouseMovingWindow(window);
             g.ActiveIdClickOffset = backup_active_click_offset;
         }
