@@ -41,6 +41,8 @@ Other Changes:
 - Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
   but it breaks existing some layout patterns. Will return back to it when we expose Separator flags.
+- Fixed InputScalar, InputScalarN, SliderScalarN, DragScalarN with non-visible label from inserting
+  style.ItemInnerSpacing.x worth of trailing spacing.
 - Fixed InputFloatX, SliderFloatX, DragFloatX functions erroneously reporting IsItemEdited() multiple
   times when the text input doesn't match the formatted output value (e.g. input "1" shows "1.000").
   It wasn't much of a problem because we typically use the return value instead of IsItemEdited() here.
@@ -48,6 +50,9 @@ Other Changes:
   after EndGroup(). (#2550, #1875)
 - Fixed crash when appending with BeginMainMenuBar() more than once and no other window are showing. (#2567)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
+  collapsing/docking button to the other side of the title bar.
+- Style: Made window close button cross is slightly smaller.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.
 - ImFontGlyphRangesBuilder: Fixed unnecessarily over-sized buffer, which incidentally was also not

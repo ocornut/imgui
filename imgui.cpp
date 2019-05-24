@@ -1161,6 +1161,7 @@ ImGuiStyle::ImGuiStyle()
     WindowBorderSize        = 1.0f;             // Thickness of border around windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
+    WindowMenuButtonPosition= ImGuiDir_Left;    // Position of the collapsing/docking button in the title bar (left/right). Defaults to ImGuiDir_Left.
     ChildRounding           = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular child windows
     ChildBorderSize         = 1.0f;             // Thickness of border around child windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     PopupRounding           = 0.0f;             // Radius of popup window corners rounding. Set to 0.0f to have rectangular child windows
@@ -3593,6 +3594,8 @@ void ImGui::NewFrame()
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)!");
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
+    IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
+
     for (int n = 0; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
@@ -5434,30 +5437,54 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
     }
 }
 
+// Render title text, collapse button, close button
 void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open)
 {
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
     ImGuiWindowFlags flags = window->Flags;
 
-    // Close & collapse button are on layer 1 (same as menus) and don't default focus
+    const bool has_close_button = (p_open != NULL);
+    const bool has_collapse_button = !(flags & ImGuiWindowFlags_NoCollapse);
+
+    // Close & collapse button are on the Menu NavLayer and don't default focus (unless there's nothing else on that layer)
     const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;
     window->DC.ItemFlags |= ImGuiItemFlags_NoNavDefaultFocus;
     window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
     window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Menu);
 
-    // Collapse button
-    if (!(flags & ImGuiWindowFlags_NoCollapse))
-        if (CollapseButton(window->GetID("#COLLAPSE"), window->Pos, NULL))
-            window->WantCollapseToggle = true; // Defer collapsing to next frame as we are too far in the Begin() function
+    // Layout buttons
+    // FIXME: Would be nice to generalize the subtleties expressed here into reusable code.
+    float pad_l = style.FramePadding.x;
+    float pad_r = style.FramePadding.x;
+    float button_sz = g.FontSize;
+    ImVec2 close_button_pos;
+    ImVec2 collapse_button_pos;
+    if (has_close_button)
+    {
+        pad_r += button_sz;
+        close_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
+    }
+    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Right)
+    {
+        pad_r += button_sz;
+        collapse_button_pos = ImVec2(title_bar_rect.Max.x - pad_r - style.FramePadding.x, title_bar_rect.Min.y);
+    }
+    if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Left)
+    {
+        collapse_button_pos = ImVec2(title_bar_rect.Min.x + pad_l - style.FramePadding.x, title_bar_rect.Min.y);
+        pad_l += button_sz;
+    }
+
+    // Collapse button (submitting first so it gets priority when choosing a navigation init fallback)
+    if (has_collapse_button)
+        if (CollapseButton(window->GetID("#COLLAPSE"), collapse_button_pos, NULL))
+            window->WantCollapseToggle = true; // Defer actual collapsing to next frame as we are too far in the Begin() function
 
     // Close button
-    if (p_open != NULL)
-    {
-        const float rad = g.FontSize * 0.5f;
-        if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x - rad, window->Pos.y + style.FramePadding.y + rad), rad + 1))
+    if (has_close_button)
+        if (CloseButton(window->GetID("#CLOSE"), close_button_pos))
             *p_open = false;
-    }
 
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
     window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
@@ -5466,23 +5493,32 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     // Title bar text (with: horizontal alignment, avoiding collapse/close button, optional "unsaved document" marker)
     // FIXME: Refactor text alignment facilities along with RenderText helpers, this is too much code..
     const char* UNSAVED_DOCUMENT_MARKER = "*";
-    float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, NULL, false).x : 0.0f;
-    ImVec2 text_size = CalcTextSize(name, NULL, true) + ImVec2(marker_size_x, 0.0f);
-    ImRect text_r = title_bar_rect;
-    float pad_left = (flags & ImGuiWindowFlags_NoCollapse) ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
-    float pad_right = (p_open == NULL)                     ? style.FramePadding.x : (style.FramePadding.x + g.FontSize + style.ItemInnerSpacing.x);
-    if (style.WindowTitleAlign.x > 0.0f)
-        pad_right = ImLerp(pad_right, pad_left, style.WindowTitleAlign.x);
-    text_r.Min.x += pad_left;
-    text_r.Max.x -= pad_right;
-    ImRect clip_rect = text_r;
-    clip_rect.Max.x = window->Pos.x + window->Size.x - (p_open ? title_bar_rect.GetHeight() - 3 : style.FramePadding.x); // Match the size of CloseButton()
-    RenderTextClipped(text_r.Min, text_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_rect);
+    const float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? CalcTextSize(UNSAVED_DOCUMENT_MARKER, NULL, false).x : 0.0f;
+    const ImVec2 text_size = CalcTextSize(name, NULL, true) + ImVec2(marker_size_x, 0.0f);
+
+    // As a nice touch we try to ensure that centered title text doesn't get affected by visibility of Close/Collapse button,
+    // while uncentered title text will still reach edges correct.
+    if (pad_l > style.FramePadding.x)
+        pad_l += g.Style.ItemInnerSpacing.x;
+    if (pad_r > style.FramePadding.x)
+        pad_r += g.Style.ItemInnerSpacing.x;
+    if (style.WindowTitleAlign.x > 0.0f && style.WindowTitleAlign.x < 1.0f)
+    {
+        float centerness = ImSaturate(1.0f - ImFabs(style.WindowTitleAlign.x - 0.5f) * 2.0f); // 0.0f on either edges, 1.0f on center
+        float pad_extend = ImMin(ImMax(pad_l, pad_r), title_bar_rect.GetWidth() - pad_l - pad_r - text_size.x);
+        pad_l = ImMax(pad_l, pad_extend * centerness);
+        pad_r = ImMax(pad_r, pad_extend * centerness);
+    }
+
+    ImRect layout_r(title_bar_rect.Min.x + pad_l, title_bar_rect.Min.y, title_bar_rect.Max.x - pad_r, title_bar_rect.Max.y);
+    ImRect clip_r(layout_r.Min.x, layout_r.Min.y, layout_r.Max.x + g.Style.ItemInnerSpacing.x, layout_r.Max.y);
+    //if (g.IO.KeyCtrl) window->DrawList->AddRect(layout_r.Min, layout_r.Max, IM_COL32(255, 128, 0, 255)); // [DEBUG]
+    RenderTextClipped(layout_r.Min, layout_r.Max, name, NULL, &text_size, style.WindowTitleAlign, &clip_r);
     if (flags & ImGuiWindowFlags_UnsavedDocument)
     {
-        ImVec2 marker_pos = ImVec2(ImMax(text_r.Min.x, text_r.Min.x + (text_r.GetWidth() - text_size.x) * style.WindowTitleAlign.x) + text_size.x, text_r.Min.y) + ImVec2(2 - marker_size_x, 0.0f);
+        ImVec2 marker_pos = ImVec2(ImMax(layout_r.Min.x, layout_r.Min.x + (layout_r.GetWidth() - text_size.x) * style.WindowTitleAlign.x) + text_size.x, layout_r.Min.y) + ImVec2(2 - marker_size_x, 0.0f);
         ImVec2 off = ImVec2(0.0f, (float)(int)(-g.FontSize * 0.25f));
-        RenderTextClipped(marker_pos + off, text_r.Max + off, UNSAVED_DOCUMENT_MARKER, NULL, NULL, ImVec2(0, style.WindowTitleAlign.y), &clip_rect);
+        RenderTextClipped(marker_pos + off, layout_r.Max + off, UNSAVED_DOCUMENT_MARKER, NULL, NULL, ImVec2(0, style.WindowTitleAlign.y), &clip_r);
     }
 }
 
@@ -12479,8 +12515,8 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
             PushItemFlag(ImGuiItemFlags_Disabled, true);
             PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_Text] * ImVec4(1.0f,1.0f,1.0f,0.5f));
         }
-        const float rad = g.FontSize * 0.5f;
-        if (CloseButton(host_window->GetID("#CLOSE"), title_bar_rect.GetTR() + ImVec2(-style.FramePadding.x - rad, style.FramePadding.y + rad), rad + 1))
+        const float button_sz = g.FontSize;
+        if (CloseButton(host_window->GetID("#CLOSE"), title_bar_rect.GetTR() + ImVec2(-style.FramePadding.x * 2.0f - button_sz, 0.0f)))
             if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_bar->VisibleTabId))
             {
                 node->WantCloseTabID = tab->ID;
