@@ -5074,8 +5074,8 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     // Close button
     if (p_open != NULL)
     {
-        const float rad = g.FontSize * 0.5f;
-        if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x - rad, window->Pos.y + style.FramePadding.y + rad), rad + 1))
+        const float button_sz = g.FontSize;
+        if (CloseButton(window->GetID("#CLOSE"), ImVec2(window->Pos.x + window->Size.x - style.FramePadding.x * 2.0f - button_sz, window->Pos.y)))
             *p_open = false;
     }
 

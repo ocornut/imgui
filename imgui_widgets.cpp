@@ -717,14 +717,14 @@ bool ImGui::ArrowButton(const char* str_id, ImGuiDir dir)
 }
 
 // Button to close a window
-bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
+bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)//, float size)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
     // We intentionally allow interaction when clipped so that a mechanical Alt,Right,Validate sequence close a window.
     // (this isn't the regular behavior of buttons, but it doesn't affect the user much because navigation tends to keep items visible).
-    const ImRect bb(pos - ImVec2(radius,radius), pos + ImVec2(radius,radius));
+    const ImRect bb(pos, pos + ImVec2(g.FontSize, g.FontSize) + g.Style.FramePadding * 2.0f);
     bool is_clipped = !ItemAdd(bb, id);
 
     bool hovered, held;
@@ -733,11 +733,12 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos, float radius)
         return pressed;
 
     // Render
+    ImU32 col = GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered);
     ImVec2 center = bb.GetCenter();
     if (hovered)
-        window->DrawList->AddCircleFilled(center, ImMax(2.0f, radius), GetColorU32(held ? ImGuiCol_ButtonActive : ImGuiCol_ButtonHovered), 9);
+        window->DrawList->AddCircleFilled(center, ImMax(2.0f, g.FontSize * 0.5f + 1.0f), col, 12);
 
-    float cross_extent = (radius * 0.7071f) - 1.0f;
+    float cross_extent = g.FontSize * 0.5f * 0.7071f - 1.0f;
     ImU32 cross_col = GetColorU32(ImGuiCol_Text);
     center -= ImVec2(0.5f, 0.5f);
     window->DrawList->AddLine(center + ImVec2(+cross_extent,+cross_extent), center + ImVec2(-cross_extent,-cross_extent), cross_col, 1.0f);
@@ -756,9 +757,11 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     bool hovered, held;
     bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
 
+    // Render
     ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
+    ImVec2 center = bb.GetCenter();
     if (hovered || held)
-        window->DrawList->AddCircleFilled(bb.GetCenter() + ImVec2(0.0f, -0.5f), g.FontSize * 0.5f + 1.0f, col, 9);
+        window->DrawList->AddCircleFilled(center/* + ImVec2(0.0f, -0.5f)*/, g.FontSize * 0.5f + 1.0f, col, 12);
     RenderArrow(bb.Min + g.Style.FramePadding, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
@@ -5358,9 +5361,9 @@ bool ImGui::CollapsingHeader(const char* label, bool* p_open, ImGuiTreeNodeFlags
         // Create a small overlapping close button // FIXME: We can evolve this into user accessible helpers to add extra buttons on title bars, headers, etc.
         ImGuiContext& g = *GImGui;
         ImGuiItemHoveredDataBackup last_item_backup;
-        float button_radius = g.FontSize * 0.5f;
-        ImVec2 button_center = ImVec2(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x - button_radius, window->DC.LastItemRect.GetCenter().y);
-        if (CloseButton(window->GetID((void*)((intptr_t)id+1)), button_center, button_radius))
+        float button_size = g.FontSize;
+        ImVec2 button_pos = ImVec2(ImMin(window->DC.LastItemRect.Max.x, window->ClipRect.Max.x) - g.Style.FramePadding.x * 2.0f - button_size, window->DC.LastItemRect.Min.y);
+        if (CloseButton(window->GetID((void*)((intptr_t)id + 1)), button_pos))
             *p_open = false;
         last_item_backup.Restore();
     }
@@ -7038,16 +7041,18 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     if (close_button_visible)
     {
         ImGuiItemHoveredDataBackup last_item_backup;
-        const float close_button_sz = g.FontSize * 0.5f;
-        if (CloseButton(close_button_id, ImVec2(bb.Max.x - frame_padding.x - close_button_sz, bb.Min.y + frame_padding.y + close_button_sz), close_button_sz))
+        const float close_button_sz = g.FontSize;
+        PushStyleVar(ImGuiStyleVar_FramePadding, frame_padding);
+        if (CloseButton(close_button_id, ImVec2(bb.Max.x - frame_padding.x * 2.0f - close_button_sz, bb.Min.y)))
             close_button_pressed = true;
+        PopStyleVar();
         last_item_backup.Restore();
 
         // Close with middle mouse button
         if (!(flags & ImGuiTabItemFlags_NoCloseWithMiddleMouseButton) && IsMouseClicked(2))
             close_button_pressed = true;
 
-        text_pixel_clip_bb.Max.x -= close_button_sz * 2.0f;
+        text_pixel_clip_bb.Max.x -= close_button_sz;
     }
 
     // Label with ellipsis

@@ -50,6 +50,7 @@ Other Changes:
   after EndGroup(). (#2550, #1875)
 - Fixed crash when appending with BeginMainMenuBar() more than once and no other window are showing. (#2567)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- Style: Made window close button cross is slightly smaller.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.
 - ImFontGlyphRangesBuilder: Fixed unnecessarily over-sized buffer, which incidentally was also not
