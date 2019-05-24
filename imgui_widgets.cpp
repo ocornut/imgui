@@ -2068,15 +2068,22 @@ bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* v, int
     for (int i = 0; i < components; i++)
     {
         PushID(i);
+        if (i > 0)
+            SameLine(0, g.Style.ItemInnerSpacing.x);
         value_changed |= DragScalar("", data_type, v, v_speed, v_min, v_max, format, power);
-        SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
         v = (void*)((char*)v + type_size);
     }
     PopID();
 
-    TextEx(label, FindRenderedTextEnd(label));
+    const char* label_end = FindRenderedTextEnd(label);
+    if (label != label_end)
+    {
+        SameLine(0, g.Style.ItemInnerSpacing.x);
+        TextEx(label, label_end);
+    }
+
     EndGroup();
     return value_changed;
 }
@@ -2516,15 +2523,22 @@ bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, i
     for (int i = 0; i < components; i++)
     {
         PushID(i);
+        if (i > 0)
+            SameLine(0, g.Style.ItemInnerSpacing.x);
         value_changed |= SliderScalar("", data_type, v, v_min, v_max, format, power);
-        SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
         v = (void*)((char*)v + type_size);
     }
     PopID();
 
-    TextEx(label, FindRenderedTextEnd(label));
+    const char* label_end = FindRenderedTextEnd(label);
+    if (label != label_end)
+    {
+        SameLine(0, g.Style.ItemInnerSpacing.x);
+        TextEx(label, label_end);
+    }
+
     EndGroup();
     return value_changed;
 }
@@ -2827,8 +2841,13 @@ bool ImGui::InputScalar(const char* label, ImGuiDataType data_type, void* data_p
             DataTypeApplyOp(data_type, '+', data_ptr, data_ptr, g.IO.KeyCtrl && step_fast ? step_fast : step);
             value_changed = true;
         }
-        SameLine(0, style.ItemInnerSpacing.x);
-        TextEx(label, FindRenderedTextEnd(label));
+
+        const char* label_end = FindRenderedTextEnd(label);
+        if (label != label_end)
+        {
+            SameLine(0, style.ItemInnerSpacing.x);
+            TextEx(label, label_end);
+        }
         style.FramePadding = backup_frame_padding;
 
         PopID();
@@ -2860,15 +2879,22 @@ bool ImGui::InputScalarN(const char* label, ImGuiDataType data_type, void* v, in
     for (int i = 0; i < components; i++)
     {
         PushID(i);
+        if (i > 0)
+            SameLine(0, g.Style.ItemInnerSpacing.x);
         value_changed |= InputScalar("", data_type, v, step, step_fast, format, flags);
-        SameLine(0, g.Style.ItemInnerSpacing.x);
         PopID();
         PopItemWidth();
         v = (void*)((char*)v + type_size);
     }
     PopID();
 
-    TextEx(label, FindRenderedTextEnd(label));
+    const char* label_end = FindRenderedTextEnd(label);
+    if (label != label_end)
+    {
+        SameLine(0.0f, g.Style.ItemInnerSpacing.x);
+        TextEx(label, label_end);
+    }
+
     EndGroup();
     return value_changed;
 }
