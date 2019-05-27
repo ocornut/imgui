@@ -350,14 +350,15 @@ enum ImGuiColumnsFlags_
     ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4    // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
 };
 
+// Extend ImGuiSelectableFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 10,
-    ImGuiSelectableFlags_PressedOnClick     = 1 << 11,
-    ImGuiSelectableFlags_PressedOnRelease   = 1 << 12,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 13,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
-    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 14
+    ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 20,
+    ImGuiSelectableFlags_PressedOnClick     = 1 << 21,
+    ImGuiSelectableFlags_PressedOnRelease   = 1 << 22,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 23,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
+    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 24
 };
 
 enum ImGuiSeparatorFlags_
@@ -1350,6 +1351,7 @@ struct ImGuiItemHoveredDataBackup
 // Tab bar, tab item
 //-----------------------------------------------------------------------------
 
+// Extend ImGuiTabBarFlags_
 enum ImGuiTabBarFlagsPrivate_
 {
     ImGuiTabBarFlags_DockNode                   = 1 << 20,  // Part of a dock node [we don't use this in the master branch but it facilitate branch syncing to keep this around]
@@ -1357,6 +1359,7 @@ enum ImGuiTabBarFlagsPrivate_
     ImGuiTabBarFlags_SaveSettings               = 1 << 22   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
 };
 
+// Extend ImGuiTabItemFlags_
 enum ImGuiTabItemFlagsPrivate_
 {
     ImGuiTabItemFlags_NoCloseButton             = 1 << 20   // Store whether p_open is set or not, which we need to recompute WidthContents during layout.
