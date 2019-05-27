@@ -888,14 +888,14 @@ void ImGui::Scrollbar(ImGuiAxis axis)
     ImRect bb;
     if (axis == ImGuiAxis_X)
     {
-        bb.Min = ImVec2(window->InnerMainRect.Min.x, window->InnerMainRect.Max.y);
-        bb.Max = ImVec2(window->InnerMainRect.Max.x, outer_rect.Max.y - window->WindowBorderSize);
+        bb.Min = ImVec2(window->InnerVisibleRect.Min.x, window->InnerVisibleRect.Max.y);
+        bb.Max = ImVec2(window->InnerVisibleRect.Max.x, outer_rect.Max.y - window->WindowBorderSize);
         rounding_corners |= ImDrawCornerFlags_BotLeft;
     }
     else
     {
-        bb.Min = ImVec2(window->InnerMainRect.Max.x, window->InnerMainRect.Min.y);
-        bb.Max = ImVec2(outer_rect.Max.x - window->WindowBorderSize, window->InnerMainRect.Max.y);
+        bb.Min = ImVec2(window->InnerVisibleRect.Max.x, window->InnerVisibleRect.Min.y);
+        bb.Max = ImVec2(outer_rect.Max.x - window->WindowBorderSize, window->InnerVisibleRect.Max.y);
         rounding_corners |= ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
     }
     ScrollbarEx(bb, id, axis, &window->Scroll[axis], window->SizeFull[axis] - other_scrollbar_size, window->SizeContents[axis], rounding_corners);

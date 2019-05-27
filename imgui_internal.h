@@ -1249,8 +1249,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeFullAtLastBegin;                // Copy of SizeFull at the end of Begin. This is the reference value we'll use on the next frame to decide if we need scrollbars.
-    ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame. Include decoration, window title, border, menu, etc.
-    ImVec2                  SizeContentsExplicit;               // Size of contents explicitly set by the user via SetNextWindowContentSize()
+    ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame. FIXME: Include decoration, window title, border, menu, etc. Ideally should remove them from this value?
+    ImVec2                  SizeContentsExplicit;               // Size of contents explicitly set by the user via SetNextWindowContentSize(). EXCLUDE decorations. Making this not consistent with the above!
     ImVec2                  WindowPadding;                      // Window padding at the time of begin.
     float                   WindowRounding;                     // Window rounding at the time of begin.
     float                   WindowBorderSize;                   // Window border size at the time of begin.
@@ -1292,7 +1292,7 @@ struct IMGUI_API ImGuiWindow
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImRect                  ClipRect;                           // Current clipping rectangle. = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
     ImRect                  OuterRectClipped;                   // == WindowRect just after setup in Begin(). == window->Rect() for root window.
-    ImRect                  InnerMainRect;                      //
+    ImRect                  InnerVisibleRect;                   // Inner visible rectangle
     ImRect                  InnerWorkRect;                      // == InnerMainRect minus WindowPadding.x
     ImRect                  InnerWorkRectClipped;               // == InnerMainRect minus WindowPadding.x, clipped within viewport or parent clip rect.
     ImRect                  ContentsRegionRect;                 // FIXME: This is currently confusing/misleading. Maximum visible content position ~~ Pos + (SizeContentsExplicit ? SizeContentsExplicit : Size - ScrollbarSizes) - CursorStartPos, per axis
