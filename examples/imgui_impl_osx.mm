@@ -66,6 +66,48 @@ void ImGui_ImplOSX_Shutdown()
 {
 }
 
+static void ImGui_ImplOSX_UpdateMouseCursor()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+        return;
+
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+    {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        [NSCursor hide];
+    }
+    else
+    {
+        // Show OS mouse cursor
+        switch (imgui_cursor) {
+        default: [[fallthrough]];
+        case ImGuiMouseCursor_Arrow:
+            [[NSCursor arrowCursor] set];
+            break;
+        case ImGuiMouseCursor_TextInput:
+            [[NSCursor IBeamCursor] set];
+            break;
+        case ImGuiMouseCursor_ResizeAll:
+        case ImGuiMouseCursor_ResizeNESW:
+        case ImGuiMouseCursor_ResizeNWSE:
+            [[NSCursor closedHandCursor] set];
+            break;
+        case ImGuiMouseCursor_ResizeNS:
+            [[NSCursor resizeUpDownCursor] set];
+            break;
+        case ImGuiMouseCursor_ResizeEW:
+            [[NSCursor resizeLeftRightCursor] set];
+            break;
+        case ImGuiMouseCursor_Hand:
+            [[NSCursor pointingHandCursor] set];
+            break;
+        }
+        [NSCursor unhide];
+    }
+}
+
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
@@ -80,6 +122,8 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
     io.DeltaTime = current_time - g_Time;
     g_Time = current_time;
+
+    ImGui_ImplOSX_UpdateMouseCursor();
 }
 
 static int mapCharacterToKey(int c)
