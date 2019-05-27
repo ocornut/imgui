@@ -26,7 +26,7 @@ bool ImGui_ImplOSX_Init()
     ImGuiIO& io = ImGui::GetIO();
 
     // Setup back-end capabilities flags
-    //io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
@@ -75,14 +75,14 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
     {
-        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         [NSCursor hide];
     }
     else
     {
-        // Show OS mouse cursor
-        switch (imgui_cursor) {
-        default: [[fallthrough]];
+#pragma clang diagnostic ignored "-Wundeclared-selector"
+        switch (imgui_cursor)
+        {
+        default:
         case ImGuiMouseCursor_Arrow:
             [[NSCursor arrowCursor] set];
             break;
@@ -90,21 +90,52 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
             [[NSCursor IBeamCursor] set];
             break;
         case ImGuiMouseCursor_ResizeAll:
-        case ImGuiMouseCursor_ResizeNESW:
-        case ImGuiMouseCursor_ResizeNWSE:
             [[NSCursor closedHandCursor] set];
-            break;
-        case ImGuiMouseCursor_ResizeNS:
-            [[NSCursor resizeUpDownCursor] set];
-            break;
-        case ImGuiMouseCursor_ResizeEW:
-            [[NSCursor resizeLeftRightCursor] set];
             break;
         case ImGuiMouseCursor_Hand:
             [[NSCursor pointingHandCursor] set];
             break;
+        case ImGuiMouseCursor_ResizeNESW:
+            {
+                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthEastSouthWestCursor)];
+                if ([cursor isKindOfClass:[NSCursor class]])
+                    [cursor set];
+                else
+                    [[NSCursor closedHandCursor] set];
+                break;
+            }
+        case ImGuiMouseCursor_ResizeNWSE:
+            {
+                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthWestSouthEastCursor)];
+                if ([cursor isKindOfClass:[NSCursor class]])
+                    [cursor set];
+                else
+                    [[NSCursor closedHandCursor] set];
+                break;
+            }
+        case ImGuiMouseCursor_ResizeNS:
+            {
+                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthSouthCursor)];
+                if ([cursor isKindOfClass:[NSCursor class]])
+                    [cursor set];
+                else
+                    [[NSCursor closedHandCursor] set];
+                break;
+            }
+            break;
+        case ImGuiMouseCursor_ResizeEW:
+            {
+                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeEastWestCursor)];
+                if ([cursor isKindOfClass:[NSCursor class]])
+                    [cursor set];
+                else
+                    [[NSCursor closedHandCursor] set];
+                break;
+            }
+            break;
         }
         [NSCursor unhide];
+#pragma clang diagnostic pop
     }
 }
 
