@@ -75,10 +75,12 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
     {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
         [NSCursor hide];
     }
     else
     {
+        // Show OS mouse cursor
 #pragma clang diagnostic ignored "-Wundeclared-selector"
         switch (imgui_cursor)
         {
@@ -119,7 +121,7 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
                 if ([cursor isKindOfClass:[NSCursor class]])
                     [cursor set];
                 else
-                    [[NSCursor closedHandCursor] set];
+                    [[NSCursor resizeUpDownCursor] set];
                 break;
             }
             break;
@@ -129,7 +131,7 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
                 if ([cursor isKindOfClass:[NSCursor class]])
                     [cursor set];
                 else
-                    [[NSCursor closedHandCursor] set];
+                    [[NSCursor resizeLeftRightCursor] set];
                 break;
             }
             break;
