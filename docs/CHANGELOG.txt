@@ -54,12 +54,13 @@ Other Changes:
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
-- Style: Made window close button cross is slightly smaller.
+- Style: Made window close button cross slightly smaller.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.
 - ImFontGlyphRangesBuilder: Fixed unnecessarily over-sized buffer, which incidentally was also not
-  fully cleared. Fixed edge case overflow when adding character 0xFFFF. (#2568). [@NIKE3500]
-- Add native Mac clipboard copy/paste default implementation in core library to match what we are
+  fully cleared. Fixed edge-case overflow when adding character 0xFFFF. (#2568). [@NIKE3500]
+- Demo: Added full "Dear ImGui" prefix to the title of "Dear ImGui Demo" and "Dear ImGui Metrics" windows.
+- Backends: Add native Mac clipboard copy/paste default implementation in core library to match what we are
   dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
