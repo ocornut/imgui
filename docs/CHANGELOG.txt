@@ -49,6 +49,8 @@ Other Changes:
 - Fixed uses of IsItemDeactivated(), IsItemDeactivatedAfterEdit() on multi-components widgets and
   after EndGroup(). (#2550, #1875)
 - Fixed crash when appending with BeginMainMenuBar() more than once and no other window are showing. (#2567)
+- ColorEdit: Fixed the color picker popup only displaying inputs as HSV instead of showing multiple
+  options. (#2587, broken in 1.69 by #2384).
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
