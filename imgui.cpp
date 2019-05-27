@@ -14087,6 +14087,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
         if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
+    if (sscanf(line, " NoResize=%d%n", &x, &r) == 1)                { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoResize; }
     if (sscanf(line, " CentralNode=%d%n", &x, &r) == 1)             { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_CentralNode; }
     if (sscanf(line, " NoTabBar=%d%n", &x, &r) == 1)                { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoTabBar; }
     if (sscanf(line, " HiddenTabBar=%d%n", &x, &r) == 1)            { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_HiddenTabBar; }
@@ -14109,7 +14110,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.SelectedTabID = node->SelectedTabID;
     node_settings.SplitAxis = node->IsSplitNode() ? (char)node->SplitAxis : ImGuiAxis_None;
     node_settings.Depth = (char)depth;
-    node_settings.Flags = node->GetMergedFlags() & ImGuiDockNodeFlags_SavedFlagsMask_;
+    node_settings.Flags = (node->LocalFlags & ImGuiDockNodeFlags_SavedFlagsMask_);
     node_settings.Pos = ImVec2ih((short)node->Pos.x, (short)node->Pos.y);
     node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
     node_settings.SizeRef = ImVec2ih((short)node->SizeRef.x, (short)node->SizeRef.y);
@@ -14154,6 +14155,8 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
         if (node_settings->SplitAxis != ImGuiAxis_None)
             buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
+        if (node_settings->Flags & ImGuiDockNodeFlags_NoResize)
+            buf->appendf(" NoResize=1");
         if (node_settings->Flags & ImGuiDockNodeFlags_CentralNode)
             buf->appendf(" CentralNode=1");
         if (node_settings->Flags & ImGuiDockNodeFlags_NoTabBar)
