@@ -11065,18 +11065,16 @@ struct ImGuiDockPreviewData
 // Persistent Settings data, stored contiguously in SettingsNodes (sizeof() ~32 bytes)
 struct ImGuiDockNodeSettings
 {
-    ImGuiID         ID;
-    ImGuiID         ParentID;
-    ImGuiID         SelectedTabID;
-    signed char     SplitAxis;
-    char            Depth;
-    char            IsDockSpace;
-    char            IsCentralNode;
-    char            IsHiddenTabBar;
-    ImVec2ih        Pos;
-    ImVec2ih        Size;
-    ImVec2ih        SizeRef;
-    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; IsDockSpace = IsCentralNode = IsHiddenTabBar = 0; }
+    ImGuiID             ID;
+    ImGuiID             ParentID;
+    ImGuiID             SelectedTabID;
+    signed char         SplitAxis;
+    char                Depth;
+    ImGuiDockNodeFlags  Flags;                  // NB: We save individual flags one by one in ascii format (ImGuiDockNodeFlags_SavedFlagsMask_)
+    ImVec2ih            Pos;
+    ImVec2ih            Size;
+    ImVec2ih            SizeRef;
+    ImGuiDockNodeSettings() { ID = ParentID = SelectedTabID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; Flags = ImGuiDockNodeFlags_None; }
 };
 
 struct ImGuiDockContext
@@ -11394,7 +11392,7 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
         ImGuiDockContextPruneNodeData* data_root = (data->RootID == settings->ID) ? data : pool.GetByKey(data->RootID);
 
         bool remove = false;
-        remove |= (data->CountWindows == 1 && settings->ParentID == 0 && data->CountChildNodes == 0 && !settings->IsCentralNode);  // Floating root node with only 1 window
+        remove |= (data->CountWindows == 1 && settings->ParentID == 0 && data->CountChildNodes == 0 && !(settings->Flags & ImGuiDockNodeFlags_CentralNode));  // Floating root node with only 1 window
         remove |= (data->CountWindows == 0 && settings->ParentID == 0 && data->CountChildNodes == 0); // Leaf nodes with 0 window
         remove |= (data_root->CountChildWindows == 0);
         if (remove)
@@ -11425,12 +11423,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
             node->ParentNode->ChildNodes[1] = node;
         node->SelectedTabID = settings->SelectedTabID;
         node->SplitAxis = settings->SplitAxis;
-        if (settings->IsDockSpace)
-            node->LocalFlags |= ImGuiDockNodeFlags_DockSpace;
-        if (settings->IsCentralNode)
-            node->LocalFlags |= ImGuiDockNodeFlags_CentralNode;
-        if (settings->IsHiddenTabBar)
-            node->LocalFlags |= ImGuiDockNodeFlags_HiddenTabBar;
+        node->LocalFlags |= (settings->Flags & ImGuiDockNodeFlags_SavedFlagsMask_);
 
         // Bind host window immediately if it already exist (in case of a rebuild)
         // This is useful as the RootWindowForTitleBarHighlight links necessary to highlight the currently focused node requires node->HostWindow to be set.
@@ -14076,10 +14069,11 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     // Parsing, e.g.
     // " DockNode   ID=0x00000001 Pos=383,193 Size=201,322 Split=Y,0.506 "
     // "   DockNode ID=0x00000002 Parent=0x00000001 "
+    // Important: this code expect currently fields in a fixed order.
     ImGuiDockNodeSettings node;
     line = ImStrSkipBlank(line);
     if      (strncmp(line, "DockNode", 8) == 0)  { line = ImStrSkipBlank(line + strlen("DockNode")); }
-    else if (strncmp(line, "DockSpace", 9) == 0) { line = ImStrSkipBlank(line + strlen("DockSpace")); node.IsDockSpace = true; }
+    else if (strncmp(line, "DockSpace", 9) == 0) { line = ImStrSkipBlank(line + strlen("DockSpace")); node.Flags |= ImGuiDockNodeFlags_DockSpace; }
     else return;
     if (sscanf(line, "ID=0x%08X%n",      &node.ID, &r) == 1)        { line += r; } else return;
     if (sscanf(line, " Parent=0x%08X%n", &node.ParentID, &r) == 1)  { line += r; if (node.ParentID == 0) return; }
@@ -14093,8 +14087,11 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
         if (sscanf(line, " SizeRef=%i,%i%n", &x, &y, &r) == 2)      { line += r; node.SizeRef = ImVec2ih((short)x, (short)y); }
     }
     if (sscanf(line, " Split=%c%n", &c, &r) == 1)                   { line += r; if (c == 'X') node.SplitAxis = ImGuiAxis_X; else if (c == 'Y') node.SplitAxis = ImGuiAxis_Y; }
-    if (sscanf(line, " CentralNode=%d%n", &x, &r) == 1)             { line += r; node.IsCentralNode = (x != 0); }
-    if (sscanf(line, " HiddenTabBar=%d%n", &x, &r) == 1)            { line += r; node.IsHiddenTabBar = (x != 0); }
+    if (sscanf(line, " CentralNode=%d%n", &x, &r) == 1)             { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_CentralNode; }
+    if (sscanf(line, " NoTabBar=%d%n", &x, &r) == 1)                { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoTabBar; }
+    if (sscanf(line, " HiddenTabBar=%d%n", &x, &r) == 1)            { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_HiddenTabBar; }
+    if (sscanf(line, " NoWindowMenuButton=%d%n", &x, &r) == 1)      { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoWindowMenuButton; }
+    if (sscanf(line, " NoCloseButton=%d%n", &x, &r) == 1)           { line += r; if (x != 0) node.Flags |= ImGuiDockNodeFlags_NoCloseButton; }
     if (sscanf(line, " SelectedTab=0x%08X%n", &node.SelectedTabID,&r) == 1) { line += r; }
     ImGuiDockContext* dc = ctx->DockContext;
     if (node.ParentID != 0)
@@ -14112,9 +14109,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.SelectedTabID = node->SelectedTabID;
     node_settings.SplitAxis = node->IsSplitNode() ? (char)node->SplitAxis : ImGuiAxis_None;
     node_settings.Depth = (char)depth;
-    node_settings.IsDockSpace = (char)node->IsDockSpace();
-    node_settings.IsCentralNode = (char)node->IsCentralNode();
-    node_settings.IsHiddenTabBar = (char)node->IsHiddenTabBar();
+    node_settings.Flags = node->GetMergedFlags() & ImGuiDockNodeFlags_SavedFlagsMask_;
     node_settings.Pos = ImVec2ih((short)node->Pos.x, (short)node->Pos.y);
     node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
     node_settings.SizeRef = ImVec2ih((short)node->SizeRef.x, (short)node->SizeRef.y);
@@ -14151,7 +14146,7 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
     {
         const int line_start_pos = buf->size(); (void)line_start_pos;
         const ImGuiDockNodeSettings* node_settings = &dc->SettingsNodes[node_n];
-        buf->appendf("%*s%s%*s", node_settings->Depth * 2, "", node_settings->IsDockSpace ? "DockSpace" : "DockNode ", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
+        buf->appendf("%*s%s%*s", node_settings->Depth * 2, "", (node_settings->Flags & ImGuiDockNodeFlags_DockSpace) ? "DockSpace" : "DockNode ", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
         buf->appendf(" ID=0x%08X", node_settings->ID);
         if (node_settings->ParentID)
             buf->appendf(" Parent=0x%08X SizeRef=%d,%d", node_settings->ParentID, node_settings->SizeRef.x, node_settings->SizeRef.y);
@@ -14159,10 +14154,16 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
         if (node_settings->SplitAxis != ImGuiAxis_None)
             buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
-        if (node_settings->IsCentralNode)
+        if (node_settings->Flags & ImGuiDockNodeFlags_CentralNode)
             buf->appendf(" CentralNode=1");
-        if (node_settings->IsHiddenTabBar)
+        if (node_settings->Flags & ImGuiDockNodeFlags_NoTabBar)
+            buf->appendf(" NoTabBar=1");
+        if (node_settings->Flags & ImGuiDockNodeFlags_HiddenTabBar)
             buf->appendf(" HiddenTabBar=1");
+        if (node_settings->Flags & ImGuiDockNodeFlags_NoWindowMenuButton)
+            buf->appendf(" NoWindowMenuButton=1");
+        if (node_settings->Flags & ImGuiDockNodeFlags_NoCloseButton)
+            buf->appendf(" NoCloseButton=1");
         if (node_settings->SelectedTabID)
             buf->appendf(" SelectedTab=0x%08X", node_settings->SelectedTabID);
 
@@ -14700,10 +14701,12 @@ void ImGui::ShowDockingDebug()
                 ImGui::BulletText("Misc:%s%s%s%s", node->IsDockSpace() ? " IsDockSpace" : "", node->IsCentralNode() ? " IsCentralNode" : "", (g.FrameCount - node->LastFrameAlive < 2) ? " IsAlive" : "", (g.FrameCount - node->LastFrameActive < 2) ? " IsActive" : "");
                 if (ImGui::TreeNode("flags", "LocalFlags: 0x%04X SharedFlags: 0x%04X", node->LocalFlags, node->SharedFlags))
                 {
-                    ImGui::CheckboxFlags("LocalFlags: NoSplit",     (unsigned int*)&node->LocalFlags, ImGuiDockNodeFlags_NoSplit);
-                    ImGui::CheckboxFlags("LocalFlags: NoResize",    (unsigned int*)&node->LocalFlags, ImGuiDockNodeFlags_NoResize);
-                    ImGui::CheckboxFlags("LocalFlags: NoTabBar",    (unsigned int*)&node->LocalFlags, ImGuiDockNodeFlags_NoTabBar);
-                    ImGui::CheckboxFlags("LocalFlags: HiddenTabBar",(unsigned int*)&node->LocalFlags, ImGuiDockNodeFlags_HiddenTabBar);
+                    ImGui::CheckboxFlags("LocalFlags: NoSplit",             (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoSplit);
+                    ImGui::CheckboxFlags("LocalFlags: NoResize",            (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoResize);
+                    ImGui::CheckboxFlags("LocalFlags: NoTabBar",            (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoTabBar);
+                    ImGui::CheckboxFlags("LocalFlags: HiddenTabBar",        (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_HiddenTabBar);
+                    ImGui::CheckboxFlags("LocalFlags: NoWindowMenuButton",  (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoWindowMenuButton);
+                    ImGui::CheckboxFlags("LocalFlags: NoCloseButton",       (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoCloseButton);
                     ImGui::TreePop();
                 }
                 if (node->ChildNodes[0])
