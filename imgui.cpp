@@ -2997,7 +2997,7 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
 
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (wrap_pos_x == 0.0f)
-        wrap_pos_x = GetWorkRectMax().x;
+        wrap_pos_x = GetContentRegionMaxAbs().x;
     else if (wrap_pos_x > 0.0f)
         wrap_pos_x += window->Pos.x - window->Scroll.x; // wrap_pos_x is provided is window local space
 
@@ -5517,10 +5517,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
         // Note that if our window is collapsed we will end up with an inverted (~null) clipping rectangle which is the correct behavior.
         const ImRect title_bar_rect = window->TitleBarRect();
-        window->InnerVisibleRect.Min.x = title_bar_rect.Min.x + window->WindowBorderSize;
-        window->InnerVisibleRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + (((flags & ImGuiWindowFlags_MenuBar) || !(flags & ImGuiWindowFlags_NoTitleBar)) ? style.FrameBorderSize : window->WindowBorderSize);
-        window->InnerVisibleRect.Max.x = window->Pos.x + window->Size.x - ImMax(window->ScrollbarSizes.x, window->WindowBorderSize);
-        window->InnerVisibleRect.Max.y = window->Pos.y + window->Size.y - ImMax(window->ScrollbarSizes.y, window->WindowBorderSize);
+        window->InnerRect.Min.x = title_bar_rect.Min.x + window->WindowBorderSize;
+        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + (((flags & ImGuiWindowFlags_MenuBar) || !(flags & ImGuiWindowFlags_NoTitleBar)) ? style.FrameBorderSize : window->WindowBorderSize);
+        window->InnerRect.Max.x = window->Pos.x + window->Size.x - ImMax(window->ScrollbarSizes.x, window->WindowBorderSize);
+        window->InnerRect.Max.y = window->Pos.y + window->Size.y - ImMax(window->ScrollbarSizes.y, window->WindowBorderSize);
 
         // Outer host rectangle for drawing background and borders
         ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
@@ -5532,12 +5532,12 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Inner work/clipping rectangle will extend a little bit outside the work region.
         // This is to allow e.g. Selectable or CollapsingHeader or some separators to cover that space.
         // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
-        window->InnerWorkRect.Min.x = ImFloor(0.5f + window->InnerVisibleRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
-        window->InnerWorkRect.Min.y = ImFloor(0.5f + window->InnerVisibleRect.Min.y);
-        window->InnerWorkRect.Max.x = ImFloor(0.5f + window->InnerVisibleRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
-        window->InnerWorkRect.Max.y = ImFloor(0.5f + window->InnerVisibleRect.Max.y);
-        window->InnerWorkRectClipped = window->InnerWorkRect;
-        window->InnerWorkRectClipped.ClipWithFull(host_rect);
+        window->WorkRect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
+        window->WorkRect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y);
+        window->WorkRect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
+        window->WorkRect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y);
+        window->InnerClipRect = window->WorkRect;
+        window->InnerClipRect.ClipWithFull(host_rect);
 
         // DRAWING
 
@@ -5662,7 +5662,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetCurrentWindow(window);
     }
 
-    PushClipRect(window->InnerWorkRectClipped.Min, window->InnerWorkRectClipped.Max, true);
+    PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
 
     // Clear 'accessed' flag last thing (After PushClipRect which will set the flag. We want the flag to stay false when the default "Debug" window is unused)
     if (first_begin_of_the_frame)
@@ -5905,7 +5905,7 @@ float ImGui::CalcItemWidth()
         w = window->DC.ItemWidth;
     if (w < 0.0f)
     {
-        float region_max_x = GetWorkRectMax().x;
+        float region_max_x = GetContentRegionMaxAbs().x;
         w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
     }
     w = (float)(int)w;
@@ -5922,7 +5922,7 @@ ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
 
     ImVec2 region_max;
     if (size.x < 0.0f || size.y < 0.0f)
-        region_max = GetWorkRectMax();
+        region_max = GetContentRegionMaxAbs();
 
     if (size.x == 0.0f)
         size.x = default_w;
@@ -6513,7 +6513,7 @@ ImVec2 ImGui::GetContentRegionMax()
 }
 
 // [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
-ImVec2 ImGui::GetWorkRectMax()
+ImVec2 ImGui::GetContentRegionMaxAbs()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImVec2 mx = window->ContentsRegionRect.Max;
@@ -6525,7 +6525,7 @@ ImVec2 ImGui::GetWorkRectMax()
 ImVec2 ImGui::GetContentRegionAvail()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
-    return GetWorkRectMax() - window->DC.CursorPos;
+    return GetContentRegionMaxAbs() - window->DC.CursorPos;
 }
 
 // In window space (not screen space!)
@@ -7843,7 +7843,7 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
 // NB: We modify rect_rel by the amount we scrolled for, so it is immediately updated.
 static void NavScrollToBringItemIntoView(ImGuiWindow* window, const ImRect& item_rect)
 {
-    ImRect window_rect(window->InnerVisibleRect.Min - ImVec2(1, 1), window->InnerVisibleRect.Max + ImVec2(1, 1));
+    ImRect window_rect(window->InnerRect.Min - ImVec2(1, 1), window->InnerRect.Max + ImVec2(1, 1));
     //GetForegroundDrawList(window)->AddRect(window_rect.Min, window_rect.Max, IM_COL32_WHITE); // [DEBUG]
     if (window_rect.Contains(item_rect))
         return;
@@ -8117,7 +8117,7 @@ static void ImGui::NavUpdate()
     if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == 0)
     {
         ImGuiWindow* window = g.NavWindow;
-        ImRect window_rect_rel(window->InnerVisibleRect.Min - window->Pos - ImVec2(1,1), window->InnerVisibleRect.Max - window->Pos + ImVec2(1,1));
+        ImRect window_rect_rel(window->InnerRect.Min - window->Pos - ImVec2(1,1), window->InnerRect.Max - window->Pos + ImVec2(1,1));
         if (!window_rect_rel.Contains(window->NavRectRel[g.NavLayer]))
         {
             float pad = window->CalcFontSize() * 0.5f;
@@ -8218,14 +8218,14 @@ static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
             {
                 // Fallback manual-scroll when window has no navigable item
                 if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                    SetWindowScrollY(window, window->Scroll.y - window->InnerVisibleRect.GetHeight());
+                    SetWindowScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
                 else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                    SetWindowScrollY(window, window->Scroll.y + window->InnerVisibleRect.GetHeight());
+                    SetWindowScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
             }
             else
             {
                 const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
-                const float page_offset_y = ImMax(0.0f, window->InnerVisibleRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
+                const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
                 float nav_scoring_rect_offset_y = 0.0f;
                 if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
                 {
@@ -8701,7 +8701,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     window->DC.CurrentColumns = columns;
 
     // Set state for first column
-    const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->InnerWorkRect.Max.x - window->Pos.x);
+    const float content_region_width = (window->SizeContentsExplicit.x != 0.0f) ? (window->SizeContentsExplicit.x) : (window->WorkRect.Max.x - window->Pos.x);
     columns->OffMinX = window->DC.Indent.x - g.Style.ItemSpacing.x; // Lock our horizontal range
     columns->OffMaxX = ImMax(content_region_width - window->Scroll.x, columns->OffMinX + 1.0f);
     columns->HostCursorPosY = window->DC.CursorPos.y;
@@ -9749,10 +9749,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
-    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerVisibleRect, RT_InnerWorkRect, RT_InnerWorkRectClipped, RT_ContentsRegionRect, RT_ContentsFullRect };
+    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerRect, RT_InnerClipRect, RT_WorkRect, RT_Contents, RT_ContentsRegionRect };
     static bool show_windows_begin_order = false;
     static bool show_windows_rects = false;
-    static int  show_windows_rect_type = RT_InnerWorkRect;
+    static int  show_windows_rect_type = RT_WorkRect;
     static bool show_drawcmd_clip_rects = true;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -9769,9 +9769,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         {
             if (rect_type == RT_OuterRect)                  { return window->Rect(); }
             else if (rect_type == RT_OuterRectClipped)      { return window->OuterRectClipped; }
-            else if (rect_type == RT_InnerVisibleRect)      { return window->InnerVisibleRect; }
-            else if (rect_type == RT_InnerWorkRect)         { return window->InnerWorkRect; }
-            else if (rect_type == RT_InnerWorkRectClipped)  { return window->InnerWorkRectClipped; }
+            else if (rect_type == RT_InnerRect)             { return window->InnerRect; }
+            else if (rect_type == RT_InnerClipRect)         { return window->InnerClipRect; }
+            else if (rect_type == RT_WorkRect)              { return window->WorkRect; }
+            else if (rect_type == RT_Contents)              { return ImRect(window->Pos, window->Pos + window->SizeContents); }
             else if (rect_type == RT_ContentsRegionRect)    { return window->ContentsRegionRect; }
             IM_ASSERT(0);
             return ImRect();
@@ -9979,7 +9980,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, "OuterRect\0" "OuterRectClipped\0" "InnerVisibleRect\0" "InnerWorkRect\0" "InnerWorkRectClipped\0" "ContentsRegionRect\0");
+        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, "OuterRect\0" "OuterRectClipped\0" "InnerRect\0" "InnerClipRect\0" "WorkRect\0" "Contents\0" "ContentsRegionRect\0");
         if (show_windows_rects && g.NavWindow)
         {
             ImRect r = Funcs::GetRect(g.NavWindow, show_windows_rect_type);

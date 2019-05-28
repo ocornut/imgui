@@ -888,14 +888,14 @@ void ImGui::Scrollbar(ImGuiAxis axis)
     ImRect bb;
     if (axis == ImGuiAxis_X)
     {
-        bb.Min = ImVec2(window->InnerVisibleRect.Min.x, window->InnerVisibleRect.Max.y);
-        bb.Max = ImVec2(window->InnerVisibleRect.Max.x, outer_rect.Max.y - window->WindowBorderSize);
+        bb.Min = ImVec2(window->InnerRect.Min.x, window->InnerRect.Max.y);
+        bb.Max = ImVec2(window->InnerRect.Max.x, outer_rect.Max.y - window->WindowBorderSize);
         rounding_corners |= ImDrawCornerFlags_BotLeft;
     }
     else
     {
-        bb.Min = ImVec2(window->InnerVisibleRect.Max.x, window->InnerVisibleRect.Min.y);
-        bb.Max = ImVec2(outer_rect.Max.x - window->WindowBorderSize, window->InnerVisibleRect.Max.y);
+        bb.Min = ImVec2(window->InnerRect.Max.x, window->InnerRect.Min.y);
+        bb.Max = ImVec2(outer_rect.Max.x - window->WindowBorderSize, window->InnerRect.Max.y);
         rounding_corners |= ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
     }
     ScrollbarEx(bb, id, axis, &window->Scroll[axis], window->SizeFull[axis] - other_scrollbar_size, window->SizeContents[axis], rounding_corners);
@@ -5127,7 +5127,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     // We vertically grow up to current line height up the typical widget height.
     const float text_base_offset_y = ImMax(padding.y, window->DC.CurrLineTextBaseOffset); // Latch before ItemSize changes it
     const float frame_height = ImMax(ImMin(window->DC.CurrLineSize.y, g.FontSize + style.FramePadding.y*2), label_size.y + padding.y*2);
-    ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(GetWorkRectMax().x, window->DC.CursorPos.y + frame_height));
+    ImRect frame_bb = ImRect(window->DC.CursorPos, ImVec2(GetContentRegionMaxAbs().x, window->DC.CursorPos.y + frame_height));
     if (display_frame)
     {
         // Framed header expand a little outside the default padding
@@ -6281,7 +6281,7 @@ bool    ImGui::BeginTabBar(const char* str_id, ImGuiTabBarFlags flags)
 
     ImGuiID id = window->GetID(str_id);
     ImGuiTabBar* tab_bar = g.TabBars.GetOrAddByKey(id);
-    ImRect tab_bar_bb = ImRect(window->DC.CursorPos.x, window->DC.CursorPos.y, window->InnerWorkRect.Max.x, window->DC.CursorPos.y + g.FontSize + g.Style.FramePadding.y * 2);
+    ImRect tab_bar_bb = ImRect(window->DC.CursorPos.x, window->DC.CursorPos.y, window->WorkRect.Max.x, window->DC.CursorPos.y + g.FontSize + g.Style.FramePadding.y * 2);
     tab_bar->ID = id;
     return BeginTabBarEx(tab_bar, tab_bar_bb, flags | ImGuiTabBarFlags_IsFocused);
 }
