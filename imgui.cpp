@@ -5519,15 +5519,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->OuterRectClipped.ClipWith(host_rect);
 
         // Inner rectangle
-        // Used by: 
+        // Not affected by window border size. Used by: 
         // - NavScrollToBringItemIntoView()
         // - NavUpdatePageUpPageDown()
         // - Scrollbar()
         const ImRect title_bar_rect = window->TitleBarRect();
-        window->InnerRect.Min.x = title_bar_rect.Min.x + window->WindowBorderSize;
-        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + (((flags & ImGuiWindowFlags_MenuBar) || !(flags & ImGuiWindowFlags_NoTitleBar)) ? style.FrameBorderSize : window->WindowBorderSize);
-        window->InnerRect.Max.x = window->Pos.x + window->Size.x - ImMax(window->ScrollbarSizes.x, window->WindowBorderSize);
-        window->InnerRect.Max.y = window->Pos.y + window->Size.y - ImMax(window->ScrollbarSizes.y, window->WindowBorderSize);
+        window->InnerRect.Min.x = title_bar_rect.Min.x;
+        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
+        window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
 
         // Work rectangle.
         // Affected by window padding and border size. Used by:
