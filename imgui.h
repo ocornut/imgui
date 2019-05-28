@@ -114,6 +114,7 @@ struct ImGuiStorage;                // Helper for key->value storage
 struct ImGuiStyle;                  // Runtime data for styling/colors
 struct ImGuiTextBuffer;             // Helper to hold and append into a text buffer (~string builder)
 struct ImGuiTextFilter;             // Helper to parse and apply text filters (e.g. "aaaaa[,bbbb][,ccccc]")
+struct ImVec2;                      // 2D vector (often used to store positions, sizes, etc.)
 
 // Typedefs and Enums/Flags (declared as int for compatibility with old C++, to allow using as flags and to not pollute the top of this file)
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
@@ -149,6 +150,7 @@ typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: f
 typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin*()
 typedef int (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
+typedef void(*ImGuiArrowCallback)(ImDrawList* list, ImGuiDir dir, ImVec2 min, float scale);
 
 // Scalar data types
 typedef signed char         ImS8;   // 8-bit signed integer == char
