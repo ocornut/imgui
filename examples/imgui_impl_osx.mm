@@ -19,6 +19,8 @@
 
 // Data
 static CFAbsoluteTime g_Time = 0.0;
+static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static bool           g_MouseCursorHidden = false;
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -32,14 +34,14 @@ static CFAbsoluteTime g_Time = 0.0;
 bool ImGui_ImplOSX_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
-
+    
     // Setup back-end capabilities flags
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
-
+    
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
     io.KeyMap[ImGuiKey_Tab]         = '\t';
@@ -63,10 +65,28 @@ bool ImGui_ImplOSX_Init()
     io.KeyMap[ImGuiKey_X]           = 'X';
     io.KeyMap[ImGuiKey_Y]           = 'Y';
     io.KeyMap[ImGuiKey_Z]           = 'Z';
+    
+    g_MouseCursorHidden = false;
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)]
+        ? [NSCursor _windowResizeNorthSouthCursor]
+        : [NSCursor resizeUpDownCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)]
+        ? [NSCursor _windowResizeEastWestCursor]
+        : [NSCursor resizeLeftRightCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)]
+        ? [NSCursor _windowResizeNorthEastSouthWestCursor]
+        : [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)]
+        ? [NSCursor _windowResizeNorthWestSouthEastCursor]
+        : [NSCursor closedHandCursor];
 
     // We don't set the io.SetClipboardTextFn/io.GetClipboardTextFn handlers,
     // because imgui.cpp has a default for them that works with OSX.
-
+    
     return true;
 }
 
@@ -79,71 +99,26 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return;
-
+    
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
     {
         // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
-        [NSCursor hide];
+        if (!g_MouseCursorHidden)
+        {
+            g_MouseCursorHidden = true;
+            [NSCursor hide];
+        }
     }
     else
     {
         // Show OS mouse cursor
-        switch (imgui_cursor)
+        [g_MouseCursors[g_MouseCursors[imgui_cursor]? imgui_cursor: ImGuiMouseCursor_Arrow] set];
+        if (g_MouseCursorHidden)
         {
-        case ImGuiMouseCursor_TextInput:
-            [[NSCursor IBeamCursor] set];
-            break;
-        case ImGuiMouseCursor_ResizeAll:
-            [[NSCursor closedHandCursor] set];
-            break;
-        case ImGuiMouseCursor_Hand:
-            [[NSCursor pointingHandCursor] set];
-            break;
-        case ImGuiMouseCursor_ResizeNESW:
-            {
-                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthEastSouthWestCursor)];
-                if ([cursor isKindOfClass:[NSCursor class]])
-                    [cursor set];
-                else
-                    [[NSCursor closedHandCursor] set];
-                break;
-            }
-        case ImGuiMouseCursor_ResizeNWSE:
-            {
-                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthWestSouthEastCursor)];
-                if ([cursor isKindOfClass:[NSCursor class]])
-                    [cursor set];
-                else
-                    [[NSCursor closedHandCursor] set];
-                break;
-            }
-        case ImGuiMouseCursor_ResizeNS:
-            {
-                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeNorthSouthCursor)];
-                if ([cursor isKindOfClass:[NSCursor class]])
-                    [cursor set];
-                else
-                    [[NSCursor resizeUpDownCursor] set];
-                break;
-            }
-            break;
-        case ImGuiMouseCursor_ResizeEW:
-            {
-                NSCursor* cursor = [[NSCursor class] performSelector:@selector(_windowResizeEastWestCursor)];
-                if ([cursor isKindOfClass:[NSCursor class]])
-                    [cursor set];
-                else
-                    [[NSCursor resizeLeftRightCursor] set];
-                break;
-            }
-            break;
-        case ImGuiMouseCursor_Arrow:
-        default:
-            [[NSCursor arrowCursor] set];
-            break;
+            g_MouseCursorHidden = false;
+            [NSCursor unhide];
         }
-        [NSCursor unhide];
     }
 }
 
@@ -154,14 +129,14 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     const float dpi = [view.window backingScaleFactor];
     io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
     io.DisplayFramebufferScale = ImVec2(dpi, dpi);
-
+    
     // Setup time step
     if (g_Time == 0.0)
         g_Time = CFAbsoluteTimeGetCurrent();
     CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
     io.DeltaTime = current_time - g_Time;
     g_Time = current_time;
-
+    
     ImGui_ImplOSX_UpdateMouseCursor();
 }
 
@@ -188,7 +163,7 @@ static void resetKeys()
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
-
+    
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
@@ -196,7 +171,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.MouseDown[button] = true;
         return io.WantCaptureMouse;
     }
-
+    
     if (event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeRightMouseUp || event.type == NSEventTypeOtherMouseUp)
     {
         int button = (int)[event buttonNumber];
@@ -204,7 +179,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.MouseDown[button] = false;
         return io.WantCaptureMouse;
     }
-
+    
     if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged)
     {
         NSPoint mousePoint = event.locationInWindow;
@@ -212,13 +187,13 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
         io.MousePos = ImVec2(mousePoint.x, mousePoint.y);
     }
-
+    
     if (event.type == NSEventTypeScrollWheel)
     {
         double wheel_dx = 0.0;
         double wheel_dy = 0.0;
-
-        #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+        
+#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
         {
             wheel_dx = [event scrollingDeltaX];
@@ -230,19 +205,19 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
         }
         else
-        #endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
+#endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
         {
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
         }
-
+        
         if (fabs(wheel_dx) > 0.0)
             io.MouseWheelH += wheel_dx * 0.1f;
         if (fabs(wheel_dy) > 0.0)
             io.MouseWheel += wheel_dy * 0.1f;
         return io.WantCaptureMouse;
     }
-
+    
     // FIXME: All the key handling is wrong and broken. Refer to GLFW's cocoa_init.mm and cocoa_window.mm.
     if (event.type == NSEventTypeKeyDown)
     {
@@ -253,7 +228,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             int c = [str characterAtIndex:i];
             if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF))
                 io.AddInputCharacter((unsigned int)c);
-
+            
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);
             if (key != -1 && key < 256 && !io.KeyCtrl)
@@ -263,7 +238,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         }
         return io.WantCaptureKeyboard;
     }
-
+    
     if (event.type == NSEventTypeKeyUp)
     {
         NSString* str = [event characters];
@@ -277,12 +252,12 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         }
         return io.WantCaptureKeyboard;
     }
-
+    
     if (event.type == NSEventTypeFlagsChanged)
     {
         ImGuiIO& io = ImGui::GetIO();
         unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
-
+        
         bool oldKeyCtrl = io.KeyCtrl;
         bool oldKeyShift = io.KeyShift;
         bool oldKeyAlt = io.KeyAlt;
@@ -291,12 +266,12 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         io.KeyShift     = flags & NSEventModifierFlagShift;
         io.KeyAlt       = flags & NSEventModifierFlagOption;
         io.KeySuper     = flags & NSEventModifierFlagCommand;
-
+        
         // We must reset them as we will not receive any keyUp event if they where pressed with a modifier
         if ((oldKeyShift && !io.KeyShift) || (oldKeyCtrl && !io.KeyCtrl) || (oldKeyAlt && !io.KeyAlt) || (oldKeySuper && !io.KeySuper))
             resetKeys();
         return io.WantCaptureKeyboard;
     }
-
+    
     return false;
 }
