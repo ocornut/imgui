@@ -4996,6 +4996,8 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     }
 }
 
+// Draw background and borders
+// Draw and handle scrollbars
 void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size)
 {
     ImGuiContext& g = *GImGui;
@@ -5503,39 +5505,46 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Store a backup of SizeFull which we will use next frame to decide if we need scrollbars.
         window->SizeFullAtLastBegin = window->SizeFull;
 
-        // UPDATE RECTANGLES
+        // UPDATE RECTANGLES (1- THOSE NOT AFFECTED BY SCROLLING)
+        // Update various regions. Variables they depends on should be set above in this function.
+        // We set this up after processing the resize grip so that our rectangles doesn't lag by a frame.
 
-        // Update various regions. Variables they depends on are set above in this function.
-        // FIXME: window->ContentsRegionRect.Max is currently very misleading / partly faulty, but some BeginChild() patterns relies on it.
-        // NB: WindowBorderSize is included in WindowPadding _and_ ScrollbarSizes so we need to cancel one out.
-        window->ContentsRegionRect.Min.x = window->Pos.x - window->Scroll.x + window->WindowPadding.x;
-        window->ContentsRegionRect.Min.y = window->Pos.y - window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
-        window->ContentsRegionRect.Max.x = window->Pos.x - window->Scroll.x - window->WindowPadding.x + (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : (window->Size.x - window->ScrollbarSizes.x + ImMin(window->ScrollbarSizes.x, window->WindowBorderSize)));
-        window->ContentsRegionRect.Max.y = window->Pos.y - window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : (window->Size.y - window->ScrollbarSizes.y + ImMin(window->ScrollbarSizes.y, window->WindowBorderSize)));
+        // Outer rectangle
+        // Not affected by window border size. Used by:
+        // - FindHoveredWindow() (w/ extra padding when border resize is enabled)
+        // - Begin() initial clipping rect for drawing window background and borders.
+        // - Begin() clipping whole child
+        ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
+        window->OuterRectClipped = window->Rect();
+        window->OuterRectClipped.ClipWith(host_rect);
 
         // Inner rectangle
-        // We set this up after processing the resize grip so that our clip rectangle doesn't lag by a frame
-        // Note that if our window is collapsed we will end up with an inverted (~null) clipping rectangle which is the correct behavior.
+        // Used by: 
+        // - NavScrollToBringItemIntoView()
+        // - NavUpdatePageUpPageDown()
+        // - Scrollbar()
         const ImRect title_bar_rect = window->TitleBarRect();
         window->InnerRect.Min.x = title_bar_rect.Min.x + window->WindowBorderSize;
         window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight() + (((flags & ImGuiWindowFlags_MenuBar) || !(flags & ImGuiWindowFlags_NoTitleBar)) ? style.FrameBorderSize : window->WindowBorderSize);
         window->InnerRect.Max.x = window->Pos.x + window->Size.x - ImMax(window->ScrollbarSizes.x, window->WindowBorderSize);
         window->InnerRect.Max.y = window->Pos.y + window->Size.y - ImMax(window->ScrollbarSizes.y, window->WindowBorderSize);
 
-        // Outer host rectangle for drawing background and borders
-        ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
-
-        // Save clipped aabb so we can access it in constant-time in FindHoveredWindow()
-        window->OuterRectClipped = window->Rect();
-        window->OuterRectClipped.ClipWith(host_rect);
-
-        // Inner work/clipping rectangle will extend a little bit outside the work region.
-        // This is to allow e.g. Selectable or CollapsingHeader or some separators to cover that space.
-        // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
+        // Work rectangle.
+        // Affected by window padding and border size. Used by:
+        // - Columns() for right-most edge
+        // - BeginTabBar() for right-most edge
         window->WorkRect.Min.x = ImFloor(0.5f + window->InnerRect.Min.x + ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
         window->WorkRect.Min.y = ImFloor(0.5f + window->InnerRect.Min.y);
         window->WorkRect.Max.x = ImFloor(0.5f + window->InnerRect.Max.x - ImMax(0.0f, ImFloor(window->WindowPadding.x * 0.5f - window->WindowBorderSize)));
         window->WorkRect.Max.y = ImFloor(0.5f + window->InnerRect.Max.y);
+
+        // Inner clipping rectangle.
+        // Will extend a little bit outside the normal work region.
+        // This is to allow e.g. Selectable or CollapsingHeader or some separators to cover that space.
+        // Force round operator last to ensure that e.g. (int)(max.x-min.x) in user's render code produce correct result.
+        // Note that if our window is collapsed we will end up with an inverted (~null) clipping rectangle which is the correct behavior.
+        // Affected by window/frame border size. Used by:
+        // - Begin() initial clip rect
         window->InnerClipRect = window->WorkRect;
         window->InnerClipRect.ClipWithFull(host_rect);
 
@@ -5581,6 +5590,19 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             }
             window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_NavWindowingHighlight, g.NavWindowingHighlightAlpha), rounding, ~0, 3.0f);
         }
+
+        // UPDATE RECTANGLES (2- THOSE AFFECTED BY SCROLLING)
+
+        // [LEGACY] Contents Region
+        // FIXME: window->ContentsRegionRect.Max is currently very misleading / partly faulty, but some BeginChild() patterns relies on it.
+        // NB: WindowBorderSize is included in WindowPadding _and_ ScrollbarSizes so we need to cancel one out when we have both.
+        // Used by:
+        // - Mouse wheel scrolling
+        // - ... (many things)
+        window->ContentsRegionRect.Min.x = window->Pos.x - window->Scroll.x + window->WindowPadding.x;
+        window->ContentsRegionRect.Min.y = window->Pos.y - window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
+        window->ContentsRegionRect.Max.x = window->Pos.x - window->Scroll.x - window->WindowPadding.x + (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : (window->Size.x - window->ScrollbarSizes.x + ImMin(window->ScrollbarSizes.x, window->WindowBorderSize)));
+        window->ContentsRegionRect.Max.y = window->Pos.y - window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : (window->Size.y - window->ScrollbarSizes.y + ImMin(window->ScrollbarSizes.y, window->WindowBorderSize)));
 
         // Setup drawing context
         // (NB: That term "drawing context / DC" lost its meaning a long time ago. Initially was meant to hold transient data only. Nowadays difference between window-> and window->DC-> is dubious.)
