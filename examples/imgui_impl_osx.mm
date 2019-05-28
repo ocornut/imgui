@@ -1,10 +1,12 @@
 // dear imgui: Platform Binding for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
-// [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
+// [ALPHA] Early bindings, not well tested. If you want a portable application, prefer using the GLFW or SDL platform bindings on Mac.
 
+// Implemented features:
+//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this back-end).
 // Issues:
-// [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-// [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 
 #include "imgui.h"
 #include "imgui_impl_osx.h"
@@ -12,6 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
 //  2019-05-18: Misc: Removed clipboard handlers as they are now supported by core imgui.cpp.
 //  2019-05-11: Inputs: Don't filter character values before calling AddInputCharacter() apart from 0xF700..0xFFFF range.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
@@ -66,23 +69,16 @@ bool ImGui_ImplOSX_Init()
     io.KeyMap[ImGuiKey_Y]           = 'Y';
     io.KeyMap[ImGuiKey_Z]           = 'Z';
 
+    // Load cursors. Some of them are undocumented.
     g_MouseCursorHidden = false;
     g_MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
     g_MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
     g_MouseCursors[ImGuiMouseCursor_ResizeAll] = [NSCursor closedHandCursor];
     g_MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
-    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)]
-        ? [NSCursor _windowResizeNorthSouthCursor]
-        : [NSCursor resizeUpDownCursor];
-    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)]
-        ? [NSCursor _windowResizeEastWestCursor]
-        : [NSCursor resizeLeftRightCursor];
-    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)]
-        ? [NSCursor _windowResizeNorthEastSouthWestCursor]
-        : [NSCursor closedHandCursor];
-    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)]
-        ? [NSCursor _windowResizeNorthWestSouthEastCursor]
-        : [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)] ? [NSCursor _windowResizeNorthSouthCursor] : [NSCursor resizeUpDownCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)] ? [NSCursor _windowResizeEastWestCursor] : [NSCursor resizeLeftRightCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)] ? [NSCursor _windowResizeNorthEastSouthWestCursor] : [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)] ? [NSCursor _windowResizeNorthWestSouthEastCursor] : [NSCursor closedHandCursor];
 
     // We don't set the io.SetClipboardTextFn/io.GetClipboardTextFn handlers,
     // because imgui.cpp has a default for them that works with OSX.
@@ -113,7 +109,7 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     else
     {
         // Show OS mouse cursor
-        [g_MouseCursors[g_MouseCursors[imgui_cursor]? imgui_cursor: ImGuiMouseCursor_Arrow] set];
+        [g_MouseCursors[g_MouseCursors[imgui_cursor] ? imgui_cursor : ImGuiMouseCursor_Arrow] set];
         if (g_MouseCursorHidden)
         {
             g_MouseCursorHidden = false;

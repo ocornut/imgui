@@ -62,6 +62,7 @@ Other Changes:
 - Demo: Added full "Dear ImGui" prefix to the title of "Dear ImGui Demo" and "Dear ImGui Metrics" windows.
 - Backends: Add native Mac clipboard copy/paste default implementation in core library to match what we are
   dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
+- Backends: OSX: imgui_impl_osx: Added mouse cursor support. (#2585, #1873) [@actboy168]
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)
