@@ -2077,11 +2077,14 @@ struct ImFontAtlas
     IMGUI_API const ImWchar*    GetGlyphRangesVietnamese();             // Default + Vietname characters
 
     //-------------------------------------------
-    // Custom Rectangles/Glyphs API
+    // [BETA] Custom Rectangles/Glyphs API
     //-------------------------------------------
 
-    // You can request arbitrary rectangles to be packed into the atlas, for your own purposes. After calling Build(), you can query the rectangle position and render your pixels.
-    // You can also request your rectangles to be mapped as font glyph (given a font + Unicode point), so you can render e.g. custom colorful icons and use them as regular glyphs.
+    // You can request arbitrary rectangles to be packed into the atlas, for your own purposes. 
+    // After calling Build(), you can query the rectangle position and render your pixels.
+    // You can also request your rectangles to be mapped as font glyph (given a font + Unicode point), 
+    // so you can render e.g. custom colorful icons and use them as regular glyphs.
+    // Read misc/fonts/README.txt for more details about using colorful icons.
     struct CustomRect
     {
         unsigned int    ID;             // Input    // User ID. Use <0x10000 to map into a font glyph, >=0x10000 for other/internal/custom texture data.
@@ -2093,7 +2096,6 @@ struct ImFontAtlas
         CustomRect()            { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; GlyphAdvanceX = 0.0f; GlyphOffset = ImVec2(0,0); Font = NULL; }
         bool IsPacked() const   { return X != 0xFFFF; }
     };
-
     IMGUI_API int       AddCustomRectRegular(unsigned int id, int width, int height);                                                                   // Id needs to be >= 0x10000. Id >= 0x80000000 are reserved for ImGui and ImDrawList
     IMGUI_API int       AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0,0));   // Id needs to be < 0x10000 to register a rectangle to map into a specific font.
     const CustomRect*   GetCustomRectByIndex(int index) const { if (index < 0) return NULL; return &CustomRects[index]; }
