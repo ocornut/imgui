@@ -34,7 +34,7 @@ static bool           g_MouseCursorHidden = false;
 bool ImGui_ImplOSX_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
-    
+
     // Setup back-end capabilities flags
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
@@ -65,7 +65,7 @@ bool ImGui_ImplOSX_Init()
     io.KeyMap[ImGuiKey_X]           = 'X';
     io.KeyMap[ImGuiKey_Y]           = 'Y';
     io.KeyMap[ImGuiKey_Z]           = 'Z';
-    
+
     g_MouseCursorHidden = false;
     g_MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
     g_MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
@@ -99,7 +99,7 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
         return;
-    
+
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
     if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
     {
@@ -136,7 +136,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
     io.DeltaTime = current_time - g_Time;
     g_Time = current_time;
-    
+
     ImGui_ImplOSX_UpdateMouseCursor();
 }
 
