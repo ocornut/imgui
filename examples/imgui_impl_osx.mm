@@ -41,7 +41,7 @@ bool ImGui_ImplOSX_Init()
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
-    
+
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
     io.KeyMap[ImGuiKey_Tab]         = '\t';
@@ -86,7 +86,7 @@ bool ImGui_ImplOSX_Init()
 
     // We don't set the io.SetClipboardTextFn/io.GetClipboardTextFn handlers,
     // because imgui.cpp has a default for them that works with OSX.
-    
+
     return true;
 }
 
@@ -129,7 +129,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     const float dpi = [view.window backingScaleFactor];
     io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
     io.DisplayFramebufferScale = ImVec2(dpi, dpi);
-    
+
     // Setup time step
     if (g_Time == 0.0)
         g_Time = CFAbsoluteTimeGetCurrent();
@@ -163,7 +163,7 @@ static void resetKeys()
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
-    
+
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
@@ -171,7 +171,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.MouseDown[button] = true;
         return io.WantCaptureMouse;
     }
-    
+
     if (event.type == NSEventTypeLeftMouseUp || event.type == NSEventTypeRightMouseUp || event.type == NSEventTypeOtherMouseUp)
     {
         int button = (int)[event buttonNumber];
@@ -179,7 +179,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             io.MouseDown[button] = false;
         return io.WantCaptureMouse;
     }
-    
+
     if (event.type == NSEventTypeMouseMoved || event.type == NSEventTypeLeftMouseDragged)
     {
         NSPoint mousePoint = event.locationInWindow;
@@ -187,13 +187,13 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
         io.MousePos = ImVec2(mousePoint.x, mousePoint.y);
     }
-    
+
     if (event.type == NSEventTypeScrollWheel)
     {
         double wheel_dx = 0.0;
         double wheel_dy = 0.0;
-        
-#if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
+
+        #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
         if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
         {
             wheel_dx = [event scrollingDeltaX];
@@ -205,19 +205,19 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
         }
         else
-#endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
+        #endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
         {
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
         }
-        
+
         if (fabs(wheel_dx) > 0.0)
             io.MouseWheelH += wheel_dx * 0.1f;
         if (fabs(wheel_dy) > 0.0)
             io.MouseWheel += wheel_dy * 0.1f;
         return io.WantCaptureMouse;
     }
-    
+
     // FIXME: All the key handling is wrong and broken. Refer to GLFW's cocoa_init.mm and cocoa_window.mm.
     if (event.type == NSEventTypeKeyDown)
     {
@@ -228,7 +228,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             int c = [str characterAtIndex:i];
             if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF))
                 io.AddInputCharacter((unsigned int)c);
-            
+
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);
             if (key != -1 && key < 256 && !io.KeyCtrl)
@@ -238,7 +238,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         }
         return io.WantCaptureKeyboard;
     }
-    
+
     if (event.type == NSEventTypeKeyUp)
     {
         NSString* str = [event characters];
@@ -252,12 +252,12 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         }
         return io.WantCaptureKeyboard;
     }
-    
+
     if (event.type == NSEventTypeFlagsChanged)
     {
         ImGuiIO& io = ImGui::GetIO();
         unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
-        
+
         bool oldKeyCtrl = io.KeyCtrl;
         bool oldKeyShift = io.KeyShift;
         bool oldKeyAlt = io.KeyAlt;
@@ -266,12 +266,12 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         io.KeyShift     = flags & NSEventModifierFlagShift;
         io.KeyAlt       = flags & NSEventModifierFlagOption;
         io.KeySuper     = flags & NSEventModifierFlagCommand;
-        
+
         // We must reset them as we will not receive any keyUp event if they where pressed with a modifier
         if ((oldKeyShift && !io.KeyShift) || (oldKeyCtrl && !io.KeyCtrl) || (oldKeyAlt && !io.KeyAlt) || (oldKeySuper && !io.KeySuper))
             resetKeys();
         return io.WantCaptureKeyboard;
     }
-    
+
     return false;
 }
