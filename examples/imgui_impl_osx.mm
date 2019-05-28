@@ -19,6 +19,16 @@
 
 // Data
 static CFAbsoluteTime g_Time = 0.0;
+static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static bool           g_MouseCursorHidden = false;
+
+// Undocumented methods for creating cursors.
+@interface NSCursor()
++ (id)_windowResizeNorthWestSouthEastCursor;
++ (id)_windowResizeNorthEastSouthWestCursor;
++ (id)_windowResizeNorthSouthCursor;
++ (id)_windowResizeEastWestCursor;
+@end
 
 // Functions
 bool ImGui_ImplOSX_Init()
@@ -26,7 +36,7 @@ bool ImGui_ImplOSX_Init()
     ImGuiIO& io = ImGui::GetIO();
 
     // Setup back-end capabilities flags
-    //io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
@@ -56,6 +66,24 @@ bool ImGui_ImplOSX_Init()
     io.KeyMap[ImGuiKey_Y]           = 'Y';
     io.KeyMap[ImGuiKey_Z]           = 'Z';
 
+    g_MouseCursorHidden = false;
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)]
+        ? [NSCursor _windowResizeNorthSouthCursor]
+        : [NSCursor resizeUpDownCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)]
+        ? [NSCursor _windowResizeEastWestCursor]
+        : [NSCursor resizeLeftRightCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)]
+        ? [NSCursor _windowResizeNorthEastSouthWestCursor]
+        : [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)]
+        ? [NSCursor _windowResizeNorthWestSouthEastCursor]
+        : [NSCursor closedHandCursor];
+
     // We don't set the io.SetClipboardTextFn/io.GetClipboardTextFn handlers,
     // because imgui.cpp has a default for them that works with OSX.
 
@@ -64,6 +92,34 @@ bool ImGui_ImplOSX_Init()
 
 void ImGui_ImplOSX_Shutdown()
 {
+}
+
+static void ImGui_ImplOSX_UpdateMouseCursor()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+        return;
+
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+    {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        if (!g_MouseCursorHidden)
+        {
+            g_MouseCursorHidden = true;
+            [NSCursor hide];
+        }
+    }
+    else
+    {
+        // Show OS mouse cursor
+        [g_MouseCursors[g_MouseCursors[imgui_cursor]? imgui_cursor: ImGuiMouseCursor_Arrow] set];
+        if (g_MouseCursorHidden)
+        {
+            g_MouseCursorHidden = false;
+            [NSCursor unhide];
+        }
+    }
 }
 
 void ImGui_ImplOSX_NewFrame(NSView* view)
@@ -80,6 +136,8 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
     io.DeltaTime = current_time - g_Time;
     g_Time = current_time;
+
+    ImGui_ImplOSX_UpdateMouseCursor();
 }
 
 static int mapCharacterToKey(int c)
