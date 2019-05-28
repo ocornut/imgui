@@ -20,6 +20,14 @@
 // Data
 static CFAbsoluteTime g_Time = 0.0;
 
+// Undocumented methods for creating cursors.
+@interface NSCursor()
++ (id)_windowResizeNorthWestSouthEastCursor;
++ (id)_windowResizeNorthEastSouthWestCursor;
++ (id)_windowResizeNorthSouthCursor;
++ (id)_windowResizeEastWestCursor;
+@end
+
 // Functions
 bool ImGui_ImplOSX_Init()
 {
@@ -81,7 +89,6 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
     else
     {
         // Show OS mouse cursor
-#pragma clang diagnostic ignored "-Wundeclared-selector"
         switch (imgui_cursor)
         {
         default:
@@ -137,7 +144,6 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
             break;
         }
         [NSCursor unhide];
-#pragma clang diagnostic pop
     }
 }
 
