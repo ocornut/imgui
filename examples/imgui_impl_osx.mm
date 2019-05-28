@@ -91,10 +91,6 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
         // Show OS mouse cursor
         switch (imgui_cursor)
         {
-        default:
-        case ImGuiMouseCursor_Arrow:
-            [[NSCursor arrowCursor] set];
-            break;
         case ImGuiMouseCursor_TextInput:
             [[NSCursor IBeamCursor] set];
             break;
@@ -141,6 +137,10 @@ static void ImGui_ImplOSX_UpdateMouseCursor()
                     [[NSCursor resizeLeftRightCursor] set];
                 break;
             }
+            break;
+        case ImGuiMouseCursor_Arrow:
+        default:
+            [[NSCursor arrowCursor] set];
             break;
         }
         [NSCursor unhide];
