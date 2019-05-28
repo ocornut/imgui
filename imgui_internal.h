@@ -361,6 +361,12 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_AllowItemOverlap   = 1 << 24
 };
 
+// Extend ImGuiTreeNodeFlags_
+enum ImGuiTreeNodeFlagsPrivate_
+{
+    ImGuiTreeNodeFlags_ClipLabelForTrailingButton = 1 << 20
+};
+
 enum ImGuiSeparatorFlags_
 {
     ImGuiSeparatorFlags_None                = 0,
