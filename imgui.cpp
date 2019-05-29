@@ -1055,6 +1055,7 @@ static void             SettingsHandlerWindow_WriteAll(ImGuiContext* imgui_ctx, 
 // Platform Dependents default implementation for IO functions
 static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
 static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
+static void             ImeSetOpenStatusFn_DefaultImpl(bool open);
 static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
 
 namespace ImGui
@@ -1235,6 +1236,7 @@ ImGuiIO::ImGuiIO()
     GetClipboardTextFn = GetClipboardTextFn_DefaultImpl;   // Platform dependent default implementations
     SetClipboardTextFn = SetClipboardTextFn_DefaultImpl;
     ClipboardUserData = NULL;
+    ImeSetOpenStatusFn = ImeSetOpenStatusFn_DefaultImpl;
     ImeSetInputScreenPosFn = ImeSetInputScreenPosFn_DefaultImpl;
     ImeWindowHandle = NULL;
 
@@ -3583,6 +3585,7 @@ void ImGui::NewFrame()
     g.MouseCursor = ImGuiMouseCursor_Arrow;
     g.WantCaptureMouseNextFrame = g.WantCaptureKeyboardNextFrame = g.WantTextInputNextFrame = -1;
     g.PlatformImePos = ImVec2(1.0f, 1.0f); // OS Input Method Editor showing on top-left of our window by default
+    g.PlatformImeStatus = false;
 
     // Mouse wheel scrolling, scale
     UpdateMouseWheel();
@@ -3877,7 +3880,13 @@ void ImGui::EndFrame()
     IM_ASSERT(g.FrameScopeActive && "Forgot to call ImGui::NewFrame()?");
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
-    if (g.IO.ImeSetInputScreenPosFn && (g.PlatformImeLastPos.x == FLT_MAX || ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f))
+    if (g.IO.ImeSetOpenStatusFn && g.PlatformImeLastStatus != g.PlatformImeStatus)
+    {
+        g.IO.ImeSetOpenStatusFn(g.PlatformImeStatus);
+        g.PlatformImeLastStatus = g.PlatformImeStatus;
+    }
+
+    if (g.PlatformImeStatus && g.IO.ImeSetInputScreenPosFn && (g.PlatformImeLastPos.x == FLT_MAX || ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f))
     {
         g.IO.ImeSetInputScreenPosFn((int)g.PlatformImePos.x, (int)g.PlatformImePos.y);
         g.PlatformImeLastPos = g.PlatformImePos;
@@ -9703,6 +9712,12 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 #pragma comment(lib, "imm32")
 #endif
 
+static void ImeSetOpenStatusFn_DefaultImpl(bool open)
+{
+    if (HWND hwnd = (HWND)GImGui->IO.ImeWindowHandle)
+        ::ImmAssociateContextEx(hwnd, NULL, open? IACE_DEFAULT: 0);
+}
+
 static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 {
     // Notify OS Input Method Editor of text input position
@@ -9719,6 +9734,8 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 }
 
 #else
+
+static void ImeSetOpenStatusFn_DefaultImpl(int, int) {}
 
 static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 
