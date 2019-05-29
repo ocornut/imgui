@@ -9735,7 +9735,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #else
 
-static void ImeSetOpenStatusFn_DefaultImpl(int, int) {}
+static void ImeSetOpenStatusFn_DefaultImpl(bool) {}
 
 static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 
