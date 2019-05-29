@@ -13,7 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2019-05-29: DirectX12: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_HasVtxOffset flag.
+//  2019-05-29: DirectX12: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: DirectX12: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-03-29: Misc: Various minor tidying up.
 //  2018-12-03: Misc: Added #pragma comment statement to automatically link with d3dcompiler.lib when using D3DCompile().
@@ -607,7 +607,7 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_dx12";
-    io.BackendFlags |= ImGuiBackendFlags_HasVtxOffset;      // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     g_pd3dDevice = device;
     g_RTVFormat = rtv_format;

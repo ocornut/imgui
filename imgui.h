@@ -1003,10 +1003,10 @@ enum ImGuiConfigFlags_
 enum ImGuiBackendFlags_
 {
     ImGuiBackendFlags_None                  = 0,
-    ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Platform Back-end supports gamepad and currently has one connected.
-    ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Platform Back-end supports honoring GetMouseCursor() value to change the OS cursor shape.
-    ImGuiBackendFlags_HasSetMousePos        = 1 << 2,   // Platform Back-end supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
-    ImGuiBackendFlags_HasVtxOffset          = 1 << 3    // Renderer Back-end supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bits indices.
+    ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Back-end Platform supports gamepad and currently has one connected.
+    ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Back-end Platform supports honoring GetMouseCursor() value to change the OS cursor shape.
+    ImGuiBackendFlags_HasSetMousePos        = 1 << 2,   // Back-end Platform supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
+    ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3    // Back-end Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bits indices.
 };
 
 // Enumeration for PushStyleColor() / PopStyleColor()
@@ -1779,14 +1779,14 @@ typedef void (*ImDrawCallback)(const ImDrawList* parent_list, const ImDrawCmd* c
 #define ImDrawCallback_ResetRenderState     (ImDrawCallback)(-1)
 
 // Typically, 1 command = 1 GPU draw call (unless command is a callback)
-// Pre 1.71 back-ends will typically ignore the VtxOffset/IdxOffset fields. When (io.BackendFlags & ImGuiBackendFlags_HasVtxOffset) 
+// Pre 1.71 back-ends will typically ignore the VtxOffset/IdxOffset fields. When 'io.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset'
 // is enabled, those fields allow us to render meshes larger than 64K vertices while keeping 16-bits indices.
 struct ImDrawCmd
 {
     unsigned int    ElemCount;              // Number of indices (multiple of 3) to be rendered as triangles. Vertices are stored in the callee ImDrawList's vtx_buffer[] array, indices in idx_buffer[].
     ImVec4          ClipRect;               // Clipping rectangle (x1, y1, x2, y2). Subtract ImDrawData->DisplayPos to get clipping rectangle in "viewport" coordinates
     ImTextureID     TextureId;              // User-provided texture ID. Set by user in ImfontAtlas::SetTexID() for fonts or passed to Image*() functions. Ignore if never using images or multiple fonts atlas.
-    unsigned int    VtxOffset;              // Start offset in vertex buffer. Pre-1.71 or without ImGuiBackendFlags_HasVtxOffset: always 0. With ImGuiBackendFlags_HasVtxOffset: may be >0 to support meshes larger than 64K vertices with 16-bits indices.
+    unsigned int    VtxOffset;              // Start offset in vertex buffer. Pre-1.71 or without ImGuiBackendFlags_RendererHasVtxOffset: always 0. With ImGuiBackendFlags_RendererHasVtxOffset: may be >0 to support meshes larger than 64K vertices with 16-bits indices.
     unsigned int    IdxOffset;              // Start offset in index buffer. Always equal to sum of ElemCount drawn so far.
     ImDrawCallback  UserCallback;           // If != NULL, call the function instead of rendering the vertices. clip_rect and texture_id will be set normally.
     void*           UserCallbackData;       // The draw callback code can access this.
@@ -1795,7 +1795,7 @@ struct ImDrawCmd
 };
 
 // Vertex index 
-// (to allow large meshes with 16-bits indices: set 'io.BackendFlags |= ImGuiBackendFlags_HasVtxOffset' and handle ImDrawCmd::VtxOffset in the renderer back-end)
+// (to allow large meshes with 16-bits indices: set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' and handle ImDrawCmd::VtxOffset in the renderer back-end)
 // (to use 32-bits indices: override with '#define ImDrawIdx unsigned int' in imconfig.h)
 #ifndef ImDrawIdx
 typedef unsigned short ImDrawIdx;
@@ -1843,7 +1843,7 @@ enum ImDrawListFlags_
     ImDrawListFlags_None             = 0,
     ImDrawListFlags_AntiAliasedLines = 1 << 0,  // Lines are anti-aliased (*2 the number of triangles for 1.0f wide line, otherwise *3 the number of triangles)
     ImDrawListFlags_AntiAliasedFill  = 1 << 1,  // Filled shapes have anti-aliased edges (*2 the number of vertices)
-    ImDrawListFlags_AllowVtxOffset   = 1 << 2   // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'io.BackendFlags & ImGuiBackendFlags_HasVtxOffset' is enabled.
+    ImDrawListFlags_AllowVtxOffset   = 1 << 2   // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
 };
 
 // Draw command list

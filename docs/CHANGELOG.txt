@@ -57,8 +57,8 @@ Other Changes:
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
 - ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bits indices.
-  To enable the feature, the renderer back-end needs to set 'io.BackendFlags |= ImGuiBackendFlags_HasVtxOffset'
-  and honor the ImDrawCmd::VtxOffset field. Otherwise the value will always be zero.
+  The renderer back-end needs to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' to enable
+  this, and honor the ImDrawCmd::VtxOffset field. Otherwise the value will always be zero.
   This has the advantage of preserving smaller index buffers and allowing to execute on hardware that do not
   support 32-bits indices. Most examples back-ends have been modified to support the VtxOffset field.
 - ImDrawList: Added ImDrawCmd::IdxOffset value, equivalent to summing element count for each draw command.
@@ -72,7 +72,7 @@ Other Changes:
   dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
 - Backends: OSX: imgui_impl_osx: Added mouse cursor support. (#2585, #1873) [@actboy168]
 - Examples/Backends: DirectX9/10/11/12, Vulkan, OpenGL3 (Desktop GL only): Added support for large meshes
-  (64k+ vertices) with 16-bits indices, enable 'ImGuiBackendFlags_HasVtxOffset' config flag in back-end.
+  (64k+ vertices) with 16-bits indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those back-ends.
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)
