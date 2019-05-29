@@ -364,6 +364,7 @@ void ImDrawList::Clear()
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
     Flags = _Data->InitialFlags;
+    _VtxCurrentOffset = 0;
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
@@ -416,6 +417,8 @@ void ImDrawList::AddDrawCmd()
     ImDrawCmd draw_cmd;
     draw_cmd.ClipRect = GetCurrentClipRect();
     draw_cmd.TextureId = GetCurrentTextureId();
+    draw_cmd.VtxOffset = _VtxCurrentOffset;
+    draw_cmd.IdxOffset = IdxBuffer.Size;
 
     IM_ASSERT(draw_cmd.ClipRect.x <= draw_cmd.ClipRect.z && draw_cmd.ClipRect.y <= draw_cmd.ClipRect.w);
     CmdBuffer.push_back(draw_cmd);
@@ -604,6 +607,14 @@ void ImDrawList::ChannelsSetCurrent(int idx)
 // NB: this can be called with negative count for removing primitives (as long as the result does not underflow)
 void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
+    // Large mesh support (when enabled)
+    if (sizeof(ImDrawIdx) == 2 && (_VtxCurrentIdx + vtx_count >= (1 << 16)) && (Flags & ImDrawListFlags_AllowVtxOffset))
+    {
+        _VtxCurrentOffset = VtxBuffer.Size;
+        _VtxCurrentIdx = 0;
+        AddDrawCmd();
+    }
+
     ImDrawCmd& draw_cmd = CmdBuffer.Data[CmdBuffer.Size-1];
     draw_cmd.ElemCount += idx_count;
 
@@ -2950,7 +2961,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list->CmdBuffer[draw_list->CmdBuffer.Size-1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
     draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
-    draw_list->_VtxCurrentIdx = (unsigned int)draw_list->VtxBuffer.Size;
+    draw_list->_VtxCurrentIdx = vtx_current_idx;
 }
 
 //-----------------------------------------------------------------------------

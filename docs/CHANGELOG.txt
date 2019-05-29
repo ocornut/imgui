@@ -56,6 +56,13 @@ Other Changes:
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
+- ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bits indices.
+  To enable the feature, the renderer back-end needs to set 'io.BackendFlags |= ImGuiBackendFlags_HasVtxOffset'
+  and honor the ImDrawCmd::VtxOffset field. Otherwise the value will always be zero.
+  This has the advantage of preserving smaller index buffers and allowing to execute on hardware that do not
+  support 32-bits indices. Most examples back-ends have been modified to support the VtxOffset field.
+- ImDrawList: Added ImDrawCmd::IdxOffset value, equivalent to summing element count for each draw command.
+  This is provided for convenience and consistency with VtxOffset.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. (#2545)
   Combine with RasterizerFlags::MonoHinting for best results.
 - ImFontGlyphRangesBuilder: Fixed unnecessarily over-sized buffer, which incidentally was also not
