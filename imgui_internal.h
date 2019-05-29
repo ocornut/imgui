@@ -731,6 +731,7 @@ struct IMGUI_API ImDrawListSharedData
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
     float           CurveTessellationTol;
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
+    ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
     // Const data
     // FIXME: Bake rounded corners fill/borders in atlas
@@ -1034,7 +1035,7 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
-    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(NULL), ForegroundDrawList(NULL)
+    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(&DrawListSharedData), ForegroundDrawList(&DrawListSharedData)
     {
         Initialized = false;
         FrameScopeActive = FrameScopePushedImplicitWindow = false;
@@ -1109,9 +1110,7 @@ struct ImGuiContext
         FocusTabPressed = false;
 
         DimBgRatio = 0.0f;
-        BackgroundDrawList._Data = &DrawListSharedData;
         BackgroundDrawList._OwnerName = "##Background"; // Give it a name for debugging
-        ForegroundDrawList._Data = &DrawListSharedData;
         ForegroundDrawList._OwnerName = "##Foreground"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
 

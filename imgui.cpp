@@ -3502,16 +3502,15 @@ void ImGui::NewFrame()
     IM_ASSERT(g.Font->IsLoaded());
     g.DrawListSharedData.ClipRectFullscreen = ImVec4(0.0f, 0.0f, g.IO.DisplaySize.x, g.IO.DisplaySize.y);
     g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
+    g.DrawListSharedData.InitialFlags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     g.BackgroundDrawList.Clear();
     g.BackgroundDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.BackgroundDrawList.PushClipRectFullScreen();
-    g.BackgroundDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     g.ForegroundDrawList.Clear();
     g.ForegroundDrawList.PushTextureID(g.IO.Fonts->TexID);
     g.ForegroundDrawList.PushClipRectFullScreen();
-    g.ForegroundDrawList.Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
 
     // Mark rendering data as invalid to prevent user who may have a handle on it to use it.
     g.DrawData.Clear();
@@ -5529,7 +5528,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Setup draw list and outer clipping rectangle
         window->DrawList->Clear();
-        window->DrawList->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 

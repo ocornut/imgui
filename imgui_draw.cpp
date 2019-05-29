@@ -348,6 +348,7 @@ ImDrawListSharedData::ImDrawListSharedData()
     FontSize = 0.0f;
     CurveTessellationTol = 0.0f;
     ClipRectFullscreen = ImVec4(-8192.0f, -8192.0f, +8192.0f, +8192.0f);
+    InitialFlags = ImDrawListFlags_None;
 
     // Const data
     for (int i = 0; i < IM_ARRAYSIZE(CircleVtx12); i++)
@@ -362,7 +363,7 @@ void ImDrawList::Clear()
     CmdBuffer.resize(0);
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
-    Flags = ImDrawListFlags_AntiAliasedLines | ImDrawListFlags_AntiAliasedFill;
+    Flags = _Data->InitialFlags;
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
     _IdxWritePtr = NULL;
