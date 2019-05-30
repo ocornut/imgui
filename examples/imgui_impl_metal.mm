@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -10,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-29: Metal: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: Metal: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: Metal: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
@@ -76,6 +78,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_metal";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -478,12 +481,9 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     for (int n = 0; n < drawData->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = drawData->CmdLists[n];
-        ImDrawIdx idx_buffer_offset = 0;
 
         memcpy((char *)vertexBuffer.buffer.contents + vertexBufferOffset, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
         memcpy((char *)indexBuffer.buffer.contents + indexBufferOffset, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-
-        [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
 
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
@@ -522,14 +522,15 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                     // Bind texture, Draw
                     if (pcmd->TextureId != NULL)
                         [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(pcmd->TextureId) atIndex:0];
+
+                    [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
                     [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                                                indexCount:pcmd->ElemCount
                                                 indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
                                               indexBuffer:indexBuffer.buffer
-                                        indexBufferOffset:indexBufferOffset + idx_buffer_offset];
+                                        indexBufferOffset:indexBufferOffset + pcmd->IdxOffset * sizeof(ImDrawIdx)];
                 }
             }
-            idx_buffer_offset += pcmd->ElemCount * sizeof(ImDrawIdx);
         }
 
         vertexBufferOffset += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);

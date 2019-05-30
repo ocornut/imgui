@@ -38,14 +38,11 @@
 		4080A99F20B034280036BA46 /* imgui_impl_osx.mm */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.objcpp; name = imgui_impl_osx.mm; path = ../imgui_impl_osx.mm; sourceTree = "<group>"; };
 		4080A9A020B034280036BA46 /* imgui_impl_opengl2.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_opengl2.h; path = ../imgui_impl_opengl2.h; sourceTree = "<group>"; };
 		4080A9A120B034280036BA46 /* imgui_impl_osx.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_osx.h; path = ../imgui_impl_osx.h; sourceTree = "<group>"; };
-		4080A9A420B0343C0036BA46 /* stb_truetype.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_truetype.h; path = ../../stb_truetype.h; sourceTree = "<group>"; };
 		4080A9A520B0343C0036BA46 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = ../../imgui_internal.h; sourceTree = "<group>"; };
 		4080A9A620B0343C0036BA46 /* imgui_demo.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_demo.cpp; path = ../../imgui_demo.cpp; sourceTree = "<group>"; };
 		4080A9A720B0343C0036BA46 /* imgui.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui.cpp; path = ../../imgui.cpp; sourceTree = "<group>"; };
 		4080A9A820B0343C0036BA46 /* imgui.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui.h; path = ../../imgui.h; sourceTree = "<group>"; };
-		4080A9A920B0343C0036BA46 /* stb_rect_pack.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_rect_pack.h; path = ../../stb_rect_pack.h; sourceTree = "<group>"; };
 		4080A9AA20B0343C0036BA46 /* imgui_draw.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_draw.cpp; path = ../../imgui_draw.cpp; sourceTree = "<group>"; };
-		4080A9AB20B0343C0036BA46 /* stb_textedit.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = stb_textedit.h; path = ../../stb_textedit.h; sourceTree = "<group>"; };
 		4080A9AC20B0343C0036BA46 /* imconfig.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imconfig.h; path = ../../imconfig.h; sourceTree = "<group>"; };
 		4080A9B220B034E40036BA46 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
 		4080A9B420B034EA0036BA46 /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
@@ -74,9 +71,6 @@
 				4080A9A620B0343C0036BA46 /* imgui_demo.cpp */,
 				4080A9AA20B0343C0036BA46 /* imgui_draw.cpp */,
 				4080A9A520B0343C0036BA46 /* imgui_internal.h */,
-				4080A9A920B0343C0036BA46 /* stb_rect_pack.h */,
-				4080A9AB20B0343C0036BA46 /* stb_textedit.h */,
-				4080A9A420B0343C0036BA46 /* stb_truetype.h */,
 				4080A99E20B034280036BA46 /* imgui_impl_opengl2.cpp */,
 				4080A9A020B034280036BA46 /* imgui_impl_opengl2.h */,
 				4080A9A120B034280036BA46 /* imgui_impl_osx.h */,

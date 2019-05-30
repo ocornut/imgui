@@ -25,6 +25,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: using SetWindowPos() inside Begin() and moving the window with the mouse reacts a very ugly glitch. We should just defer the SetWindowPos() call.
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
+ - window: top most window flag? (#2574)
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/child: border could be emitted in parent as well.
@@ -66,7 +67,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: a way to represent "mixed" values, so e.g. all values replaced with **, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed)
  - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
  - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
- - widgets: checkbox with custom glyph inside frame.
+ - widgets: checkbox: checkbox with custom glyph inside frame.
+ - widgets: coloredit: keep reporting as active when picker is on?
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
@@ -81,7 +83,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
  - input text: decorrelate layout from inputs - e.g. what's the easiest way to implement a nice IP/Mac address input editor?
- - input text: global callback system so user can plug in an expression evaluator easily.
+ - input text: global callback system so user can plug in an expression evaluator easily. (#1691)
  - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
@@ -103,8 +105,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
- - layout: BeginGroup() needs a border option. (~#1496)
  - layout: vertical alignment of mixed height items (e.g. buttons) within a same line (#1284)
+
+ - group: BeginGroup() needs a border option. (~#1496)
+ - group: IsHovered() after EndGroup() covers whole aabb rather than the intersection of individual items. Is that desirable?
+ - group: merge deactivation/activation within same group (fwd WasEdited flag). (#2550)
 
  - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
  - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
@@ -132,6 +137,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - clipper: ability to force display 1 item in the list would be convenient (for patterns where we need to set active id etc.)
  - clipper: ability to disable the clipping through a simple flag/bool.
  - clipper: ability to run without knowing full count in advance.
+ - clipper: horizontal clipping support. (#2580)
 
  - separator: expose flags (#759)
  - separator: width, thickness, centering (#1643)
@@ -264,6 +270,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
+ - font: make it easier to submit own bitmap font (same texture, another texture?). (#2127, #2575)
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
  - font: storing MinAdvanceX per font would allow us to skip calculating line width (under a threshold of character count) in loops looking for block width
@@ -272,7 +279,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/atlas: add a missing Glyphs.reserve()
  - font/atlas: incremental updates
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
- - font/atlas: allow user to submit its own primitive to be rectpacked, and allow to map them on a Unicode point.
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
  - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
@@ -280,8 +286,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct), would save on cache line.
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
- - font: fix AddRemapChar() to work before font has been built.
- - font: what would it take to support codepoint higher than 0xFFFF? (smileys, etc.)
+ - font: fix AddRemapChar() to work before atlas  has been built.
+ - font: what would it take to support codepoint higher than 0xFFFF? (smileys, etc.) (#2538, #2541)
  - font: (api breaking) remove "TTF" from symbol names. also because it now supports OTF.
  - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16 bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
@@ -320,6 +326,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
  - inputs: add mouse cursor for unavailable/no? IDC_NO/SDL_SYSTEM_CURSOR_NO.
+ - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
  - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.

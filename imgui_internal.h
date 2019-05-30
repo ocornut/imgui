@@ -36,21 +36,28 @@ Index of this file:
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
 
+// Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (push)
 #pragma warning (disable: 4251) // class 'xxx' needs to have dll-interface to be used by clients of struct 'xxx' // when IMGUI_API is set to__declspec(dllexport)
 #endif
 
-#ifdef __clang__
+// Clang/GCC warnings with -Weverything
+#if defined(__clang__)
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"                // for stb_textedit.h
-#pragma clang diagnostic ignored "-Wmissing-prototypes"             // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wunused-function"        // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wmissing-prototypes"     // for stb_textedit.h
 #pragma clang diagnostic ignored "-Wold-style-cast"
 #if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
 #endif
 #if __has_warning("-Wdouble-promotion")
 #pragma clang diagnostic ignored "-Wdouble-promotion"
+#endif
+#elif defined(__GNUC__)
+#pragma GCC diagnostic push
+#if __GNUC__ >= 8
+#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 #endif
 
@@ -343,14 +350,21 @@ enum ImGuiColumnsFlags_
     ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4    // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
 };
 
+// Extend ImGuiSelectableFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 10,
-    ImGuiSelectableFlags_PressedOnClick     = 1 << 11,
-    ImGuiSelectableFlags_PressedOnRelease   = 1 << 12,
-    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 13,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
-    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 14
+    ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 20,
+    ImGuiSelectableFlags_PressedOnClick     = 1 << 21,
+    ImGuiSelectableFlags_PressedOnRelease   = 1 << 22,
+    ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 23,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
+    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 24
+};
+
+// Extend ImGuiTreeNodeFlags_
+enum ImGuiTreeNodeFlagsPrivate_
+{
+    ImGuiTreeNodeFlags_ClipLabelForTrailingButton = 1 << 20
 };
 
 enum ImGuiSeparatorFlags_
@@ -717,6 +731,7 @@ struct IMGUI_API ImDrawListSharedData
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
     float           CurveTessellationTol;
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
+    ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
     // Const data
     // FIXME: Bake rounded corners fill/borders in atlas
@@ -804,7 +819,7 @@ struct ImGuiNextItemData
 // Tabs
 //-----------------------------------------------------------------------------
 
-struct ImGuiTabBarSortItem
+struct ImGuiShrinkWidthItem
 {
     int             Index;
     float           Width;
@@ -969,7 +984,7 @@ struct ImGuiContext
     ImPool<ImGuiTabBar>             TabBars;
     ImGuiTabBar*                    CurrentTabBar;
     ImVector<ImGuiTabBarRef>        CurrentTabBarStack;
-    ImVector<ImGuiTabBarSortItem>   TabSortByWidthBuffer;
+    ImVector<ImGuiShrinkWidthItem>  ShrinkWidthBuffer;
 
     // Widget state
     ImVec2                  LastValidMousePos;
@@ -1020,7 +1035,7 @@ struct ImGuiContext
     int                     WantTextInputNextFrame;
     char                    TempBuffer[1024*3+1];               // Temporary text buffer
 
-    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(NULL), ForegroundDrawList(NULL)
+    ImGuiContext(ImFontAtlas* shared_font_atlas) : BackgroundDrawList(&DrawListSharedData), ForegroundDrawList(&DrawListSharedData)
     {
         Initialized = false;
         FrameScopeActive = FrameScopePushedImplicitWindow = false;
@@ -1095,9 +1110,7 @@ struct ImGuiContext
         FocusTabPressed = false;
 
         DimBgRatio = 0.0f;
-        BackgroundDrawList._Data = &DrawListSharedData;
         BackgroundDrawList._OwnerName = "##Background"; // Give it a name for debugging
-        ForegroundDrawList._Data = &DrawListSharedData;
         ForegroundDrawList._OwnerName = "##Foreground"; // Give it a name for debugging
         MouseCursor = ImGuiMouseCursor_Arrow;
 
@@ -1241,8 +1254,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  Size;                               // Current size (==SizeFull or collapsed title bar size)
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  SizeFullAtLastBegin;                // Copy of SizeFull at the end of Begin. This is the reference value we'll use on the next frame to decide if we need scrollbars.
-    ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame. Include decoration, window title, border, menu, etc.
-    ImVec2                  SizeContentsExplicit;               // Size of contents explicitly set by the user via SetNextWindowContentSize()
+    ImVec2                  SizeContents;                       // Size of contents (== extents reach of the drawing cursor) from previous frame. FIXME: Include decoration, window title, border, menu, etc. Ideally should remove them from this value?
+    ImVec2                  SizeContentsExplicit;               // Size of contents explicitly set by the user via SetNextWindowContentSize(). EXCLUDE decorations. Making this not consistent with the above!
     ImVec2                  WindowPadding;                      // Window padding at the time of begin.
     float                   WindowRounding;                     // Window rounding at the time of begin.
     float                   WindowBorderSize;                   // Window border size at the time of begin.
@@ -1283,8 +1296,10 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindowTempData     DC;                                 // Temporary per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the "DC" variable name.
     ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
     ImRect                  ClipRect;                           // Current clipping rectangle. = DrawList->clip_rect_stack.back(). Scissoring / clipping rectangle. x1, y1, x2, y2.
-    ImRect                  OuterRectClipped;                   // = WindowRect just after setup in Begin(). == window->Rect() for root window.
-    ImRect                  InnerMainRect, InnerClipRect;
+    ImRect                  OuterRectClipped;                   // == WindowRect just after setup in Begin(). == window->Rect() for root window.
+    ImRect                  InnerVisibleRect;                   // Inner visible rectangle
+    ImRect                  InnerWorkRect;                      // == InnerMainRect minus WindowPadding.x
+    ImRect                  InnerWorkRectClipped;               // == InnerMainRect minus WindowPadding.x, clipped within viewport or parent clip rect.
     ImRect                  ContentsRegionRect;                 // FIXME: This is currently confusing/misleading. Maximum visible content position ~~ Pos + (SizeContentsExplicit ? SizeContentsExplicit : Size - ScrollbarSizes) - CursorStartPos, per axis
     int                     LastFrameActive;                    // Last frame number the window was Active.
     float                   ItemWidthDefault;
@@ -1341,6 +1356,7 @@ struct ImGuiItemHoveredDataBackup
 // Tab bar, tab item
 //-----------------------------------------------------------------------------
 
+// Extend ImGuiTabBarFlags_
 enum ImGuiTabBarFlagsPrivate_
 {
     ImGuiTabBarFlags_DockNode                   = 1 << 20,  // Part of a dock node [we don't use this in the master branch but it facilitate branch syncing to keep this around]
@@ -1348,6 +1364,7 @@ enum ImGuiTabBarFlagsPrivate_
     ImGuiTabBarFlags_SaveSettings               = 1 << 22   // FIXME: Settings are handled by the docking system, this only request the tab bar to mark settings dirty when reordering tabs
 };
 
+// Extend ImGuiTabItemFlags_
 enum ImGuiTabItemFlagsPrivate_
 {
     ImGuiTabItemFlags_NoCloseButton             = 1 << 20   // Store whether p_open is set or not, which we need to recompute WidthContents during layout.
@@ -1486,6 +1503,7 @@ namespace ImGui
     IMGUI_API void          PopItemFlag();
     IMGUI_API bool          IsItemToggledSelection();                                           // was the last item selection toggled? (after Selectable(), TreeNode() etc. We only returns toggle _event_ in order to handle clipping correctly)
     IMGUI_API ImVec2        GetWorkRectMax();
+    IMGUI_API void          ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_excess);
 
     // Logging/Capture
     IMGUI_API void          LogBegin(ImGuiLogType type, int auto_open_depth);   // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
@@ -1572,7 +1590,7 @@ namespace ImGui
     // Widgets
     IMGUI_API void          TextEx(const char* text, const char* text_end = NULL, ImGuiTextFlags flags = 0);
     IMGUI_API bool          ButtonEx(const char* label, const ImVec2& size_arg = ImVec2(0,0), ImGuiButtonFlags flags = 0);
-    IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos, float radius);
+    IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos);
     IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos);
     IMGUI_API bool          ArrowButtonEx(const char* str_id, ImGuiDir dir, ImVec2 size_arg, ImGuiButtonFlags flags);
     IMGUI_API void          Scrollbar(ImGuiAxis axis);
@@ -1645,8 +1663,10 @@ extern void                 ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGu
 #define IMGUI_TEST_ENGINE_ITEM_INFO(_ID, _LABEL, _FLAGS)  do { } while (0)
 #endif
 
-#ifdef __clang__
+#if defined(__clang__)
 #pragma clang diagnostic pop
+#elif defined(__GNUC__)
+#pragma GCC diagnostic pop
 #endif
 
 #ifdef _MSC_VER
