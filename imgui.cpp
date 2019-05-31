@@ -5768,6 +5768,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         flags = window->Flags;
 
         // Lock border size and padding for the frame (so that altering them doesn't cause inconsistencies)
+        // We read Style data after the call to UpdateSelectWindowViewport() which might be swapping the style.
         if (flags & ImGuiWindowFlags_ChildWindow)
             window->WindowBorderSize = style.ChildBorderSize;
         else
