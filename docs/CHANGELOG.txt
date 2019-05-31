@@ -53,6 +53,8 @@ Other Changes:
   options. (#2587, broken in 1.69 by #2384).
 - CollapsingHeader: Better clipping when a close button is enabled and it overlaps the label. (#600)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- Nav: Fixed gamepad/keyboard moving of window affecting contents size incorrectly, sometimes leading
+  to scrollbars appearing during the movement.
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
