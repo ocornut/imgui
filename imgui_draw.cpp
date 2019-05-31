@@ -47,6 +47,7 @@ Index of this file:
 
 // Visual Studio warnings
 #ifdef _MSC_VER
+#pragma warning (disable: 4127) // condition expression is constant
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
@@ -565,13 +566,13 @@ void ImDrawList::ChannelsMerge()
         return;
 
     ChannelsSetCurrent(0);
-    if (CmdBuffer.Size && CmdBuffer.back().ElemCount == 0)
+    if (CmdBuffer.Size != 0 && CmdBuffer.back().ElemCount == 0)
         CmdBuffer.pop_back();
 
     // Calculate our final buffer sizes. Also fix the incorrect IdxOffset values in each command.
     int new_cmd_buffer_count = 0;
     int new_idx_buffer_count = 0;
-    int idx_offset = CmdBuffer.back().IdxOffset + CmdBuffer.back().ElemCount;
+    int idx_offset = (CmdBuffer.Size != 0) ? (CmdBuffer.back().IdxOffset + CmdBuffer.back().ElemCount) : 0;
     for (int i = 1; i < _ChannelsCount; i++)
     {
         ImDrawChannel& ch = _Channels[i];
