@@ -4,18 +4,30 @@
 
 #if TARGET_OS_OSX
 #include "imgui_impl_osx.h"
+#define IMGUI_IMPLOSX_BASEVIEW MTKView
+#include "imgui_impl_osx_ime.h"
 #endif
 
 @interface ViewController ()
+#if TARGET_OS_OSX
+@property (nonatomic, readonly) ImGuiView *mtkView;
+#else
 @property (nonatomic, readonly) MTKView *mtkView;
+#endif
 @property (nonatomic, strong) Renderer *renderer;
 @end
 
 @implementation ViewController
 
+#if TARGET_OS_OSX
+- (ImGuiView *)mtkView {
+return (ImGuiView *)self.view;
+}
+#else
 - (MTKView *)mtkView {
     return (MTKView *)self.view;
 }
+#endif
 
 - (void)viewDidLoad
 {
@@ -50,19 +62,27 @@
     NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged | NSEventTypeScrollWheel;
     [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event) {
         BOOL wantsCapture = ImGui_ImplOSX_HandleEvent(event, self.view);
-        if (event.type == NSEventTypeKeyDown && wantsCapture) {
-            return nil;
-        } else {
-            return event;
+        if (event.type == NSEventTypeKeyDown) {
+            [self.view interpretKeyEvents:@[event]];
+            if (wantsCapture) {
+                return nil;
+            }
         }
-
+        return event;
     }];
 
     ImGui_ImplOSX_Init();
+    ImGui_ImplOSX_InitIme(self.mtkView);
 #endif
 }
 
 #if TARGET_OS_OSX
+
+- (void)viewDidAppear {
+    [super viewDidAppear];
+    [self.view.window setContentView: self.view];
+    [self.view.window makeFirstResponder: self.view];
+}
 
 - (void)mouseMoved:(NSEvent *)event {
     ImGui_ImplOSX_HandleEvent(event, self.view);

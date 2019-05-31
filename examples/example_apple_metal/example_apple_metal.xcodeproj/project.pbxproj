@@ -41,6 +41,7 @@
 /* Begin PBXFileReference section */
 		07A82ED62139413C0078D120 /* imgui_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_internal.h; path = ../../imgui_internal.h; sourceTree = "<group>"; };
 		07A82ED72139413C0078D120 /* imgui_widgets.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; name = imgui_widgets.cpp; path = ../../imgui_widgets.cpp; sourceTree = "<group>"; };
+		115BC89222A0C91600C3FF03 /* imgui_impl_osx_ime.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = imgui_impl_osx_ime.h; path = ../../imgui_impl_osx_ime.h; sourceTree = "<group>"; };
 		8307E7BB20E9F9C700473790 /* Renderer.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Renderer.h; sourceTree = "<group>"; };
 		8307E7BC20E9F9C700473790 /* Renderer.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = Renderer.mm; sourceTree = "<group>"; };
 		8307E7C420E9F9C900473790 /* example_apple_metal.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = example_apple_metal.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -112,6 +113,7 @@
 		8307E7BA20E9F9C700473790 /* Shared */ = {
 			isa = PBXGroup;
 			children = (
+				115BC89222A0C91600C3FF03 /* imgui_impl_osx_ime.h */,
 				83BBE9FC20EB54D800295997 /* imgui_impl_metal.h */,
 				83BBE9FD20EB54D800295997 /* imgui_impl_metal.mm */,
 				836D2A2C20EE208D0098E909 /* imgui_impl_osx.h */,
