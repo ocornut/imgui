@@ -20,7 +20,7 @@ Index of this file:
 // Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
 // Obsolete functions
 // Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
-// Draw List API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListFlags, ImDrawList, ImDrawData)
+// Draw List API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 
 */
@@ -91,11 +91,12 @@ Index of this file:
 // Forward declarations and basic types
 //-----------------------------------------------------------------------------
 
-struct ImDrawChannel;               // Temporary storage for ImDrawList ot output draw commands out of order, used by ImDrawList::ChannelsSplit()
+struct ImDrawChannel;               // Temporary storage to output draw commands out of order, used by ImDrawListSplitter and ImDrawList::ChannelsSplit()
 struct ImDrawCmd;                   // A single draw command within a parent ImDrawList (generally maps to 1 GPU draw call, unless it is a callback)
 struct ImDrawData;                  // All draw command lists required to render the frame + pos/size coordinates to use for the projection matrix.
 struct ImDrawList;                  // A single draw command list (generally one per window, conceptually you may see this as a dynamic "mesh" builder)
 struct ImDrawListSharedData;        // Data shared among multiple draw lists (typically owned by parent ImGui context, but you may create one yourself)
+struct ImDrawListSplitter;          // Helper to split a draw list into different layers which can be drawn into out of order, then flattened back.
 struct ImDrawVert;                  // A single vertex (pos + uv + col = 20 bytes by default. Override layout with IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
@@ -1760,7 +1761,7 @@ struct ImColor
 };
 
 //-----------------------------------------------------------------------------
-// Draw List API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListFlags, ImDrawList, ImDrawData)
+// Draw List API (ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // Hold a series of drawing commands. The user provides a renderer for ImDrawData which essentially contains an array of ImDrawList.
 //-----------------------------------------------------------------------------
 
@@ -1817,12 +1818,27 @@ struct ImDrawVert
 IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 #endif
 
-// Draw channels are used by the Columns API to "split" the render list into different channels while building, so items of each column can be batched together.
-// You can also use them to simulate drawing layers and submit primitives in a different order than how they will be rendered.
+// For use by ImDrawListSplitter.
 struct ImDrawChannel
 {
-    ImVector<ImDrawCmd>     CmdBuffer;
-    ImVector<ImDrawIdx>     IdxBuffer;
+    ImVector<ImDrawCmd>         CmdBuffer;
+    ImVector<ImDrawIdx>         IdxBuffer;
+};
+
+// Split/Merge functions are used to split the draw list into different layers which can be drawn into out of order.
+// This is used by the Columns api, so items of each column can be batched together in a same draw call. 
+struct ImDrawListSplitter
+{
+    int                         _Current;    // Current channel number (0)
+    int                         _Count;      // Number of active channels (1+)
+    ImVector<ImDrawChannel>     _Channels;   // Draw channels (not resized down so Count might be < Channels.Size)
+
+    inline ImDrawListSplitter() { Clear(); }
+    inline void                 Clear() { _Current = 0; _Count = 1; } // Do not clear Channels[] so our allocations are reused next frame
+    IMGUI_API void              ClearFreeMemory();
+    IMGUI_API void              Split(ImDrawList* draw_list, int count);
+    IMGUI_API void              Merge(ImDrawList* draw_lists);
+    IMGUI_API void              SetCurrentChannel(ImDrawList* draw_list, int channel_idx);
 };
 
 enum ImDrawCornerFlags_
@@ -1847,8 +1863,10 @@ enum ImDrawListFlags_
 };
 
 // Draw command list
-// This is the low-level list of polygons that ImGui functions are filling. At the end of the frame, all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
-// Each ImGui window contains its own ImDrawList. You can use ImGui::GetWindowDrawList() to access the current window draw list and draw custom primitives.
+// This is the low-level list of polygons that ImGui:: functions are filling. At the end of the frame,
+// all command lists are passed to your ImGuiIO::RenderDrawListFn function for rendering.
+// Each dear imgui window contains its own ImDrawList. You can use ImGui::GetWindowDrawList() to 
+// access the current window draw list and draw custom primitives.
 // You can interleave normal ImGui:: calls and adding primitives to the current draw list.
 // All positions are generally in pixel coordinates (top-left at (0,0), bottom-right at io.DisplaySize), but you are totally free to apply whatever transformation matrix to want to the data (if you apply such transformation you'll want to apply it to ClipRect as well)
 // Important: Primitives are always added to the list and not culled (culling is done at higher-level by ImGui:: functions), if you use this API a lot consider coarse culling your drawn objects.
@@ -1870,9 +1888,7 @@ struct ImDrawList
     ImVector<ImVec4>        _ClipRectStack;     // [Internal]
     ImVector<ImTextureID>   _TextureIdStack;    // [Internal]
     ImVector<ImVec2>        _Path;              // [Internal] current path building
-    int                     _ChannelsCurrent;   // [Internal] current channel number (0)
-    int                     _ChannelsCount;     // [Internal] number of active channels (1+)
-    ImVector<ImDrawChannel> _Channels;          // [Internal] draw channels for columns API (not resized down so _ChannelsCount may be smaller than _Channels.Size)
+    ImDrawListSplitter      _Splitter;          // [Internal] for channels api
 
     // If you want to create ImDrawList instances, pass them ImGui::GetDrawListSharedData() or create and use your own ImDrawListSharedData (so you can use ImDrawList without ImGui)
     ImDrawList(const ImDrawListSharedData* shared_data) { _Data = shared_data; _OwnerName = NULL; Clear(); }
@@ -1916,17 +1932,17 @@ struct ImDrawList
     IMGUI_API void  PathBezierCurveTo(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, int num_segments = 0);
     IMGUI_API void  PathRect(const ImVec2& rect_min, const ImVec2& rect_max, float rounding = 0.0f, int rounding_corners_flags = ImDrawCornerFlags_All);
 
-    // Channels
-    // - Use to simulate layers. By switching channels to can render out-of-order (e.g. submit foreground primitives before background primitives)
-    // - Use to minimize draw calls (e.g. if going back-and-forth between multiple non-overlapping clipping rectangles, prefer to append into separate channels then merge at the end)
-    IMGUI_API void  ChannelsSplit(int channels_count);
-    IMGUI_API void  ChannelsMerge();
-    IMGUI_API void  ChannelsSetCurrent(int channel_index);
-
     // Advanced
     IMGUI_API void  AddCallback(ImDrawCallback callback, void* callback_data);  // Your rendering function must check for 'UserCallback' in ImDrawCmd and call the function instead of rendering triangles.
     IMGUI_API void  AddDrawCmd();                                               // This is useful if you need to forcefully create a new draw call (to allow for dependent rendering / blending). Otherwise primitives are merged into the same draw-call as much as possible
     IMGUI_API ImDrawList* CloneOutput() const;                                  // Create a clone of the CmdBuffer/IdxBuffer/VtxBuffer.
+
+    // Advanced: Channels
+    // - Use to split render into layers. By switching channels to can render out-of-order (e.g. submit foreground primitives before background primitives)
+    // - Use to minimize draw calls (e.g. if going back-and-forth between multiple non-overlapping clipping rectangles, prefer to append into separate channels then merge at the end)
+    inline void     ChannelsSplit(int count)    { _Splitter.Split(this, count); }
+    inline void     ChannelsMerge()             { _Splitter.Merge(this); }
+    inline void     ChannelsSetCurrent(int n)   { _Splitter.SetCurrentChannel(this, n); }
 
     // Internal helpers
     // NB: all primitives needs to be reserved via PrimReserve() beforehand!
