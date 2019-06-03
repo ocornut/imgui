@@ -2154,6 +2154,7 @@ static void ShowDemoWindowLayout()
             static bool show_h_scrollbar = true;
             static bool show_button = true;
             static bool show_tree_nodes = true;
+            static bool show_text_wrapped = false;
             static bool show_columns = true;
             static bool show_tab_bar = true;
             static bool explicit_content_size = false;
@@ -2167,6 +2168,7 @@ static void ShowDemoWindowLayout()
             ImGui::Checkbox("H-scrollbar", &show_h_scrollbar);
             ImGui::Checkbox("Button", &show_button);            // Will grow contents size (unless explicitly overwritten)
             ImGui::Checkbox("Tree nodes", &show_tree_nodes);    // Will grow contents size and display highlight over full width
+            ImGui::Checkbox("Text wrapped", &show_text_wrapped);// Will grow and use contents size
             ImGui::Checkbox("Columns", &show_columns);          // Will use contents size
             ImGui::Checkbox("Tab bar", &show_tab_bar);          // Will use contents size
             ImGui::Checkbox("Explicit content size", &explicit_content_size);
@@ -2199,6 +2201,10 @@ static void ShowDemoWindowLayout()
                     ImGui::TreePop();
                 }
                 ImGui::CollapsingHeader("CollapsingHeader", &open);
+            }
+            if (show_text_wrapped)
+            {
+                ImGui::TextWrapped("This text should automatically wrap on the edge of the work rectangle.");
             }
             if (show_columns)
             {
