@@ -2550,7 +2550,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     Flags = ImGuiWindowFlags_None;
     Pos = ImVec2(0.0f, 0.0f);
     Size = SizeFull = ImVec2(0.0f, 0.0f);
-    SizeContents = SizeContentsExplicit = ImVec2(0.0f, 0.0f);
+    ContentSize = ContentSizeExplicit = ImVec2(0.0f, 0.0f);
     WindowPadding = ImVec2(0.0f, 0.0f);
     WindowRounding = 0.0f;
     WindowBorderSize = 0.0f;
@@ -4638,7 +4638,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
                 size = ImFloor(settings->Size);
         }
     window->Size = window->SizeFull = ImFloor(size);
-    window->DC.CursorStartPos = window->DC.CursorMaxPos = window->Pos; // So first call to CalcSizeContents() doesn't return crazy values
+    window->DC.CursorStartPos = window->DC.CursorMaxPos = window->Pos; // So first call to CalcContentSize() doesn't return crazy values
 
     if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
     {
@@ -4694,17 +4694,17 @@ static ImVec2 CalcSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size)
     return new_size;
 }
 
-static ImVec2 CalcSizeContents(ImGuiWindow* window)
+static ImVec2 CalcContentSize(ImGuiWindow* window)
 {
     if (window->Collapsed)
         if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-            return window->SizeContents;
+            return window->ContentSize;
     if (window->Hidden && window->HiddenFramesCannotSkipItems == 0 && window->HiddenFramesCanSkipItems > 0)
-        return window->SizeContents;
+        return window->ContentSize;
 
     ImVec2 sz;
-    sz.x = (float)(int)((window->SizeContentsExplicit.x != 0.0f) ? window->SizeContentsExplicit.x : window->DC.CursorMaxPos.x - window->DC.CursorStartPos.x);
-    sz.y = (float)(int)((window->SizeContentsExplicit.y != 0.0f) ? window->SizeContentsExplicit.y : window->DC.CursorMaxPos.y - window->DC.CursorStartPos.y);
+    sz.x = (float)(int)((window->ContentSizeExplicit.x != 0.0f) ? window->ContentSizeExplicit.x : window->DC.CursorMaxPos.x - window->DC.CursorStartPos.x);
+    sz.y = (float)(int)((window->ContentSizeExplicit.y != 0.0f) ? window->ContentSizeExplicit.y : window->DC.CursorMaxPos.y - window->DC.CursorStartPos.y);
     return sz;
 }
 
@@ -4743,18 +4743,18 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
 
 ImVec2 ImGui::CalcWindowExpectedSize(ImGuiWindow* window)
 {
-    ImVec2 size_contents = CalcSizeContents(window);
+    ImVec2 size_contents = CalcContentSize(window);
     return CalcSizeAfterConstraint(window, CalcSizeAutoFit(window, size_contents));
 }
 
 float ImGui::GetWindowScrollMaxX(ImGuiWindow* window)
 {
-    return ImMax(0.0f, window->SizeContents.x + window->WindowPadding.x * 2.0f - window->InnerRect.GetWidth());
+    return ImMax(0.0f, window->ContentSize.x + window->WindowPadding.x * 2.0f - window->InnerRect.GetWidth());
 }
 
 float ImGui::GetWindowScrollMaxY(ImGuiWindow* window)
 {
-    return ImMax(0.0f, window->SizeContents.y + window->WindowPadding.y * 2.0f - window->InnerRect.GetHeight());
+    return ImMax(0.0f, window->ContentSize.y + window->WindowPadding.y * 2.0f - window->InnerRect.GetHeight());
 }
 
 static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges)
@@ -4773,8 +4773,8 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool s
         float target_y = window->ScrollTarget.y;
         if (snap_on_edges && cr_y <= 0.0f && target_y <= window->WindowPadding.y)
             target_y = 0.0f;
-        if (snap_on_edges && cr_y >= 1.0f && target_y >= window->SizeContents.y + window->WindowPadding.y + g.Style.ItemSpacing.y)
-            target_y = window->SizeContents.y + window->WindowPadding.y * 2.0f;
+        if (snap_on_edges && cr_y >= 1.0f && target_y >= window->ContentSize.y + window->WindowPadding.y + g.Style.ItemSpacing.y)
+            target_y = window->ContentSize.y + window->WindowPadding.y * 2.0f;
         scroll.y = target_y - cr_y * window->InnerRect.GetHeight();
     }
     scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
@@ -5281,9 +5281,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
     }
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasContentSize)
-        window->SizeContentsExplicit = g.NextWindowData.ContentSizeVal;
+        window->ContentSizeExplicit = g.NextWindowData.ContentSizeVal;
     else if (first_begin_of_the_frame)
-        window->SizeContentsExplicit = ImVec2(0.0f, 0.0f);
+        window->ContentSizeExplicit = ImVec2(0.0f, 0.0f);
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasCollapsed)
         SetWindowCollapsed(window, g.NextWindowData.CollapsedVal, g.NextWindowData.CollapsedCond);
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasFocus)
@@ -5318,7 +5318,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // UPDATE CONTENTS SIZE, UPDATE HIDDEN STATUS
 
         // Update contents size from last frame for auto-fitting (or use explicit size)
-        window->SizeContents = CalcSizeContents(window);
+        window->ContentSize = CalcContentSize(window);
         if (window->HiddenFramesCanSkipItems > 0)
             window->HiddenFramesCanSkipItems--;
         if (window->HiddenFramesCannotSkipItems > 0)
@@ -5329,7 +5329,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             window->HiddenFramesCannotSkipItems = 1;
 
         // Hide popup/tooltip window when re-opening while we measure size (because we recycle the windows)
-        // We reset Size/SizeContents for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
+        // We reset Size/ContentSize for reappearing popups/tooltips early in this function, so further code won't be tempted to use the old size.
         if (window_just_activated_by_user && (flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_Tooltip)) != 0)
         {
             window->HiddenFramesCannotSkipItems = 1;
@@ -5339,7 +5339,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                     window->Size.x = window->SizeFull.x = 0.f;
                 if (!window_size_y_set_by_api)
                     window->Size.y = window->SizeFull.y = 0.f;
-                window->SizeContents = ImVec2(0.f, 0.f);
+                window->ContentSize = ImVec2(0.f, 0.f);
             }
         }
 
@@ -5382,7 +5382,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // SIZE
 
         // Calculate auto-fit size, handle automatic resize
-        const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->SizeContents);
+        const ImVec2 size_auto_fit = CalcSizeAutoFit(window, window->ContentSize);
         ImVec2 size_full_modified(FLT_MAX, FLT_MAX);
         if ((flags & ImGuiWindowFlags_AlwaysAutoResize) && !window->Collapsed)
         {
@@ -5417,10 +5417,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // When we use InnerRect here we are intentionally reading last frame size, same for ScrollbarSizes values before we set them again.
             float size_x_for_scrollbars = size_full_modified.x != FLT_MAX ? window->SizeFull.x : window->InnerRect.GetWidth() + window->ScrollbarSizes.x;
             float size_y_for_scrollbars = size_full_modified.y != FLT_MAX ? window->SizeFull.y - window->TitleBarHeight() - window->MenuBarHeight() : window->InnerRect.GetHeight() + window->ScrollbarSizes.y;
-            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->SizeContents.y + window->WindowPadding.y * 2.0f > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
-            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->SizeContents.x + window->WindowPadding.x * 2.0f > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
+            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->ContentSize.y + window->WindowPadding.y * 2.0f > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
+            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->ContentSize.x + window->WindowPadding.x * 2.0f > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
             if (window->ScrollbarX && !window->ScrollbarY)
-                window->ScrollbarY = (window->SizeContents.y + window->WindowPadding.y * 2.0f > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar);
+                window->ScrollbarY = (window->ContentSize.y + window->WindowPadding.y * 2.0f > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
         }
 
@@ -5590,8 +5590,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // - BeginTabBar() for right-most edge
         const bool allow_scrollbar_x = !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar);
         const bool allow_scrollbar_y = !(flags & ImGuiWindowFlags_NoScrollbar);
-        const float work_rect_size_x = (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : ImMax(allow_scrollbar_x ? window->SizeContents.x : 0.0f, window->InnerRect.GetWidth() - window->WindowPadding.x * 2.0f));
-        const float work_rect_size_y = (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : ImMax(allow_scrollbar_y ? window->SizeContents.y : 0.0f, window->InnerRect.GetHeight() - window->WindowPadding.y * 2.0f));
+        const float work_rect_size_x = (window->ContentSizeExplicit.x != 0.0f ? window->ContentSizeExplicit.x : ImMax(allow_scrollbar_x ? window->ContentSize.x : 0.0f, window->InnerRect.GetWidth() - window->WindowPadding.x * 2.0f));
+        const float work_rect_size_y = (window->ContentSizeExplicit.y != 0.0f ? window->ContentSizeExplicit.y : ImMax(allow_scrollbar_y ? window->ContentSize.y : 0.0f, window->InnerRect.GetHeight() - window->WindowPadding.y * 2.0f));
         window->WorkRect.Min.x = ImFloor(window->InnerRect.Min.x - window->Scroll.x + ImMax(window->WindowPadding.x, window->WindowBorderSize));
         window->WorkRect.Min.y = ImFloor(window->InnerRect.Min.y - window->Scroll.y + ImMax(window->WindowPadding.y, window->WindowBorderSize));
         window->WorkRect.Max.x = window->WorkRect.Min.x + work_rect_size_x;
@@ -5604,8 +5604,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // - Mouse wheel scrolling + many other things
         window->ContentsRegionRect.Min.x = window->Pos.x - window->Scroll.x + window->WindowPadding.x;
         window->ContentsRegionRect.Min.y = window->Pos.y - window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
-        window->ContentsRegionRect.Max.x = window->Pos.x - window->Scroll.x - window->WindowPadding.x + (window->SizeContentsExplicit.x != 0.0f ? window->SizeContentsExplicit.x : (window->Size.x - window->ScrollbarSizes.x + ImMin(window->ScrollbarSizes.x, window->WindowBorderSize)));
-        window->ContentsRegionRect.Max.y = window->Pos.y - window->Scroll.y - window->WindowPadding.y + (window->SizeContentsExplicit.y != 0.0f ? window->SizeContentsExplicit.y : (window->Size.y - window->ScrollbarSizes.y + ImMin(window->ScrollbarSizes.y, window->WindowBorderSize)));
+        window->ContentsRegionRect.Max.x = window->Pos.x - window->Scroll.x - window->WindowPadding.x + (window->ContentSizeExplicit.x != 0.0f ? window->ContentSizeExplicit.x : (window->Size.x - window->ScrollbarSizes.x + ImMin(window->ScrollbarSizes.x, window->WindowBorderSize)));
+        window->ContentsRegionRect.Max.y = window->Pos.y - window->Scroll.y - window->WindowPadding.y + (window->ContentSizeExplicit.y != 0.0f ? window->ContentSizeExplicit.y : (window->Size.y - window->ScrollbarSizes.y + ImMin(window->ScrollbarSizes.y, window->WindowBorderSize)));
 
         // Setup drawing context
         // (NB: That term "drawing context / DC" lost its meaning a long time ago. Initially was meant to hold transient data only. Nowadays difference between window-> and window->DC-> is dubious.)
@@ -6351,7 +6351,7 @@ void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
     window->Pos = ImFloor(pos);
     ImVec2 offset = window->Pos - old_pos;
     window->DC.CursorPos += offset;         // As we happen to move the window while it is being appended to (which is a bad idea - will smear) let's at least offset the cursor
-    window->DC.CursorMaxPos += offset;      // And more importantly we need to offset CursorMaxPos/CursorStartPos this so SizeContents calculation doesn't get affected.
+    window->DC.CursorMaxPos += offset;      // And more importantly we need to offset CursorMaxPos/CursorStartPos this so ContentSize calculation doesn't get affected.
     window->DC.CursorStartPos += offset;
 }
 
@@ -7720,7 +7720,7 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
     ImGuiDir clip_dir = g.NavMoveDir;
     if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
     {
-        bb_rel.Min.x = bb_rel.Max.x = ImMax(window->SizeFull.x, window->SizeContents.x + window->WindowPadding.x * 2.0f) - window->Scroll.x;
+        bb_rel.Min.x = bb_rel.Max.x = ImMax(window->SizeFull.x, window->ContentSize.x + window->WindowPadding.x * 2.0f) - window->Scroll.x;
         if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(-bb_rel.GetHeight()); clip_dir = ImGuiDir_Up; }
         NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
     }
@@ -7732,7 +7732,7 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
     }
     if (g.NavMoveDir == ImGuiDir_Up && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
     {
-        bb_rel.Min.y = bb_rel.Max.y = ImMax(window->SizeFull.y, window->SizeContents.y + window->WindowPadding.y * 2.0f) - window->Scroll.y;
+        bb_rel.Min.y = bb_rel.Max.y = ImMax(window->SizeFull.y, window->ContentSize.y + window->WindowPadding.y * 2.0f) - window->Scroll.y;
         if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(-bb_rel.GetWidth()); clip_dir = ImGuiDir_Left; }
         NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
     }
@@ -9773,7 +9773,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
-    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerRect, RT_InnerClipRect, RT_WorkRect, RT_Contents, RT_ContentsRegionRect };
+    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerRect, RT_InnerClipRect, RT_WorkRect, RT_Contents, RT_ContentsRegionRect, RT_Count };
     static bool show_windows_begin_order = false;
     static bool show_windows_rects = false;
     static int  show_windows_rect_type = RT_WorkRect;
@@ -9796,7 +9796,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             else if (rect_type == RT_InnerRect)             { return window->InnerRect; }
             else if (rect_type == RT_InnerClipRect)         { return window->InnerClipRect; }
             else if (rect_type == RT_WorkRect)              { return window->WorkRect; }
-            else if (rect_type == RT_Contents)              { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->SizeContents); }
+            else if (rect_type == RT_Contents)              { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->ContentSize); }
             else if (rect_type == RT_ContentsRegionRect)    { return window->ContentsRegionRect; }
             IM_ASSERT(0);
             return ImRect();
@@ -9901,7 +9901,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 return;
             ImGuiWindowFlags flags = window->Flags;
             NodeDrawList(window, window->DrawList, "DrawList");
-            ImGui::BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), SizeContents (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->SizeContents.x, window->SizeContents.y);
+            ImGui::BulletText("Pos: (%.1f,%.1f), Size: (%.1f,%.1f), ContentSize (%.1f,%.1f)", window->Pos.x, window->Pos.y, window->Size.x, window->Size.y, window->ContentSize.x, window->ContentSize.y);
             ImGui::BulletText("Flags: 0x%08X (%s%s%s%s%s%s%s%s%s..)", flags,
                 (flags & ImGuiWindowFlags_ChildWindow)  ? "Child " : "",      (flags & ImGuiWindowFlags_Tooltip)     ? "Tooltip "   : "",  (flags & ImGuiWindowFlags_Popup) ? "Popup " : "",
                 (flags & ImGuiWindowFlags_Modal)        ? "Modal " : "",      (flags & ImGuiWindowFlags_ChildMenu)   ? "ChildMenu " : "",  (flags & ImGuiWindowFlags_NoSavedSettings) ? "NoSavedSettings " : "",
@@ -10004,11 +10004,18 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, "OuterRect\0" "OuterRectClipped\0" "InnerRect\0" "InnerClipRect\0" "WorkRect\0" "Contents\0" "ContentsRegionRect\0");
+        const char* rects_names[RT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Contents", "ContentsRegionRect" };
+        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, rects_names, RT_Count);
         if (show_windows_rects && g.NavWindow)
         {
-            ImRect r = Funcs::GetRect(g.NavWindow, show_windows_rect_type);
-            ImGui::BulletText("'%s': (%.1f,%.1f) (%.1f,%.1f) Size (%.1f,%.1f)", g.NavWindow->Name, r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight());
+            ImGui::BulletText("'%s':", g.NavWindow->Name);
+            ImGui::Indent();
+            for (int n = 0; n < RT_Count; n++)
+            {
+                ImRect r = Funcs::GetRect(g.NavWindow, n);
+                ImGui::Text("(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), rects_names[n]);
+            }
+            ImGui::Unindent();
         }
         ImGui::Checkbox("Show clipping rectangle when hovering ImDrawCmd node", &show_drawcmd_clip_rects);
         ImGui::TreePop();

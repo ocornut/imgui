@@ -847,7 +847,7 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
         }
 
         // Apply scroll
-        // It is ok to modify Scroll here because we are being called in Begin() after the calculation of SizeContents and before setting up our starting position
+        // It is ok to modify Scroll here because we are being called in Begin() after the calculation of ContentSize and before setting up our starting position
         const float scroll_v_norm = ImSaturate((clicked_v_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm * 0.5f) / (1.0f - grab_h_norm));
         *p_scroll_v = (float)(int)(0.5f + scroll_v_norm * scroll_max);//(win_size_contents_v - win_size_v));
 
@@ -898,7 +898,7 @@ void ImGui::Scrollbar(ImGuiAxis axis)
         bb.Max = ImVec2(outer_rect.Max.x - window->WindowBorderSize, window->InnerRect.Max.y);
         rounding_corners |= ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
     }
-    ScrollbarEx(bb, id, axis, &window->Scroll[axis], window->InnerRect.Max[axis] - window->InnerRect.Min[axis], window->SizeContents[axis] + window->WindowPadding[axis] * 2.0f, rounding_corners);
+    ScrollbarEx(bb, id, axis, &window->Scroll[axis], window->InnerRect.Max[axis] - window->InnerRect.Min[axis], window->ContentSize[axis] + window->WindowPadding[axis] * 2.0f, rounding_corners);
 }
 
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
