@@ -41,6 +41,7 @@ Other Changes:
   after removal of WindowPadding on each sides. So SetNextWindowContentSize(ImVec2(100,100)) + auto-resize
   will always allow submitting a 100x100 item without creating a scrollbar, regarding of WindowPadding.
   The exact meaning of ContentSize for decorated windows was previously ill-defined.
+- Window: Fixed auto-resize with AlwaysVerticalScrollbar or AlwaysHorizontalScrollbar flags.
 - Columns: Fixed Separator from creating an extraneous draw command. (#125)
 - Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect

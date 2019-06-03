@@ -4733,9 +4733,11 @@ static ImVec2 CalcSizeAutoFit(ImGuiWindow* window, const ImVec2& size_contents)
         // When the window cannot fit all contents (either because of constraints, either because screen is too small),
         // we are growing the size on the other axis to compensate for expected scrollbar. FIXME: Might turn bigger than ViewportSize-WindowPadding.
         ImVec2 size_auto_fit_after_constraint = CalcSizeAfterConstraint(window, size_auto_fit);
-        if (size_auto_fit_after_constraint.x - size_pad.x - size_decorations.x < size_contents.x && !(window->Flags & ImGuiWindowFlags_NoScrollbar) && (window->Flags & ImGuiWindowFlags_HorizontalScrollbar))
+        bool will_have_scrollbar_x = (size_auto_fit_after_constraint.x - size_pad.x - size_decorations.x < size_contents.x && !(window->Flags & ImGuiWindowFlags_NoScrollbar) && (window->Flags & ImGuiWindowFlags_HorizontalScrollbar)) || (window->Flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar);
+        bool will_have_scrollbar_y = (size_auto_fit_after_constraint.y - size_pad.y - size_decorations.y < size_contents.y && !(window->Flags & ImGuiWindowFlags_NoScrollbar)) || (window->Flags & ImGuiWindowFlags_AlwaysVerticalScrollbar);
+        if (will_have_scrollbar_x)
             size_auto_fit.y += style.ScrollbarSize;
-        if (size_auto_fit_after_constraint.y - size_pad.y - size_decorations.y < size_contents.y && !(window->Flags & ImGuiWindowFlags_NoScrollbar))
+        if (will_have_scrollbar_y)
             size_auto_fit.x += style.ScrollbarSize;
         return size_auto_fit;
     }
@@ -5405,12 +5407,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             // When reading the current size we need to read it after size constraints have been applied.
             // When we use InnerRect here we are intentionally reading last frame size, same for ScrollbarSizes values before we set them again.
-            float size_x_for_scrollbars = size_full_modified.x != FLT_MAX ? window->SizeFull.x : window->InnerRect.GetWidth() + window->ScrollbarSizes.x;
-            float size_y_for_scrollbars = size_full_modified.y != FLT_MAX ? window->SizeFull.y - window->TitleBarHeight() - window->MenuBarHeight() : window->InnerRect.GetHeight() + window->ScrollbarSizes.y;
-            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((window->ContentSize.y + window->WindowPadding.y * 2.0f > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
-            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((window->ContentSize.x + window->WindowPadding.x * 2.0f > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
+            ImVec2 avail_size_from_current_frame = ImVec2(window->SizeFull.x, window->SizeFull.y - window->TitleBarHeight() - window->MenuBarHeight());
+            ImVec2 avail_size_from_last_frame = window->InnerRect.GetSize() + window->ScrollbarSizes;
+            ImVec2 needed_size_from_last_frame = window_just_created ? ImVec2(0,0) : window->ContentSize + window->WindowPadding * 2.0f;
+            float size_x_for_scrollbars = (size_full_modified.x != FLT_MAX || window_just_created) ? avail_size_from_current_frame.x : avail_size_from_last_frame.x;
+            float size_y_for_scrollbars = (size_full_modified.y != FLT_MAX || window_just_created) ? avail_size_from_current_frame.y : avail_size_from_last_frame.y;
+            window->ScrollbarY = (flags & ImGuiWindowFlags_AlwaysVerticalScrollbar) || ((needed_size_from_last_frame.y > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar));
+            window->ScrollbarX = (flags & ImGuiWindowFlags_AlwaysHorizontalScrollbar) || ((needed_size_from_last_frame.x > size_x_for_scrollbars - (window->ScrollbarY ? style.ScrollbarSize : 0.0f)) && !(flags & ImGuiWindowFlags_NoScrollbar) && (flags & ImGuiWindowFlags_HorizontalScrollbar));
             if (window->ScrollbarX && !window->ScrollbarY)
-                window->ScrollbarY = (window->ContentSize.y + window->WindowPadding.y * 2.0f > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar);
+                window->ScrollbarY = (needed_size_from_last_frame.y > size_y_for_scrollbars) && !(flags & ImGuiWindowFlags_NoScrollbar);
             window->ScrollbarSizes = ImVec2(window->ScrollbarY ? style.ScrollbarSize : 0.0f, window->ScrollbarX ? style.ScrollbarSize : 0.0f);
         }
 
