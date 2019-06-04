@@ -5400,6 +5400,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->SizeFull = CalcSizeAfterConstraint(window, window->SizeFull);
         window->Size = window->Collapsed && !(flags & ImGuiWindowFlags_ChildWindow) ? window->TitleBarRect().GetSize() : window->SizeFull;
 
+        // Decoration size
+        const float decoration_up_height = window->TitleBarHeight() + window->MenuBarHeight();
+
         // SCROLLBAR STATUS
 
         // Update scrollbar status (based on the Size that was effective during last frame or the auto-resized Size).
@@ -5407,7 +5410,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             // When reading the current size we need to read it after size constraints have been applied.
             // When we use InnerRect here we are intentionally reading last frame size, same for ScrollbarSizes values before we set them again.
-            ImVec2 avail_size_from_current_frame = ImVec2(window->SizeFull.x, window->SizeFull.y - window->TitleBarHeight() - window->MenuBarHeight());
+            ImVec2 avail_size_from_current_frame = ImVec2(window->SizeFull.x, window->SizeFull.y - decoration_up_height);
             ImVec2 avail_size_from_last_frame = window->InnerRect.GetSize() + window->ScrollbarSizes;
             ImVec2 needed_size_from_last_frame = window_just_created ? ImVec2(0,0) : window->ContentSize + window->WindowPadding * 2.0f;
             float size_x_for_scrollbars = (size_full_modified.x != FLT_MAX || window_just_created) ? avail_size_from_current_frame.x : avail_size_from_last_frame.x;
@@ -5499,19 +5502,20 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // - FindHoveredWindow() (w/ extra padding when border resize is enabled)
         // - Begin() initial clipping rect for drawing window background and borders.
         // - Begin() clipping whole child
-        ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
-        ImRect outer_rect = window->Rect();
+        const ImRect host_rect = ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & ImGuiWindowFlags_Popup) && !window_is_child_tooltip) ? parent_window->ClipRect : viewport_rect;
+        const ImRect outer_rect = window->Rect();
+        const ImRect title_bar_rect = window->TitleBarRect();
         window->OuterRectClipped = outer_rect;
         window->OuterRectClipped.ClipWith(host_rect);
 
         // Inner rectangle
         // Not affected by window border size. Used by: 
+        // - InnerClipRect
         // - NavScrollToBringItemIntoView()
         // - NavUpdatePageUpPageDown()
         // - Scrollbar()
-        const ImRect title_bar_rect = window->TitleBarRect();
-        window->InnerRect.Min.x = title_bar_rect.Min.x;
-        window->InnerRect.Min.y = title_bar_rect.Max.y + window->MenuBarHeight();
+        window->InnerRect.Min.x = window->Pos.x;
+        window->InnerRect.Min.y = window->Pos.y + decoration_up_height;
         window->InnerRect.Max.x = window->Pos.x + window->Size.x - window->ScrollbarSizes.x;
         window->InnerRect.Max.y = window->Pos.y + window->Size.y - window->ScrollbarSizes.y;
 
@@ -5606,7 +5610,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Used by:
         // - Mouse wheel scrolling + many other things
         window->ContentsRegionRect.Min.x = window->Pos.x - window->Scroll.x + window->WindowPadding.x;
-        window->ContentsRegionRect.Min.y = window->Pos.y - window->Scroll.y + window->WindowPadding.y + window->TitleBarHeight() + window->MenuBarHeight();
+        window->ContentsRegionRect.Min.y = window->Pos.y - window->Scroll.y + window->WindowPadding.y + decoration_up_height;
         window->ContentsRegionRect.Max.x = window->Pos.x - window->Scroll.x - window->WindowPadding.x + (window->ContentSizeExplicit.x != 0.0f ? window->ContentSizeExplicit.x : (window->Size.x - window->ScrollbarSizes.x + ImMin(window->ScrollbarSizes.x, window->WindowBorderSize)));
         window->ContentsRegionRect.Max.y = window->Pos.y - window->Scroll.y - window->WindowPadding.y + (window->ContentSizeExplicit.y != 0.0f ? window->ContentSizeExplicit.y : (window->Size.y - window->ScrollbarSizes.y + ImMin(window->ScrollbarSizes.y, window->WindowBorderSize)));
 
@@ -5615,7 +5619,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.Indent.x = 0.0f + window->WindowPadding.x - window->Scroll.x;
         window->DC.GroupOffset.x = 0.0f;
         window->DC.ColumnsOffset.x = 0.0f;
-        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.Indent.x + window->DC.ColumnsOffset.x, window->TitleBarHeight() + window->MenuBarHeight() + window->WindowPadding.y - window->Scroll.y);
+        window->DC.CursorStartPos = window->Pos + ImVec2(window->DC.Indent.x + window->DC.ColumnsOffset.x, decoration_up_height + window->WindowPadding.y - window->Scroll.y);
         window->DC.CursorPos = window->DC.CursorStartPos;
         window->DC.CursorPosPrevLine = window->DC.CursorPos;
         window->DC.CursorMaxPos = window->DC.CursorStartPos;

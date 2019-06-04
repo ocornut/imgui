@@ -2059,14 +2059,21 @@ static void ShowDemoWindowLayout()
         HelpMarker("Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given position.");
 
         static bool track = true;
-        static int track_line = 50, scroll_to_px = 200;
+        static int track_line = 50;
+        static float scroll_to_off_px = 0.0f;
+        static float scroll_to_pos_px = 200.0f;
         ImGui::Checkbox("Track", &track);
         ImGui::PushItemWidth(100);
-        ImGui::SameLine(130); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 99, "Line = %d");
-        bool scroll_to = ImGui::Button("Scroll To Pos");
-        ImGui::SameLine(130); scroll_to |= ImGui::DragInt("##pos_y", &scroll_to_px, 1.00f, 0, 9999, "Y = %d px");
+        ImGui::SameLine(140); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 99, "Line = %d");
+
+        bool scroll_to_off = ImGui::Button("Scroll Offset");
+        ImGui::SameLine(140); scroll_to_off |= ImGui::DragFloat("##off_y", &scroll_to_off_px, 1.00f, 0, 9999, "+%.0f px");
+
+        bool scroll_to_pos = ImGui::Button("Scroll To Pos");
+        ImGui::SameLine(140); scroll_to_pos |= ImGui::DragFloat("##pos_y", &scroll_to_pos_px, 1.00f, 0, 9999, "Y = %.0f px");
+
         ImGui::PopItemWidth();
-        if (scroll_to) 
+        if (scroll_to_off || scroll_to_pos)
             track = false;
 
         ImGuiStyle& style = ImGui::GetStyle();
@@ -2076,9 +2083,13 @@ static void ShowDemoWindowLayout()
             if (i > 0) ImGui::SameLine();
             ImGui::BeginGroup();
             ImGui::Text("%s", i == 0 ? "Top" : i == 1 ? "25%" : i == 2 ? "Center" : i == 3 ? "75%" : "Bottom");
-            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true);
-            if (scroll_to)
-                ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_px, i * 0.25f);
+
+            ImGuiWindowFlags child_flags = ImGuiWindowFlags_MenuBar;
+            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true, child_flags);
+            if (scroll_to_off)
+                ImGui::SetScrollY(scroll_to_off_px);
+            if (scroll_to_pos)
+                ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_pos_px, i * 0.25f);
             for (int line = 0; line < 100; line++)
             {
                 if (track && line == track_line)
@@ -2094,7 +2105,7 @@ static void ShowDemoWindowLayout()
             float scroll_y = ImGui::GetScrollY();
             float scroll_max_y = ImGui::GetScrollMaxY();
             ImGui::EndChild();
-            ImGui::Text("%.0f/%0.f", scroll_y, scroll_max_y);
+            ImGui::Text("%.0f/%.0f", scroll_y, scroll_max_y);
             ImGui::EndGroup();
         }
         ImGui::TreePop();
