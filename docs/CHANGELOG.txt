@@ -37,6 +37,7 @@ Breaking Changes:
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
 
 Other Changes:
+- Combo: Fixed rounding not applying with the ImGuiComboFlags_NoArrowButton flag
 - Columns: Fixed Separator from creating an extraneous draw command. (#125)
 - Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
