@@ -122,6 +122,13 @@ Other Changes:
   options. (#2587, broken in 1.69 by #2384).
 - CollapsingHeader: Better clipping when a close button is enabled and it overlaps the label. (#600)
 - Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- Combo: Fixed rounding not applying with the ImGuiComboFlags_NoArrowButton flag. (#2607) [@DucaRii]
+- Nav: Fixed gamepad/keyboard moving of window affecting contents size incorrectly, sometimes leading
+  to scrollbars appearing during the movement.
+- Nav: Fixed rare crash when e.g. releasing Alt-key while focusing a window with a menu at the same
+  frame as clearing the focus. This was in most noticeable in back-ends such as Glfw and SDL which
+  emits key release events when focusing another viewport, leading to Alt+clicking on void on another
+  viewport triggering the issue. (#2609)
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
