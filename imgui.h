@@ -97,7 +97,7 @@ struct ImDrawData;                  // All draw command lists required to render
 struct ImDrawList;                  // A single draw command list (generally one per window, conceptually you may see this as a dynamic "mesh" builder)
 struct ImDrawListSharedData;        // Data shared among multiple draw lists (typically owned by parent ImGui context, but you may create one yourself)
 struct ImDrawListSplitter;          // Helper to split a draw list into different layers which can be drawn into out of order, then flattened back.
-struct ImDrawVert;                  // A single vertex (pos + uv + col = 20 bytes by default. Override layout with IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
+struct ImDrawVert;                  // A single vertex (pos + uv + col = 20 bytes by default. You may override layout with a #define.
 struct ImFont;                      // Runtime data for a single font within a parent ImFontAtlas
 struct ImFontAtlas;                 // Runtime data for multiple fonts, bake multiple fonts into a single texture, TTF/OTF font loader
 struct ImFontConfig;                // Configuration data when adding a font or merging fonts
@@ -1803,19 +1803,23 @@ typedef unsigned short ImDrawIdx;
 #endif
 
 // Vertex layout
-#ifndef IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT
+// (You can override the vertex format layout by using e.g. #define ImDrawVert MyDrawVert in imconfig.h
+//  The code expect ImVec2 pos (8 bytes), ImVec2 uv (8 bytes), ImU32 col (4 bytes), but you can re-order them or add other fields 
+//  as needed to simplify integration in your engine. IMPORTANT: dear imgui DOES NOT CLEAR THE STRUCTURE AND DOESN"T CALL ITS CONSTRUCTOR,
+//  so any field other than pos/uv/col will be uninitialized. If you add extra fields (such as a Z coordinate) you will need to either 
+//  ignore them, either set them up yourself.)
+#ifndef ImDrawVert
 struct ImDrawVert
 {
     ImVec2  pos;
     ImVec2  uv;
     ImU32   col;
 };
-#else
-// You can override the vertex format layout by defining IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT in imconfig.h
-// The code expect ImVec2 pos (8 bytes), ImVec2 uv (8 bytes), ImU32 col (4 bytes), but you can re-order them or add other fields as needed to simplify integration in your engine.
-// The type has to be described within the macro (you can either declare the struct or use a typedef)
-// NOTE: IMGUI DOESN'T CLEAR THE STRUCTURE AND DOESN'T CALL A CONSTRUCTOR SO ANY CUSTOM FIELD WILL BE UNINITIALIZED. IF YOU ADD EXTRA FIELDS (SUCH AS A 'Z' COORDINATES) YOU WILL NEED TO CLEAR THEM DURING RENDER OR TO IGNORE THEM.
-IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
+#endif
+
+// We previously used IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT that was expanded in this file. Instead please use '#define ImDrawVert MyDrawVert' [OBSOLETED in 1.71]
+#if defined(IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT)
+#error Please use '#define ImDrawVert MyDrawVert' instead!
 #endif
 
 // For use by ImDrawListSplitter.

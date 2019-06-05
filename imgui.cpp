@@ -369,6 +369,8 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2019/06/05 (1.71) - changed syntax for (very rarely used) IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT mechanism. instead you only need to '#define ImDrawVert MyDrawVert' to use this feature, 
+                       avoiding the need to declare the entire structure within an awkward macro. Using the old macro will now error and show a message pointing you to the you method.
  - 2019/05/13 (1.71) - renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
  - 2019/05/11 (1.71) - changed io.AddInputCharacter(unsigned short c) signature to io.AddInputCharacter(unsigned int c).
  - 2019/04/29 (1.70) - improved ImDrawList thick strokes (>1.0f) preserving correct thickness up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines, they will appear thicker now.
