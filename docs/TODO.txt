@@ -69,6 +69,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
  - widgets: checkbox: checkbox with custom glyph inside frame.
  - widgets: coloredit: keep reporting as active when picker is on?
+ - widgets: group/scalarn functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
@@ -231,6 +232,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - style: a concept of "compact style" that the end-user can easily rely on (e.g. PushStyleCompact()?) that maps to other settings? avoid implementing duplicate helpers such as SmallCheckbox(), etc.
  - style: try to make PushStyleVar() more robust to incorrect parameters (to be more friendly to edit & continues situation).
  - style: global scale setting.
+ - style: FramePadding could be different for up vs down (#584)
  - style: WindowPadding needs to be EVEN as the 0.5 multiplier used on this value probably have a subtle effect on clip rectangle
  - style: have a more global HSV setter (e.g. alter hue on all elements). consider replacing active/hovered by offset in HSV space? (#438, #707, #1223)
  - style: gradients fill (#1223) ~ 2 bg colors for each fill? tricky with rounded shapes and using textures for corners.
