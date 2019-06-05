@@ -35,10 +35,6 @@ HOW TO UPDATE?
 Breaking Changes:
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
-- Changed syntax for (very rarely used) IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT mechanism, instead you only
-  need to '#define ImDrawVert MyDrawVert' to use this feature, avoiding the need to declare the entire
-  structure within an awkward macro. Using the old macro will now error with a message pointing you
-  to the new method. (#38, #103, #1172, #1231, #2489)
 
 Other Changes:
 - Window: clarified behavior of SetNextWindowContentSize(). Content size is defined as the size available

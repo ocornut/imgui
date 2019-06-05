@@ -68,9 +68,6 @@
 // Read about ImGuiBackendFlags_RendererHasVtxOffset for details.
 //#define ImDrawIdx unsigned int
 
-//---- Override ImDrawVert layout (see comments near ImDrawVert declaration)
-//#define ImDrawVert MyDrawVert
-
 //---- Tip: You can add extra functions within the ImGui:: namespace, here or in your own headers files.
 /*
 namespace ImGui

@@ -138,8 +138,8 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 
     // Copy and convert all vertices into a single contiguous buffer, convert colors to DX9 default format.
     // FIXME-OPT: This is a waste of resource, the ideal is to use imconfig.h and
-    //  1) to avoid repacking colors:   use '#define IMGUI_USE_BGRA_PACKED_COLOR'
-    //  2) to avoid repacking vertices: use 'struct ImDrawVertDx9 { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }' + '#define ImDrawVert ImDrawVertDx9'
+    //  1) to avoid repacking colors:   #define IMGUI_USE_BGRA_PACKED_COLOR
+    //  2) to avoid repacking vertices: #define IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT struct ImDrawVert { ImVec2 pos; float z; ImU32 col; ImVec2 uv; }
     CUSTOMVERTEX* vtx_dst;
     ImDrawIdx* idx_dst;
     if (g_pVB->Lock(0, (UINT)(draw_data->TotalVtxCount * sizeof(CUSTOMVERTEX)), (void**)&vtx_dst, D3DLOCK_DISCARD) < 0)
