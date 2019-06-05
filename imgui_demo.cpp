@@ -2168,6 +2168,7 @@ static void ShowDemoWindowLayout()
             static bool show_text_wrapped = false;
             static bool show_columns = true;
             static bool show_tab_bar = true;
+            static bool show_child = false;
             static bool explicit_content_size = false;
             static float contents_size_x = 300.0f;
             if (explicit_content_size)
@@ -2182,7 +2183,9 @@ static void ShowDemoWindowLayout()
             ImGui::Checkbox("Text wrapped", &show_text_wrapped);// Will grow and use contents size
             ImGui::Checkbox("Columns", &show_columns);          // Will use contents size
             ImGui::Checkbox("Tab bar", &show_tab_bar);          // Will use contents size
+            ImGui::Checkbox("Child", &show_child);              // Will grow and use contents size
             ImGui::Checkbox("Explicit content size", &explicit_content_size);
+            ImGui::Text("Scroll %.1f/%.1f %.1f/%.1f", ImGui::GetScrollX(), ImGui::GetScrollMaxX(), ImGui::GetScrollY(), ImGui::GetScrollMaxY());
             if (explicit_content_size)
             {
                 ImGui::SameLine();
@@ -2234,6 +2237,11 @@ static void ShowDemoWindowLayout()
                 if (ImGui::BeginTabItem("ThreeThreeThree")) { ImGui::EndTabItem(); }
                 if (ImGui::BeginTabItem("FourFourFour")) { ImGui::EndTabItem(); }
                 ImGui::EndTabBar();
+            }
+            if (show_child)
+            {
+                ImGui::BeginChild("child", ImVec2(0,0), true);
+                ImGui::EndChild();
             }
             ImGui::End();
         }
