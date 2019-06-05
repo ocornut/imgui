@@ -106,6 +106,13 @@ Breaking Changes:
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
 
 Other Changes:
+- Window: clarified behavior of SetNextWindowContentSize(). Content size is defined as the size available
+  after removal of WindowPadding on each sides. So SetNextWindowContentSize(ImVec2(100,100)) + auto-resize
+  will always allow submitting a 100x100 item without creating a scrollbar, regarding of WindowPadding.
+  The exact meaning of ContentSize for decorated windows was previously ill-defined.
+- Window: Fixed auto-resize with AlwaysVerticalScrollbar or AlwaysHorizontalScrollbar flags.
+- Window: Fixed one case where auto-resize by double-clicking the resize grip would make either scrollbar
+  appear for a single frame after the resize.
 - Columns: Fixed Separator from creating an extraneous draw command. (#125)
 - Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
@@ -121,7 +128,8 @@ Other Changes:
 - ColorEdit: Fixed the color picker popup only displaying inputs as HSV instead of showing multiple
   options. (#2587, broken in 1.69 by #2384).
 - CollapsingHeader: Better clipping when a close button is enabled and it overlaps the label. (#600)
-- Scrollbar: Very minor bounding box adjustment to cope with various border size.
+- Scrollbar: Minor bounding box adjustment to cope with various border size.
+- Scrollbar, Style: Changed default style.ScrollbarSize from 16 to 14.
 - Combo: Fixed rounding not applying with the ImGuiComboFlags_NoArrowButton flag. (#2607) [@DucaRii]
 - Nav: Fixed gamepad/keyboard moving of window affecting contents size incorrectly, sometimes leading
   to scrollbars appearing during the movement.
@@ -129,6 +137,12 @@ Other Changes:
   frame as clearing the focus. This was in most noticeable in back-ends such as Glfw and SDL which
   emits key release events when focusing another viewport, leading to Alt+clicking on void on another
   viewport triggering the issue. (#2609)
+- TreeNode, CollapsingHeader: Fixed highlight frame not covering horizontal area fully when using
+  horizontal scrolling. (#2211, #2579)
+- TabBar: Fixed BeginTabBar() within a window with horizontal scrolling from creating a feedback
+  loop with the horizontal contents size.
+- Columns: Fixed Columns() within a window with horizontal scrolling from not covering the full
+  horizontal area (previously only worked with an explicit contents size). (#125)
 - Style: Added style.WindowMenuButtonPosition (left/right, defaults to ImGuiDir_Left) to move the
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
