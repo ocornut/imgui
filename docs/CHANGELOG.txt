@@ -42,6 +42,8 @@ Other Changes:
   will always allow submitting a 100x100 item without creating a scrollbar, regarding of WindowPadding.
   The exact meaning of ContentSize for decorated windows was previously ill-defined.
 - Window: Fixed auto-resize with AlwaysVerticalScrollbar or AlwaysHorizontalScrollbar flags.
+- Window: Fixed one case where auto-resize by double-clicking the resize grip would make either scrollbar
+  appear for a single frame after the resize.
 - Columns: Fixed Separator from creating an extraneous draw command. (#125)
 - Columns: Fixed Selectable with SpanAllColumns flag from creating an extraneous draw command. (#125)
 - Separator: Revert 1.70 "Declare its thickness (1.0f) to the layout" change. It's not incorrect
