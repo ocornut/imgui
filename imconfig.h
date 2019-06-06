@@ -68,6 +68,12 @@
 // Read about ImGuiBackendFlags_RendererHasVtxOffset for details.
 //#define ImDrawIdx unsigned int
 
+//---- Override ImDrawCallback signature (will need to modify renderer back-ends accordingly)
+//struct ImDrawList;
+//struct ImDrawCmd;
+//typedef void (*MyImDrawCallback)(const ImDrawList* draw_list, const ImDrawCmd* cmd, void* my_renderer_user_data);
+//#define ImDrawCallback MyImDrawCallback
+
 //---- Tip: You can add extra functions within the ImGui:: namespace, here or in your own headers files.
 /*
 namespace ImGui
