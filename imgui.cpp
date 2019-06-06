@@ -2624,6 +2624,14 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     return id;
 }
 
+ImGuiID ImGuiWindow::GetID(int n)
+{
+    ImGuiID seed = IDStack.back();
+    ImGuiID id = ImHashData(&n, sizeof(n), seed);
+    ImGui::KeepAliveID(id);
+    return id;
+}
+
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
@@ -2634,6 +2642,12 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
     return ImHashData(&ptr, sizeof(void*), seed);
+}
+
+ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n)
+{
+    ImGuiID seed = IDStack.back();
+    return ImHashData(&n, sizeof(n), seed);
 }
 
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
@@ -6836,9 +6850,8 @@ void ImGui::PushID(const void* ptr_id)
 
 void ImGui::PushID(int int_id)
 {
-    const void* ptr_id = (void*)(intptr_t)int_id;
     ImGuiWindow* window = GImGui->CurrentWindow;
-    window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
+    window->IDStack.push_back(window->GetIDNoKeepAlive(int_id));
 }
 
 // Push a given id value ignoring the ID stack as a seed.
