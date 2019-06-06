@@ -349,7 +349,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
 
- - examples: move ImGui::NewFrame() out of the backend _NewFrame() ?
  - viewport: make it possible to have no main/hosting viewport
  - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
    on a custom e.g. Win32 bindings. It prevents newly dragged-out viewports from taking the focus, which makes ALT+F4 more ambiguous.
