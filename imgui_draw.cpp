@@ -183,6 +183,9 @@ void ImGui::StyleColorsDark(ImGuiStyle* dst)
     colors[ImGuiCol_TextDisabled]           = ImVec4(0.50f, 0.50f, 0.50f, 1.00f);
     colors[ImGuiCol_WindowBg]               = ImVec4(0.06f, 0.06f, 0.06f, 0.94f);
     colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_CursorShadowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.19f);
+    colors[ImGuiCol_CursorBorderBg]         = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_CursorFillBg]           = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_PopupBg]                = ImVec4(0.08f, 0.08f, 0.08f, 0.94f);
     colors[ImGuiCol_Border]                 = ImVec4(0.43f, 0.43f, 0.50f, 0.50f);
     colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -238,6 +241,9 @@ void ImGui::StyleColorsClassic(ImGuiStyle* dst)
     colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
     colors[ImGuiCol_WindowBg]               = ImVec4(0.00f, 0.00f, 0.00f, 0.70f);
     colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_CursorShadowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.19f);
+    colors[ImGuiCol_CursorBorderBg]         = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_CursorFillBg]           = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_PopupBg]                = ImVec4(0.11f, 0.11f, 0.14f, 0.92f);
     colors[ImGuiCol_Border]                 = ImVec4(0.50f, 0.50f, 0.50f, 0.50f);
     colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -294,6 +300,9 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
     colors[ImGuiCol_TextDisabled]           = ImVec4(0.60f, 0.60f, 0.60f, 1.00f);
     colors[ImGuiCol_WindowBg]               = ImVec4(0.94f, 0.94f, 0.94f, 1.00f);
     colors[ImGuiCol_ChildBg]                = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
+    colors[ImGuiCol_CursorShadowBg]         = ImVec4(0.00f, 0.00f, 0.00f, 0.19f);
+    colors[ImGuiCol_CursorBorderBg]         = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+    colors[ImGuiCol_CursorFillBg]           = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
     colors[ImGuiCol_PopupBg]                = ImVec4(1.00f, 1.00f, 1.00f, 0.98f);
     colors[ImGuiCol_Border]                 = ImVec4(0.00f, 0.00f, 0.00f, 0.30f);
     colors[ImGuiCol_BorderShadow]           = ImVec4(0.00f, 0.00f, 0.00f, 0.00f);
@@ -3017,14 +3026,16 @@ void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, Im
 {
     if (mouse_cursor == ImGuiMouseCursor_None)
         return;
+
     IM_ASSERT(mouse_cursor > ImGuiMouseCursor_None && mouse_cursor < ImGuiMouseCursor_COUNT);
 
-    const ImU32 col_shadow = IM_COL32(0, 0, 0, 48);
-    const ImU32 col_border = IM_COL32(0, 0, 0, 255);          // Black
-    const ImU32 col_fill   = IM_COL32(255, 255, 255, 255);    // White
+    const ImU32 col_shadow = GetColorU32(ImGuiCol_CursorShadowBg);
+    const ImU32 col_border = GetColorU32(ImGuiCol_CursorBorderBg);
+    const ImU32 col_fill = GetColorU32(ImGuiCol_CursorFillBg);
 
     ImFontAtlas* font_atlas = draw_list->_Data->Font->ContainerAtlas;
     ImVec2 offset, size, uv[4];
+
     if (font_atlas->GetMouseCursorTexData(mouse_cursor, &offset, &size, &uv[0], &uv[2]))
     {
         pos -= offset;

@@ -6233,6 +6233,9 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
     case ImGuiCol_TextDisabled: return "TextDisabled";
     case ImGuiCol_WindowBg: return "WindowBg";
     case ImGuiCol_ChildBg: return "ChildBg";
+    case ImGuiCol_CursorShadowBg: return "CursorShadowBg";
+    case ImGuiCol_CursorBorderBg: return "CursorBorderBg";
+    case ImGuiCol_CursorFillBg: return "CursorFillBg";
     case ImGuiCol_PopupBg: return "PopupBg";
     case ImGuiCol_Border: return "Border";
     case ImGuiCol_BorderShadow: return "BorderShadow";
