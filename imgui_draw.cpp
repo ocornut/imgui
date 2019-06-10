@@ -1203,8 +1203,8 @@ void ImDrawListSplitter::ClearFreeMemory()
     {
         if (i == _Current) 
             memset(&_Channels[i], 0, sizeof(_Channels[i]));  // Current channel is a copy of CmdBuffer/IdxBuffer, don't destruct again
-        _Channels[i].CmdBuffer.clear();
-        _Channels[i].IdxBuffer.clear();
+        _Channels[i]._CmdBuffer.clear();
+        _Channels[i]._IdxBuffer.clear();
     }
     _Current = 0;
     _Count = 1;
@@ -1231,22 +1231,22 @@ void ImDrawListSplitter::Split(ImDrawList* draw_list, int channels_count)
         }
         else
         {
-            _Channels[i].CmdBuffer.resize(0);
-            _Channels[i].IdxBuffer.resize(0);
+            _Channels[i]._CmdBuffer.resize(0);
+            _Channels[i]._IdxBuffer.resize(0);
         }
-        if (_Channels[i].CmdBuffer.Size == 0)
+        if (_Channels[i]._CmdBuffer.Size == 0)
         {
             ImDrawCmd draw_cmd;
             draw_cmd.ClipRect = draw_list->_ClipRectStack.back();
             draw_cmd.TextureId = draw_list->_TextureIdStack.back();
-            _Channels[i].CmdBuffer.push_back(draw_cmd);
+            _Channels[i]._CmdBuffer.push_back(draw_cmd);
         }
     }
 }
 
 static inline bool CanMergeDrawCommands(ImDrawCmd* a, ImDrawCmd* b)
 {
-    return memcmp(&a->ClipRect, &b->ClipRect, sizeof(a->ClipRect)) == 0 && a->TextureId == b->TextureId && !a->UserCallback && !b->UserCallback;
+    return memcmp(&a->ClipRect, &b->ClipRect, sizeof(a->ClipRect)) == 0 && a->TextureId == b->TextureId && a->VtxOffset == b->VtxOffset && !a->UserCallback && !b->UserCallback;
 }
 
 void ImDrawListSplitter::Merge(ImDrawList* draw_list)
@@ -1262,28 +1262,28 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
     // Calculate our final buffer sizes. Also fix the incorrect IdxOffset values in each command.
     int new_cmd_buffer_count = 0;
     int new_idx_buffer_count = 0;
-    ImDrawCmd* last_cmd = (_Count > 0 && _Channels[0].CmdBuffer.Size > 0) ? &_Channels[0].CmdBuffer.back() : NULL;
+    ImDrawCmd* last_cmd = (_Count > 0 && _Channels[0]._CmdBuffer.Size > 0) ? &_Channels[0]._CmdBuffer.back() : NULL;
     int idx_offset = last_cmd ? last_cmd->IdxOffset + last_cmd->ElemCount : 0;
     for (int i = 1; i < _Count; i++)
     {
         ImDrawChannel& ch = _Channels[i];
-        if (ch.CmdBuffer.Size > 0 && ch.CmdBuffer.back().ElemCount == 0)
-            ch.CmdBuffer.pop_back();
-        if (ch.CmdBuffer.Size > 0 && last_cmd != NULL && CanMergeDrawCommands(last_cmd, &ch.CmdBuffer[0]))
+        if (ch._CmdBuffer.Size > 0 && ch._CmdBuffer.back().ElemCount == 0)
+            ch._CmdBuffer.pop_back();
+        if (ch._CmdBuffer.Size > 0 && last_cmd != NULL && CanMergeDrawCommands(last_cmd, &ch._CmdBuffer[0]))
         {
             // Merge previous channel last draw command with current channel first draw command if matching.
-            last_cmd->ElemCount += ch.CmdBuffer[0].ElemCount;
-            idx_offset += ch.CmdBuffer[0].ElemCount;
-            ch.CmdBuffer.erase(ch.CmdBuffer.Data);
+            last_cmd->ElemCount += ch._CmdBuffer[0].ElemCount;
+            idx_offset += ch._CmdBuffer[0].ElemCount;
+            ch._CmdBuffer.erase(ch._CmdBuffer.Data);
         }
-        if (ch.CmdBuffer.Size > 0)
-            last_cmd = &ch.CmdBuffer.back();
-        new_cmd_buffer_count += ch.CmdBuffer.Size;
-        new_idx_buffer_count += ch.IdxBuffer.Size;
-        for (int cmd_n = 0; cmd_n < ch.CmdBuffer.Size; cmd_n++)
+        if (ch._CmdBuffer.Size > 0)
+            last_cmd = &ch._CmdBuffer.back();
+        new_cmd_buffer_count += ch._CmdBuffer.Size;
+        new_idx_buffer_count += ch._IdxBuffer.Size;
+        for (int cmd_n = 0; cmd_n < ch._CmdBuffer.Size; cmd_n++)
         {
-            ch.CmdBuffer.Data[cmd_n].IdxOffset = idx_offset;
-            idx_offset += ch.CmdBuffer.Data[cmd_n].ElemCount;
+            ch._CmdBuffer.Data[cmd_n].IdxOffset = idx_offset;
+            idx_offset += ch._CmdBuffer.Data[cmd_n].ElemCount;
         }
     }
     draw_list->CmdBuffer.resize(draw_list->CmdBuffer.Size + new_cmd_buffer_count);
@@ -1295,8 +1295,8 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
     for (int i = 1; i < _Count; i++)
     {
         ImDrawChannel& ch = _Channels[i];
-        if (int sz = ch.CmdBuffer.Size) { memcpy(cmd_write, ch.CmdBuffer.Data, sz * sizeof(ImDrawCmd)); cmd_write += sz; }
-        if (int sz = ch.IdxBuffer.Size) { memcpy(idx_write, ch.IdxBuffer.Data, sz * sizeof(ImDrawIdx)); idx_write += sz; }
+        if (int sz = ch._CmdBuffer.Size) { memcpy(cmd_write, ch._CmdBuffer.Data, sz * sizeof(ImDrawCmd)); cmd_write += sz; }
+        if (int sz = ch._IdxBuffer.Size) { memcpy(idx_write, ch._IdxBuffer.Data, sz * sizeof(ImDrawIdx)); idx_write += sz; }
     }
     draw_list->_IdxWritePtr = idx_write;
     draw_list->UpdateClipRect(); // We call this instead of AddDrawCmd(), so that empty channels won't produce an extra draw call.
@@ -1309,11 +1309,11 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
     if (_Current == idx) 
         return;
     // Overwrite ImVector (12/16 bytes), four times. This is merely a silly optimization instead of doing .swap()
-    memcpy(&_Channels.Data[_Current].CmdBuffer, &draw_list->CmdBuffer, sizeof(draw_list->CmdBuffer));
-    memcpy(&_Channels.Data[_Current].IdxBuffer, &draw_list->IdxBuffer, sizeof(draw_list->IdxBuffer));
+    memcpy(&_Channels.Data[_Current]._CmdBuffer, &draw_list->CmdBuffer, sizeof(draw_list->CmdBuffer));
+    memcpy(&_Channels.Data[_Current]._IdxBuffer, &draw_list->IdxBuffer, sizeof(draw_list->IdxBuffer));
     _Current = idx;
-    memcpy(&draw_list->CmdBuffer, &_Channels.Data[idx].CmdBuffer, sizeof(draw_list->CmdBuffer));
-    memcpy(&draw_list->IdxBuffer, &_Channels.Data[idx].IdxBuffer, sizeof(draw_list->IdxBuffer));
+    memcpy(&draw_list->CmdBuffer, &_Channels.Data[idx]._CmdBuffer, sizeof(draw_list->CmdBuffer));
+    memcpy(&draw_list->IdxBuffer, &_Channels.Data[idx]._IdxBuffer, sizeof(draw_list->IdxBuffer));
     draw_list->_IdxWritePtr = draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size;
 }
 

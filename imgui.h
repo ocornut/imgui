@@ -1824,8 +1824,8 @@ IMGUI_OVERRIDE_DRAWVERT_STRUCT_LAYOUT;
 // For use by ImDrawListSplitter.
 struct ImDrawChannel
 {
-    ImVector<ImDrawCmd>         CmdBuffer;
-    ImVector<ImDrawIdx>         IdxBuffer;
+    ImVector<ImDrawCmd>         _CmdBuffer;
+    ImVector<ImDrawIdx>         _IdxBuffer;
 };
 
 // Split/Merge functions are used to split the draw list into different layers which can be drawn into out of order.
@@ -1834,7 +1834,7 @@ struct ImDrawListSplitter
 {
     int                         _Current;    // Current channel number (0)
     int                         _Count;      // Number of active channels (1+)
-    ImVector<ImDrawChannel>     _Channels;   // Draw channels (not resized down so Count might be < Channels.Size)
+    ImVector<ImDrawChannel>     _Channels;   // Draw channels (not resized down so _Count might be < Channels.Size)
 
     inline ImDrawListSplitter() { Clear(); }
     inline void                 Clear() { _Current = 0; _Count = 1; } // Do not clear Channels[] so our allocations are reused next frame
