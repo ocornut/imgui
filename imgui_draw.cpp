@@ -1267,12 +1267,13 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
     for (int i = 1; i < _Count; i++)
     {
         ImDrawChannel& ch = _Channels[i];
-        if (ch.CmdBuffer.Size && ch.CmdBuffer.back().ElemCount == 0)
+        if (ch.CmdBuffer.Size > 0 && ch.CmdBuffer.back().ElemCount == 0)
             ch.CmdBuffer.pop_back();
-        else if (ch.CmdBuffer.Size > 0 && last_cmd != NULL && CanMergeDrawCommands(last_cmd, &ch.CmdBuffer[0]))
+        if (ch.CmdBuffer.Size > 0 && last_cmd != NULL && CanMergeDrawCommands(last_cmd, &ch.CmdBuffer[0]))
         {
             // Merge previous channel last draw command with current channel first draw command if matching.
             last_cmd->ElemCount += ch.CmdBuffer[0].ElemCount;
+            idx_offset += ch.CmdBuffer[0].ElemCount;
             ch.CmdBuffer.erase(ch.CmdBuffer.Data);
         }
         if (ch.CmdBuffer.Size > 0)
