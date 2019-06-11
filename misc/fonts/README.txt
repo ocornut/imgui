@@ -279,13 +279,13 @@ ProggyClean.ttf
 
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 13.0, DisplayOffset.Y = +1
   http://www.proggyfonts.net/
 
 ProggyTiny.ttf
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 10.0, DisplayOffset.Y = +1
   http://www.proggyfonts.net/
 
 Karla-Regular.ttf

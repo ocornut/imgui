@@ -1,3 +1,8 @@
+# Example usage:
+#  mkdir build
+#  cd build
+#  cmake -g "Visual Studio 14 2015" ..
+
 cmake_minimum_required(VERSION 2.8)
 project(imgui_example_glfw_vulkan C CXX)
 
@@ -18,7 +23,7 @@ option(GLFW_DOCUMENT_INTERNALS "Include internals in documentation" OFF)
 add_subdirectory(${GLFW_DIR} binary_dir EXCLUDE_FROM_ALL)
 include_directories(${GLFW_DIR}/include)
 
-# ImGui
+# Dear ImGui
 set(IMGUI_DIR ../../)
 include_directories(${IMGUI_DIR} ..)
 

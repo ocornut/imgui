@@ -93,7 +93,7 @@ Most the example bindings are split in 2 parts:
 
  - Road-map: Dear ImGui 1.80 (WIP currently in the "docking" branch) will allows imgui windows to be
    seamlessly detached from the main application window. This is achieved using an extra layer to the
-   platform and renderer bindings, which allows imgui to communicate platform-specific requests.
+   platform and renderer bindings, which allows Dear ImGui to communicate platform-specific requests.
    If you decide to use unmodified imgui_impl_xxxx.cpp files, you will automatically benefit from
    improvements and fixes related to viewports and platform windows without extra work on your side.
 
@@ -210,6 +210,12 @@ example_glut_opengl2/
 example_marmalade/
     Marmalade example using IwGx.
     = main.cpp + imgui_impl_marmalade.cpp
+
+example_null
+    Null example, compile and link imgui, create context, run headless with no inputs and no graphics output.
+    = main.cpp
+    This is used to quickly test compilation of core imgui files in as many setups as possible.
+    Because this application doesn't create a window nor a graphic context, there's no graphics output.
 
 example_sdl_opengl2/
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
