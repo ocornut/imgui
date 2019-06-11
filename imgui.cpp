@@ -2422,6 +2422,51 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
         LogRenderedText(&pos_min, text, text_display_end);
 }
 
+
+// Another overly complex function until we reorganize everything into a nice all-in-one helper.
+// This is made more complex because we have dissociated the layout rectangle (pos_min..pos_max) which define where the ellipsis is, from actual clipping and limit of the ellipsis display.
+// This is because in the context of tabs we selectively hide part of the text when the Close Button appears, but we don't want the ellipsis to move. 
+void    ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end_full, const ImVec2* text_size_if_known)
+{
+    ImGuiContext& g = *GImGui;
+    if (text_end_full == NULL)
+        text_end_full = FindRenderedTextEnd(text);
+    const ImVec2 text_size = text_size_if_known ? *text_size_if_known : CalcTextSize(text, text_end_full, false, 0.0f);
+
+    if (text_size.x > pos_max.x - pos_min.x)
+    {
+
+        const ImFont* font = draw_list->_Data->Font;
+        const float font_size = draw_list->_Data->FontSize;
+        const int ellipsis_dot_count = 3;
+        const float ellipsis_width = (1.0f + 1.0f) * ellipsis_dot_count - 1.0f;
+        const char* text_end_ellipsis = NULL;
+        float text_size_clipped_x = font->CalcTextSizeA(font_size, (pos_max.x - pos_min.x) - ellipsis_width + 1.0f, 0.0f, text, text_end_full, &text_end_ellipsis).x;
+        if (text == text_end_ellipsis && text_end_ellipsis < text_end_full)    // Always display at least 1 character if there's no room for character + ellipsis
+        {
+            text_end_ellipsis = text + ImTextCountUtf8BytesFromChar(text, text_end_full);
+            text_size_clipped_x = font->CalcTextSizeA(font_size, FLT_MAX, 0.0f, text, text_end_ellipsis).x;
+        }
+        while (text_end_ellipsis > text && ImCharIsBlankA(text_end_ellipsis[-1])) // Trim trailing space
+        {
+            text_end_ellipsis--;
+            text_size_clipped_x -= font->CalcTextSizeA(font_size, FLT_MAX, 0.0f, text_end_ellipsis, text_end_ellipsis + 1).x; // Ascii blanks are always 1 byte
+        }
+        RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
+
+        const float ellipsis_x = pos_min.x + text_size_clipped_x + 1.0f;
+        if (ellipsis_x + ellipsis_width <= ellipsis_max_x)
+            RenderPixelEllipsis(draw_list, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_dot_count);
+    }
+    else
+    {
+        RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_full, &text_size, ImVec2(0.0f, 0.0f));
+    }
+
+    if (g.LogEnabled)
+        LogRenderedText(&pos_min, text, text_end_full);
+}
+
 // Render a rectangle shaped with optional rounding and borders
 void ImGui::RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border, float rounding)
 {
