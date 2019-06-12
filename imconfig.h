@@ -3,10 +3,10 @@
 // Runtime options (clipboard callbacks, enabling various features, etc.) can generally be set via the ImGuiIO structure.
 // You can use ImGui::SetAllocatorFunctions() before calling ImGui::CreateContext() to rewire memory allocation functions.
 //-----------------------------------------------------------------------------
-// A) You may edit imconfig.h (and not overwrite it when updating imgui, or maintain a patch/branch with your modifications to imconfig.h)
+// A) You may edit imconfig.h (and not overwrite it when updating Dear ImGui, or maintain a patch/branch with your modifications to imconfig.h)
 // B) or add configuration directives in your own file and compile with #define IMGUI_USER_CONFIG "myfilename.h"
-// If you do so you need to make sure that configuration settings are defined consistently _everywhere_ dear imgui is used, which include
-// the imgui*.cpp files but also _any_ of your code that uses imgui. This is because some compile-time options have an affect on data structures.
+// If you do so you need to make sure that configuration settings are defined consistently _everywhere_ Dear ImGui is used, which include
+// the imgui*.cpp files but also _any_ of your code that uses Dear ImGui. This is because some compile-time options have an affect on data structures.
 // Defining those options in imconfig.h will ensure every compilation unit gets to see the same data structure layouts.
 // Call IMGUI_CHECKVERSION() from your .cpp files to verify that the data structures your files are using are matching the ones imgui.cpp is using.
 //-----------------------------------------------------------------------------
@@ -17,7 +17,8 @@
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 //#define IM_ASSERT(_EXPR)  ((void)(_EXPR))     // Disable asserts
 
-//---- Define attributes of all API symbols declarations, e.g. for DLL under Windows.
+//---- Define attributes of all API symbols declarations, e.g. for DLL under Windows 
+// Using dear imgui via a shared library is not recommended, because of function call overhead and because we don't guarantee backward nor forward ABI compatibility.
 //#define IMGUI_API __declspec( dllexport )
 //#define IMGUI_API __declspec( dllimport )
 
@@ -25,7 +26,7 @@
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //---- Don't implement demo windows functionality (ShowDemoWindow()/ShowStyleEditor()/ShowUserGuide() methods will be empty)
-//---- It is very strongly recommended to NOT disable the demo windows during development. Please read the comments in imgui_demo.cpp.
+// It is very strongly recommended to NOT disable the demo windows during development. Please read the comments in imgui_demo.cpp.
 //#define IMGUI_DISABLE_DEMO_WINDOWS
 
 //---- Don't implement some functions to reduce linkage requirements.
