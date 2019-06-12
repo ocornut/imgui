@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
- dear imgui, v1.71 WIP
+ dear imgui, v1.71
 -----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)
@@ -104,7 +104,7 @@ List of Platforms Bindings in this repository:
     imgui_impl_osx.mm         ; macOS native API (not as feature complete as glfw/sdl back-ends)
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
     imgui_impl_win32.cpp      ; Win32 native API (Windows)
-    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (not recommended unless really miss the 90's)
+    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (absolutely not recommended in 2019)
 
 List of Renderer Bindings in this repository:
 
