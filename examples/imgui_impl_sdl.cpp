@@ -190,6 +190,14 @@ bool ImGui_ImplSDL2_InitForVulkan(SDL_Window* window)
     return ImGui_ImplSDL2_Init(window);
 }
 
+bool ImGui_ImplSDL2_InitForD3D(SDL_Window* window)
+{
+#if !defined(_WIN32)
+    IM_ASSERT(0 && "Unsupported");
+#endif
+    return ImGui_ImplSDL2_Init(window);
+}
+
 void ImGui_ImplSDL2_Shutdown()
 {
     g_Window = NULL;
