@@ -564,8 +564,8 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataDx11* data = IM_NEW(ImGuiViewportDataDx11)();
     viewport->RendererUserData = data;
 
-    HWND hwnd = (HWND)viewport->PlatformHandle;
-    IM_ASSERT(hwnd != 0);
+    assert(viewport->PlatformHandleRaw);
+    HWND hwnd = (HWND)viewport->PlatformHandleRaw;
 
     // Create swap chain
     DXGI_SWAP_CHAIN_DESC sd;

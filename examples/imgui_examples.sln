@@ -13,6 +13,8 @@ Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_glfw_opengl2", "exa
 EndProject
 Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_glfw_opengl3", "example_glfw_opengl3\example_glfw_opengl3.vcxproj", "{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}"
 EndProject
+Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "example_sdl_directx11.vcxproj", "example_sdl_directx11\example_sdl_directx11.vcxproj.vcxproj", "{9E1987E3-1F19-45CA-B9C9-D31E791836D8}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Win32 = Debug|Win32
@@ -61,6 +63,14 @@ Global
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Release|Win32.Build.0 = Release|Win32
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Release|x64.ActiveCfg = Release|x64
 		{4A1FB5EA-22F5-42A8-AB92-1D2DF5D47FB9}.Release|x64.Build.0 = Release|x64
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Debug|Win32.ActiveCfg = Debug|Win32
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Debug|Win32.Build.0 = Debug|Win32
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Debug|x64.ActiveCfg = Debug|x64
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Debug|x64.Build.0 = Debug|x64
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|Win32.ActiveCfg = Release|Win32
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|Win32.Build.0 = Release|Win32
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|x64.ActiveCfg = Release|x64
+		{9E1987E3-1F19-45CA-B9C9-D31E791836D8}.Release|x64.Build.0 = Release|x64
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

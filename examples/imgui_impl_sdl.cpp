@@ -223,6 +223,11 @@ bool ImGui_ImplSDL2_InitForVulkan(SDL_Window* window)
     return ImGui_ImplSDL2_Init(window, NULL);
 }
 
+bool ImGui_ImplSDL2_InitForD3D(SDL_Window* window)
+{
+    return ImGui_ImplSDL2_Init(window, NULL);
+}
+
 void ImGui_ImplSDL2_Shutdown()
 {
     ImGui_ImplSDL2_ShutdownPlatformInterface();
@@ -448,6 +453,15 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     if (use_opengl && backup_context)
         SDL_GL_MakeCurrent(data->Window, backup_context);
     viewport->PlatformHandle = (void*)data->Window;
+
+#if defined(_WIN32)
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (SDL_GetWindowWMInfo(data->Window, &info))
+    {
+        viewport->PlatformHandleRaw = info.info.win.window;
+    }
+#endif
 }
 
 static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
