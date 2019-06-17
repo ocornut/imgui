@@ -98,6 +98,24 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.72 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+- Removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017):
+  - ImGuiCol_Column*, ImGuiSetCond_* enums.
+  - IsItemHoveredRect(), IsPosHoveringAnyWindow(), IsMouseHoveringAnyWindow(), IsMouseHoveringWindow() functions.
+  - IMGUI_ONCE_UPON_A_FRAME macro.
+  If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
+  the new names and equivalent.
+
+Other Changes:
+- ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
+- ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between channel 0 and 1. (#2624)
+>>>>>>> master
+
+
+-----------------------------------------------------------------------
  VERSION 1.71 (Released 2019-06-12)
 -----------------------------------------------------------------------
 
