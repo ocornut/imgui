@@ -10558,17 +10558,20 @@ static ImGuiViewportP* FindViewportHoveredFromPlatformWindowStack(const ImVec2 m
     return best_candidate;
 }
 
+// Update viewports and monitor infos
+// Note that this is runing even if 'ImGuiConfigFlags_ViewportsEnable' is not set, in order to clear unused viewports (if any) and update monitor info.
 static void ImGui::UpdateViewportsNewFrame()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
-    for (int n = 0; n < g.Viewports.Size; n++)
+    if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
     {
-        ImGuiViewportP* viewport = g.Viewports[n];
-        const bool platform_funcs_available = viewport->PlatformWindowCreated;
-        if ((g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable))
+        for (int n = 0; n < g.Viewports.Size; n++)
+        {
+            ImGuiViewportP* viewport = g.Viewports[n];
+            const bool platform_funcs_available = viewport->PlatformWindowCreated;
             if (g.PlatformIO.Platform_GetWindowMinimized && platform_funcs_available)
             {
                 bool minimized = g.PlatformIO.Platform_GetWindowMinimized(viewport);
@@ -10577,6 +10580,7 @@ static void ImGui::UpdateViewportsNewFrame()
                 else
                     viewport->Flags &= ~ImGuiViewportFlags_Minimized;
             }
+        }
     }
 
     // Create/update main viewport with current platform position and size
@@ -10593,10 +10597,10 @@ static void ImGui::UpdateViewportsNewFrame()
     g.MouseViewport = NULL;
     for (int n = 0; n < g.Viewports.Size; n++)
     {
-        // Erase unused viewports
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->Idx = n;
 
+        // Erase unused viewports
         if (n > 0 && viewport->LastFrameActive < g.FrameCount - 2)
         {
             // Clear references to this viewport in windows (window->ViewportId becomes the master data)
@@ -10631,9 +10635,10 @@ static void ImGui::UpdateViewportsNewFrame()
                 if (viewport->PlatformRequestResize)
                     viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
             }
-
-            UpdateViewportPlatformMonitor(viewport);
         }
+
+        // Update/copy monitor info
+        UpdateViewportPlatformMonitor(viewport);
 
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
         viewport->Alpha = 1.0f;
@@ -11102,10 +11107,14 @@ static int ImGui::FindPlatformMonitorForPos(const ImVec2& pos)
 
 // Search for the monitor with the largest intersection area with the given rectangle
 // We generally try to avoid searching loops but the monitor count should be very small here
-// FIXME-OPT: We could test the last monitor used for that viewport first..
+// FIXME-OPT: We could test the last monitor used for that viewport first, and early 
 static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 {
     ImGuiContext& g = *GImGui;
+
+    const int monitor_count = g.PlatformIO.Monitors.Size;
+    if (monitor_count <= 1)
+        return monitor_count - 1;
 
     // Use a minimum threshold of 1.0f so a zero-sized rect won't false positive, and will still find the correct monitor given its position. 
     // This is necessary for tooltips which always resize down to zero at first.
