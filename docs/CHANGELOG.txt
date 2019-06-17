@@ -42,6 +42,7 @@ Breaking Changes:
   the new names and equivalent.
 
 Other Changes:
+- Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between channel 0 and 1. (#2624)
 
