@@ -42,7 +42,8 @@ Breaking Changes:
   the new names and equivalent.
 
 Other Changes:
-- ImDrawList::ChannelsSplit(), ImDrawListSlitter: Fixed an issue with merging draw commands between channel 0 and 1. (#2624)
+- ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
+- ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between channel 0 and 1. (#2624)
 
 
 -----------------------------------------------------------------------
