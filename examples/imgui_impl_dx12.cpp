@@ -4,7 +4,8 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
-// Issues:
+// Missing features, issues:
+//  [ ] Renderer: Missing multi-viewport support.
 //  [ ] 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*)). See github.com/ocornut/imgui/pull/301
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
@@ -680,7 +681,9 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
 
     /*
     // FIXME-PLATFORM
-    HWND hwnd = (HWND)viewport->PlatformHandle;
+    // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // Some back-ends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
+    HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);
 
     // Create swap chain

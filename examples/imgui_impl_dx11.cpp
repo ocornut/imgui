@@ -564,13 +564,9 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataDx11* data = IM_NEW(ImGuiViewportDataDx11)();
     viewport->RendererUserData = data;
 
-    // When using SDL, PlatformHandleRaw will be the HWND (because PlatformHandle would be the SDL_Window)
-    // If not using SDL, PlatformHandleRaw will be null and PlatformHandle will contain the HWND
-    HWND hwnd = (HWND)viewport->PlatformHandleRaw;
-    if (hwnd == 0)
-    {
-        hwnd = (HWND)viewport->PlatformHandle;
-    }
+    // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // Some back-end will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
+    HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);
 
     // Create swap chain

@@ -73,7 +73,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     g_hWnd = (HWND)hwnd;
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = (void*)g_hWnd;
+    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)g_hWnd;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplWin32_InitPlatformInterface();
 
@@ -547,7 +547,7 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
         parent_window, NULL, ::GetModuleHandle(NULL), NULL);                    // Parent window, Menu, Instance, Param
     data->HwndOwned = true;
     viewport->PlatformRequestResize = false;
-    viewport->PlatformHandle = data->Hwnd;
+    viewport->PlatformHandle = viewport->PlatformHandleRaw = data->Hwnd;
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)

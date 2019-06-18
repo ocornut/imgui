@@ -553,7 +553,9 @@ static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataDx10* data = IM_NEW(ImGuiViewportDataDx10)();
     viewport->RendererUserData = data;
 
-    HWND hwnd = (HWND)viewport->PlatformHandle;
+    // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // Some back-ends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
+    HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
     IM_ASSERT(hwnd != 0);
 
     // Create swap chain

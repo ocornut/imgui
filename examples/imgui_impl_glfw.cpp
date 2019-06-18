@@ -202,6 +202,9 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = (void*)g_Window;
+#ifdef _WIN32
+    main_viewport->PlatformHandleRaw = glfwGetWin32Window(g_Window);
+#endif
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplGlfw_InitPlatformInterface();
 
@@ -444,6 +447,9 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, share_window);
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
+#ifdef _WIN32
+    viewport->PlatformHandleRaw = glfwGetWin32Window(data->Window);
+#endif
     glfwSetWindowPos(data->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 
     // Install callbacks for secondary viewports
@@ -468,7 +474,7 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
         if (data->WindowOwned)
         {
 #if GLFW_HAS_GLFW_HOVERED && defined(_WIN32)
-            HWND hwnd = glfwGetWin32Window(data->Window);
+            HWND hwnd = (HWND)viewport->PlatformHandleRaw;
             ::RemovePropA(hwnd, "IMGUI_VIEWPORT");
 #endif
             glfwDestroyWindow(data->Window);
@@ -504,7 +510,7 @@ static void ImGui_ImplGlfw_ShowWindow(ImGuiViewport* viewport)
 
 #if defined(_WIN32)
     // GLFW hack: Hide icon from task bar
-    HWND hwnd = glfwGetWin32Window(data->Window);
+    HWND hwnd = (HWND)viewport->PlatformHandleRaw;
     if (viewport->Flags & ImGuiViewportFlags_NoTaskBarIcon)
     {
         LONG ex_style = ::GetWindowLong(hwnd, GWL_EXSTYLE);
@@ -633,13 +639,12 @@ static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport, void*)
 static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
 {
     COMPOSITIONFORM cf = { CFS_FORCE_POSITION, { (LONG)(pos.x - viewport->Pos.x), (LONG)(pos.y - viewport->Pos.y) }, { 0, 0, 0, 0 } };
-    if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
-        if (HWND hwnd = glfwGetWin32Window(data->Window))
-            if (HIMC himc = ::ImmGetContext(hwnd))
-            {
-                ::ImmSetCompositionWindow(himc, &cf);
-                ::ImmReleaseContext(hwnd, himc);
-            }
+    if (HWND hwnd = (HWND)viewport->PlatformHandleRaw)
+        if (HIMC himc = ::ImmGetContext(hwnd))
+        {
+            ::ImmSetCompositionWindow(himc, &cf);
+            ::ImmReleaseContext(hwnd, himc);
+        }
 }
 #else
 #define HAS_WIN32_IME   0

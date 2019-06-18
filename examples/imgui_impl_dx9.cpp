@@ -319,8 +319,10 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     ImGuiViewportDataDx9* data = IM_NEW(ImGuiViewportDataDx9)();
     viewport->RendererUserData = data;
 
-    HWND hWnd = (HWND)viewport->PlatformHandle;
-    IM_ASSERT(hWnd != 0);
+    // PlatformHandleRaw should always be a HWND, whereas PlatformHandle might be a higher-level handle (e.g. GLFWWindow*, SDL_Window*).
+    // Some back-ends will leave PlatformHandleRaw NULL, in which case we assume PlatformHandle will contain the HWND.
+    HWND hwnd = viewport->PlatformHandleRaw ? (HWND)viewport->PlatformHandleRaw : (HWND)viewport->PlatformHandle;
+    IM_ASSERT(hwnd != 0);
 
     ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
     data->d3dpp.Windowed = TRUE;
@@ -328,7 +330,7 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     data->d3dpp.BackBufferWidth = (UINT)viewport->Size.x;
     data->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
     data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
-    data->d3dpp.hDeviceWindow = hWnd;
+    data->d3dpp.hDeviceWindow = hwnd;
     data->d3dpp.EnableAutoDepthStencil = FALSE;
     data->d3dpp.AutoDepthStencilFormat = D3DFMT_D16;
     data->d3dpp.PresentationInterval = D3DPRESENT_INTERVAL_IMMEDIATE;   // Present without vsync
