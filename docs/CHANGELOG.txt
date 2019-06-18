@@ -43,6 +43,8 @@ Breaking Changes:
 
 Other Changes:
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
+- Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
+  of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between
   channel 0 and 1. (#2624)

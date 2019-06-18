@@ -2692,7 +2692,7 @@ const char* ImFont::CalcWordWrapPositionA(float scale, const char* text, const c
         }
 
         // We ignore blank width at the end of the line (they can be skipped)
-        if (line_width + word_width >= wrap_width)
+        if (line_width + word_width > wrap_width)
         {
             // Words that cannot possibly fit within an entire line will be cut anywhere.
             if (word_width < wrap_width)
