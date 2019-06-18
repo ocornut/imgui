@@ -110,9 +110,15 @@ Breaking Changes:
   the new names and equivalent.
 
 Other Changes:
+- Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
+- Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
+  of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
-- ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between channel 0 and 1. (#2624)
->>>>>>> master
+- ImDrawListSplitter, ImDrawList::ChannelsSplit(): Fixed an issue with merging draw commands between
+  channel 0 and 1. (#2624)
+- Backends: SDL2: Added dummy ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
+  (#2482, #2632) [@josiahmanson]
+- Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
 
 
 -----------------------------------------------------------------------

@@ -208,6 +208,7 @@ example_glfw_vulkan/
     GLFW (Win32, Mac, Linux) + Vulkan example.
     = main.cpp + imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
     This is quite long and tedious, because: Vulkan.
+    For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
 
 example_glut_opengl2/
     GLUT (e.g., FreeGLUT on Linux/Windows, GLUT framework on OSX) + OpenGL2.
@@ -223,6 +224,11 @@ example_null
     = main.cpp
     This is used to quickly test compilation of core imgui files in as many setups as possible.
     Because this application doesn't create a window nor a graphic context, there's no graphics output.
+
+example_sdl_directx11/
+    SDL2 + DirectX11 example, Windows only.
+    = main.cpp + imgui_impl_sdl.cpp + imgui_impl_dx11.cpp
+    This to demonstrate usage of DirectX with SDL.
 
 example_sdl_opengl2/
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).
@@ -247,6 +253,7 @@ example_sdl_vulkan/
     SDL2 (Win32, Mac, Linux, etc.) + Vulkan example.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_vulkan.cpp
     This is quite long and tedious, because: Vulkan.
+    For this example, the main.cpp file exceptionally use helpers function from imgui_impl_vulkan.h/cpp.
 
 example_win32_directx9/
     DirectX9 example, Windows only.
