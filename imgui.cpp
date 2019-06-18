@@ -1032,6 +1032,8 @@ CODE
 #pragma clang diagnostic ignored "-Wdouble-promotion"       // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
 #endif
 #elif defined(__GNUC__)
+// We disable -Wpragmas because GCC doesn't provide an has_warning equivalent and some forks/patches may not following the warning/version association.
+#pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wunused-function"          // warning: 'xxxx' defined but not used
 #pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
 #pragma GCC diagnostic ignored "-Wformat"                   // warning: format '%p' expects argument of type 'void*', but argument 6 has type 'ImGuiWindow*'
@@ -1039,9 +1041,7 @@ CODE
 #pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"        // warning: format not a string literal, format string not checked
 #pragma GCC diagnostic ignored "-Wstrict-overflow"          // warning: assuming signed overflow does not occur when assuming that (X - c) > X is always false
-#if __GNUC__ >= 8
-#pragma GCC diagnostic ignored "-Wclass-memaccess"          // warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
-#endif
+#pragma GCC diagnostic ignored "-Wclass-memaccess"          // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
 // When using CTRL+TAB (or Gamepad Square+L/R) we delay the visual a little in order to reduce visual noise doing a fast switch.
@@ -2294,8 +2294,8 @@ static void SetCursorPosYAndSetupDummyPrevLine(float pos_y, float line_height)
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;      // Setting those fields so that SetScrollHereY() can properly function after the end of our clipper usage.
     window->DC.PrevLineSize.y = (line_height - GImGui->Style.ItemSpacing.y);    // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
-    if (window->DC.CurrentColumns)
-        window->DC.CurrentColumns->LineMinY = window->DC.CursorPos.y;           // Setting this so that cell Y position are set properly
+    if (ImGuiColumns* columns = window->DC.CurrentColumns)
+        columns->LineMinY = window->DC.CursorPos.y;                             // Setting this so that cell Y position are set properly
 }
 
 // Use case A: Begin() called from constructor with items_height<0, then called again from Sync() in StepNo 1
@@ -3562,7 +3562,7 @@ void ImGui::UpdateMouseWheel()
     const bool scroll_allowed = !(window->Flags & ImGuiWindowFlags_NoScrollWithMouse) && !(window->Flags & ImGuiWindowFlags_NoMouseInputs);
     if (scroll_allowed && (g.IO.MouseWheel != 0.0f || g.IO.MouseWheelH != 0.0f) && !g.IO.KeyCtrl)
     {
-        ImVec2 max_step = (window->ContentsRegionRect.GetSize() + window->WindowPadding * 2.0f) * 0.67f;
+        ImVec2 max_step = window->InnerRect.GetSize() * 0.67f;
 
         // Vertical Mouse Wheel Scrolling (hold Shift to scroll horizontally)
         if (g.IO.MouseWheel != 0.0f && !g.IO.KeyShift)
@@ -6452,7 +6452,7 @@ void ImGui::End()
 
     ImGuiWindow* window = g.CurrentWindow;
 
-    if (window->DC.CurrentColumns != NULL)
+    if (window->DC.CurrentColumns)
         EndColumns();
     if (!(window->Flags & ImGuiWindowFlags_DockNodeHost))   // Pop inner window clip rectangle
         PopClipRect();
@@ -7299,7 +7299,7 @@ ImVec2 ImGui::GetContentRegionMax()
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImVec2 mx = window->ContentsRegionRect.Max - window->Pos;
     if (window->DC.CurrentColumns)
-        mx.x = GetColumnOffset(window->DC.CurrentColumns->Current + 1) - window->WindowPadding.x;
+        mx.x = window->WorkRect.Max.x - window->Pos.x;
     return mx;
 }
 
@@ -7309,7 +7309,7 @@ ImVec2 ImGui::GetContentRegionMaxAbs()
     ImGuiWindow* window = GImGui->CurrentWindow;
     ImVec2 mx = window->ContentsRegionRect.Max;
     if (window->DC.CurrentColumns)
-        mx.x = window->Pos.x + GetColumnOffset(window->DC.CurrentColumns->Current + 1) - window->WindowPadding.x;
+        mx.x = window->WorkRect.Max.x;
     return mx;
 }
 
@@ -7322,19 +7322,19 @@ ImVec2 ImGui::GetContentRegionAvail()
 // In window space (not screen space!)
 ImVec2 ImGui::GetWindowContentRegionMin()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentsRegionRect.Min - window->Pos;
 }
 
 ImVec2 ImGui::GetWindowContentRegionMax()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentsRegionRect.Max - window->Pos;
 }
 
 float ImGui::GetWindowContentRegionWidth()
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentsRegionRect.GetWidth();
 }
 
@@ -9350,7 +9350,13 @@ void ImGui::NextColumn()
     window->DC.CurrLineTextBaseOffset = 0.0f;
 
     PushColumnClipRect(columns->Current);     // FIXME-COLUMNS: Could it be an overwrite?
-    PushItemWidth(GetColumnWidth() * 0.65f);  // FIXME-COLUMNS: Move on columns setup
+
+    // FIXME-COLUMNS: Share code with BeginColumns() - move code on columns setup.
+    float offset_0 = GetColumnOffset(columns->Current);
+    float offset_1 = GetColumnOffset(columns->Current + 1);
+    float width = offset_1 - offset_0;
+    PushItemWidth(width * 0.65f);
+    window->WorkRect.Max.x = window->Pos.x + offset_1 - window->WindowPadding.x;
 }
 
 int ImGui::GetColumnIndex()
@@ -9546,6 +9552,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     columns->HostCursorPosY = window->DC.CursorPos.y;
     columns->HostCursorMaxPosX = window->DC.CursorMaxPos.x;
     columns->HostClipRect = window->ClipRect;
+    columns->HostWorkRect = window->WorkRect;
     columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffset.x = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
@@ -9583,7 +9590,12 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
         window->DrawList->ChannelsSetCurrent(1);
         PushColumnClipRect(0);
     }
-    PushItemWidth(GetColumnWidth() * 0.65f);
+
+    float offset_0 = GetColumnOffset(columns->Current);
+    float offset_1 = GetColumnOffset(columns->Current + 1);
+    float width = offset_1 - offset_0;
+    PushItemWidth(width * 0.65f);
+    window->WorkRect.Max.x = window->Pos.x + offset_1 - window->WindowPadding.x;
 }
 
 void ImGui::EndColumns()
@@ -9655,6 +9667,7 @@ void ImGui::EndColumns()
     }
     columns->IsBeingResized = is_being_resized;
 
+    window->WorkRect = columns->HostWorkRect;
     window->DC.CurrentColumns = NULL;
     window->DC.ColumnsOffset.x = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
