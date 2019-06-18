@@ -456,6 +456,16 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
     if (use_opengl && backup_context)
         SDL_GL_MakeCurrent(data->Window, backup_context);
     viewport->PlatformHandle = (void*)data->Window;
+
+#if defined(_WIN32)
+    // save the window handle for render that needs it (directX)
+    SDL_SysWMinfo info;
+    SDL_VERSION(&info.version);
+    if (SDL_GetWindowWMInfo(data->Window, &info))
+    {
+        viewport->PlatformHandleRaw = info.info.win.window;
+    }
+#endif
 }
 
 static void ImGui_ImplSDL2_DestroyWindow(ImGuiViewport* viewport)
