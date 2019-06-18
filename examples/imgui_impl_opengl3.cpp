@@ -77,7 +77,7 @@
 
 // Auto-detect GL version
 #if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
-#if (defined(__APPLE__) && TARGET_OS_IOS) || (defined(__ANDROID__))
+#if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
 #define IMGUI_IMPL_OPENGL_ES3       // iOS, Android  -> GL ES 3, "#version 300 es"
 #elif defined(__EMSCRIPTEN__)
 #define IMGUI_IMPL_OPENGL_ES2       // Emscripten    -> GL ES 2, "#version 100"
@@ -87,7 +87,11 @@
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
+#if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
+#include <OpenGLES/ES3/gl.h>  // Use GL ES 3
+#else
 #include <GLES3/gl3.h>  // Use GL ES 3
+#endif
 #else
 // About Desktop OpenGL function loaders:
 //  Modern desktop OpenGL doesn't have a standard portable header file to load OpenGL function pointers.
