@@ -44,7 +44,11 @@ Breaking Changes:
 Other Changes:
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
-- ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between channel 0 and 1. (#2624)
+- ImDrawListSlitter, ImDrawList::ChannelsSplit(), : Fixed an issue with merging draw commands between
+  channel 0 and 1. (#2624)
+- Backends: SDL2: Added dummy ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
+  (#2482, #2632) [@josiahmanson]
+- Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
 
 
 -----------------------------------------------------------------------
