@@ -3298,7 +3298,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
                 if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                     g.MovingWindow = NULL;
         }
-        else if (g.NavWindow != NULL && GetFrontMostPopupModal() == NULL)
+        else if (g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
         {
             // Clicking on void disable focus
             FocusWindow(NULL);
@@ -3310,9 +3310,9 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     // (The left mouse button path calls FocusWindow on the hovered window, which will lead NewFrame->ClosePopupsOverWindow to trigger)
     if (g.IO.MouseClicked[1])
     {
-        // Find the top-most window between HoveredWindow and the front most Modal Window.
+        // Find the top-most window between HoveredWindow and the top-most Modal Window.
         // This is where we can trim the popup stack.
-        ImGuiWindow* modal = GetFrontMostPopupModal();
+        ImGuiWindow* modal = GetTopMostPopupModal();
         bool hovered_window_above_modal = false;
         if (modal == NULL)
             hovered_window_above_modal = true;
@@ -3458,7 +3458,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     FindHoveredWindow();
 
     // Modal windows prevents cursor from hovering behind them.
-    ImGuiWindow* modal_window = GetFrontMostPopupModal();
+    ImGuiWindow* modal_window = GetTopMostPopupModal();
     if (modal_window)
         if (g.HoveredRootWindow && !IsWindowChildOf(g.HoveredRootWindow, modal_window))
             g.HoveredRootWindow = g.HoveredWindow = NULL;
@@ -3654,7 +3654,7 @@ void ImGui::NewFrame()
     UpdateMouseMovingWindowNewFrame();
 
     // Background darkening/whitening
-    if (GetFrontMostPopupModal() != NULL || (g.NavWindowingTarget != NULL && g.NavWindowingHighlightAlpha > 0.0f))
+    if (GetTopMostPopupModal() != NULL || (g.NavWindowingTarget != NULL && g.NavWindowingHighlightAlpha > 0.0f))
         g.DimBgRatio = ImMin(g.DimBgRatio + g.IO.DeltaTime * 6.0f, 1.0f);
     else
         g.DimBgRatio = ImMax(g.DimBgRatio - g.IO.DeltaTime * 10.0f, 0.0f);
@@ -4062,18 +4062,18 @@ void ImGui::Render()
     if (!g.BackgroundDrawList.VtxBuffer.empty())
         AddDrawListToDrawData(&g.DrawDataBuilder.Layers[0], &g.BackgroundDrawList);
 
-    ImGuiWindow* windows_to_render_front_most[2];
-    windows_to_render_front_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
-    windows_to_render_front_most[1] = g.NavWindowingTarget ? g.NavWindowingList : NULL;
+    ImGuiWindow* windows_to_render_top_most[2];
+    windows_to_render_top_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
+    windows_to_render_top_most[1] = g.NavWindowingTarget ? g.NavWindowingList : NULL;
     for (int n = 0; n != g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
-        if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != windows_to_render_front_most[0] && window != windows_to_render_front_most[1])
+        if (IsWindowActiveAndVisible(window) && (window->Flags & ImGuiWindowFlags_ChildWindow) == 0 && window != windows_to_render_top_most[0] && window != windows_to_render_top_most[1])
             AddRootWindowToDrawData(window);
     }
-    for (int n = 0; n < IM_ARRAYSIZE(windows_to_render_front_most); n++)
-        if (windows_to_render_front_most[n] && IsWindowActiveAndVisible(windows_to_render_front_most[n])) // NavWindowingTarget is always temporarily displayed as the front-most window
-            AddRootWindowToDrawData(windows_to_render_front_most[n]);
+    for (int n = 0; n < IM_ARRAYSIZE(windows_to_render_top_most); n++)
+        if (windows_to_render_top_most[n] && IsWindowActiveAndVisible(windows_to_render_top_most[n])) // NavWindowingTarget is always temporarily displayed as the top-most window
+            AddRootWindowToDrawData(windows_to_render_top_most[n]);
     g.DrawDataBuilder.FlattenIntoSingleLayer();
 
     // Draw software mouse cursor if requested
@@ -5648,7 +5648,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
         // Draw modal window background (darkens what is behind them, all viewports)
-        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetFrontMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
+        const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetTopMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
         const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && (window == g.NavWindowingTargetAnim->RootWindow);
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
@@ -5893,7 +5893,7 @@ void ImGui::BringWindowToFocusFront(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     if (g.WindowsFocusOrder.back() == window)
         return;
-    for (int i = g.WindowsFocusOrder.Size - 2; i >= 0; i--) // We can ignore the front most window
+    for (int i = g.WindowsFocusOrder.Size - 2; i >= 0; i--) // We can ignore the top-most window
         if (g.WindowsFocusOrder[i] == window)
         {
             memmove(&g.WindowsFocusOrder[i], &g.WindowsFocusOrder[i + 1], (size_t)(g.WindowsFocusOrder.Size - i - 1) * sizeof(ImGuiWindow*));
@@ -5908,7 +5908,7 @@ void ImGui::BringWindowToDisplayFront(ImGuiWindow* window)
     ImGuiWindow* current_front_window = g.Windows.back();
     if (current_front_window == window || current_front_window->RootWindow == window)
         return;
-    for (int i = g.Windows.Size - 2; i >= 0; i--) // We can ignore the front most window
+    for (int i = g.Windows.Size - 2; i >= 0; i--) // We can ignore the top-most window
         if (g.Windows[i] == window)
         {
             memmove(&g.Windows[i], &g.Windows[i + 1], (size_t)(g.Windows.Size - i - 1) * sizeof(ImGuiWindow*));
@@ -7178,7 +7178,7 @@ bool ImGui::IsPopupOpen(const char* str_id)
     return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
 }
 
-ImGuiWindow* ImGui::GetFrontMostPopupModal()
+ImGuiWindow* ImGui::GetTopMostPopupModal()
 {
     ImGuiContext& g = *GImGui;
     for (int n = g.OpenPopupStack.Size-1; n >= 0; n--)
@@ -8435,7 +8435,7 @@ static void ImGui::NavUpdateWindowing()
     ImGuiWindow* apply_focus_window = NULL;
     bool apply_toggle_layer = false;
 
-    ImGuiWindow* modal_window = GetFrontMostPopupModal();
+    ImGuiWindow* modal_window = GetTopMostPopupModal();
     if (modal_window != NULL)
     {
         g.NavWindowingTarget = NULL;
@@ -8477,7 +8477,7 @@ static void ImGui::NavUpdateWindowing()
             g.NavWindowingHighlightAlpha = 1.0f;
         }
 
-        // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered front-most)
+        // Single press toggles NavLayer, long press with L/R apply actual focus on release (until then the window was merely rendered top-most)
         if (!IsNavInputDown(ImGuiNavInput_Menu))
         {
             g.NavWindowingToggleLayer &= (g.NavWindowingHighlightAlpha < 1.0f); // Once button was held long enough we don't consider it a tap-to-toggle-layer press anymore.
