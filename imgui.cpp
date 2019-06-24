@@ -1142,6 +1142,7 @@ ImGuiStyle::ImGuiStyle()
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
     WindowMenuButtonPosition= ImGuiDir_Left;    // Position of the collapsing/docking button in the title bar (left/right). Defaults to ImGuiDir_Left.
+    WindowHideCollapseButton= false;            // Hide the collapse button in the title bar, while leaving the possibility to collapse the window. Defaults to false.
     ChildRounding           = 0.0f;             // Radius of child window corners rounding. Set to 0.0f to have rectangular child windows
     ChildBorderSize         = 1.0f;             // Thickness of border around child windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     PopupRounding           = 0.0f;             // Radius of popup window corners rounding. Set to 0.0f to have rectangular child windows
@@ -5153,7 +5154,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     ImGuiWindowFlags flags = window->Flags;
 
     const bool has_close_button = (p_open != NULL);
-    const bool has_collapse_button = !(flags & ImGuiWindowFlags_NoCollapse);
+    const bool has_collapse_button = !((flags & ImGuiWindowFlags_NoCollapse) || style.WindowHideCollapseButton);
 
     // Close & Collapse button are on the Menu NavLayer and don't default focus (unless there's nothing else on that layer)
     const ImGuiItemFlags item_flags_backup = window->DC.ItemFlags;

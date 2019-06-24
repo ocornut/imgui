@@ -3071,6 +3071,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
     { bool frame_border = (style.FrameBorderSize > 0.0f); if (ImGui::Checkbox("FrameBorder", &frame_border)) style.FrameBorderSize = frame_border ? 1.0f : 0.0f; }
     ImGui::SameLine();
     { bool popup_border = (style.PopupBorderSize > 0.0f); if (ImGui::Checkbox("PopupBorder", &popup_border)) style.PopupBorderSize = popup_border ? 1.0f : 0.0f; }
+    ImGui::Checkbox("Hide collapse buttons", &style.WindowHideCollapseButton);
 
     // Save/Revert button
     if (ImGui::Button("Save Ref"))
