@@ -3285,7 +3285,6 @@ static ImDrawList* GetViewportDrawList(ImGuiViewportP* viewport, size_t drawlist
         draw_list->Clear();
         draw_list->PushTextureID(g.IO.Fonts->TexID);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
-        draw_list->Flags = (g.Style.AntiAliasedLines ? ImDrawListFlags_AntiAliasedLines : 0) | (g.Style.AntiAliasedFill ? ImDrawListFlags_AntiAliasedFill : 0);
         viewport->LastFrameDrawLists[drawlist_no] = g.FrameCount;
     }
     return draw_list;
