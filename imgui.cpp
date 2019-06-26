@@ -844,6 +844,8 @@ CODE
     main font. Then you can refer to icons within your strings.
     You may want to see ImFontConfig::GlyphMinAdvanceX to make your icon look monospace to facilitate alignment.
     (Read the 'misc/fonts/README.txt' file for more details about icons font loading.)
+    With some extra effort, you may use colorful icon by registering custom rectangle space inside the font atlas,
+    and copying your own graphics data into it. See misc/fonts/README.txt about using the AddCustomRectFontGlyph API.
 
  Q: How can I load multiple fonts?
  A: Use the font atlas to pack them into a single texture:

@@ -212,9 +212,11 @@ texture, and blit/copy any graphics data of your choice into those rectangles.
 
 Pseudo-code:
 
-  // Add font, then register one custom 13x13 rectangle mapped to glyph 'a' of this font
+  // Add font, then register two custom 13x13 rectangles mapped to glyph 'a' and 'b' of this font
   ImFont* font = io.Fonts->AddFontDefault();
-  int rect_id = io.Fonts->AddCustomRectFontGlyph(font, 'a', 13, 13, 13+1);
+  int rect_ids[2];
+  rect_ids[0] = io.Fonts->AddCustomRectFontGlyph(font, 'a', 13, 13, 13+1);
+  rect_ids[1] = io.Fonts->AddCustomRectFontGlyph(font, 'b', 13, 13, 13+1);
 
   // Build atlas
   io.Fonts->Build();
@@ -224,14 +226,18 @@ Pseudo-code:
   int tex_width, tex_height;
   io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
 
-  // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here)
-  if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+  for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
   {
-      for (int y = 0; y < rect->Height; y++)
+      int rect_id = rects_ids[rect_n];
+      if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
       {
-          ImU32* p = (ImU32*)tex_pixels + (rect->Y + y) * tex_width + (rect->X);
-          for (int x = rect->Width; x > 0; x--)
-              *p++ = IM_COL32(255, 0, 0, 255);
+          // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here!)
+          for (int y = 0; y < rect->Height; y++)
+          {
+              ImU32* p = (ImU32*)tex_pixels + (rect->Y + y) * tex_width + (rect->X);
+              for (int x = rect->Width; x > 0; x--)
+                  *p++ = IM_COL32(255, 0, 0, 255);
+          }
       }
   }
 
