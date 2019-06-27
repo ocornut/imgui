@@ -5832,9 +5832,11 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
                 window->HiddenFramesCanSkipItems = 1;
 
-        // Completely hide along with parent or if parent is collapsed
-        if (parent_window && (parent_window->Collapsed || parent_window->Hidden))
+        // Hide along with parent or if parent is collapsed
+        if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
             window->HiddenFramesCanSkipItems = 1;
+        if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCannotSkipItems > 0))
+            window->HiddenFramesCannotSkipItems = 1;
     }
 
     // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)
