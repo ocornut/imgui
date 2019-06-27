@@ -1304,7 +1304,7 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
 
 void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
 {
-    IM_ASSERT(idx < _Count);
+    IM_ASSERT(idx >= 0 && idx < _Count);
     if (_Current == idx) 
         return;
     // Overwrite ImVector (12/16 bytes), four times. This is merely a silly optimization instead of doing .swap()
