@@ -42,6 +42,9 @@ Other Changes:
 - SliderScalar: Improved assert when using U32 or U64 types with a large v_max value. (#2765) [@loicmouton]
 - ImDrawList: clarified the name of many parameters so reading the code is a little easier. (#2740)
 - Using offsetof() when available in C++11. Avoids Clang sanitizer complaining about old-style macros. (#94)
+- Added a mechanism to compact/free the larger allocations of unused windows (buffers are compacted when
+  a window is unused for 60 seconds, as per io.ConfigWindowsMemoryCompactTimer = 60.0f). Note that memory
+  usage has never been reported as a problem, so this is merely a touch of overzealous luxury. (#2636)
 - Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count,
   would generally make the debug layer complain (Added in 1.72).
 - Backends: Vulkan: Added support for specifying multisample count.
