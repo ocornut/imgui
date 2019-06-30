@@ -1001,10 +1001,17 @@ bool ImGui::Checkbox(const char* label, bool* v)
     const ImRect check_bb(pos, pos + ImVec2(square_sz, square_sz));
     RenderNavHighlight(total_bb, id);
     RenderFrame(check_bb.Min, check_bb.Max, GetColorU32((held && hovered) ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg), true, style.FrameRounding);
-    if (*v)
+    ImU32 check_col = GetColorU32(ImGuiCol_CheckMark);
+    if (window->DC.ItemFlags & ImGuiItemFlags_MixedValue)
+    {
+        // Undocumented tristate/mixed/indeterminate checkbox (#2644)
+        ImVec2 pad(ImMax(1.0f, (float)(int)(square_sz / 3.6f)), ImMax(1.0f, (float)(int)(square_sz / 3.6f)));
+        window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
+    }
+    else if (*v)
     {
         const float pad = ImMax(1.0f, (float)(int)(square_sz / 6.0f));
-        RenderCheckMark(check_bb.Min + ImVec2(pad, pad), GetColorU32(ImGuiCol_CheckMark), square_sz - pad*2.0f);
+        RenderCheckMark(check_bb.Min + ImVec2(pad, pad), check_col, square_sz - pad*2.0f);
     }
 
     if (g.LogEnabled)
