@@ -9935,6 +9935,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 // [SECTION] METRICS/DEBUG WINDOW
 //-----------------------------------------------------------------------------
 
+#ifndef IMGUI_DISABLE_METRICS_WINDOW
 void ImGui::ShowMetricsWindow(bool* p_open)
 {
     if (!ImGui::Begin("Dear ImGui Metrics", p_open))
@@ -9943,10 +9944,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
-    enum { RT_OuterRect, RT_OuterRectClipped, RT_InnerRect, RT_InnerClipRect, RT_WorkRect, RT_Contents, RT_ContentsRegionRect, RT_Count };
+    enum { WRT_OuterRect, WRT_OuterRectClipped, WRT_InnerRect, WRT_InnerClipRect, WRT_WorkRect, WRT_Contents, WRT_ContentsRegionRect, WRT_Count }; // Windows Rect Type
+    const char* wrt_rects_names[WRT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Contents", "ContentsRegionRect" };
+
     static bool show_windows_begin_order = false;
     static bool show_windows_rects = false;
-    static int  show_windows_rect_type = RT_WorkRect;
+    static int  show_windows_rect_type = WRT_WorkRect;
     static bool show_drawcmd_clip_rects = true;
 
     ImGuiIO& io = ImGui::GetIO();
@@ -9959,15 +9962,15 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     struct Funcs
     {
-        static ImRect GetRect(ImGuiWindow* window, int rect_type)
+        static ImRect GetWindowRect(ImGuiWindow* window, int rect_type)
         {
-            if (rect_type == RT_OuterRect)                  { return window->Rect(); }
-            else if (rect_type == RT_OuterRectClipped)      { return window->OuterRectClipped; }
-            else if (rect_type == RT_InnerRect)             { return window->InnerRect; }
-            else if (rect_type == RT_InnerClipRect)         { return window->InnerClipRect; }
-            else if (rect_type == RT_WorkRect)              { return window->WorkRect; }
-            else if (rect_type == RT_Contents)              { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->ContentSize); }
-            else if (rect_type == RT_ContentsRegionRect)    { return window->ContentsRegionRect; }
+            if (rect_type == WRT_OuterRect)                 { return window->Rect(); }
+            else if (rect_type == WRT_OuterRectClipped)     { return window->OuterRectClipped; }
+            else if (rect_type == WRT_InnerRect)            { return window->InnerRect; }
+            else if (rect_type == WRT_InnerClipRect)        { return window->InnerClipRect; }
+            else if (rect_type == WRT_WorkRect)             { return window->WorkRect; }
+            else if (rect_type == WRT_Contents)             { ImVec2 min = window->InnerRect.Min - window->Scroll + window->WindowPadding; return ImRect(min, min + window->ContentSize); }
+            else if (rect_type == WRT_ContentsRegionRect)   { return window->ContentsRegionRect; }
             IM_ASSERT(0);
             return ImRect();
         }
@@ -10174,16 +10177,15 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-        const char* rects_names[RT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Contents", "ContentsRegionRect" };
-        show_windows_rects |= ImGui::Combo("##rects_type", &show_windows_rect_type, rects_names, RT_Count);
+        show_windows_rects |= ImGui::Combo("##show_windows_rect_type", &show_windows_rect_type, wrt_rects_names, WRT_Count);
         if (show_windows_rects && g.NavWindow)
         {
             ImGui::BulletText("'%s':", g.NavWindow->Name);
             ImGui::Indent();
-            for (int n = 0; n < RT_Count; n++)
+            for (int rect_n = 0; rect_n < WRT_Count; rect_n++)
             {
-                ImRect r = Funcs::GetRect(g.NavWindow, n);
-                ImGui::Text("(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), rects_names[n]);
+                ImRect r = Funcs::GetWindowRect(g.NavWindow, rect_n);
+                ImGui::Text("(%6.1f,%6.1f) (%6.1f,%6.1f) Size (%6.1f,%6.1f) %s", r.Min.x, r.Min.y, r.Max.x, r.Max.y, r.GetWidth(), r.GetHeight(), wrt_rects_names[rect_n]);
             }
             ImGui::Unindent();
         }
@@ -10201,7 +10203,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImDrawList* draw_list = GetForegroundDrawList(window);
             if (show_windows_rects)
             {
-                ImRect r = Funcs::GetRect(window, show_windows_rect_type);
+                ImRect r = Funcs::GetWindowRect(window, show_windows_rect_type);
                 draw_list->AddRect(r.Min, r.Max, IM_COL32(255, 0, 128, 255));
             }
             if (show_windows_begin_order && !(window->Flags & ImGuiWindowFlags_ChildWindow))
@@ -10216,6 +10218,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
     ImGui::End();
 }
+#else
+void ImGui::ShowMetricsWindow(bool*)
+{
+}
+#endif
 
 //-----------------------------------------------------------------------------
 

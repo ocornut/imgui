@@ -47,6 +47,7 @@ Other Changes:
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
+- Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawList::ChannelsSplit(), ImDrawListSplitter: Fixed an issue with merging draw commands between
   channel 0 and 1. (#2624)
