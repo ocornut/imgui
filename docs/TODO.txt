@@ -30,6 +30,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/child: border could be emitted in parent as well.
+ - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
