@@ -2079,8 +2079,8 @@ static void ShowDemoWindowLayout()
 
         ImGuiStyle& style = ImGui::GetStyle();
         float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 5;
-        if (child_w < 20.0f)
-            child_w = 20.0f;
+        if (child_w < 1.0f)
+            child_w = 1.0f;
         ImGui::PushID("##VerticalScrolling");
         for (int i = 0; i < 5; i++)
         {
