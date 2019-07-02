@@ -1023,7 +1023,7 @@ static void ShowDemoWindowWidgets()
             ImGui::CheckboxFlags("ImGuiInputTextFlags_ReadOnly", (unsigned int*)&flags, ImGuiInputTextFlags_ReadOnly);
             ImGui::CheckboxFlags("ImGuiInputTextFlags_AllowTabInput", (unsigned int*)&flags, ImGuiInputTextFlags_AllowTabInput);
             ImGui::CheckboxFlags("ImGuiInputTextFlags_CtrlEnterForNewLine", (unsigned int*)&flags, ImGuiInputTextFlags_CtrlEnterForNewLine);
-            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-1.0f, ImGui::GetTextLineHeight() * 16), flags);
+            ImGui::InputTextMultiline("##source", text, IM_ARRAYSIZE(text), ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16), flags);
             ImGui::TreePop();
         }
 
@@ -1079,7 +1079,7 @@ static void ShowDemoWindowWidgets()
             static ImVector<char> my_str;
             if (my_str.empty())
                 my_str.push_back(0);
-            Funcs::MyInputTextMultiline("##MyStr", &my_str, ImVec2(-1.0f, ImGui::GetTextLineHeight() * 16));
+            Funcs::MyInputTextMultiline("##MyStr", &my_str, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 16));
             ImGui::Text("Data: %p\nSize: %d\nCapacity: %d", (void*)my_str.begin(), my_str.size(), my_str.capacity());
             ImGui::TreePop();
         }
@@ -1140,7 +1140,8 @@ static void ShowDemoWindowWidgets()
             if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
         }
 
-        // Typically we would use ImVec2(-1.0f,0.0f) to use all available width, or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
+        // Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width, 
+        // or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
         ImGui::ProgressBar(progress, ImVec2(0.0f,0.0f));
         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::Text("Progress Bar");
@@ -1785,7 +1786,7 @@ static void ShowDemoWindowLayout()
             {
                 char buf[32];
                 sprintf(buf, "%03d", i);
-                ImGui::Button(buf, ImVec2(-1.0f, 0.0f));
+                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
                 ImGui::NextColumn();
             }
             ImGui::EndChild();
@@ -1801,7 +1802,7 @@ static void ShowDemoWindowLayout()
         // - Using ImGui::GetItemRectMin/Max() to query the "item" state (because the child window is an item from the POV of the parent window)
         //   See "Widgets" -> "Querying Status (Active/Focused/Hovered etc.)" section for more details about this.
         {
-            ImGui::SetCursorPosX(50);
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
             ImGui::BeginChild("blah", ImVec2(200, 100), true, ImGuiWindowFlags_None);
             for (int n = 0; n < 50; n++)
@@ -2014,7 +2015,7 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Groups"))
     {
-        HelpMarker("Using ImGui::BeginGroup()/EndGroup() to layout items. BeginGroup() basically locks the horizontal position. EndGroup() bundles the whole group so that you can use functions such as IsItemHovered() on it.");
+        HelpMarker("BeginGroup() basically locks the horizontal position for new line. EndGroup() bundles the whole group so that you can use \"item\" functions such as IsItemHovered()/IsItemActive() or SameLine() etc. on the whole group.");
         ImGui::BeginGroup();
         {
             ImGui::BeginGroup();
@@ -2113,21 +2114,22 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Scrolling"))
     {
-        HelpMarker("Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given position.");
+        // Vertical scroll functions
+        HelpMarker("Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given vertical position.");
 
         static bool track = true;
-        static int track_line = 50;
+        static int track_item = 50;
         static float scroll_to_off_px = 0.0f;
         static float scroll_to_pos_px = 200.0f;
         ImGui::Checkbox("Track", &track);
         ImGui::PushItemWidth(100);
-        ImGui::SameLine(140); track |= ImGui::DragInt("##line", &track_line, 0.25f, 0, 99, "Line = %d");
+        ImGui::SameLine(140); track |= ImGui::DragInt("##item", &track_item, 0.25f, 0, 99, "Item = %d");
 
         bool scroll_to_off = ImGui::Button("Scroll Offset");
-        ImGui::SameLine(140); scroll_to_off |= ImGui::DragFloat("##off_y", &scroll_to_off_px, 1.00f, 0, 9999, "+%.0f px");
+        ImGui::SameLine(140); scroll_to_off |= ImGui::DragFloat("##off", &scroll_to_off_px, 1.00f, 0, 9999, "+%.0f px");
 
         bool scroll_to_pos = ImGui::Button("Scroll To Pos");
-        ImGui::SameLine(140); scroll_to_pos |= ImGui::DragFloat("##pos_y", &scroll_to_pos_px, 1.00f, 0, 9999, "Y = %.0f px");
+        ImGui::SameLine(140); scroll_to_pos |= ImGui::DragFloat("##pos", &scroll_to_pos_px, 1.00f, 0, 9999, "X/Y = %.0f px");
 
         ImGui::PopItemWidth();
         if (scroll_to_off || scroll_to_pos)
@@ -2135,28 +2137,31 @@ static void ShowDemoWindowLayout()
 
         ImGuiStyle& style = ImGui::GetStyle();
         float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 5;
+        if (child_w < 1.0f)
+            child_w = 1.0f;
+        ImGui::PushID("##VerticalScrolling");
         for (int i = 0; i < 5; i++)
         {
             if (i > 0) ImGui::SameLine();
             ImGui::BeginGroup();
-            ImGui::Text("%s", i == 0 ? "Top" : i == 1 ? "25%" : i == 2 ? "Center" : i == 3 ? "75%" : "Bottom");
+            const char* names[] = { "Top", "25%", "Center", "75%", "Bottom" };
+            ImGui::TextUnformatted(names[i]);
 
-            ImGuiWindowFlags child_flags = ImGuiWindowFlags_MenuBar;
-            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true, child_flags);
+            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true, ImGuiWindowFlags_None);
             if (scroll_to_off)
                 ImGui::SetScrollY(scroll_to_off_px);
             if (scroll_to_pos)
                 ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_pos_px, i * 0.25f);
-            for (int line = 0; line < 100; line++)
+            for (int item = 0; item < 100; item++)
             {
-                if (track && line == track_line)
+                if (track && item == track_item)
                 {
-                    ImGui::TextColored(ImVec4(1,1,0,1), "Line %d", line);
+                    ImGui::TextColored(ImVec4(1,1,0,1), "Item %d", item);
                     ImGui::SetScrollHereY(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
                 }
                 else
                 {
-                    ImGui::Text("Line %d", line);
+                    ImGui::Text("Item %d", item);
                 }
             }
             float scroll_y = ImGui::GetScrollY();
@@ -2165,11 +2170,44 @@ static void ShowDemoWindowLayout()
             ImGui::Text("%.0f/%.0f", scroll_y, scroll_max_y);
             ImGui::EndGroup();
         }
-        ImGui::TreePop();
-    }
+        ImGui::PopID();
 
-    if (ImGui::TreeNode("Horizontal Scrolling"))
-    {
+        // Horizontal scroll functions
+        ImGui::Spacing();
+        HelpMarker("Use SetScrollHereX() or SetScrollFromPosX() to scroll to a given horizontal position.\n\nUsing the \"Scroll To Pos\" button above will make the discontinuity at edges visible: scrolling to the top/bottom/left/right-most item will add an additional WindowPadding to reflect on reaching the edge of the list.\n\nBecause the clipping rectangle of most window hides half worth of WindowPadding on the left/right, using SetScrollFromPosX(+1) will usually result in clipped text whereas the equivalent SetScrollFromPosY(+1) wouldn't.");
+        ImGui::PushID("##HorizontalScrolling");
+        for (int i = 0; i < 5; i++)
+        {
+            float child_height = ImGui::GetTextLineHeight() + style.ScrollbarSize + style.WindowPadding.y * 2.0f;
+            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(-100, child_height), true, ImGuiWindowFlags_HorizontalScrollbar);
+            if (scroll_to_off)
+                ImGui::SetScrollX(scroll_to_off_px);
+            if (scroll_to_pos)
+                ImGui::SetScrollFromPosX(ImGui::GetCursorStartPos().x + scroll_to_pos_px, i * 0.25f);
+            for (int item = 0; item < 100; item++)
+            {
+                if (track && item == track_item)
+                {
+                    ImGui::TextColored(ImVec4(1, 1, 0, 1), "Item %d", item);
+                    ImGui::SetScrollHereX(i * 0.25f); // 0.0f:left, 0.5f:center, 1.0f:right
+                }
+                else
+                {
+                    ImGui::Text("Item %d", item);
+                }
+                ImGui::SameLine();
+            }
+            float scroll_x = ImGui::GetScrollX();
+            float scroll_max_x = ImGui::GetScrollMaxX();
+            ImGui::EndChild();
+            ImGui::SameLine();
+            const char* names[] = { "Left", "25%", "Center", "75%", "Right" };
+            ImGui::Text("%s\n%.0f/%.0f", names[i], scroll_x, scroll_max_x);
+            ImGui::Spacing();
+        }
+        ImGui::PopID();
+
+        // Miscellaneous Horizontal Scrolling Demo
         HelpMarker("Horizontal scrolling for a window has to be enabled explicitly via the ImGuiWindowFlags_HorizontalScrollbar flag.\n\nYou may want to explicitly specify content width by calling SetNextWindowContentWidth() before Begin().");
         static int lines = 7;
         ImGui::SliderInt("Lines", &lines, 1, 15);
@@ -2577,7 +2615,7 @@ static void ShowDemoWindowColumns()
             char label[32];
             sprintf(label, "Item %d", n);
             if (ImGui::Selectable(label)) {}
-            //if (ImGui::Button(label, ImVec2(-1,0))) {}
+            //if (ImGui::Button(label, ImVec2(-FLT_MIN,0.0f))) {}
             ImGui::NextColumn();
         }
         ImGui::Columns(1);
@@ -2628,7 +2666,7 @@ static void ShowDemoWindowColumns()
             ImGui::Text("Width %.2f", ImGui::GetColumnWidth());
             ImGui::Text("Offset %.2f", ImGui::GetColumnOffset());
             ImGui::Text("Long text that is likely to clip");
-            ImGui::Button("Button", ImVec2(-1.0f, 0.0f));
+            ImGui::Button("Button", ImVec2(-FLT_MIN, 0.0f));
             ImGui::NextColumn();
         }
         ImGui::Columns(1);
@@ -4100,7 +4138,7 @@ static void ShowExampleAppLongText(bool* p_open)
     static ImGuiTextBuffer log;
     static int lines = 0;
     ImGui::Text("Printing unusually long amount of text.");
-    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped manually\0Multiple calls to Text(), not clipped (slow)\0");
+    ImGui::Combo("Test type", &test_type, "Single call to TextUnformatted()\0Multiple calls to Text(), clipped\0Multiple calls to Text(), not clipped (slow)\0");
     ImGui::Text("Buffer contents: %d lines, %d bytes", lines, log.size());
     if (ImGui::Button("Clear")) { log.clear(); lines = 0; }
     ImGui::SameLine();
