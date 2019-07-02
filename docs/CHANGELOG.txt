@@ -43,6 +43,11 @@ Breaking Changes:
 
 Other Changes:
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
+- Window: Mouse wheel scrolling while hovering a child window is automatically forwarded to parent window
+  if ScrollMax is zero on the scrolling axis.
+  Also still case if ImGuiWindowFlags_NoScrollWithMouse is set (not new), but previously the forwarding
+  would be disabled if ImGuiWindowFlags_NoScrollbar was set on the child window, which is not the case
+  any more. Forwarding can still be disabled by setting ImGuiWindowFlags_NoInputs. (amend #1502, #1380).
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
