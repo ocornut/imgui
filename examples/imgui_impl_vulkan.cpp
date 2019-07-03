@@ -76,8 +76,14 @@ static VkDeviceSize             g_BufferMemoryAlignment = 256;
 static VkPipelineCreateFlags    g_PipelineCreateFlags = 0x00;
 static VkDescriptorSetLayout    g_DescriptorSetLayout = VK_NULL_HANDLE;
 static VkPipelineLayout         g_PipelineLayout = VK_NULL_HANDLE;
-static VkDescriptorSet          g_DescriptorSet = VK_NULL_HANDLE;
 static VkPipeline               g_Pipeline = VK_NULL_HANDLE;
+static ImTextureID              g_hLastTextureSet = NULL;
+
+// Default Descriptor management
+static uint32_t                 g_DescriptorPoolSize = 32; // will create and double on first frame
+static uint32_t                 g_DescriptorsAllocated = 32;
+static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
+ImVector<VkDescriptorPool>      g_DescriptorPoolToDelete;
 
 // Font data
 static VkSampler                g_FontSampler = VK_NULL_HANDLE;
@@ -269,8 +275,6 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkCommandBu
     // Bind pipeline and descriptor sets:
     {
         vkCmdBindPipeline(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, g_Pipeline);
-        VkDescriptorSet desc_set[1] = { g_DescriptorSet };
-        vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, g_PipelineLayout, 0, 1, desc_set, 0, NULL);
     }
 
     // Bind Vertex And Index Buffer:
@@ -305,6 +309,8 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkCommandBu
         vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 0, sizeof(float) * 2, scale);
         vkCmdPushConstants(command_buffer, g_PipelineLayout, VK_SHADER_STAGE_VERTEX_BIT, sizeof(float) * 2, sizeof(float) * 2, translate);
     }
+
+    g_hLastTextureSet = NULL;
 }
 
 // Render function
@@ -317,6 +323,7 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     if (fb_width <= 0 || fb_height <= 0 || draw_data->TotalVtxCount == 0)
         return;
 
+    ImGuiIO& io = ImGui::GetIO();
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
 
     // Allocate array to store enough vertex/index buffers
@@ -371,6 +378,25 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         vkUnmapMemory(v->Device, rb->IndexBufferMemory);
     }
 
+    // Reset descriptor pool once per draw
+    if (g_DescriptorPool)
+    {
+        err = vkResetDescriptorPool(v->Device, g_DescriptorPool, 0);
+        check_vk_result(err);
+
+        g_DescriptorsAllocated = 0;
+
+        // destroy old pools
+        if (!g_DescriptorPoolToDelete.empty())
+        {
+            for (int i = 0; i < g_DescriptorPoolToDelete.size(); i++)
+            {
+                vkDestroyDescriptorPool(v->Device, g_DescriptorPoolToDelete[i], v->Allocator);
+            }
+            g_DescriptorPoolToDelete.resize(0);
+        }
+    }
+
     // Setup desired Vulkan state
     ImGui_ImplVulkan_SetupRenderState(draw_data, command_buffer, rb, fb_width, fb_height);
 
@@ -399,6 +425,16 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
             }
             else
             {
+                if (g_hLastTextureSet != pcmd->TextureId)
+                {
+                    g_hLastTextureSet = pcmd->TextureId;
+                    if (io.SetTextureFn)
+                        io.SetTextureFn(pcmd->TextureId);
+                    else
+                    {
+                        ImGui_ImplVulkan_SetTexture((VkImageView)pcmd->TextureId, command_buffer);
+                    }
+                }
                 // Project scissor/clipping rectangles into framebuffer space
                 ImVec4 clip_rect;
                 clip_rect.x = (pcmd->ClipRect.x - clip_off.x) * clip_scale.x;
@@ -430,6 +466,66 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
         global_idx_offset += cmd_list->IdxBuffer.Size;
         global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
+}
+
+void ImGui_ImplVulkan_SetTexture(VkImageView image_view, VkCommandBuffer command_buffer)
+{
+    ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
+
+    // Out of descriptors, add a new bigger pool and mark the old one to be freed next frame
+    if (g_DescriptorsAllocated == g_DescriptorPoolSize)
+    {
+        if (g_DescriptorsAllocated < 1024)
+            g_DescriptorPoolSize *= 2;
+        else
+            g_DescriptorPoolSize += 1024;
+
+        if (g_DescriptorPool)
+            g_DescriptorPoolToDelete.push_back(g_DescriptorPool);
+
+        g_DescriptorsAllocated = 0;
+
+        VkDescriptorPoolSize poolSizes[1] =
+        {
+            { VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER, g_DescriptorPoolSize },
+        };
+
+        VkDescriptorPoolCreateInfo descriptor_pool_info = {};
+        descriptor_pool_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+        descriptor_pool_info.poolSizeCount = 1;
+        descriptor_pool_info.pPoolSizes = poolSizes;
+        descriptor_pool_info.maxSets = g_DescriptorPoolSize;
+
+        VkResult err = vkCreateDescriptorPool(v->Device, &descriptor_pool_info, v->Allocator, &g_DescriptorPool);
+        check_vk_result(err);
+    }
+
+    VkDescriptorSet desc_set;
+
+    // Create and update new set
+    VkDescriptorSetAllocateInfo allocate_info = {};
+    allocate_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+    allocate_info.descriptorPool = g_DescriptorPool;
+    allocate_info.descriptorSetCount = 1;
+    allocate_info.pSetLayouts = &g_DescriptorSetLayout;
+    VkResult err = vkAllocateDescriptorSets(v->Device, &allocate_info, &desc_set);
+    check_vk_result(err);
+
+    VkDescriptorImageInfo desc_image = {};
+    desc_image.imageView = image_view;
+    desc_image.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+
+    VkWriteDescriptorSet write_desc[1] = {};
+    write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+    write_desc[0].dstSet = desc_set;
+    write_desc[0].descriptorCount = 1;
+    write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+    write_desc[0].pImageInfo = &desc_image;
+    vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, NULL);
+
+    vkCmdBindDescriptorSets(command_buffer, VK_PIPELINE_BIND_POINT_GRAPHICS, g_PipelineLayout, 0, 1, &desc_set, 0, NULL);
+
+    ++g_DescriptorsAllocated;
 }
 
 bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
@@ -488,20 +584,6 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
         check_vk_result(err);
     }
 
-    // Update the Descriptor Set:
-    {
-        VkDescriptorImageInfo desc_image[1] = {};
-        desc_image[0].sampler = g_FontSampler;
-        desc_image[0].imageView = g_FontView;
-        desc_image[0].imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-        VkWriteDescriptorSet write_desc[1] = {};
-        write_desc[0].sType = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-        write_desc[0].dstSet = g_DescriptorSet;
-        write_desc[0].descriptorCount = 1;
-        write_desc[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        write_desc[0].pImageInfo = desc_image;
-        vkUpdateDescriptorSets(v->Device, 1, write_desc, 0, NULL);
-    }
 
     // Create the Upload Buffer:
     {
@@ -578,8 +660,10 @@ bool ImGui_ImplVulkan_CreateFontsTexture(VkCommandBuffer command_buffer)
         vkCmdPipelineBarrier(command_buffer, VK_PIPELINE_STAGE_TRANSFER_BIT, VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT, 0, 0, NULL, 0, NULL, 1, use_barrier);
     }
 
+    // Update the descriptor set
+
     // Store our identifier
-    io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontImage;
+    io.Fonts->TexID = (ImTextureID)(intptr_t)g_FontView;
 
     return true;
 }
@@ -637,17 +721,6 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         info.bindingCount = 1;
         info.pBindings = binding;
         err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &g_DescriptorSetLayout);
-        check_vk_result(err);
-    }
-
-    // Create Descriptor Set:
-    {
-        VkDescriptorSetAllocateInfo alloc_info = {};
-        alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-        alloc_info.descriptorPool = v->DescriptorPool;
-        alloc_info.descriptorSetCount = 1;
-        alloc_info.pSetLayouts = &g_DescriptorSetLayout;
-        err = vkAllocateDescriptorSets(v->Device, &alloc_info, &g_DescriptorSet);
         check_vk_result(err);
     }
 
@@ -796,10 +869,18 @@ void    ImGui_ImplVulkan_DestroyDeviceObjects()
     ImGui_ImplVulkanH_DestroyWindowRenderBuffers(v->Device, &g_MainWindowRenderBuffers, v->Allocator);
     ImGui_ImplVulkan_DestroyFontUploadObjects();
 
+    for (int i = 0; i < g_DescriptorPoolToDelete.size(); i++)
+    {
+        vkDestroyDescriptorPool(v->Device, g_DescriptorPoolToDelete[i], v->Allocator);
+    }
+    g_DescriptorPoolToDelete.clear();
+    g_DescriptorPoolSize = g_DescriptorsAllocated = 32;
+
     if (g_FontView)             { vkDestroyImageView(v->Device, g_FontView, v->Allocator); g_FontView = VK_NULL_HANDLE; }
     if (g_FontImage)            { vkDestroyImage(v->Device, g_FontImage, v->Allocator); g_FontImage = VK_NULL_HANDLE; }
     if (g_FontMemory)           { vkFreeMemory(v->Device, g_FontMemory, v->Allocator); g_FontMemory = VK_NULL_HANDLE; }
     if (g_FontSampler)          { vkDestroySampler(v->Device, g_FontSampler, v->Allocator); g_FontSampler = VK_NULL_HANDLE; }
+    if (g_DescriptorPool)       { vkDestroyDescriptorPool(v->Device, g_DescriptorPool, v->Allocator); g_DescriptorPool = VK_NULL_HANDLE; }
     if (g_DescriptorSetLayout)  { vkDestroyDescriptorSetLayout(v->Device, g_DescriptorSetLayout, v->Allocator); g_DescriptorSetLayout = VK_NULL_HANDLE; }
     if (g_PipelineLayout)       { vkDestroyPipelineLayout(v->Device, g_PipelineLayout, v->Allocator); g_PipelineLayout = VK_NULL_HANDLE; }
     if (g_Pipeline)             { vkDestroyPipeline(v->Device, g_Pipeline, v->Allocator); g_Pipeline = VK_NULL_HANDLE; }
@@ -816,7 +897,6 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
     IM_ASSERT(info->PhysicalDevice != VK_NULL_HANDLE);
     IM_ASSERT(info->Device != VK_NULL_HANDLE);
     IM_ASSERT(info->Queue != VK_NULL_HANDLE);
-    IM_ASSERT(info->DescriptorPool != VK_NULL_HANDLE);
     IM_ASSERT(info->MinImageCount >= 2);
     IM_ASSERT(info->ImageCount >= info->MinImageCount);
     IM_ASSERT(render_pass != VK_NULL_HANDLE);
