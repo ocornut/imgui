@@ -1,16 +1,24 @@
-// dear imgui: standalone example application for FreeGLUT + OpenGL2, using legacy fixed pipeline
+// dear imgui: standalone example application for GLUT/FreeGLUT + OpenGL2, using legacy fixed pipeline
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// (Using GLUT or FreeGLUT is not recommended unless you really miss the 90's)
+
+// !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
+// !!! Nowadays, prefer using GLFW or SDL instead!
 
 #include "imgui.h"
-#include "../imgui_impl_freeglut.h"
+#include "../imgui_impl_glut.h"
 #include "../imgui_impl_opengl2.h"
-#include <GL/freeglut.h>
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/freeglut.h>
+#endif
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed
 #endif
 
+// Our state
 static bool show_demo_window = true;
 static bool show_another_window = false;
 static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -59,7 +67,7 @@ void glut_display_func()
 {
     // Start the Dear ImGui frame
     ImGui_ImplOpenGL2_NewFrame();
-    ImGui_ImplFreeGLUT_NewFrame();
+    ImGui_ImplGLUT_NewFrame();
 
     my_display_code();
 
@@ -85,28 +93,31 @@ int main(int argc, char** argv)
 {
     // Create GLUT window
     glutInit(&argc, argv);
+#ifdef __FREEGLUT_EXT_H__
     glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_GLUTMAINLOOP_RETURNS);
+#endif
     glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_MULTISAMPLE);
     glutInitWindowSize(1280, 720);
-    glutCreateWindow("Dear ImGui FreeGLUT+OpenGL2 Example");
+    glutCreateWindow("Dear ImGui GLUT+OpenGL2 Example");
 
     // Setup GLUT display function
-    // We will also call ImGui_ImplFreeGLUT_InstallFuncs() to get all the other functions installed for us,
-    // otherwise it is possible to install our own functions and call the imgui_impl_freeglut.h functions ourselves.
+    // We will also call ImGui_ImplGLUT_InstallFuncs() to get all the other functions installed for us,
+    // otherwise it is possible to install our own functions and call the imgui_impl_glut.h functions ourselves.
     glutDisplayFunc(glut_display_func);
 
     // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplFreeGLUT_Init();
-    ImGui_ImplFreeGLUT_InstallFuncs();
+    ImGui_ImplGLUT_Init();
+    ImGui_ImplGLUT_InstallFuncs();
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
@@ -128,7 +139,7 @@ int main(int argc, char** argv)
 
     // Cleanup
     ImGui_ImplOpenGL2_Shutdown();
-    ImGui_ImplFreeGLUT_Shutdown();
+    ImGui_ImplGLUT_Shutdown();
     ImGui::DestroyContext();
 
     return 0;

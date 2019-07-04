@@ -21,13 +21,17 @@ SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
+CXXFLAGS = -I../ -I../../
+CXXFLAGS += -g -Wall -Wformat
+LIBS =
+
 ##---------------------------------------------------------------------
 ## OPENGL LOADER
 ##---------------------------------------------------------------------
 
 ## Using OpenGL loader: gl3w [default]
 SOURCES += ../libs/gl3w/GL/gl3w.c
-CXXFLAGS = -I../libs/gl3w
+CXXFLAGS += -I../libs/gl3w
 
 ## Using OpenGL loader: glew
 ## (This assumes a system-wide installation)
@@ -44,28 +48,27 @@ CXXFLAGS = -I../libs/gl3w
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS = -lGL -ldl `sdl2-config --libs`
+	LIBS += -lGL -ldl `sdl2-config --libs`
 
-	CXXFLAGS = -I../ -I../../ -I../libs/gl3w `sdl2-config --cflags`
-	CXXFLAGS += -Wall -Wformat
+	CXXFLAGS += -I../libs/gl3w `sdl2-config --cflags`
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS = -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	LIBS += -L/usr/local/lib -L/opt/local/lib
 
-	CXXFLAGS = -I../ -I../../ -I../libs/gl3w -I/usr/local/include `sdl2-config --cflags`
-	CXXFLAGS += -Wall -Wformat
+	CXXFLAGS += -I../libs/gl3w `sdl2-config --cflags`
+	CXXFLAGS += -I/usr/local/include -I/opt/local/include
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
-   ECHO_MESSAGE = "Windows"
-   LIBS = -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
+   ECHO_MESSAGE = "MinGW"
+   LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
 
-   CXXFLAGS = -I../ -I../../ -I../libs/gl3w `pkg-config --cflags sdl2`
-   CXXFLAGS += -Wall -Wformat
+   CXXFLAGS += -I../libs/gl3w `pkg-config --cflags sdl2`
    CFLAGS = $(CXXFLAGS)
 endif
 

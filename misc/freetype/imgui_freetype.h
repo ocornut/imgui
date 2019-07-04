@@ -24,12 +24,13 @@ namespace ImGuiFreeType
         LightHinting    = 1 << 3,   // A lighter hinting algorithm for gray-level modes. Many generated glyphs are fuzzier but better resemble their original shape. This is achieved by snapping glyphs to the pixel grid only vertically (Y-axis), as is done by Microsoft's ClearType and Adobe's proprietary font renderer. This preserves inter-glyph spacing in horizontal text.
         MonoHinting     = 1 << 4,   // Strong hinting algorithm that should only be used for monochrome output.
         Bold            = 1 << 5,   // Styling: Should we artificially embolden the font?
-        Oblique         = 1 << 6    // Styling: Should we slant the font, emulating italic style?
+        Oblique         = 1 << 6,   // Styling: Should we slant the font, emulating italic style?
+        Monochrome      = 1 << 7    // Disable anti-aliasing. Combine this with MonoHinting for best results!
     };
 
     IMGUI_API bool BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags = 0);
 
-    // By default ImGuiFreeType will use ImGui::MemAlloc()/MemFree().
+    // By default ImGuiFreeType will use IM_ALLOC()/IM_FREE().
     // However, as FreeType does lots of allocations we provide a way for the user to redirect it to a separate memory heap if desired:
     IMGUI_API void SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data = NULL);
 }

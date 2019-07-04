@@ -3,6 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -10,6 +11,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-05-29: Metal: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
+//  2019-04-30: Metal: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: Metal: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
 //  2018-07-05: Metal: Added new Metal backend implementation.
@@ -18,7 +21,7 @@
 #include "imgui_impl_metal.h"
 
 #import <Metal/Metal.h>
-// #import <QuartzCore/CAMetalLayer.h> // Not suported in XCode 9.2. Maybe a macro to detect the SDK version can be used (something like #if MACOS_SDK >= 10.13 ...)
+// #import <QuartzCore/CAMetalLayer.h> // Not supported in XCode 9.2. Maybe a macro to detect the SDK version can be used (something like #if MACOS_SDK >= 10.13 ...)
 #import <simd/simd.h>
 
 #pragma mark - Support classes
@@ -56,6 +59,12 @@
 - (void)enqueueReusableBuffer:(MetalBuffer *)buffer;
 - (id<MTLRenderPipelineState>)renderPipelineStateForFrameAndDevice:(id<MTLDevice>)device;
 - (void)emptyRenderPipelineStateCache;
+- (void)setupRenderState:(ImDrawData *)drawData
+           commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+          commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+     renderPipelineState:(id<MTLRenderPipelineState>)renderPipelineState
+            vertexBuffer:(MetalBuffer *)vertexBuffer
+      vertexBufferOffset:(size_t)vertexBufferOffset;
 - (void)renderDrawData:(ImDrawData *)drawData
          commandBuffer:(id<MTLCommandBuffer>)commandBuffer
         commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder;
@@ -69,6 +78,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_metal";
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -87,7 +97,7 @@ void ImGui_ImplMetal_Shutdown()
 
 void ImGui_ImplMetal_NewFrame(MTLRenderPassDescriptor *renderPassDescriptor)
 {
-    IM_ASSERT(g_sharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init?");
+    IM_ASSERT(g_sharedMetalContext != nil && "No Metal context. Did you call ImGui_ImplMetal_Init() ?");
 
     g_sharedMetalContext.framebufferDescriptor = [[FramebufferDescriptor alloc] initWithRenderPassDescriptor:renderPassDescriptor];
 }
@@ -397,16 +407,13 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     [self.renderPipelineStateCache removeAllObjects];
 }
 
-- (void)renderDrawData:(ImDrawData *)drawData
-         commandBuffer:(id<MTLCommandBuffer>)commandBuffer
-        commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+- (void)setupRenderState:(ImDrawData *)drawData
+           commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+          commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+     renderPipelineState:(id<MTLRenderPipelineState>)renderPipelineState
+            vertexBuffer:(MetalBuffer *)vertexBuffer
+      vertexBufferOffset:(size_t)vertexBufferOffset
 {
-    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
-    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
-    if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
-        return;
-
     [commandEncoder setCullMode:MTLCullModeNone];
     [commandEncoder setDepthStencilState:g_sharedMetalContext.depthStencilState];
 
@@ -417,12 +424,13 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     {
         .originX = 0.0,
         .originY = 0.0,
-        .width = double(fb_width),
-        .height = double(fb_height),
+        .width = (double)(drawData->DisplaySize.x * drawData->FramebufferScale.x),
+        .height = (double)(drawData->DisplaySize.y * drawData->FramebufferScale.y),
         .znear = 0.0,
         .zfar = 1.0
     };
     [commandEncoder setViewport:viewport];
+
     float L = drawData->DisplayPos.x;
     float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
     float T = drawData->DisplayPos.y;
@@ -436,18 +444,32 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
         { 0.0f,         0.0f,        1/(F-N),   0.0f },
         { (R+L)/(L-R),  (T+B)/(B-T), N/(F-N),   1.0f },
     };
-
     [commandEncoder setVertexBytes:&ortho_projection length:sizeof(ortho_projection) atIndex:1];
+
+    [commandEncoder setRenderPipelineState:renderPipelineState];
+
+    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
+    [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
+}
+
+- (void)renderDrawData:(ImDrawData *)drawData
+         commandBuffer:(id<MTLCommandBuffer>)commandBuffer
+        commandEncoder:(id<MTLRenderCommandEncoder>)commandEncoder
+{
+    // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
+    int fb_width = (int)(drawData->DisplaySize.x * drawData->FramebufferScale.x);
+    int fb_height = (int)(drawData->DisplaySize.y * drawData->FramebufferScale.y);
+    if (fb_width <= 0 || fb_height <= 0 || drawData->CmdListsCount == 0)
+        return;
+
+    id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
 
     size_t vertexBufferLength = drawData->TotalVtxCount * sizeof(ImDrawVert);
     size_t indexBufferLength = drawData->TotalIdxCount * sizeof(ImDrawIdx);
     MetalBuffer* vertexBuffer = [self dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
     MetalBuffer* indexBuffer = [self dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
-    id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
-    [commandEncoder setRenderPipelineState:renderPipelineState];
-
-    [commandEncoder setVertexBuffer:vertexBuffer.buffer offset:0 atIndex:0];
+    [self setupRenderState:drawData commandBuffer:commandBuffer commandEncoder:commandEncoder renderPipelineState:renderPipelineState vertexBuffer:vertexBuffer vertexBufferOffset:0];
 
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = drawData->DisplayPos;         // (0,0) unless using multi-viewports
@@ -459,20 +481,21 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     for (int n = 0; n < drawData->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = drawData->CmdLists[n];
-        ImDrawIdx idx_buffer_offset = 0;
 
         memcpy((char *)vertexBuffer.buffer.contents + vertexBufferOffset, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
         memcpy((char *)indexBuffer.buffer.contents + indexBufferOffset, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
-
-        [commandEncoder setVertexBufferOffset:vertexBufferOffset atIndex:0];
 
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
             const ImDrawCmd* pcmd = &cmd_list->CmdBuffer[cmd_i];
             if (pcmd->UserCallback)
             {
-                // User callback (registered via ImDrawList::AddCallback)
-                pcmd->UserCallback(cmd_list, pcmd);
+                // User callback, registered via ImDrawList::AddCallback()
+                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
+                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                    [self setupRenderState:drawData commandBuffer:commandBuffer commandEncoder:commandEncoder renderPipelineState:renderPipelineState vertexBuffer:vertexBuffer vertexBufferOffset:vertexBufferOffset];
+                else
+                    pcmd->UserCallback(cmd_list, pcmd);
             }
             else
             {
@@ -499,14 +522,15 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
                     // Bind texture, Draw
                     if (pcmd->TextureId != NULL)
                         [commandEncoder setFragmentTexture:(__bridge id<MTLTexture>)(pcmd->TextureId) atIndex:0];
+
+                    [commandEncoder setVertexBufferOffset:(vertexBufferOffset + pcmd->VtxOffset * sizeof(ImDrawVert)) atIndex:0];
                     [commandEncoder drawIndexedPrimitives:MTLPrimitiveTypeTriangle
                                                indexCount:pcmd->ElemCount
                                                 indexType:sizeof(ImDrawIdx) == 2 ? MTLIndexTypeUInt16 : MTLIndexTypeUInt32
                                               indexBuffer:indexBuffer.buffer
-                                        indexBufferOffset:indexBufferOffset + idx_buffer_offset];
+                                        indexBufferOffset:indexBufferOffset + pcmd->IdxOffset * sizeof(ImDrawIdx)];
                 }
             }
-            idx_buffer_offset += pcmd->ElemCount * sizeof(ImDrawIdx);
         }
 
         vertexBufferOffset += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
