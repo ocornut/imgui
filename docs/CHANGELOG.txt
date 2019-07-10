@@ -59,6 +59,7 @@ Other Changes:
   channel 0 and 1. (#2624)
 - ImDrawListSplitter: Fixed memory leak when using low-level split api (was not affecting ImDrawList api,
   also this type was added in 1.71 and not advertised as a public-facing feature).
+- Fonts: binary_to_compressed_c.cpp: Display an error message if failing to open/read the input font file.
 - Backends: SDL2: Added dummy ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
   (#2482, #2632) [@josiahmanson]
 - Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]

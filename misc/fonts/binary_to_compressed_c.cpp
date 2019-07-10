@@ -48,12 +48,15 @@ int main(int argc, char** argv)
         else if (strcmp(argv[argn], "-nocompress") == 0) { use_compression = false; argn++; }
         else
         {
-            printf("Unknown argument: '%s'\n", argv[argn]);
+            fprintf(stderr, "Unknown argument: '%s'\n", argv[argn]);
             return 1;
         }
     }
 
-    return binary_to_compressed_c(argv[argn], argv[argn+1], use_base85_encoding, use_compression) ? 0 : 1;
+    bool ret = binary_to_compressed_c(argv[argn], argv[argn+1], use_base85_encoding, use_compression);
+    if (!ret)
+        fprintf(stderr, "Error opening or reading file: '%s'\n", argv[argn]);
+    return ret ? 0 : 1;
 }
 
 char Encode85Byte(unsigned int x)
