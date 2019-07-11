@@ -33,12 +33,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
  - scrolling/style: shadows on scrollable areas to denote that there is more contents
 
- - drawdata: make it easy to clone (or swap?) a ImDrawData so user can easily save that data if they use threaded rendering.
+ - drawdata: make it easy to clone (or swap?) a full ImDrawData so user can easily save that data if they use threaded rendering. (e.g. #2646)
  ! drawlist: add calctextsize func to facilitate consistent code from user pov (currently need to use ImGui or ImFont alternatives!)
  - drawlist: end-user probably can't call Clear() directly because we expect a texture to be pushed in the stack.
  - drawlist: maintaining bounding box per command would allow to merge draw command when clipping isn't relied on (typical non-scrolling window or non-overflowing column would merge with previous command).
@@ -205,23 +206,24 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - shortcuts: programmatically access shortcuts "Focus("&Save"))
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
+ - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
 
  - text: selectable text (for copy) as a generic feature (ItemFlags?)
  - text: proper alignment options in imgui_internal.h
- - text wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
  - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
+ - text/wrapped: should be a more first-class citizen, e.g. wrapped text within a Selectable with known width
+ - text/wrapped: figure out better way to use TextWrapped() in an always auto-resize context (tooltip, etc.) (#249)
 
- - tree node / optimization: avoid formatting when clipped.
- - tree node: tree-node/header right-most side doesn't take account of horizontal scrolling.
  - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
  - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
  - tree node: _NoIndentOnOpen flag? would require to store a per-depth bit mask to store info for pop (or whatever is cheaper)
+ - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)

@@ -49,6 +49,7 @@ Other Changes:
   would be disabled if ImGuiWindowFlags_NoScrollbar was set on the child window, which is not the case
   any more. Forwarding can still be disabled by setting ImGuiWindowFlags_NoInputs. (amend #1502, #1380).
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
+- Combo: Hide arrow when there's not enough space even for the square button.
 - Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
