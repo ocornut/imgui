@@ -1591,21 +1591,19 @@ struct ImGuiTextFilter
     bool                IsActive() const { return !Filters.empty(); }
 
     // [Internal]
-    struct TextRange
+    struct ImGuiTextRange
     {
-        const char* b;
-        const char* e;
+        const char*     b;
+        const char*     e;
 
-        TextRange() { b = e = NULL; }
-        TextRange(const char* _b, const char* _e) { b = _b; e = _e; }
-        const char*     begin() const   { return b; }
-        const char*     end () const    { return e; }
-        bool            empty() const   { return b == e; }
-        IMGUI_API void  split(char separator, ImVector<TextRange>* out) const;
+        ImGuiTextRange()                                { b = e = NULL; }
+        ImGuiTextRange(const char* _b, const char* _e)  { b = _b; e = _e; }
+        bool            empty() const                   { return b == e; }
+        IMGUI_API void  split(char separator, ImVector<ImGuiTextRange>* out) const;
     };
-    char                InputBuf[256];
-    ImVector<TextRange> Filters;
-    int                 CountGrep;
+    char                    InputBuf[256];
+    ImVector<ImGuiTextRange>Filters;
+    int                     CountGrep;
 };
 
 // Helper: Growable text buffer for logging/accumulating text
@@ -1639,15 +1637,17 @@ struct ImGuiTextBuffer
 // Types are NOT stored, so it is up to you to make sure your Key don't collide with different types.
 struct ImGuiStorage
 {
-    struct Pair
+    // [Internal]
+    struct ImGuiStoragePair
     {
         ImGuiID key;
         union { int val_i; float val_f; void* val_p; };
-        Pair(ImGuiID _key, int _val_i)   { key = _key; val_i = _val_i; }
-        Pair(ImGuiID _key, float _val_f) { key = _key; val_f = _val_f; }
-        Pair(ImGuiID _key, void* _val_p) { key = _key; val_p = _val_p; }
+        ImGuiStoragePair(ImGuiID _key, int _val_i)      { key = _key; val_i = _val_i; }
+        ImGuiStoragePair(ImGuiID _key, float _val_f)    { key = _key; val_f = _val_f; }
+        ImGuiStoragePair(ImGuiID _key, void* _val_p)    { key = _key; val_p = _val_p; }
     };
-    ImVector<Pair>      Data;
+
+    ImVector<ImGuiStoragePair>      Data;
 
     // - Get***() functions find pair, never add/allocate. Pairs are sorted so a query is O(log N)
     // - Set***() functions find pair, insertion on demand if missing.
