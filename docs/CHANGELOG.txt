@@ -40,6 +40,7 @@ Breaking Changes:
   - IMGUI_ONCE_UPON_A_FRAME macro.
   If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
   the new names and equivalent.
+- Renamed ImFontAtlas::CustomRect to ImFontAtlasCustomRect. Keep redirection typedef (will obsolete).
 
 Other Changes:
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
