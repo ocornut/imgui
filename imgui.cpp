@@ -11855,6 +11855,11 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                 DockSettingsRenameNodeReferences(payload_dock_id, node->ID);
         }
     }
+    else
+    {
+        // When docking a floating single window node we want to reevaluate auto-hiding of the tab bar
+        node->WantHiddenTabBarUpdate = true;
+    }
 
     // Update selection immediately
     if (ImGuiTabBar* tab_bar = node->TabBar)
