@@ -11373,7 +11373,7 @@ namespace ImGui
     // ImGuiDockNode tree manipulations
     static void             DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImGuiAxis split_axis, int split_first_child, float split_ratio, ImGuiDockNode* new_node);
     static void             DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImGuiDockNode* merge_lead_child);
-    static void             DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size);
+    static void             DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size, bool only_write_to_marked_nodes = false);
     static void             DockNodeTreeUpdateSplitter(ImGuiDockNode* node);
     static ImGuiDockNode*   DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos);
     static ImGuiDockNode*   DockNodeTreeFindFallbackLeafNode(ImGuiDockNode* node);
@@ -11953,6 +11953,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     IsVisible = true;
     IsFocused = HasCloseButton = HasWindowMenuButton = EnableCloseButton = false;
     WantCloseAll = WantLockSizeOnce = WantMouseMove = WantHiddenTabBarUpdate = WantHiddenTabBarToggle = false;
+    MarkedForPosSizeWrite = false;
 }
 
 ImGuiDockNode::~ImGuiDockNode()
@@ -12286,6 +12287,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(node->LastFrameActive != g.FrameCount);
     node->LastFrameAlive = g.FrameCount;
+    node->MarkedForPosSizeWrite = false;
 
     node->CentralNode = node->OnlyNodeWithWindows = NULL;
     if (node->IsRootNode())
@@ -12533,6 +12535,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     node->LastFrameActive = g.FrameCount;
 
     // Recurse into children
+    // FIXME-DOCK FIXME-OPT: Should not need to recurse into children
     if (host_window)
     {
         if (node->ChildNodes[0])
@@ -13265,10 +13268,17 @@ void ImGui::DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
 }
 
 // Update Pos/Size for a node hierarchy (don't affect child Windows yet)
-void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size)
+void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size, bool only_write_to_marked_nodes)
 {
-    node->Pos = pos;
-    node->Size = size;
+    // During the regular dock node update we write to all nodes.
+    // 'only_write_to_marked_nodes' is only set when turning a node visible mid-frame and we need its size right-away.
+    const bool write_to_node = (only_write_to_marked_nodes == false) || (node->MarkedForPosSizeWrite);
+    if (write_to_node)
+    {
+        node->Pos = pos;
+        node->Size = size;
+    }
+
     if (node->IsLeafNode())
         return;
 
@@ -14082,6 +14092,25 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
                 node->LastFrameAlive = g.FrameCount;
         }
 
+        // If the node just turned visible, it doesn't have a Size assigned by DockNodeTreeUpdatePosSize() yet,
+        // so we're forcing a Pos/Size update from the first ancestor that is already visible (often it will be the root node).
+        // If we don't do this, the window will be assigned a zero-size on its first frame, which won't ideally warm up the layout.
+        // This is a little wonky because we don't normally update the Pos/Size of visible node mid-frame.
+        if (!node->IsVisible)
+        {
+            ImGuiDockNode* ancestor_node = node;
+            while (!ancestor_node->IsVisible)
+            {
+                ancestor_node->IsVisible = true;
+                ancestor_node->MarkedForPosSizeWrite = true;
+                if (ancestor_node->ParentNode)
+                    ancestor_node = ancestor_node->ParentNode;
+            }
+            IM_ASSERT(ancestor_node->Size.x > 0.0f && ancestor_node->Size.y > 0.0f);
+            DockNodeTreeUpdatePosSize(ancestor_node, ancestor_node->Pos, ancestor_node->Size, true);
+        }
+
+        // Add window to node
         DockNodeAddWindow(node, window, true);
         IM_ASSERT(node == window->DockNode);
     }
@@ -14128,6 +14157,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     }
     IM_ASSERT(node->HostWindow);
     IM_ASSERT(node->IsLeafNode());
+    IM_ASSERT(node->Size.x > 0.0f && node->Size.y > 0.0f);
 
     // Position window
     SetNextWindowPos(node->Pos);

@@ -956,6 +956,7 @@ struct ImGuiDockNode
     bool                    WantMouseMove           :1; // After a node extraction we need to transition toward moving the newly created host window
     bool                    WantHiddenTabBarUpdate  :1;
     bool                    WantHiddenTabBarToggle  :1;
+    bool                    MarkedForPosSizeWrite   :1; // Update by DockNodeTreeUpdatePosSize() write-filtering
 
     ImGuiDockNode(ImGuiID id);
     ~ImGuiDockNode();
