@@ -4990,7 +4990,6 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
 // - TreeNodeBehavior() [Internal]
 // - TreePush()
 // - TreePop()
-// - TreeAdvanceToLabelPos()
 // - GetTreeNodeToLabelSpacing()
 // - SetNextItemOpen()
 // - CollapsingHeader()
@@ -5330,12 +5329,6 @@ void ImGui::TreePop()
 
     IM_ASSERT(window->IDStack.Size > 1); // There should always be 1 element in the IDStack (pushed during window creation). If this triggers you called TreePop/PopID too much.
     PopID();
-}
-
-void ImGui::TreeAdvanceToLabelPos()
-{
-    ImGuiContext& g = *GImGui;
-    g.CurrentWindow->DC.CursorPos.x += GetTreeNodeToLabelSpacing();
 }
 
 // Horizontal distance preceding label when using TreeNode() or Bullet()

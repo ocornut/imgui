@@ -41,6 +41,8 @@ Breaking Changes:
   If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
   the new names or equivalent features.
 - Renamed ImFontAtlas::CustomRect to ImFontAtlasCustomRect. Kept redirection typedef (will obsolete).
+- Removed TreeAdvanceToLabelPos() which is rarely used and only does SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()). 
+  Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
