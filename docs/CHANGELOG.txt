@@ -41,7 +41,7 @@ Breaking Changes:
   If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
   the new names or equivalent features.
 - Renamed ImFontAtlas::CustomRect to ImFontAtlasCustomRect. Kept redirection typedef (will obsolete).
-- Removed TreeAdvanceToLabelPos() which is rarely used and only does SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()). 
+- Removed TreeAdvanceToLabelPos() which is rarely used and only does SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()).
   Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
@@ -58,6 +58,8 @@ Other Changes:
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
+- Style: Added style.ColorButtonButton (left/right, defaults to ImGuiDir_Right) to move the color button
+  of ColorEdit3/ColorEdit4 functions to either side of the inputs.
 - Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawList::ChannelsSplit(), ImDrawListSplitter: Fixed an issue with merging draw commands between
