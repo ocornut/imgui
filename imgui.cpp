@@ -6,7 +6,7 @@
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
 // Technical Support for Getting Started https://discourse.dearimgui.org/c/getting-started
-// Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/1269
+// Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/2529
 
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
@@ -380,6 +380,8 @@ CODE
  - 2019/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
  
 
+ - 2019/07/15 (1.72) - removed TreeAdvanceToLabelPos() which is rarely used and only does SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()). Kept redirection function (will obsolete).
+ - 2019/07/12 (1.72) - renamed ImFontAtlas::CustomRect to ImFontAtlasCustomRect. Kept redirection typedef (will obsolete).
  - 2019/06/14 (1.72) - removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017): ImGuiCol_Column*, ImGuiSetCond_*, IsItemHoveredRect(), IsPosHoveringAnyWindow(), IsMouseHoveringAnyWindow(), IsMouseHoveringWindow(), IMGUI_ONCE_UPON_A_FRAME. Grep this log for details and new names.
  - 2019/06/07 (1.71) - rendering of child window outer decorations (bg color, border, scrollbars) is now performed as part of the parent window. If you have
                        overlapping child windows in a same parent, and relied on their relative z-order to be mapped to their submission order, this will affect your rendering.
@@ -394,7 +396,7 @@ CODE
  - 2019/02/14 (1.68) - made it illegal/assert when io.DisplayTime == 0.0f (with an exception for the first frame). If for some reason your time step calculation gives you a zero value, replace it with a dummy small value!
  - 2019/02/01 (1.68) - removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
  - 2019/01/06 (1.67) - renamed io.InputCharacters[], marked internal as was always intended. Please don't access directly, and use AddInputCharacter() instead!
- - 2019/01/06 (1.67) - renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Keep redirection typedef (will obsolete).
+ - 2019/01/06 (1.67) - renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Kept redirection typedef (will obsolete).
  - 2018/12/20 (1.67) - made it illegal to call Begin("") with an empty string. This somehow half-worked before but had various undesirable side-effects.
  - 2018/12/10 (1.67) - renamed io.ConfigResizeWindowsFromEdges to io.ConfigWindowsResizeFromEdges as we are doing a large pass on configuration flags.
  - 2018/10/12 (1.66) - renamed misc/stl/imgui_stl.* to misc/cpp/imgui_stdlib.* in prevision for other C++ helper files.
@@ -467,7 +469,7 @@ CODE
                          IsMouseHoveringWindow()    --> IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem) [weird, old behavior]
  - 2017/10/17 (1.52) - marked the old 5-parameters version of Begin() as obsolete (still available). Use SetNextWindowSize()+Begin() instead!
  - 2017/10/11 (1.52) - renamed AlignFirstTextHeightToWidgets() to AlignTextToFramePadding(). Kept inline redirection function (will obsolete).
- - 2017/09/26 (1.52) - renamed ImFont::Glyph to ImFontGlyph. Keep redirection typedef (will obsolete).
+ - 2017/09/26 (1.52) - renamed ImFont::Glyph to ImFontGlyph. Kept redirection typedef (will obsolete).
  - 2017/09/25 (1.52) - removed SetNextWindowPosCenter() because SetNextWindowPos() now has the optional pivot information to do the same and more. Kept redirection function (will obsolete).
  - 2017/08/25 (1.52) - io.MousePos needs to be set to ImVec2(-FLT_MAX,-FLT_MAX) when mouse is unavailable/missing. Previously ImVec2(-1,-1) was enough but we now accept negative mouse coordinates. In your binding if you need to support unavailable mouse, make sure to replace "io.MousePos = ImVec2(-1,-1)" with "io.MousePos = ImVec2(-FLT_MAX,-FLT_MAX)".
  - 2017/08/22 (1.51) - renamed IsItemHoveredRect() to IsItemRectHovered(). Kept inline redirection function (will obsolete). -> (1.52) use IsItemHovered(ImGuiHoveredFlags_RectOnly)!
@@ -1190,6 +1192,7 @@ ImGuiStyle::ImGuiStyle()
     GrabRounding            = 0.0f;             // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
     TabRounding             = 4.0f;             // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
     TabBorderSize           = 0.0f;             // Thickness of border around tabs.
+    ColorButtonPosition     = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign     = ImVec2(0.0f,0.0f);// Alignment of selectable text when button is larger than text.
     DisplayWindowPadding    = ImVec2(19,19);    // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
@@ -1968,15 +1971,15 @@ ImU32 ImGui::GetColorU32(ImU32 col)
 //-----------------------------------------------------------------------------
 
 // std::lower_bound but without the bullshit
-static ImGuiStorage::Pair* LowerBound(ImVector<ImGuiStorage::Pair>& data, ImGuiID key)
+static ImGuiStorage::ImGuiStoragePair* LowerBound(ImVector<ImGuiStorage::ImGuiStoragePair>& data, ImGuiID key)
 {
-    ImGuiStorage::Pair* first = data.Data;
-    ImGuiStorage::Pair* last = data.Data + data.Size;
+    ImGuiStorage::ImGuiStoragePair* first = data.Data;
+    ImGuiStorage::ImGuiStoragePair* last = data.Data + data.Size;
     size_t count = (size_t)(last - first);
     while (count > 0)
     {
         size_t count2 = count >> 1;
-        ImGuiStorage::Pair* mid = first + count2;
+        ImGuiStorage::ImGuiStoragePair* mid = first + count2;
         if (mid->key < key)
         {
             first = ++mid;
@@ -1998,18 +2001,18 @@ void ImGuiStorage::BuildSortByKey()
         static int IMGUI_CDECL PairCompareByID(const void* lhs, const void* rhs)
         {
             // We can't just do a subtraction because qsort uses signed integers and subtracting our ID doesn't play well with that.
-            if (((const Pair*)lhs)->key > ((const Pair*)rhs)->key) return +1;
-            if (((const Pair*)lhs)->key < ((const Pair*)rhs)->key) return -1;
+            if (((const ImGuiStoragePair*)lhs)->key > ((const ImGuiStoragePair*)rhs)->key) return +1;
+            if (((const ImGuiStoragePair*)lhs)->key < ((const ImGuiStoragePair*)rhs)->key) return -1;
             return 0;
         }
     };
     if (Data.Size > 1)
-        ImQsort(Data.Data, (size_t)Data.Size, sizeof(Pair), StaticFunc::PairCompareByID);
+        ImQsort(Data.Data, (size_t)Data.Size, sizeof(ImGuiStoragePair), StaticFunc::PairCompareByID);
 }
 
 int ImGuiStorage::GetInt(ImGuiID key, int default_val) const
 {
-    ImGuiStorage::Pair* it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
+    ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
     if (it == Data.end() || it->key != key)
         return default_val;
     return it->val_i;
@@ -2022,7 +2025,7 @@ bool ImGuiStorage::GetBool(ImGuiID key, bool default_val) const
 
 float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const
 {
-    ImGuiStorage::Pair* it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
+    ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
     if (it == Data.end() || it->key != key)
         return default_val;
     return it->val_f;
@@ -2030,7 +2033,7 @@ float ImGuiStorage::GetFloat(ImGuiID key, float default_val) const
 
 void* ImGuiStorage::GetVoidPtr(ImGuiID key) const
 {
-    ImGuiStorage::Pair* it = LowerBound(const_cast<ImVector<ImGuiStorage::Pair>&>(Data), key);
+    ImGuiStoragePair* it = LowerBound(const_cast<ImVector<ImGuiStoragePair>&>(Data), key);
     if (it == Data.end() || it->key != key)
         return NULL;
     return it->val_p;
@@ -2039,9 +2042,9 @@ void* ImGuiStorage::GetVoidPtr(ImGuiID key) const
 // References are only valid until a new value is added to the storage. Calling a Set***() function or a Get***Ref() function invalidates the pointer.
 int* ImGuiStorage::GetIntRef(ImGuiID key, int default_val)
 {
-    ImGuiStorage::Pair* it = LowerBound(Data, key);
+    ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
-        it = Data.insert(it, Pair(key, default_val));
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_i;
 }
 
@@ -2052,27 +2055,27 @@ bool* ImGuiStorage::GetBoolRef(ImGuiID key, bool default_val)
 
 float* ImGuiStorage::GetFloatRef(ImGuiID key, float default_val)
 {
-    ImGuiStorage::Pair* it = LowerBound(Data, key);
+    ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
-        it = Data.insert(it, Pair(key, default_val));
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_f;
 }
 
 void** ImGuiStorage::GetVoidPtrRef(ImGuiID key, void* default_val)
 {
-    ImGuiStorage::Pair* it = LowerBound(Data, key);
+    ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
-        it = Data.insert(it, Pair(key, default_val));
+        it = Data.insert(it, ImGuiStoragePair(key, default_val));
     return &it->val_p;
 }
 
 // FIXME-OPT: Need a way to reuse the result of lower_bound when doing GetInt()/SetInt() - not too bad because it only happens on explicit interaction (maximum one a frame)
 void ImGuiStorage::SetInt(ImGuiID key, int val)
 {
-    ImGuiStorage::Pair* it = LowerBound(Data, key);
+    ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
     {
-        Data.insert(it, Pair(key, val));
+        Data.insert(it, ImGuiStoragePair(key, val));
         return;
     }
     it->val_i = val;
@@ -2085,10 +2088,10 @@ void ImGuiStorage::SetBool(ImGuiID key, bool val)
 
 void ImGuiStorage::SetFloat(ImGuiID key, float val)
 {
-    ImGuiStorage::Pair* it = LowerBound(Data, key);
+    ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
     {
-        Data.insert(it, Pair(key, val));
+        Data.insert(it, ImGuiStoragePair(key, val));
         return;
     }
     it->val_f = val;
@@ -2096,10 +2099,10 @@ void ImGuiStorage::SetFloat(ImGuiID key, float val)
 
 void ImGuiStorage::SetVoidPtr(ImGuiID key, void* val)
 {
-    ImGuiStorage::Pair* it = LowerBound(Data, key);
+    ImGuiStoragePair* it = LowerBound(Data, key);
     if (it == Data.end() || it->key != key)
     {
-        Data.insert(it, Pair(key, val));
+        Data.insert(it, ImGuiStoragePair(key, val));
         return;
     }
     it->val_p = val;
@@ -2140,7 +2143,7 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
     return value_changed;
 }
 
-void ImGuiTextFilter::TextRange::split(char separator, ImVector<TextRange>* out) const
+void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const
 {
     out->resize(0);
     const char* wb = b;
@@ -2149,25 +2152,25 @@ void ImGuiTextFilter::TextRange::split(char separator, ImVector<TextRange>* out)
     {
         if (*we == separator)
         {
-            out->push_back(TextRange(wb, we));
+            out->push_back(ImGuiTextRange(wb, we));
             wb = we + 1;
         }
         we++;
     }
     if (wb != we)
-        out->push_back(TextRange(wb, we));
+        out->push_back(ImGuiTextRange(wb, we));
 }
 
 void ImGuiTextFilter::Build()
 {
     Filters.resize(0);
-    TextRange input_range(InputBuf, InputBuf+strlen(InputBuf));
+    ImGuiTextRange input_range(InputBuf, InputBuf+strlen(InputBuf));
     input_range.split(',', &Filters);
 
     CountGrep = 0;
     for (int i = 0; i != Filters.Size; i++)
     {
-        TextRange& f = Filters[i];
+        ImGuiTextRange& f = Filters[i];
         while (f.b < f.e && ImCharIsBlankA(f.b[0]))
             f.b++;
         while (f.e > f.b && ImCharIsBlankA(f.e[-1]))
@@ -2189,19 +2192,19 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
 
     for (int i = 0; i != Filters.Size; i++)
     {
-        const TextRange& f = Filters[i];
+        const ImGuiTextRange& f = Filters[i];
         if (f.empty())
             continue;
         if (f.b[0] == '-')
         {
             // Subtract
-            if (ImStristr(text, text_end, f.begin()+1, f.end()) != NULL)
+            if (ImStristr(text, text_end, f.b + 1, f.e) != NULL)
                 return false;
         }
         else
         {
             // Grep
-            if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
+            if (ImStristr(text, text_end, f.b, f.e) != NULL)
                 return true;
         }
     }
@@ -2917,6 +2920,16 @@ void ImGui::SetHoveredID(ImGuiID id)
     g.HoveredIdAllowOverlap = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
+
+    // [DEBUG] Item Picker tool!
+    // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
+    // the cost of this tool near-zero. We would get slightly better call-stack if we made the test in ItemAdd()
+    // but that would incur a slightly higher cost and may require us to hide this feature behind a define.
+    if (id != 0 && id == g.DebugBreakItemId)
+    {
+        IM_DEBUG_BREAK();
+        g.DebugBreakItemId = 0;
+    }
 }
 
 ImGuiID ImGui::GetHoveredID()
@@ -3590,7 +3603,7 @@ void ImGui::UpdateMouseWheel()
 
     // Zoom / Scale window
     // FIXME-OBSOLETE: This is an old feature, it still works but pretty much nobody is using it and may be best redesigned.
-    if (g.IO.MouseWheel != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling && !g.HoveredWindow->Collapsed)
+    if (g.IO.MouseWheel != 0.0f && g.IO.KeyCtrl && g.IO.FontAllowUserScaling)
     {
         ImGuiWindow* window = g.HoveredWindow;
         const float new_font_scale = ImClamp(window->FontWindowScale + g.IO.MouseWheel * 0.10f, 0.50f, 2.50f);
@@ -10252,6 +10265,8 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
     ImGuiContext& g = *GImGui;
     g.SettingsWindows.push_back(ImGuiWindowSettings());
     ImGuiWindowSettings* settings = &g.SettingsWindows.back();
+    if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
+        name = p;
     settings->Name = ImStrdup(name);
     settings->ID = ImHashStr(name);
     return settings;
@@ -10448,10 +10463,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
     for (int i = 0; i != g.SettingsWindows.Size; i++)
     {
         const ImGuiWindowSettings* settings = &g.SettingsWindows[i];
-        const char* name = settings->Name;
-        if (const char* p = strstr(name, "###"))  // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
-            name = p;
-        buf->appendf("[%s][%s]\n", handler->TypeName, name);
+        buf->appendf("[%s][%s]\n", handler->TypeName, settings->Name);
         if (settings->ViewportId != 0 && settings->ViewportId != ImGui::IMGUI_VIEWPORT_DEFAULT_ID)
         {
             buf->appendf("ViewportPos=%d,%d\n", (int)settings->ViewportPos.x, (int)settings->ViewportPos.y);
@@ -14836,7 +14848,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     NodeColumns(&window->ColumnsStorage[n]);
                 ImGui::TreePop();
             }
-            ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.Size * (int)sizeof(ImGuiStorage::Pair));
+            ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.size_in_bytes());
             ImGui::TreePop();
         }
 
@@ -14927,6 +14939,28 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     if (ImGui::TreeNode("Tools"))
     {
+        static bool picking_enabled = false;
+        if (ImGui::Button("Item Picker.."))
+            picking_enabled = true;
+        if (picking_enabled)
+        {
+            const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            if (ImGui::IsKeyPressedMap(ImGuiKey_Escape))
+                picking_enabled = false;
+            if (ImGui::IsMouseClicked(0) && hovered_id)
+            {
+                g.DebugBreakItemId = hovered_id;
+                picking_enabled = false;
+            }
+            ImGui::SetNextWindowBgAlpha(0.5f);
+            ImGui::BeginTooltip();
+            ImGui::Text("HoveredId: 0x%08X", hovered_id);
+            ImGui::Text("Press ESC to abort picking.");
+            ImGui::TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
+            ImGui::EndTooltip();
+        }
+
         ImGui::Checkbox("Show windows begin order", &show_windows_begin_order);
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
@@ -14972,10 +15006,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
     ImGui::End();
 }
+
 #else
-void ImGui::ShowMetricsWindow(bool*)
-{
-}
+
+void ImGui::ShowMetricsWindow(bool*) { }
+
 #endif
 
 void ImGui::ShowDockingDebug()

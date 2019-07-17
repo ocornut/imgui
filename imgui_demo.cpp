@@ -683,7 +683,7 @@ static void ShowDemoWindowWidgets()
                 {
                     // Items 3..5 are Tree Leaves
                     // The only reason we use TreeNode at all is to allow selection of the leaf.
-                    // Otherwise we can use BulletText() or TreeAdvanceToLabelPos()+Text().
+                    // Otherwise we can use BulletText() or advance the cursor by GetTreeNodeToLabelSpacing() and call Text().
                     node_flags |= ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen; // ImGuiTreeNodeFlags_Bullet
                     ImGui::TreeNodeEx((void*)(intptr_t)i, node_flags, "Selectable Leaf %d", i);
                     if (ImGui::IsItemClicked())
@@ -1200,7 +1200,7 @@ static void ShowDemoWindowWidgets()
 
         static ImVec4 backup_color;
         bool open_popup = ImGui::ColorButton("MyColor##3b", color, misc_flags);
-        ImGui::SameLine();
+        ImGui::SameLine(0, ImGui::GetStyle().ItemInnerSpacing.x);
         open_popup |= ImGui::Button("Palette");
         if (open_popup)
         {
@@ -2664,6 +2664,7 @@ static void ShowDemoWindowColumns()
                 ImGui::Separator();
             ImGui::Text("%c%c%c", 'a' + i, 'a' + i, 'a' + i);
             ImGui::Text("Width %.2f", ImGui::GetColumnWidth());
+            ImGui::Text("Avail %.2f", ImGui::GetContentRegionAvail().x);
             ImGui::Text("Offset %.2f", ImGui::GetColumnOffset());
             ImGui::Text("Long text that is likely to clip");
             ImGui::Button("Button", ImVec2(-FLT_MIN, 0.0f));
@@ -3229,6 +3230,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::Text("Alignment");
             ImGui::SliderFloat2("WindowTitleAlign", (float*)&style.WindowTitleAlign, 0.0f, 1.0f, "%.2f");
             ImGui::Combo("WindowMenuButtonPosition", (int*)&style.WindowMenuButtonPosition, "Left\0Right\0");
+            ImGui::Combo("ColorButtonPosition", (int*)&style.ColorButtonPosition, "Left\0Right\0");
             ImGui::SliderFloat2("ButtonTextAlign", (float*)&style.ButtonTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); HelpMarker("Alignment applies when a button is larger than its text content.");
             ImGui::SliderFloat2("SelectableTextAlign", (float*)&style.SelectableTextAlign, 0.0f, 1.0f, "%.2f"); ImGui::SameLine(); HelpMarker("Alignment applies when a selectable is larger than its text content.");
             ImGui::Text("Safe Area Padding"); ImGui::SameLine(); HelpMarker("Adjust if you cannot see the edges of your screen (e.g. on a TV where scaling has not been configured).");

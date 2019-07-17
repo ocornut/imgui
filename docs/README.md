@@ -102,7 +102,7 @@ Demo Binaries
 -------------
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20190219.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20190219.zip) (Windows binaries, Dear ImGui 1.68 built 2019/02/19, master branch, 5 executables)
+- [imgui-demo-binaries-20190715.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20190715.zip) (Windows binaries, Dear ImGui 1.72 WIP built 2019/07/15, master branch, 5 executables)
 
 The demo applications are unfortunately not yet DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
@@ -137,6 +137,7 @@ Frameworks:
 - Platform: GLFW, SDL, Win32, OSX, GLUT: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Framework: Allegro 5, Emscripten, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
 - Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
+- bsf: [bsfimgui](https://github.com/pgruenbacher/bsfImgui)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
 - Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)

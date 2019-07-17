@@ -107,7 +107,10 @@ Breaking Changes:
   - IsItemHoveredRect(), IsPosHoveringAnyWindow(), IsMouseHoveringAnyWindow(), IsMouseHoveringWindow() functions.
   - IMGUI_ONCE_UPON_A_FRAME macro.
   If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
-  the new names and equivalent.
+  the new names or equivalent features.
+- Renamed ImFontAtlas::CustomRect to ImFontAtlasCustomRect. Kept redirection typedef (will obsolete).
+- Removed TreeAdvanceToLabelPos() which is rarely used and only does SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()).
+  Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
@@ -117,16 +120,23 @@ Other Changes:
   would be disabled if ImGuiWindowFlags_NoScrollbar was set on the child window, which is not the case
   any more. Forwarding can still be disabled by setting ImGuiWindowFlags_NoInputs. (amend #1502, #1380).
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
+- Combo: Hide arrow when there's not enough space even for the square button.
+- TabBar: Fixed unfocused tab bar separator color (was using ImGuiCol_Tab, should use ImGuiCol_TabUnfocusedActive).
 - Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
+- Style: Added style.ColorButtonButton (left/right, defaults to ImGuiDir_Right) to move the color button
+  of ColorEdit3/ColorEdit4 functions to either side of the inputs.
 - Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
+- Debug, Metrics: Added "Tools->Item Picker" tool which allow clicking on a widget to break in the debugger
+  within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h if needed.
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawList::ChannelsSplit(), ImDrawListSplitter: Fixed an issue with merging draw commands between
   channel 0 and 1. (#2624)
 - ImDrawListSplitter: Fixed memory leak when using low-level split api (was not affecting ImDrawList api,
   also this type was added in 1.71 and not advertised as a public-facing feature).
+- Fonts: binary_to_compressed_c.cpp: Display an error message if failing to open/read the input font file.
 - Backends: SDL2: Added dummy ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
   (#2482, #2632) [@josiahmanson]
 - Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
@@ -308,7 +318,7 @@ Breaking Changes:
 - Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
   ImGuiColorEditFlags_DisplayRGB/_DisplayHSV/_DisplayHex. This is because the addition of
   new flag ImGuiColorEditFlags_InputHSV makes the earlier one ambiguous.
-  Keep redirection enum values (will obsolete). (#2384) [@haldean]
+  Kept redirection enum values (will obsolete). (#2384) [@haldean]
 - Renamed GetOverlayDrawList() to GetForegroundDrawList(). Kept redirection function (will obsolete). (#2391)
 
 Other Changes:
@@ -453,7 +463,7 @@ Breaking Changes:
   side-effect because the window would have ID zero. In particular it is causing problems in viewport/docking branches.
 - Renamed io.ConfigResizeWindowsFromEdges to io.ConfigWindowsResizeFromEdges and removed its [Beta] mark.
   The addition of new configuration options in the Docking branch is pushing for a little reorganization of those names.
-- Renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Keep redirection typedef (will obsolete).
+- Renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Kept redirection typedef (will obsolete).
 
 Other Changes:
 
@@ -1195,7 +1205,7 @@ Breaking Changes:
 - Removed `IsItemRectHovered()`, `IsWindowRectHovered()` recently introduced in 1.51 which were merely the more consistent/correct names for the above functions which are now obsolete anyway. (#1382)
 - Changed `IsWindowHovered()` default parameters behavior to return false if an item is active in another window (e.g. click-dragging item from another window to this window). You can use the newly introduced IsWindowHovered() flags to requests this specific behavior if you need it. (#1382)
 - Renamed imconfig.h's `IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCS`/`IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCS` to `IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS`/`IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS` for consistency.
-- Renamed ImFont::Glyph to ImFontGlyph. Keep redirection typedef (will obsolete).
+- Renamed ImFont::Glyph to ImFontGlyph. Kept redirection typedef (will obsolete).
 
 Other Changes:
 
