@@ -776,30 +776,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_no
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
     if (IsItemActive() && IsMouseDragging(0))
-    {
-        bool can_extract_dock_node = false;
-        if (dock_node != NULL && dock_node->VisibleWindow && !(dock_node->VisibleWindow->Flags & ImGuiWindowFlags_NoMove))
-        {
-            ImGuiDockNode* root_node = DockNodeGetRootNode(dock_node);
-            if (root_node->OnlyNodeWithWindows != dock_node || (root_node->CentralNode != NULL))
-                can_extract_dock_node = true;
-        }
-        if (can_extract_dock_node)
-        {
-            float threshold_base = g.FontSize;
-            float threshold_x = (threshold_base * 2.2f);
-            float threshold_y = (threshold_base * 1.5f);
-            IM_ASSERT(window->DockNodeAsHost != NULL);
-            if (g.IO.MouseDragMaxDistanceAbs[0].x > threshold_x || g.IO.MouseDragMaxDistanceAbs[0].y > threshold_y)
-                DockContextQueueUndockNode(&g, dock_node);
-        }
-        else
-        {
-            ImVec2 backup_active_click_offset = g.ActiveIdClickOffset + (pos - window->Pos);
-            StartMouseMovingWindow(window);
-            g.ActiveIdClickOffset = backup_active_click_offset;
-        }
-    }
+        StartMouseDragFromTitleBar(window, dock_node, true);
 
     return pressed;
 }
@@ -7048,7 +7025,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 //float threshold_base = g.IO.ConfigDockingWithShift ? g.FontSize * 0.5f : g.FontSize;
                 float threshold_x = (threshold_base * 2.2f);
                 float threshold_y = (threshold_base * 1.5f) + ImClamp((ImFabs(g.IO.MouseDragMaxDistanceAbs[0].x) - threshold_base * 2.0f) * 0.20f, 0.0f, threshold_base * 4.0f);
-                //GetOverlayDrawList(window)->AddRect(ImVec2(bb.Min.x - threshold_x, bb.Min.y - threshold_y), ImVec2(bb.Max.x + threshold_x, bb.Max.y + threshold_y), IM_COL32_WHITE); // [DEBUG]
+                //GetForegroundDrawList()->AddRect(ImVec2(bb.Min.x - threshold_x, bb.Min.y - threshold_y), ImVec2(bb.Max.x + threshold_x, bb.Max.y + threshold_y), IM_COL32_WHITE); // [DEBUG]
 
                 float distance_from_edge_y = ImMax(bb.Min.y - g.IO.MousePos.y, g.IO.MousePos.y - bb.Max.y);
                 if (distance_from_edge_y >= threshold_y)

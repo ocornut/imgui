@@ -3403,6 +3403,32 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
         g.MovingWindow = window;
 }
 
+void ImGui::StartMouseDragFromTitleBar(ImGuiWindow* window, ImGuiDockNode* node, bool from_collapse_button)
+{
+    ImGuiContext& g = *GImGui;
+    bool can_extract_dock_node = false;
+    if (node != NULL && node->VisibleWindow && (node->VisibleWindow->Flags & ImGuiWindowFlags_NoMove) == 0)
+    {
+        ImGuiDockNode* root_node = DockNodeGetRootNode(node);
+        if (root_node->OnlyNodeWithWindows != node || (root_node->CentralNode != NULL))
+            if (from_collapse_button || root_node->IsDockSpace())
+                can_extract_dock_node = true;
+    }
+
+    const bool clicked = IsMouseClicked(0);
+    const bool dragging = IsMouseDragging(0, g.IO.MouseDragThreshold * 1.70f);
+    if (can_extract_dock_node && dragging)
+    {
+        DockContextQueueUndockNode(&g, node);
+        g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - node->Pos;
+    }
+    else if (!can_extract_dock_node && (clicked || dragging) && g.MovingWindow != window)
+    {
+        StartMouseMovingWindow(window);
+        g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - window->RootWindow->Pos;
+    }
+}
+
 // Handle mouse moving window
 // Note: moving window with the navigation keys (Square + d-pad / CTRL+TAB + Arrows) are processed in NavUpdateWindowing()
 void ImGui::UpdateMouseMovingWindowNewFrame()
@@ -12802,15 +12828,20 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     }
 
     // When clicking on the title bar outside of tabs, we still focus the selected tab for that node
-    if (g.HoveredWindow == host_window && g.HoveredId == 0 && IsMouseHoveringRect(title_bar_rect.Min, title_bar_rect.Max))
+    // FIXME: TabItem use AllowItemOverlap so we manually perform a more specific test for now (hovered || held)
+    ImGuiID title_bar_id = host_window->GetID("#TITLEBAR");
+    if (g.HoveredId == 0 || g.HoveredId == title_bar_id || g.ActiveId == title_bar_id)
     {
-        if (IsMouseClicked(0))
+        bool held;
+        ButtonBehavior(title_bar_rect, title_bar_id, NULL, &held);
+        if (held)
         {
-            focus_tab_id = tab_bar->SelectedTabId;
+            if (IsMouseClicked(0))
+                focus_tab_id = tab_bar->SelectedTabId;
 
             // Forward moving request to selected window
-            if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, focus_tab_id))
-                StartMouseMovingWindow(tab->Window);
+            if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_bar->SelectedTabId))
+                StartMouseDragFromTitleBar(tab->Window, node, false);
         }
     }
 
@@ -13418,7 +13449,7 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
 
                 /*
                 // [DEBUG] Render limits
-                ImDrawList* draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
+                ImDrawList* draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList((ImGuiViewportP*)GetMainViewport());
                 for (int n = 0; n < 2; n++)
                     if (axis == ImGuiAxis_X)
                         draw_list->AddLine(ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y), ImVec2(resize_limits[n], node->ChildNodes[n]->Pos.y + node->ChildNodes[n]->Size.y), IM_COL32(255, 0, 255, 255), 3.0f);
@@ -13446,7 +13477,7 @@ void ImGui::DockNodeTreeUpdateSplitter(ImGuiDockNode* node)
                         for (int touching_node_n = 0; touching_node_n < touching_nodes[side_n].Size; touching_node_n++)
                         {
                             ImGuiDockNode* touching_node = touching_nodes[side_n][touching_node_n];
-                            //ImDrawList* draw_list = node->HostWindow ? GetOverlayDrawList(node->HostWindow) : GetOverlayDrawList((ImGuiViewportP*)GetMainViewport());
+                            //ImDrawList* draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList((ImGuiViewportP*)GetMainViewport());
                             //draw_list->AddRect(touching_node->Pos, touching_node->Pos + touching_node->Size, IM_COL32(255, 128, 0, 255));
                             while (touching_node->ParentNode != node)
                             {
