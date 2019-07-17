@@ -62,6 +62,9 @@ Other Changes:
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
 - Style: Added style.ColorButtonPosition (left/right, defaults to ImGuiDir_Right) to move the color button
   of ColorEdit3/ColorEdit4 functions to either side of the inputs.
+- Misc: Made Button(), ColorButton() not trigger an "edited" event leading to IsItemDeactivatedAfterEdit()
+  returning true. This also effectively make ColorEdit4() not incorrect trigger IsItemDeactivatedAfterEdit()
+  when clicking the color button to open the picker popup. (#1875)
 - Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
 - Debug, Metrics: Added "Tools->Item Picker" tool which allow clicking on a widget to break in the debugger
   within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h if needed.
