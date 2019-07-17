@@ -61,6 +61,8 @@ Other Changes:
 - Style: Added style.ColorButtonButton (left/right, defaults to ImGuiDir_Right) to move the color button
   of ColorEdit3/ColorEdit4 functions to either side of the inputs.
 - Misc: Added IMGUI_DISABLE_METRICS_WINDOW imconfig.h setting to explicitly compile out ShowMetricsWindow().
+- Debug, Metrics: Added "Tools->Item Picker" tool which allow clicking on a widget to break in the debugger
+  within the item code. The tool calls IM_DEBUG_BREAK() which can be redefined in imconfig.h if needed.
 - ImDrawList: Fixed CloneOutput() helper crashing. (#1860) [@gviot]
 - ImDrawList::ChannelsSplit(), ImDrawListSplitter: Fixed an issue with merging draw commands between
   channel 0 and 1. (#2624)

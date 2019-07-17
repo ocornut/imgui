@@ -2862,6 +2862,16 @@ void ImGui::SetHoveredID(ImGuiID id)
     g.HoveredIdAllowOverlap = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
+
+    // [DEBUG] Item Picker tool!
+    // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
+    // the cost of this tool near-zero. We would get slightly better call-stack if we made the test in ItemAdd()
+    // but that would incur a slightly higher cost and may require us to hide this feature behind a define.
+    if (id != 0 && id == g.DebugBreakItemId)
+    {
+        IM_DEBUG_BREAK();
+        g.DebugBreakItemId = 0;
+    }
 }
 
 ImGuiID ImGui::GetHoveredID()
@@ -10180,6 +10190,28 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     if (ImGui::TreeNode("Tools"))
     {
+        static bool picking_enabled = false;
+        if (ImGui::Button("Item Picker.."))
+            picking_enabled = true;
+        if (picking_enabled)
+        {
+            const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
+            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+            if (ImGui::IsKeyPressedMap(ImGuiKey_Escape))
+                picking_enabled = false;
+            if (ImGui::IsMouseClicked(0) && hovered_id)
+            {
+                g.DebugBreakItemId = hovered_id;
+                picking_enabled = false;
+            }
+            ImGui::SetNextWindowBgAlpha(0.5f);
+            ImGui::BeginTooltip();
+            ImGui::Text("HoveredId: 0x%08X", hovered_id);
+            ImGui::Text("Press ESC to abort picking.");
+            ImGui::TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
+            ImGui::EndTooltip();
+        }
+
         ImGui::Checkbox("Show windows begin order", &show_windows_begin_order);
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
@@ -10225,10 +10257,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
     ImGui::End();
 }
+
 #else
-void ImGui::ShowMetricsWindow(bool*)
-{
-}
+
+void ImGui::ShowMetricsWindow(bool*) { }
+
 #endif
 
 //-----------------------------------------------------------------------------
