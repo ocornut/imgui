@@ -1563,6 +1563,8 @@ namespace ImGui
     IMGUI_API void          PopColumnsBackground();
     IMGUI_API ImGuiID       GetColumnsID(const char* str_id, int count);
     IMGUI_API ImGuiColumns* FindOrCreateColumns(ImGuiWindow* window, ImGuiID id);
+    IMGUI_API float         GetColumnOffsetFromNorm(const ImGuiColumns* columns, float offset_norm);
+    IMGUI_API float         GetColumnNormFromOffset(const ImGuiColumns* columns, float offset);
 
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);
