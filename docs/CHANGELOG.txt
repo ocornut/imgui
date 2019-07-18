@@ -56,6 +56,8 @@ Other Changes:
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Combo: Hide arrow when there's not enough space even for the square button.
 - TabBar: Fixed unfocused tab bar separator color (was using ImGuiCol_Tab, should use ImGuiCol_TabUnfocusedActive).
+- Columns: Fixed a regression from 1.71 where the right-side of the contents rectangle within each column
+  would wrongly use a WindowPadding.x instead of ItemSpacing.x like it always did. (#125, #2666)
 - Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]

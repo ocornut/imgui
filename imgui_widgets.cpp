@@ -7295,8 +7295,10 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     window->DC.CurrentColumns = columns;
 
     // Set state for first column
-    columns->OffMinX = window->DC.Indent.x - g.Style.ItemSpacing.x;
-    columns->OffMaxX = ImMax(window->WorkRect.Max.x - window->Pos.x, columns->OffMinX + 1.0f);
+    const float column_padding = g.Style.ItemSpacing.x;
+    columns->OffMinX = window->DC.Indent.x - column_padding;
+    columns->OffMaxX = window->WorkRect.Max.x - window->Pos.x;
+    columns->OffMaxX = ImMax(columns->OffMaxX, columns->OffMinX + 1.0f);
     columns->HostCursorPosY = window->DC.CursorPos.y;
     columns->HostCursorMaxPosX = window->DC.CursorMaxPos.x;
     columns->HostClipRect = window->ClipRect;
@@ -7343,7 +7345,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     float offset_1 = GetColumnOffset(columns->Current + 1);
     float width = offset_1 - offset_0;
     PushItemWidth(width * 0.65f);
-    window->WorkRect.Max.x = window->Pos.x + offset_1 - window->WindowPadding.x;
+    window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
 }
 
 void ImGui::NextColumn()
@@ -7364,17 +7366,19 @@ void ImGui::NextColumn()
     PopItemWidth();
     PopClipRect();
 
+    const float column_padding = g.Style.ItemSpacing.x;
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
     if (++columns->Current < columns->Count)
     {
-        // Columns 1+ cancel out IndentX
+        // Columns 1+ ignore IndentX (by canceling it out)
         // FIXME-COLUMNS: Unnecessary, could be locked?
-        window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + g.Style.ItemSpacing.x;
+        window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + column_padding;
         window->DrawList->ChannelsSetCurrent(columns->Current + 1);
     }
     else
     {
         // New row/line
+        // Column 0 honor IndentX
         window->DC.ColumnsOffset.x = 0.0f;
         window->DrawList->ChannelsSetCurrent(1);
         columns->Current = 0;
@@ -7392,7 +7396,7 @@ void ImGui::NextColumn()
     float offset_1 = GetColumnOffset(columns->Current + 1);
     float width = offset_1 - offset_0;
     PushItemWidth(width * 0.65f);
-    window->WorkRect.Max.x = window->Pos.x + offset_1 - window->WindowPadding.x;
+    window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
 }
 
 void ImGui::EndColumns()
