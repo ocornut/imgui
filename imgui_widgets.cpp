@@ -7294,18 +7294,19 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     columns->Flags = flags;
     window->DC.CurrentColumns = columns;
 
-    // Set state for first column
-    const float column_padding = g.Style.ItemSpacing.x;
-    columns->OffMinX = window->DC.Indent.x - column_padding;
-    columns->OffMaxX = window->WorkRect.Max.x - window->Pos.x;
-    columns->OffMaxX = ImMax(columns->OffMaxX, columns->OffMinX + 1.0f);
     columns->HostCursorPosY = window->DC.CursorPos.y;
     columns->HostCursorMaxPosX = window->DC.CursorMaxPos.x;
     columns->HostClipRect = window->ClipRect;
     columns->HostWorkRect = window->WorkRect;
+
+    // Set state for first column
+    // We aim so that the right-most column will have the same clipping width as other after being clipped by parent ClipRect
+    const float column_padding = g.Style.ItemSpacing.x;
+    const float half_clip_extend_x = ImFloor(ImMax(window->WindowPadding.x * 0.5f, window->WindowBorderSize));
+    columns->OffMinX = window->DC.Indent.x - column_padding + ImMax(column_padding - window->WindowPadding.x, 0.0f);
+    columns->OffMaxX = ImMin(window->WorkRect.Max.x + column_padding - ImMax(column_padding - window->WindowPadding.x, 0.0f), window->WorkRect.Max.x + half_clip_extend_x) - window->Pos.x;
+    columns->OffMaxX = ImMax(columns->OffMaxX, columns->OffMinX + 1.0f);
     columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
-    window->DC.ColumnsOffset.x = 0.0f;
-    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
 
     // Clear data if columns count changed
     if (columns->Columns.Size != 0 && columns->Columns.Size != columns_count + 1)
@@ -7345,6 +7346,8 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     float offset_1 = GetColumnOffset(columns->Current + 1);
     float width = offset_1 - offset_0;
     PushItemWidth(width * 0.65f);
+    window->DC.ColumnsOffset.x = columns->OffMinX - window->DC.Indent.x + column_padding;
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
 }
 
@@ -7379,7 +7382,7 @@ void ImGui::NextColumn()
     {
         // New row/line
         // Column 0 honor IndentX
-        window->DC.ColumnsOffset.x = 0.0f;
+        window->DC.ColumnsOffset.x = columns->OffMinX - window->DC.Indent.x + column_padding;
         window->DrawList->ChannelsSetCurrent(1);
         columns->Current = 0;
         columns->LineMinY = columns->LineMaxY;
