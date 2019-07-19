@@ -7304,13 +7304,13 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     columns->HostWorkRect = window->WorkRect;
 
     // Set state for first column
+    // We aim so that the right-most column will have the same clipping width as other after being clipped by parent ClipRect
     const float column_padding = g.Style.ItemSpacing.x;
+    const float half_clip_extend_x = ImFloor(ImMax(window->WindowPadding.x * 0.5f, window->WindowBorderSize));
     columns->OffMinX = window->DC.Indent.x - column_padding;
-    columns->OffMaxX = window->WorkRect.Max.x - window->Pos.x;
+    columns->OffMaxX = window->WorkRect.Max.x + half_clip_extend_x - window->Pos.x;
     columns->OffMaxX = ImMax(columns->OffMaxX, columns->OffMinX + 1.0f);
     columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
-    window->DC.ColumnsOffset.x = 0.0f;
-    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
 
     // Clear data if columns count changed
     if (columns->Columns.Size != 0 && columns->Columns.Size != columns_count + 1)
@@ -7346,10 +7346,13 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
         PushColumnClipRect(0);
     }
 
+    // We don't generally store Indent.x inside ColumnsOffset because it may be manipulated by the user.
     float offset_0 = GetColumnOffset(columns->Current);
     float offset_1 = GetColumnOffset(columns->Current + 1);
     float width = offset_1 - offset_0;
     PushItemWidth(width * 0.65f);
+    window->DC.ColumnsOffset.x = 0.0f;
+    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->WorkRect.Max.x = window->Pos.x + offset_1 - column_padding;
 }
 
