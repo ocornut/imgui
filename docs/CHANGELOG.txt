@@ -58,9 +58,6 @@ Other Changes:
 - TabBar: Fixed unfocused tab bar separator color (was using ImGuiCol_Tab, should use ImGuiCol_TabUnfocusedActive).
 - Columns: Fixed a regression from 1.71 where the right-side of the contents rectangle within each column
   would wrongly use a WindowPadding.x instead of ItemSpacing.x like it always did. (#125, #2666)
-- Columns: Improved honoring left-most and right-most alignment with various values of ItemSpacing.x and
-  WindowPadding.x. In particular, the right-most edge now reaches up to the clipping rectangle while
-  ensuring that the right-most column clipping width matches others. (#125, #2666)
 - Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
