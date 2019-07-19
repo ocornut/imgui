@@ -2919,16 +2919,6 @@ void ImGui::SetHoveredID(ImGuiID id)
     g.HoveredIdAllowOverlap = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
-
-    // [DEBUG] Item Picker tool!
-    // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
-    // the cost of this tool near-zero. We would get slightly better call-stack if we made the test in ItemAdd()
-    // but that would incur a slightly higher cost and may require us to hide this feature behind a define.
-    if (id != 0 && id == g.DebugBreakItemId)
-    {
-        IM_DEBUG_BREAK();
-        g.DebugBreakItemId = 0;
-    }
 }
 
 ImGuiID ImGui::GetHoveredID()
@@ -3042,6 +3032,15 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
             if (g.NavWindow->RootWindowForNav == window->RootWindowForNav)
                 if (window == g.NavWindow || ((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened))
                     NavProcessItem(window, nav_bb_arg ? *nav_bb_arg : bb, id);
+
+        // [DEBUG] Item Picker tool, when enabling the "extended" version we perform the check in ItemAdd()
+#ifdef IMGUI_DEBUG_TOOL_ITEM_PICKER_EX
+        if (id == g.DebugItemPickerBreakID)
+        {
+            IM_DEBUG_BREAK();
+            g.DebugItemPickerBreakID = 0;
+        }
+#endif
     }
 
     window->DC.LastItemId = id;
@@ -3130,6 +3129,17 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
 
     SetHoveredID(id);
+
+    // [DEBUG] Item Picker tool!
+    // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
+    // the cost of this tool near-zero. We can get slightly better call-stack and support picking non-hovered
+    // items if we perform the test in ItemAdd(), but that would incur a small runtime cost.
+    // #define IMGUI_DEBUG_TOOL_ITEM_PICKER_EX in imconfig.h if you want this check to also be performed in ItemAdd().
+    if (g.DebugItemPickerActive && g.HoveredIdPreviousFrame == id)
+        GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
+    if (g.DebugItemPickerBreakID == id)
+        IM_DEBUG_BREAK();
+
     return true;
 }
 
@@ -3997,6 +4007,27 @@ void ImGui::NewFrame()
     g.CurrentWindowStack.resize(0);
     g.BeginPopupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow, false);
+
+    // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
+    g.DebugItemPickerBreakID = 0;
+    if (g.DebugItemPickerActive)
+    {
+        const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
+        ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
+        if (ImGui::IsKeyPressedMap(ImGuiKey_Escape))
+            g.DebugItemPickerActive = false;
+        if (ImGui::IsMouseClicked(0) && hovered_id)
+        {
+            g.DebugItemPickerBreakID = hovered_id;
+            g.DebugItemPickerActive = false;
+        }
+        ImGui::SetNextWindowBgAlpha(0.60f);
+        ImGui::BeginTooltip();
+        ImGui::Text("HoveredId: 0x%08X", hovered_id);
+        ImGui::Text("Press ESC to abort picking.");
+        ImGui::TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
+        ImGui::EndTooltip();
+    }
 
     // Docking
     DockContextUpdateDocking(&g);
@@ -14581,27 +14612,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     if (ImGui::TreeNode("Tools"))
     {
-        static bool picking_enabled = false;
+        // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
         if (ImGui::Button("Item Picker.."))
-            picking_enabled = true;
-        if (picking_enabled)
-        {
-            const ImGuiID hovered_id = g.HoveredIdPreviousFrame;
-            ImGui::SetMouseCursor(ImGuiMouseCursor_Hand);
-            if (ImGui::IsKeyPressedMap(ImGuiKey_Escape))
-                picking_enabled = false;
-            if (ImGui::IsMouseClicked(0) && hovered_id)
-            {
-                g.DebugBreakItemId = hovered_id;
-                picking_enabled = false;
-            }
-            ImGui::SetNextWindowBgAlpha(0.5f);
-            ImGui::BeginTooltip();
-            ImGui::Text("HoveredId: 0x%08X", hovered_id);
-            ImGui::Text("Press ESC to abort picking.");
-            ImGui::TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
-            ImGui::EndTooltip();
-        }
+            ImGui::DebugStartItemPicker();
 
         ImGui::Checkbox("Show windows begin order", &show_windows_begin_order);
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);

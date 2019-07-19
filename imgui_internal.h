@@ -1179,7 +1179,8 @@ struct ImGuiContext
     int                     LogDepthToExpandDefault;            // Default/stored value for LogDepthMaxExpand if not specified in the LogXXX function call.
 
     // Debug Tools
-    ImGuiID                 DebugBreakItemId;
+    bool                    DebugItemPickerActive;
+    ImGuiID                 DebugItemPickerBreakID;             // Will call IM_DEBUG_BREAK() when encountering this id
 
     // Misc
     float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
@@ -1314,7 +1315,8 @@ struct ImGuiContext
         LogDepthRef = 0;
         LogDepthToExpand = LogDepthToExpandDefault = 2;
 
-        DebugBreakItemId = 0;
+        DebugItemPickerActive = false;
+        DebugItemPickerBreakID = 0;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
@@ -1888,6 +1890,9 @@ namespace ImGui
     // Shade functions (write over already created vertices)
     IMGUI_API void          ShadeVertsLinearColorGradientKeepAlpha(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, ImVec2 gradient_p0, ImVec2 gradient_p1, ImU32 col0, ImU32 col1);
     IMGUI_API void          ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp);
+
+    // Debug Tools
+    inline void             DebugStartItemPicker() { GImGui->DebugItemPickerActive = true; }
 
 } // namespace ImGui
 

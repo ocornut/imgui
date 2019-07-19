@@ -2648,11 +2648,16 @@ static void ShowDemoWindowColumns()
         // NB: Future columns API should allow automatic horizontal borders.
         static bool h_borders = true;
         static bool v_borders = true;
+        static int columns_count = 4;
+        const int lines_count = 3;
+        ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
+        ImGui::DragInt("##columns_count", &columns_count, 0.1f, 1, 10, "%d columns");
+        ImGui::SameLine();
         ImGui::Checkbox("horizontal", &h_borders);
         ImGui::SameLine();
         ImGui::Checkbox("vertical", &v_borders);
-        ImGui::Columns(4, NULL, v_borders);
-        for (int i = 0; i < 4 * 3; i++)
+        ImGui::Columns(columns_count, NULL, v_borders);
+        for (int i = 0; i < columns_count * lines_count; i++)
         {
             if (h_borders && ImGui::GetColumnIndex() == 0)
                 ImGui::Separator();
