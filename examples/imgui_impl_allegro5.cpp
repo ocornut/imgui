@@ -281,6 +281,7 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Backspace] = ALLEGRO_KEY_BACKSPACE;
     io.KeyMap[ImGuiKey_Space] = ALLEGRO_KEY_SPACE;
     io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
+    io.KeyMap[ImGuiKey_EnterSecondary] = ALLEGRO_KEY_PAD_ENTER;
     io.KeyMap[ImGuiKey_Escape] = ALLEGRO_KEY_ESCAPE;
     io.KeyMap[ImGuiKey_A] = ALLEGRO_KEY_A;
     io.KeyMap[ImGuiKey_C] = ALLEGRO_KEY_C;
