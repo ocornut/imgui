@@ -61,6 +61,7 @@ Other Changes:
 - Columns: Made the right-most edge reaches up to the clipping rectangle (removing half of WindowPadding.x
   worth of asymmetrical/extraneous padding, note that there's another half that conservatively has to offset
   the right-most column, otherwise it's clipping width won't match the other column). (#125, #2666)
+- Columns: Improved honoring alignment with various values of ItemSpacing.x and WindowPadding.x. (#125, #2666)
 - Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
   of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
