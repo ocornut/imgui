@@ -234,6 +234,7 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_Backspace] = s3eKeyBackspace;
     io.KeyMap[ImGuiKey_Space] = s3eKeySpace;
     io.KeyMap[ImGuiKey_Enter] = s3eKeyEnter;
+    io.KeyMap[ImGuiKey_EnterSecondary] = s3eKeyNumPadEnter;
     io.KeyMap[ImGuiKey_Escape] = s3eKeyEsc;
     io.KeyMap[ImGuiKey_A] = s3eKeyA;
     io.KeyMap[ImGuiKey_C] = s3eKeyC;

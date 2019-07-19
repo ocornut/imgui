@@ -47,27 +47,28 @@ bool ImGui_ImplOSX_Init()
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
-    io.KeyMap[ImGuiKey_Tab]         = '\t';
-    io.KeyMap[ImGuiKey_LeftArrow]   = NSLeftArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_RightArrow]  = NSRightArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_UpArrow]     = NSUpArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_DownArrow]   = NSDownArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageUp]      = NSPageUpFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageDown]    = NSPageDownFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Home]        = NSHomeFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_End]         = NSEndFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Insert]      = NSInsertFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Delete]      = NSDeleteFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Backspace]   = 127;
-    io.KeyMap[ImGuiKey_Space]       = 32;
-    io.KeyMap[ImGuiKey_Enter]       = 13;
-    io.KeyMap[ImGuiKey_Escape]      = 27;
-    io.KeyMap[ImGuiKey_A]           = 'A';
-    io.KeyMap[ImGuiKey_C]           = 'C';
-    io.KeyMap[ImGuiKey_V]           = 'V';
-    io.KeyMap[ImGuiKey_X]           = 'X';
-    io.KeyMap[ImGuiKey_Y]           = 'Y';
-    io.KeyMap[ImGuiKey_Z]           = 'Z';
+    io.KeyMap[ImGuiKey_Tab]             = '\t';
+    io.KeyMap[ImGuiKey_LeftArrow]       = NSLeftArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_RightArrow]      = NSRightArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_UpArrow]         = NSUpArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_DownArrow]       = NSDownArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageUp]          = NSPageUpFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageDown]        = NSPageDownFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Home]            = NSHomeFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_End]             = NSEndFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Insert]          = NSInsertFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Delete]          = NSDeleteFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Backspace]       = 127;
+    io.KeyMap[ImGuiKey_Space]           = 32;
+    io.KeyMap[ImGuiKey_Enter]           = 13;
+    io.KeyMap[ImGuiKey_EnterSecondary]  = 13;
+    io.KeyMap[ImGuiKey_Escape]          = 27;
+    io.KeyMap[ImGuiKey_A]               = 'A';
+    io.KeyMap[ImGuiKey_C]               = 'C';
+    io.KeyMap[ImGuiKey_V]               = 'V';
+    io.KeyMap[ImGuiKey_X]               = 'X';
+    io.KeyMap[ImGuiKey_Y]               = 'Y';
+    io.KeyMap[ImGuiKey_Z]               = 'Z';
 
     // Load cursors. Some of them are undocumented.
     g_MouseCursorHidden = false;
