@@ -7236,6 +7236,8 @@ void ImGui::PushColumnsBackground()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     ImGuiColumns* columns = window->DC.CurrentColumns;
+    if (columns->Count == 1)
+        return;
     window->DrawList->ChannelsSetCurrent(0);
     int cmd_size = window->DrawList->CmdBuffer.Size;
     PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false); 
@@ -7247,6 +7249,8 @@ void ImGui::PopColumnsBackground()
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     ImGuiColumns* columns = window->DC.CurrentColumns;
+    if (columns->Count == 1)
+        return;
     window->DrawList->ChannelsSetCurrent(columns->Current + 1);
     PopClipRect();
 }
@@ -7294,15 +7298,16 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     columns->Flags = flags;
     window->DC.CurrentColumns = columns;
 
+    columns->HostCursorPosY = window->DC.CursorPos.y;
+    columns->HostCursorMaxPosX = window->DC.CursorMaxPos.x;
+    columns->HostClipRect = window->ClipRect;
+    columns->HostWorkRect = window->WorkRect;
+
     // Set state for first column
     const float column_padding = g.Style.ItemSpacing.x;
     columns->OffMinX = window->DC.Indent.x - column_padding;
     columns->OffMaxX = window->WorkRect.Max.x - window->Pos.x;
     columns->OffMaxX = ImMax(columns->OffMaxX, columns->OffMinX + 1.0f);
-    columns->HostCursorPosY = window->DC.CursorPos.y;
-    columns->HostCursorMaxPosX = window->DC.CursorMaxPos.x;
-    columns->HostClipRect = window->ClipRect;
-    columns->HostWorkRect = window->WorkRect;
     columns->LineMinY = columns->LineMaxY = window->DC.CursorPos.y;
     window->DC.ColumnsOffset.x = 0.0f;
     window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
