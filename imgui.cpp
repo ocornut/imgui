@@ -3782,6 +3782,13 @@ void ImGui::NewFrame()
     if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
         g.IO.ConfigWindowsResizeFromEdges = false;
 
+    // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.
+    const ImGuiColumnsFlags prev_config_flags = g.ConfigFlagsForFrame;
+    if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable) && (prev_config_flags & ImGuiConfigFlags_DockingEnable) == 0)
+        IM_ASSERT(0 && "Please DockingEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
+    if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (prev_config_flags & ImGuiConfigFlags_ViewportsEnable) == 0)
+        IM_ASSERT(0 && "Please ViewportEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
+
     // Perform simple checks: multi-viewport and platform windows support
     if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
