@@ -2593,7 +2593,9 @@ static void ShowDemoWindowColumns()
         static int columns_count = 4;
         const int lines_count = 3;
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 8);
-        ImGui::DragInt("##columns_count", &columns_count, 0.1f, 1, 10, "%d columns");
+        ImGui::DragInt("##columns_count", &columns_count, 0.1f, 2, 10, "%d columns");
+        if (columns_count < 2)
+            columns_count = 2;
         ImGui::SameLine();
         ImGui::Checkbox("horizontal", &h_borders);
         ImGui::SameLine();
