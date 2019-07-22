@@ -6979,10 +6979,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         SetItemAllowOverlap();
 
     // Drag and drop a single floating window node moves it
-    // FIXME-DOCK: In theory we shouldn't test for the ConfigDockingNodifySingleWindows flag here.
-    // When our single window node and OnlyNodeWithWindows are working properly we may remove this check here.
     ImGuiDockNode* node = docked_window ? docked_window->DockNode : NULL;
-    const bool single_floating_window_node = node && node->IsRootNode() && !node->IsDockSpace() && node->Windows.Size == 1 && g.IO.ConfigDockingTabBarOnSingleWindows;
+    const bool single_floating_window_node = node && node->IsFloatingNode() && (node->Windows.Size == 1);
     if (held && single_floating_window_node && IsMouseDragging(0, 0.0f))
     {
         // Move
