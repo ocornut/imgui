@@ -70,6 +70,9 @@ Other Changes:
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
 - Style: Added style.ColorButtonPosition (left/right, defaults to ImGuiDir_Right) to move the color button
   of ColorEdit3/ColorEdit4 functions to either side of the inputs.
+- IO: Added ImGuiKey_KeyPadEnter and support in various back-ends (previously back-ends would need to
+  specifically redirect key-pad keys to their regular counterpart). This is a temporary attenuating measure
+  until we actually refactor and add whole sets of keys into the ImGuiKey enum. (#2677, #2005) [@amc522]
 - Misc: Made Button(), ColorButton() not trigger an "edited" event leading to IsItemDeactivatedAfterEdit()
   returning true. This also effectively make ColorEdit4() not incorrect trigger IsItemDeactivatedAfterEdit()
   when clicking the color button to open the picker popup. (#1875)
