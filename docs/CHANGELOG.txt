@@ -85,6 +85,10 @@ Other Changes:
 - ImDrawListSplitter: Fixed memory leak when using low-level split api (was not affecting ImDrawList api,
   also this type was added in 1.71 and not advertised as a public-facing feature).
 - Fonts: binary_to_compressed_c.cpp: Display an error message if failing to open/read the input font file.
+- Backends: OSX: Disabled default native Mac clipboard copy/paste implementation in core library (added in 1.71),
+  because it needs application to be linked with '-framework ApplicationServices'. It can be explicitly
+  enabled back by using '#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS' in imconfig.h. Re-added
+  equivalent using NSPasteboard api in the imgui_impl_osx.mm experimental back-end. (#2546)
 - Backends: SDL2: Added dummy ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
   (#2482, #2632) [@josiahmanson]
 - Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
