@@ -11,6 +11,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-07-21: DirectX10: Backup, clear and restore Geometry Shader is any is bound when calling ImGui_ImplDX10_RenderDrawData().
 //  2019-05-29: DirectX10: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: DirectX10: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2018-12-03: Misc: Added #pragma comment statement to automatically link with d3dcompiler.lib when using D3DCompile().
@@ -81,6 +82,7 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     ctx->VSSetConstantBuffers(0, 1, &g_pVertexConstantBuffer);
     ctx->PSSetShader(g_pPixelShader);
     ctx->PSSetSamplers(0, 1, &g_pFontSampler);
+    ctx->GSSetShader(NULL);
 
     // Setup render state
     const float blend_factor[4] = { 0.f, 0.f, 0.f, 0.f };
@@ -183,6 +185,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
         ID3D10SamplerState*         PSSampler;
         ID3D10PixelShader*          PS;
         ID3D10VertexShader*         VS;
+        ID3D10GeometryShader*       GS;
         D3D10_PRIMITIVE_TOPOLOGY    PrimitiveTopology;
         ID3D10Buffer*               IndexBuffer, *VertexBuffer, *VSConstantBuffer;
         UINT                        IndexBufferOffset, VertexBufferStride, VertexBufferOffset;
@@ -201,6 +204,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ctx->PSGetShader(&old.PS);
     ctx->VSGetShader(&old.VS);
     ctx->VSGetConstantBuffers(0, 1, &old.VSConstantBuffer);
+    ctx->GSGetShader(&old.GS);
     ctx->IAGetPrimitiveTopology(&old.PrimitiveTopology);
     ctx->IAGetIndexBuffer(&old.IndexBuffer, &old.IndexBufferFormat, &old.IndexBufferOffset);
     ctx->IAGetVertexBuffers(0, 1, &old.VertexBuffer, &old.VertexBufferStride, &old.VertexBufferOffset);
@@ -255,6 +259,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ctx->PSSetSamplers(0, 1, &old.PSSampler); if (old.PSSampler) old.PSSampler->Release();
     ctx->PSSetShader(old.PS); if (old.PS) old.PS->Release();
     ctx->VSSetShader(old.VS); if (old.VS) old.VS->Release();
+    ctx->GSSetShader(old.GS); if (old.GS) old.GS->Release();
     ctx->VSSetConstantBuffers(0, 1, &old.VSConstantBuffer); if (old.VSConstantBuffer) old.VSConstantBuffer->Release();
     ctx->IASetPrimitiveTopology(old.PrimitiveTopology);
     ctx->IASetIndexBuffer(old.IndexBuffer, old.IndexBufferFormat, old.IndexBufferOffset); if (old.IndexBuffer) old.IndexBuffer->Release();
