@@ -3186,10 +3186,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             static ImGuiTextFilter filter;
             filter.Draw("Filter colors", ImGui::GetFontSize() * 16);
 
-            static ImGuiColorEditFlags alpha_flags = 0;
+            static int alpha_flags = 0;
             ImGui::RadioButton("Opaque", &alpha_flags, 0); ImGui::SameLine();
-            ImGui::RadioButton("Alpha", &alpha_flags, ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine();
-            ImGui::RadioButton("Both", &alpha_flags, ImGuiColorEditFlags_AlphaPreviewHalf); ImGui::SameLine();
+            ImGui::RadioButton("Alpha", &alpha_flags, (int)ImGuiColorEditFlags_AlphaPreview); ImGui::SameLine();
+            ImGui::RadioButton("Both", &alpha_flags, (int)ImGuiColorEditFlags_AlphaPreviewHalf); ImGui::SameLine();
             HelpMarker("In the color list:\nLeft-click on colored square to open color picker,\nRight-click to open edit options menu.");
 
             ImGui::BeginChild("##colors", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
@@ -3200,7 +3200,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 if (!filter.PassFilter(name))
                     continue;
                 ImGui::PushID(i);
-                ImGui::ColorEdit4("##color", (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | alpha_flags);
+                ImGui::ColorEdit4("##color", (float*)&style.Colors[i], ImGuiColorEditFlags_AlphaBar | (ImGuiColorEditFlags)alpha_flags);
                 if (memcmp(&style.Colors[i], &ref->Colors[i], sizeof(ImVec4)) != 0)
                 {
                     // Tips: in a real user application, you may want to merge and use an icon font into the main font, so instead of "Save"/"Revert" you'd use icons.
