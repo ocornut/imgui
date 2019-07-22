@@ -1102,6 +1102,7 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 static void             UpdateMouseInputs();
 static void             UpdateMouseWheel();
 static bool             UpdateManualResize(ImGuiWindow* window, const ImVec2& size_auto_fit, int* border_held, int resize_grip_count, ImU32 resize_grip_col[4]);
+static void             UpdateDebugToolItemPicker();
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
@@ -3749,14 +3750,9 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     g.IO.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
-void ImGui::NewFrame()
+static void NewFrameSanityChecks()
 {
-    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     ImGuiContext& g = *GImGui;
-
-#ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_PreNewFrame(&g);
-#endif
 
     // Check user data
     // (We pass an error message in the assert expression to make it visible to programmers who are not using a debugger, as most assert handlers display their argument)
@@ -3770,7 +3766,6 @@ void ImGui::NewFrame()
     IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)!");
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
-
     for (int n = 0; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
@@ -3781,6 +3776,19 @@ void ImGui::NewFrame()
     // Perform simple check: the beta io.ConfigWindowsResizeFromEdges option requires back-end to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
     if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
         g.IO.ConfigWindowsResizeFromEdges = false;
+}
+
+void ImGui::NewFrame()
+{
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
+    ImGuiContext& g = *GImGui;
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngineHook_PreNewFrame(&g);
+#endif
+
+    // Check and assert for various common IO and Configuration mistakes
+    NewFrameSanityChecks();
 
     // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.
     const ImGuiColumnsFlags prev_config_flags = g.ConfigFlagsForFrame;
@@ -4015,7 +4023,28 @@ void ImGui::NewFrame()
     g.BeginPopupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow, false);
 
+    // Docking
+    DockContextUpdateDocking(&g);
+
     // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
+    UpdateDebugToolItemPicker();
+
+    // Create implicit/fallback window - which we will only render it if the user has added something to it.
+    // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
+    // This fallback is particularly important as it avoid ImGui:: calls from crashing.
+    SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
+    Begin("Debug##Default");
+    g.FrameScopePushedImplicitWindow = true;
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngineHook_PostNewFrame(&g);
+#endif
+}
+
+// [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
+void ImGui::UpdateDebugToolItemPicker()
+{
+    ImGuiContext& g = *GImGui;
     g.DebugItemPickerBreakID = 0;
     if (g.DebugItemPickerActive)
     {
@@ -4035,20 +4064,6 @@ void ImGui::NewFrame()
         ImGui::TextColored(GetStyleColorVec4(hovered_id ? ImGuiCol_Text : ImGuiCol_TextDisabled), "Click to break in debugger!");
         ImGui::EndTooltip();
     }
-
-    // Docking
-    DockContextUpdateDocking(&g);
-
-    // Create implicit/fallback window - which we will only render it if the user has added something to it.
-    // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
-    // This fallback is particularly important as it avoid ImGui:: calls from crashing.
-    SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
-    Begin("Debug##Default");
-    g.FrameScopePushedImplicitWindow = true;
-
-#ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_PostNewFrame(&g);
-#endif
 }
 
 void ImGui::Initialize(ImGuiContext* context)
@@ -6029,7 +6044,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         const bool window_pos_with_pivot = (window->SetWindowPosVal.x != FLT_MAX && window->HiddenFramesCannotSkipItems == 0);
         if (window_pos_with_pivot)
-            SetWindowPos(window, ImMax(style.DisplaySafeAreaPadding, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot), 0); // Position given a pivot (e.g. for centering)
+            SetWindowPos(window, window->SetWindowPosVal - window->SizeFull * window->SetWindowPosPivot, 0); // Position given a pivot (e.g. for centering)
         else if ((flags & ImGuiWindowFlags_ChildMenu) != 0)
             window->Pos = FindBestWindowPosForPopup(window);
         else if ((flags & ImGuiWindowFlags_Popup) != 0 && !window_pos_set_by_api && window_just_appearing_after_hidden_for_resize)
@@ -14226,12 +14241,13 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
     ::CloseClipboard();
 }
 
-#elif defined(__APPLE__) && TARGET_OS_OSX && !defined(IMGUI_DISABLE_OSX_FUNCTIONS)
+#elif defined(__APPLE__) && TARGET_OS_OSX && defined(IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS)
 
 #include <Carbon/Carbon.h>  // Use old API to avoid need for separate .mm file
 static PasteboardRef main_clipboard = 0;
 
 // OSX clipboard implementation
+// If you enable this you will need to add '-framework ApplicationServices' to your linker command-line!
 static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 {
     if (!main_clipboard)

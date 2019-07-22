@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-07-21: Readded clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
 //  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
 //  2019-05-18: Misc: Removed clipboard handlers as they are now supported by core imgui.cpp.
 //  2019-05-11: Inputs: Don't filter character values before calling AddInputCharacter() apart from 0xF700..0xFFFF range.
@@ -48,27 +49,28 @@ bool ImGui_ImplOSX_Init()
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
-    io.KeyMap[ImGuiKey_Tab]         = '\t';
-    io.KeyMap[ImGuiKey_LeftArrow]   = NSLeftArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_RightArrow]  = NSRightArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_UpArrow]     = NSUpArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_DownArrow]   = NSDownArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageUp]      = NSPageUpFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageDown]    = NSPageDownFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Home]        = NSHomeFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_End]         = NSEndFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Insert]      = NSInsertFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Delete]      = NSDeleteFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Backspace]   = 127;
-    io.KeyMap[ImGuiKey_Space]       = 32;
-    io.KeyMap[ImGuiKey_Enter]       = 13;
-    io.KeyMap[ImGuiKey_Escape]      = 27;
-    io.KeyMap[ImGuiKey_A]           = 'A';
-    io.KeyMap[ImGuiKey_C]           = 'C';
-    io.KeyMap[ImGuiKey_V]           = 'V';
-    io.KeyMap[ImGuiKey_X]           = 'X';
-    io.KeyMap[ImGuiKey_Y]           = 'Y';
-    io.KeyMap[ImGuiKey_Z]           = 'Z';
+    io.KeyMap[ImGuiKey_Tab]             = '\t';
+    io.KeyMap[ImGuiKey_LeftArrow]       = NSLeftArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_RightArrow]      = NSRightArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_UpArrow]         = NSUpArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_DownArrow]       = NSDownArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageUp]          = NSPageUpFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageDown]        = NSPageDownFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Home]            = NSHomeFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_End]             = NSEndFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Insert]          = NSInsertFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Delete]          = NSDeleteFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Backspace]       = 127;
+    io.KeyMap[ImGuiKey_Space]           = 32;
+    io.KeyMap[ImGuiKey_Enter]           = 13;
+    io.KeyMap[ImGuiKey_Escape]          = 27;
+    io.KeyMap[ImGuiKey_KeyPadEnter]     = 13;
+    io.KeyMap[ImGuiKey_A]               = 'A';
+    io.KeyMap[ImGuiKey_C]               = 'C';
+    io.KeyMap[ImGuiKey_V]               = 'V';
+    io.KeyMap[ImGuiKey_X]               = 'X';
+    io.KeyMap[ImGuiKey_Y]               = 'Y';
+    io.KeyMap[ImGuiKey_Z]               = 'Z';
 
     // Load cursors. Some of them are undocumented.
     g_MouseCursorHidden = false;
@@ -81,8 +83,34 @@ bool ImGui_ImplOSX_Init()
     g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)] ? [NSCursor _windowResizeNorthEastSouthWestCursor] : [NSCursor closedHandCursor];
     g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)] ? [NSCursor _windowResizeNorthWestSouthEastCursor] : [NSCursor closedHandCursor];
 
-    // We don't set the io.SetClipboardTextFn/io.GetClipboardTextFn handlers,
-    // because imgui.cpp has a default for them that works with OSX.
+    // Note that imgui.cpp also include default OSX clipboard handlers which can be enabled
+    // by adding '#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS' in imconfig.h and adding '-framework ApplicationServices' to your linker command-line.
+    // Since we are already in ObjC land here, it is easy for us to add a clipboard handler using the NSPasteboard api.
+    io.SetClipboardTextFn = [](void*, const char* str) -> void
+    {
+        NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+        [pasteboard declareTypes:[NSArray arrayWithObject:NSPasteboardTypeString] owner:nil];
+        [pasteboard setString:[NSString stringWithUTF8String:str] forType:NSPasteboardTypeString];
+    };
+
+    io.GetClipboardTextFn = [](void*) -> const char*
+    {
+        NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
+        NSString* available = [pasteboard availableTypeFromArray: [NSArray arrayWithObject:NSPasteboardTypeString]];
+        if (![available isEqualToString:NSPasteboardTypeString])
+            return NULL;
+
+        NSString* string = [pasteboard stringForType:NSPasteboardTypeString];
+        if (string == nil)
+            return NULL;
+
+        const char* string_c = (const char*)[string UTF8String];
+        size_t string_len = strlen(string_c);
+        static ImVector<char> s_clipboard;
+        s_clipboard.resize((int)string_len + 1);
+        strcpy(s_clipboard.Data, string_c);
+        return s_clipboard.Data;
+    };
 
     return true;
 }

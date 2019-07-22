@@ -48,7 +48,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.72 WIP"
-#define IMGUI_VERSION_NUM           17101
+#define IMGUI_VERSION_NUM           17102
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_VIEWPORT          1 // Viewport WIP branch
 #define IMGUI_HAS_DOCK              1 // Docking WIP branch
@@ -997,6 +997,7 @@ enum ImGuiKey_
     ImGuiKey_Space,
     ImGuiKey_Enter,
     ImGuiKey_Escape,
+    ImGuiKey_KeyPadEnter,
     ImGuiKey_A,         // for text edit CTRL+A: select all
     ImGuiKey_C,         // for text edit CTRL+C: copy
     ImGuiKey_V,         // for text edit CTRL+V: paste

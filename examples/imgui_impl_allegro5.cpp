@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter character value from ALLEGRO_EVENT_KEY_CHAR before calling AddInputCharacter().
 //  2019-04-30: Renderer: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2018-11-30: Platform: Added touchscreen support.
@@ -282,6 +283,7 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
     io.KeyMap[ImGuiKey_Space] = ALLEGRO_KEY_SPACE;
     io.KeyMap[ImGuiKey_Enter] = ALLEGRO_KEY_ENTER;
     io.KeyMap[ImGuiKey_Escape] = ALLEGRO_KEY_ESCAPE;
+    io.KeyMap[ImGuiKey_KeyPadEnter] = ALLEGRO_KEY_PAD_ENTER;
     io.KeyMap[ImGuiKey_A] = ALLEGRO_KEY_A;
     io.KeyMap[ImGuiKey_C] = ALLEGRO_KEY_C;
     io.KeyMap[ImGuiKey_V] = ALLEGRO_KEY_V;

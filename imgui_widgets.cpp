@@ -3660,7 +3660,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             }
             state->OnKeyPressed(STB_TEXTEDIT_K_BACKSPACE | k_mask);
         }
-        else if (IsKeyPressedMap(ImGuiKey_Enter))
+        else if (IsKeyPressedMap(ImGuiKey_Enter) || IsKeyPressedMap(ImGuiKey_KeyPadEnter))
         {
             bool ctrl_enter_for_new_line = (flags & ImGuiInputTextFlags_CtrlEnterForNewLine) != 0;
             if (!is_multiline || (ctrl_enter_for_new_line && !io.KeyCtrl) || (!ctrl_enter_for_new_line && io.KeyCtrl))
@@ -7271,7 +7271,8 @@ float ImGui::GetColumnOffset(int column_index)
 {
     ImGuiWindow* window = GetCurrentWindowRead();
     ImGuiColumns* columns = window->DC.CurrentColumns;
-    IM_ASSERT(columns != NULL);
+    if (columns == NULL)
+        return 0.0f;
 
     if (column_index < 0)
         column_index = columns->Current;
@@ -7297,9 +7298,11 @@ static float GetColumnWidthEx(ImGuiColumns* columns, int column_index, bool befo
 
 float ImGui::GetColumnWidth(int column_index)
 {
-    ImGuiWindow* window = GetCurrentWindowRead();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     ImGuiColumns* columns = window->DC.CurrentColumns;
-    IM_ASSERT(columns != NULL);
+    if (columns == NULL)
+        return GetContentRegionAvail().x;
 
     if (column_index < 0)
         column_index = columns->Current;
