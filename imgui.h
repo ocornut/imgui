@@ -1425,7 +1425,7 @@ struct ImGuiIO
     // Docking options (when ImGuiConfigFlags_DockingEnable is set)
     bool        ConfigDockingNoSplit;           // = false          // Simplified docking mode: disable window splitting, so docking is limited to merging multiple windows together into tab-bars.
     bool        ConfigDockingWithShift;         // = false          // Enable docking with holding Shift key (reduce visual noise, allows dropping in wider space)
-    bool        ConfigDockingTabBarOnSingleWindows; // = false      // [BETA] Make every single floating window display within a docking node.
+    bool        ConfigDockingAlwaysTabBar;      // = false          // [BETA] [FIXME: This currently creates regression with auto-sizing and general overhead] Make every single floating window display within a docking node.
     bool        ConfigDockingTransparentPayload;// = false          // [BETA] Make window or viewport transparent when docking and only display docking boxes on the target viewport. Useful if rendering of multiple viewport cannot be synced. Best used with ConfigViewportsNoAutoMerge.
     
     // Viewport options (when ImGuiConfigFlags_ViewportsEnable is set)
@@ -1612,9 +1612,10 @@ struct ImGuiWindowClass
     ImGuiID             ParentViewportId;           // Hint for the platform back-end. If non-zero, the platform back-end can create a parent<>child relationship between the platform windows. Not conforming back-ends are free to e.g. parent every viewport to the main viewport or not.
     ImGuiViewportFlags  ViewportFlagsOverrideMask;  // Viewport flags to override when a window of this class owns a viewport. This allows you to enforce OS decoration or task bar icon, override the defaults on a per-window basis.
     ImGuiViewportFlags  ViewportFlagsOverrideValue; // Viewport flags values to override when a window of this class owns a viewport.
+    bool                DockingAlwaysTabBar;        // Set to true to enforce windows of this class always having their own tab (equivalent of setting the global io.ConfigDockingAlwaysTabBar)
     bool                DockingAllowUnclassed;      // Set to true to allow windows of this class to be docked/merged with an unclassed window.
 
-    ImGuiWindowClass()  { ClassId = 0; ParentViewportId = 0; ViewportFlagsOverrideMask = ViewportFlagsOverrideValue = 0x00; DockingAllowUnclassed = true; }
+    ImGuiWindowClass()  { ClassId = 0; ParentViewportId = 0; ViewportFlagsOverrideMask = ViewportFlagsOverrideValue = 0x00; DockingAlwaysTabBar = false; DockingAllowUnclassed = true; }
 };
 
 //-----------------------------------------------------------------------------

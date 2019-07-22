@@ -1262,7 +1262,7 @@ ImGuiIO::ImGuiIO()
     // Docking options (when ImGuiConfigFlags_DockingEnable is set)
     ConfigDockingNoSplit = false;
     ConfigDockingWithShift = false;
-    ConfigDockingTabBarOnSingleWindows = false;
+    ConfigDockingAlwaysTabBar = false;
     ConfigDockingTransparentPayload = false;
 
     // Viewport options (when ImGuiConfigFlags_ViewportsEnable is set)
@@ -2731,6 +2731,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     SkipItems = false;
     Appearing = false;
     Hidden = false;
+    FallbackWindow = false;
     HasCloseButton = false;
     ResizeBorderHeld = -1;
     BeginCount = 0;
@@ -4034,7 +4035,8 @@ void ImGui::NewFrame()
     // This fallback is particularly important as it avoid ImGui:: calls from crashing.
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
-    g.FrameScopePushedImplicitWindow = true;
+    IM_ASSERT(g.CurrentWindow->FallbackWindow == true);
+    g.FrameScopePushedFallbackWindow = true;
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_PostNewFrame(&g);
@@ -4407,7 +4409,7 @@ void ImGui::EndFrame()
     }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
-    g.FrameScopePushedImplicitWindow = false;
+    g.FrameScopePushedFallbackWindow = false;
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
@@ -5760,7 +5762,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Find or create
     ImGuiWindow* window = FindWindowByName(name);
     const bool window_just_created = (window == NULL);
-    const bool window_is_fallback = (g.CurrentWindowStack.Size == 0);
     if (window_just_created)
     {
         ImVec2 size_on_first_use = (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasSize) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
@@ -5776,6 +5777,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
+    window->FallbackWindow = (g.CurrentWindowStack.Size == 0);
 
     // Update the Appearing flag
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
@@ -5812,7 +5814,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     if (first_begin_of_the_frame)
     {
         bool has_dock_node = (window->DockId != 0 || window->DockNode != NULL);
-        bool new_auto_dock_node = !has_dock_node && g.IO.ConfigDockingTabBarOnSingleWindows && !(flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking)) && !window_is_fallback;
+        bool new_auto_dock_node = !has_dock_node && GetWindowAlwaysWantOwnTabBar(window);
         if (has_dock_node || new_auto_dock_node)
         {
             BeginDocked(window, p_open);
@@ -6556,7 +6558,7 @@ void ImGui::End()
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.CurrentWindowStack.Size <= 1 && g.FrameScopePushedImplicitWindow)
+    if (g.CurrentWindowStack.Size <= 1 && g.FrameScopePushedFallbackWindow)
     {
         IM_ASSERT(g.CurrentWindowStack.Size > 1 && "Calling End() too many times!");
         return; // FIXME-ERRORHANDLING
@@ -12026,7 +12028,11 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         DockNodeRemoveTabBar(node);
 
     // Early out for hidden root dock nodes (when all DockId references are in inactive windows, or there is only 1 floating window holding on the DockId)
-    if (node->Windows.Size <= 1 && node->IsFloatingNode() && node->IsLeafNode() && !g.IO.ConfigDockingTabBarOnSingleWindows)
+    bool want_to_hide_host_window = false;
+    if (node->Windows.Size <= 1 && node->IsFloatingNode() && node->IsLeafNode())
+        if (!g.IO.ConfigDockingAlwaysTabBar && (node->Windows.Size == 0 || !node->Windows[0]->WindowClass.DockingAlwaysTabBar))
+            want_to_hide_host_window = true;
+    if (want_to_hide_host_window)
     {
         if (node->Windows.Size == 1)
         {
@@ -13749,12 +13755,22 @@ void ImGui::DockBuilderFinish(ImGuiID root_id)
 // Docking: Begin/End Functions (called from Begin/End)
 //-----------------------------------------------------------------------------
 
+bool ImGui::GetWindowAlwaysWantOwnTabBar(ImGuiWindow* window)
+{
+    ImGuiContext& g = *GImGui;
+    if (g.IO.ConfigDockingAlwaysTabBar || window->WindowClass.DockingAlwaysTabBar)
+        if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking)) == 0)
+            if (!window->FallbackWindow)    // We don't support AlwaysTabBar on the fallback/implicit window to avoid unused dock-node overhead/noise
+                return true;
+    return false;
+}
+
 void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 {
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
 
-    const bool auto_dock_node = (g.IO.ConfigDockingTabBarOnSingleWindows) && !(window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking));
+    const bool auto_dock_node = GetWindowAlwaysWantOwnTabBar(window);
     if (auto_dock_node)
     {
         if (window->DockId == 0)

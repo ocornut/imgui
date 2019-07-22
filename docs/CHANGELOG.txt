@@ -38,15 +38,16 @@ DOCKING FEATURES
 - Added Docking system: [BETA] (#2109, #351)
   - Added ImGuiConfigFlags_DockingEnable flag to enable Docking.
     Set with `io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;`.
-  - Added DockSpace() API.
+  - Added DockSpace(), DockSpaceOverViewport() API.
   - Added ImGuiDockNodeFlags flags for DockSpace().
-  - Added SetNextWindowDock(), SetNextWindowClass() API.
-  - Added GetWindowDockId(), IsWindowDocked() API.
+  - Added SetNextWindowDockID(), SetNextWindowClass() API.
+  - Added GetWindowDockID(), IsWindowDocked() API.
   - Added ImGuiWindowFlags_NoDocking window flag to disable the possibility for a window to be docked.
     Popup, Menu and Child windows always have the ImGuiWindowFlags_NoDocking flag set.
+  - Added ImGuiWindowClass to specify advanced docking/viewport related flags via SetNextWindowClass().
   - Added io.ConfigDockingNoSplit option.
   - Added io.ConfigDockingWithShift option.
-  - Added io.ConfigDockingTabBarOnSingleWindows option.
+  - Added io.ConfigDockingAlwaysTabBar option.
   - Added io.ConfigDockingTransparentPayload option.
   - Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors.
   - Demo: Added "DockSpace" example app showcasing use of explicit dockspace nodes.
