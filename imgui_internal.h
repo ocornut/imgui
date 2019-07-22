@@ -1764,7 +1764,6 @@ namespace ImGui
     IMGUI_API void          BeginAsDockableDragDropSource(ImGuiWindow* window);
     IMGUI_API void          BeginAsDockableDragDropTarget(ImGuiWindow* window);
     IMGUI_API void          SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond);
-    IMGUI_API void          ShowDockingDebug();
 
     // Docking - Builder function needs to be generally called before the DockSpace() node is submitted.
     IMGUI_API void          DockBuilderDockWindow(const char* window_name, ImGuiID node_id);

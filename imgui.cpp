@@ -14172,11 +14172,11 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         // [DEBUG] Include comments in the .ini file to ease debugging
         if (ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_settings->ID))
         {
-            buf->appendf("%*s", ImMax(2, (line_start_pos + 92) - buf->size()), "");        // Align everything
+            buf->appendf("%*s", ImMax(2, (line_start_pos + 92) - buf->size()), "");     // Align everything
             if (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow)
                 buf->appendf(" ; in '%s'", node->HostWindow->ParentWindow->Name);
             int contains_window = 0;
-            for (int window_n = 0; window_n < ctx->SettingsWindows.Size; window_n++)
+            for (int window_n = 0; window_n < ctx->SettingsWindows.Size; window_n++)    // Iterate settings so we can give info about windows that didn't exist during the session.
                 if (ctx->SettingsWindows[window_n].DockId == node_settings->ID)
                 {
                     if (contains_window++ == 0)
@@ -14411,6 +14411,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     static bool show_windows_rects = false;
     static int  show_windows_rect_type = WRT_WorkRect;
     static bool show_drawcmd_clip_rects = true;
+    static bool show_window_dock_info = false;
 
     ImGuiIO& io = ImGui::GetIO();
     ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
@@ -14420,6 +14421,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     ImGui::Text("%d active allocations", io.MetricsActiveAllocations);
     ImGui::Separator();
 
+    // Helper functions to display common structures:
+    // - NodeDrawList
+    // - NodeColumns
+    // - NodeWindow
+    // - NodeWindows
+    // - NodeViewport
+    // - NodeDockNode
+    // - NodeTabBar
     struct Funcs
     {
         static ImRect GetWindowRect(ImGuiWindow* window, int rect_type)
@@ -14519,15 +14528,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::TreePop();
         }
 
-        static void NodeWindows(ImVector<ImGuiWindow*>& windows, const char* label)
-        {
-            if (!ImGui::TreeNode(label, "%s (%d)", label, windows.Size))
-                return;
-            for (int i = 0; i < windows.Size; i++)
-                Funcs::NodeWindow(windows[i], "Window");
-            ImGui::TreePop();
-        }
-
         static void NodeWindow(ImGuiWindow* window, const char* label)
         {
             if (!ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, window->Active || window->WasActive, window))
@@ -14550,7 +14550,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("NavRectRel[0]: <None>");
             ImGui::BulletText("Viewport: %d%s, ViewportId: 0x%08X, ViewportPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportOwned ? " (Owned)" : "", window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);
             ImGui::BulletText("ViewportMonitor: %d", window->Viewport ? window->Viewport->PlatformMonitor : -1);
-            ImGui::BulletText("DockId: 0x%04X, DockOrder: %d, %s: 0x%p, Act: %d, Vis: %d", window->DockId, window->DockOrder, window->DockNodeAsHost ? "DockNodeAsHost" : "DockNode", window->DockNodeAsHost ? window->DockNodeAsHost : window->DockNode, window->DockIsActive, window->DockTabIsVisible);
+            ImGui::BulletText("DockId: 0x%04X, DockOrder: %d, Act: %d, Vis: %d", window->DockId, window->DockOrder, window->DockIsActive, window->DockTabIsVisible);
+            if (window->DockNode || window->DockNodeAsHost)
+                NodeDockNode(window->DockNodeAsHost ? window->DockNodeAsHost : window->DockNode, window->DockNodeAsHost ? "DockNodeAsHost" : "DockNode");
             if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
             if (window->RootWindowDockStop != window->RootWindow) NodeWindow(window->RootWindowDockStop, "RootWindowDockStop");
             if (window->ParentWindow != NULL) NodeWindow(window->ParentWindow, "ParentWindow");
@@ -14562,6 +14564,15 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::TreePop();
             }
             ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.size_in_bytes());
+            ImGui::TreePop();
+        }
+
+        static void NodeWindows(ImVector<ImGuiWindow*>& windows, const char* label)
+        {
+            if (!ImGui::TreeNode(label, "%s (%d)", label, windows.Size))
+                return;
+            for (int i = 0; i < windows.Size; i++)
+                Funcs::NodeWindow(windows[i], "Window");
             ImGui::TreePop();
         }
 
@@ -14581,6 +14592,75 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 for (int layer_i = 0; layer_i < IM_ARRAYSIZE(viewport->DrawDataBuilder.Layers); layer_i++)
                     for (int draw_list_i = 0; draw_list_i < viewport->DrawDataBuilder.Layers[layer_i].Size; draw_list_i++)
                         Funcs::NodeDrawList(NULL, viewport, viewport->DrawDataBuilder.Layers[layer_i][draw_list_i], "DrawList");
+                ImGui::TreePop();
+            }
+        }
+
+        static void NodeDockNode(ImGuiDockNode* node, const char* label)
+        {
+            ImGuiContext& g = *GImGui;
+            bool open;
+            if (node->Windows.Size > 0)
+                open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+            else
+                open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+            if (open)
+            {
+                IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
+                IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
+                ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f) Ref (%.0f, %.0f)",
+                    node->Pos.x, node->Pos.y, node->Size.x, node->Size.y, node->SizeRef.x, node->SizeRef.y);
+                NodeWindow(node->VisibleWindow, "VisibleWindow");
+                ImGui::BulletText("SelectedTabID: 0x%08X, LastFocusedNodeID: 0x%08X", node->SelectedTabID, node->LastFocusedNodeID);
+                ImGui::BulletText("Misc:%s%s%s%s", node->IsDockSpace() ? " IsDockSpace" : "", node->IsCentralNode() ? " IsCentralNode" : "", (g.FrameCount - node->LastFrameAlive < 2) ? " IsAlive" : "", (g.FrameCount - node->LastFrameActive < 2) ? " IsActive" : "");
+                if (ImGui::TreeNode("flags", "LocalFlags: 0x%04X SharedFlags: 0x%04X", node->LocalFlags, node->SharedFlags))
+                {
+                    ImGui::CheckboxFlags("LocalFlags: NoSplit", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoSplit);
+                    ImGui::CheckboxFlags("LocalFlags: NoResize", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoResize);
+                    ImGui::CheckboxFlags("LocalFlags: NoTabBar", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoTabBar);
+                    ImGui::CheckboxFlags("LocalFlags: HiddenTabBar", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_HiddenTabBar);
+                    ImGui::CheckboxFlags("LocalFlags: NoWindowMenuButton", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoWindowMenuButton);
+                    ImGui::CheckboxFlags("LocalFlags: NoCloseButton", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoCloseButton);
+                    ImGui::TreePop();
+                }
+                if (node->ParentNode)
+                    NodeDockNode(node->ParentNode, "ParentNode");
+                if (node->ChildNodes[0])
+                    NodeDockNode(node->ChildNodes[0], "Child[0]");
+                if (node->ChildNodes[1])
+                    NodeDockNode(node->ChildNodes[1], "Child[1]");
+                if (node->TabBar)
+                    NodeTabBar(node->TabBar);
+                ImGui::TreePop();
+            }
+        }
+
+        static void NodeTabBar(ImGuiTabBar* tab_bar)
+        {
+            // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
+            char buf[256];
+            char* p = buf;
+            const char* buf_end = buf + IM_ARRAYSIZE(buf);
+            p += ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s",
+                tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
+            if (tab_bar->Flags & ImGuiTabBarFlags_DockNode)
+            {
+                p += ImFormatString(p, buf_end - p, "  { ");
+                for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
+                    p += ImFormatString(p, buf_end - p, "%s'%s'", tab_n > 0 ? ", " : "", tab_bar->Tabs[tab_n].Window->Name);
+                p += ImFormatString(p, buf_end - p, (tab_bar->Tabs.Size > 3) ? " ... }" : " } ");
+            }
+            if (ImGui::TreeNode(tab_bar, "%s", buf))
+            {
+                for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
+                {
+                    const ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+                    ImGui::PushID(tab);
+                    if (ImGui::SmallButton("<")) { TabBarQueueChangeTabOrder(tab_bar, tab, -1); } ImGui::SameLine(0, 2);
+                    if (ImGui::SmallButton(">")) { TabBarQueueChangeTabOrder(tab_bar, tab, +1); } ImGui::SameLine();
+                    ImGui::Text("%02d%c Tab 0x%08X '%s'", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, tab->Window ? tab->Window->Name : "N/A");
+                    ImGui::PopID();
+                }
                 ImGui::TreePop();
             }
         }
@@ -14622,9 +14702,60 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
-    if (ImGui::TreeNode("Docking & Tab Bars"))
+    if (ImGui::TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.Data.Size))
     {
-        ShowDockingDebug();
+        for (int n = 0; n < g.TabBars.Data.Size; n++)
+            Funcs::NodeTabBar(g.TabBars.GetByIndex(n));
+        ImGui::TreePop();
+    }
+
+    if (ImGui::TreeNode("Docking"))
+    {
+        ImGuiDockContext* dc = g.DockContext;
+        ImGui::Checkbox("Ctrl shows window dock info", &show_window_dock_info);
+
+        if (ImGui::TreeNode("Dock nodes"))
+        {
+            if (ImGui::SmallButton("Clear settings")) { DockContextClearNodes(&g, 0, true); }
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
+            for (int n = 0; n < dc->Nodes.Data.Size; n++)
+                if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+                    if (node->IsRootNode())
+                        Funcs::NodeDockNode(node, "Node");
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Settings"))
+        {
+            if (ImGui::SmallButton("Refresh"))
+                SaveIniSettingsToMemory();
+            ImGui::SameLine();
+            if (ImGui::SmallButton("Save to disk"))
+                SaveIniSettingsToDisk(g.IO.IniFilename);
+            ImGui::Separator();
+            ImGui::Text("Docked Windows:");
+            for (int n = 0; n < g.SettingsWindows.Size; n++)
+                if (g.SettingsWindows[n].DockId != 0)
+                    ImGui::BulletText("Window '%s' -> DockId %08X", g.SettingsWindows[n].Name, g.SettingsWindows[n].DockId);
+            ImGui::Separator();
+            ImGui::Text("Dock Nodes:");
+            for (int n = 0; n < dc->SettingsNodes.Size; n++)
+            {
+                ImGuiDockNodeSettings* settings = &dc->SettingsNodes[n];
+                const char* selected_tab_name = NULL;
+                if (settings->SelectedTabID)
+                {
+                    if (ImGuiWindow* window = FindWindowByID(settings->SelectedTabID))
+                        selected_tab_name = window->Name;
+                    else if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->SelectedTabID))
+                        selected_tab_name = window_settings->Name;
+                }
+                ImGui::BulletText("Node %08X, Parent %08X, SelectedTab %08X ('%s')", settings->ID, settings->ParentID, settings->SelectedTabID, selected_tab_name ? selected_tab_name : settings->SelectedTabID ? "N/A" : "");
+            }
+            ImGui::TreePop();
+        }
+
         ImGui::TreePop();
     }
 
@@ -14699,148 +14830,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             }
         }
     }
-    ImGui::End();
-}
 
-#else
-
-void ImGui::ShowMetricsWindow(bool*) { }
-
-#endif
-
-void ImGui::ShowDockingDebug()
-{
-    ImGuiContext* ctx = GImGui;
-    ImGuiContext& g = *ctx;
-    ImGuiDockContext* dc = ctx->DockContext;
-
-    struct Funcs
+    if (show_window_dock_info && g.IO.KeyCtrl)
     {
-        static void NodeDockNode(ImGuiDockNode* node, const char* label)
-        {
-            ImGuiContext& g = *GImGui;
-            ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-            bool open; 
-            if (node->Windows.Size > 0)
-                open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
-            else
-                open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
-            if (open)
-            {
-                IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
-                IM_ASSERT(node->ChildNodes[1] == NULL || node->ChildNodes[1]->ParentNode == node);
-                ImGui::BulletText("Pos (%.0f,%.0f), Size (%.0f, %.0f) Ref (%.0f, %.0f)",
-                    node->Pos.x, node->Pos.y, node->Size.x, node->Size.y, node->SizeRef.x, node->SizeRef.y);
-                ImGui::BulletText("VisibleWindow: 0x%08X %s", node->VisibleWindow ? node->VisibleWindow->ID : 0, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
-                ImGui::BulletText("SelectedTabID: 0x%08X, LastFocusedNodeID: 0x%08X", node->SelectedTabID, node->LastFocusedNodeID);
-                ImGui::BulletText("Misc:%s%s%s%s", node->IsDockSpace() ? " IsDockSpace" : "", node->IsCentralNode() ? " IsCentralNode" : "", (g.FrameCount - node->LastFrameAlive < 2) ? " IsAlive" : "", (g.FrameCount - node->LastFrameActive < 2) ? " IsActive" : "");
-                if (ImGui::TreeNode("flags", "LocalFlags: 0x%04X SharedFlags: 0x%04X", node->LocalFlags, node->SharedFlags))
-                {
-                    ImGui::CheckboxFlags("LocalFlags: NoSplit",             (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoSplit);
-                    ImGui::CheckboxFlags("LocalFlags: NoResize",            (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoResize);
-                    ImGui::CheckboxFlags("LocalFlags: NoTabBar",            (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoTabBar);
-                    ImGui::CheckboxFlags("LocalFlags: HiddenTabBar",        (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_HiddenTabBar);
-                    ImGui::CheckboxFlags("LocalFlags: NoWindowMenuButton",  (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoWindowMenuButton);
-                    ImGui::CheckboxFlags("LocalFlags: NoCloseButton",       (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoCloseButton);
-                    ImGui::TreePop();
-                }
-                if (node->ChildNodes[0])
-                    NodeDockNode(node->ChildNodes[0], "Child[0]");
-                if (node->ChildNodes[1])
-                    NodeDockNode(node->ChildNodes[1], "Child[1]");
-                if (node->TabBar)
-                    NodeTabBar(node->TabBar);
-                ImGui::TreePop();
-            }
-        }
-
-        static void NodeTabBar(ImGuiTabBar* tab_bar)
-        {
-            // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
-            char buf[256];
-            char* p = buf;
-            const char* buf_end = buf + IM_ARRAYSIZE(buf);
-            p += ImFormatString(p, buf_end - p, "TabBar (%d tabs)%s", 
-                tab_bar->Tabs.Size, (tab_bar->PrevFrameVisible < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
-            if (tab_bar->Flags & ImGuiTabBarFlags_DockNode)
-            {
-                p += ImFormatString(p, buf_end - p, "  { ");
-                for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
-                    p += ImFormatString(p, buf_end - p, "%s'%s'", tab_n > 0 ? ", " : "", tab_bar->Tabs[tab_n].Window->Name);
-                p += ImFormatString(p, buf_end - p, (tab_bar->Tabs.Size > 3) ? " ... }" : " } ");
-            }
-            if (ImGui::TreeNode(tab_bar, "%s", buf))
-            {
-                for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
-                {
-                    const ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
-                    ImGui::PushID(tab);
-                    if (ImGui::SmallButton("<")) { TabBarQueueChangeTabOrder(tab_bar, tab, -1); } ImGui::SameLine(0, 2);
-                    if (ImGui::SmallButton(">")) { TabBarQueueChangeTabOrder(tab_bar, tab, +1); } ImGui::SameLine();
-                    ImGui::Text("%02d%c Tab 0x%08X '%s'", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, tab->Window ? tab->Window->Name : "N/A");
-                    ImGui::PopID();
-                }
-                ImGui::TreePop();
-            }
-        }
-    };
-
-    static bool show_window_dock_info = false;
-    ImGui::Checkbox("Ctrl shows window dock info", &show_window_dock_info);
-
-    if (ImGui::TreeNode("Dock nodes"))
-    {
-        if (ImGui::SmallButton("Clear settings"))   { DockContextClearNodes(&g, 0, true); }
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Rebuild all"))      { dc->WantFullRebuild = true; }
-        for (int n = 0; n < dc->Nodes.Data.Size; n++)
-            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
-                if (node->IsRootNode())
-                    Funcs::NodeDockNode(node, "Node");
-        ImGui::TreePop();
-    }
-
-    if (ImGui::TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.Data.Size))
-    {
-        for (int n = 0; n < g.TabBars.Data.Size; n++)
-            Funcs::NodeTabBar(g.TabBars.GetByIndex(n));
-        ImGui::TreePop();
-    }
-
-    if (ImGui::TreeNode("Settings"))
-    {
-        if (ImGui::SmallButton("Refresh"))
-            SaveIniSettingsToMemory();
-        ImGui::SameLine();
-        if (ImGui::SmallButton("Save to disk"))
-            SaveIniSettingsToDisk(g.IO.IniFilename);
-        ImGui::Separator();
-        ImGui::Text("Docked Windows:");
-        for (int n = 0; n < g.SettingsWindows.Size; n++)
-            if (g.SettingsWindows[n].DockId != 0)
-                ImGui::BulletText("Window '%s' -> DockId %08X", g.SettingsWindows[n].Name, g.SettingsWindows[n].DockId);
-        ImGui::Separator();
-        ImGui::Text("Dock Nodes:");
-        for (int n = 0; n < dc->SettingsNodes.Size; n++)
-        {
-            ImGuiDockNodeSettings* settings = &dc->SettingsNodes[n];
-            const char* selected_tab_name = NULL;
-            if (settings->SelectedTabID)
-            {
-                if (ImGuiWindow* window = FindWindowByID(settings->SelectedTabID))
-                    selected_tab_name = window->Name;
-                else if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->SelectedTabID))
-                    selected_tab_name = window_settings->Name;
-            }
-            ImGui::BulletText("Node %08X, Parent %08X, SelectedTab %08X ('%s')", settings->ID, settings->ParentID, settings->SelectedTabID, selected_tab_name ? selected_tab_name : settings->SelectedTabID ? "N/A" : "");
-        }
-        ImGui::TreePop();
-    }
-
-    if (g.IO.KeyCtrl && show_window_dock_info)
-    {
-        for (int n = 0; n < dc->Nodes.Data.Size; n++)
-            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        for (int n = 0; n < g.DockContext->Nodes.Data.Size; n++)
+            if (ImGuiDockNode* node = (ImGuiDockNode*)g.DockContext->Nodes.Data[n].val_p)
             {
                 ImGuiDockNode* root_node = DockNodeGetRootNode(node);
                 if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(root_node, g.IO.MousePos))
@@ -14853,13 +14847,21 @@ void ImGui::ShowDockingDebug()
                 p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
                 p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
                 int depth = DockNodeGetDepth(node);
-                overlay_draw_list->AddRect(node->Pos + ImVec2(3,3) * (float)depth, node->Pos + node->Size - ImVec2(3,3) * (float)depth, IM_COL32(200, 100, 100, 255));
-                ImVec2 pos = node->Pos + ImVec2(3,3) * (float)depth;
+                overlay_draw_list->AddRect(node->Pos + ImVec2(3, 3) * (float)depth, node->Pos + node->Size - ImVec2(3, 3) * (float)depth, IM_COL32(200, 100, 100, 255));
+                ImVec2 pos = node->Pos + ImVec2(3, 3) * (float)depth;
                 overlay_draw_list->AddRectFilled(pos - ImVec2(1, 1), pos + CalcTextSize(buf) + ImVec2(1, 1), IM_COL32(200, 100, 100, 255));
                 overlay_draw_list->AddText(NULL, 0.0f, pos, IM_COL32(255, 255, 255, 255), buf);
             }
     }
+
+    ImGui::End();
 }
+
+#else
+
+void ImGui::ShowMetricsWindow(bool*) { }
+
+#endif
 
 //-----------------------------------------------------------------------------
 
