@@ -5756,6 +5756,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (render_decorations_in_parent)
             window->DrawList = parent_window->DrawList;
         
+        // Handle title bar, scrollbar, resize grips and resize borders
         const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
         const bool title_bar_is_highlight = want_focus || (window_to_highlight && window->RootWindowForTitleBarHighlight == window_to_highlight->RootWindowForTitleBarHighlight);
         RenderWindowDecorations(window, title_bar_rect, title_bar_is_highlight, resize_grip_count, resize_grip_col, resize_grip_draw_size);
@@ -8451,42 +8452,44 @@ static void ImGui::NavUpdateMoveResult()
 static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavMoveDir == ImGuiDir_None && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) && !g.NavWindowingTarget && g.NavLayer == 0)
+    if (g.NavMoveDir != ImGuiDir_None || g.NavWindow == NULL)
+        return 0.0f;
+    if ((g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL || g.NavLayer != 0)
+        return 0.0f;
+
+    ImGuiWindow* window = g.NavWindow;
+    bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && (allowed_dir_flags & (1 << ImGuiDir_Up));
+    bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && (allowed_dir_flags & (1 << ImGuiDir_Down));
+    if (page_up_held != page_down_held) // If either (not both) are pressed
     {
-        ImGuiWindow* window = g.NavWindow;
-        bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && (allowed_dir_flags & (1 << ImGuiDir_Up));
-        bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && (allowed_dir_flags & (1 << ImGuiDir_Down));
-        if (page_up_held != page_down_held) // If either (not both) are pressed
+        if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
         {
-            if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
+            // Fallback manual-scroll when window has no navigable item
+            if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
+                SetWindowScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
+            else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
+                SetWindowScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
+        }
+        else
+        {
+            const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
+            const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
+            float nav_scoring_rect_offset_y = 0.0f;
+            if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
             {
-                // Fallback manual-scroll when window has no navigable item
-                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                    SetWindowScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
-                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                    SetWindowScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
+                nav_scoring_rect_offset_y = -page_offset_y;
+                g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
+                g.NavMoveClipDir = ImGuiDir_Up;
+                g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
             }
-            else
+            else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
             {
-                const ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
-                const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
-                float nav_scoring_rect_offset_y = 0.0f;
-                if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                {
-                    nav_scoring_rect_offset_y = -page_offset_y;
-                    g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
-                    g.NavMoveClipDir = ImGuiDir_Up;
-                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
-                }
-                else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                {
-                    nav_scoring_rect_offset_y = +page_offset_y;
-                    g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
-                    g.NavMoveClipDir = ImGuiDir_Down;
-                    g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
-                }
-                return nav_scoring_rect_offset_y;
+                nav_scoring_rect_offset_y = +page_offset_y;
+                g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset, we intentionally request the opposite direction (so we can always land on the last item)
+                g.NavMoveClipDir = ImGuiDir_Down;
+                g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
             }
+            return nav_scoring_rect_offset_y;
         }
     }
     return 0.0f;
