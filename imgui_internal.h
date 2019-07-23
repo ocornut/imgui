@@ -868,6 +868,9 @@ struct ImGuiContext
     ImGuiWindow*            HoveredWindow;                      // Will catch mouse inputs
     ImGuiWindow*            HoveredRootWindow;                  // Will catch mouse inputs (for focus/move only)
     ImGuiWindow*            MovingWindow;                       // Track the window we clicked on (in order to preserve focus). The actually window that is moved is generally MovingWindow->RootWindow.
+    ImGuiWindow*            WheelingWindow;
+    ImVec2                  WheelingWindowRefMousePos;
+    float                   WheelingWindowTimer;
 
     // Item/widgets state and tracking information
     ImGuiID                 HoveredId;                          // Hovered widget
@@ -1058,6 +1061,8 @@ struct ImGuiContext
         HoveredWindow = NULL;
         HoveredRootWindow = NULL;
         MovingWindow = NULL;
+        WheelingWindow = NULL;
+        WheelingWindowTimer = 0.0f;
 
         HoveredId = 0;
         HoveredIdAllowOverlap = false;
