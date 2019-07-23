@@ -1088,6 +1088,7 @@ bool ImGui::RadioButton(const char* label, bool active)
     return pressed;
 }
 
+// FIXME: This would work nicely if it was a public template, e.g. 'template<T> RadioButton(const char* label, T* v, T v_button)', but I'm not sure how we would expose it..
 bool ImGui::RadioButton(const char* label, int* v, int v_button)
 {
     const bool pressed = RadioButton(label, *v == v_button);
