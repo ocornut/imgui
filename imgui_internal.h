@@ -1460,8 +1460,8 @@ namespace ImGui
     IMGUI_API ImVec2        CalcWindowExpectedSize(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
-    IMGUI_API void          SetWindowScrollX(ImGuiWindow* window, float new_scroll_x);
-    IMGUI_API void          SetWindowScrollY(ImGuiWindow* window, float new_scroll_y);
+    IMGUI_API void          SetScrollX(ImGuiWindow* window, float new_scroll_x);
+    IMGUI_API void          SetScrollY(ImGuiWindow* window, float new_scroll_y);
     IMGUI_API ImRect        GetWindowAllowedExtentRect(ImGuiWindow* window);
     IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond = 0);

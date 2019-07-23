@@ -3506,7 +3506,7 @@ void ImGui::UpdateMouseWheel()
         {
             float max_step = window->InnerRect.GetHeight() * 0.67f;
             float scroll_step = ImFloor(ImMin(5 * window->CalcFontSize(), max_step));
-            SetWindowScrollY(window, window->Scroll.y - wheel_y * scroll_step);
+            SetScrollY(window, window->Scroll.y - wheel_y * scroll_step);
         }
     }
 
@@ -3521,7 +3521,7 @@ void ImGui::UpdateMouseWheel()
         {
             float max_step = window->InnerRect.GetWidth() * 0.67f;
             float scroll_step = ImFloor(ImMin(2 * window->CalcFontSize(), max_step));
-            SetWindowScrollX(window, window->Scroll.x - wheel_x * scroll_step);
+            SetScrollX(window, window->Scroll.x - wheel_x * scroll_step);
         }
     }
 }
@@ -6524,16 +6524,6 @@ ImVec2 ImGui::GetWindowPos()
     return window->Pos;
 }
 
-void ImGui::SetWindowScrollX(ImGuiWindow* window, float new_scroll_x)
-{
-    window->Scroll.x = new_scroll_x;
-}
-
-void ImGui::SetWindowScrollY(ImGuiWindow* window, float new_scroll_y)
-{
-    window->Scroll.y = new_scroll_y;
-}
-
 void ImGui::SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond)
 {
     // Test condition (NB: bit 0 is always true) and clear flags for next time
@@ -6918,6 +6908,18 @@ void ImGui::SetScrollY(float scroll_y)
 {
     ImGuiWindow* window = GetCurrentWindow();
     window->ScrollTarget.y = scroll_y;
+    window->ScrollTargetCenterRatio.y = 0.0f;
+}
+
+void ImGui::SetScrollX(ImGuiWindow* window, float new_scroll_x)
+{
+    window->ScrollTarget.x = new_scroll_x;
+    window->ScrollTargetCenterRatio.x = 0.0f;
+}
+
+void ImGui::SetScrollY(ImGuiWindow* window, float new_scroll_y)
+{
+    window->ScrollTarget.y = new_scroll_y;
     window->ScrollTargetCenterRatio.y = 0.0f;
 }
 
@@ -8333,9 +8335,9 @@ static void ImGui::NavUpdate()
         if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll && g.NavMoveRequest)
         {
             if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
-                SetWindowScrollX(window, ImFloor(window->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
+                SetScrollX(window, ImFloor(window->Scroll.x + ((g.NavMoveDir == ImGuiDir_Left) ? -1.0f : +1.0f) * scroll_speed));
             if (g.NavMoveDir == ImGuiDir_Up || g.NavMoveDir == ImGuiDir_Down)
-                SetWindowScrollY(window, ImFloor(window->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
+                SetScrollY(window, ImFloor(window->Scroll.y + ((g.NavMoveDir == ImGuiDir_Up) ? -1.0f : +1.0f) * scroll_speed));
         }
 
         // *Normal* Manual scroll with NavScrollXXX keys
@@ -8343,12 +8345,12 @@ static void ImGui::NavUpdate()
         ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down, 1.0f/10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
         {
-            SetWindowScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
+            SetScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
         if (scroll_dir.y != 0.0f)
         {
-            SetWindowScrollY(window, ImFloor(window->Scroll.y + scroll_dir.y * scroll_speed));
+            SetScrollY(window, ImFloor(window->Scroll.y + scroll_dir.y * scroll_speed));
             g.NavMoveFromClampedRefRect = true;
         }
     }
@@ -8466,9 +8468,9 @@ static float ImGui::NavUpdatePageUpPageDown(int allowed_dir_flags)
         {
             // Fallback manual-scroll when window has no navigable item
             if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
-                SetWindowScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
+                SetScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
             else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
-                SetWindowScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
+                SetScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
         }
         else
         {
