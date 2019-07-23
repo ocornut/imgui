@@ -122,7 +122,6 @@ Other Changes:
   any more. Forwarding can still be disabled by setting ImGuiWindowFlags_NoInputs. (amend #1502, #1380).
 - Window: Fixed old SetWindowFontScale() api value from not being inherited by child window. Added
   comments about the right way to scale your UI (load a font at the right side, rebuild atlas, scale style).
-- Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Combo: Hide arrow when there's not enough space even for the square button.
 - TabBar: Fixed unfocused tab bar separator color (was using ImGuiCol_Tab, should use ImGuiCol_TabUnfocusedActive).
 - Columns: Fixed a regression from 1.71 where the right-side of the contents rectangle within each column
@@ -131,11 +130,21 @@ Other Changes:
   worth of asymmetrical/extraneous padding, note that there's another half that conservatively has to offset
   the right-most column, otherwise it's clipping width won't match the other column). (#125, #2666)
 - Columns: Improved honoring alignment with various values of ItemSpacing.x and WindowPadding.x. (#125, #2666)
-- Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
-  of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
 - Columns: Made GetColumnOffset() and GetColumnWidth() behave when there's no column set, consistently with
   other column functions. (#2683)
+- InputTextMultiline: Fixed vertical scrolling tracking glitch.
+- Word-wrapping: Fixed overzealous word-wrapping when glyph edge lands exactly on the limit. Because
+  of this, auto-fitting exactly unwrapped text would make it wrap. (fixes initial 1.15 commit, 78645a7d).
+- Scrolling: Made mouse-wheel scrolling lock the underlying window until the mouse is moved again or
+  until a short delay expires (2 seconds). This allow uninterrupted scroll even if child windows are
+  passing under the mouse cursor. (#2604)
+- Scrolling: Made it possible for mouse wheel and navigation-triggered scrolling to override a call to
+  SetScrollX()/SetScrollY(), making it possible to use a simpler stateless pattern for auto-scrolling:
+     // (Submit items..)
+     if (ImGui::GetScrollY() >= ImGui::GetScrollMaxY())   // Keep scrolling at the bottom if already
+         ImGui::SetScrollHereY(1.0f);
 - Scrolling: Added SetScrollHereX(), SetScrollFromPosX() for completeness. (#1580) [@kevreco]
+- Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
 - Style: Added style.ColorButtonPosition (left/right, defaults to ImGuiDir_Right) to move the color button
   of ColorEdit3/ColorEdit4 functions to either side of the inputs.
@@ -154,6 +163,7 @@ Other Changes:
 - ImDrawListSplitter: Fixed memory leak when using low-level split api (was not affecting ImDrawList api,
   also this type was added in 1.71 and not advertised as a public-facing feature).
 - Fonts: binary_to_compressed_c.cpp: Display an error message if failing to open/read the input font file.
+- Demo: Log, Console: Using a simpler stateless pattern for auto-scrolling.
 - Backends: DX10/DX11: Backup, clear and restore Geometry Shader is any is bound when calling renderer.
 - Backends: DX11: Clear Hull Shader, Domain Shader, Compute Shader before rendering. Not backing/restoring them.
 - Backends: OSX: Disabled default native Mac clipboard copy/paste implementation in core library (added in 1.71),

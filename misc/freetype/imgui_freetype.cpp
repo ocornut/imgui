@@ -646,7 +646,8 @@ static void* FreeType_Realloc(FT_Memory /*memory*/, long cur_size, long new_size
 bool ImGuiFreeType::BuildFontAtlas(ImFontAtlas* atlas, unsigned int extra_flags)
 {
     // FreeType memory management: https://www.freetype.org/freetype2/docs/design/design-4.html
-    FT_MemoryRec_ memory_rec = { 0 };
+    FT_MemoryRec_ memory_rec = {};
+    memory_rec.user = NULL;
     memory_rec.alloc = &FreeType_Alloc;
     memory_rec.free = &FreeType_Free;
     memory_rec.realloc = &FreeType_Realloc;
