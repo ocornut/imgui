@@ -156,6 +156,10 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #ifndef IMGUI_DEBUG_LOG
 #define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
 #endif
+#define IMGUI_DEBUG_LOG_VIEWPORT(...)   ((void)0)       // Disable log
+#define IMGUI_DEBUG_LOG_DOCKING(...)    ((void)0)       // Disable log
+//#define IMGUI_DEBUG_LOG_VIEWPORT      IMGUI_DEBUG_LOG // Enable log
+//#define IMGUI_DEBUG_LOG_DOCKING       IMGUI_DEBUG_LOG // Enable log
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
 #ifdef _MSC_VER
