@@ -5852,6 +5852,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             BeginDocked(window, p_open);
             flags = window->Flags;
+
+            // Docking currently override constraints
+            g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint;
         }
     }
 
@@ -13050,6 +13053,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
 {
     // During the regular dock node update we write to all nodes.
     // 'only_write_to_marked_nodes' is only set when turning a node visible mid-frame and we need its size right-away.
+    IM_ASSERT(size.x > 0.0f && size.y > 0.0f);
     const bool write_to_node = (only_write_to_marked_nodes == false) || (node->MarkedForPosSizeWrite);
     if (write_to_node)
     {
@@ -13082,6 +13086,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
             child_0->WantLockSizeOnce = false;
             child_0_size[axis] = child_0->SizeRef[axis] = child_0->Size[axis];
             child_1_size[axis] = child_1->SizeRef[axis] = (size_avail - child_0_size[axis]);
+            IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
 
         }
         else if (child_1->WantLockSizeOnce)
@@ -13089,6 +13094,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
             child_1->WantLockSizeOnce = false;
             child_1_size[axis] = child_1->SizeRef[axis] = child_1->Size[axis];
             child_0_size[axis] = child_0->SizeRef[axis] = (size_avail - child_1_size[axis]);
+            IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
         }
 
         // 3) If one window is the central node (~ use remaining space, should be made explicit!), use explicit size from the other, and remainder for the central node
@@ -13373,6 +13379,7 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
         size.x = ImMax(content_avail.x + size.x, 4.0f); // Arbitrary minimum child size (0.0f causing too much issues)
     if (size.y <= 0.0f)
         size.y = ImMax(content_avail.y + size.y, 4.0f);
+    IM_ASSERT(size.x > 0.0f && size.y > 0.0f);
 
     node->Pos = window->DC.CursorPos;
     node->Size = node->SizeRef = size;
@@ -13493,6 +13500,7 @@ void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, node_id);
     if (node == NULL)
         return;
+    IM_ASSERT(size.x > 0.0f && size.y > 0.0f);
     node->Size = node->SizeRef = size;
     node->AuthorityForSize = ImGuiDataAuthority_DockNode;
 }
