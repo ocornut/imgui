@@ -6162,8 +6162,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->Viewport->ParentViewportId = parent_window_in_stack->Viewport->ID;
             else
                 window->Viewport->ParentViewportId = g.IO.ConfigViewportsNoDefaultParent ? 0 : IMGUI_VIEWPORT_DEFAULT_ID;
-            if (window->WindowClass.ViewportFlagsOverrideMask)
-                viewport_flags = (viewport_flags & ~window->WindowClass.ViewportFlagsOverrideMask) | (window->WindowClass.ViewportFlagsOverrideValue & window->WindowClass.ViewportFlagsOverrideMask);
+            if (window->WindowClass.ViewportFlagsOverrideSet)
+                viewport_flags |= window->WindowClass.ViewportFlagsOverrideSet;
+            if (window->WindowClass.ViewportFlagsOverrideClear)
+                viewport_flags &= ~window->WindowClass.ViewportFlagsOverrideClear;
 
             // We also tell the back-end that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
             viewport_flags |= ImGuiViewportFlags_NoRendererClear;
@@ -7437,6 +7439,7 @@ void ImGui::SetNextWindowDockID(ImGuiID id, ImGuiCond cond)
 void ImGui::SetNextWindowClass(const ImGuiWindowClass* window_class)
 {
     ImGuiContext& g = *GImGui;
+    IM_ASSERT((window_class->ViewportFlagsOverrideSet & window_class->ViewportFlagsOverrideClear) == 0); // Cannot set both set and clear for the same bit
     g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasWindowClass;
     g.NextWindowData.WindowClass = *window_class;
 }
@@ -10291,7 +10294,7 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
 {
     // Tooltips and menus are not automatically forced into their own viewport when the NoMerge flag is set, however the multiplication of viewports makes them more likely to protrude and create their own.
     ImGuiContext& g = *GImGui;
-    if (g.IO.ConfigViewportsNoAutoMerge || ((window->WindowClass.ViewportFlagsOverrideValue & window->WindowClass.ViewportFlagsOverrideMask) & ImGuiViewportFlags_NoAutoMerge))
+    if (g.IO.ConfigViewportsNoAutoMerge || (window->WindowClass.ViewportFlagsOverrideSet & ImGuiViewportFlags_NoAutoMerge))
         if (g.ConfigFlagsForFrame & ImGuiConfigFlags_ViewportsEnable)
             if (!window->DockIsActive)
                 if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) == 0)
