@@ -89,6 +89,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: decorrelate layout from inputs - e.g. what's the easiest way to implement a nice IP/Mac address input editor?
  - input text: global callback system so user can plug in an expression evaluator easily. (#1691)
  - input text: force scroll to end or scroll to a given line/contents (so user can implement a log or a search feature)
+ - input text: a way to preview completion (e.g. disabled text completing from the cursor)
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
  - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput could eat preceding blanks, up to tab_count.
@@ -122,6 +123,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: option to alternate background colors on odd/even scanlines.
  - columns: allow columns to recurse.
  - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
+ - columns: sizing is lossy when columns width is very small (default width may turn negative etc.)
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
  - columns: flag to add horizontal separator above/below?
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)

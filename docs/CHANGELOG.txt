@@ -95,6 +95,8 @@ Other Changes:
   also this type was added in 1.71 and not advertised as a public-facing feature).
 - Fonts: binary_to_compressed_c.cpp: Display an error message if failing to open/read the input font file.
 - Demo: Log, Console: Using a simpler stateless pattern for auto-scrolling.
+- Demo: Widgets: Showing how to use the format parameter of Slider/Drag functions to display the name
+  of an enum value instead of the underlying integer value.
 - Backends: DX10/DX11: Backup, clear and restore Geometry Shader is any is bound when calling renderer.
 - Backends: DX11: Clear Hull Shader, Domain Shader, Compute Shader before rendering. Not backing/restoring them.
 - Backends: OSX: Disabled default native Mac clipboard copy/paste implementation in core library (added in 1.71),
