@@ -3,16 +3,16 @@ dear imgui
 [![Build Status](https://api.travis-ci.com/ocornut/imgui.svg?branch=master)](https://travis-ci.com/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-_(This library is free as in freedom, but needs your support to sustain its development. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for invoiced financial support. If you are an individual using dear imgui, please consider donating via Patreon or PayPal.)_
+_(This library is available under a free and permissive licence, but needs financial support to sustain its continued improvements. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal.)_
+
+Businesses: support continued development via invoiced technical support & maintenance contracts:
+<br>&nbsp;&nbsp;_E-mail: omarcornut at gmail dot com_
 
 Individuals/hobbyists: support continued maintenance and development via the monthly Patreon:
 <br>&nbsp;&nbsp;[![Patreon](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/patreon_01.png)](http://www.patreon.com/imgui)
 
 Individuals/hobbyists: support continued maintenance and development via PayPal:
 <br>&nbsp;&nbsp;[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S)
-
-Businesses: support continued maintenance and development via support contracts or sponsoring:
-<br>&nbsp;&nbsp;_E-mail: omarcornut at gmail dot com_
 
 Dear ImGui is a bloat-free graphical user interface library for C++. It outputs optimized vertex buffers that you can render anytime in your 3D-pipeline enabled application. It is fast, portable, renderer agnostic and self-contained (no external dependencies).
 
@@ -290,7 +290,10 @@ Support dear imgui
 
 **How can I help financing further development of Dear ImGui?**
 
-Your contributions are keeping this project alive. The library is free as in freedom, but continued maintenance and development are a full-time endeavor. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for financial support. If you are an individual using dear imgui, please consider donating via Patreon or PayPal. Thank you!
+Your contributions are keeping this project alive. The library is available under a free and permissive licence, but continued maintenance and development are a full-time endeavor and I would like to grow the team. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for invoiced technical support and maintenance contracts. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal. Thank you!
+
+Businesses: support continued development via invoiced technical support & maintenance contracts:
+<br>&nbsp;&nbsp;_E-mail: omarcornut at gmail dot com_
 
 Individuals/hobbyists: support continued maintenance and development via the monthly Patreon:
 <br>&nbsp;&nbsp;[![Patreon](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/patreon_01.png)](http://www.patreon.com/imgui)
@@ -298,22 +301,20 @@ Individuals/hobbyists: support continued maintenance and development via the mon
 Individuals/hobbyists: support continued maintenance and development via PayPal:
 <br>&nbsp;&nbsp;[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S)
 
-Businesses: support continued maintenance and development via support contracts or sponsoring:
-<br>&nbsp;&nbsp;_E-mail: omarcornut at gmail dot com_
-
 Ongoing dear imgui development is financially supported by users and private sponsors, recently:
 
 **Platinum-chocolate sponsors**
-- **Blizzard Entertainment**.
+- Blizzard Entertainment
+- Google
 
 **Double-chocolate sponsors**
 - Media Molecule, Mobigame, Aras Pranckevičius, Greggman, DotEmu, Nadeo, Supercell, Runner, Aiden Koss, Kylotonn.
 
 **Salty caramel supporters**
-- Remedy Entertainment, Recognition Robotics, ikrima, Geoffrey Evans, Mercury Labs, Singularity Demo Group, Lionel Landwerlin, Ron Gilbert, Brandon Townsend, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Jeff Roberts, Rainway inc, Ondra Voves, Mesh Consultants, Unit 2 Games, Neil Bickford.
+- Remedy Entertainment, Recognition Robotics, ikrima, Geoffrey Evans, Mercury Labs, Singularity Demo Group, Lionel Landwerlin, Ron Gilbert, Brandon Townsend, Morten Skaaning, Nikhil Deshpande, Cort Stratton, drudru, Harfang 3D, Jeff Roberts, Rainway inc, Ondra Voves, Mesh Consultants, Unit 2 Games, Neil Bickford.
 
 **Caramel supporters**
-- Jerome Lanquetot, Daniel Collin, Ctrl Alt Ninja, Neil Henning, Neil Blakey-Milner, Aleksei, NeiloGD, Eric, Game Atelier, Vincent Hamm, Colin Riley, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Josh Faust, Martin Donlon, Codecat, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Jonas Bernemann, Johan Andersson, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Steven Kah Hien Wong, Bartosz Bielecki, Oscar Penas, A M, Liam Moynihan, Artometa, Mark Lee, Dimitri Diakopoulos, Pete Goodwin, Johnathan Roatch, nyu lea, Oswald Hurlem, Semyon Smelyanskiy, Le Bach, Jeong MyeongSoo, Chris Matthews, Astrofra.
+- Jerome Lanquetot, Daniel Collin, Ctrl Alt Ninja, Neil Henning, Neil Blakey-Milner, Aleksei, NeiloGD, Eric, Game Atelier, Vincent Hamm, Colin Riley, Sergio Gonzales, Andrew Berridge, Roy Eltham, Game Preservation Society, Josh Faust, Martin Donlon, Codecat, Doug McNabb, Emmanuel Julien, Guillaume Chereau, Jeffrey Slutter, Jeremiah Deckard, r-lyeh, Nekith, Joshua Fisher, Malte Hoffmann, Mustafa Karaalioglu, Merlyn Morgan-Graham, Per Vognsen, Fabian Giesen, Jan Staubach, Matt Hargett, John Shearer, Jesse Chounard, kingcoopa, Jonas Bernemann, Johan Andersson, Michael Labbe, Tomasz Golebiowski, Louis Schnellbach, Jimmy Andrews, Bojan Endrovski, Robin Berg Pettersen, Rachel Crawford, Andrew Johnson, Sean Hunter, Jordan Mellow, Nefarius Software Solutions, Laura Wieme, Robert Nix, Mick Honey, Steven Kah Hien Wong, Bartosz Bielecki, Oscar Penas, A M, Liam Moynihan, Artometa, Mark Lee, Dimitri Diakopoulos, Pete Goodwin, Johnathan Roatch, nyu lea, Oswald Hurlem, Semyon Smelyanskiy, Le Bach, Jeong MyeongSoo, Chris Matthews, Astrofra, Frederik De Bleser, Anticrisis.
 
 And all other past and present supporters; THANK YOU!
 (Please contact me if you would like to be added or removed from this list)

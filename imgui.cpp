@@ -1,4 +1,4 @@
-// dear imgui, v1.72 WIP
+// dear imgui, v1.72
 // (main code and documentation)
 
 // Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code.
@@ -4779,15 +4779,23 @@ bool ImGui::IsMouseDoubleClicked(int button)
     return g.IO.MouseDoubleClicked[button];
 }
 
+// [Internal] This doesn't test if the button is presed
+bool ImGui::IsMouseDragPastThreshold(int button, float lock_threshold)
+{
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
+    if (lock_threshold < 0.0f)
+        lock_threshold = g.IO.MouseDragThreshold;
+    return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
+}
+
 bool ImGui::IsMouseDragging(int button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(button >= 0 && button < IM_ARRAYSIZE(g.IO.MouseDown));
     if (!g.IO.MouseDown[button])
         return false;
-    if (lock_threshold < 0.0f)
-        lock_threshold = g.IO.MouseDragThreshold;
-    return g.IO.MouseDragMaxDistanceSqr[button] >= lock_threshold * lock_threshold;
+    return IsMouseDragPastThreshold(button, lock_threshold);
 }
 
 ImVec2 ImGui::GetMousePos()
@@ -8901,7 +8909,7 @@ static void ImGui::NavUpdate()
     // Update Keyboard->Nav inputs mapping
     if (nav_keyboard_active)
     {
-        #define NAV_MAP_KEY(_KEY, _NAV_INPUT) if (IsKeyDown(g.IO.KeyMap[_KEY])) { g.IO.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_NavKeyboard; }
+        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)  do { if (IsKeyDown(g.IO.KeyMap[_KEY])) { g.IO.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_NavKeyboard; } } while (0)
         NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
         NAV_MAP_KEY(ImGuiKey_Enter,     ImGuiNavInput_Input    );
         NAV_MAP_KEY(ImGuiKey_Escape,    ImGuiNavInput_Cancel   );
@@ -14545,6 +14553,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 fg_draw_list->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
             if (!node_open)
                 return;
+
+            if (window && !window->WasActive)
+                ImGui::Text("(Note: owning Window is inactive: DrawList is not being rendered!)");
 
             int elem_offset = 0;
             for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)

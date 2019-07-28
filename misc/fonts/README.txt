@@ -1,4 +1,4 @@
-dear imgui, v1.72 WIP
+dear imgui, v1.72
 (Font Readme)
 
 ---------------------------------------
