@@ -950,8 +950,8 @@ struct ImGuiDockNode
     int                     LastFrameActive;            // Last frame number the node was updated.
     int                     LastFrameFocused;           // Last frame number the node was focused.
     ImGuiID                 LastFocusedNodeID;          // [Root node only] Which of our child docking node (any ancestor in the hierarchy) was last focused.
-    ImGuiID                 SelectedTabID;              // [Tab node only] Which of our tab is selected.
-    ImGuiID                 WantCloseTabID;             // [Tab node only] Set when closing a specific tab.
+    ImGuiID                 SelectedTabID;              // [Leaf node only] Which of our tab/window is selected.
+    ImGuiID                 WantCloseTabID;             // [Leaf node only] Set when closing a specific tab/window.
     ImGuiDataAuthority      AuthorityForPos         :3;
     ImGuiDataAuthority      AuthorityForSize        :3;
     ImGuiDataAuthority      AuthorityForViewport    :3;
