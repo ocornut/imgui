@@ -11074,6 +11074,7 @@ struct ImGuiDockNodeSettings
 {
     ImGuiID             ID;
     ImGuiID             ParentNodeID;
+    ImGuiID             ParentWindowID;
     ImGuiID             SelectedWindowID;
     signed char         SplitAxis;
     char                Depth;
@@ -11081,7 +11082,7 @@ struct ImGuiDockNodeSettings
     ImVec2ih            Pos;
     ImVec2ih            Size;
     ImVec2ih            SizeRef;
-    ImGuiDockNodeSettings() { ID = ParentNodeID = SelectedWindowID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; Flags = ImGuiDockNodeFlags_None; }
+    ImGuiDockNodeSettings() { ID = ParentNodeID = ParentWindowID = SelectedWindowID = 0; SplitAxis = ImGuiAxis_None; Depth = 0; Flags = ImGuiDockNodeFlags_None; }
 };
 
 struct ImGuiDockContext
@@ -11378,6 +11379,18 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
         pool.GetOrAddByKey(settings->ID)->RootID = parent_data ? parent_data->RootID : settings->ID;
         if (settings->ParentNodeID)
             pool.GetOrAddByKey(settings->ParentNodeID)->CountChildNodes++;
+    }
+
+    // Count reference to dock ids from dockspaces
+    // We track the 'auto-DockNode <- manual-Window <- manual-DockSpace' in order to avoid 'auto-DockNode' being ditched by DockContextPruneUnusedSettingsNodes()
+    for (int settings_n = 0; settings_n < dc->SettingsNodes.Size; settings_n++)
+    {
+        ImGuiDockNodeSettings* settings = &dc->SettingsNodes[settings_n];
+        if (settings->ParentWindowID != 0)
+            if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->ParentWindowID))
+                if (window_settings->DockId)
+                    if (ImGuiDockContextPruneNodeData* data = pool.GetByKey(window_settings->DockId))
+                        data->CountChildNodes++;
     }
 
     // Count reference to dock ids from window settings
@@ -14166,6 +14179,7 @@ static void ImGui::DockSettingsHandler_ReadLine(ImGuiContext* ctx, ImGuiSettings
     else return;
     if (sscanf(line, "ID=0x%08X%n",      &node.ID, &r) == 1)            { line += r; } else return;
     if (sscanf(line, " Parent=0x%08X%n", &node.ParentNodeID, &r) == 1)  { line += r; if (node.ParentNodeID == 0) return; }
+    if (sscanf(line, " Window=0x%08X%n", &node.ParentWindowID, &r) ==1) { line += r; if (node.ParentWindowID == 0) return; }
     if (node.ParentNodeID == 0)
     {
         if (sscanf(line, " Pos=%i,%i%n",  &x, &y, &r) == 2)         { line += r; node.Pos = ImVec2ih((short)x, (short)y); } else return;
@@ -14196,6 +14210,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     IM_ASSERT(depth < (1 << (sizeof(node_settings.Depth) << 3)));
     node_settings.ID = node->ID;
     node_settings.ParentNodeID = node->ParentNode ? node->ParentNode->ID : 0;
+    node_settings.ParentWindowID = (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow) ? node->HostWindow->ParentWindow->ID : 0;
     node_settings.SelectedWindowID = node->SelectedTabID;
     node_settings.SplitAxis = node->IsSplitNode() ? (char)node->SplitAxis : ImGuiAxis_None;
     node_settings.Depth = (char)depth;
@@ -14239,9 +14254,15 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
         buf->appendf("%*s%s%*s", node_settings->Depth * 2, "", (node_settings->Flags & ImGuiDockNodeFlags_DockSpace) ? "DockSpace" : "DockNode ", (max_depth - node_settings->Depth) * 2, "");  // Text align nodes to facilitate looking at .ini file
         buf->appendf(" ID=0x%08X", node_settings->ID);
         if (node_settings->ParentNodeID)
+        {
             buf->appendf(" Parent=0x%08X SizeRef=%d,%d", node_settings->ParentNodeID, node_settings->SizeRef.x, node_settings->SizeRef.y);
+        }
         else
+        {
+            if (node_settings->ParentWindowID)
+                buf->appendf(" Window=0x%08X", node_settings->ParentWindowID);
             buf->appendf(" Pos=%d,%d Size=%d,%d", node_settings->Pos.x, node_settings->Pos.y, node_settings->Size.x, node_settings->Size.y);
+        }
         if (node_settings->SplitAxis != ImGuiAxis_None)
             buf->appendf(" Split=%c", (node_settings->SplitAxis == ImGuiAxis_X) ? 'X' : 'Y');
         if (node_settings->Flags & ImGuiDockNodeFlags_NoResize)
