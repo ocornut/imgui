@@ -850,8 +850,17 @@ bool    ImGui_ImplVulkan_Init(ImGui_ImplVulkan_InitInfo* info, VkRenderPass rend
 
 void ImGui_ImplVulkan_Shutdown()
 {
-    ImGui_ImplVulkan_ShutdownPlatformInterface();
+    // First destroy objects in all viewports
     ImGui_ImplVulkan_DestroyDeviceObjects();
+
+    // Manually delete main viewport render data in-case we haven't initialized for viewports
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    if (ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)main_viewport->RendererUserData)
+        IM_DELETE(data);
+    main_viewport->RendererUserData = NULL;
+
+    // Clean up windows
+    ImGui_ImplVulkan_ShutdownPlatformInterface();
 }
 
 void ImGui_ImplVulkan_NewFrame()
