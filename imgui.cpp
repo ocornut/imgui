@@ -7761,7 +7761,7 @@ static bool NavScoreItem(ImGuiNavMoveResult* result, ImRect cand)
     if (window->ParentWindow == g.NavWindow)
     {
         IM_ASSERT((window->Flags | g.NavWindow->Flags) & ImGuiWindowFlags_NavFlattened);
-        if (!window->ClipRect.Contains(cand))
+        if (!window->ClipRect.Overlaps(cand))
             return false;
         cand.ClipWithFull(window->ClipRect); // This allows the scored item to not overlap other candidates in the parent window
     }
