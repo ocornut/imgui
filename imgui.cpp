@@ -3171,13 +3171,15 @@ void ImGui::MemFree(void* ptr)
 
 const char* ImGui::GetClipboardText()
 {
-    return GImGui->IO.GetClipboardTextFn ? GImGui->IO.GetClipboardTextFn(GImGui->IO.ClipboardUserData) : "";
+    ImGuiContext& g = *GImGui;
+    return g.IO.GetClipboardTextFn ? g.IO.GetClipboardTextFn(g.IO.ClipboardUserData) : "";
 }
 
 void ImGui::SetClipboardText(const char* text)
 {
-    if (GImGui->IO.SetClipboardTextFn)
-        GImGui->IO.SetClipboardTextFn(GImGui->IO.ClipboardUserData, text);
+    ImGuiContext& g = *GImGui;
+    if (g.IO.SetClipboardTextFn)
+        g.IO.SetClipboardTextFn(g.IO.ClipboardUserData, text);
 }
 
 const char* ImGui::GetVersion()
@@ -4331,15 +4333,18 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
 int ImGui::GetKeyIndex(ImGuiKey imgui_key)
 {
     IM_ASSERT(imgui_key >= 0 && imgui_key < ImGuiKey_COUNT);
-    return GImGui->IO.KeyMap[imgui_key];
+    ImGuiContext& g = *GImGui;
+    return g.IO.KeyMap[imgui_key];
 }
 
 // Note that imgui doesn't know the semantic of each entry of io.KeysDown[]. Use your own indices/enums according to how your back-end/engine stored them into io.KeysDown[]!
 bool ImGui::IsKeyDown(int user_key_index)
 {
-    if (user_key_index < 0) return false;
-    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(GImGui->IO.KeysDown));
-    return GImGui->IO.KeysDown[user_key_index];
+    if (user_key_index < 0) 
+        return false;
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
+    return g.IO.KeysDown[user_key_index];
 }
 
 int ImGui::CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate)
@@ -4948,7 +4953,7 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool s
         float target_x = window->ScrollTarget.x;
         if (snap_on_edges && cr_x <= 0.0f && target_x <= window->WindowPadding.x)
             target_x = 0.0f;
-        else if (snap_on_edges && cr_x >= 1.0f && target_x >= window->ContentSize.x + window->WindowPadding.x + GImGui->Style.ItemSpacing.x)
+        else if (snap_on_edges && cr_x >= 1.0f && target_x >= window->ContentSize.x + window->WindowPadding.x + g.Style.ItemSpacing.x)
             target_x = window->ContentSize.x + window->WindowPadding.x * 2.0f;
         scroll.x = target_x - cr_x * window->InnerRect.GetWidth();
     }
@@ -6139,7 +6144,7 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    const ImGuiStyle& style = GImGui->Style;
+    const ImGuiStyle& style = g.Style;
     const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
     const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
     window->DC.ItemWidthStack.push_back(w_item_last);
@@ -6969,7 +6974,8 @@ void ImGui::SetScrollY(ImGuiWindow* window, float new_scroll_y)
 void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio)
 {
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
     window->ScrollTarget.x = (float)(int)(local_x + window->Scroll.x);
     window->ScrollTargetCenterRatio.x = center_x_ratio;
@@ -6978,7 +6984,8 @@ void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio)
 void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
 {
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     window->ScrollTarget.y = (float)(int)(local_y + window->Scroll.y);
     window->ScrollTargetCenterRatio.y = center_y_ratio;
@@ -6987,19 +6994,21 @@ void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
 // center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
 void ImGui::SetScrollHereX(float center_x_ratio)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     float target_x = window->DC.LastItemRect.Min.x - window->Pos.x; // Left of last item, in window space
     float last_item_width = window->DC.LastItemRect.GetWidth();
-    target_x += (last_item_width * center_x_ratio) + (GImGui->Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
+    target_x += (last_item_width * center_x_ratio) + (g.Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
     SetScrollFromPosX(target_x, center_x_ratio);
 }
 
 // center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
 void ImGui::SetScrollHereY(float center_y_ratio)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     float target_y = window->DC.CursorPosPrevLine.y - window->Pos.y; // Top of last item, in window space
-    target_y += (window->DC.PrevLineSize.y * center_y_ratio) + (GImGui->Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
+    target_y += (window->DC.PrevLineSize.y * center_y_ratio) + (g.Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
     SetScrollFromPosY(target_y, center_y_ratio);
 }
 
@@ -9640,7 +9649,8 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 {
     // Notify OS Input Method Editor of text input position
-    if (HWND hwnd = (HWND)GImGui->IO.ImeWindowHandle)
+    ImGuiIO& io = ImGui::GetIO();
+    if (HWND hwnd = (HWND)io.ImeWindowHandle)
         if (HIMC himc = ::ImmGetContext(hwnd))
         {
             COMPOSITIONFORM cf;
