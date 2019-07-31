@@ -35,9 +35,13 @@ HOW TO UPDATE?
 
 Other Changes:
 
-- Scrolling, Nav: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
+- Nav, Scrolling: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
   the window has decorations or a menu-bar (broken in 1.71). This was mostly noticeable when
   a keyboard/gamepad movement led to scrolling the view, or using e.g. SetScrollHereY() function.
+- Nav: Made hovering non-MenuItem Selectable not re-assign the source item for keyboard navigation.
+- Nav: Fixed an issue with NavFlattened window flag (beta) where widgets not entirely fitting
+  in child window (often selectables because of their protruding sides) would be not considered
+  as entry points to to navigate toward the child window. (#787)
 
 
 -----------------------------------------------------------------------
