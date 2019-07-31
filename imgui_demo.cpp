@@ -1,4 +1,4 @@
-// dear imgui, v1.72
+// dear imgui, v1.72b
 // (demo code)
 
 // Message to the person tempted to delete this file when integrating Dear ImGui into their code base:
@@ -2122,23 +2122,29 @@ static void ShowDemoWindowLayout()
         // Vertical scroll functions
         HelpMarker("Use SetScrollHereY() or SetScrollFromPosY() to scroll to a given vertical position.");
 
-        static bool track = true;
         static int track_item = 50;
+        static bool enable_track = true;
+        static bool enable_extra_decorations = false;
         static float scroll_to_off_px = 0.0f;
         static float scroll_to_pos_px = 200.0f;
-        ImGui::Checkbox("Track", &track);
+
+        ImGui::Checkbox("Decoration", &enable_extra_decorations);
+        ImGui::SameLine();
+        HelpMarker("We expose this for testing because scrolling sometimes had issues with window decoration such as menu-bars.");
+
+        ImGui::Checkbox("Track", &enable_track);
         ImGui::PushItemWidth(100);
-        ImGui::SameLine(140); track |= ImGui::DragInt("##item", &track_item, 0.25f, 0, 99, "Item = %d");
+        ImGui::SameLine(140); enable_track |= ImGui::DragInt("##item", &track_item, 0.25f, 0, 99, "Item = %d");
 
         bool scroll_to_off = ImGui::Button("Scroll Offset");
         ImGui::SameLine(140); scroll_to_off |= ImGui::DragFloat("##off", &scroll_to_off_px, 1.00f, 0, 9999, "+%.0f px");
 
         bool scroll_to_pos = ImGui::Button("Scroll To Pos");
-        ImGui::SameLine(140); scroll_to_pos |= ImGui::DragFloat("##pos", &scroll_to_pos_px, 1.00f, 0, 9999, "X/Y = %.0f px");
-
+        ImGui::SameLine(140); scroll_to_pos |= ImGui::DragFloat("##pos", &scroll_to_pos_px, 1.00f, -10, 9999, "X/Y = %.0f px");
         ImGui::PopItemWidth();
+
         if (scroll_to_off || scroll_to_pos)
-            track = false;
+            enable_track = false;
 
         ImGuiStyle& style = ImGui::GetStyle();
         float child_w = (ImGui::GetContentRegionAvail().x - 4 * style.ItemSpacing.x) / 5;
@@ -2152,14 +2158,20 @@ static void ShowDemoWindowLayout()
             const char* names[] = { "Top", "25%", "Center", "75%", "Bottom" };
             ImGui::TextUnformatted(names[i]);
 
-            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true, ImGuiWindowFlags_None);
+            ImGuiWindowFlags child_flags = enable_extra_decorations ? ImGuiWindowFlags_MenuBar : 0;
+            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(child_w, 200.0f), true, child_flags);
+            if (ImGui::BeginMenuBar())
+            {
+                ImGui::TextUnformatted("abc");
+                ImGui::EndMenuBar();
+            }
             if (scroll_to_off)
                 ImGui::SetScrollY(scroll_to_off_px);
             if (scroll_to_pos)
                 ImGui::SetScrollFromPosY(ImGui::GetCursorStartPos().y + scroll_to_pos_px, i * 0.25f);
             for (int item = 0; item < 100; item++)
             {
-                if (track && item == track_item)
+                if (enable_track && item == track_item)
                 {
                     ImGui::TextColored(ImVec4(1,1,0,1), "Item %d", item);
                     ImGui::SetScrollHereY(i * 0.25f); // 0.0f:top, 0.5f:center, 1.0f:bottom
@@ -2184,14 +2196,15 @@ static void ShowDemoWindowLayout()
         for (int i = 0; i < 5; i++)
         {
             float child_height = ImGui::GetTextLineHeight() + style.ScrollbarSize + style.WindowPadding.y * 2.0f;
-            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(-100, child_height), true, ImGuiWindowFlags_HorizontalScrollbar);
+            ImGuiWindowFlags child_flags = ImGuiWindowFlags_HorizontalScrollbar | (enable_extra_decorations ? ImGuiWindowFlags_AlwaysVerticalScrollbar : 0);
+            ImGui::BeginChild(ImGui::GetID((void*)(intptr_t)i), ImVec2(-100, child_height), true, child_flags);
             if (scroll_to_off)
                 ImGui::SetScrollX(scroll_to_off_px);
             if (scroll_to_pos)
                 ImGui::SetScrollFromPosX(ImGui::GetCursorStartPos().x + scroll_to_pos_px, i * 0.25f);
             for (int item = 0; item < 100; item++)
             {
-                if (track && item == track_item)
+                if (enable_track && item == track_item)
                 {
                     ImGui::TextColored(ImVec4(1, 1, 0, 1), "Item %d", item);
                     ImGui::SetScrollHereX(i * 0.25f); // 0.0f:left, 0.5f:center, 1.0f:right

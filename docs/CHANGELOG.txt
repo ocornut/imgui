@@ -99,7 +99,22 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.72 (In Progress)
+ VERSION 1.72b (Released 2019-07-31)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Nav, Scrolling: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
+  the window has decorations or a menu-bar (broken in 1.71). This was mostly noticeable when
+  a keyboard/gamepad movement led to scrolling the view, or using e.g. SetScrollHereY() function.
+- Nav: Made hovering non-MenuItem Selectable not re-assign the source item for keyboard navigation.
+- Nav: Fixed an issue with NavFlattened window flag (beta) where widgets not entirely fitting
+  in child window (often selectables because of their protruding sides) would be not considered
+  as entry points to to navigate toward the child window. (#787)
+
+
+-----------------------------------------------------------------------
+ VERSION 1.72 (Released 2019-07-27)
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -114,7 +129,6 @@ Breaking Changes:
   Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
-  comments about the right way to scale your UI (load a font at the right side, rebuild atlas, scale style).
 - Scrolling: Made mouse-wheel scrolling lock the underlying window until the mouse is moved again or
   until a short delay expires (~2 seconds). This allow uninterrupted scroll even if child windows are
   passing under the mouse cursor. (#2604)
@@ -131,6 +145,7 @@ Other Changes:
   any more. Forwarding can still be disabled by setting ImGuiWindowFlags_NoInputs. (amend #1502, #1380).
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
 - Window: Fixed old SetWindowFontScale() api value from not being inherited by child window. Added
+  comments about the right way to scale your UI (load a font at the right side, rebuild atlas, scale style).
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Combo: Hide arrow when there's not enough space even for the square button.
 - InputText: Testing for newly added ImGuiKey_KeyPadEnter key. (#2677, #2005) [@amc522]
