@@ -33,6 +33,12 @@ HOW TO UPDATE?
  VERSION 1.73 (In Progress)
 -----------------------------------------------------------------------
 
+Other Changes:
+
+- Scrolling, Nav: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
+  the window has decorations or a menu-bar (broken in 1.71). This was mostly noticeable when
+  a keyboard/gamepad movement led to scrolling the view, or using e.g. SetScrollHereY() function.
+
 
 -----------------------------------------------------------------------
  VERSION 1.72 (Released 2019-07-27)
