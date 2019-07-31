@@ -1470,8 +1470,6 @@ namespace ImGui
     IMGUI_API ImVec2        CalcWindowExpectedSize(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
-    IMGUI_API void          SetScrollX(ImGuiWindow* window, float new_scroll_x);
-    IMGUI_API void          SetScrollY(ImGuiWindow* window, float new_scroll_y);
     IMGUI_API ImRect        GetWindowAllowedExtentRect(ImGuiWindow* window);
     IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond = 0);
@@ -1497,6 +1495,11 @@ namespace ImGui
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
     IMGUI_API ImGuiWindowSettings*  FindOrCreateWindowSettings(const char* name);
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
+
+    // Scrolling
+    IMGUI_API void          SetScrollX(ImGuiWindow* window, float new_scroll_x);
+    IMGUI_API void          SetScrollY(ImGuiWindow* window, float new_scroll_y);
+    IMGUI_API void          ScrollToBringItemIntoView(ImGuiWindow* window, const ImRect& item_rect);
 
     // Basic Accessors
     inline ImGuiID          GetItemID()     { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.LastItemId; }
@@ -1549,7 +1552,6 @@ namespace ImGui
     IMGUI_API void          NavMoveRequestCancel();
     IMGUI_API void          NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const ImRect& bb_rel, ImGuiNavMoveFlags move_flags);
     IMGUI_API void          NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags);
-    IMGUI_API void          NavScrollToBringItemIntoView(ImGuiWindow* window, const ImRect& item_rect);
     IMGUI_API float         GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode);
     IMGUI_API ImVec2        GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f);
     IMGUI_API int           CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate);

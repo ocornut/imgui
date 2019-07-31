@@ -72,6 +72,7 @@ CODE
 // [SECTION] ImGuiListClipper
 // [SECTION] RENDER HELPERS
 // [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
+// [SECTION] SCROLLING
 // [SECTION] TOOLTIPS
 // [SECTION] POPUPS
 // [SECTION] KEYBOARD/GAMEPAD NAVIGATION
@@ -4943,40 +4944,6 @@ ImVec2 ImGui::CalcWindowExpectedSize(ImGuiWindow* window)
     return CalcSizeAfterConstraint(window, CalcSizeAutoFit(window, size_contents));
 }
 
-static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges)
-{
-    ImGuiContext& g = *GImGui;
-    ImVec2 scroll = window->Scroll;
-    if (window->ScrollTarget.x < FLT_MAX)
-    {
-        float cr_x = window->ScrollTargetCenterRatio.x;
-        float target_x = window->ScrollTarget.x;
-        if (snap_on_edges && cr_x <= 0.0f && target_x <= window->WindowPadding.x)
-            target_x = 0.0f;
-        else if (snap_on_edges && cr_x >= 1.0f && target_x >= window->ContentSize.x + window->WindowPadding.x + g.Style.ItemSpacing.x)
-            target_x = window->ContentSize.x + window->WindowPadding.x * 2.0f;
-        scroll.x = target_x - cr_x * window->InnerRect.GetWidth();
-    }
-    if (window->ScrollTarget.y < FLT_MAX)
-    {
-        // 'snap_on_edges' allows for a discontinuity at the edge of scrolling limits to take account of WindowPadding so that scrolling to make the last item visible scroll far enough to see the padding.
-        float cr_y = window->ScrollTargetCenterRatio.y;
-        float target_y = window->ScrollTarget.y;
-        if (snap_on_edges && cr_y <= 0.0f && target_y <= window->WindowPadding.y)
-            target_y = 0.0f;
-        if (snap_on_edges && cr_y >= 1.0f && target_y >= window->ContentSize.y + window->WindowPadding.y + g.Style.ItemSpacing.y)
-            target_y = window->ContentSize.y + window->WindowPadding.y * 2.0f;
-        scroll.y = target_y - cr_y * window->InnerRect.GetHeight();
-    }
-    scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
-    if (!window->Collapsed && !window->SkipItems)
-    {
-        scroll.x = ImMin(scroll.x, window->ScrollMax.x);
-        scroll.y = ImMin(scroll.y, window->ScrollMax.y);
-    }
-    return scroll;
-}
-
 static ImGuiCol GetWindowBgColorIdxFromFlags(ImGuiWindowFlags flags)
 {
     if (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup))
@@ -6921,97 +6888,6 @@ void ImGui::SetCursorScreenPos(const ImVec2& pos)
     window->DC.CursorMaxPos = ImMax(window->DC.CursorMaxPos, window->DC.CursorPos);
 }
 
-float ImGui::GetScrollX()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->Scroll.x;
-}
-
-float ImGui::GetScrollY()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->Scroll.y;
-}
-
-float ImGui::GetScrollMaxX()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ScrollMax.x;
-}
-
-float ImGui::GetScrollMaxY()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ScrollMax.y;
-}
-
-void ImGui::SetScrollX(float scroll_x)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTarget.x = scroll_x;
-    window->ScrollTargetCenterRatio.x = 0.0f;
-}
-
-void ImGui::SetScrollY(float scroll_y)
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    window->ScrollTarget.y = scroll_y;
-    window->ScrollTargetCenterRatio.y = 0.0f;
-}
-
-void ImGui::SetScrollX(ImGuiWindow* window, float new_scroll_x)
-{
-    window->ScrollTarget.x = new_scroll_x;
-    window->ScrollTargetCenterRatio.x = 0.0f;
-}
-
-void ImGui::SetScrollY(ImGuiWindow* window, float new_scroll_y)
-{
-    window->ScrollTarget.y = new_scroll_y;
-    window->ScrollTargetCenterRatio.y = 0.0f;
-}
-
-void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio)
-{
-    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
-    window->ScrollTarget.x = (float)(int)(local_x + window->Scroll.x);
-    window->ScrollTargetCenterRatio.x = center_x_ratio;
-}
-
-void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
-{
-    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
-    window->ScrollTarget.y = (float)(int)(local_y + window->Scroll.y);
-    window->ScrollTargetCenterRatio.y = center_y_ratio;
-}
-
-// center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
-void ImGui::SetScrollHereX(float center_x_ratio)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    float target_x = window->DC.LastItemRect.Min.x - window->Pos.x; // Left of last item, in window space
-    float last_item_width = window->DC.LastItemRect.GetWidth();
-    target_x += (last_item_width * center_x_ratio) + (g.Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
-    SetScrollFromPosX(target_x, center_x_ratio);
-}
-
-// center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
-void ImGui::SetScrollHereY(float center_y_ratio)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    float target_y = window->DC.CursorPosPrevLine.y - window->Pos.y; // Top of last item, in window space
-    target_y += (window->DC.PrevLineSize.y * center_y_ratio) + (g.Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
-    SetScrollFromPosY(target_y, center_y_ratio);
-}
-
 void ImGui::ActivateItem(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -7246,6 +7122,167 @@ void ImGui::Unindent(float indent_w)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.Indent.x -= (indent_w != 0.0f) ? indent_w : g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
+}
+
+
+//-----------------------------------------------------------------------------
+// [SECTION] SCROLLING
+//-----------------------------------------------------------------------------
+
+static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges)
+{
+    ImGuiContext& g = *GImGui;
+    ImVec2 scroll = window->Scroll;
+    if (window->ScrollTarget.x < FLT_MAX)
+    {
+        float cr_x = window->ScrollTargetCenterRatio.x;
+        float target_x = window->ScrollTarget.x;
+        if (snap_on_edges && cr_x <= 0.0f && target_x <= window->WindowPadding.x)
+            target_x = 0.0f;
+        else if (snap_on_edges && cr_x >= 1.0f && target_x >= window->ContentSize.x + window->WindowPadding.x + g.Style.ItemSpacing.x)
+            target_x = window->ContentSize.x + window->WindowPadding.x * 2.0f;
+        scroll.x = target_x - cr_x * window->InnerRect.GetWidth();
+    }
+    if (window->ScrollTarget.y < FLT_MAX)
+    {
+        // 'snap_on_edges' allows for a discontinuity at the edge of scrolling limits to take account of WindowPadding so that scrolling to make the last item visible scroll far enough to see the padding.
+        float cr_y = window->ScrollTargetCenterRatio.y;
+        float target_y = window->ScrollTarget.y;
+        if (snap_on_edges && cr_y <= 0.0f && target_y <= window->WindowPadding.y)
+            target_y = 0.0f;
+        if (snap_on_edges && cr_y >= 1.0f && target_y >= window->ContentSize.y + window->WindowPadding.y + g.Style.ItemSpacing.y)
+            target_y = window->ContentSize.y + window->WindowPadding.y * 2.0f;
+        scroll.y = target_y - cr_y * window->InnerRect.GetHeight();
+    }
+    scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
+    if (!window->Collapsed && !window->SkipItems)
+    {
+        scroll.x = ImMin(scroll.x, window->ScrollMax.x);
+        scroll.y = ImMin(scroll.y, window->ScrollMax.y);
+    }
+    return scroll;
+}
+
+// Scroll to keep newly navigated item fully into view
+void ImGui::ScrollToBringItemIntoView(ImGuiWindow* window, const ImRect& item_rect)
+{
+    ImRect window_rect(window->InnerRect.Min - ImVec2(1, 1), window->InnerRect.Max + ImVec2(1, 1));
+    //GetForegroundDrawList(window)->AddRect(window_rect.Min, window_rect.Max, IM_COL32_WHITE); // [DEBUG]
+    if (window_rect.Contains(item_rect))
+        return;
+
+    ImGuiContext& g = *GImGui;
+    if (window->ScrollbarX && item_rect.Min.x < window_rect.Min.x)
+    {
+        window->ScrollTarget.x = item_rect.Min.x - window->Pos.x + window->Scroll.x - g.Style.ItemSpacing.x;
+        window->ScrollTargetCenterRatio.x = 0.0f;
+    }
+    else if (window->ScrollbarX && item_rect.Max.x >= window_rect.Max.x)
+    {
+        window->ScrollTarget.x = item_rect.Max.x - window->Pos.x + window->Scroll.x + g.Style.ItemSpacing.x;
+        window->ScrollTargetCenterRatio.x = 1.0f;
+    }
+    if (item_rect.Min.y < window_rect.Min.y)
+    {
+        window->ScrollTarget.y = item_rect.Min.y - window->Pos.y + window->Scroll.y - g.Style.ItemSpacing.y;
+        window->ScrollTargetCenterRatio.y = 0.0f;
+    }
+    else if (item_rect.Max.y >= window_rect.Max.y)
+    {
+        window->ScrollTarget.y = item_rect.Max.y - window->Pos.y + window->Scroll.y + g.Style.ItemSpacing.y;
+        window->ScrollTargetCenterRatio.y = 1.0f;
+    }
+}
+
+float ImGui::GetScrollX()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->Scroll.x;
+}
+
+float ImGui::GetScrollY()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->Scroll.y;
+}
+
+float ImGui::GetScrollMaxX()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ScrollMax.x;
+}
+
+float ImGui::GetScrollMaxY()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ScrollMax.y;
+}
+
+void ImGui::SetScrollX(float scroll_x)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->ScrollTarget.x = scroll_x;
+    window->ScrollTargetCenterRatio.x = 0.0f;
+}
+
+void ImGui::SetScrollY(float scroll_y)
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->ScrollTarget.y = scroll_y;
+    window->ScrollTargetCenterRatio.y = 0.0f;
+}
+
+void ImGui::SetScrollX(ImGuiWindow* window, float new_scroll_x)
+{
+    window->ScrollTarget.x = new_scroll_x;
+    window->ScrollTargetCenterRatio.x = 0.0f;
+}
+
+void ImGui::SetScrollY(ImGuiWindow* window, float new_scroll_y)
+{
+    window->ScrollTarget.y = new_scroll_y;
+    window->ScrollTargetCenterRatio.y = 0.0f;
+}
+
+void ImGui::SetScrollFromPosX(float local_x, float center_x_ratio)
+{
+    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
+    window->ScrollTarget.x = (float)(int)(local_x + window->Scroll.x);
+    window->ScrollTargetCenterRatio.x = center_x_ratio;
+}
+
+void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
+{
+    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
+    window->ScrollTarget.y = (float)(int)(local_y + window->Scroll.y);
+    window->ScrollTargetCenterRatio.y = center_y_ratio;
+}
+
+// center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
+void ImGui::SetScrollHereX(float center_x_ratio)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    float target_x = window->DC.LastItemRect.Min.x - window->Pos.x; // Left of last item, in window space
+    float last_item_width = window->DC.LastItemRect.GetWidth();
+    target_x += (last_item_width * center_x_ratio) + (g.Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
+    SetScrollFromPosX(target_x, center_x_ratio);
+}
+
+// center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
+void ImGui::SetScrollHereY(float center_y_ratio)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    float target_y = window->DC.CursorPosPrevLine.y - window->Pos.y; // Top of last item, in window space
+    target_y += (window->DC.PrevLineSize.y * center_y_ratio) + (g.Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
+    SetScrollFromPosY(target_y, center_y_ratio);
 }
 
 //-----------------------------------------------------------------------------
@@ -8138,37 +8175,6 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
     return delta;
 }
 
-// Scroll to keep newly navigated item fully into view
-void ImGui::NavScrollToBringItemIntoView(ImGuiWindow* window, const ImRect& item_rect)
-{
-    ImRect window_rect(window->InnerRect.Min - ImVec2(1, 1), window->InnerRect.Max + ImVec2(1, 1));
-    //GetForegroundDrawList(window)->AddRect(window_rect.Min, window_rect.Max, IM_COL32_WHITE); // [DEBUG]
-    if (window_rect.Contains(item_rect))
-        return;
-
-    ImGuiContext& g = *GImGui;
-    if (window->ScrollbarX && item_rect.Min.x < window_rect.Min.x)
-    {
-        window->ScrollTarget.x = item_rect.Min.x - window->Pos.x + window->Scroll.x - g.Style.ItemSpacing.x;
-        window->ScrollTargetCenterRatio.x = 0.0f;
-    }
-    else if (window->ScrollbarX && item_rect.Max.x >= window_rect.Max.x)
-    {
-        window->ScrollTarget.x = item_rect.Max.x - window->Pos.x + window->Scroll.x + g.Style.ItemSpacing.x;
-        window->ScrollTargetCenterRatio.x = 1.0f;
-    }
-    if (item_rect.Min.y < window_rect.Min.y)
-    {
-        window->ScrollTarget.y = item_rect.Min.y - window->Pos.y + window->Scroll.y - g.Style.ItemSpacing.y;
-        window->ScrollTargetCenterRatio.y = 0.0f;
-    }
-    else if (item_rect.Max.y >= window_rect.Max.y)
-    {
-        window->ScrollTarget.y = item_rect.Max.y - window->Pos.y + window->Scroll.y + g.Style.ItemSpacing.y;
-        window->ScrollTargetCenterRatio.y = 1.0f;
-    }
-}
-
 static void ImGui::NavUpdate()
 {
     ImGuiContext& g = *GImGui;
@@ -8478,7 +8484,7 @@ static void ImGui::NavUpdateMoveResult()
     if (g.NavLayer == 0)
     {
         ImRect rect_abs = ImRect(result->RectRel.Min + result->Window->Pos, result->RectRel.Max + result->Window->Pos);
-        NavScrollToBringItemIntoView(result->Window, rect_abs);
+        ScrollToBringItemIntoView(result->Window, rect_abs);
 
         // Estimate upcoming scroll so we can offset our result position so mouse position can be applied immediately after in NavUpdate()
         ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(result->Window, false);
@@ -8487,7 +8493,7 @@ static void ImGui::NavUpdateMoveResult()
 
         // Also scroll parent window to keep us into view if necessary (we could/should technically recurse back the whole the parent hierarchy).
         if (result->Window->Flags & ImGuiWindowFlags_ChildWindow)
-            NavScrollToBringItemIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
+            ScrollToBringItemIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
     }
 
     ClearActiveID();
