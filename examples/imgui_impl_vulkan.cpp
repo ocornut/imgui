@@ -722,10 +722,10 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
     if (v->MSAASamples != 0) {
-      ms_info.rasterizationSamples = v->MSAASamples;
+        ms_info.rasterizationSamples = v->MSAASamples;
     }
     else {
-      ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
+        ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
     }
 
     VkPipelineColorBlendAttachmentState color_attachment[1] = {};
