@@ -33,6 +33,9 @@ HOW TO UPDATE?
  VERSION 1.73 (In Progress)
 -----------------------------------------------------------------------
 
+Other Changes:
+- Backends: Vulkan: Added support for specifying multisample count. Set ImGui_ImplVulkan_InitInfo::MSAASamples to one of the VkSampleCountFlagBits values to use, default is non-multisampled as before.
+
 
 -----------------------------------------------------------------------
  VERSION 1.72 (Released 2019-07-27)
