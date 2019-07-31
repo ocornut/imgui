@@ -36,6 +36,9 @@ HOW TO UPDATE?
 Other Changes:
 - Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count,
   would generally make the debug layer complain (Added in 1.72).
+- Backends: Vulkan: Added support for specifying multisample count. 
+  Set ImGui_ImplVulkan_InitInfo::MSAASamples to one of the VkSampleCountFlagBits values 
+  to use, default is non-multisampled as before. (#2705, #2706) [@vilya]
 
 
 -----------------------------------------------------------------------
