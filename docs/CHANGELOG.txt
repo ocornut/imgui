@@ -50,7 +50,6 @@ Breaking Changes:
   Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
-  comments about the right way to scale your UI (load a font at the right side, rebuild atlas, scale style).
 - Scrolling: Made mouse-wheel scrolling lock the underlying window until the mouse is moved again or
   until a short delay expires (~2 seconds). This allow uninterrupted scroll even if child windows are
   passing under the mouse cursor. (#2604)
@@ -67,6 +66,7 @@ Other Changes:
   any more. Forwarding can still be disabled by setting ImGuiWindowFlags_NoInputs. (amend #1502, #1380).
 - Window: Fixed InnerClipRect right-most coordinates using wrong padding setting (introduced in 1.71).
 - Window: Fixed old SetWindowFontScale() api value from not being inherited by child window. Added
+  comments about the right way to scale your UI (load a font at the right side, rebuild atlas, scale style).
 - Scrollbar: Avoid overlapping the opposite side when window (often a child window) is forcibly too small.
 - Combo: Hide arrow when there's not enough space even for the square button.
 - InputText: Testing for newly added ImGuiKey_KeyPadEnter key. (#2677, #2005) [@amc522]
