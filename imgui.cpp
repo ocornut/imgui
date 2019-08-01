@@ -7165,22 +7165,33 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool s
 }
 
 // Scroll to keep newly navigated item fully into view
-void ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_rect)
+ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_rect)
 {
+    ImGuiContext& g = *GImGui;
     ImRect window_rect(window->InnerRect.Min - ImVec2(1, 1), window->InnerRect.Max + ImVec2(1, 1));
     //GetForegroundDrawList(window)->AddRect(window_rect.Min, window_rect.Max, IM_COL32_WHITE); // [DEBUG]
-    if (window_rect.Contains(item_rect))
-        return;
 
-    ImGuiContext& g = *GImGui;
-    if (window->ScrollbarX && item_rect.Min.x < window_rect.Min.x)
-        SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x + g.Style.ItemSpacing.x, 0.0f);
-    else if (window->ScrollbarX && item_rect.Max.x >= window_rect.Max.x)
-        SetScrollFromPosX(window, item_rect.Max.x - window->Pos.x + g.Style.ItemSpacing.x, 1.0f);
-    if (item_rect.Min.y < window_rect.Min.y)
-        SetScrollFromPosY(window, item_rect.Min.y - window->Pos.y - g.Style.ItemSpacing.y, 0.0f);
-    else if (item_rect.Max.y >= window_rect.Max.y)
-        SetScrollFromPosY(window, item_rect.Max.y - window->Pos.y + g.Style.ItemSpacing.y, 1.0f);
+    ImVec2 delta_scroll;
+    if (!window_rect.Contains(item_rect))
+    {
+        if (window->ScrollbarX && item_rect.Min.x < window_rect.Min.x)
+            SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x + g.Style.ItemSpacing.x, 0.0f);
+        else if (window->ScrollbarX && item_rect.Max.x >= window_rect.Max.x)
+            SetScrollFromPosX(window, item_rect.Max.x - window->Pos.x + g.Style.ItemSpacing.x, 1.0f);
+        if (item_rect.Min.y < window_rect.Min.y)
+            SetScrollFromPosY(window, item_rect.Min.y - window->Pos.y - g.Style.ItemSpacing.y, 0.0f);
+        else if (item_rect.Max.y >= window_rect.Max.y)
+            SetScrollFromPosY(window, item_rect.Max.y - window->Pos.y + g.Style.ItemSpacing.y, 1.0f);
+
+        ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window, false);
+        delta_scroll = next_scroll - window->Scroll;
+    }
+
+    // Also scroll parent window to keep us into view if necessary
+    if (window->Flags & ImGuiWindowFlags_ChildWindow)
+        delta_scroll += ScrollToBringRectIntoView(window->ParentWindow, ImRect(item_rect.Min - delta_scroll, item_rect.Max - delta_scroll));
+
+    return delta_scroll;
 }
 
 float ImGui::GetScrollX()
@@ -8484,16 +8495,11 @@ static void ImGui::NavUpdateMoveResult()
     if (g.NavLayer == 0)
     {
         ImRect rect_abs = ImRect(result->RectRel.Min + result->Window->Pos, result->RectRel.Max + result->Window->Pos);
-        ScrollToBringRectIntoView(result->Window, rect_abs);
+        ImVec2 delta_scroll = ScrollToBringRectIntoView(result->Window, rect_abs);
 
-        // Estimate upcoming scroll so we can offset our result position so mouse position can be applied immediately after in NavUpdate()
-        ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(result->Window, false);
-        ImVec2 delta_scroll = result->Window->Scroll - next_scroll;
-        result->RectRel.Translate(delta_scroll);
-
-        // Also scroll parent window to keep us into view if necessary (we could/should technically recurse back the whole the parent hierarchy).
-        if (result->Window->Flags & ImGuiWindowFlags_ChildWindow)
-            ScrollToBringRectIntoView(result->Window->ParentWindow, ImRect(rect_abs.Min + delta_scroll, rect_abs.Max + delta_scroll));
+        // Offset our result position so mouse position can be applied immediately after in NavUpdate()
+        result->RectRel.TranslateX(-delta_scroll.x);
+        result->RectRel.TranslateY(-delta_scroll.y);
     }
 
     ClearActiveID();
