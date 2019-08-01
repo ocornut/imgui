@@ -11426,13 +11426,14 @@ static void ImGui::DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx)
     }
 
     // Count reference to dock ids from window settings
+    // We guard against the possibility of an invalid .ini file (RootID may point to a missing node)
     for (int settings_n = 0; settings_n < g.SettingsWindows.Size; settings_n++)
         if (ImGuiID dock_id = g.SettingsWindows[settings_n].DockId)
             if (ImGuiDockContextPruneNodeData* data = pool.GetByKey(dock_id))
             {
-                ImGuiDockContextPruneNodeData* data_root = (data->RootID == dock_id) ? data : pool.GetByKey(data->RootID);
                 data->CountWindows++;
-                data_root->CountChildWindows++;
+                if (ImGuiDockContextPruneNodeData* data_root = (data->RootID == dock_id) ? data : pool.GetByKey(data->RootID))
+                    data_root->CountChildWindows++;
             }
 
     // Prune
