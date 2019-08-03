@@ -136,7 +136,7 @@
 // Flip coordinate system upside down on Y
 -(BOOL)isFlipped
 {
-    return (YES);
+    return (NO);
 }
 
 -(void)dealloc
@@ -150,6 +150,8 @@
 -(void)flagsChanged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseDown:(NSEvent *)event       { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseUp:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseMoved:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseDragged:(NSEvent *)event	{ ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)scrollWheel:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self); }
 
 @end
@@ -233,6 +235,8 @@
         [view setWantsBestResolutionOpenGLSurface:YES];
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
     [self.window setContentView:view];
+	
+	[self.window setAcceptsMouseMovedEvents:YES];
 
     if ([view openGLContext] == nil)
         NSLog(@"No OpenGL Context!");
