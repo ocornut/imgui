@@ -133,7 +133,6 @@
     return (YES);
 }
 
-// Flip coordinate system upside down on Y
 -(BOOL)isFlipped
 {
     return (NO);
