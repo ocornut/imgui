@@ -235,7 +235,7 @@
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
     [self.window setContentView:view];
 	
-	[self.window setAcceptsMouseMovedEvents:YES];
+    [self.window setAcceptsMouseMovedEvents:YES];
 
     if ([view openGLContext] == nil)
         NSLog(@"No OpenGL Context!");
