@@ -133,11 +133,6 @@
     return (YES);
 }
 
--(BOOL)isFlipped
-{
-    return (NO);
-}
-
 -(void)dealloc
 {
     animationTimer = nil;
