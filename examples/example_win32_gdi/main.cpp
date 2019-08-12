@@ -119,6 +119,7 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
+        ImGui_ImplGDI_SetBackgroundColor(&clear_color);
         ImGui_ImplGDI_RenderDrawData(ImGui::GetDrawData());
     }
 

@@ -15,3 +15,5 @@ IMGUI_IMPL_API bool     ImGui_ImplGDI_Init();
 IMGUI_IMPL_API void     ImGui_ImplGDI_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplGDI_NewFrame();
 IMGUI_IMPL_API void     ImGui_ImplGDI_RenderDrawData(ImDrawData* draw_data);
+
+IMGUI_IMPL_API void     ImGui_ImplGDI_SetBackgroundColor(ImVec4* BackgroundColor);

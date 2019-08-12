@@ -11,6 +11,7 @@
 // https://github.com/ocornut/imgui
 
 // CHANGELOG
+//  2019-08-12: GDI: Improve the implementation of the GDI renderer.
 //  2019-08-12: GDI: Add Windows GDI Renderer Support.
 
 #include "imgui.h"
@@ -807,6 +808,16 @@ namespace imgui_sw {
 
 // ****************************************************************************
 
+static int old_fb_width = 0;
+static int old_fb_height = 0;
+
+static HDC g_hDC = nullptr;
+static HDC g_hBufferDC = nullptr;
+static HBITMAP g_hBitmap = nullptr;
+static uint32_t* g_PixelBuffer = nullptr;
+static size_t g_PixelBufferSize = 0;
+static HBRUSH g_BackgroundColorBrush = nullptr;
+
 bool ImGui_ImplGDI_Init()
 {
     // Setup back-end capabilities flags
@@ -836,57 +847,109 @@ void ImGui_ImplGDI_RenderDrawData(ImDrawData* draw_data)
     if (fb_width == 0 || fb_height == 0)
         return;
 
-    // Get the handle of the current window.
-    ImGuiIO& io = ImGui::GetIO();
-    HWND hWnd = (HWND)io.ImeWindowHandle;
+    if (old_fb_width != fb_width || old_fb_height != fb_height)
+    {
+        // Get the handle of the current window.
+        ImGuiIO& io = ImGui::GetIO();
+        HWND hWnd = (HWND)io.ImeWindowHandle;
 
-    HDC hDC = GetDC(hWnd);
+        if (g_hDC)
+        {
+            ReleaseDC(hWnd, g_hDC);
+            g_hDC = nullptr;
+        }
 
-    HDC hBufferDC = CreateCompatibleDC(hDC);
+        if (g_hBufferDC)
+        {
+            DeleteDC(g_hBufferDC);
+            g_hBufferDC = nullptr;
+        }
 
-    BITMAPINFO FontBitmapInfo;
+        if (g_hBitmap)
+        {
+            DeleteObject(g_hBitmap);
+            g_hBitmap = nullptr;
+            g_PixelBuffer = nullptr;
+            g_PixelBufferSize = 0;
+        }
 
-    FontBitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
-    FontBitmapInfo.bmiHeader.biWidth = fb_width;
-    FontBitmapInfo.bmiHeader.biHeight = -fb_height;
-    FontBitmapInfo.bmiHeader.biPlanes = 1;
-    FontBitmapInfo.bmiHeader.biBitCount = 32;
-    FontBitmapInfo.bmiHeader.biCompression = BI_RGB;
 
-    uint32_t* pixel_buffer = nullptr;
+        g_hDC = GetDC(hWnd);
+        if (!g_hDC)
+            return;
 
-    HBITMAP hBitmap = CreateDIBSection(
-        hBufferDC,
-        &FontBitmapInfo,
-        DIB_RGB_COLORS,
-        (void**)&pixel_buffer,
-        NULL,
-        0);
+        g_hBufferDC = CreateCompatibleDC(g_hDC);
+        if (!g_hBufferDC)
+            return;
+
+        BITMAPINFO BitmapInfo;
+        BitmapInfo.bmiHeader.biSize = sizeof(BITMAPINFOHEADER);
+        BitmapInfo.bmiHeader.biWidth = fb_width;
+        BitmapInfo.bmiHeader.biHeight = -fb_height;
+        BitmapInfo.bmiHeader.biPlanes = 1;
+        BitmapInfo.bmiHeader.biBitCount = 32;
+        BitmapInfo.bmiHeader.biCompression = BI_RGB;
+
+        g_hBitmap = CreateDIBSection(
+            g_hBufferDC,
+            &BitmapInfo,
+            DIB_RGB_COLORS,
+            (void**)& g_PixelBuffer,
+            NULL,
+            0);
+        if (!g_hBitmap)
+            return;
+
+        g_PixelBufferSize = fb_width * fb_height * sizeof(uint32_t);
+    }
+
+    old_fb_width = fb_width;
+    old_fb_height = fb_height;
+
+    HBITMAP hOldBitmap = (HBITMAP)SelectObject(g_hBufferDC, g_hBitmap);
+
+    if (g_BackgroundColorBrush)
+    {
+        RECT rc;
+        rc.left = 0;
+        rc.top = 0;
+        rc.right = fb_width;
+        rc.bottom = fb_height;
+
+        FillRect(g_hBufferDC, &rc, g_BackgroundColorBrush);
+    }
+    else
+    {
+        memset(g_PixelBuffer, 0, g_PixelBufferSize);
+    }
 
     imgui_sw::SwOptions options;
-
-    imgui_sw::paint_imgui(pixel_buffer, fb_width, fb_height, options);
-
-    HBITMAP hOldBitmap = (HBITMAP)SelectObject(hBufferDC, hBitmap);
+    imgui_sw::paint_imgui(g_PixelBuffer, fb_width, fb_height, options);
 
     BitBlt(
-        hDC,
+        g_hDC,
         0,
         0,
         fb_width,
         fb_height,
-        hBufferDC,
+        g_hBufferDC,
         0,
         0,
         SRCCOPY);
 
-    SelectObject(hBufferDC, hOldBitmap);
+    SelectObject(g_hBufferDC, hOldBitmap);
+}
 
-    DeleteObject(hBitmap);
+void ImGui_ImplGDI_SetBackgroundColor(ImVec4* BackgroundColor)
+{
+    if (g_BackgroundColorBrush)
+    {
+        DeleteObject(g_BackgroundColorBrush);
+        g_BackgroundColorBrush = nullptr;
+    }
 
-    DeleteObject(hBitmap);
-    DeleteDC(hBufferDC);
-    ReleaseDC(hWnd, hDC);
+    g_BackgroundColorBrush = CreateSolidBrush(
+        RGB(BackgroundColor->x * 256.0, BackgroundColor->y * 256.0, BackgroundColor->z * 256.0));
 }
 
 //std::vector<TRIVERTEX> g_VertexBuffer;
