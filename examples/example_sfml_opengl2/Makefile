@@ -1,8 +1,8 @@
 #
 # Cross Platform Makefile
-# Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
+# Compatible with MSYS2/MINGW, Ubuntu 18.04 and Mac OS X
 #
-# You will need GLFW (http://www.glfw.org):
+# You will need SFML (https://www.sfml-dev.org):
 # Linux:
 #   apt-get install libsfml-dev
 # Mac OS X:
