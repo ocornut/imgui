@@ -1,20 +1,17 @@
 // dear imgui: Platform Binding for SFML
-// This needs to be used along with a Renderer (e.g. OpenGL3..)
-// (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
-// (Requires: GLFW 3.1+)
+// This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3..)
+// (Info: SFML is a cross-platform general purpose library for handling windows, inputs, OpenGL graphics context creation, etc.)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
 //  [X] Platform: Gamepad support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [x] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: 3 cursors types are missing from GLFW.
-//  [X] Platform: Keyboard arrays indexed using GLFW_KEY_* codes, e.g. ImGui::IsKeyPressed(GLFW_KEY_SPACE).
+//  [x] Platform: Mouse cursor shape (with SFML > 2.5) and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'. FIXME: 3 cursors types are missing from GLFW.
+//  [X] Platform: Keyboard arrays indexed using sf::Keyboard::* codes, e.g. ImGui::IsKeyPressed(sf::Keyboard::A).
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
-// CHANGELOG
-// (minor and older changes stripped away, please see git history for details)
 #include "imgui.h"
 #include "imgui_impl_sfml.h"
 
