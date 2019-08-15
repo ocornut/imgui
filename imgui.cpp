@@ -4439,7 +4439,7 @@ bool ImGui::IsMouseDoubleClicked(int button)
     return g.IO.MouseDoubleClicked[button];
 }
 
-// [Internal] This doesn't test if the button is presed
+// [Internal] This doesn't test if the button is pressed
 bool ImGui::IsMouseDragPastThreshold(int button, float lock_threshold)
 {
     ImGuiContext& g = *GImGui;
