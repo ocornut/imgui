@@ -10262,6 +10262,29 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 //-----------------------------------------------------------------------------
 // [SECTION] VIEWPORTS, PLATFORM WINDOWS
 //-----------------------------------------------------------------------------
+// - GetMainViewport()
+// - FindViewportByID()
+// - FindViewportByPlatformHandle()
+// - SetCurrentViewport() [Internal]
+// - SetWindowViewport() [Internal]
+// - GetWindowAlwaysWantOwnViewport() [Internal]
+// - UpdateTryMergeWindowIntoHostViewport() [Internal]
+// - UpdateTryMergeWindowIntoHostViewports() [Internal]
+// - TranslateWindowsInViewport() [Internal]
+// - ScaleWindowsInViewport() [Internal]
+// - FindHoveredViewportFromPlatformWindowStack() [Internal]
+// - UpdateViewportsNewFrame() [Internal]
+// - UpdateViewportsEndFrame() [Internal]
+// - AddUpdateViewport() [Internal]
+// - UpdateSelectWindowViewport() [Internal]
+// - UpdatePlatformWindows()
+// - RenderPlatformWindowsDefault()
+// - FindPlatformMonitorForPos() [Internal]
+// - FindPlatformMonitorForRect() [Internal]
+// - UpdateViewportPlatformMonitor() [Internal]
+// - DestroyPlatformWindow() [Internal]
+// - DestroyPlatformWindows()
+//-----------------------------------------------------------------------------
 
 ImGuiViewport* ImGui::GetMainViewport()
 {
@@ -10401,7 +10424,7 @@ void ImGui::ScaleWindowsInViewport(ImGuiViewportP* viewport, float scale)
 // If the back-end doesn't set MouseLastHoveredViewport or doesn't honor ImGuiViewportFlags_NoInputs, we do a search ourselves.
 // A) It won't take account of the possibility that non-imgui windows may be in-between our dragged window and our target window. 
 // B) It requires Platform_GetWindowFocus to be implemented by back-end.
-static ImGuiViewportP* FindViewportHoveredFromPlatformWindowStack(const ImVec2 mouse_platform_pos)
+static ImGuiViewportP* FindHoveredViewportFromPlatformWindowStack(const ImVec2 mouse_platform_pos)
 {
     ImGuiContext& g = *GImGui;
     ImGuiViewportP* best_candidate = NULL;
@@ -10416,7 +10439,7 @@ static ImGuiViewportP* FindViewportHoveredFromPlatformWindowStack(const ImVec2 m
 }
 
 // Update viewports and monitor infos
-// Note that this is runing even if 'ImGuiConfigFlags_ViewportsEnable' is not set, in order to clear unused viewports (if any) and update monitor info.
+// Note that this is running even if 'ImGuiConfigFlags_ViewportsEnable' is not set, in order to clear unused viewports (if any) and update monitor info.
 static void ImGui::UpdateViewportsNewFrame()
 {
     ImGuiContext& g = *GImGui;
@@ -10547,7 +10570,7 @@ static void ImGui::UpdateViewportsNewFrame()
         {
             // Back-end failed at honoring its contract if it returned a viewport with the _NoInputs flag.
             IM_ASSERT(0);
-            viewport_hovered = FindViewportHoveredFromPlatformWindowStack(g.IO.MousePos);
+            viewport_hovered = FindHoveredViewportFromPlatformWindowStack(g.IO.MousePos);
         }
     }
     else
@@ -10555,7 +10578,7 @@ static void ImGui::UpdateViewportsNewFrame()
         // If the back-end doesn't know how to honor ImGuiViewportFlags_NoInputs, we do a search ourselves. Note that this search:
         // A) won't take account of the possibility that non-imgui windows may be in-between our dragged window and our target window. 
         // B) uses LastFrameAsRefViewport as a flawed replacement for the last time a window was focused (we could/should fix that by introducing Focus functions in PlatformIO)
-        viewport_hovered = FindViewportHoveredFromPlatformWindowStack(g.IO.MousePos);
+        viewport_hovered = FindHoveredViewportFromPlatformWindowStack(g.IO.MousePos);
     }
     if (viewport_hovered != NULL)
         g.MouseLastHoveredViewport = viewport_hovered;
@@ -11043,14 +11066,20 @@ void ImGui::DestroyPlatformWindows()
 // Docking: ImGuiDockContext Docking/Undocking functions
 // Docking: ImGuiDockNode
 // Docking: ImGuiDockNode Tree manipulation functions
-// Docking: Public Functions (SetWindowDock, DockSpace)
+// Docking: Public Functions (SetWindowDock, DockSpace, DockSpaceOverViewport)
 // Docking: Builder Functions
-// Docking: Begin/End Functions (called from Begin/End)
+// Docking: Begin/End Support Functions (called from Begin/End)
 // Docking: Settings
 //-----------------------------------------------------------------------------
 
 //-----------------------------------------------------------------------------
 // Docking: Internal Types
+//-----------------------------------------------------------------------------
+// - ImGuiDockRequestType
+// - ImGuiDockRequest
+// - ImGuiDockPreviewData
+// - ImGuiDockNodeSettings
+// - ImGuiDockContext
 //-----------------------------------------------------------------------------
 
 static float IMGUI_DOCK_SPLITTER_SIZE = 2.0f;
@@ -11198,6 +11227,22 @@ namespace ImGui
 // we can also very easily recreate the nodes from scratch given the settings data (this is what DockContextRebuild() does).
 // This is convenient as docking reconfiguration can be implemented by mostly poking at the simpler settings data.
 //-----------------------------------------------------------------------------
+// - DockContextInitialize()
+// - DockContextShutdown()
+// - DockContextOnLoadSettings()
+// - DockContextClearNodes()
+// - DockContextRebuildNodes()
+// - DockContextUpdateUndocking()
+// - DockContextUpdateDocking()
+// - DockContextFindNodeByID()
+// - DockContextGenNodeID()
+// - DockContextAddNode()
+// - DockContextRemoveNode()
+// - ImGuiDockContextPruneNodeData
+// - DockContextPruneUnusedSettingsNodes()
+// - DockContextBuildNodesFromSettings()
+// - DockContextBuildAddWindowsToNodes()
+//-----------------------------------------------------------------------------
 
 void ImGui::DockContextInitialize(ImGuiContext* ctx)
 {
@@ -11242,7 +11287,7 @@ void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear
 }
 
 // This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
-void ImGui::DockContextRebuild(ImGuiContext* ctx)
+void ImGui::DockContextRebuildNodes(ImGuiContext* ctx)
 {
     IMGUI_DEBUG_LOG_DOCKING("DockContextRebuild()\n");
     ImGuiDockContext* dc = ctx->DockContext;
@@ -11282,7 +11327,7 @@ void ImGui::DockContextUpdateUndocking(ImGuiContext* ctx)
 #endif
     if (dc->WantFullRebuild)
     {
-        DockContextRebuild(ctx);
+        DockContextRebuildNodes(ctx);
         dc->WantFullRebuild = false;
     }
 
@@ -11509,6 +11554,15 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id
 
 //-----------------------------------------------------------------------------
 // Docking: ImGuiDockContext Docking/Undocking functions
+//-----------------------------------------------------------------------------
+// - DockContextQueueDock()
+// - DockContextQueueUndockWindow()
+// - DockContextQueueUndockNode()
+// - DockContextQueueNotifyRemovedNode()
+// - DockContextProcessDock()
+// - DockContextProcessUndockWindow()
+// - DockContextProcessUndockNode()
+// - DockContextCalcDropPosForDocking()
 //-----------------------------------------------------------------------------
 
 void ImGui::DockContextQueueDock(ImGuiContext* ctx, ImGuiWindow* target, ImGuiDockNode* target_node, ImGuiWindow* payload, ImGuiDir split_dir, float split_ratio, bool split_outer)
@@ -11752,6 +11806,31 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 
 //-----------------------------------------------------------------------------
 // Docking: ImGuiDockNode
+//-----------------------------------------------------------------------------
+// - DockNodeGetTabOrder()
+// - DockNodeAddWindow()
+// - DockNodeRemoveWindow()
+// - DockNodeMoveChildNodes()
+// - DockNodeMoveWindows()
+// - DockNodeApplyPosSizeToWindows()
+// - DockNodeHideHostWindow()
+// - ImGuiDockNodeFindInfoResults
+// - DockNodeFindInfo()
+// - DockNodeUpdateVisibleFlagAndInactiveChilds()
+// - DockNodeUpdateVisibleFlag()
+// - DockNodeStartMouseMovingWindow()
+// - DockNodeUpdate()
+// - DockNodeUpdateWindowMenu()
+// - DockNodeUpdateTabBar()
+// - DockNodeAddTabBar()
+// - DockNodeRemoveTabBar()
+// - DockNodeIsDropAllowedOne()
+// - DockNodeIsDropAllowed()
+// - DockNodeCalcTabBarLayout()
+// - DockNodeCalcSplitRects()
+// - DockNodeCalcDropRectsAndTestMousePos()
+// - DockNodePreviewDockCalc()
+// - DockNodePreviewDockRender()
 //-----------------------------------------------------------------------------
 
 ImGuiDockNode::ImGuiDockNode(ImGuiID id)
@@ -13017,6 +13096,14 @@ static void ImGui::DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDock
 //-----------------------------------------------------------------------------
 // Docking: ImGuiDockNode Tree manipulation functions
 //-----------------------------------------------------------------------------
+// - DockNodeTreeSplit()
+// - DockNodeTreeMerge()
+// - DockNodeTreeUpdatePosSize()
+// - DockNodeTreeUpdateSplitterFindTouchingNode()
+// - DockNodeTreeUpdateSplitter()
+// - DockNodeTreeFindFallbackLeafNode()
+// - DockNodeTreeFindNodeByPos()
+//-----------------------------------------------------------------------------
 
 void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImGuiAxis split_axis, int split_inheritor_child_idx, float split_ratio, ImGuiDockNode* new_node)
 {
@@ -13352,6 +13439,10 @@ ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
 //-----------------------------------------------------------------------------
 // Docking: Public Functions (SetWindowDock, DockSpace, DockSpaceOverViewport)
 //-----------------------------------------------------------------------------
+// - SetWindowDock() [Internal]
+// - DockSpace()
+// - DockSpaceOverViewport()
+//-----------------------------------------------------------------------------
 
 // [Internal] Called via SetNextWindowDockID()
 void ImGui::SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond)
@@ -13511,7 +13602,23 @@ ImGuiID ImGui::DockSpaceOverViewport(ImGuiViewport* viewport, ImGuiDockNodeFlags
 // Docking: Builder Functions
 //-----------------------------------------------------------------------------
 // Very early end-user API to manipulate dock nodes.
+// Only available in imgui_internal.h. Expect this API to change/break!
 // It is expected that those functions are all called _before_ the dockspace node submission.
+//-----------------------------------------------------------------------------
+// - DockBuilderDockWindow()
+// - DockBuilderGetNode()
+// - DockBuilderSetNodePos()
+// - DockBuilderSetNodeSize()
+// - DockBuilderAddNode()
+// - DockBuilderRemoveNode()
+// - DockBuilderRemoveNodeChildNodes()
+// - DockBuilderRemoveNodeDockedWindows()
+// - DockBuilderSplitNode()
+// - DockBuilderCopyNodeRec()
+// - DockBuilderCopyNode()
+// - DockBuilderCopyWindowSettings()
+// - DockBuilderCopyDockSpace()
+// - DockBuilderFinish()
 //-----------------------------------------------------------------------------
 
 void ImGui::DockBuilderDockWindow(const char* window_name, ImGuiID node_id)
@@ -13888,7 +13995,12 @@ void ImGui::DockBuilderFinish(ImGuiID root_id)
 }
 
 //-----------------------------------------------------------------------------
-// Docking: Begin/End Functions (called from Begin/End)
+// Docking: Begin/End Support Functions (called from Begin/End)
+//-----------------------------------------------------------------------------
+// - GetWindowAlwaysWantOwnTabBar()
+// - BeginDocked()
+// - BeginAsDockableDragDropSource()
+// - BeginAsDockableDragDropTarget()
 //-----------------------------------------------------------------------------
 
 bool ImGui::GetWindowAlwaysWantOwnTabBar(ImGuiWindow* window)
@@ -14138,6 +14250,14 @@ void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
 
 //-----------------------------------------------------------------------------
 // Docking: Settings
+//-----------------------------------------------------------------------------
+// - DockSettingsRenameNodeReferences()
+// - DockSettingsRemoveNodeReferences()
+// - DockSettingsFindNodeSettings()
+// - DockSettingsHandler_ReadOpen()
+// - DockSettingsHandler_ReadLine()
+// - DockSettingsHandler_DockNodeToSettings()
+// - DockSettingsHandler_WriteAll()
 //-----------------------------------------------------------------------------
 
 static void ImGui::DockSettingsRenameNodeReferences(ImGuiID old_node_id, ImGuiID new_node_id)
