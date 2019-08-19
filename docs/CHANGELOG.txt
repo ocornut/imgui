@@ -99,6 +99,22 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.73 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+- ColorPicker: Made rendering aware of global style alpha of the picker can be faded out. (#2711)
+  Note that some elements won't accurately fade down with the same intensity, and the color wheel
+  when enabled will have small overlap glitches with (style.Alpha < 1.0).
+- TabBar: fixed ScrollToBar request creating bouncing loop when tab is larger than available space.
+- Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count,
+  would generally make the debug layer complain (Added in 1.72).
+- Backends: Vulkan: Added support for specifying multisample count.
+  Set ImGui_ImplVulkan_InitInfo::MSAASamples to one of the VkSampleCountFlagBits values
+  to use, default is non-multisampled as before. (#2705, #2706) [@vilya]
+
+
+-----------------------------------------------------------------------
  VERSION 1.72b (Released 2019-07-31)
 -----------------------------------------------------------------------
 
