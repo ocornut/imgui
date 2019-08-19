@@ -37,6 +37,7 @@ Other Changes:
 - ColorPicker: Made rendering aware of global style alpha of the picker can be faded out. (#2711)
   Note that some elements won't accurately fade down with the same intensity, and the color wheel
   when enabled will have small overlap glitches with (style.Alpha < 1.0).
+- TabBar: fixed ScrollToBar request creating bouncing loop when tab is larger than available space.
 - Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count,
   would generally make the debug layer complain (Added in 1.72).
 - Backends: Vulkan: Added support for specifying multisample count.
