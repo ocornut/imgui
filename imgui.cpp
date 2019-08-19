@@ -4519,9 +4519,9 @@ void ImGui::Render()
     if (g.FrameCountEnded != g.FrameCount)
         EndFrame();
     g.FrameCountRendered = g.FrameCount;
-
-    // Gather ImDrawList to render (for each active window)
     g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsRenderWindows = 0;
+    
+    // Add background ImDrawList (for each active viewport)
     for (int n = 0; n != g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
@@ -4530,9 +4530,10 @@ void ImGui::Render()
             AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], GetBackgroundDrawList(viewport));
     }
 
+    // Add ImDrawList to render (for each active window)
     ImGuiWindow* windows_to_render_top_most[2];
     windows_to_render_top_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
-    windows_to_render_top_most[1] = g.NavWindowingTarget ? g.NavWindowingList : NULL;
+    windows_to_render_top_most[1] = (g.NavWindowingTarget ? g.NavWindowingList : NULL);
     for (int n = 0; n != g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
@@ -4553,8 +4554,11 @@ void ImGui::Render()
     {
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->DrawDataBuilder.FlattenIntoSingleLayer();
+
+        // Add foreground ImDrawList (for each active viewport)
         if (viewport->DrawLists[1] != NULL)
             AddDrawListToDrawData(&viewport->DrawDataBuilder.Layers[0], GetForegroundDrawList(viewport));
+
         SetupViewportDrawData(viewport, &viewport->DrawDataBuilder.Layers[0]);
         g.IO.MetricsRenderVertices += viewport->DrawData->TotalVtxCount;
         g.IO.MetricsRenderIndices += viewport->DrawData->TotalIdxCount;
@@ -8298,7 +8302,10 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     // Center modal windows by default
     // FIXME: Should test for (PosCond & window->SetWindowPosAllowFlags) with the upcoming window.
     if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasPos) == 0)
-        SetNextWindowPos(window->Viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    {
+        ImGuiViewportP* viewport = window->WasActive ? window->Viewport : (ImGuiViewportP*)GetMainViewport(); // FIXME-VIEWPORT: What may be our reference viewport?
+        SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+    }
 
     flags |= ImGuiWindowFlags_Popup | ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking;
     const bool is_open = Begin(name, p_open, flags);
@@ -10342,8 +10349,9 @@ static bool ImGui::GetWindowAlwaysWantOwnViewport(ImGuiWindow* window)
     if (g.IO.ConfigViewportsNoAutoMerge || (window->WindowClass.ViewportFlagsOverrideSet & ImGuiViewportFlags_NoAutoMerge))
         if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
             if (!window->DockIsActive)
-                if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) == 0)
-                    return true;
+                if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip)) == 0)
+                    if ((window->Flags & ImGuiWindowFlags_Popup) == 0 || (window->Flags & ImGuiWindowFlags_Modal) != 0)
+                        return true;
     return false;
 }
 
@@ -10715,7 +10723,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasViewport) == 0)
     {
         // By default inherit from parent window
-        if (window->Viewport == NULL && window->ParentWindow)
+        if (window->Viewport == NULL && window->ParentWindow && !window->ParentWindow->FallbackWindow)
             window->Viewport = window->ParentWindow->Viewport;
 
         // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
