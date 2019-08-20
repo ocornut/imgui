@@ -11197,6 +11197,7 @@ namespace ImGui
     static void             DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node);
     static void             DockContextPruneUnusedSettingsNodes(ImGuiContext* ctx);
     static ImGuiDockNode*   DockContextFindNodeByID(ImGuiContext* ctx, ImGuiID id);
+    static ImGuiDockNode*   DockContextBindNodeToWindow(ImGuiContext* ctx, ImGuiWindow* window);
     static void             DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_refs);    // Use root_id==0 to clear all
     static void             DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDockNodeSettings* node_settings_array, int node_settings_count);
     static void             DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id);                            // Use root_id==0 to add all
@@ -11208,6 +11209,7 @@ namespace ImGui
     static void             DockNodeApplyPosSizeToWindows(ImGuiDockNode* node);
     static void             DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window, ImGuiID save_dock_id);
     static void             DockNodeHideHostWindow(ImGuiDockNode* node);
+    static ImGuiWindow*     DockNodeFindWindowByID(ImGuiDockNode* node, ImGuiID id);
     static void             DockNodeUpdate(ImGuiDockNode* node);
     static void             DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
@@ -11261,6 +11263,7 @@ namespace ImGui
 // - DockContextUpdateUndocking()
 // - DockContextUpdateDocking()
 // - DockContextFindNodeByID()
+// - DockContextBindNodeToWindow()
 // - DockContextGenNodeID()
 // - DockContextAddNode()
 // - DockContextRemoveNode()
@@ -11800,7 +11803,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
     }
     else
     {
-        // Otherwise delete the previous node by merging the other sibling back into the parent node.
+        // Otherwise extract our node and merging our sibling back into the parent node.
         IM_ASSERT(node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
         int index_in_parent = (node->ParentNode->ChildNodes[0] == node) ? 0 : 1;
         node->ParentNode->ChildNodes[index_in_parent] = NULL;
@@ -12295,6 +12298,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
     const ImGuiDockNodeFlags node_flags = node->GetMergedFlags();
 
+    // Bind or create host window
     ImGuiWindow* host_window = NULL;
     bool beginned_into_host_window = false;
     if (node->IsDockSpace())
@@ -14042,6 +14046,51 @@ bool ImGui::GetWindowAlwaysWantOwnTabBar(ImGuiWindow* window)
     return false;
 }
 
+static ImGuiDockNode* ImGui::DockContextBindNodeToWindow(ImGuiContext* ctx, ImGuiWindow* window)
+{
+    ImGuiContext& g = *ctx;
+    ImGuiDockNode* node = DockContextFindNodeByID(ctx, window->DockId);
+    IM_ASSERT(window->DockNode == NULL);
+
+    // We should not be docking into a split node (SetWindowDock should avoid this)
+    if (node && node->IsSplitNode())
+    {
+        DockContextProcessUndockWindow(ctx, window);
+        return NULL;
+    }
+
+    // Create node
+    if (node == NULL)
+    {
+        node = DockContextAddNode(ctx, window->DockId);
+        node->AuthorityForPos = node->AuthorityForSize = node->AuthorityForViewport = ImGuiDataAuthority_Window;
+        node->LastFrameAlive = g.FrameCount;
+    }
+
+    // If the node just turned visible and is part of a hierarchy, it doesn't have a Size assigned by DockNodeTreeUpdatePosSize() yet,
+    // so we're forcing a Pos/Size update from the first ancestor that is already visible (often it will be the root node).
+    // If we don't do this, the window will be assigned a zero-size on its first frame, which won't ideally warm up the layout.
+    // This is a little wonky because we don't normally update the Pos/Size of visible node mid-frame.
+    if (!node->IsVisible)
+    {
+        ImGuiDockNode* ancestor_node = node;
+        while (!ancestor_node->IsVisible)
+        {
+            ancestor_node->IsVisible = true;
+            ancestor_node->MarkedForPosSizeWrite = true;
+            if (ancestor_node->ParentNode)
+                ancestor_node = ancestor_node->ParentNode;
+        }
+        IM_ASSERT(ancestor_node->Size.x > 0.0f && ancestor_node->Size.y > 0.0f);
+        DockNodeTreeUpdatePosSize(ancestor_node, ancestor_node->Pos, ancestor_node->Size, true);
+    }
+
+    // Add window to node
+    DockNodeAddWindow(node, window, true);
+    IM_ASSERT(node == window->DockNode);
+    return node;
+}
+
 void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
 {
     ImGuiContext* ctx = GImGui;
@@ -14075,44 +14124,9 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         IM_ASSERT(window->DockId == node->ID);
     if (window->DockId != 0 && node == NULL)
     {
-        node = DockContextFindNodeByID(ctx, window->DockId);
-        
-        // We should not be docking into a split node (SetWindowDock should avoid this)
-        if (node && node->IsSplitNode())
-        {
-            DockContextProcessUndockWindow(ctx, window);
-            return;
-        }
-
-        // Create node
+        node = DockContextBindNodeToWindow(ctx, window);
         if (node == NULL)
-        {
-            node = DockContextAddNode(ctx, window->DockId);
-            node->AuthorityForPos = node->AuthorityForSize = node->AuthorityForViewport = ImGuiDataAuthority_Window;
-            node->LastFrameAlive = g.FrameCount;
-        }
-
-        // If the node just turned visible, it doesn't have a Size assigned by DockNodeTreeUpdatePosSize() yet,
-        // so we're forcing a Pos/Size update from the first ancestor that is already visible (often it will be the root node).
-        // If we don't do this, the window will be assigned a zero-size on its first frame, which won't ideally warm up the layout.
-        // This is a little wonky because we don't normally update the Pos/Size of visible node mid-frame.
-        if (!node->IsVisible)
-        {
-            ImGuiDockNode* ancestor_node = node;
-            while (!ancestor_node->IsVisible)
-            {
-                ancestor_node->IsVisible = true;
-                ancestor_node->MarkedForPosSizeWrite = true;
-                if (ancestor_node->ParentNode)
-                    ancestor_node = ancestor_node->ParentNode;
-            }
-            IM_ASSERT(ancestor_node->Size.x > 0.0f && ancestor_node->Size.y > 0.0f);
-            DockNodeTreeUpdatePosSize(ancestor_node, ancestor_node->Pos, ancestor_node->Size, true);
-        }
-
-        // Add window to node
-        DockNodeAddWindow(node, window, true);
-        IM_ASSERT(node == window->DockNode);
+            return;
     }
 
 #if 0
@@ -14142,22 +14156,25 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         return;
     }
 
-    // Undock if we are submitted earlier than the host window
-    if (node->HostWindow && window->BeginOrderWithinContext < node->HostWindow->BeginOrderWithinContext)
-    {
-        DockContextProcessUndockWindow(ctx, window);
-        return;
-    }
-
+    // Fast path return. It is common for windows to hold on a persistent DockId but be the only visible window,
+    // and never create neither a host window neither a tab bar.
     // FIXME-DOCK: replace ->HostWindow NULL compare with something more explicit (~was initially intended as a first frame test)
     if (node->HostWindow == NULL)
     {
         window->DockTabIsVisible = false;
         return;
     }
+
     IM_ASSERT(node->HostWindow);
     IM_ASSERT(node->IsLeafNode());
     IM_ASSERT(node->Size.x > 0.0f && node->Size.y > 0.0f);
+
+    // Undock if we are submitted earlier than the host window
+    if (window->BeginOrderWithinContext < node->HostWindow->BeginOrderWithinContext)
+    {
+        DockContextProcessUndockWindow(ctx, window);
+        return;
+    }
 
     // Position window
     SetNextWindowPos(node->Pos);
