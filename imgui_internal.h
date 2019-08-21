@@ -929,6 +929,14 @@ enum ImGuiDataAuthority_
     ImGuiDataAuthority_Window
 };
 
+enum ImGuiDockNodeState
+{
+    ImGuiDockNodeState_Unknown,
+    ImGuiDockNodeState_HostWindowHiddenBecauseSingleWindow,
+    ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing,
+    ImGuiDockNodeState_HostWindowVisible
+};
+
 // sizeof() 116~160
 struct ImGuiDockNode
 {
@@ -945,6 +953,7 @@ struct ImGuiDockNode
     int                     SplitAxis;                  // [Split node only] Split axis (X or Y)
     ImGuiWindowClass        WindowClass;
 
+    ImGuiDockNodeState      State;
     ImGuiWindow*            HostWindow;
     ImGuiWindow*            VisibleWindow;              // Generally point to window which is ID is == SelectedTabID, but when CTRL+Tabbing this can be a different window.
     ImGuiDockNode*          CentralNode;                // [Root node only] Pointer to central node.

@@ -11206,6 +11206,7 @@ namespace ImGui
     static void             DockNodeAddWindow(ImGuiDockNode* node, ImGuiWindow* window, bool add_to_tab_bar);
     static void             DockNodeMoveWindows(ImGuiDockNode* dst_node, ImGuiDockNode* src_node);
     static void             DockNodeMoveChildNodes(ImGuiDockNode* dst_node, ImGuiDockNode* src_node);
+    static ImGuiWindow*     DockNodeFindWindowByID(ImGuiDockNode* node, ImGuiID id);
     static void             DockNodeApplyPosSizeToWindows(ImGuiDockNode* node);
     static void             DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window, ImGuiID save_dock_id);
     static void             DockNodeHideHostWindow(ImGuiDockNode* node);
@@ -11846,6 +11847,7 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 // - DockNodeHideHostWindow()
 // - ImGuiDockNodeFindInfoResults
 // - DockNodeFindInfo()
+// - DockNodeFindWindowByID()
 // - DockNodeUpdateVisibleFlagAndInactiveChilds()
 // - DockNodeUpdateVisibleFlag()
 // - DockNodeStartMouseMovingWindow()
@@ -11871,6 +11873,7 @@ ImGuiDockNode::ImGuiDockNode(ImGuiID id)
     TabBar = NULL;
     SplitAxis = ImGuiAxis_None;
 
+    State = ImGuiDockNodeState_Unknown;
     HostWindow = VisibleWindow = NULL;
     CentralNode = OnlyNodeWithWindows = NULL;
     LastFrameAlive = LastFrameActive = LastFrameFocused = -1;
@@ -12131,6 +12134,15 @@ static void DockNodeFindInfo(ImGuiDockNode* node, ImGuiDockNodeFindInfoResults* 
         DockNodeFindInfo(node->ChildNodes[1], results);
 }
 
+static ImGuiWindow* ImGui::DockNodeFindWindowByID(ImGuiDockNode* node, ImGuiID id)
+{
+    IM_ASSERT(id != 0);
+    for (int n = 0; n < node->Windows.Size; n++)
+        if (node->Windows[n]->ID == id)
+            return node->Windows[n];
+    return NULL;
+}
+
 // - Remove inactive windows/nodes.
 // - Update visibility flag.
 static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node)
@@ -12169,6 +12181,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         if (node->Windows.Size == 1 && !node->IsCentralNode())
         {
             DockNodeHideHostWindow(node);
+            node->State = ImGuiDockNodeState_HostWindowHiddenBecauseSingleWindow;
             DockNodeRemoveWindow(node, window, node->ID); // Will delete the node so it'll be invalid on return
             return;
         }
@@ -12285,6 +12298,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         }
 
         DockNodeHideHostWindow(node);
+        node->State = ImGuiDockNodeState_HostWindowHiddenBecauseSingleWindow;
         node->WantCloseAll = false;
         node->WantCloseTabID = 0;
         node->HasCloseButton = node->HasWindowMenuButton = node->EnableCloseButton = false;
@@ -12293,6 +12307,31 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         if (node->WantMouseMove && node->Windows.Size == 1)
             DockNodeStartMouseMovingWindow(node, node->Windows[0]);
         return;
+    }
+
+    // In some circumstance we will defer creating the host window (so everything will be kept hidden),
+    // while the expected visible window is resizing itself.
+    // This is important for first-time (no ini settings restored) single window when io.ConfigDockingAlwaysTabBar is enabled,
+    // otherwise the node ends up using the minimum window size. Effectively those windows will take an extra frame to show up:
+    //   N+0: Begin(): window created (with no known size), node is created
+    //   N+1: DockNodeUpdate(): node skip creating host window / Begin(): window size applied, not visible
+    //   N+2: DockNodeUpdate(): node can create host window / Begin(): window becomes visible
+    // We could remove this frame if we could reliably calculate the expected window size during node update, before the Begin() code.
+    // It would require a generalization of CalcWindowExpectedSize(), probably extracting code away from Begin().
+    // In reality it isn't very important as user quickly ends up with size data in .ini file. 
+    if (node->IsVisible && node->HostWindow == NULL && node->IsFloatingNode() && node->IsLeafNode())
+    {
+        IM_ASSERT(node->Windows.Size > 0);
+        ImGuiWindow* ref_window = NULL;
+        if (node->SelectedTabID != 0) // Note that we prune single-window-node settings on .ini loading, so this is generally 0 for them!
+            ref_window = DockNodeFindWindowByID(node, node->SelectedTabID);
+        if (ref_window == NULL)
+            ref_window = node->Windows[0];
+        if (ref_window->AutoFitFramesX > 0 || ref_window->AutoFitFramesY > 0)
+        {
+            node->State = ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing;
+            return;
+        }
     }
 
     const ImGuiDockNodeFlags node_flags = node->GetMergedFlags();
@@ -14161,6 +14200,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     // FIXME-DOCK: replace ->HostWindow NULL compare with something more explicit (~was initially intended as a first frame test)
     if (node->HostWindow == NULL)
     {
+        window->DockIsActive = (node->State == ImGuiDockNodeState_HostWindowHiddenBecauseWindowsAreResizing);
         window->DockTabIsVisible = false;
         return;
     }
@@ -14168,6 +14208,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     IM_ASSERT(node->HostWindow);
     IM_ASSERT(node->IsLeafNode());
     IM_ASSERT(node->Size.x > 0.0f && node->Size.y > 0.0f);
+    node->State = ImGuiDockNodeState_HostWindowVisible;
 
     // Undock if we are submitted earlier than the host window
     if (window->BeginOrderWithinContext < node->HostWindow->BeginOrderWithinContext)
