@@ -2733,7 +2733,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     SkipItems = false;
     Appearing = false;
     Hidden = false;
-    FallbackWindow = false;
+    IsFallbackWindow = false;
     HasCloseButton = false;
     ResizeBorderHeld = -1;
     BeginCount = 0;
@@ -4062,10 +4062,10 @@ void ImGui::NewFrame()
     // Create implicit/fallback window - which we will only render it if the user has added something to it.
     // We don't use "Debug" to avoid colliding with user trying to create a "Debug" window with custom flags.
     // This fallback is particularly important as it avoid ImGui:: calls from crashing.
+    g.FrameScopePushedFallbackWindow = true;
     SetNextWindowSize(ImVec2(400,400), ImGuiCond_FirstUseEver);
     Begin("Debug##Default");
-    IM_ASSERT(g.CurrentWindow->FallbackWindow == true);
-    g.FrameScopePushedFallbackWindow = true;
+    IM_ASSERT(g.CurrentWindow->IsFallbackWindow == true);
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiTestEngineHook_PostNewFrame(&g);
@@ -5796,7 +5796,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
     const int current_frame = g.FrameCount;
     const bool first_begin_of_the_frame = (window->LastFrameActive != current_frame);
-    window->FallbackWindow = (g.CurrentWindowStack.Size == 0);
+    window->IsFallbackWindow = (g.CurrentWindowStack.Size == 0 && g.FrameScopePushedFallbackWindow);
 
     // Update the Appearing flag
     bool window_just_activated_by_user = (window->LastFrameActive < current_frame - 1);   // Not using !WasActive because the implicit "Debug" window would always toggle off->on
@@ -10731,7 +10731,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
     if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasViewport) == 0)
     {
         // By default inherit from parent window
-        if (window->Viewport == NULL && window->ParentWindow && !window->ParentWindow->FallbackWindow)
+        if (window->Viewport == NULL && window->ParentWindow && !window->ParentWindow->IsFallbackWindow)
             window->Viewport = window->ParentWindow->Viewport;
 
         // Attempt to restore saved viewport id (= window that hasn't been activated yet), try to restore the viewport based on saved 'window->ViewportPos' restored from .ini file
@@ -14024,7 +14024,7 @@ bool ImGui::GetWindowAlwaysWantOwnTabBar(ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     if (g.IO.ConfigDockingAlwaysTabBar || window->WindowClass.DockingAlwaysTabBar)
         if ((window->Flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoDocking)) == 0)
-            if (!window->FallbackWindow)    // We don't support AlwaysTabBar on the fallback/implicit window to avoid unused dock-node overhead/noise
+            if (!window->IsFallbackWindow)    // We don't support AlwaysTabBar on the fallback/implicit window to avoid unused dock-node overhead/noise
                 return true;
     return false;
 }
