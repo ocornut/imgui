@@ -36,6 +36,17 @@ Dear ImGui is self-contained within a few files that you can easily copy and com
 
 No specific build process is required. You can add the .cpp files to your project or #include them from an existing file.
 
+If you are using the [vcpkg](https://github.com/Microsoft/vcpkg/) dependency manager you can download and install Dear ImGui with a single command:
+- Mac and Linux
+```
+./vcpkg install imgui
+```
+- Windows
+```
+.\vcpkg.exe install imgui
+```
+This command will also provide usage instructions for your CMake-based projects.
+
 ### Usage
 
 Your code passes mouse/keyboard/gamepad inputs and settings to Dear ImGui (see example applications for more details). After Dear ImGui is setup, you can use it from \_anywhere\_ in your program loop:
