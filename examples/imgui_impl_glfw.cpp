@@ -66,6 +66,7 @@ static GLFWwindow*          g_Window = NULL;    // Main window
 static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
 static double               g_Time = 0.0;
 static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
+static int                  g_MouseJustPressedFrame = 0;
 static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 static bool                 g_WantUpdateMonitors = true;
 
@@ -95,8 +96,19 @@ void ImGui_ImplGlfw_MouseButtonCallback(GLFWwindow* window, int button, int acti
     if (g_PrevUserCallbackMousebutton != NULL && window == g_Window)
         g_PrevUserCallbackMousebutton(window, button, action, mods);
 
-    if (action == GLFW_PRESS && button >= 0 && button < IM_ARRAYSIZE(g_MouseJustPressed))
-        g_MouseJustPressed[button] = true;
+    ImGuiIO& io = ImGui::GetIO();
+    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    {
+        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
+        if (action == GLFW_PRESS)
+        {
+            io.MouseDown[i] = true;
+            g_MouseJustPressed[i] = true;
+            g_MouseJustPressedFrame = ImGui::GetFrameCount();
+        }
+        else if (!g_MouseJustPressed[i])
+            io.MouseDown[i] = false;
+    }
 }
 
 void ImGui_ImplGlfw_ScrollCallback(GLFWwindow* window, double xoffset, double yoffset)
@@ -238,13 +250,11 @@ void ImGui_ImplGlfw_Shutdown()
 
 static void ImGui_ImplGlfw_UpdateMousePosAndButtons()
 {
-    // Update buttons
     ImGuiIO& io = ImGui::GetIO();
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    for (int i = 0; i < IM_ARRAYSIZE(g_MouseJustPressed); i++)
     {
-        // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
-        io.MouseDown[i] = g_MouseJustPressed[i] || glfwGetMouseButton(g_Window, i) != 0;
-        g_MouseJustPressed[i] = false;
+        if (g_MouseJustPressed[i] && g_MouseJustPressedFrame < ImGui::GetFrameCount())
+            g_MouseJustPressed[i] = false;
     }
 
     // Update mouse position
@@ -454,6 +464,22 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 #endif
     glfwSetWindowPos(data->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 
+#if __linux__
+    // TODO: This will probably not be needed when wayland backend is used.
+    // Upon window creation glfw will report mouse button as released and dragging imgui window out of main viewport
+    // will stop at the moment native window is created. Create a fake mouse-press event for this frame to avoid this
+    // behavior.
+    ImGuiIO& io = ImGui::GetIO();
+    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
+    {
+        if (io.MouseDown[i])
+        {
+            g_MouseJustPressed[i] = true;
+            g_MouseJustPressedFrame = ImGui::GetFrameCount();
+        }
+    }
+#endif
+
     // Install callbacks for secondary viewports
     glfwSetMouseButtonCallback(data->Window, ImGui_ImplGlfw_MouseButtonCallback);
     glfwSetScrollCallback(data->Window, ImGui_ImplGlfw_ScrollCallback);
@@ -620,7 +646,7 @@ static void ImGui_ImplGlfw_RenderWindow(ImGuiViewport* viewport, void*)
 static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
-    if (g_ClientApi == GlfwClientApi_OpenGL) 
+    if (g_ClientApi == GlfwClientApi_OpenGL)
     {
         glfwMakeContextCurrent(data->Window);
         glfwSwapBuffers(data->Window);
