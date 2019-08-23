@@ -406,8 +406,9 @@ struct ImGuiViewportDataGlfw
 {
     GLFWwindow* Window;
     bool        WindowOwned;
+    bool        IgnoreSetWindowSizeEvent;
 
-    ImGuiViewportDataGlfw() { Window = NULL; WindowOwned = false; }
+    ImGuiViewportDataGlfw() { Window = NULL; WindowOwned = false; IgnoreSetWindowSizeEvent = false; }
     ~ImGuiViewportDataGlfw() { IM_ASSERT(Window == NULL); }
 };
 
@@ -426,7 +427,21 @@ static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int, int)
 static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
 {
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
+    {
+        if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
+        {
+            if (data->IgnoreSetWindowSizeEvent)
+            {
+                // GLFW will dispatch window size event. ImGui expects no such event sent when library explicitly requests setting
+                // window size. Depending on the platform this callback may be invoked during glfwSetWindowSize() call or queued
+                // for the next frame and invoked during glfwPollEvents() call. When latter happens - restoring collapsed window
+                // would have incorrect size.
+                data->IgnoreSetWindowSizeEvent = false;
+                return;
+            }
+        }
         viewport->PlatformRequestResize = true;
+    }
 }
 
 static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
@@ -569,6 +584,8 @@ static ImVec2 ImGui_ImplGlfw_GetWindowSize(ImGuiViewport* viewport)
 
 static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
+    if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
+        data->IgnoreSetWindowSizeEvent = true;
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
 #if __APPLE__
     // Native OS windows are positioned from the bottom-left corner on macOS, whereas on other platforms they are
@@ -630,7 +647,7 @@ static void ImGui_ImplGlfw_RenderWindow(ImGuiViewport* viewport, void*)
 static void ImGui_ImplGlfw_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
-    if (g_ClientApi == GlfwClientApi_OpenGL) 
+    if (g_ClientApi == GlfwClientApi_OpenGL)
     {
         glfwMakeContextCurrent(data->Window);
         glfwSwapBuffers(data->Window);
