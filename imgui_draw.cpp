@@ -897,16 +897,16 @@ void ImDrawList::PathEllipticalArcTo(const ImVec2& center, float radius_x, float
 {
     _Path.reserve(_Path.Size + (num_segments + 1));
 
-    const float cosRot = ImCos(rot);
-    const float sinRot = ImSin(rot);
-    for(int i = 0; i <= num_segments; i++)
+    const float cos_rot = ImCos(rot);
+    const float sin_rot = ImSin(rot);
+    for (int i = 0; i <= num_segments; i++)
     {
         const float a = a_min + ((float)i / (float)num_segments) * (a_max - a_min);
         ImVec2 point(center.x + ImCos(a) * radius_x, center.y + ImSin(a) * radius_y);
         point.x -= center.x;
         point.y -= center.y;
-        const float rel_x = (point.x * cosRot) - (point.y * sinRot);
-        const float rel_y = (point.x * sinRot) + (point.y * cosRot);
+        const float rel_x = (point.x * cos_rot) - (point.y * sin_rot);
+        const float rel_y = (point.x * sin_rot) + (point.y * cos_rot);
         point.x = rel_x + center.x;
         point.y = rel_y + center.y;
         _Path.push_back(point);
@@ -1123,7 +1123,7 @@ void ImDrawList::AddEllipse(const ImVec2& center, float radius_x, float radius_y
 
 void ImDrawList::AddEllipseFilled(const ImVec2& center, float radius_x, float radius_y, ImU32 col, float rot, int num_segments)
 {
-    if((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
+    if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
         return;
 
     // Because we are filling a closed shape we remove 1 from the count of segments/points
