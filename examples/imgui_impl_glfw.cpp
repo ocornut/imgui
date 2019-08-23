@@ -75,6 +75,9 @@ static GLFWscrollfun        g_PrevUserCallbackScroll = NULL;
 static GLFWkeyfun           g_PrevUserCallbackKey = NULL;
 static GLFWcharfun          g_PrevUserCallbackChar = NULL;
 
+// Flags used for GLFW workarounds.
+static bool g_IgnoreSetWindowSizeEvent = false;
+
 // Forward Declarations
 static void ImGui_ImplGlfw_InitPlatformInterface();
 static void ImGui_ImplGlfw_ShutdownPlatformInterface();
@@ -425,6 +428,16 @@ static void ImGui_ImplGlfw_WindowPosCallback(GLFWwindow* window, int, int)
 
 static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
 {
+    if (g_IgnoreSetWindowSizeEvent)
+    {
+        // GLFW will dispatch window size event. ImGui expects no such event sent when library explicitly requests setting
+        // window size. Depending on the platform this callback may be invoked during glfwSetWindowSize() call or queued
+        // for the next frame and invoked during glfwPollEvents() call. When latter happens - restoring collapsed window
+        // would have incorrect size.
+        g_IgnoreSetWindowSizeEvent = false;
+        return;
+    }
+
     if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle(window))
         viewport->PlatformRequestResize = true;
 }
@@ -569,6 +582,7 @@ static ImVec2 ImGui_ImplGlfw_GetWindowSize(ImGuiViewport* viewport)
 
 static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
+    g_IgnoreSetWindowSizeEvent = true;
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
     glfwSetWindowSize(data->Window, (int)size.x, (int)size.y);
 }
