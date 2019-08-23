@@ -5182,7 +5182,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             if (settings->ViewportId)
             {
                 window->ViewportId = settings->ViewportId;
-                window->ViewportPos = ImVec2(settings->ViewportPosh.x, settings->ViewportPosh.y);
+                window->ViewportPos = ImVec2(settings->ViewportPos.x, settings->ViewportPos.y);
             }
             else
             {
@@ -7304,8 +7304,8 @@ void ImGui::SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond co
 static void SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size)
 {
     IM_ASSERT(window->HitTestHoleSize.x == 0);     // We don't support multiple holes/hit test filters
-    window->HitTestHoleSize = ImVec2ih((short)size.x, (short)size.y);
-    window->HitTestHoleOffset = ImVec2ih((short)(pos.x - window->Pos.x), (short)(pos.y - window->Pos.y));
+    window->HitTestHoleSize = ImVec2ih(size);
+    window->HitTestHoleOffset = ImVec2ih(pos - window->Pos);
 }
 
 void ImGui::SetWindowCollapsed(bool collapsed, ImGuiCond cond)
@@ -10217,7 +10217,7 @@ static void SettingsHandlerWindow_ReadLine(ImGuiContext*, ImGuiSettingsHandler*,
     if (sscanf(line, "Pos=%i,%i", &x, &y) == 2)                 { settings->Pos = ImVec2ih((short)x, (short)y); }
     else if (sscanf(line, "Size=%i,%i", &x, &y) == 2)           { settings->Size = ImVec2ih((short)x, (short)y); }
     else if (sscanf(line, "ViewportId=0x%08X", &u1) == 1)       { settings->ViewportId = u1; }
-    else if (sscanf(line, "ViewportPos=%i,%i", &x, &y) == 2)    { settings->ViewportPosh = ImVec2ih((short)x, (short)y); }
+    else if (sscanf(line, "ViewportPos=%i,%i", &x, &y) == 2)    { settings->ViewportPos = ImVec2ih((short)x, (short)y); }
     else if (sscanf(line, "Collapsed=%d", &i) == 1)             { settings->Collapsed = (i != 0); }
     else if (sscanf(line, "DockId=0x%X,%d", &u1, &i) == 2)      { settings->DockId = u1; settings->DockOrder = (short)i; }
     else if (sscanf(line, "DockId=0x%X", &u1) == 1)             { settings->DockId = u1; settings->DockOrder = -1; }
@@ -10242,10 +10242,10 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
             window->SettingsIdx = g.SettingsWindows.index_from_ptr(settings);
         }
         IM_ASSERT(settings->ID == window->ID);
-        settings->Pos = ImVec2ih((short)(window->Pos.y - window->ViewportPos.y), (short)(window->Pos.y - window->ViewportPos.y));
-        settings->Size = ImVec2ih((short)window->SizeFull.x, (short)window->SizeFull.y);
+        settings->Pos = ImVec2ih(window->Pos - window->ViewportPos);
+        settings->Size = ImVec2ih(window->SizeFull);
         settings->ViewportId = window->ViewportId;
-        settings->ViewportPosh = ImVec2ih((short)window->ViewportPos.x, (short)window->ViewportPos.y);
+        settings->ViewportPos = ImVec2ih(window->ViewportPos);
         IM_ASSERT(window->DockNode == NULL || window->DockNode->ID == window->DockId);
         settings->DockId = window->DockId;
         settings->ClassId = window->WindowClass.ClassId;
@@ -10261,7 +10261,7 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
         buf->appendf("[%s][%s]\n", handler->TypeName, settings->Name);
         if (settings->ViewportId != 0 && settings->ViewportId != ImGui::IMGUI_VIEWPORT_DEFAULT_ID)
         {
-            buf->appendf("ViewportPos=%d,%d\n", settings->ViewportPosh.x, settings->ViewportPosh.y);
+            buf->appendf("ViewportPos=%d,%d\n", settings->ViewportPos.x, settings->ViewportPos.y);
             buf->appendf("ViewportId=0x%08X\n", settings->ViewportId);
         }
         if (settings->Pos.x != 0 || settings->Pos.y != 0 || settings->ViewportId == ImGui::IMGUI_VIEWPORT_DEFAULT_ID)
@@ -13929,10 +13929,10 @@ void ImGui::DockBuilderCopyWindowSettings(const char* src_name, const char* dst_
     }
     else if (ImGuiWindowSettings* dst_settings = FindOrCreateWindowSettings(dst_name))
     {
-        ImVec2ih window_pos_2ih = ImVec2ih((short)src_window->Pos.x, (short)src_window->Pos.y);
+        ImVec2ih window_pos_2ih = ImVec2ih(src_window->Pos);
         if (src_window->ViewportId != 0 && src_window->ViewportId != IMGUI_VIEWPORT_DEFAULT_ID)
         {
-            dst_settings->ViewportPosh = window_pos_2ih;
+            dst_settings->ViewportPos = window_pos_2ih;
             dst_settings->ViewportId = src_window->ViewportId;
             dst_settings->Pos = ImVec2ih(0, 0);
         }
@@ -13940,7 +13940,7 @@ void ImGui::DockBuilderCopyWindowSettings(const char* src_name, const char* dst_
         {
             dst_settings->Pos = window_pos_2ih;
         }
-        dst_settings->Size = ImVec2ih((short)src_window->SizeFull.x, (short)src_window->SizeFull.y);
+        dst_settings->Size = ImVec2ih(src_window->SizeFull);
         dst_settings->Collapsed = src_window->Collapsed;
     }
 }
@@ -14412,9 +14412,9 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.SplitAxis = node->IsSplitNode() ? (char)node->SplitAxis : ImGuiAxis_None;
     node_settings.Depth = (char)depth;
     node_settings.Flags = (node->LocalFlags & ImGuiDockNodeFlags_SavedFlagsMask_);
-    node_settings.Pos = ImVec2ih((short)node->Pos.x, (short)node->Pos.y);
-    node_settings.Size = ImVec2ih((short)node->Size.x, (short)node->Size.y);
-    node_settings.SizeRef = ImVec2ih((short)node->SizeRef.x, (short)node->SizeRef.y);
+    node_settings.Pos = ImVec2ih(node->Pos);
+    node_settings.Size = ImVec2ih(node->Size);
+    node_settings.SizeRef = ImVec2ih(node->SizeRef);
     dc->SettingsNodes.push_back(node_settings);
     if (node->ChildNodes[0])
         DockSettingsHandler_DockNodeToSettings(dc, node->ChildNodes[0], depth + 1);
