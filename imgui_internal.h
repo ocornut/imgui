@@ -528,6 +528,14 @@ struct ImVec1
     ImVec1(float _x) { x = _x; }
 };
 
+// 2D vector (half-size integer)
+struct ImVec2ih
+{
+    short   x, y;
+    ImVec2ih()                   { x = y = 0; }
+    ImVec2ih(short _x, short _y) { x = _x; y = _y; }
+};
+
 // 2D axis aligned bounding-box
 // NB: we can't rely on ImVec2 math operators being available here
 struct IMGUI_API ImRect
@@ -655,11 +663,11 @@ struct ImGuiWindowSettings
 {
     char*       Name;
     ImGuiID     ID;
-    ImVec2      Pos;
-    ImVec2      Size;
+    ImVec2ih    Pos;
+    ImVec2ih    Size;
     bool        Collapsed;
 
-    ImGuiWindowSettings() { Name = NULL; ID = 0; Pos = Size = ImVec2(0,0); Collapsed = false; }
+    ImGuiWindowSettings() { Name = NULL; ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
