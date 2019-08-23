@@ -1368,8 +1368,12 @@ static int IMGUI_CDECL ShrinkWidthItemComparer(const void* lhs, const void* rhs)
 // Shrink excess width from a set of item, by removing width from the larger items first.
 void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_excess)
 {
-    if (count > 1)
-        ImQsort(items, (size_t)count, sizeof(ImGuiShrinkWidthItem), ShrinkWidthItemComparer);
+    if (count == 1)
+    {
+        items[0].Width -= width_excess;
+        return;
+    }
+    ImQsort(items, (size_t)count, sizeof(ImGuiShrinkWidthItem), ShrinkWidthItemComparer);
     int count_same_width = 1;
     while (width_excess > 0.0f && count_same_width < count)
     {
