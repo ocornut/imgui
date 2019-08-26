@@ -1066,7 +1066,17 @@ static void ShowDemoWindowWidgets()
             phase += 0.10f*values_offset;
             refresh_time += 1.0f/60.0f;
         }
-        ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, "avg 0.0", -1.0f, 1.0f, ImVec2(0,80));
+
+        float average = 0.0;
+        for (int a = 0; a < IM_ARRAYSIZE(values); a++)
+        {
+            average += values[a];
+        }
+
+        char buffer[10];
+        sprintf(buffer, "avg %f", average);
+        
+        ImGui::PlotLines("Lines", values, IM_ARRAYSIZE(values), values_offset, buffer, -1.0f, 1.0f, ImVec2(0,80));
         ImGui::PlotHistogram("Histogram", arr, IM_ARRAYSIZE(arr), 0, NULL, 0.0f, 1.0f, ImVec2(0,80));
 
         // Use functions to generate output
