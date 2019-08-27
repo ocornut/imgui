@@ -46,6 +46,8 @@ Other Changes:
 - Backends: Vulkan: Added support for specifying multisample count.
   Set ImGui_ImplVulkan_InitInfo::MSAASamples to one of the VkSampleCountFlagBits values
   to use, default is non-multisampled as before. (#2705, #2706) [@vilya]
+- Misc: Updated stb_rect_pack from 0.99 to 1.00 (fixes by @rygorous: off-by-1 bug in best-fit heuristic,
+  fix handling of rectangles too large to fit inside texture). (#2762) [@tido64]
 
 
 -----------------------------------------------------------------------
