@@ -54,6 +54,7 @@
 #define GLFW_HAS_FOCUS_WINDOW         (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3200) // 3.2+ glfwFocusWindow
 #define GLFW_HAS_FOCUS_ON_SHOW        (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ GLFW_FOCUS_ON_SHOW
 #define GLFW_HAS_MONITOR_WORK_AREA    (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300) // 3.3+ glfwGetMonitorWorkarea
+#define GLFW_HAS_TRANSPARENT_FRAMEBUFFERS (GLFW_VERSION_MAJOR * 1000 + GLFW_VERSION_MINOR * 100 >= 3300)
 
 // Data
 enum GlfwClientApi
@@ -438,6 +439,9 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     // With GLFW 3.3, the hint GLFW_FOCUS_ON_SHOW fixes this problem
     glfwWindowHint(GLFW_VISIBLE, false);
     glfwWindowHint(GLFW_FOCUSED, false);
+#if GLFW_HAS_TRANSPARENT_FRAMEBUFFERS
+    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, true);
+#endif
 #if GLFW_HAS_FOCUS_ON_SHOW
      glfwWindowHint(GLFW_FOCUS_ON_SHOW, false);
  #endif

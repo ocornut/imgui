@@ -58,6 +58,8 @@ int main(int, char**)
     //glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);  // 3.2+ only
     //glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);            // 3.0+ only
 #endif
+    
+    glfwWindowHint(GLFW_TRANSPARENT_FRAMEBUFFER, true); // Enable transparent backbuffers
 
     // Create window with graphics context
     GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+OpenGL3 example", NULL, NULL);
@@ -92,6 +94,7 @@ int main(int, char**)
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
     //io.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
+    io.ConfigFlags |= ImGuiConfigFlags_TransparentBackbuffers;  // Enable transparent backbuffer support
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
@@ -159,8 +162,12 @@ int main(int, char**)
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+            if (ImGui::SliderFloat("Window Opacity", &f, 0.0f, 1.0f)) {
+                ImGuiStyle& style = ImGui::GetStyle();
+                style.Colors[ImGuiCol_WindowBg].w = f;
+            }// Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit4("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
                 counter++;
