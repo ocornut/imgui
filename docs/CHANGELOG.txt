@@ -39,6 +39,8 @@ Other Changes:
   when enabled will have small overlap glitches with (style.Alpha < 1.0).
 - TabBar: fixed ScrollToBar request creating bouncing loop when tab is larger than available space.
 - TabBar: fixed single-tab not shrinking their width down.
+- TabBar: feed desired width (sum of unclipped tabs width) into layout system to allow for auto-resize. (#2768)
+  (before 1.71 tab bars fed the sum of current width which created feedback loops in certain situations).
 - TabBar: improved shrinking for large number of tabs to avoid leaving extraneous space on the right side.
   Individuals tabs are given integer-rounded width and remainder is spread between tabs left-to-right.
 - SliderScalar: Improved assert when using U32 or U64 types with a large v_max value. (#2765) [@loicmouton]
