@@ -570,6 +570,16 @@ static ImVec2 ImGui_ImplGlfw_GetWindowSize(ImGuiViewport* viewport)
 static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
+#if __APPLE__
+    // Native OS windows are positioned from the bottom-left corner on macOS, whereas on other platforms they are
+    // positioned from the upper-left corner. GLFW makes an effort to convert macOS style coordinates, however it
+    // doesn't handle it when changing size. We are manually moving the window in order for changes of size to be based
+    // on the upper-left corner.
+    int x, y, width, height;
+    glfwGetWindowPos(data->Window, &x, &y);
+    glfwGetWindowSize(data->Window, &width, &height);
+    glfwSetWindowPos(data->Window, x, y - height + size.y);
+#endif
     glfwSetWindowSize(data->Window, (int)size.x, (int)size.y);
 }
 
