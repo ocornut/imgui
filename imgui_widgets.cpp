@@ -1370,14 +1370,28 @@ void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_exc
     int count_same_width = 1;
     while (width_excess > 0.0f && count_same_width < count)
     {
-        while (count_same_width < count && items[0].Width == items[count_same_width].Width)
+        while (count_same_width < count && items[0].Width <= items[count_same_width].Width)
             count_same_width++;
-        float width_to_remove_per_item_max = (count_same_width < count) ? (items[0].Width - items[count_same_width].Width) : (items[0].Width - 1.0f);
-        float width_to_remove_per_item = ImMin(width_excess / count_same_width, width_to_remove_per_item_max);
+        float max_width_to_remove_per_item = (count_same_width < count) ? (items[0].Width - items[count_same_width].Width) : (items[0].Width - 1.0f);
+        float width_to_remove_per_item = ImMin(width_excess / count_same_width, max_width_to_remove_per_item);
         for (int item_n = 0; item_n < count_same_width; item_n++)
             items[item_n].Width -= width_to_remove_per_item;
         width_excess -= width_to_remove_per_item * count_same_width;
     }
+
+    // Round width and redistribute remainder left-to-right (could make it an option of the function?)
+    // Ensure that e.g. the right-most tab of a shrunk tab-bar always reaches exactly at the same distance from the right-most edge of the tab bar separator.
+    width_excess = 0.0f;
+    for (int n = 0; n < count; n++)
+    {
+        float width_rounded = ImFloor(items[n].Width);
+        width_excess += items[n].Width - width_rounded;
+        items[n].Width = width_rounded;
+    }
+    if (width_excess > 0.0f)
+        for (int n = 0; n < count; n++)
+            if (items[n].Index < (int)(width_excess + 0.01f))
+                items[n].Width += 1.0f;
 }
 
 //-------------------------------------------------------------------------
