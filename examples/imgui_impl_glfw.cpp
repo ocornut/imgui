@@ -1,7 +1,7 @@
 // dear imgui: Platform Binding for GLFW
 // This needs to be used along with a Renderer (e.g. OpenGL3, Vulkan..)
 // (Info: GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan graphics context creation, etc.)
-// (Requires: GLFW 3.1+)
+// (Requires: GLFW 3.1+. Prefer GLFW 3.3+ for full feature support.)
 
 // Implemented features:
 //  [X] Platform: Clipboard support.
@@ -406,9 +406,9 @@ struct ImGuiViewportDataGlfw
 {
     GLFWwindow* Window;
     bool        WindowOwned;
-    bool        IgnoreSetWindowSizeEvent;
+    int         IgnoreWindowSizeEventFrame;
 
-    ImGuiViewportDataGlfw() { Window = NULL; WindowOwned = false; IgnoreSetWindowSizeEvent = false; }
+    ImGuiViewportDataGlfw()  { Window = NULL; WindowOwned = false; IgnoreWindowSizeEventFrame = -1; }
     ~ImGuiViewportDataGlfw() { IM_ASSERT(Window == NULL); }
 };
 
@@ -430,15 +430,16 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
     {
         if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
         {
-            if (data->IgnoreSetWindowSizeEvent)
-            {
-                // GLFW will dispatch window size event. ImGui expects no such event sent when library explicitly requests setting
-                // window size. Depending on the platform this callback may be invoked during glfwSetWindowSize() call or queued
-                // for the next frame and invoked during glfwPollEvents() call. When latter happens - restoring collapsed window
-                // would have incorrect size.
-                data->IgnoreSetWindowSizeEvent = false;
+            // GLFW may dispatch window size event after calling glfwSetWindowSize().
+            // However depending on the platform the callback may be invoked at different time: on Windows it
+            // appears to be called within the glfwSetWindowSize() call whereas on Linux it is queued and invoked
+            // during glfwPollEvents(). 
+            // Because the event doesn't always fire on glfwSetWindowSize() we use a frame counter tag to only 
+            // ignore recent glfwSetWindowSize() calls.
+            bool ignore_event = (ImGui::GetFrameCount() <= data->IgnoreWindowSizeEventFrame + 1);
+            data->IgnoreWindowSizeEventFrame = -1;
+            if (ignore_event)
                 return;
-            }
         }
         viewport->PlatformRequestResize = true;
     }
@@ -584,8 +585,6 @@ static ImVec2 ImGui_ImplGlfw_GetWindowSize(ImGuiViewport* viewport)
 
 static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
-    if (ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData)
-        data->IgnoreSetWindowSizeEvent = true;
     ImGuiViewportDataGlfw* data = (ImGuiViewportDataGlfw*)viewport->PlatformUserData;
 #if __APPLE__
     // Native OS windows are positioned from the bottom-left corner on macOS, whereas on other platforms they are
@@ -597,6 +596,7 @@ static void ImGui_ImplGlfw_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     glfwGetWindowSize(data->Window, &width, &height);
     glfwSetWindowPos(data->Window, x, y - height + size.y);
 #endif
+    data->IgnoreWindowSizeEventFrame = ImGui::GetFrameCount();
     glfwSetWindowSize(data->Window, (int)size.x, (int)size.y);
 }
 
