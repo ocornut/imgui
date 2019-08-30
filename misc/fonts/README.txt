@@ -1,3 +1,7 @@
+dear imgui, v1.73 WIP
+(Font Readme)
+
+---------------------------------------
 
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default.
@@ -5,7 +9,6 @@ We embed it font in source code so you can use Dear ImGui without any file syste
 
 You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
-(Note: .OTF support in imstb_truetype.h currently doesn't appear to load every font)
 
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 Also read dear imgui FAQ in imgui.cpp!
@@ -23,16 +26,18 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
 - Fonts Loading Instructions
 - FreeType rasterizer, Small font sizes
 - Building Custom Glyph Ranges
+- Using custom colorful icons
 - Embedding Fonts in Source Code
 - Credits/Licences for fonts included in this folder
-- Links, Other fonts
+- Fonts Links
 
 
 ---------------------------------------
  README FIRST / FAQ
 ---------------------------------------
 
-- You can use the style editor ImGui::ShowStyleEditor() to browse your fonts and understand what's going on if you have an issue.
+- You can use the style editor ImGui::ShowStyleEditor() in the "Fonts" section to browse your fonts
+  and understand what's going on if you have an issue.
 - Make sure your font ranges data are persistent (available during the call to GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
 - Use C++11 u8"my text" syntax to encode literal strings as UTF-8. e.g.:
       u8"hello"
@@ -106,10 +111,13 @@ Load .TTF/.OTF file with:
 For advanced options create a ImFontConfig structure and pass it to the AddFont function (it will be copied internally):
 
   ImFontConfig config;
-  config.OversampleH = 3;
+  config.OversampleH = 2;
   config.OversampleV = 1;
   config.GlyphExtraSpacing.x = 1.0f;
   ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
+
+Read about oversampling here:
+  https://github.com/nothings/stb/blob/master/tests/oversample
 
 If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API.
 The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
@@ -192,13 +200,57 @@ For example: for a game where your script is known, if you can feed your entire 
 
 
 ---------------------------------------
+ USING CUSTOM COLORFUL ICONS
+---------------------------------------
+
+(This is a BETA api, use if you are familiar with dear imgui and with your rendering back-end)
+
+You can use the ImFontAtlas::AddCustomRect() and ImFontAtlas::AddCustomRectFontGlyph() api to register rectangles
+that will be packed into the font atlas texture. Register them before building the atlas, then call Build().
+You can then use ImFontAtlas::GetCustomRectByIndex(int) to query the position/size of your rectangle within the
+texture, and blit/copy any graphics data of your choice into those rectangles.
+
+Pseudo-code:
+
+  // Add font, then register two custom 13x13 rectangles mapped to glyph 'a' and 'b' of this font
+  ImFont* font = io.Fonts->AddFontDefault();
+  int rect_ids[2];
+  rect_ids[0] = io.Fonts->AddCustomRectFontGlyph(font, 'a', 13, 13, 13+1);
+  rect_ids[1] = io.Fonts->AddCustomRectFontGlyph(font, 'b', 13, 13, 13+1);
+
+  // Build atlas
+  io.Fonts->Build();
+
+  // Retrieve texture in RGBA format
+  unsigned char* tex_pixels = NULL;
+  int tex_width, tex_height;
+  io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
+
+  for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
+  {
+      int rect_id = rects_ids[rect_n];
+      if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+      {
+          // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here!)
+          for (int y = 0; y < rect->Height; y++)
+          {
+              ImU32* p = (ImU32*)tex_pixels + (rect->Y + y) * tex_width + (rect->X);
+              for (int x = rect->Width; x > 0; x--)
+                  *p++ = IM_COL32(255, 0, 0, 255);
+          }
+      }
+  }
+
+
+---------------------------------------
  EMBEDDING FONTS IN SOURCE CODE
 ---------------------------------------
 
 Compile and use 'binary_to_compressed_c.cpp' to create a compressed C style array that you can embed in source code.
 See the documentation in binary_to_compressed_c.cpp for instruction on how to use the tool.
 You may find a precompiled version binary_to_compressed_c.exe for Windows instead of demo binaries package (see README).
-The tool optionally used Base85 encoding to reduce the size of _source code_ but the read-only arrays will be about 20% bigger.
+The tool can optionally output Base85 encoding to reduce the size of _source code_ but the read-only arrays in the
+actual binary will be about 20% bigger.
 
 Then load the font with:
   ImFont* font = io.Fonts->AddFontFromMemoryCompressedTTF(compressed_data, compressed_data_size, size_pixels, ...);
@@ -233,13 +285,13 @@ ProggyClean.ttf
 
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 13.0, DisplayOffset.Y = +1
   http://www.proggyfonts.net/
 
 ProggyTiny.ttf
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 10.0, DisplayOffset.Y = +1
   http://www.proggyfonts.net/
 
 Karla-Regular.ttf
@@ -290,6 +342,9 @@ MONOSPACE FONTS
   (Pixel Perfect) Sweet16, Sweet16 Mono, by Martin Sedlak (Latin + Supplemental + Extended A)
   https://github.com/kmar/Sweet16Font
   Also include .inl file to use directly in dear imgui.
+
+  Google Noto Mono Fonts
+  https://www.google.com/get/noto/
 
   Typefaces for source code beautification
   https://github.com/chrissimpkins/codeface

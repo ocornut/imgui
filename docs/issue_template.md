@@ -3,12 +3,16 @@
 1. PLEASE CAREFULLY READ:
 https://github.com/ocornut/imgui/issues/2261
 
-2. IF YOU ARE HAVING AN ISSUE COMPILING/LINKING/RUNNING/DISPLAYING/ADDING FONTS, please post on the "Getting Started" Discourse forum:
-https://discourse.dearimgui.org/c/getting-started
+2. IF YOU ARE HAVING AN ISSUE COMPILING/LINKING/RUNNING/LOADING FONTS, please post on the "Getting Started" Discourse forum:
+https://discourse.dearimgui.org
 
-3. PLEASE MAKE SURE that you have: read the FAQ in imgui.cpp; explored the contents of ShowDemoWindow() including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the link provided in (1).
+3. PLEASE MAKE SURE that you have: read the FAQ in imgui.cpp; explored the contents of `ShowDemoWindow()` including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the link provided in (1).
 
-4. Delete points 1-4 and PLEASE FILL THE TEMPLATE BELOW before submitting your issue.
+4. Be mindful that messages are being sent to the e-mail box of "Watching" users. Try to proof-read your messages before sending them. Edits are not seen by those users.
+
+5. Delete points 1-5 and PLEASE FILL THE TEMPLATE BELOW before submitting your issue.
+
+Thank you!
 
 ----
 
