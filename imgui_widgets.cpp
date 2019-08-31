@@ -4197,7 +4197,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if ((flags & ImGuiColorEditFlags_InputHSV) && (flags & ImGuiColorEditFlags_DisplayRGB))
         ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
     else if ((flags & ImGuiColorEditFlags_InputRGB) && (flags & ImGuiColorEditFlags_DisplayHSV))
+    {
+        bool restore_hue = memcmp(g.ColorPickerLastActiveColor, f, sizeof(float) * 3) == 0;
         ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
+        if (restore_hue)
+            f[0] = g.ColorPickerLastHue;
+    }
     int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
 
     bool value_changed = false;
@@ -4324,7 +4329,11 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             for (int n = 0; n < 4; n++)
                 f[n] = i[n] / 255.0f;
         if ((flags & ImGuiColorEditFlags_DisplayHSV) && (flags & ImGuiColorEditFlags_InputRGB))
+        {
+            g.ColorPickerLastHue = f[0];
             ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
+            memcpy(g.ColorPickerLastActiveColor, f, sizeof(float) * 3);
+        }
         if ((flags & ImGuiColorEditFlags_DisplayRGB) && (flags & ImGuiColorEditFlags_InputHSV))
             ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
@@ -4501,7 +4510,11 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     float H = col[0], S = col[1], V = col[2];
     float R = col[0], G = col[1], B = col[2];
     if (flags & ImGuiColorEditFlags_InputRGB)
+    {
         ColorConvertRGBtoHSV(R, G, B, H, S, V);
+        if (memcmp(g.ColorPickerLastActiveColor, col, sizeof(float) * 3) == 0)
+            H = g.ColorPickerLastHue;
+    }
     else if (flags & ImGuiColorEditFlags_InputHSV)
         ColorConvertHSVtoRGB(H, S, V, R, G, B);
 
@@ -4624,7 +4637,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     {
         if (flags & ImGuiColorEditFlags_InputRGB)
         {
+            g.ColorPickerLastHue = H;
             ColorConvertHSVtoRGB(H >= 1.0f ? H - 10 * 1e-6f : H, S > 0.0f ? S : 10*1e-6f, V > 0.0f ? V : 1e-6f, col[0], col[1], col[2]);
+            memcpy(g.ColorPickerLastActiveColor, col, sizeof(float) * 3);
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
         {
@@ -4677,7 +4692,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             R = col[0];
             G = col[1];
             B = col[2];
+            float preserve_hue = H;
             ColorConvertRGBtoHSV(R, G, B, H, S, V);
+            H = preserve_hue;                           // Avoids picker losing hue value for 1 frame glitch.
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
         {
