@@ -13740,8 +13740,12 @@ void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
     node->AuthorityForSize = ImGuiDataAuthority_DockNode;
 }
 
-// If you create a regular node, both ref_pos/ref_size will position the window.
-// If you create a dockspace node: ref_pos won't be used, ref_size is useful on the first frame to...
+// Make sure to use the ImGuiDockNodeFlags_DockSpace flag to create a dockspace node! Otherwise this will create a floating node!
+// - Floating node: you can then call DockBuilderSetNodePos()/DockBuilderSetNodeSize() to position and size the floating node.
+// - Dockspace node: calling DockBuilderSetNodePos() is unnecessary.
+// - If you intend to split a node immediately after creation using DockBuilderSplitNode(), make sure to call DockBuilderSetNodeSize() beforehand!
+//   For various reason, the splitting code currently needs a base size otherwise space may not be allocated as precisely as you would expect.
+// - Use (id == 0) to let the system allocate a node identifier.
 ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
 {
     ImGuiContext* ctx = GImGui;
@@ -13878,8 +13882,10 @@ void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiID root_id, bool clear_persi
     }
 }
 
+// If 'out_id_at_dir' or 'out_id_at_opposite_dir' are non NULL, the function will write out the ID of the two new nodes created.
+// Return value is ID of the node at the specified direction, so same as (*out_id_at_dir) if that pointer is set.
 // FIXME-DOCK: We are not exposing nor using split_outer. 
-ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_other)
+ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_at_opposite_dir)
 {
     ImGuiContext* ctx = GImGui;
     IM_ASSERT(split_dir != ImGuiDir_None);
@@ -13905,11 +13911,11 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_r
     DockContextProcessDock(ctx, &req);
 
     ImGuiID id_at_dir = node->ChildNodes[(split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 0 : 1]->ID;
-    ImGuiID id_other = node->ChildNodes[(split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 1 : 0]->ID;
+    ImGuiID id_at_opposite_dir = node->ChildNodes[(split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 1 : 0]->ID;
     if (out_id_at_dir)
         *out_id_at_dir = id_at_dir;
-    if (out_id_other)
-        *out_id_other = id_other;
+    if (out_id_at_opposite_dir)
+        *out_id_at_opposite_dir = id_at_opposite_dir;
     return id_at_dir;
 }
 
