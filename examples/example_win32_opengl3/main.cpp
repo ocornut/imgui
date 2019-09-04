@@ -102,7 +102,7 @@ int main(int, char**)
     }
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplWin32_Init(hwnd, glContext);
+    ImGui_ImplWin32_Init(hwnd);
     ImGui_ImplOpenGL3_Init("#version 410");
 
     // Load Fonts
@@ -196,10 +196,10 @@ int main(int, char**)
         // (Platform functions may change the current OpenGL context, so we save/restore it to make it easier to paste this code elsewhere.
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            HDC backup_current_context = GetDC(hwnd);
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
-            wglMakeCurrent(backup_current_context, glContext);
+                HDC backup_current_context = GetDC(hwnd);
+                ImGui::UpdatePlatformWindows();
+                ImGui::RenderPlatformWindowsDefault();
+                wglMakeCurrent(backup_current_context, glContext);
         }
 
         SwapBuffers(devContext);

@@ -56,7 +56,7 @@ static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
 
 // Functions
-bool    ImGui_ImplWin32_Init(void* hwnd, void* glcontext)
+bool    ImGui_ImplWin32_Init(void* hwnd)
 {
     if (!::QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond))
         return false;
@@ -72,7 +72,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd, void* glcontext)
     io.BackendPlatformName = "imgui_impl_win32";
 
     g_hWnd = (HWND)hwnd;
-    g_MainGlContext = (HGLRC)glcontext;
+    g_MainGlContext = wglGetCurrentContext();
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -512,10 +512,8 @@ struct ImGuiViewportDataWin32
     bool    HwndOwned;
     DWORD   DwStyle;
     DWORD   DwExStyle;
-    HDC     Hdc;
-    HGLRC   HgLrc;
 
-    ImGuiViewportDataWin32() { Hwnd = NULL; HwndOwned = false;  DwStyle = DwExStyle = 0; Hdc = NULL; HgLrc = NULL; }
+    ImGuiViewportDataWin32() { Hwnd = NULL; HwndOwned = false;  DwStyle = DwExStyle = 0; }
     ~ImGuiViewportDataWin32() { IM_ASSERT(Hwnd == NULL); }
 };
 
@@ -558,39 +556,17 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = data->Hwnd;
 
-    //Set this window to the current context.
-    data->Hdc = GetDC(data->Hwnd);
+    //Set the childs window to the same GL Context of the main along with its parents PixelFormat
+    HDC mainHDC = GetDC(g_hWnd);
+    HDC childHDC = GetDC(data->Hwnd);
 
-    //Set the pixel format for the context
-    PIXELFORMATDESCRIPTOR pfd =
-    {
-        sizeof(PIXELFORMATDESCRIPTOR),
-        1,
-        PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL | PFD_DOUBLEBUFFER,    // Flags
-        PFD_TYPE_RGBA,        // The kind of framebuffer. RGBA or palette.
-        32,                   // Colordepth of the framebuffer.
-        0, 0, 0, 0, 0, 0,
-        0,
-        0,
-        0,
-        0, 0, 0, 0,
-        24,                   // Number of bits for the depthbuffer
-        8,                    // Number of bits for the stencilbuffer
-        0,                    // Number of Aux buffers in the framebuffer.
-        PFD_MAIN_PLANE,
-        0,
-        0, 0, 0
-    };
-    int pixelFormat = ChoosePixelFormat(data->Hdc, &pfd);
-    SetPixelFormat(data->Hdc, pixelFormat, &pfd);
+    PIXELFORMATDESCRIPTOR pfd = {};
+    int pixelFormat = GetPixelFormat(mainHDC);
+    DescribePixelFormat(mainHDC, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+    SetPixelFormat(childHDC, pixelFormat, &pfd);
 
-    //Create the OpenGl context and make it current.
-    data->HgLrc = wglCreateContext(data->Hdc);
-    wglMakeCurrent(data->Hdc, data->HgLrc);
-
-    //Share the main window OpenGl context with the new context. This allows them to share textures.
-    //Note: You don't have to use two OpenGl context if you do not wish to but it is normal to do so.
-    wglShareLists(g_MainGlContext, data->HgLrc);
+    //Set it to current so we can render to it.
+    wglMakeCurrent(childHDC, g_MainGlContext);
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
@@ -746,18 +722,17 @@ static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport)
 static void ImGui_ImplWin32_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
-
-    //Something went wrong when you created the window. HDC or GlContext was not set properly.
-    IM_ASSERT(data->Hdc != NULL && data->HgLrc != NULL);
+    HDC hdc = GetDC(data->Hwnd);
 
     //Make this window's context current.
-    wglMakeCurrent(data->Hdc, data->HgLrc);
+    wglMakeCurrent(hdc, g_MainGlContext);
 }
 
 static void ImGui_ImplWin32_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
-    SwapBuffers(data->Hdc);
+    HDC hdc = GetDC(data->Hwnd);
+    SwapBuffers(hdc);
 }
 
 
