@@ -1495,8 +1495,8 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  SetWindowPosVal;                    // store window position when using a non-zero Pivot (position set needs to be processed when we know the window size)
     ImVec2                  SetWindowPosPivot;                  // store window pivot for positioning. ImVec2(0,0) when positioning from top-left corner; ImVec2(0.5f,0.5f) for centering; ImVec2(1,1) for bottom right.
 
+    ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack. (In theory this should be in the TempData structure)
     ImGuiWindowTempData     DC;                                 // Temporary per-window data, reset at the beginning of the frame. This used to be called ImGuiDrawContext, hence the "DC" variable name.
-    ImVector<ImGuiID>       IDStack;                            // ID stack. ID are hashes seeded with the value at the top of the stack
 
     // The best way to understand what those rectangles are is to use the 'Metrics -> Tools -> Show windows rectangles' viewer.
     // The main 'OuterRect', omitted as a field, is window->Rect().
@@ -1510,6 +1510,7 @@ struct IMGUI_API ImGuiWindow
 
     int                     LastFrameActive;                    // Last frame number the window was Active.
     int                     LastFrameJustFocused;               // Last frame number the window was made Focused.
+    float                   LastTimeActive;
     float                   ItemWidthDefault;
     ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
@@ -1529,6 +1530,10 @@ struct IMGUI_API ImGuiWindow
     ImGuiWindow*            NavLastChildNavWindow;              // When going to the menu bar, we remember the child window we came from. (This could probably be made implicit if we kept g.Windows sorted by last focused including child window.)
     ImGuiID                 NavLastIds[ImGuiNavLayer_COUNT];    // Last known NavId for this window, per layer (0/1)
     ImRect                  NavRectRel[ImGuiNavLayer_COUNT];    // Reference rectangle, in window relative space
+
+    bool                    MemoryCompacted;
+    int                     MemoryDrawListIdxCapacity;
+    int                     MemoryDrawListVtxCapacity;
 
     // Docking
     ImGuiDockNode*          DockNode;                           // Which node are we docked into
@@ -1622,8 +1627,9 @@ struct ImGuiTabBar
     int                 CurrFrameVisible;
     int                 PrevFrameVisible;
     ImRect              BarRect;
-    float               ContentsHeight;
+    float               LastTabContentHeight;   // Record the height of contents submitted below the tab bar
     float               OffsetMax;              // Distance from BarRect.Min.x, locked during layout
+    float               OffsetMaxIdeal;         // Ideal offset if all tabs were visible and not clipped
     float               OffsetNextTab;          // Distance from BarRect.Min.x, incremented with each BeginTabItem() call, not used if ImGuiTabBarFlags_Reorderable if set.
     float               ScrollingAnim;
     float               ScrollingTarget;
@@ -1677,6 +1683,8 @@ namespace ImGui
     IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond = 0);
+    IMGUI_API void          GcCompactTransientWindowBuffers(ImGuiWindow* window);
+    IMGUI_API void          GcAwakeTransientWindowBuffers(ImGuiWindow* window);
 
     IMGUI_API void          SetCurrentFont(ImFont* font);
     inline ImFont*          GetDefaultFont() { ImGuiContext& g = *GImGui; return g.IO.FontDefault ? g.IO.FontDefault : g.IO.Fonts->Fonts[0]; }
@@ -1800,17 +1808,21 @@ namespace ImGui
     IMGUI_API void          SetWindowDock(ImGuiWindow* window, ImGuiID dock_id, ImGuiCond cond);
 
     // Docking - Builder function needs to be generally called before the DockSpace() node is submitted.
-    // Important: do not hold on ImGuiDockNode* pointers. They may be invalidated by any split/merge/remove operation and every frame.
+    // - The DockBuilderXXX functions are designed to _eventually_ become a public API, but it is too early to expose it and guarantee stability.
+    // - You can create dockspace _or_ floating nodes with this API. To create a dockspace node, make sure to set the ImGuiDockNodeFlags_DockSpace flag.
+    // - If you intend to split the node immediately after creation using DockBuilderSplitNode(), make sure to call DockBuilderSetNodeSize() beforehand.
+    // - Call DockBuilderFinish() after you are done.
+    // - Important: do not hold on ImGuiDockNode* pointers! They may be invalidated by any split/merge/remove operation and every frame.
     IMGUI_API void          DockBuilderDockWindow(const char* window_name, ImGuiID node_id);
     IMGUI_API ImGuiDockNode*DockBuilderGetNode(ImGuiID node_id);
     inline ImGuiDockNode*   DockBuilderGetCentralNode(ImGuiID node_id)              { ImGuiDockNode* node = DockBuilderGetNode(node_id); if (!node) return NULL; return DockNodeGetRootNode(node)->CentralNode; }
-    IMGUI_API ImGuiID       DockBuilderAddNode(ImGuiID node_id, ImGuiDockNodeFlags flags = 0);  // Use (flags == ImGuiDockNodeFlags_DockSpace) to create a dockspace, otherwise it'll create a floating node.
+    IMGUI_API ImGuiID       DockBuilderAddNode(ImGuiID node_id = 0, ImGuiDockNodeFlags flags = 0);
     IMGUI_API void          DockBuilderRemoveNode(ImGuiID node_id);                 // Remove node and all its child, undock all windows
     IMGUI_API void          DockBuilderRemoveNodeDockedWindows(ImGuiID node_id, bool clear_persistent_docking_references = true);
     IMGUI_API void          DockBuilderRemoveNodeChildNodes(ImGuiID node_id);       // Remove all split/hierarchy. All remaining docked windows will be re-docked to the root.
     IMGUI_API void          DockBuilderSetNodePos(ImGuiID node_id, ImVec2 pos);
     IMGUI_API void          DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size);
-    IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiID node_id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_dir, ImGuiID* out_id_other);
+    IMGUI_API ImGuiID       DockBuilderSplitNode(ImGuiID node_id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_at_opposite_dir);
     IMGUI_API void          DockBuilderCopyDockSpace(ImGuiID src_dockspace_id, ImGuiID dst_dockspace_id, ImVector<const char*>* in_window_remap_pairs);
     IMGUI_API void          DockBuilderCopyNode(ImGuiID src_node_id, ImGuiID dst_node_id, ImVector<ImGuiID>* out_node_remap_pairs);
     IMGUI_API void          DockBuilderCopyWindowSettings(const char* src_name, const char* dst_name);

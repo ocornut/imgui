@@ -1283,6 +1283,7 @@ ImGuiIO::ImGuiIO()
     ConfigInputTextCursorBlink = true;
     ConfigWindowsResizeFromEdges = true;
     ConfigWindowsMoveFromTitleBarOnly = false;
+    ConfigWindowsMemoryCompactTimer = 60.0f;
 
     // Platform Functions
     BackendPlatformName = BackendRendererName = NULL;
@@ -2750,6 +2751,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
 
     LastFrameActive = -1;
     LastFrameJustFocused = -1;
+    LastTimeActive = -1.0f;
     ItemWidthDefault = 0.0f;
     FontWindowScale = FontDpiScale = 1.0f;
     SettingsIdx = -1;
@@ -2765,6 +2767,9 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     NavLastIds[0] = NavLastIds[1] = 0;
     NavRectRel[0] = NavRectRel[1] = ImRect();
     NavLastChildNavWindow = NULL;
+
+    MemoryCompacted = false;
+    MemoryDrawListIdxCapacity = MemoryDrawListVtxCapacity = 0;
 
     DockNode = DockNodeAsHost = NULL;
     DockId = 0;
@@ -2839,6 +2844,36 @@ static void SetCurrentWindow(ImGuiWindow* window)
     g.CurrentWindow = window;
     if (window)
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
+}
+
+// Free up/compact internal window buffers, we can use this when a window becomes unused.
+// This is currently unused by the library, but you may call this yourself for easy GC.
+// Not freed:
+// - ImGuiWindow, ImGuiWindowSettings, Name
+// - StateStorage, ColumnsStorage (may hold useful data)
+// This should have no noticeable visual effect. When the window reappear however, expect new allocation/buffer growth/copy cost.
+void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
+{
+    window->MemoryCompacted = true;
+    window->MemoryDrawListIdxCapacity = window->DrawList->IdxBuffer.Capacity;
+    window->MemoryDrawListVtxCapacity = window->DrawList->VtxBuffer.Capacity;
+    window->IDStack.clear();
+    window->DrawList->ClearFreeMemory();
+    window->DC.ChildWindows.clear();
+    window->DC.ItemFlagsStack.clear();
+    window->DC.ItemWidthStack.clear();
+    window->DC.TextWrapPosStack.clear();
+    window->DC.GroupStack.clear();
+}
+
+void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
+{
+    // We stored capacity of the ImDrawList buffer to reduce growth-caused allocation/copy when awakening.
+    // The other buffers tends to amortize much faster.
+    window->MemoryCompacted = false;
+    window->DrawList->IdxBuffer.reserve(window->MemoryDrawListIdxCapacity);
+    window->DrawList->VtxBuffer.reserve(window->MemoryDrawListVtxCapacity);
+    window->MemoryDrawListIdxCapacity = window->MemoryDrawListVtxCapacity = 0;
 }
 
 void ImGui::SetNavID(ImGuiID id, int nav_layer)
@@ -4032,8 +4067,9 @@ void ImGui::NewFrame()
 
     g.NavIdTabCounter = INT_MAX;
 
-    // Mark all windows as not visible
+    // Mark all windows as not visible and compact unused memory.
     IM_ASSERT(g.WindowsFocusOrder.Size == g.Windows.Size);
+    const float memory_compact_start_time = (g.IO.ConfigWindowsMemoryCompactTimer >= 0.0f) ? (float)g.Time - g.IO.ConfigWindowsMemoryCompactTimer : FLT_MAX;
     for (int i = 0; i != g.Windows.Size; i++)
     {
         ImGuiWindow* window = g.Windows[i];
@@ -4041,6 +4077,10 @@ void ImGui::NewFrame()
         window->BeginCount = 0;
         window->Active = false;
         window->WriteAccessed = false;
+
+        // Garbage collect (this is totally functional but we may need decide if the side-effects are desirable)
+        if (!window->WasActive && !window->MemoryCompacted && window->LastTimeActive < memory_compact_start_time)
+            GcCompactTransientWindowBuffers(window);
     }
 
     // Closing the focused window restore focus to the first active root window in descending z-order
@@ -5828,6 +5868,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->FlagsPreviousFrame = window->Flags;
         window->Flags = (ImGuiWindowFlags)flags;
         window->LastFrameActive = current_frame;
+        window->LastTimeActive = (float)g.Time;
         window->BeginOrderWithinParent = 0;
         window->BeginOrderWithinContext = (short)(g.WindowsActiveCount++);
     }
@@ -5859,6 +5900,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     ImGuiWindow* parent_window_in_stack = window->DockIsActive ? window->DockNode->HostWindow : g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back();
     ImGuiWindow* parent_window = first_begin_of_the_frame ? ((flags & (ImGuiWindowFlags_ChildWindow | ImGuiWindowFlags_Popup)) ? parent_window_in_stack : NULL) : window->ParentWindow;
     IM_ASSERT(parent_window != NULL || !(flags & ImGuiWindowFlags_ChildWindow));
+
+    // We allow window memory to be compacted so recreate the base stack when needed.
+    if (window->IDStack.Size == 0)
+        window->IDStack.push_back(window->ID);
 
     // Add to stack
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
@@ -5925,6 +5970,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->HasCloseButton = (p_open != NULL);
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->IDStack.resize(1);
+
+        // Restore buffer capacity when woken from a compacted state, to avoid
+        if (window->MemoryCompacted)
+            GcAwakeTransientWindowBuffers(window);
 
         // Update stored window name when it changes (which can _only_ happen with the "###" operator, so the ID would stay unchanged).
         // The title bar always display the 'name' parameter, so we only update the string storage if it needs to be visible to the end-user elsewhere.
@@ -13740,8 +13789,12 @@ void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
     node->AuthorityForSize = ImGuiDataAuthority_DockNode;
 }
 
-// If you create a regular node, both ref_pos/ref_size will position the window.
-// If you create a dockspace node: ref_pos won't be used, ref_size is useful on the first frame to...
+// Make sure to use the ImGuiDockNodeFlags_DockSpace flag to create a dockspace node! Otherwise this will create a floating node!
+// - Floating node: you can then call DockBuilderSetNodePos()/DockBuilderSetNodeSize() to position and size the floating node.
+// - Dockspace node: calling DockBuilderSetNodePos() is unnecessary.
+// - If you intend to split a node immediately after creation using DockBuilderSplitNode(), make sure to call DockBuilderSetNodeSize() beforehand!
+//   For various reason, the splitting code currently needs a base size otherwise space may not be allocated as precisely as you would expect.
+// - Use (id == 0) to let the system allocate a node identifier.
 ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
 {
     ImGuiContext* ctx = GImGui;
@@ -13878,8 +13931,10 @@ void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiID root_id, bool clear_persi
     }
 }
 
+// If 'out_id_at_dir' or 'out_id_at_opposite_dir' are non NULL, the function will write out the ID of the two new nodes created.
+// Return value is ID of the node at the specified direction, so same as (*out_id_at_dir) if that pointer is set.
 // FIXME-DOCK: We are not exposing nor using split_outer. 
-ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_other)
+ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_ratio_for_node_at_dir, ImGuiID* out_id_at_dir, ImGuiID* out_id_at_opposite_dir)
 {
     ImGuiContext* ctx = GImGui;
     IM_ASSERT(split_dir != ImGuiDir_None);
@@ -13905,11 +13960,11 @@ ImGuiID ImGui::DockBuilderSplitNode(ImGuiID id, ImGuiDir split_dir, float size_r
     DockContextProcessDock(ctx, &req);
 
     ImGuiID id_at_dir = node->ChildNodes[(split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 0 : 1]->ID;
-    ImGuiID id_other = node->ChildNodes[(split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 1 : 0]->ID;
+    ImGuiID id_at_opposite_dir = node->ChildNodes[(split_dir == ImGuiDir_Left || split_dir == ImGuiDir_Up) ? 1 : 0]->ID;
     if (out_id_at_dir)
         *out_id_at_dir = id_at_dir;
-    if (out_id_other)
-        *out_id_other = id_other;
+    if (out_id_at_opposite_dir)
+        *out_id_at_opposite_dir = id_at_opposite_dir;
     return id_at_dir;
 }
 
