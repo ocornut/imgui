@@ -1428,6 +1428,7 @@ ImFontConfig::ImFontConfig()
     RasterizerMultiply = 1.0f;
     memset(Name, 0, sizeof(Name));
     DstFont = NULL;
+    EllipsisCodePoint = (ImWchar)-1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1618,6 +1619,9 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
     }
 
+    if (new_font_cfg.DstFont->EllipsisCodePoint == (ImWchar)-1)
+        new_font_cfg.DstFont->EllipsisCodePoint = font_cfg->EllipsisCodePoint;
+
     // Invalidate texture
     ClearTexData();
     return new_font_cfg.DstFont;
@@ -1652,6 +1656,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
         font_cfg.SizePixels = 13.0f * 1.0f;
     if (font_cfg.Name[0] == '\0')
         ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf, %dpx", (int)font_cfg.SizePixels);
+    font_cfg.EllipsisCodePoint = (ImWchar)0x0085;
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
@@ -2196,6 +2201,26 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
     for (int i = 0; i < atlas->Fonts.Size; i++)
         if (atlas->Fonts[i]->DirtyLookupTables)
             atlas->Fonts[i]->BuildLookupTable();
+
+    // Ellipsis character is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
+    // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
+    for (int i = 0; i < atlas->Fonts.size(); i++)
+    {
+        ImFont* font = atlas->Fonts[i];
+        if (font->EllipsisCodePoint == (ImWchar)-1)
+        {
+            const ImWchar ellipsis_variants[] = {(ImWchar)0x2026, (ImWchar)0x0085, (ImWchar)0};
+            for (int j = 0; ellipsis_variants[j] != (ImWchar) 0; j++)
+            {
+                ImWchar ellipsis_codepoint = ellipsis_variants[j];
+                if (font->FindGlyph(ellipsis_codepoint) != font->FallbackGlyph)     // Verify glyph exists
+                {
+                    font->EllipsisCodePoint = ellipsis_codepoint;
+                    break;
+                }
+            }
+        }
+    }
 }
 
 // Retrieve list of range (2 int per range, values are inclusive)
@@ -2474,6 +2499,7 @@ ImFont::ImFont()
     Scale = 1.0f;
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
+    EllipsisCodePoint = (ImWchar)-1;
 }
 
 ImFont::~ImFont()
@@ -3012,7 +3038,6 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 // - RenderMouseCursor()
 // - RenderArrowPointingAt()
 // - RenderRectFilledRangeH()
-// - RenderPixelEllipsis()
 //-----------------------------------------------------------------------------
 
 void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor)
@@ -3120,18 +3145,6 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
         }
     }
     draw_list->PathFillConvex(col);
-}
-
-// FIXME: Rendering an ellipsis "..." is a surprisingly tricky problem for us... we cannot rely on font glyph having it,
-// and regular dot are typically too wide. If we render a dot/shape ourselves it comes with the risk that it wouldn't match
-// the boldness or positioning of what the font uses...
-void ImGui::RenderPixelEllipsis(ImDrawList* draw_list, ImVec2 pos, ImU32 col, int count)
-{
-    ImFont* font = draw_list->_Data->Font;
-    const float font_scale = draw_list->_Data->FontSize / font->FontSize;
-    pos.y += (float)(int)(font->DisplayOffset.y + font->Ascent * font_scale + 0.5f - 1.0f);
-    for (int dot_n = 0; dot_n < count; dot_n++)
-        draw_list->AddRectFilled(ImVec2(pos.x + dot_n * 2.0f, pos.y), ImVec2(pos.x + dot_n * 2.0f + 1.0f, pos.y + 1.0f), col);
 }
 
 //-----------------------------------------------------------------------------
