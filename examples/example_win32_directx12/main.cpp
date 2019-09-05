@@ -268,10 +268,10 @@ bool CreateDeviceD3D(HWND hWnd)
 
     {
         D3D12_DESCRIPTOR_HEAP_DESC desc = {};
-        desc.Type           = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
+        desc.Type = D3D12_DESCRIPTOR_HEAP_TYPE_RTV;
         desc.NumDescriptors = NUM_BACK_BUFFERS;
-        desc.Flags          = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
-        desc.NodeMask       = 1;
+        desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
+        desc.NodeMask = 1;
         if (g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&g_pd3dRtvDescHeap)) != S_OK)
             return false;
 
@@ -295,8 +295,8 @@ bool CreateDeviceD3D(HWND hWnd)
 
     {
         D3D12_COMMAND_QUEUE_DESC desc = {};
-        desc.Type     = D3D12_COMMAND_LIST_TYPE_DIRECT;
-        desc.Flags    = D3D12_COMMAND_QUEUE_FLAG_NONE;
+        desc.Type = D3D12_COMMAND_LIST_TYPE_DIRECT;
+        desc.Flags = D3D12_COMMAND_QUEUE_FLAG_NONE;
         desc.NodeMask = 1;
         if (g_pd3dDevice->CreateCommandQueue(&desc, IID_PPV_ARGS(&g_pd3dCommandQueue)) != S_OK)
             return false;

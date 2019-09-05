@@ -25,8 +25,10 @@ project.xcworkspace
 xcuserdata
 
 ## Emscripten output
+*.o.tmp
 *.out.js
 *.out.wasm
+example_emscripten/example_emscripten.*
 
 ## Unix executables
 example_glfw_opengl2/example_glfw_opengl2

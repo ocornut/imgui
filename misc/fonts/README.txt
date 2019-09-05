@@ -1,4 +1,4 @@
-dear imgui, v1.70 WIP
+dear imgui, v1.73 WIP
 (Font Readme)
 
 ---------------------------------------
@@ -26,6 +26,7 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
 - Fonts Loading Instructions
 - FreeType rasterizer, Small font sizes
 - Building Custom Glyph Ranges
+- Using custom colorful icons
 - Embedding Fonts in Source Code
 - Credits/Licences for fonts included in this folder
 - Fonts Links
@@ -199,6 +200,49 @@ For example: for a game where your script is known, if you can feed your entire 
 
 
 ---------------------------------------
+ USING CUSTOM COLORFUL ICONS
+---------------------------------------
+
+(This is a BETA api, use if you are familiar with dear imgui and with your rendering back-end)
+
+You can use the ImFontAtlas::AddCustomRect() and ImFontAtlas::AddCustomRectFontGlyph() api to register rectangles
+that will be packed into the font atlas texture. Register them before building the atlas, then call Build().
+You can then use ImFontAtlas::GetCustomRectByIndex(int) to query the position/size of your rectangle within the
+texture, and blit/copy any graphics data of your choice into those rectangles.
+
+Pseudo-code:
+
+  // Add font, then register two custom 13x13 rectangles mapped to glyph 'a' and 'b' of this font
+  ImFont* font = io.Fonts->AddFontDefault();
+  int rect_ids[2];
+  rect_ids[0] = io.Fonts->AddCustomRectFontGlyph(font, 'a', 13, 13, 13+1);
+  rect_ids[1] = io.Fonts->AddCustomRectFontGlyph(font, 'b', 13, 13, 13+1);
+
+  // Build atlas
+  io.Fonts->Build();
+
+  // Retrieve texture in RGBA format
+  unsigned char* tex_pixels = NULL;
+  int tex_width, tex_height;
+  io.Fonts->GetTexDataAsRGBA32(&tex_pixels, &tex_width, &tex_height);
+
+  for (int rect_n = 0; rect_n < IM_ARRAYSIZE(rect_ids); rect_n++)
+  {
+      int rect_id = rects_ids[rect_n];
+      if (const ImFontAtlas::CustomRect* rect = io.Fonts->GetCustomRectByIndex(rect_id))
+      {
+          // Fill the custom rectangle with red pixels (in reality you would draw/copy your bitmap data here!)
+          for (int y = 0; y < rect->Height; y++)
+          {
+              ImU32* p = (ImU32*)tex_pixels + (rect->Y + y) * tex_width + (rect->X);
+              for (int x = rect->Width; x > 0; x--)
+                  *p++ = IM_COL32(255, 0, 0, 255);
+          }
+      }
+  }
+
+
+---------------------------------------
  EMBEDDING FONTS IN SOURCE CODE
 ---------------------------------------
 
@@ -241,13 +285,13 @@ ProggyClean.ttf
 
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting in ImGui: Size = 13.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 13.0, DisplayOffset.Y = +1
   http://www.proggyfonts.net/
 
 ProggyTiny.ttf
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting in ImGui: Size = 10.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 10.0, DisplayOffset.Y = +1
   http://www.proggyfonts.net/
 
 Karla-Regular.ttf

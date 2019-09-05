@@ -1,34 +1,37 @@
-// dear imgui: standalone example application for Marmalade
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-
-// Copyright (C) 2015 by Giovanni Zito
-// This file is part of Dear ImGui
+// ImGui - standalone example application for GLFW + Metal, using programmable pipeline
+// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 #include "imgui.h"
-#include "imgui_impl_marmalade.h"
+#include "imgui_impl_glfw.h"
+#include "imgui_impl_metal.h"
+
+#define GLFW_INCLUDE_NONE
+#define GLFW_EXPOSE_NATIVE_COCOA
+#include <GLFW/glfw3.h>
+#include <GLFW/glfw3native.h>
+
+#import <Metal/Metal.h>
+#import <QuartzCore/QuartzCore.h>
+
 #include <stdio.h>
 
-#include <s3eKeyboard.h>
-#include <s3ePointer.h>
-#include <IwGx.h>
+static void glfw_error_callback(int error, const char* description)
+{
+    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
+}
 
 int main(int, char**)
 {
-    IwGxInit();
-
-    // Setup Dear ImGui context
+    // Setup Dear ImGui binding
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;        // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
-    // Setup Dear ImGui style
+    // Setup style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
-
-    // Setup Platform/Renderer bindings
-    ImGui_Marmalade_Init(true);
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
@@ -45,27 +48,63 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
+    // Setup window
+    glfwSetErrorCallback(glfw_error_callback);
+    if (!glfwInit())
+        return 1;
+
+    // Create window with graphics context
+    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
+    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+Metal example", NULL, NULL);
+    if (window == NULL)
+        return 1;
+
+    id <MTLDevice> device = MTLCreateSystemDefaultDevice();;
+    id <MTLCommandQueue> commandQueue = [device newCommandQueue];
+
+    ImGui_ImplGlfw_InitForOpenGL(window, true);
+    ImGui_ImplMetal_Init(device);
+
+    NSWindow *nswin = glfwGetCocoaWindow(window);
+    CAMetalLayer *layer = [CAMetalLayer layer];
+    layer.device = device;
+    layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
+    nswin.contentView.layer = layer;
+    nswin.contentView.wantsLayer = YES;
+
+    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor new];
+
     // Our state
     bool show_demo_window = true;
     bool show_another_window = false;
-    ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    float clear_color[4] = {0.45f, 0.55f, 0.60f, 1.00f};
 
     // Main loop
-    while (true)
+    while (!glfwWindowShouldClose(window))
     {
-        if (s3eDeviceCheckQuitRequest())
-            break;
-
-        // Poll and handle inputs
+        // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        s3eKeyboardUpdate();
-        s3ePointerUpdate();
+        glfwPollEvents();
+
+        int width, height;
+        glfwGetFramebufferSize(window, &width, &height);
+        layer.drawableSize = CGSizeMake(width, height);
+        id<CAMetalDrawable> drawable = [layer nextDrawable];
+
+        id<MTLCommandBuffer> commandBuffer = [commandQueue commandBuffer];
+        renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(clear_color[0], clear_color[1], clear_color[2], clear_color[3]);
+        renderPassDescriptor.colorAttachments[0].texture = drawable.texture;
+        renderPassDescriptor.colorAttachments[0].loadAction = MTLLoadActionClear;
+        renderPassDescriptor.colorAttachments[0].storeAction = MTLStoreActionStore;
+        id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
+        [renderEncoder pushDebugGroup:@"ImGui demo"];
 
         // Start the Dear ImGui frame
-        ImGui_Marmalade_NewFrame();
+        ImGui_ImplMetal_NewFrame(renderPassDescriptor);
+        ImGui_ImplGlfw_NewFrame();
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -107,18 +146,22 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
-        IwGxSetColClear(clear_color.x * 255, clear_color.y * 255, clear_color.z * 255, clear_color.w * 255);
-        IwGxClear();
-        ImGui_Marmalade_RenderDrawData(ImGui::GetDrawData());
-        IwGxSwapBuffers();
+        ImGui_ImplMetal_RenderDrawData(ImGui::GetDrawData(), commandBuffer, renderEncoder);
 
-        s3eDeviceYield(0);
+        [renderEncoder popDebugGroup];
+        [renderEncoder endEncoding];
+
+        [commandBuffer presentDrawable:drawable];
+        [commandBuffer commit];
     }
 
     // Cleanup
-    ImGui_Marmalade_Shutdown();
+    ImGui_ImplMetal_Shutdown();
+    ImGui_ImplGlfw_Shutdown();
     ImGui::DestroyContext();
-    IwGxTerminate();
+
+    glfwDestroyWindow(window);
+    glfwTerminate();
 
     return 0;
 }
