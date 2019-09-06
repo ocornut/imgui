@@ -103,6 +103,14 @@
     // Present
     [[self openGLContext] flushBuffer];
 
+    // Update and Render additional Platform Windows
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        ImGui::UpdatePlatformWindows();
+        ImGui::RenderPlatformWindowsDefault();
+    }
+
     if (!animationTimer)
         animationTimer = [NSTimer scheduledTimerWithTimeInterval:0.017 target:self selector:@selector(animationTimerFired:) userInfo:nil repeats:YES];
 }
@@ -158,7 +166,7 @@
 // ImGuiExampleAppDelegate
 //-----------------------------------------------------------------------------------
 
-@interface ImGuiExampleAppDelegate : NSObject <NSApplicationDelegate>
+@interface ImGuiExampleAppDelegate : NSObject <NSApplicationDelegate, NSWindowDelegate>
 @property (nonatomic, readonly) NSWindow* window;
 @end
 
@@ -181,8 +189,14 @@
     [_window setTitle:@"Dear ImGui OSX+OpenGL2 Example"];
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
+    [_window setDelegate:self];
 
     return (_window);
+}
+
+-(void)windowWillClose:(NSNotification *)notification
+{
+    [NSApp terminate:self];
 }
 
 -(void)setupMenu
@@ -242,14 +256,16 @@
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
+    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;       // Enable Multi-Viewport / Platform Windows
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplOSX_Init();
+    ImGui_ImplOSX_Init(self.window);
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
@@ -266,6 +282,13 @@
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
+}
+
+-(void)applicationWillTerminate:(NSNotification *)notification;
+{
+    ImGui_ImplOpenGL2_Shutdown();
+    ImGui_ImplOSX_Shutdown();
+    ImGui::DestroyContext();
 }
 
 @end
