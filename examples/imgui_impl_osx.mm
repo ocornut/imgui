@@ -43,7 +43,7 @@ static void ImGui_ImplOSX_UpdateMonitors();
 @end
 
 // Functions
-bool ImGui_ImplOSX_Init(NSWindow* window)
+bool ImGui_ImplOSX_Init(NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
 
@@ -55,7 +55,7 @@ bool ImGui_ImplOSX_Init(NSWindow* window)
     io.BackendPlatformName = "imgui_impl_osx";
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
-    g_Window = window;
+    g_Window = [view window];
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)g_Window;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)

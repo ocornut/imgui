@@ -265,7 +265,7 @@
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplOSX_Init(self.window);
+    ImGui_ImplOSX_Init(view);
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
