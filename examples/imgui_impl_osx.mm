@@ -440,7 +440,7 @@ static void ImGui_ImplOSX_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
     NSScreen* screen = [window screen];
     NSSize size = [screen convertRectToBacking:[screen frame]].size;
     NSRect rect = [window convertRectToBacking:[window contentLayoutRect]];
-    NSRect origin = NSMakeRect(0, 0, pos.x, size.height - pos.y - rect.size.height);
+    NSRect origin = NSMakeRect(pos.x, size.height - pos.y - rect.size.height, 0, 0);
     origin = [window convertRectFromBacking:origin];
     [window setFrameOrigin:origin.origin];
 }
