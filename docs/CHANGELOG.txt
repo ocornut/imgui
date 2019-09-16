@@ -45,6 +45,8 @@ Other Changes:
   (before 1.71 tab bars fed the sum of current width which created feedback loops in certain situations).
 - TabBar: improved shrinking for large number of tabs to avoid leaving extraneous space on the right side.
   Individuals tabs are given integer-rounded width and remainder is spread between tabs left-to-right.
+- Columns, Separator: Fixed a bug where non-visible separators within columns would alter the next row position
+  differently than visible ones.
 - SliderScalar: Improved assert when using U32 or U64 types with a large v_max value. (#2765) [@loicmouton]
 - DragInt, DragFloat, DragScalar: Using (v_min > v_max) allows locking any edit to the value.
 - DragScalar: Fixed dragging of unsigned values on ARM cpu. (#2780) [@dBagrat]
