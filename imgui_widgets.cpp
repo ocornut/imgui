@@ -1975,12 +1975,12 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
         // Offset + round to user desired precision, with a curve on the v_min..v_max range to get more precision on one side of the range
         FLOATTYPE v_old_norm_curved = ImPow((FLOATTYPE)(v_cur - v_min) / (FLOATTYPE)(v_max - v_min), (FLOATTYPE)1.0f / power);
         FLOATTYPE v_new_norm_curved = v_old_norm_curved + (g.DragCurrentAccum / (v_max - v_min));
-        v_cur = v_min + (TYPE)ImPow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
+        v_cur = v_min + (SIGNEDTYPE)ImPow(ImSaturate((float)v_new_norm_curved), power) * (v_max - v_min);
         v_old_ref_for_accum_remainder = v_old_norm_curved;
     }
     else
     {
-        v_cur += (TYPE)g.DragCurrentAccum;
+        v_cur += (SIGNEDTYPE)g.DragCurrentAccum;
     }
 
     // Round to user desired precision based on format string
