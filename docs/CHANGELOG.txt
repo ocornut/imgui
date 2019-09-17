@@ -50,6 +50,7 @@ Other Changes:
 - SliderScalar: Improved assert when using U32 or U64 types with a large v_max value. (#2765) [@loicmouton]
 - DragInt, DragFloat, DragScalar: Using (v_min > v_max) allows locking any edit to the value.
 - DragScalar: Fixed dragging of unsigned values on ARM cpu. (#2780) [@dBagrat]
+- Style: Allow style.WindowMenuButtonPosition to be set to ImGuiDir_None to hide the collapse button. (#2634, #2639)
 - Font: Better ellipsis drawing implementation. Instead of drawing three pixel-ey dots (which was glaringly
   unfitting with many types of fonts) we first attempt to find a standard ellipsis glyphs within the loaded set.
   Otherwise we render ellipsis using '.' from the font from where we trim excessive spacing to make it as narrow
