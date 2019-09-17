@@ -2489,13 +2489,17 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
 // Another overly complex function until we reorganize everything into a nice all-in-one helper.
 // This is made more complex because we have dissociated the layout rectangle (pos_min..pos_max) which define _where_ the ellipsis is, from actual clipping of text and limit of the ellipsis display.
 // This is because in the context of tabs we selectively hide part of the text when the Close Button appears, but we don't want the ellipsis to move.
-void    ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end_full, const ImVec2* text_size_if_known)
+void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end_full, const ImVec2* text_size_if_known)
 {
     ImGuiContext& g = *GImGui;
     if (text_end_full == NULL)
         text_end_full = FindRenderedTextEnd(text);
     const ImVec2 text_size = text_size_if_known ? *text_size_if_known : CalcTextSize(text, text_end_full, false, 0.0f);
 
+    //draw_list->AddLine(ImVec2(pos_max.x, pos_min.y - 4), ImVec2(pos_max.x, pos_max.y + 4), IM_COL32(0, 0, 255, 255));
+    //draw_list->AddLine(ImVec2(ellipsis_max_x, pos_min.y-2), ImVec2(ellipsis_max_x, pos_max.y+2), IM_COL32(0, 255, 0, 255));
+    //draw_list->AddLine(ImVec2(clip_max_x, pos_min.y), ImVec2(clip_max_x, pos_max.y), IM_COL32(255, 0, 0, 255));
+    // FIXME: We could technically remove (last_glyph->AdvanceX - last_glyph->X1) from text_size.x here and save a few pixels.
     if (text_size.x > pos_max.x - pos_min.x)
     {
         // Hello wo...
@@ -2503,15 +2507,33 @@ void    ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, 
         // min   max   ellipsis_max
         //          <-> this is generally some padding value
 
-        // FIXME-STYLE: RenderPixelEllipsis() style should use actual font data.
         const ImFont* font = draw_list->_Data->Font;
         const float font_size = draw_list->_Data->FontSize;
-        const int ellipsis_dot_count = 3;
-        const float ellipsis_width = (1.0f + 1.0f) * ellipsis_dot_count - 1.0f;
         const char* text_end_ellipsis = NULL;
 
-        float text_width = ImMax((pos_max.x - ellipsis_width) - pos_min.x, 1.0f);
-        float text_size_clipped_x = font->CalcTextSizeA(font_size, text_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
+        ImWchar ellipsis_char = font->EllipsisChar;
+        int ellipsis_char_count = 1;
+        if (ellipsis_char == (ImWchar)-1)
+        {
+            ellipsis_char = (ImWchar)'.';
+            ellipsis_char_count = 3;
+        }
+        const ImFontGlyph* glyph = font->FindGlyph(ellipsis_char);
+
+        float ellipsis_glyph_width = glyph->X1;                 // Width of the glyph with no padding on either side
+        float ellipsis_total_width = ellipsis_glyph_width;      // Full width of entire ellipsis
+        
+        if (ellipsis_char_count > 1)
+        {
+            // Full ellipsis size without free spacing after it.
+            const float spacing_between_dots = 1.0f * (draw_list->_Data->FontSize / font->FontSize);
+            ellipsis_glyph_width = glyph->X1 - glyph->X0 + spacing_between_dots;
+            ellipsis_total_width = ellipsis_glyph_width * (float)ellipsis_char_count - spacing_between_dots;
+        }
+        
+        // We can now claim the space between pos_max.x and ellipsis_max.x
+        const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_total_width) - pos_min.x, 1.0f);
+        float text_size_clipped_x = font->CalcTextSizeA(font_size, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
         if (text == text_end_ellipsis && text_end_ellipsis < text_end_full)
         {
             // Always display at least 1 character if there's no room for character + ellipsis
@@ -2520,15 +2542,20 @@ void    ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, 
         }
         while (text_end_ellipsis > text && ImCharIsBlankA(text_end_ellipsis[-1]))
         {
-            // Trim trailing space before ellipsis
+            // Trim trailing space before ellipsis (FIXME: Supporting non-ascii blanks would be nice, for this we need a function to backtrack in UTF-8 text)
             text_end_ellipsis--;
             text_size_clipped_x -= font->CalcTextSizeA(font_size, FLT_MAX, 0.0f, text_end_ellipsis, text_end_ellipsis + 1).x; // Ascii blanks are always 1 byte
         }
-        RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
 
-        const float ellipsis_x = pos_min.x + text_size_clipped_x + 1.0f;
-        if (ellipsis_x + ellipsis_width - 1.0f <= ellipsis_max_x)
-            RenderPixelEllipsis(draw_list, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_dot_count);
+        // Render text, render ellipsis
+        RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
+        float ellipsis_x = pos_min.x + text_size_clipped_x;
+        if (ellipsis_x + ellipsis_total_width <= ellipsis_max_x)
+            for (int i = 0; i < ellipsis_char_count; i++)
+            {
+                font->RenderChar(draw_list, font_size, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_char);
+                ellipsis_x += ellipsis_glyph_width;
+            }
     }
     else
     {
