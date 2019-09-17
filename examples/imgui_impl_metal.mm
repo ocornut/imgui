@@ -91,7 +91,7 @@ bool ImGui_ImplMetal_Init(id<MTLDevice> device)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_metal";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;
+    io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
     static dispatch_once_t onceToken;
     dispatch_once(&onceToken, ^{
@@ -139,15 +139,15 @@ void ImGui_ImplMetal_DestroyFontsTexture()
 {
     ImGuiIO& io = ImGui::GetIO();
     g_sharedMetalContext.fontTexture = nil;
-    io.Fonts->TexID = nullptr;
+    io.Fonts->TexID = NULL;
 }
 
 bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 {
     [g_sharedMetalContext makeDeviceObjectsWithDevice:device];
     g_sharedMetalContext.device = device;
-    ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
 
+    ImGui_ImplMetal_CreateDeviceObjectsForPlatformWindows();
     ImGui_ImplMetal_CreateFontsTexture(device);
 
     return true;
@@ -156,8 +156,9 @@ bool ImGui_ImplMetal_CreateDeviceObjects(id<MTLDevice> device)
 void ImGui_ImplMetal_DestroyDeviceObjects()
 {
     ImGui_ImplMetal_DestroyFontsTexture();
-    [g_sharedMetalContext emptyRenderPipelineStateCache];
     ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows();
+
+    [g_sharedMetalContext emptyRenderPipelineStateCache];
 }
 
 //--------------------------------------------------------------------------------------------------------
@@ -173,7 +174,7 @@ struct ImGuiViewportDataMetal
     MTLRenderPassDescriptor*    RenderPassDescriptor;
     void*                       Handle;
 
-    ImGuiViewportDataMetal()    { Handle = nullptr; }
+    ImGuiViewportDataMetal()    { Handle = NULL; }
     ~ImGuiViewportDataMetal()   {}
 };
 
@@ -238,16 +239,14 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 
     id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];
-    id <MTLCommandBuffer> commandBuffer = [data->CommandQueue commandBuffer];
 
     MTLRenderPassDescriptor* renderPassDescriptor = data->RenderPassDescriptor;
     renderPassDescriptor.colorAttachments[0].texture = [drawable texture];
     renderPassDescriptor.colorAttachments[0].clearColor = MTLClearColorMake(0, 0, 0, 0);
 
+    id <MTLCommandBuffer> commandBuffer = [data->CommandQueue commandBuffer];
     id <MTLRenderCommandEncoder> renderEncoder = [commandBuffer renderCommandEncoderWithDescriptor:renderPassDescriptor];
-
     ImGui_ImplMetal_RenderDrawData(viewport->DrawData, commandBuffer, renderEncoder);
-    
     [renderEncoder endEncoding];
 
     [commandBuffer presentDrawable:drawable];
