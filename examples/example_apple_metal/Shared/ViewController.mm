@@ -57,8 +57,6 @@
         }
 
     }];
-
-    ImGui_ImplOSX_Init(self.view);
 #endif
 }
 

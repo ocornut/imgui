@@ -158,6 +158,8 @@
 -(void)flagsChanged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseDown:(NSEvent *)event       { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseUp:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseMoved:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseDragged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)scrollWheel:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self); }
 
 @end
@@ -190,6 +192,7 @@
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
     [_window setDelegate:self];
+    [_window setAcceptsMouseMovedEvents:YES];
 
     return (_window);
 }
