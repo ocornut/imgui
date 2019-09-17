@@ -56,6 +56,10 @@ bool ImGui_ImplOSX_Init(NSView* view)
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     g_Window = [view window];
+    if (g_Window == nil)
+    {
+        g_Window = [NSApp orderedWindows].firstObject;
+    }
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (__bridge_retained void*)g_Window;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
@@ -366,9 +370,8 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     viewport->PlatformUserData = data;
 
     NSScreen* screen = [g_Window screen];
-    NSSize size = [screen convertRectToBacking:[screen frame]].size;
+    NSSize size = [screen frame].size;
     NSRect rect = NSMakeRect(viewport->Pos.x, size.height - viewport->Pos.y - viewport->Size.y, viewport->Size.x, viewport->Size.y);
-    rect = [screen convertRectFromBacking:rect];
 
     NSWindow* window = [[NSWindow alloc] initWithContentRect:rect styleMask:NSWindowStyleMaskBorderless backing:NSBackingStoreBuffered defer:YES];
     [window setTitle:@"Untitled"];
@@ -426,9 +429,9 @@ static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
 
     NSWindow* window = data->Window;
     NSScreen* screen = [window screen];
-    NSSize size = [screen convertRectToBacking:[screen frame]].size;
-    NSRect frame = [window convertRectToBacking:[window frame]];
-    NSRect rect = [window convertRectToBacking:[window contentLayoutRect]];
+    NSSize size = [screen frame].size;
+    NSRect frame = [window frame];
+    NSRect rect = [window contentLayoutRect];
     return ImVec2(frame.origin.x, size.height - frame.origin.y - rect.size.height);
 }
 
@@ -439,10 +442,9 @@ static void ImGui_ImplOSX_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
 
     NSWindow* window = data->Window;
     NSScreen* screen = [window screen];
-    NSSize size = [screen convertRectToBacking:[screen frame]].size;
-    NSRect rect = [window convertRectToBacking:[window contentLayoutRect]];
+    NSSize size = [screen frame].size;
+    NSRect rect = [window contentLayoutRect];
     NSRect origin = NSMakeRect(pos.x, size.height - pos.y - rect.size.height, 0, 0);
-    origin = [window convertRectFromBacking:origin];
     [window setFrameOrigin:origin.origin];
 }
 
@@ -452,7 +454,7 @@ static ImVec2 ImGui_ImplOSX_GetWindowSize(ImGuiViewport* viewport)
     IM_ASSERT(data->Window != 0);
 
     NSWindow* window = data->Window;
-    NSSize size = [window convertRectToBacking:[window contentLayoutRect]].size;
+    NSSize size = [window contentLayoutRect].size;
     return ImVec2(size.width, size.width);
 }
 
@@ -462,11 +464,10 @@ static void ImGui_ImplOSX_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
     IM_ASSERT(data->Window != 0);
 
     NSWindow* window = data->Window;
-    NSRect rect = [window convertRectToBacking:[window frame]];
+    NSRect rect = [window frame];
     rect.origin.y -= (size.y - rect.size.height);
     rect.size.width = size.x;
     rect.size.height = size.y;
-    rect = [window convertRectFromBacking:rect];
     [window setFrame:rect display:YES];
 }
 
@@ -543,8 +544,8 @@ static void ImGui_ImplOSX_UpdateMonitors()
     for (NSUInteger i = 0; i < array.count; ++i)
     {
         NSScreen* screen = array[i];
-        NSRect frame = [screen convertRectToBacking:[screen frame]];
-        NSRect visibleFrame = [screen convertRectToBacking:[screen visibleFrame]];
+        NSRect frame = [screen frame];
+        NSRect visibleFrame = [screen visibleFrame];
 
         ImGuiPlatformMonitor imgui_monitor;
         imgui_monitor.MainPos = ImVec2(frame.origin.x, frame.origin.y);
