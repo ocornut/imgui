@@ -11173,7 +11173,11 @@ void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
         if (g.PlatformIO.Platform_DestroyWindow)
             g.PlatformIO.Platform_DestroyWindow(viewport);
         IM_ASSERT(viewport->RendererUserData == NULL && viewport->PlatformUserData == NULL);
-        viewport->PlatformWindowCreated = false;
+
+        // Don't clear PlatformWindowCreated for the main viewport, as we initially set that up to true in Initialize()
+        // The right-er way may be to leave it to the back-end to set this flag all-together, and made the flag public.
+        if (viewport->ID != IMGUI_VIEWPORT_DEFAULT_ID)
+            viewport->PlatformWindowCreated = false;
     }
     else
     {
