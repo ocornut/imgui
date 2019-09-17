@@ -214,6 +214,11 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
         global_vtx_offset += cmd_list->VtxBuffer.Size;
     }
 
+    // When using multi-viewports, it appears that there's an odd logic in DirectX9 which prevent subsequent windows
+    // from rendering until the first window submits at least one draw call, even once. That's our workaround. (see #2560)
+    if (global_vtx_offset == 0)
+        g_pd3dDevice->DrawIndexedPrimitive(D3DPT_TRIANGLELIST, 0, 0, 0, 0, 0);
+
     // Restore the DX9 transform
     g_pd3dDevice->SetTransform(D3DTS_WORLD, &last_world);
     g_pd3dDevice->SetTransform(D3DTS_VIEW, &last_view);
