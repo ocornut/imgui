@@ -3222,21 +3222,21 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
 }
 
 // We don't use an enum so we can build even with conflicting symbols (if another user of stb_textedit.h leak their STB_TEXTEDIT_K_* symbols)
-#define STB_TEXTEDIT_K_LEFT         0x10000 // keyboard input to move cursor left
-#define STB_TEXTEDIT_K_RIGHT        0x10001 // keyboard input to move cursor right
-#define STB_TEXTEDIT_K_UP           0x10002 // keyboard input to move cursor up
-#define STB_TEXTEDIT_K_DOWN         0x10003 // keyboard input to move cursor down
-#define STB_TEXTEDIT_K_LINESTART    0x10004 // keyboard input to move cursor to start of line
-#define STB_TEXTEDIT_K_LINEEND      0x10005 // keyboard input to move cursor to end of line
-#define STB_TEXTEDIT_K_TEXTSTART    0x10006 // keyboard input to move cursor to start of text
-#define STB_TEXTEDIT_K_TEXTEND      0x10007 // keyboard input to move cursor to end of text
-#define STB_TEXTEDIT_K_DELETE       0x10008 // keyboard input to delete selection or character under cursor
-#define STB_TEXTEDIT_K_BACKSPACE    0x10009 // keyboard input to delete selection or character left of cursor
-#define STB_TEXTEDIT_K_UNDO         0x1000A // keyboard input to perform undo
-#define STB_TEXTEDIT_K_REDO         0x1000B // keyboard input to perform redo
-#define STB_TEXTEDIT_K_WORDLEFT     0x1000C // keyboard input to move cursor left one word
-#define STB_TEXTEDIT_K_WORDRIGHT    0x1000D // keyboard input to move cursor right one word
-#define STB_TEXTEDIT_K_SHIFT        0x20000
+#define STB_TEXTEDIT_K_LEFT         0x200000 // keyboard input to move cursor left
+#define STB_TEXTEDIT_K_RIGHT        0x200001 // keyboard input to move cursor right
+#define STB_TEXTEDIT_K_UP           0x200002 // keyboard input to move cursor up
+#define STB_TEXTEDIT_K_DOWN         0x200003 // keyboard input to move cursor down
+#define STB_TEXTEDIT_K_LINESTART    0x200004 // keyboard input to move cursor to start of line
+#define STB_TEXTEDIT_K_LINEEND      0x200005 // keyboard input to move cursor to end of line
+#define STB_TEXTEDIT_K_TEXTSTART    0x200006 // keyboard input to move cursor to start of text
+#define STB_TEXTEDIT_K_TEXTEND      0x200007 // keyboard input to move cursor to end of text
+#define STB_TEXTEDIT_K_DELETE       0x200008 // keyboard input to delete selection or character under cursor
+#define STB_TEXTEDIT_K_BACKSPACE    0x200009 // keyboard input to delete selection or character left of cursor
+#define STB_TEXTEDIT_K_UNDO         0x20000A // keyboard input to perform undo
+#define STB_TEXTEDIT_K_REDO         0x20000B // keyboard input to perform redo
+#define STB_TEXTEDIT_K_WORDLEFT     0x20000C // keyboard input to move cursor left one word
+#define STB_TEXTEDIT_K_WORDRIGHT    0x20000D // keyboard input to move cursor right one word
+#define STB_TEXTEDIT_K_SHIFT        0x400000
 
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "imstb_textedit.h"
