@@ -575,17 +575,17 @@ CODE
  Q: Where is the documentation?
  A: This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.
     - Run the examples/ and explore them.
-    - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function. 
-    - The demo covers most features of Dear ImGui, so you can read the code and see its output. 
+    - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function.
+    - The demo covers most features of Dear ImGui, so you can read the code and see its output.
     - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
-    - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ 
+    - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/
       folder to explain how to integrate Dear ImGui with your own engine/application.
-    - Your programming IDE is your friend, find the type or function declaration to find comments 
+    - Your programming IDE is your friend, find the type or function declaration to find comments
       associated to it.
 
  Q: Which version should I get?
- A: I occasionally tag Releases (https://github.com/ocornut/imgui/releases) but it is generally safe 
-    and recommended to sync to master/latest. The library is fairly stable and regressions tend to be 
+ A: I occasionally tag Releases (https://github.com/ocornut/imgui/releases) but it is generally safe
+    and recommended to sync to master/latest. The library is fairly stable and regressions tend to be
     fixed fast when reported. You may also peak at the 'docking' branch which includes:
     - Docking/Merging features (https://github.com/ocornut/imgui/issues/2109)
     - Multi-viewport features (https://github.com/ocornut/imgui/issues/1542)
@@ -597,11 +597,11 @@ CODE
     for a list of games/software which are publicly known to use dear imgui. Please add yours if you can!
 
  Q: Why the odd dual naming, "Dear ImGui" vs "ImGui"?
- A: The library started its life as "ImGui" due to the fact that I didn't give it a proper name when 
-    when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI 
-    (immediate-mode graphical user interface) was coined before and is being used in variety of other 
-    situations (e.g. Unity uses it own implementation of the IMGUI paradigm). 
-    To reduce the ambiguity without affecting existing code bases, I have decided on an alternate, 
+ A: The library started its life as "ImGui" due to the fact that I didn't give it a proper name when
+    when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI
+    (immediate-mode graphical user interface) was coined before and is being used in variety of other
+    situations (e.g. Unity uses it own implementation of the IMGUI paradigm).
+    To reduce the ambiguity without affecting existing code bases, I have decided on an alternate,
     longer name "Dear ImGui" that people can use to refer to this specific library.
     Please try to refer to this library as "Dear ImGui".
 
@@ -2488,7 +2488,7 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, cons
 
 // Another overly complex function until we reorganize everything into a nice all-in-one helper.
 // This is made more complex because we have dissociated the layout rectangle (pos_min..pos_max) which define _where_ the ellipsis is, from actual clipping of text and limit of the ellipsis display.
-// This is because in the context of tabs we selectively hide part of the text when the Close Button appears, but we don't want the ellipsis to move. 
+// This is because in the context of tabs we selectively hide part of the text when the Close Button appears, but we don't want the ellipsis to move.
 void    ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end_full, const ImVec2* text_size_if_known)
 {
     ImGuiContext& g = *GImGui;
@@ -2996,8 +2996,8 @@ bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
     {
         // Navigation processing runs prior to clipping early-out
         //  (a) So that NavInitRequest can be honored, for newly opened windows to select a default widget
-        //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests 
-        //      unfortunately, but it is still limited to one window. It may not scale very well for windows with ten of 
+        //  (b) So that we can scroll up/down past clipped items. This adds a small O(N) cost to regular navigation requests
+        //      unfortunately, but it is still limited to one window. It may not scale very well for windows with ten of
         //      thousands of item, but at least NavMoveRequest is only set on user interaction, aka maximum once a frame.
         //      We could early out with "if (is_clipped && !g.NavInitRequest) return false;" but when we wouldn't be able
         //      to reach unclipped widgets. This would work if user had explicit scrolling control (e.g. mapped on a stick).
@@ -4044,7 +4044,7 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
             return;
     }
 
-    // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc. 
+    // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
     // May trigger for you if you are using PrimXXX functions incorrectly.
     IM_ASSERT(draw_list->VtxBuffer.Size == 0 || draw_list->_VtxWritePtr == draw_list->VtxBuffer.Data + draw_list->VtxBuffer.Size);
     IM_ASSERT(draw_list->IdxBuffer.Size == 0 || draw_list->_IdxWritePtr == draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size);
@@ -4053,7 +4053,7 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
 
     // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
     // If this assert triggers because you are drawing lots of stuff manually:
-    // - First, make sure you are coarse clipping yourself and not trying to draw many things outside visible bounds. 
+    // - First, make sure you are coarse clipping yourself and not trying to draw many things outside visible bounds.
     //   Be mindful that the ImDrawList API doesn't filter vertices. Use the Metrics window to inspect draw list contents.
     // - If you want large meshes with more than 64K vertices, you can either:
     //   (A) Handle the ImDrawCmd::VtxOffset value in your renderer back-end, and set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset'.
@@ -4062,9 +4062,9 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
     //   (B) Or handle 32-bits indices in your renderer back-end, and uncomment '#define ImDrawIdx unsigned int' line in imconfig.h.
     //       Most example back-ends already support this. For example, the OpenGL example code detect index size at compile-time:
     //         glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, idx_buffer_offset);
-    //       Your own engine or render API may use different parameters or function calls to specify index sizes. 
+    //       Your own engine or render API may use different parameters or function calls to specify index sizes.
     //       2 and 4 bytes indices are generally supported by most graphics API.
-    // - If for some reason neither of those solutions works for you, a workaround is to call BeginChild()/EndChild() before reaching 
+    // - If for some reason neither of those solutions works for you, a workaround is to call BeginChild()/EndChild() before reaching
     //   the 64K limit to split your draw commands in multiple draw lists.
     if (sizeof(ImDrawIdx) == 2)
         IM_ASSERT(draw_list->_VtxCurrentIdx < (1 << 16) && "Too many vertices in ImDrawList using 16-bit indices. Read comment above");
@@ -4381,7 +4381,7 @@ int ImGui::GetKeyIndex(ImGuiKey imgui_key)
 // Note that imgui doesn't know the semantic of each entry of io.KeysDown[]. Use your own indices/enums according to how your back-end/engine stored them into io.KeysDown[]!
 bool ImGui::IsKeyDown(int user_key_index)
 {
-    if (user_key_index < 0) 
+    if (user_key_index < 0)
         return false;
     ImGuiContext& g = *GImGui;
     IM_ASSERT(user_key_index >= 0 && user_key_index < IM_ARRAYSIZE(g.IO.KeysDown));
@@ -5741,7 +5741,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->OuterRectClipped.ClipWith(host_rect);
 
         // Inner rectangle
-        // Not affected by window border size. Used by: 
+        // Not affected by window border size. Used by:
         // - InnerClipRect
         // - ScrollToBringRectIntoView()
         // - NavUpdatePageUpPageDown()
@@ -5819,7 +5819,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 render_decorations_in_parent = true;
         if (render_decorations_in_parent)
             window->DrawList = parent_window->DrawList;
-        
+
         // Handle title bar, scrollbar, resize grips and resize borders
         const ImGuiWindow* window_to_highlight = g.NavWindowingTarget ? g.NavWindowingTarget : g.NavWindow;
         const bool title_bar_is_highlight = want_focus || (window_to_highlight && window->RootWindowForTitleBarHighlight == window_to_highlight->RootWindowForTitleBarHighlight);

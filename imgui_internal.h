@@ -809,7 +809,7 @@ struct ImGuiNextWindowData
     void*                       SizeCallbackUserData;
     float                       BgAlphaVal;
     ImVec2                      MenuBarOffsetMinVal;    // *Always on* This is not exposed publicly, so we don't clear it.
-        
+
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
@@ -1710,7 +1710,7 @@ IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned ch
 
 // Debug Tools
 // Use 'Metrics->Tools->Item Picker' to break into the call-stack of a specific item.
-#ifndef IM_DEBUG_BREAK      
+#ifndef IM_DEBUG_BREAK
 #if defined(__clang__)
 #define IM_DEBUG_BREAK()    __builtin_debugtrap()
 #elif defined (_MSC_VER)

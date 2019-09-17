@@ -1202,7 +1202,7 @@ void ImDrawListSplitter::ClearFreeMemory()
 {
     for (int i = 0; i < _Channels.Size; i++)
     {
-        if (i == _Current) 
+        if (i == _Current)
             memset(&_Channels[i], 0, sizeof(_Channels[i]));  // Current channel is a copy of CmdBuffer/IdxBuffer, don't destruct again
         _Channels[i]._CmdBuffer.clear();
         _Channels[i]._IdxBuffer.clear();
@@ -1307,7 +1307,7 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
 void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
 {
     IM_ASSERT(idx >= 0 && idx < _Count);
-    if (_Current == idx) 
+    if (_Current == idx)
         return;
     // Overwrite ImVector (12/16 bytes), four times. This is merely a silly optimization instead of doing .swap()
     memcpy(&_Channels.Data[_Current]._CmdBuffer, &draw_list->CmdBuffer, sizeof(draw_list->CmdBuffer));

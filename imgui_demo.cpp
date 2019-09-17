@@ -17,7 +17,7 @@
 // In this demo code, we frequently we use 'static' variables inside functions. A static variable persist across calls, so it is
 // essentially like a global variable but declared inside the scope of the function. We do this as a way to gather code and data
 // in the same place, to make the demo source code faster to read, faster to write, and smaller in size.
-// It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be 
+// It also happens to be a convenient way of storing simple UI related information as long as your function doesn't need to be
 // reentrant or used in multiple threads. This might be a pattern you will want to use in your code, but most of the real data
 // you would be editing is likely going to be stored outside your functions.
 
@@ -589,7 +589,7 @@ static void ShowDemoWindowWidgets()
         {
             for (int i = 0; i < 5; i++)
             {
-                // Use SetNextItemOpen() so set the default state of a node to be open. 
+                // Use SetNextItemOpen() so set the default state of a node to be open.
                 // We could also use TreeNodeEx() with the ImGuiTreeNodeFlags_DefaultOpen flag to achieve the same thing!
                 if (i == 0)
                     ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -1109,7 +1109,7 @@ static void ShowDemoWindowWidgets()
             if (progress <= -0.1f) { progress = -0.1f; progress_dir *= -1.0f; }
         }
 
-        // Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width, 
+        // Typically we would use ImVec2(-1.0f,0.0f) or ImVec2(-FLT_MIN,0.0f) to use all available width,
         // or ImVec2(width,0.0f) for a specified width. ImVec2(0.0f,0.0f) uses ItemWidth.
         ImGui::ProgressBar(progress, ImVec2(0.0f,0.0f));
         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
@@ -2259,7 +2259,7 @@ static void ShowDemoWindowLayout()
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(100);
                 ImGui::DragFloat("##csx", &contents_size_x);
-                ImVec2 p = ImGui::GetCursorScreenPos(); 
+                ImVec2 p = ImGui::GetCursorScreenPos();
                 ImGui::GetWindowDrawList()->AddRectFilled(p, ImVec2(p.x + 10, p.y + 10), IM_COL32_WHITE);
                 ImGui::GetWindowDrawList()->AddRectFilled(ImVec2(p.x + contents_size_x - 10, p.y), ImVec2(p.x + contents_size_x, p.y + 10), IM_COL32_WHITE);
                 ImGui::Dummy(ImVec2(0, 10));
