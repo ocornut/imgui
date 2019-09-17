@@ -50,12 +50,12 @@ static bool                 g_WantUpdateHasGamepad = true;
 static bool                 g_WantUpdateMonitors = true;
 
 // Forward Declarations
-static void ImGui_ImplWin32_InitPlatformInterface();
+static void ImGui_ImplWin32_InitPlatformInterface(void* hicon);
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
 
 // Functions
-bool    ImGui_ImplWin32_Init(void* hwnd)
+bool    ImGui_ImplWin32_Init(void* hwnd, void* hicon)
 {
     if (!::QueryPerformanceFrequency((LARGE_INTEGER *)&g_TicksPerSecond))
         return false;
@@ -75,7 +75,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)g_hWnd;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplWin32_InitPlatformInterface();
+        ImGui_ImplWin32_InitPlatformInterface(hicon);
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -779,7 +779,7 @@ static void ImGui_ImplWin32_UpdateMonitors()
     g_WantUpdateMonitors = false;
 }
 
-static void ImGui_ImplWin32_InitPlatformInterface()
+static void ImGui_ImplWin32_InitPlatformInterface(void* hicon)
 {
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
@@ -788,7 +788,7 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
     wcex.hInstance = ::GetModuleHandle(NULL);
-    wcex.hIcon = NULL;
+    wcex.hIcon = (HICON)hicon;
     wcex.hCursor = NULL;
     wcex.hbrBackground = (HBRUSH)(COLOR_BACKGROUND + 1);
     wcex.lpszMenuName = NULL;
