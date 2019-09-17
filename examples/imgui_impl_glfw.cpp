@@ -433,8 +433,8 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
             // GLFW may dispatch window size event after calling glfwSetWindowSize().
             // However depending on the platform the callback may be invoked at different time: on Windows it
             // appears to be called within the glfwSetWindowSize() call whereas on Linux it is queued and invoked
-            // during glfwPollEvents(). 
-            // Because the event doesn't always fire on glfwSetWindowSize() we use a frame counter tag to only 
+            // during glfwPollEvents().
+            // Because the event doesn't always fire on glfwSetWindowSize() we use a frame counter tag to only
             // ignore recent glfwSetWindowSize() calls.
             bool ignore_event = (ImGui::GetFrameCount() <= data->IgnoreWindowSizeEventFrame + 1);
             data->IgnoreWindowSizeEventFrame = -1;
