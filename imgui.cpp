@@ -2496,6 +2496,10 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
         text_end_full = FindRenderedTextEnd(text);
     const ImVec2 text_size = text_size_if_known ? *text_size_if_known : CalcTextSize(text, text_end_full, false, 0.0f);
 
+    //draw_list->AddLine(ImVec2(pos_max.x, pos_min.y - 4), ImVec2(pos_max.x, pos_max.y + 4), IM_COL32(0, 0, 255, 255));
+    //draw_list->AddLine(ImVec2(ellipsis_max_x, pos_min.y-2), ImVec2(ellipsis_max_x, pos_max.y+2), IM_COL32(0, 255, 0, 255));
+    //draw_list->AddLine(ImVec2(clip_max_x, pos_min.y), ImVec2(clip_max_x, pos_max.y), IM_COL32(255, 0, 0, 255));
+    // FIXME: We could technically remove (last_glyph->AdvanceX - last_glyph->X1) from text_size.x here and save a few pixels.
     if (text_size.x > pos_max.x - pos_min.x)
     {
         // Hello wo...
@@ -2518,7 +2522,6 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         float ellipsis_glyph_width = glyph->X1;                 // Width of the glyph with no padding on either side
         float ellipsis_total_width = ellipsis_glyph_width;      // Full width of entire ellipsis
-        float push_left = 1.0f;
         
         if (ellipsis_char_count > 1)
         {
@@ -2526,13 +2529,11 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
             const float spacing_between_dots = 1.0f * (draw_list->_Data->FontSize / font->FontSize);
             ellipsis_glyph_width = glyph->X1 - glyph->X0 + spacing_between_dots;
             ellipsis_total_width = ellipsis_glyph_width * (float)ellipsis_char_count - spacing_between_dots;
-            if (glyph->X0 > 1.0f)
-                push_left = 0.0f; // Pushing ellipsis to the left will be accomplished by rendering the dot (X0).
         }
         
-        float text_avail_width = ImMax((pos_max.x - ellipsis_total_width) - pos_min.x, 1.0f);
+        // We can now claim the space between pos_max.x and ellipsis_max.x
+        const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_total_width) - pos_min.x, 1.0f);
         float text_size_clipped_x = font->CalcTextSizeA(font_size, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
-
         if (text == text_end_ellipsis && text_end_ellipsis < text_end_full)
         {
             // Always display at least 1 character if there's no room for character + ellipsis
@@ -2546,57 +2547,10 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
             text_size_clipped_x -= font->CalcTextSizeA(font_size, FLT_MAX, 0.0f, text_end_ellipsis, text_end_ellipsis + 1).x; // Ascii blanks are always 1 byte
         }
 
-        if (text_end_ellipsis != text_end_full)
-        {
-            //   +---- First invisible character we arrived at.
-            //  /  +-- Character that we hope to be first invisible.
-            // [l][i]
-            //  ||||
-            //   \ \__ extra_spacing when two characters got hidden
-            //    \___ extra_spacing when one character got hidden
-            unsigned int c = 0;
-            float extra_spacing = 0.0f;
-            const char* text_end_ellipsis_prev = text_end_ellipsis;
-            text_end_ellipsis += ImTextCharFromUtf8(&c, text_end_ellipsis, text_end_full);
-            if (c && !ImCharIsBlankW(c))
-            {
-                // Free space after first invisible glyph
-                const ImFontGlyph* hidden_glyph = font->FindGlyph((ImWchar)c);
-                extra_spacing = hidden_glyph->AdvanceX - hidden_glyph->X1;
-                text_end_ellipsis += ImTextCharFromUtf8(&c, text_end_ellipsis, text_end_full);
-                if (c && !ImCharIsBlankW(c))
-                {
-                    hidden_glyph = font->FindGlyph(text_end_ellipsis[1]);
-                    // Space before next invisible glyph. This intentionally ignores space from the first invisible 
-                    // glyph as that space will serve as spacing between ellipsis and last visible character. Without
-                    // doing this we may get into awkward situations where ellipsis pretty much sticks to the last 
-                    // visible character. This issue manifests with the default font for word "Brocolli" there both i 
-                    // and l are very thin. Unfortunately this makes fonts with wider gaps (like monospace) look a bit 
-                    // worse, but it is a fair middle ground.
-                    extra_spacing = hidden_glyph->X0;
-                }
-            }
-
-            if (extra_spacing > 0)
-            {
-                // Repeat calculation hoping that we will get extra character visible
-                text_avail_width += extra_spacing;
-                // Text length calculation is essentially an optimized version of this:
-                //   text_size_clipped_x = font->CalcTextSizeA(font_size, text_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
-                // It avoids calculating entire width of the string.
-                text_size_clipped_x += font->CalcTextSizeA(font_size, text_avail_width - text_size_clipped_x, 0.0f, text_end_ellipsis_prev, text_end_full, &text_end_ellipsis).x;
-            }
-            else
-                text_end_ellipsis = text_end_ellipsis_prev;
-        }
-
+        // Render text, render ellipsis
         RenderTextClippedEx(draw_list, pos_min, ImVec2(clip_max_x, pos_max.y), text, text_end_ellipsis, &text_size, ImVec2(0.0f, 0.0f));
-
-        // This variable pushes ellipsis to the left from last visible character. This is mostly useful when rendering
-        // ellipsis character contained in the font. If we render ellipsis manually space is already adequate and extra
-        // spacing is not needed.
-        float ellipsis_x = pos_min.x + text_size_clipped_x + push_left;
-        if (ellipsis_x + ellipsis_total_width - push_left <= ellipsis_max_x)
+        float ellipsis_x = pos_min.x + text_size_clipped_x;
+        if (ellipsis_x + ellipsis_total_width <= ellipsis_max_x)
             for (int i = 0; i < ellipsis_char_count; i++)
             {
                 font->RenderChar(draw_list, font_size, ImVec2(ellipsis_x, pos_min.y), GetColorU32(ImGuiCol_Text), ellipsis_char);
