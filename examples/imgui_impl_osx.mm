@@ -7,7 +7,7 @@
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this back-end).
 // Issues:
 //  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-//  [ ] Platform: Multi-viewport / platform windows.
+//  [X] Platform: Multi-viewport / platform windows.
 
 #include "imgui.h"
 #include "imgui_impl_osx.h"
@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-09-07: Implement Multi-viewport.
 //  2019-07-21: Readded clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
 //  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
 //  2019-05-18: Misc: Removed clipboard handlers as they are now supported by core imgui.cpp.
