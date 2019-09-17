@@ -167,8 +167,10 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
-    NSSize size = [view convertRectToBacking:[view bounds]].size;
+    NSSize size = [view bounds].size;
+    NSSize scale = [view convertSizeToBacking:NSMakeSize(1, 1)];
     io.DisplaySize = ImVec2(size.width, size.height);
+    io.DisplayFramebufferScale = ImVec2(scale.width, scale.height);
     if (g_WantUpdateMonitors)
         ImGui_ImplOSX_UpdateMonitors();
 
@@ -229,15 +231,14 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             NSScreen* screen = [[view window] screen];
-            size = [screen convertRectToBacking:[screen frame]].size;
+            size = [screen frame].size;
             mousePoint = [NSEvent mouseLocation];
         }
         else
         {
-            size = [view convertRectToBacking:[view bounds]].size;
+            size = [view bounds].size;
             mousePoint = event.locationInWindow;
         }
-        mousePoint = [view convertPointToBacking:mousePoint];
         mousePoint = NSMakePoint(mousePoint.x, size.height - mousePoint.y);
         io.MousePos = ImVec2(mousePoint.x, mousePoint.y);
     }
