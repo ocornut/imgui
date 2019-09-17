@@ -275,6 +275,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: MergeMode: flags to select overwriting or not (this is now very easy with refactored ImFontAtlasBuildWithStbTruetype)
  - font: free the Alpha buffer if user only requested RGBA.
 !- font: better CalcTextSizeA() API, at least for simple use cases. current one is horrible (perhaps have simple vs extended versions).
+ - font: for the purpose of RenderTextEllipsis(), it might be useful that CalcTextSizeA() can ignore the trailing padding?
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data

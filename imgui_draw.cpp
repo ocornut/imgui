@@ -1426,9 +1426,9 @@ ImFontConfig::ImFontConfig()
     MergeMode = false;
     RasterizerFlags = 0x00;
     RasterizerMultiply = 1.0f;
+    EllipsisChar = (ImWchar)-1;
     memset(Name, 0, sizeof(Name));
     DstFont = NULL;
-    EllipsisCodePoint = (ImWchar)-1;
 }
 
 //-----------------------------------------------------------------------------
@@ -1619,8 +1619,8 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
         memcpy(new_font_cfg.FontData, font_cfg->FontData, (size_t)new_font_cfg.FontDataSize);
     }
 
-    if (new_font_cfg.DstFont->EllipsisCodePoint == (ImWchar)-1)
-        new_font_cfg.DstFont->EllipsisCodePoint = font_cfg->EllipsisCodePoint;
+    if (new_font_cfg.DstFont->EllipsisChar == (ImWchar)-1)
+        new_font_cfg.DstFont->EllipsisChar = font_cfg->EllipsisChar;
 
     // Invalidate texture
     ClearTexData();
@@ -1656,7 +1656,7 @@ ImFont* ImFontAtlas::AddFontDefault(const ImFontConfig* font_cfg_template)
         font_cfg.SizePixels = 13.0f * 1.0f;
     if (font_cfg.Name[0] == '\0')
         ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "ProggyClean.ttf, %dpx", (int)font_cfg.SizePixels);
-    font_cfg.EllipsisCodePoint = (ImWchar)0x0085;
+    font_cfg.EllipsisChar = (ImWchar)0x0085;
 
     const char* ttf_compressed_base85 = GetDefaultCompressedFontDataTTFBase85();
     const ImWchar* glyph_ranges = font_cfg.GlyphRanges != NULL ? font_cfg.GlyphRanges : GetGlyphRangesDefault();
@@ -2204,22 +2204,19 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 
     // Ellipsis character is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
     // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
+    // FIXME: Also note that 0x2026 is currently seldomly included in our font ranges. Because of this we are more likely to use three individual dots.
     for (int i = 0; i < atlas->Fonts.size(); i++)
     {
         ImFont* font = atlas->Fonts[i];
-        if (font->EllipsisCodePoint == (ImWchar)-1)
-        {
-            const ImWchar ellipsis_variants[] = {(ImWchar)0x2026, (ImWchar)0x0085, (ImWchar)0};
-            for (int j = 0; ellipsis_variants[j] != (ImWchar) 0; j++)
+        if (font->EllipsisChar != (ImWchar)-1)
+            continue;
+        const ImWchar ellipsis_variants[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
+        for (int j = 0; j < IM_ARRAYSIZE(ellipsis_variants); j++)
+            if (font->FindGlyphNoFallback(ellipsis_variants[j]) != NULL) // Verify glyph exists
             {
-                ImWchar ellipsis_codepoint = ellipsis_variants[j];
-                if (font->FindGlyph(ellipsis_codepoint) != font->FallbackGlyph)     // Verify glyph exists
-                {
-                    font->EllipsisCodePoint = ellipsis_codepoint;
-                    break;
-                }
+                font->EllipsisChar = ellipsis_variants[j];
+                break;
             }
-        }
     }
 }
 
@@ -2490,6 +2487,7 @@ ImFont::ImFont()
     FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
     FallbackChar = (ImWchar)'?';
+    EllipsisChar = (ImWchar)-1;
     DisplayOffset = ImVec2(0.0f, 0.0f);
     FallbackGlyph = NULL;
     ContainerAtlas = NULL;
@@ -2499,7 +2497,6 @@ ImFont::ImFont()
     Scale = 1.0f;
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
-    EllipsisCodePoint = (ImWchar)-1;
 }
 
 ImFont::~ImFont()
