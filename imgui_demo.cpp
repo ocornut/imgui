@@ -625,7 +625,7 @@ static void ShowDemoWindowWidgets()
             {
                 // Disable the default open on single-click behavior and pass in Selected flag according to our selection state.
                 ImGuiTreeNodeFlags node_flags = base_flags;
-                const bool is_selected = (selection_mask & (1 << i));
+                const bool is_selected = (selection_mask & (1 << i)) != 0;
                 if (is_selected)
                     node_flags |= ImGuiTreeNodeFlags_Selected;
                 if (i < 3)
