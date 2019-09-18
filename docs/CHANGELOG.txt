@@ -50,6 +50,13 @@ Other Changes:
 - SliderScalar: Improved assert when using U32 or U64 types with a large v_max value. (#2765) [@loicmouton]
 - DragInt, DragFloat, DragScalar: Using (v_min > v_max) allows locking any edit to the value.
 - DragScalar: Fixed dragging of unsigned values on ARM cpu. (#2780) [@dBagrat]
+- TreeNode: Added ImGuiTreeNodeFlags_SpanAvailWidth flag. (#2451, #2438, #1897) [@Melix19, @PathogenDavid]
+  This extends the hit-box to the right-most edge, even if the node is not framed.
+  (Note: this is not the default in order to allow adding other items on the same line. In the future we will
+  aim toward refactoring the hit-system to be front-to-back, allowing more natural overlapping of items,
+  and then we will be able to make this the default.)
+- TreeNode: Added ImGuiTreeNodeFlags_SpanFullWidth flag. This extends the hit-box to both the left-most and
+  right-most edge of the working area, bypassing indentation.
 - Style: Allow style.WindowMenuButtonPosition to be set to ImGuiDir_None to hide the collapse button. (#2634, #2639)
 - Font: Better ellipsis drawing implementation. Instead of drawing three pixel-ey dots (which was glaringly
   unfitting with many types of fonts) we first attempt to find a standard ellipsis glyphs within the loaded set.
