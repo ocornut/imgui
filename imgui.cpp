@@ -3344,11 +3344,13 @@ ImDrawList* ImGui::GetBackgroundDrawList()
     return &GImGui->BackgroundDrawList;
 }
 
+#if IMGUI_DEBUG_NAV_RECTS
 static ImDrawList* GetForegroundDrawList(ImGuiWindow*)
 {
     // This seemingly unnecessary wrapper simplifies compatibility between the 'master' and 'docking' branches.
     return &GImGui->ForegroundDrawList;
 }
+#endif
 
 ImDrawList* ImGui::GetForegroundDrawList()
 {
