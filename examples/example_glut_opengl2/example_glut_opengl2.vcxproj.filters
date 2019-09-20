@@ -22,7 +22,7 @@
     <ClCompile Include="..\..\imgui_draw.cpp">
       <Filter>imgui</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_freeglut.cpp">
+    <ClCompile Include="..\imgui_impl_glut.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="..\imgui_impl_opengl2.cpp">
@@ -42,7 +42,7 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_freeglut.h">
+    <ClInclude Include="..\imgui_impl_glut.h">
       <Filter>sources</Filter>
     </ClInclude>
     <ClInclude Include="..\imgui_impl_opengl2.h">
