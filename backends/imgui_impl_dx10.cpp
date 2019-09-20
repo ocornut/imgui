@@ -16,6 +16,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2026-XX-XX: DirectX10: Added support for ImDrawCallback_SetSamplerLinear, ImDrawCallback_SetSamplerPoint.
 //  2026-01-19: DirectX10: Added 'SamplerNearest' in ImGui_ImplDX10_RenderState. Renamed 'SamplerDefault' to 'SamplerLinear'. 
 //  2025-09-18: Call platform_io.ClearRendererHandlers() on shutdown.
 //  2025-06-11: DirectX10: Added support for ImGuiBackendFlags_RendererHasTextures, for dynamic font atlas.
@@ -153,6 +154,12 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     device->RSSetState(bd->pRasterizerState);
 }
 
+// Draw callbacks
+static void ImGui_ImplDX10_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)       {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplDX10_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)       { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); bd->pd3dDevice->PSSetSamplers(0, 1, &bd->pTexSamplerLinear); }
+static void ImGui_ImplDX10_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)      { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); bd->pd3dDevice->PSSetSamplers(0, 1, &bd->pTexSamplerNearest); }
+static void ImGui_ImplDX10_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd)   { ImGui_ImplDX10_Data* bd = ImGui_ImplDX10_GetBackendData(); ID3D10SamplerState* sampler = (ID3D10SamplerState*)cmd->UserCallbackData; bd->pd3dDevice->PSSetSamplers(0, 1, &sampler); }
+
 // Render function
 void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
 {
@@ -279,8 +286,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
             if (pcmd->UserCallback != nullptr)
             {
                 // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImGui_ImplDX10_DrawCallback_ResetRenderState)
                     ImGui_ImplDX10_SetupRenderState(draw_data, device);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -613,6 +619,10 @@ bool    ImGui_ImplDX10_Init(ID3D10Device* device)
 
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
     platform_io.Renderer_TextureMaxWidth = platform_io.Renderer_TextureMaxHeight = D3D10_REQ_TEXTURE2D_U_OR_V_DIMENSION;
+    platform_io.DrawCallback_ResetRenderState = ImGui_ImplDX10_DrawCallback_ResetRenderState;
+    platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplDX10_DrawCallback_SetSamplerLinear;
+    platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplDX10_DrawCallback_SetSamplerNearest;
+    platform_io.DrawCallback_SetSamplerCustom = ImGui_ImplDX10_DrawCallback_SetSamplerCustom;
 
     // Get factory from device
     IDXGIDevice* pDXGIDevice = nullptr;

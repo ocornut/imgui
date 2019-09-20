@@ -22,6 +22,7 @@
 //   Calling the function is MANDATORY, otherwise the ImGui will not upload neither the vertex nor the index buffer for the GPU. See imgui_impl_sdlgpu3.cpp for more info.
 
 // CHANGELOG
+//  2026-XX-XX: Added support for standard draw callbacks (in platform_io): DrawCallback_ResetRenderState, DrawCallback_SetSamplerLinear, DrawCallback_SetSamplerNearest, DrawCallback_SetSamplerCustom.
 //  2026-03-19: Fixed issue in ImGui_ImplSDLGPU3_DestroyTexture() if ImTextureID_Invalid is defined to be != 0, which became the default since 2026-03-12. (#9295, #9310)
 //  2026-02-25: Removed unnecessary call to SDL_WaitForGPUIdle when releasing vertex/index buffers. (#9262)
 //  2025-11-26: macOS version can use MSL shaders in order to support macOS 10.14+ (vs Metallib shaders requiring macOS 14+). Requires calling SDL_CreateGPUDevice() with SDL_GPU_SHADERFORMAT_MSL.
@@ -58,6 +59,7 @@ struct ImGui_ImplSDLGPU3_FrameData
 struct ImGui_ImplSDLGPU3_Data
 {
     ImGui_ImplSDLGPU3_InitInfo   InitInfo;
+    ImGui_ImplSDLGPU3_RenderState* RenderState          = nullptr; // == ImGui::GetPlatformIO().Renderer_RenderState during rendering.
 
     // Graphics pipeline & shaders
     SDL_GPUShader*               VertexShader           = nullptr;
@@ -216,6 +218,12 @@ void ImGui_ImplSDLGPU3_PrepareDrawData(ImDrawData* draw_data, SDL_GPUCommandBuff
     SDL_EndGPUCopyPass(copy_pass);
 }
 
+// Draw callbacks
+static void ImGui_ImplSDLGPU3_DrawCallback_ResetRenderState(const ImDrawList*, const ImDrawCmd*)    {} // Intentionally empty. Used as an identifier for rendering loop to call its code. Simpler to implement this way.
+static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerLinear(const ImDrawList*, const ImDrawCmd*)    { ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->RenderState->SamplerCurrent = bd->TexSamplerLinear; }
+static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerNearest(const ImDrawList*, const ImDrawCmd*)   { ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->RenderState->SamplerCurrent = bd->TexSamplerNearest; }
+static void ImGui_ImplSDLGPU3_DrawCallback_SetSamplerCustom(const ImDrawList*, const ImDrawCmd* cmd){ ImGui_ImplSDLGPU3_Data* bd = ImGui_ImplSDLGPU3_GetBackendData(); bd->RenderState->SamplerCurrent = (SDL_GPUSampler*)cmd->UserCallbackData; }
+
 void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffer* command_buffer, SDL_GPURenderPass* render_pass, SDL_GPUGraphicsPipeline* pipeline)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
@@ -240,7 +248,7 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
     render_state.Device = bd->InitInfo.Device;
     render_state.SamplerLinear = render_state.SamplerCurrent = bd->TexSamplerLinear;
     render_state.SamplerNearest = bd->TexSamplerNearest;
-    platform_io.Renderer_RenderState = &render_state;
+    platform_io.Renderer_RenderState = bd->RenderState = &render_state;
 
     ImGui_ImplSDLGPU3_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
 
@@ -256,8 +264,7 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
             if (pcmd->UserCallback != nullptr)
             {
                 // User callback, registered via ImDrawList::AddCallback()
-                // (ImDrawCallback_ResetRenderState is a special callback value used by the user to request the renderer to reset render state.)
-                if (pcmd->UserCallback == ImDrawCallback_ResetRenderState)
+                if (pcmd->UserCallback == ImGui_ImplSDLGPU3_DrawCallback_ResetRenderState)
                     ImGui_ImplSDLGPU3_SetupRenderState(draw_data, &render_state, pipeline, command_buffer, render_pass, fd, fb_width, fb_height);
                 else
                     pcmd->UserCallback(draw_list, pcmd);
@@ -306,6 +313,8 @@ void ImGui_ImplSDLGPU3_RenderDrawData(ImDrawData* draw_data, SDL_GPUCommandBuffe
     // We perform a call to SDL_SetGPUScissor() to set back a full viewport which is likely to fix things for 99% users but technically this is not perfect. (See github #4644)
     SDL_Rect scissor_rect { 0, 0, fb_width, fb_height };
     SDL_SetGPUScissor(render_pass, &scissor_rect);
+
+    platform_io.Renderer_RenderState = bd->RenderState = nullptr;
 }
 
 static void ImGui_ImplSDLGPU3_DestroyTexture(ImTextureData* tex)
@@ -655,6 +664,12 @@ bool ImGui_ImplSDLGPU3_Init(ImGui_ImplSDLGPU3_InitInfo* info)
     io.BackendRendererName = "imgui_impl_sdlgpu3";
     io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
     io.BackendFlags |= ImGuiBackendFlags_RendererHasTextures;   // We can honor ImGuiPlatformIO::Textures[] requests during render.
+
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    platform_io.DrawCallback_ResetRenderState = ImGui_ImplSDLGPU3_DrawCallback_ResetRenderState;
+    platform_io.DrawCallback_SetSamplerLinear = ImGui_ImplSDLGPU3_DrawCallback_SetSamplerLinear;
+    platform_io.DrawCallback_SetSamplerNearest = ImGui_ImplSDLGPU3_DrawCallback_SetSamplerNearest;
+    platform_io.DrawCallback_SetSamplerCustom = ImGui_ImplSDLGPU3_DrawCallback_SetSamplerCustom;
 
     IM_ASSERT(info->Device != nullptr);
     IM_ASSERT(info->ColorTargetFormat != SDL_GPU_TEXTUREFORMAT_INVALID);
