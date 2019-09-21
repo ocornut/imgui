@@ -361,9 +361,8 @@ enum ImGuiSelectableFlagsPrivate_
     ImGuiSelectableFlags_PressedOnClick     = 1 << 21,
     ImGuiSelectableFlags_PressedOnRelease   = 1 << 22,
     ImGuiSelectableFlags_DrawFillAvailWidth = 1 << 23,  // FIXME: We may be able to remove this (added in 6251d379 for menus)
-    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 24,
-    ImGuiSelectableFlags_DrawHoveredWhenHeld= 1 << 25,  // Always show active when held, even is not hovered. This concept could probably be renamed/formalized somehow.
-    ImGuiSelectableFlags_SetNavIdOnHover    = 1 << 26
+    ImGuiSelectableFlags_DrawHoveredWhenHeld= 1 << 24,  // Always show active when held, even is not hovered. This concept could probably be renamed/formalized somehow.
+    ImGuiSelectableFlags_SetNavIdOnHover    = 1 << 25
 };
 
 // Extend ImGuiTreeNodeFlags_
