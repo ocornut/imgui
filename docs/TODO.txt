@@ -93,6 +93,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: a side bar that could e.g. preview where errors are. probably left to the user to draw but we'd need to give them the info there.
  - input text: a way for the user to provide syntax coloring.
  - input text: Shift+TAB with ImGuiInputTextFlags_AllowTabInput could eat preceding blanks, up to tab_count.
+ - input text: facilitate patterns like if (InputText(..., obj.get_string_ref()) { obj.set_string(...); } relying on internally held buffer.
  - input text multi-line: don't directly call AddText() which does an unnecessary vertex reserve for character count prior to clipping. and/or more line-based clipping to AddText(). and/or reorganize TextUnformatted/RenderText for more efficiency for large text (e.g TextUnformatted could clip and log separately, etc).
  - input text multi-line: support for cut/paste without selection (cut/paste the current line)
  - input text multi-line: line numbers? status bar? (follow up on #200)
@@ -111,6 +112,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - layout: more generic alignment state (left/right/centered) for single items?
  - layout: clean up the InputFloatN/SliderFloatN/ColorEdit4 layout code. item width should include frame padding.
  - layout: vertical alignment of mixed height items (e.g. buttons) within a same line (#1284)
+ - layout: null layout mode were items are not rendered but user can query GetItemRectMin()/Max/Size.
+ - layout: (R&D) local multi-pass layout mode.
+ - layout: (R&D) bind authored layout data (created by an off-line tool), items fetch their pos/size at submission, self-optimize data structures to stable linear access.
 
  - group: BeginGroup() needs a border option. (~#1496)
  - group: IsHovered() after EndGroup() covers whole aabb rather than the intersection of individual items. Is that desirable?

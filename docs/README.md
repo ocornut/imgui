@@ -244,13 +244,13 @@ See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software usi
 The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). To reduce this ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library. Please try to refer to this library as "Dear ImGui".
 
 **How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?**
-<br>**How can I display an image? What is ImTextureID, how does it works?**
+<br>**How can I display an image? What is ImTextureID, how does it works?** ([examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples))
 <br>**Why are multiple widgets reacting when I interact with a single one? How can I have multiple widgets with the same label or with an empty label? A primer on labels and the ID Stack...**
 <br>**How can I use my own math types instead of ImVec2/ImVec4?**
 <br>**How can I load a different font than the default?**
 <br>**How can I easily use icons in my application?**
 <br>**How can I load multiple fonts?**
-<br>**How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?** ([example](https://github.com/ocornut/imgui/wiki/Loading-Font-Example))
+<br>**How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?** ([examples](https://github.com/ocornut/imgui/wiki/Loading-Font-Example))
 <br>**How can I interact with standard C++ types (such as std::string and std::vector)?**
 <br>**How can I use the drawing facilities without a Dear ImGui window? (using ImDrawList API)**
 <br>**How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)**

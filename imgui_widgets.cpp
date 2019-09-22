@@ -1373,7 +1373,7 @@ void ImGui::ShrinkWidths(ImGuiShrinkWidthItem* items, int count, float width_exc
 {
     if (count == 1)
     {
-        items[0].Width -= width_excess;
+        items[0].Width = ImMax(items[0].Width - width_excess, 1.0f);
         return;
     }
     ImQsort(items, (size_t)count, sizeof(ImGuiShrinkWidthItem), ShrinkWidthItemComparer);
@@ -4210,7 +4210,12 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
     if ((flags & ImGuiColorEditFlags_InputHSV) && (flags & ImGuiColorEditFlags_DisplayRGB))
         ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
     else if ((flags & ImGuiColorEditFlags_InputRGB) && (flags & ImGuiColorEditFlags_DisplayHSV))
+    {
+        // Hue is lost when converting from greyscale rgb (saturation=0). Restore it.
         ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
+        if (f[1] == 0 && memcmp(g.ColorEditLastColor, col, sizeof(float) * 3) == 0)
+            f[0] = g.ColorEditLastHue;
+    }
     int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
 
     bool value_changed = false;
@@ -4337,7 +4342,11 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             for (int n = 0; n < 4; n++)
                 f[n] = i[n] / 255.0f;
         if ((flags & ImGuiColorEditFlags_DisplayHSV) && (flags & ImGuiColorEditFlags_InputRGB))
+        {
+            g.ColorEditLastHue = f[0];
             ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
+            memcpy(g.ColorEditLastColor, f, sizeof(float) * 3);
+        }
         if ((flags & ImGuiColorEditFlags_DisplayRGB) && (flags & ImGuiColorEditFlags_InputHSV))
             ColorConvertRGBtoHSV(f[0], f[1], f[2], f[0], f[1], f[2]);
 
@@ -4514,9 +4523,16 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
     float H = col[0], S = col[1], V = col[2];
     float R = col[0], G = col[1], B = col[2];
     if (flags & ImGuiColorEditFlags_InputRGB)
+    {
+        // Hue is lost when converting from greyscale rgb (saturation=0). Restore it.
         ColorConvertRGBtoHSV(R, G, B, H, S, V);
+        if (S == 0 && memcmp(g.ColorEditLastColor, col, sizeof(float) * 3) == 0)
+            H = g.ColorEditLastHue;
+    }
     else if (flags & ImGuiColorEditFlags_InputHSV)
+    {
         ColorConvertHSVtoRGB(H, S, V, R, G, B);
+    }
 
     bool value_changed = false, value_changed_h = false, value_changed_sv = false;
 
@@ -4638,6 +4654,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         if (flags & ImGuiColorEditFlags_InputRGB)
         {
             ColorConvertHSVtoRGB(H >= 1.0f ? H - 10 * 1e-6f : H, S > 0.0f ? S : 10*1e-6f, V > 0.0f ? V : 1e-6f, col[0], col[1], col[2]);
+            g.ColorEditLastHue = H;
+            memcpy(g.ColorEditLastColor, col, sizeof(float) * 3);
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
         {
@@ -4691,6 +4709,8 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             G = col[1];
             B = col[2];
             ColorConvertRGBtoHSV(R, G, B, H, S, V);
+            if (S == 0 && memcmp(g.ColorEditLastColor, col, sizeof(float) * 3) == 0) // Fix local Hue as display below will use it immediately.
+                H = g.ColorEditLastHue;
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
         {
@@ -6561,6 +6581,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         {
             ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
             tab->Width = ImMin(tab->WidthContents, tab_max_width);
+            IM_ASSERT(tab->Width > 0.0f);
         }
     }
 
