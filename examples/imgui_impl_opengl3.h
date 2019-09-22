@@ -32,7 +32,19 @@
  && !defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)     \
  && !defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)     \
  && !defined(IMGUI_IMPL_OPENGL_LOADER_CUSTOM)
-#define IMGUI_IMPL_OPENGL_LOADER_GL3W
+    // to avoid problem with non-clang compilers not having this macro.
+    #if defined(__has_include)
+        // check if the header exists, then automatically define the macros ..
+        #if __has_include(<GL/glew.h>)
+            #define IMGUI_IMPL_OPENGL_LOADER_GLEW
+        #elif __has_include(<glad/glad.h>)
+            #define IMGUI_IMPL_OPENGL_LOADER_GLAD
+        #else
+            #define IMGUI_IMPL_OPENGL_LOADER_GL3W
+        #endif
+    #else
+        #define IMGUI_IMPL_OPENGL_LOADER_GL3W
+    #endif
 #endif
 
 IMGUI_IMPL_API bool     ImGui_ImplOpenGL3_Init(const char* glsl_version = NULL);
