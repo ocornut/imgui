@@ -74,6 +74,7 @@ Other Changes:
   usage has never been reported as a problem, so this is merely a touch of overzealous luxury. (#2636)
 - Backends: OpenGL3: Tweaked initialization code allow application calling ImGui_ImplOpenGL3_CreateFontsTexture()
   before ImGui_ImplOpenGL3_NewFrame() if for some reason they wanted.
+- Backends: OpenGL3: Attempt to automatically detect default GL loader by using __has_include. (#2798) [@o-micron]
 - Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count,
   would generally make the debug layer complain (Added in 1.72).
 - Backends: Vulkan: Added support for specifying multisample count.
