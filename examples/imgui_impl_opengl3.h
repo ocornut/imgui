@@ -36,9 +36,17 @@
     #if defined(__has_include)
         // check if the header exists, then automatically define the macros ..
         #if __has_include(<GL/glew.h>)
-            #define IMGUI_IMPL_OPENGL_LOADER_GLEW
+            #if __has_include(<glad/glad.h>)
+                #error you have multiple headers in your system (GLEW + GLAD)
+            #else
+                #define IMGUI_IMPL_OPENGL_LOADER_GLEW
+            #endif
         #elif __has_include(<glad/glad.h>)
-            #define IMGUI_IMPL_OPENGL_LOADER_GLAD
+            #if __has_include(<GL/glew.h>)
+                 #error you have multiple headers in your system (GLEW + GLAD)
+            #else
+                #define IMGUI_IMPL_OPENGL_LOADER_GLAD
+            #endif
         #else
             #define IMGUI_IMPL_OPENGL_LOADER_GL3W
         #endif
