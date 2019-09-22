@@ -35,15 +35,26 @@
     // to avoid problem with non-clang compilers not having this macro.
     #if defined(__has_include)
         // check if the header exists, then automatically define the macros ..
+        // check if glew gl loader exists, use it
         #if __has_include(<GL/glew.h>)
+            // make sure we don't have another gl loader headers ....
+            // that means that the user might have used one and initialized it
+            // while we use the other ....
+            // so we make sure there is only one gl loader header
+            // in this case, we need to only have glew headers and not glad !
             #if __has_include(<glad/glad.h>)
-                #error you have multiple headers in your system (GLEW + GLAD)
+                #error you have multiple headers in your system (GLEW + GLAD), remove one of them or use '#define IMGUI_IMPL_OPENGL_LOADER_GLEW'
             #else
                 #define IMGUI_IMPL_OPENGL_LOADER_GLEW
             #endif
         #elif __has_include(<glad/glad.h>)
+            // make sure we don't have another gl loader headers ....
+            // that means that the user might have used one and initialized it
+            // while we use the other ....
+            // so we make sure there is only one gl loader header
+            // in this case, we need to only have glad headers and not glew !
             #if __has_include(<GL/glew.h>)
-                 #error you have multiple headers in your system (GLEW + GLAD)
+                 #error you have multiple headers in your system (GLEW + GLAD), remove one of them or use '#define IMGUI_IMPL_OPENGL_LOADER_GLAD'
             #else
                 #define IMGUI_IMPL_OPENGL_LOADER_GLAD
             #endif
