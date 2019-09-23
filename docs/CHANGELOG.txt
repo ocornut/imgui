@@ -169,6 +169,7 @@ Other Changes:
 - Demo: Log, Console: Using a simpler stateless pattern for auto-scrolling.
 - Demo: Widgets: Showing how to use the format parameter of Slider/Drag functions to display the name
   of an enum value instead of the underlying integer value.
+- Demo: Renamed the "Help" menu to "Tools" (more accurate).
 - Backends: DX10/DX11: Backup, clear and restore Geometry Shader is any is bound when calling renderer.
 - Backends: DX11: Clear Hull Shader, Domain Shader, Compute Shader before rendering. Not backing/restoring them.
 - Backends: OSX: Disabled default native Mac clipboard copy/paste implementation in core library (added in 1.71),

@@ -1199,20 +1199,20 @@ struct ImGuiContext
 // FIXME: That's theory, in practice the delimitation between ImGuiWindow and ImGuiWindowTempData is quite tenuous and could be reconsidered.
 struct IMGUI_API ImGuiWindowTempData
 {
-    ImVec2                  CursorPos;
+    ImVec2                  CursorPos;              // Current emitting position, in absolute coordinates.
     ImVec2                  CursorPosPrevLine;
-    ImVec2                  CursorStartPos;         // Initial position in client area with padding
+    ImVec2                  CursorStartPos;         // Initial position after Begin(), generally ~ window position + WindowPadding.
     ImVec2                  CursorMaxPos;           // Used to implicitly calculate the size of our contents, always growing during the frame. Used to calculate window->ContentSize at the beginning of next frame
     ImVec2                  CurrLineSize;
     ImVec2                  PrevLineSize;
-    float                   CurrLineTextBaseOffset;
+    float                   CurrLineTextBaseOffset; // Baseline offset (0.0f by default on a new line, generally == style.FramePadding.y when a framed item has been added).
     float                   PrevLineTextBaseOffset;
-    int                     TreeDepth;
-    ImU32                   TreeMayJumpToParentOnPopMask; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31.. Could be turned into a ImU64 if necessary.
-    ImGuiID                 LastItemId;
-    ImGuiItemStatusFlags    LastItemStatusFlags;
-    ImRect                  LastItemRect;           // Interaction rect
-    ImRect                  LastItemDisplayRect;    // End-user display rect (only valid if LastItemStatusFlags & ImGuiItemStatusFlags_HasDisplayRect)
+    int                     TreeDepth;                      // Current tree depth.
+    ImU32                   TreeMayJumpToParentOnPopMask;   // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31.. Could be turned into a ImU64 if necessary.
+    ImGuiID                 LastItemId;             // ID for last item
+    ImGuiItemStatusFlags    LastItemStatusFlags;    // Status flags for last item (see ImGuiItemStatusFlags_)
+    ImRect                  LastItemRect;           // Interaction rect for last item
+    ImRect                  LastItemDisplayRect;    // End-user display rect for last item (only valid if LastItemStatusFlags & ImGuiItemStatusFlags_HasDisplayRect)
     ImGuiNavLayer           NavLayerCurrent;        // Current layer, 0..31 (we currently only use 0..1)
     int                     NavLayerCurrentMask;    // = (1 << NavLayerCurrent) used by ItemAdd prior to clipping.
     int                     NavLayerActiveMask;     // Which layer have been written to (result from previous frame)
@@ -1222,7 +1222,7 @@ struct IMGUI_API ImGuiWindowTempData
     bool                    MenuBarAppending;       // FIXME: Remove this
     ImVec2                  MenuBarOffset;          // MenuBarOffset.x is sort of equivalent of a per-layer CursorPos.x, saved/restored as we switch to the menu bar. The only situation when MenuBarOffset.y is > 0 if when (SafeAreaPadding.y > FramePadding.y), often used on TVs.
     ImVector<ImGuiWindow*>  ChildWindows;
-    ImGuiStorage*           StateStorage;
+    ImGuiStorage*           StateStorage;           // Current persistent per-window storage (store e.g. tree node open/close state)
     ImGuiLayoutType         LayoutType;
     ImGuiLayoutType         ParentLayoutType;       // Layout type of parent window at the time of Begin()
     int                     FocusCounterAll;        // Counter for focus/tabbing system. Start at -1 and increase as assigned via FocusableItemRegister() (FIXME-NAV: Needs redesign)
@@ -1287,9 +1287,9 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  SizeFull;                           // Size when non collapsed
     ImVec2                  ContentSize;                        // Size of contents/scrollable client area (calculated from the extents reach of the cursor) from previous frame. Does not include window decoration or window padding.
     ImVec2                  ContentSizeExplicit;                // Size of contents/scrollable client area explicitly request by the user via SetNextWindowContentSize().
-    ImVec2                  WindowPadding;                      // Window padding at the time of begin.
-    float                   WindowRounding;                     // Window rounding at the time of begin.
-    float                   WindowBorderSize;                   // Window border size at the time of begin.
+    ImVec2                  WindowPadding;                      // Window padding at the time of Begin().
+    float                   WindowRounding;                     // Window rounding at the time of Begin().
+    float                   WindowBorderSize;                   // Window border size at the time of Begin().
     int                     NameBufLen;                         // Size of buffer storing Name. May be larger than strlen(Name)!
     ImGuiID                 MoveId;                             // == window->GetID("#MOVE")
     ImGuiID                 ChildId;                            // ID of corresponding item in parent window (for navigation to return from child window to parent window)
@@ -1298,7 +1298,7 @@ struct IMGUI_API ImGuiWindow
     ImVec2                  ScrollTarget;                       // target scroll position. stored as cursor position with scrolling canceled out, so the highest point is always 0.0f. (FLT_MAX for no change)
     ImVec2                  ScrollTargetCenterRatio;            // 0.0f = scroll so that target position is at top, 0.5f = scroll so that target position is centered
     ImVec2                  ScrollbarSizes;                     // Size taken by scrollbars on each axis
-    bool                    ScrollbarX, ScrollbarY;
+    bool                    ScrollbarX, ScrollbarY;             // Are scrollbars visible?
     bool                    Active;                             // Set to true on Begin(), unless Collapsed
     bool                    WasActive;
     bool                    WriteAccessed;                      // Set to true when any widget access the current window
@@ -1313,9 +1313,9 @@ struct IMGUI_API ImGuiWindow
     short                   BeginOrderWithinParent;             // Order within immediate parent window, if we are a child window. Otherwise 0.
     short                   BeginOrderWithinContext;            // Order within entire imgui context. This is mostly used for debugging submission order related issues.
     ImGuiID                 PopupId;                            // ID in the popup stack when this window is used as a popup/menu (because we use generic Name/ID for recycling)
-    int                     AutoFitFramesX, AutoFitFramesY;
+    ImS8                    AutoFitFramesX, AutoFitFramesY;
+    ImS8                    AutoFitChildAxises;
     bool                    AutoFitOnlyGrows;
-    int                     AutoFitChildAxises;
     ImGuiDir                AutoPosLastDirection;
     int                     HiddenFramesCanSkipItems;           // Hide the window for N frames
     int                     HiddenFramesCannotSkipItems;        // Hide the window for N frames while allowing items to be submitted so we can measure their size
@@ -1338,7 +1338,7 @@ struct IMGUI_API ImGuiWindow
     ImRect                  ContentsRegionRect;                 // FIXME: This is currently confusing/misleading. It is essentially WorkRect but not handling of scrolling. We currently rely on it as right/bottom aligned sizing operation need some size to rely on.
 
     int                     LastFrameActive;                    // Last frame number the window was Active.
-    float                   LastTimeActive;
+    float                   LastTimeActive;                     // Last timestamp the window was Active (using float as we don't need high precision there)
     float                   ItemWidthDefault;
     ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;

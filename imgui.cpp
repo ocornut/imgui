@@ -2704,8 +2704,8 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
     BeginOrderWithinContext = -1;
     PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
-    AutoFitOnlyGrows = false;
     AutoFitChildAxises = 0x00;
+    AutoFitOnlyGrows = false;
     AutoPosLastDirection = ImGuiDir_None;
     HiddenFramesCanSkipItems = HiddenFramesCannotSkipItems = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
@@ -4729,7 +4729,7 @@ static bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size
 
     ImGuiWindow* child_window = g.CurrentWindow;
     child_window->ChildId = id;
-    child_window->AutoFitChildAxises = auto_fit_axises;
+    child_window->AutoFitChildAxises = (ImS8)auto_fit_axises;
 
     // Set the cursor to handle case where the user called SetNextWindowPos()+BeginChild() manually.
     // While this is not really documented/defined, it seems that the expected thing to do.
