@@ -63,7 +63,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
  - widgets: add visuals for Disabled/ReadOnly mode and expose publicly (#211)
- - widgets: add always-allow-overlap mode. This should perhaps be the default.
+ - widgets: add always-allow-overlap mode. This should perhaps be the default? one problem is that highlight after mouse-wheel scrolling gets deferred, makes scrolling more flickery.
  - widgets: start exposing PushItemFlag() and ImGuiItemFlags
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)

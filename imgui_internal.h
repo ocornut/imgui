@@ -1208,7 +1208,7 @@ struct IMGUI_API ImGuiWindowTempData
     float                   CurrLineTextBaseOffset;
     float                   PrevLineTextBaseOffset;
     int                     TreeDepth;
-    ImU32                   TreeStoreMayJumpToParentOnPop; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31.. Could be turned into a ImU64 if necessary.
+    ImU32                   TreeMayJumpToParentOnPopMask; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31.. Could be turned into a ImU64 if necessary.
     ImGuiID                 LastItemId;
     ImGuiItemStatusFlags    LastItemStatusFlags;
     ImRect                  LastItemRect;           // Interaction rect
@@ -1249,7 +1249,7 @@ struct IMGUI_API ImGuiWindowTempData
         CurrLineSize = PrevLineSize = ImVec2(0.0f, 0.0f);
         CurrLineTextBaseOffset = PrevLineTextBaseOffset = 0.0f;
         TreeDepth = 0;
-        TreeStoreMayJumpToParentOnPop = 0x00;
+        TreeMayJumpToParentOnPopMask = 0x00;
         LastItemId = 0;
         LastItemStatusFlags = 0;
         LastItemRect = LastItemDisplayRect = ImRect();
