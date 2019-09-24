@@ -17,6 +17,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-09-29: Inputs: Use SDL_GetMouseState, because there is no global mouse state on Wayland.
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-04-23: Inputs: Added support for SDL_GameController (if ImGuiConfigFlags_NavEnableGamepad is set by user application).
 //  2019-03-12: Misc: Preserve DisplayFramebufferScale when main window is minimized.
@@ -59,6 +60,7 @@ static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
 static char*        g_ClipboardTextData = NULL;
+static bool         g_VideoDriverIsWayland = false;
 
 static const char* ImGui_ImplSDL2_GetClipboardText(void*)
 {
@@ -122,6 +124,9 @@ bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 static bool ImGui_ImplSDL2_Init(SDL_Window* window)
 {
     g_Window = window;
+
+    // Check and store if we are on Wayland to not check on every frame.
+    g_VideoDriverIsWayland = strncmp(SDL_GetCurrentVideoDriver(), "wayland", 7) == 0;
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
@@ -236,13 +241,17 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
     SDL_Window* focused_window = SDL_GetKeyboardFocus();
     if (g_Window == focused_window)
     {
-        // SDL_GetMouseState() gives mouse position seemingly based on the last window entered/focused(?)
-        // The creation of a new windows at runtime and SDL_CaptureMouse both seems to severely mess up with that, so we retrieve that position globally.
-        int wx, wy;
-        SDL_GetWindowPosition(focused_window, &wx, &wy);
-        SDL_GetGlobalMouseState(&mx, &my);
-        mx -= wx;
-        my -= wy;
+        if (!g_VideoDriverIsWayland)
+        {
+            // SDL_GetMouseState() gives mouse position seemingly based on the last window entered/focused(?)
+            // The creation of a new windows at runtime and SDL_CaptureMouse both seems to severely mess up with that, so we retrieve that position globally.
+            // Won't use this workaround when on Wayland, as there is no global mouse position.
+            int wx, wy;
+            SDL_GetWindowPosition(focused_window, &wx, &wy);
+            SDL_GetGlobalMouseState(&mx, &my);
+            mx -= wx;
+            my -= wy;
+        }
         io.MousePos = ImVec2((float)mx, (float)my);
     }
 
