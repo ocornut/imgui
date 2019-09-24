@@ -1,5 +1,5 @@
 // dear imgui: Renderer for modern OpenGL with shaders / programmatic pipeline
-// - Desktop GL: 3.x 4.x
+// - Desktop GL: 2.x 3.x 4.x
 // - Embedded GL: ES 2.0 (WebGL 1.0), ES 3.0 (WebGL 2.0)
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
@@ -15,6 +15,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2019-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2019-09-22: OpenGL: Detect default GL loader using __has_include compiler facility.
 //  2019-09-16: OpenGL: Tweak initialization code to allow application calling ImGui_ImplOpenGL3_CreateFontsTexture() before the first NewFrame() call.
 //  2019-05-29: OpenGL: Desktop GL only: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: OpenGL: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
@@ -81,12 +82,21 @@
 // Auto-detect GL version
 #if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
-#define IMGUI_IMPL_OPENGL_ES3       // iOS, Android  -> GL ES 3, "#version 300 es"
+#define IMGUI_IMPL_OPENGL_ES3           // iOS, Android  -> GL ES 3, "#version 300 es"
+#undef IMGUI_IMPL_OPENGL_LOADER_GL3W
+#undef IMGUI_IMPL_OPENGL_LOADER_GLEW
+#undef IMGUI_IMPL_OPENGL_LOADER_GLAD
+#undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #elif defined(__EMSCRIPTEN__)
-#define IMGUI_IMPL_OPENGL_ES2       // Emscripten    -> GL ES 2, "#version 100"
+#define IMGUI_IMPL_OPENGL_ES2           // Emscripten    -> GL ES 2, "#version 100"
+#undef IMGUI_IMPL_OPENGL_LOADER_GL3W
+#undef IMGUI_IMPL_OPENGL_LOADER_GLEW
+#undef IMGUI_IMPL_OPENGL_LOADER_GLAD
+#undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
 #endif
 
+// GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
@@ -155,6 +165,23 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     IM_ASSERT((int)strlen(glsl_version) + 2 < IM_ARRAYSIZE(g_GlslVersionString));
     strcpy(g_GlslVersionString, glsl_version);
     strcat(g_GlslVersionString, "\n");
+
+    // Dummy construct to make it easily visible in the IDE and debugger which GL loader has been selected. 
+    // The code actually never uses the 'gl_loader' variable! It is only here so you can read it!
+    // If auto-detection fails or doesn't select the same GL loader file as used by your application, 
+    // you are likely to get a crash below.
+    // You can explicitly select a loader by using '#define IMGUI_IMPL_OPENGL_LOADER_XXX' in imconfig.h or compiler command-line.
+    const char* gl_loader = "Unknown";
+    IM_UNUSED(gl_loader);
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)
+    gl_loader = "GL3W";
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)
+    gl_loader = "GLEW";
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
+    gl_loader = "GLAD";
+#else IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+    gl_loader = "Custom";
+#endif
 
     // Make a dummy GL call (we don't actually need the result)
     // IF YOU GET A CRASH HERE: it probably means that you haven't initialized the OpenGL function loader used by this code.

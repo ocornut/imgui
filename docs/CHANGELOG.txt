@@ -99,10 +99,11 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.73 WIP (In Progress)
+ VERSION 1.73 (Released 2019-09-24)
 -----------------------------------------------------------------------
 
 Other Changes:
+
 - Nav, Scrolling: Added support for Home/End key. (#787)
 - ColorEdit: Disable Hue edit when Saturation==0 instead of letting Hue values jump around.
 - ColorEdit, ColorPicker: In HSV display of a RGB stored value, attempt to locally preserve Hue
@@ -110,8 +111,8 @@ Other Changes:
 - ColorPicker: Made rendering aware of global style alpha of the picker can be faded out. (#2711)
   Note that some elements won't accurately fade down with the same intensity, and the color wheel
   when enabled will have small overlap glitches with (style.Alpha < 1.0).
-- TabBar: Fixed ScrollToBar request creating bouncing loop when tab is larger than available space.
 - TabBar: Fixed single-tab not shrinking their width down.
+- TabBar: Fixed clicking on a tab larger than tab-bar width creating a bouncing feedback loop.
 - TabBar: Feed desired width (sum of unclipped tabs width) into layout system to allow for auto-resize. (#2768)
   (before 1.71 tab bars fed the sum of current width which created feedback loops in certain situations).
 - TabBar: Improved shrinking for large number of tabs to avoid leaving extraneous space on the right side.
@@ -119,8 +120,8 @@ Other Changes:
 - Columns, Separator: Fixed a bug where non-visible separators within columns would alter the next row position
   differently than visible ones.
 - SliderScalar: Improved assert when using U32 or U64 types with a large v_max value. (#2765) [@loicmouton]
-- DragInt, DragFloat, DragScalar: Using (v_min > v_max) allows locking any edit to the value.
-- DragScalar: Fixed dragging of unsigned values on ARM cpu. (#2780) [@dBagrat]
+- DragInt, DragFloat, DragScalar: Using (v_min > v_max) allows locking any edits to the value.
+- DragScalar: Fixed dragging of unsigned values on ARM cpu (float to uint cast is undefined). (#2780) [@dBagrat]
 - TreeNode: Added ImGuiTreeNodeFlags_SpanAvailWidth flag. (#2451, #2438, #1897) [@Melix19, @PathogenDavid]
   This extends the hit-box to the right-most edge, even if the node is not framed.
   (Note: this is not the default in order to allow adding other items on the same line. In the future we will
@@ -128,29 +129,32 @@ Other Changes:
   and then we will be able to make this the default.)
 - TreeNode: Added ImGuiTreeNodeFlags_SpanFullWidth flag. This extends the hit-box to both the left-most and
   right-most edge of the working area, bypassing indentation.
+- CollapsingHeader: Added support for ImGuiTreeNodeFlags_Bullet and ImGuiTreeNodeFlags_Leaf on framed nodes,
+  mostly for consistency. (#2159, #2160) [@goran-w]
 - Selectable: Added ImGuiSelectableFlags_AllowItemOverlap flag in public api (was previously internal only).
 - Style: Allow style.WindowMenuButtonPosition to be set to ImGuiDir_None to hide the collapse button. (#2634, #2639)
-- Font: Better ellipsis drawing implementation. Instead of drawing three pixel-ey dots (which was glaringly
+- Font: Better ellipsis ("...") drawing implementation. Instead of drawing three pixel-ey dots (which was glaringly
   unfitting with many types of fonts) we first attempt to find a standard ellipsis glyphs within the loaded set.
   Otherwise we render ellipsis using '.' from the font from where we trim excessive spacing to make it as narrow
   as possible. (#2775) [@rokups]
 - ImDrawList: Clarified the name of many parameters so reading the code is a little easier. (#2740)
-- ImDrawListSplitter: fixed an issue merging channels if the last submitted draw command used a different texture. (#2506)
+- ImDrawListSplitter: Fixed merging channels if the last submitted draw command used a different texture. (#2506)
 - Using offsetof() when available in C++11. Avoids Clang sanitizer complaining about old-style macros. (#94)
 - ImVector: Added find(), find_erase(), find_erase_unsorted() helpers.
 - Added a mechanism to compact/free the larger allocations of unused windows (buffers are compacted when
   a window is unused for 60 seconds, as per io.ConfigWindowsMemoryCompactTimer = 60.0f). Note that memory
   usage has never been reported as a problem, so this is merely a touch of overzealous luxury. (#2636)
+- Documentation: Various tweaks and improvements to the README page. [@ker0chan]
 - Backends: OpenGL3: Tweaked initialization code allow application calling ImGui_ImplOpenGL3_CreateFontsTexture()
-  before ImGui_ImplOpenGL3_NewFrame() if for some reason they wanted.
-- Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count,
-  would generally make the debug layer complain (Added in 1.72).
-- Backends: Vulkan: Added support for specifying multisample count.
-  Set ImGui_ImplVulkan_InitInfo::MSAASamples to one of the VkSampleCountFlagBits values
-  to use, default is non-multisampled as before. (#2705, #2706) [@vilya]
+  before ImGui_ImplOpenGL3_NewFrame(), which sometimes can be convenient.
+- Backends: OpenGL3: Attempt to automatically detect default GL loader by using __has_include. (#2798) [@o-micron]
+- Backends: DX11: Fixed GSGetShader() call not passing an initialized instance count, which would
+  generally make the DX11 debug layer complain (bug added in 1.72).
+- Backends: Vulkan: Added support for specifying multisample count. Set 'ImGui_ImplVulkan_InitInfo::MSAASamples' to
+   one of the VkSampleCountFlagBits values to use, default is non-multisampled as before. (#2705, #2706) [@vilya]
 - Examples: OSX: Fix example_apple_opengl2/main.mm not forwarding mouse clicks and drags correctly. (#1961, #2710)
   [@intonarumori, @ElectricMagic]
-- Misc: Updated stb_rect_pack from 0.99 to 1.00 (fixes by @rygorous: off-by-1 bug in best-fit heuristic,
+- Misc: Updated stb_rect_pack.h from 0.99 to 1.00 (fixes by @rygorous: off-by-1 bug in best-fit heuristic,
   fix handling of rectangles too large to fit inside texture). (#2762) [@tido64]
 
 
@@ -238,6 +242,7 @@ Other Changes:
 - Demo: Log, Console: Using a simpler stateless pattern for auto-scrolling.
 - Demo: Widgets: Showing how to use the format parameter of Slider/Drag functions to display the name
   of an enum value instead of the underlying integer value.
+- Demo: Renamed the "Help" menu to "Tools" (more accurate).
 - Backends: DX10/DX11: Backup, clear and restore Geometry Shader is any is bound when calling renderer.
 - Backends: DX11: Clear Hull Shader, Domain Shader, Compute Shader before rendering. Not backing/restoring them.
 - Backends: OSX: Disabled default native Mac clipboard copy/paste implementation in core library (added in 1.71),

@@ -1,4 +1,4 @@
-// dear imgui, v1.73 WIP
+// dear imgui, v1.73
 // (drawing and font code)
 
 /*
@@ -3046,39 +3046,24 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 // - RenderRectFilledWithHole()
 //-----------------------------------------------------------------------------
 
-void ImGui::RenderMouseCursor(ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor)
+void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
 {
     if (mouse_cursor == ImGuiMouseCursor_None)
         return;
     IM_ASSERT(mouse_cursor > ImGuiMouseCursor_None && mouse_cursor < ImGuiMouseCursor_COUNT);
 
-    const ImU32 col_shadow = IM_COL32(0, 0, 0, 48);
-    const ImU32 col_border = IM_COL32(0, 0, 0, 255);          // Black
-    const ImU32 col_fill   = IM_COL32(255, 255, 255, 255);    // White
-
-    ImGuiContext& g = *GImGui;
-    ImFontAtlas* font_atlas = g.IO.Fonts;
+    ImFontAtlas* font_atlas = draw_list->_Data->Font->ContainerAtlas;
     ImVec2 offset, size, uv[4];
     if (font_atlas->GetMouseCursorTexData(mouse_cursor, &offset, &size, &uv[0], &uv[2]))
     {
         pos -= offset;
         const ImTextureID tex_id = font_atlas->TexID;
-
-        // We need to account for the possibility of the mouse cursor straddling multiple viewports...
-        for (int viewport_n = 0; viewport_n < g.Viewports.Size; viewport_n++)
-        {
-            ImGuiViewportP* viewport = g.Viewports[viewport_n];
-            if (!viewport->GetRect().Overlaps(ImRect(pos, pos + ImVec2(size.x + 2, size.y + 2) * scale)))
-                continue;
-
-            ImDrawList* draw_list = GetForegroundDrawList(viewport);
-            draw_list->PushTextureID(tex_id);
-            draw_list->AddImage(tex_id, pos + ImVec2(1,0)*scale, pos + ImVec2(1,0)*scale + size*scale, uv[2], uv[3], col_shadow);
-            draw_list->AddImage(tex_id, pos + ImVec2(2,0)*scale, pos + ImVec2(2,0)*scale + size*scale, uv[2], uv[3], col_shadow);
-            draw_list->AddImage(tex_id, pos,                     pos + size*scale,                     uv[2], uv[3], col_border);
-            draw_list->AddImage(tex_id, pos,                     pos + size*scale,                     uv[0], uv[1], col_fill);
-            draw_list->PopTextureID();
-        }
+        draw_list->PushTextureID(tex_id);
+        draw_list->AddImage(tex_id, pos + ImVec2(1, 0)*scale, pos + ImVec2(1, 0)*scale + size*scale, uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex_id, pos + ImVec2(2, 0)*scale, pos + ImVec2(2, 0)*scale + size*scale, uv[2], uv[3], col_shadow);
+        draw_list->AddImage(tex_id, pos, pos + size*scale, uv[2], uv[3], col_border);
+        draw_list->AddImage(tex_id, pos, pos + size*scale, uv[0], uv[1], col_fill);
+        draw_list->PopTextureID();
     }
 }
 
