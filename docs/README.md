@@ -9,7 +9,7 @@ Businesses: support continued development via invoiced technical support, mainte
 <br>&nbsp;&nbsp;_E-mail: omarcornut at gmail dot com_
 
 Individuals/hobbyists: support continued maintenance and development via the monthly Patreon:
-<br>&nbsp;&nbsp;[![Patreon](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/patreon_01.png)](http://www.patreon.com/imgui)
+<br>&nbsp;&nbsp;[![Patreon](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/patreon_02.png)](http://www.patreon.com/imgui)
 
 Individuals/hobbyists: support continued maintenance and development via PayPal:
 <br>&nbsp;&nbsp;[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S)
@@ -22,12 +22,10 @@ Dear ImGui is designed to **enable fast iterations** and to **empower programmer
 
 Dear ImGui is particularly suited to integration in games engine (for tooling), real-time 3D applications, fullscreen applications, embedded applications, or any applications on consoles platforms where operating system features are non-standard.
 
-See [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui), [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Gallery](https://github.com/ocornut/imgui/issues/2529) pages to get an idea of its use cases.
-
 | [Usage](#usage) - [How it works](#how-it-works) - [Demo](#demo) - [Integration](#integration) |
 :----------------------------------------------------------: |
 | [Upcoming changes](#upcoming-changes) - [Gallery](#gallery) - [Support, FAQ](#support-frequently-asked-questions-faq) -  [How to help](#how-to-help) - [Sponsors](#sponsors) - [Credits](#credits) - [License](#license) |
-| <sub>[Wiki](https://github.com/ocornut/imgui/wiki) - [Language & frameworks bindings](https://github.com/ocornut/imgui/wiki/Bindings) - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) - [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) </sub> |
+| [Wiki](https://github.com/ocornut/imgui/wiki) - [Language & frameworks bindings](https://github.com/ocornut/imgui/wiki/Bindings) - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) - [User quotes](https://github.com/ocornut/imgui/wiki/Quotes) |
 
 ### Usage
 
@@ -45,9 +43,9 @@ Dear ImGui is self-contained within a few files that you can easily copy and com
 
 No specific build process is required. You can add the .cpp files to your project or #include them from an existing file.
 
-Backends for a variety of graphics api and rendering platforms are provided in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder.
+Backends for a variety of graphics api and rendering platforms along with example applications are provided in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder.
 
-The backend passes mouse/keyboard/gamepad inputs and variety of settings to Dear ImGui, and is in charge of rendering the resulting vertices (see example applications for more details). After Dear ImGui is setup in your application, you can use it from \_anywhere\_ in your program loop:
+The backend passes mouse/keyboard/gamepad inputs and variety of settings to Dear ImGui, and is in charge of rendering the resulting vertices. After Dear ImGui is setup in your application, you can use it from \_anywhere\_ in your program loop:
 
 Code:
 ```cp
@@ -109,12 +107,12 @@ _A common misunderstanding is to mistake immediate mode gui for immediate mode r
 
 ### Demo
 
-Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcasing variety of Dear ImGui features and examples.
+Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcasing variety of features and examples.
 
 ![screenshot demo](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/v167-misc.png)
 
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
-- [imgui-demo-binaries-20190715.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20190715.zip) (Windows binaries, Dear ImGui 1.72 WIP built 2019/07/15, master branch, 5 executables)
+- [imgui-demo-binaries-20190715.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20190715.zip) (Windows binaries, 1.72 WIP built 2019/07/15, master branch, 5 executables)
 
 The demo applications are unfortunately not yet DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your Style with `style.ScaleAllSizes()`.
 
@@ -172,12 +170,12 @@ For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Binding
 ### Upcoming Changes
 
 Some of the goals for 2019 are:
-- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), in public `docking` branch looking for feedback)
-- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), in public `docking` branch looking for feedback)
+- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch looking for feedback)
+- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch looking for feedback)
 - Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
 - Add an automation and testing system, both to test the library and end-user apps. (see [#435](https://github.com/ocornut/imgui/issues/435))
-- Make Columns better. (they are currently pretty terrible!)
-- Make the examples look better, improve styles, improve font support, make the examples hi-DPI aware.
+- Make Columns better. They are currently pretty terrible! New Tables API coming Q4 2019!
+- Make the examples look better, improve styles, improve font support, make the examples hi-DPI and multi-DPI aware.
 
 ### Gallery
 
@@ -290,7 +288,7 @@ Businesses: support continued development via invoiced technical support, mainte
 <br>&nbsp;&nbsp;_E-mail: omarcornut at gmail dot com_
 
 Individuals/hobbyists: support continued maintenance and development via the monthly Patreon:
-<br>&nbsp;&nbsp;[![Patreon](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/patreon_01.png)](http://www.patreon.com/imgui)
+<br>&nbsp;&nbsp;[![Patreon](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/patreon_02.png)](http://www.patreon.com/imgui)
 
 Individuals/hobbyists: support continued maintenance and development via PayPal:
 <br>&nbsp;&nbsp;[![PayPal](https://www.paypalobjects.com/en_US/i/btn/btn_donate_LG.gif)](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S)
