@@ -1,7 +1,9 @@
-dear imgui, v1.73 WIP
-(Font Readme)
-
----------------------------------------
+----------------------------------------------------------------------
+ dear imgui, v1.73
+----------------------------------------------------------------------
+ misc/fonts/README.txt
+ This is the Readme dedicated to fonts.
+----------------------------------------------------------------------
 
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default.
