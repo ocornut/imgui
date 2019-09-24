@@ -1,4 +1,3 @@
-
 #import "Renderer.h"
 #import <Metal/Metal.h>
 
@@ -26,11 +25,9 @@
 
         IMGUI_CHECKVERSION();
         ImGui::CreateContext();
-        (void)ImGui::GetIO();
-        
-        ImGui_ImplMetal_Init(_device);
-
         ImGui::StyleColorsDark();
+
+        ImGui_ImplMetal_Init(_device);
     }
 
     return self;
@@ -52,7 +49,7 @@
     io.DeltaTime = 1 / float(view.preferredFramesPerSecond ?: 60);
 
     id<MTLCommandBuffer> commandBuffer = [self.commandQueue commandBuffer];
-    
+
     static bool show_demo_window = true;
     static bool show_another_window = false;
     static float clear_color[4] = { 0.28f, 0.36f, 0.5f, 1.0f };
@@ -89,7 +86,7 @@
             ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
             ImGui::Checkbox("Another Window", &show_another_window);
 
-            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -115,13 +112,13 @@
         ImGui::Render();
         ImDrawData *drawData = ImGui::GetDrawData();
         ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
-        
+
         [renderEncoder popDebugGroup];
         [renderEncoder endEncoding];
 
         [commandBuffer presentDrawable:view.currentDrawable];
     }
-    
+
     [commandBuffer commit];
 }
 

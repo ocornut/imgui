@@ -9,7 +9,7 @@
 #import <OpenGL/gl.h>
 #import <OpenGL/glu.h>
 
-//-----------------------------------------------------------------------------------	
+//-----------------------------------------------------------------------------------
 // ImGuiExampleView
 //-----------------------------------------------------------------------------------
 
@@ -29,7 +29,7 @@
 -(void)prepareOpenGL
 {
     [super prepareOpenGL];
-	
+
 #ifndef DEBUG
     GLint swapInterval = 1;
     [[self openGLContext] setValues:&swapInterval forParameter:NSOpenGLCPSwapInterval];
@@ -65,7 +65,7 @@
         ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
         ImGui::Checkbox("Another Window", &show_another_window);
 
-        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f    
+        ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
         ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
         if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -91,18 +91,18 @@
 	ImGui::Render();
 	[[self openGLContext] makeCurrentContext];
 
-    ImGuiIO& io = ImGui::GetIO();
-    GLsizei width  = (GLsizei)(io.DisplaySize.x * io.DisplayFramebufferScale.x);
-    GLsizei height = (GLsizei)(io.DisplaySize.y * io.DisplayFramebufferScale.y);
+    ImDrawData* draw_data = ImGui::GetDrawData();
+    GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     glViewport(0, 0, width, height);
 
 	glClearColor(clear_color.x, clear_color.y, clear_color.z, clear_color.w);
 	glClear(GL_COLOR_BUFFER_BIT);
-	ImGui_ImplOpenGL2_RenderDrawData(ImGui::GetDrawData());
+	ImGui_ImplOpenGL2_RenderDrawData(draw_data);
 
     // Present
     [[self openGLContext] flushBuffer];
-	
+
     if (!animationTimer)
         animationTimer = [NSTimer scheduledTimerWithTimeInterval:0.017 target:self selector:@selector(animationTimerFired:) userInfo:nil repeats:YES];
 }
@@ -133,12 +133,6 @@
     return (YES);
 }
 
-// Flip coordinate system upside down on Y
--(BOOL)isFlipped
-{
-    return (YES);
-}
-
 -(void)dealloc
 {
     animationTimer = nil;
@@ -150,6 +144,8 @@
 -(void)flagsChanged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseDown:(NSEvent *)event       { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)mouseUp:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseMoved:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self); }
+-(void)mouseDragged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)scrollWheel:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self); }
 
 @end
@@ -174,14 +170,15 @@
 {
     if (_window != nil)
         return (_window);
-	
+
     NSRect viewRect = NSMakeRect(100.0, 100.0, 100.0 + 1280.0, 100 + 720.0);
-	
+
     _window = [[NSWindow alloc] initWithContentRect:viewRect styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable|NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:YES];
     [_window setTitle:@"Dear ImGui OSX+OpenGL2 Example"];
+    [_window setAcceptsMouseMovedEvents:YES];
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
-	
+
     return (_window);
 }
 
@@ -194,12 +191,12 @@
     appMenu = [[NSMenu alloc] initWithTitle:@"Dear ImGui OSX+OpenGL2 Example"];
     menuItem = [appMenu addItemWithTitle:@"Quit Dear ImGui OSX+OpenGL2 Example" action:@selector(terminate:) keyEquivalent:@"q"];
     [menuItem setKeyEquivalentModifierMask:NSEventModifierFlagCommand];
-	
+
     menuItem = [[NSMenuItem alloc] init];
     [menuItem setSubmenu:appMenu];
-	
+
     [mainMenuBar addItem:menuItem];
-	
+
     appMenu = nil;
     [NSApp setMainMenu:mainMenuBar];
 }
@@ -217,14 +214,14 @@
 
 	// Menu
     [self setupMenu];
-	
+
     NSOpenGLPixelFormatAttribute attrs[] =
     {
         NSOpenGLPFADoubleBuffer,
         NSOpenGLPFADepthSize, 32,
         0
     };
-	
+
     NSOpenGLPixelFormat* format = [[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
     ImGuiExampleView* view = [[ImGuiExampleView alloc] initWithFrame:self.window.frame pixelFormat:format];
     format = nil;
@@ -233,22 +230,23 @@
         [view setWantsBestResolutionOpenGLSurface:YES];
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
     [self.window setContentView:view];
-	
+
     if ([view openGLContext] == nil)
         NSLog(@"No OpenGL Context!");
 
-    // Setup Dear ImGui binding
+    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
 
-    ImGui_ImplOSX_Init();
-    ImGui_ImplOpenGL2_Init();
-
-    // Setup style
+    // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
+
+    // Setup Platform/Renderer bindings
+    ImGui_ImplOSX_Init();
+    ImGui_ImplOpenGL2_Init();
 
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.

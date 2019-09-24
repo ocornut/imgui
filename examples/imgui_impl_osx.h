@@ -1,10 +1,12 @@
 // dear imgui: Platform Binding for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
-// [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
+// [ALPHA] Early bindings, not well tested. If you want a portable application, prefer using the GLFW or SDL platform bindings on Mac.
 
+// Implemented features:
+//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this back-end).
 // Issues:
-// [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-// [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 
 @class NSEvent;
 @class NSView;
