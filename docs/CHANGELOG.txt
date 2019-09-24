@@ -74,6 +74,7 @@ Other Changes:
 - Added a mechanism to compact/free the larger allocations of unused windows (buffers are compacted when
   a window is unused for 60 seconds, as per io.ConfigWindowsMemoryCompactTimer = 60.0f). Note that memory
   usage has never been reported as a problem, so this is merely a touch of overzealous luxury. (#2636)
+- Documentation: Various tweaks and improvements to the README page. [@ker0chan]
 - Backends: OpenGL3: Tweaked initialization code allow application calling ImGui_ImplOpenGL3_CreateFontsTexture()
   before ImGui_ImplOpenGL3_NewFrame(), which sometimes can be convenient.
 - Backends: OpenGL3: Attempt to automatically detect default GL loader by using __has_include. (#2798) [@o-micron]
