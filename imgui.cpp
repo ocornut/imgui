@@ -1258,30 +1258,34 @@ ImGuiIO::ImGuiIO()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
 void ImGuiIO::AddInputCharacter(unsigned int c)
 {
-    if (c > 0 && c < 0x10000)
+    if (c > 0 && c < (sizeof(ImWchar) == 2 ? 0x10000 : 0x110000))
         InputQueueCharacters.push_back((ImWchar)c);
 }
 
-// UTF16 string use Surrogate to encode unicode > 0x10000, so we should save the Surrogate.
+// UTF16 strings use surrogate pairs to encode codepoints >= 0x10000, so
+// we should save the high surrogate.
 void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
 {
-    if (c >= 0xD800 && c <= 0xDBFF)
+    if ((c & 0xFC00) == 0xD800) // High surrogate, must save
     {
+        if (Surrogate != 0)
+            InputQueueCharacters.push_back(0xFFFD);
         Surrogate = c;
+        return;
     }
-    else
+
+    ImWchar cp = c;
+    if (Surrogate != 0)
     {
-        ImWchar cp = c;
-        if (c >= 0xDC00 && c <= 0xDFFF)
-        {
-            if (sizeof(ImWchar) == 2)
-                cp = 0xFFFD;
-            else
-                cp = ((ImWchar)(Surrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000;
-            Surrogate = 0;
-        }
-        InputQueueCharacters.push_back(cp);
+        if ((c & 0xFC00) != 0xDC00) // Invalid low surrogate
+            InputQueueCharacters.push_back(0xFFFD);
+        else if (sizeof(ImWchar) == 2)
+            cp = 0xFFFD;
+        else
+            cp = ((ImWchar)(Surrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000;
+        Surrogate = 0;
     }
+    InputQueueCharacters.push_back(cp);
 }
 
 void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
@@ -1581,6 +1585,17 @@ ImU32 ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
     }
     return ~crc;
 }
+
+#if defined(_WIN32) && !defined(__CYGWIN__) && !defined(__GNUC__)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef __MINGW32__
+#include <Windows.h>
+#else
+#include <windows.h>
+#endif
+#endif
 
 FILE* ImFileOpen(const char* filename, const char* mode)
 {

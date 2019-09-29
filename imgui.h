@@ -132,7 +132,7 @@ typedef unsigned int ImGuiID;       // Unique ID used by widgets (typically hash
 #define ImWchar ImWchar16
 #endif
 typedef unsigned short ImWchar16;   // A single U16 character for keyboard input/display. We encode them as multi bytes UTF-8 when used in strings.
-typedef int ImWchar32;              // A single 32bit character for keyboard input/display, define ImWchar to ImWchar32 to use it. See imconfig.h .
+typedef unsigned int ImWchar32;     // A single U32 character for keyboard input/display. Define ImWchar to ImWchar32 to use it. See imconfig.h .
 typedef int ImGuiCol;               // -> enum ImGuiCol_             // Enum: A color identifier for styling
 typedef int ImGuiCond;              // -> enum ImGuiCond_            // Enum: A condition for many Set*() functions
 typedef int ImGuiDataType;          // -> enum ImGuiDataType_        // Enum: A primary data type
