@@ -1094,30 +1094,33 @@ ImGuiIO::ImGuiIO()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
 void ImGuiIO::AddInputCharacter(unsigned int c)
 {
-    if (c > 0 && c <= IM_UNICODE_CODEPOINT_MAX)
-        InputQueueCharacters.push_back((ImWchar)c);
+    InputQueueCharacters.push_back(c > 0 && c <= IM_UNICODE_CODEPOINT_MAX ? (ImWchar)c : IM_UNICODE_CODEPOINT_INVALID);
 }
 
-// UTF16 string use Surrogate to encode unicode > 0x10000, so we should save the Surrogate.
+// UTF16 strings use surrogate pairs to encode codepoints >= 0x10000, so
+// we should save the high surrogate.
 void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
 {
-    if (c >= 0xD800 && c <= 0xDBFF)
+    if ((c & 0xFC00) == 0xD800) // High surrogate, must save
     {
-        Surrogate = c;
+        if (InputQueueSurrogate != 0)
+            InputQueueCharacters.push_back(0xFFFD);
+        InputQueueSurrogate = c;
+        return;
     }
-    else
+
+    ImWchar cp = c;
+    if (InputQueueSurrogate != 0)
     {
-        ImWchar cp = c;
-        if (c >= 0xDC00 && c <= 0xDFFF)
-        {
-            if (sizeof(ImWchar) == 2)
-                cp = IM_UNICODE_CODEPOINT_INVALID;
-            else
-                cp = ((ImWchar)(Surrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000;
-            Surrogate = 0;
-        }
-        InputQueueCharacters.push_back(cp);
+        if ((c & 0xFC00) != 0xDC00) // Invalid low surrogate
+            InputQueueCharacters.push_back(IM_UNICODE_CODEPOINT_INVALID);
+        else if (IM_UNICODE_CODEPOINT_MAX == (0xFFFF)) // Codepoint will not fit in ImWchar (extra parenthesis around 0xFFFF somehow fixes -Wunreachable-code with Clang)
+            cp = IM_UNICODE_CODEPOINT_INVALID;
+        else
+            cp = (ImWchar)(((InputQueueSurrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000);
+        InputQueueSurrogate = 0;
     }
+    InputQueueCharacters.push_back(cp);
 }
 
 void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
@@ -1506,6 +1509,18 @@ ImU32 ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
 
 // Default file functions
 #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
+
+#if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
+#ifndef WIN32_LEAN_AND_MEAN
+#define WIN32_LEAN_AND_MEAN
+#endif
+#ifndef __MINGW32__
+#include <Windows.h>
+#else
+#include <windows.h>
+#endif
+#endif
+
 ImFileHandle ImFileOpen(const char* filename, const char* mode)
 {
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
@@ -1514,9 +1529,9 @@ ImFileHandle ImFileOpen(const char* filename, const char* mode)
     const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode, -1, NULL, 0);
     ImVector<ImWchar> buf;
     buf.resize(filename_wsize + mode_wsize);
-    ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, &buf[0], filename_wsize);
-    ::MultiByteToWideChar(CP_UTF8, 0, mode, -1,&buf[filename_wsize], mode_wsize);
-    return _wfopen(&buf[0], &buf[filename_wsize]);
+    ::MultiByteToWideChar(CP_UTF8, 0, filename, -1, (wchar_t*)&buf[0], filename_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, mode, -1, (wchar_t*)&buf[filename_wsize], mode_wsize);
+    return _wfopen((const wchar_t*)&buf[0], (const wchar_t*)&buf[filename_wsize]);
 #else
     return fopen(filename, mode);
 #endif
@@ -1628,8 +1643,8 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
         c += (*str++ & 0x3f);
         // utf-8 encodings of values used in surrogate pairs are invalid
         if ((c & 0xFFFFF800) == 0xD800) return 4;
-        // If ImWchar is 16bit, use replacement character U+FFFD instead
-        if (sizeof(ImWchar) == 2 && c >= 0x10000) c = IM_UNICODE_CODEPOINT_INVALID;
+        // If codepoint does not fit in ImWchar, use replacement character U+FFFD instead
+        if (c > IM_UNICODE_CODEPOINT_MAX) c = IM_UNICODE_CODEPOINT_INVALID;
         *out_char = c;
         return 4;
     }

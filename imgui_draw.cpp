@@ -2724,7 +2724,7 @@ void ImFont::AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst)
 
 const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
 {
-    if (c >= IndexLookup.Size)
+    if (c >= (size_t)IndexLookup.Size)
         return FallbackGlyph;
     const ImWchar i = IndexLookup.Data[c];
     if (i == (ImWchar)-1)
@@ -2734,7 +2734,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar c) const
 
 const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
 {
-    if (c >= IndexLookup.Size)
+    if (c >= (size_t)IndexLookup.Size)
         return NULL;
     const ImWchar i = IndexLookup.Data[c];
     if (i == (ImWchar)-1)
