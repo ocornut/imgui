@@ -6973,8 +6973,7 @@ void ImGui::SetItemDefaultFocus()
         g.NavInitResultId = g.NavWindow->DC.LastItemId;
         g.NavInitResultRectRel = ImRect(g.NavWindow->DC.LastItemRect.Min - g.NavWindow->Pos, g.NavWindow->DC.LastItemRect.Max - g.NavWindow->Pos);
         NavUpdateAnyRequestFlag();
-        if (!IsItemVisible())
-            SetScrollHereY();
+        ScrollToBringRectIntoView(window, g.NavWindow->DC.LastItemRect);
     }
 }
 
