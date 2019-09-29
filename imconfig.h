@@ -70,6 +70,9 @@
 // Read about ImGuiBackendFlags_RendererHasVtxOffset for details.
 //#define ImDrawIdx unsigned int
 
+//---- Use 32-bit for ImWchar (default is 16-bit) to support full Unicode code points.
+//#define ImWchar ImWchar32
+
 //---- Override ImDrawCallback signature (will need to modify renderer back-ends accordingly)
 //struct ImDrawList;
 //struct ImDrawCmd;
