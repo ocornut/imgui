@@ -64,6 +64,8 @@ Other changes:
 - Nav: Fixed an issue with Gamepad navigation when the movement lead to a scroll and
   frame time > repeat rate. Triggering a new move request on the same frame as a move
   result lead to an incorrect calculation and loss of navigation id. (#6171)
+- Nav: Fixed SetItemDefaultFocus() from not scrolling when item is partially visible.
+  (#2814, #2812) [@DomGries]
 - IO: Lifted constraint to call io.AddEventXXX functions from current context. (#4921, #5856, #6199)
 - InputText: Fixed not being able to use CTRL+Tab while an InputText() using Tab
   for completion or textinput is active (regresion from 1.89).
