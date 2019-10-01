@@ -3,7 +3,7 @@ dear imgui
 [![Build Status](https://api.travis-ci.com/ocornut/imgui.svg?branch=master)](https://travis-ci.com/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-<sub>(This library is available under a free and permissive licence, but needs financial support to sustain its continued improvements. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal.)</sub>
+<sub>(This library is available under a free and permissive license, but needs financial support to sustain its continued improvements. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal.)</sub>
 
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
@@ -206,7 +206,7 @@ See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [B
 
 If you are new to Dear ImGui and have issues with: compiling, linking, adding fonts, wiring inputs, running or displaying Dear ImGui: you can use [Discord server](https://discord.gg/NgJ4SEP) or [Discourse forums](https://discourse.dearimgui.org).
 
-Otherwise for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
+Otherwise, for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
 Private support is available for paying customers.
 
@@ -218,8 +218,8 @@ Private support is available for paying customers.
  - The demo covers most features of Dear ImGui, so you can read the code and see its output.
  - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
  - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder to explain how to integrate Dear ImGui with your own engine/application.
- - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
- - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
+ - Your programming IDE is your friend, find the type or function declaration to find comments associated with it.
+ - We obviously need better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
 **Which version should I get?**
 
@@ -233,7 +233,7 @@ See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software usi
 
 **Why the odd dual naming, "Dear ImGui" vs "ImGui"?**
 
-The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). To reduce this ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library. Please try to refer to this library as "Dear ImGui".
+The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses its own implementation of the IMGUI paradigm). To reduce this ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library. Please try to refer to this library as "Dear ImGui".
 
 **How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?**
 <br>**How can I display an image? What is ImTextureID, how does it works?** ([examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples))
@@ -256,7 +256,7 @@ See the FAQ in [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cp
 
 Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
+Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
 
 **Can you reskin the look of Dear ImGui?**
 
@@ -282,7 +282,7 @@ How to help
 
 **How can I help financing further development of Dear ImGui?**
 
-Your contributions are keeping this project alive. The library is available under a free and permissive licence, but continued maintenance and development are a full-time endeavor and I would like to grow the team. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for invoiced technical support and maintenance contracts. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal. Thank you!
+Your contributions are keeping this project alive. The library is available under a free and permissive license, but continued maintenance and development are a full-time endeavor and I would like to grow the team. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for invoiced technical support and maintenance contracts. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal. Thank you!
 
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
