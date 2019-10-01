@@ -150,9 +150,12 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
-    const float dpi = [view.window backingScaleFactor];
-    io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
-    io.DisplayFramebufferScale = ImVec2(dpi, dpi);
+    if (view)
+    {
+        const float dpi = [view.window backingScaleFactor];
+        io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
+        io.DisplayFramebufferScale = ImVec2(dpi, dpi);
+    }
 
     // Setup time step
     if (g_Time == 0.0)
@@ -250,7 +253,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         for (int i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
-            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF))
+            if (!io.KeyCtrl && !((c >= 0xF700 && c <= 0xFFFF) || c == 127))
                 io.AddInputCharacter((unsigned int)c);
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
