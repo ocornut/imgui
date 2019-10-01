@@ -160,6 +160,8 @@ typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: f
 typedef int (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
 
+#define IM_UNICODE_MAX_CODEPOINT (sizeof(ImWchar) == 2 ? 0x10000 : 0x110000)
+
 // Scalar data types
 typedef signed char         ImS8;   // 8-bit signed integer == char
 typedef unsigned char       ImU8;   // 8-bit unsigned integer
@@ -1466,7 +1468,7 @@ struct ImGuiIO
     float       KeysDownDurationPrev[512];      // Previous duration the key has been down
     float       NavInputsDownDuration[ImGuiNavInput_COUNT];
     float       NavInputsDownDurationPrev[ImGuiNavInput_COUNT];
-    ImWchar16   Surrogate;                      // For AddInputCharacterUTF16
+    ImWchar16   InputQueueSurrogate;            // For AddInputCharacterUTF16
     ImVector<ImWchar> InputQueueCharacters;     // Queue of _characters_ input (obtained by platform back-end). Fill using AddInputCharacter() helper.
 
     IMGUI_API   ImGuiIO();
@@ -2047,7 +2049,7 @@ struct ImFontGlyphRangesBuilder
     ImVector<ImU32> UsedChars;            // Store 1-bit per Unicode code point (0=unused, 1=used)
 
     ImFontGlyphRangesBuilder()          { Clear(); }
-    inline void     Clear()             { int size_in_bytes = (sizeof(ImWchar) == 2 ? 0x10000 : 0x110000) / 8; UsedChars.resize(size_in_bytes / (int)sizeof(ImU32)); memset(UsedChars.Data, 0, (size_t)size_in_bytes); }
+    inline void     Clear()             { int size_in_bytes = IM_UNICODE_MAX_CODEPOINT / 8; UsedChars.resize(size_in_bytes / (int)sizeof(ImU32)); memset(UsedChars.Data, 0, (size_t)size_in_bytes); }
     inline bool     GetBit(int n) const { int off = (n >> 5); ImU32 mask = 1u << (n & 31); return (UsedChars[off] & mask) != 0; }  // Get bit n in the array
     inline void     SetBit(int n)       { int off = (n >> 5); ImU32 mask = 1u << (n & 31); UsedChars[off] |= mask; }               // Set bit n in the array
     inline void     AddChar(ImWchar c)  { SetBit(c); }                          // Add character

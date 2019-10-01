@@ -1258,8 +1258,7 @@ ImGuiIO::ImGuiIO()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
 void ImGuiIO::AddInputCharacter(unsigned int c)
 {
-    if (c > 0 && c < (sizeof(ImWchar) == 2 ? 0x10000 : 0x110000))
-        InputQueueCharacters.push_back((ImWchar)c);
+    InputQueueCharacters.push_back(c > 0 && c < IM_UNICODE_MAX_CODEPOINT ? (ImWchar)c : 0xFFFD);
 }
 
 // UTF16 strings use surrogate pairs to encode codepoints >= 0x10000, so
@@ -1268,22 +1267,22 @@ void ImGuiIO::AddInputCharacterUTF16(ImWchar16 c)
 {
     if ((c & 0xFC00) == 0xD800) // High surrogate, must save
     {
-        if (Surrogate != 0)
+        if (InputQueueSurrogate != 0)
             InputQueueCharacters.push_back(0xFFFD);
-        Surrogate = c;
+        InputQueueSurrogate = c;
         return;
     }
 
     ImWchar cp = c;
-    if (Surrogate != 0)
+    if (InputQueueSurrogate != 0)
     {
         if ((c & 0xFC00) != 0xDC00) // Invalid low surrogate
             InputQueueCharacters.push_back(0xFFFD);
-        else if (sizeof(ImWchar) == 2)
+        else if (IM_UNICODE_MAX_CODEPOINT == 0x10000) // Codepoint will not fit in ImWchar
             cp = 0xFFFD;
         else
-            cp = ((ImWchar)(Surrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000;
-        Surrogate = 0;
+            cp = (ImWchar)(((InputQueueSurrogate - 0xD800) << 10) + (c - 0xDC00) + 0x10000);
+        InputQueueSurrogate = 0;
     }
     InputQueueCharacters.push_back(cp);
 }
@@ -1713,8 +1712,8 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
         c += (*str++ & 0x3f);
         // utf-8 encodings of values used in surrogate pairs are invalid
         if ((c & 0xFFFFF800) == 0xD800) return 4;
-        // If ImWchar is 16bit, use replacement character U+FFFD instead
-        if (sizeof(ImWchar) == 2 && c >= 0x10000) c = 0xFFFD;
+        // If codepoint does not fit in ImWchar, use replacement character U+FFFD instead
+        if (c >= IM_UNICODE_MAX_CODEPOINT) c = 0xFFFD;
         *out_char = c;
         return 4;
     }
