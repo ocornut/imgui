@@ -3907,6 +3907,41 @@ ImGuiKeyModFlags ImGui::GetMergedKeyModFlags()
     return key_mod_flags;
 }
 
+static void DpiScaleMousePosition()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.IO.MousePos.x == g.LastMousePos.x && g.IO.MousePos.y == g.LastMousePos.y)
+        // Mouse position did not change since the last frame therefore it is already scaled.
+        return;
+
+    float dpi = 1.f;
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        if (g.MovingWindow)
+            // Windows and their viewpots do not transition DPI during window movement.
+            dpi = g.MovingWindow->Viewport->DpiScale;
+        else
+        {
+            // Use DPI of monitor mouse hovers
+            for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
+            {
+                ImGuiPlatformMonitor* monitor = (ImGuiPlatformMonitor*)&g.PlatformIO.Monitors[i];
+                if (ImRect(monitor->MainPos, monitor->MainPos + monitor->MainSize).Contains(g.IO.MousePos))
+                {
+                    dpi = monitor->DpiScale;
+                    break;
+                }
+            }
+        }
+    }
+    else
+        // Monitors are detected with viewports disabled therefore we have to use whatever scale main viewport has.
+        dpi = g.PlatformIO.MainViewport->DpiScale;
+
+    g.IO.MousePos.x /= dpi;
+    g.IO.MousePos.y /= dpi;
+}
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -3937,6 +3972,7 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
 
+    DpiScaleMousePosition();
     UpdateViewportsNewFrame();
 
     // Setup current font and draw list shared data
@@ -4612,6 +4648,10 @@ void ImGui::Render()
     if (g.Viewports[0]->DrawData->CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
         g.IO.RenderDrawListsFn(g.Viewports[0]->DrawData);
 #endif
+
+    // (Viewports) Save mouse position so we can detect position change in NewFrame(). Poition is DPI-scaled there.
+    g.LastMousePos = g.IO.MousePos;
+    g.LastDisplaySize = g.IO.DisplaySize;
 }
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
@@ -10849,6 +10889,22 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
+    float scale = g.PlatformIO.MainViewport->DpiScale;
+    bool display_size_changed = g.LastDisplaySize.x != g.IO.DisplaySize.x || g.LastDisplaySize.y != g.IO.DisplaySize.y;
+    bool scale_changed = scale != g.LastDisplayScale;
+    if (display_size_changed || scale_changed)
+    {
+        if (!display_size_changed)
+        {
+            // Scale changed but not display size. Reverse downscaling.
+            g.IO.DisplaySize.x *= g.LastDisplayScale;
+            g.IO.DisplaySize.y *= g.LastDisplayScale;
+        }
+        // Downscale main viewport to 96 DPI.
+        g.IO.DisplaySize.x /= scale;
+        g.IO.DisplaySize.y /= scale;
+    }
+
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
     const bool viewports_enabled = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != 0;
     if (viewports_enabled)
@@ -10873,7 +10929,7 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     IM_ASSERT(main_viewport->Window == NULL);
-    ImVec2 main_viewport_pos = viewports_enabled ? g.PlatformIO.Platform_GetWindowPos(main_viewport) : ImVec2(0.0f, 0.0f);
+    ImVec2 main_viewport_pos = viewports_enabled ? (g.PlatformIO.Platform_GetWindowPos(main_viewport) / main_viewport->DpiScale) : ImVec2(0.0f, 0.0f);
     ImVec2 main_viewport_size = g.IO.DisplaySize;
     if (viewports_enabled && (main_viewport->Flags & ImGuiViewportFlags_Minimized))
     {
@@ -10921,9 +10977,9 @@ static void ImGui::UpdateViewportsNewFrame()
             if (!(viewport->Flags & ImGuiViewportFlags_Minimized) && platform_funcs_available)
             {
                 if (viewport->PlatformRequestMove)
-                    viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
+                    viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / viewport->DpiScale;
                 if (viewport->PlatformRequestResize)
-                    viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
+                    viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport) / viewport->DpiScale;
             }
         }
 
@@ -10952,21 +11008,24 @@ static void ImGui::UpdateViewportsNewFrame()
             new_dpi_scale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
         else
             new_dpi_scale = (viewport->DpiScale != 0.0f) ? viewport->DpiScale : 1.0f;
-        if (viewport->DpiScale != 0.0f && new_dpi_scale != viewport->DpiScale)
-        {
-            float scale_factor = new_dpi_scale / viewport->DpiScale;
-            if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
-                ScaleWindowsInViewport(viewport, scale_factor);
-            //if (viewport == GetMainViewport())
-            //    g.PlatformInterface.SetWindowSize(viewport, viewport->Size * scale_factor);
 
-            // Scale our window moving pivot so that the window will rescale roughly around the mouse position.
-            // FIXME-VIEWPORT: This currently creates a resizing feedback loop when a window is straddling a DPI transition border.
-            // (Minor: since our sizes do not perfectly linearly scale, deferring the click offset scale until we know the actual window scale ratio may get us slightly more precise mouse positioning.)
-            //if (g.MovingWindow != NULL && g.MovingWindow->Viewport == viewport)
-            //    g.ActiveIdClickOffset = ImFloor(g.ActiveIdClickOffset * scale_factor);
+        // Moving windows do not transition their DPI.
+        if (g.MovingWindow == NULL || g.MovingWindow->Viewport != viewport)
+        {
+            if (new_dpi_scale != viewport->DpiScale && viewport != GetMainViewport() && platform_funcs_available)
+            {
+                // DPI changed and we have to update window that transitioned to new DPI. Main viewport is an exception.
+                // It's size (native window with OS decorations) remains static while ImGui windows in it get scaled
+                // automatically.
+                g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * new_dpi_scale);
+                // Reupdate viewport position from native window. Not doing this causes discrepancy between where ImGui
+                // thinks window is and where it actually is and it breaks any mouse input.
+                viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / new_dpi_scale;
+                if (viewport->Window != NULL)
+                    viewport->Window->Pos = viewport->Pos;
+            }
+            viewport->DpiScale = new_dpi_scale;
         }
-        viewport->DpiScale = new_dpi_scale;
     }
 
     if (!viewports_enabled)
@@ -11268,7 +11327,14 @@ void ImGui::UpdatePlatformWindows()
         if (is_new_platform_window)
         {
             IMGUI_DEBUG_LOG_VIEWPORT("Create Platform Window %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
+            // TODO: Ugly workaround to allow user to not care about this
+            ImVec2 pos_bkp = viewport->Pos;                   // TODO: Sucks
+            ImVec2 size_bkp = viewport->Size;                 // TODO: Sucks
+            viewport->Pos *= viewport->DpiScale;              // TODO: Sucks
+            viewport->Size *= viewport->DpiScale;             // TODO: Sucks
             g.PlatformIO.Platform_CreateWindow(viewport);
+            viewport->Pos = pos_bkp;                          // TODO: Sucks
+            viewport->Size = size_bkp;                        // TODO: Sucks
             if (g.PlatformIO.Renderer_CreateWindow != NULL)
                 g.PlatformIO.Renderer_CreateWindow(viewport);
             viewport->LastNameHash = 0;
@@ -11279,9 +11345,9 @@ void ImGui::UpdatePlatformWindows()
 
         // Apply Position and Size (from ImGui to Platform/Renderer back-ends)
         if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !viewport->PlatformRequestMove)
-            g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos);
+            g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos * viewport->DpiScale);
         if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !viewport->PlatformRequestResize)
-            g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size);
+            g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * viewport->DpiScale);
         if ((viewport->LastRendererSize.x != viewport->Size.x || viewport->LastRendererSize.y != viewport->Size.y) && g.PlatformIO.Renderer_SetWindowSize)
             g.PlatformIO.Renderer_SetWindowSize(viewport, viewport->Size);
         viewport->LastPlatformPos = viewport->Pos;
@@ -11435,7 +11501,7 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 // Update monitor from viewport rectangle (we'll use this info to clamp windows and save windows lost in a removed monitor)
 static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
 {
-    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect());
+    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect() * viewport->DpiScale);
 }
 
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)

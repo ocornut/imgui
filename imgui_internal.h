@@ -729,6 +729,9 @@ struct IMGUI_API ImRect
     void        Floor()                             { Min.x = IM_FLOOR(Min.x); Min.y = IM_FLOOR(Min.y); Max.x = IM_FLOOR(Max.x); Max.y = IM_FLOOR(Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
 };
+#ifdef IMGUI_DEFINE_MATH_OPERATORS
+static inline ImRect operator*(const ImRect& lhs, const float rhs)              { return ImRect(lhs.Min*rhs, lhs.Max*rhs); }
+#endif
 
 // Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
 struct ImGuiDataTypeInfo
@@ -1266,6 +1269,9 @@ struct ImGuiContext
     ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more) + honoring the _NoInputs flag.
     ImGuiID                 PlatformLastFocusedViewport;        // Record of last focused platform window/viewport, when this changes we stamp the viewport as front-most
     int                     ViewportFrontMostStampCount;        // Every time the front-most window changes, we stamp its viewport with an incrementing counter
+    ImVec2                  LastMousePos;                       // Mouse position at the end of frame. Used to detect mouse position changes in NewFrame().
+    ImVec2                  LastDisplaySize;                    // Display size at the end of frame. Used to detect display size changes in NewFrame().
+    float                   LastDisplayScale;                   // DPI scale of main viewport at the end of frame. Used to detect display size changes in NewFrame().
 
     // Gamepad/keyboard Navigation
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'

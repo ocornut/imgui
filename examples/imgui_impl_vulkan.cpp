@@ -330,8 +330,8 @@ static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkCommandBu
 void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer command_buffer)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x * draw_data->OwnerViewport->DpiScale);
+    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y * draw_data->OwnerViewport->DpiScale);
     if (fb_width <= 0 || fb_height <= 0)
         return;
 
@@ -396,6 +396,8 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
+    clip_scale.x *= draw_data->OwnerViewport->DpiScale;
+    clip_scale.y *= draw_data->OwnerViewport->DpiScale;
 
     // Render command lists
     // (Because we merged all buffers into a single one, we maintain our own offset into them)
