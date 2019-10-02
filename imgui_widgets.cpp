@@ -557,7 +557,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             SetActiveID(id, window);
             if ((nav_activated_by_code || nav_activated_by_inputs) && !(flags & ImGuiButtonFlags_NoNavFocus))
                 SetFocusID(id, window);
-            g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right) | (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
         }
     }
 
@@ -2093,7 +2092,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* v, floa
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
-            g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+            g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
             if (focus_requested || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavInputId == id)
             {
                 temp_input_start = true;
@@ -2542,7 +2541,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* v, co
             SetActiveID(id, window);
             SetFocusID(id, window);
             FocusWindow(window);
-            g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+            g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
             if (focus_requested || (clicked && g.IO.KeyCtrl) || g.NavInputId == id)
             {
                 temp_input_start = true;
@@ -2696,7 +2695,7 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
-        g.ActiveIdAllowNavDirFlags = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
+        g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
     }
 
     // Draw frame
@@ -3505,12 +3504,17 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         SetActiveID(id, window);
         SetFocusID(id, window);
         FocusWindow(window);
+
+        // Declare our inputs
         IM_ASSERT(ImGuiNavInput_COUNT < 32);
-        g.ActiveIdBlockNavInputFlags = (1 << ImGuiNavInput_Cancel);
+        if (is_multiline || (flags & ImGuiInputTextFlags_CallbackHistory))
+            g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Up) | (1 << ImGuiDir_Down);
+        g.ActiveIdUsingNavInputMask |= (1 << ImGuiNavInput_Cancel);
+        g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_Home) | ((ImU64)1 << ImGuiKey_End);
+        if (is_multiline)
+            g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_PageUp) | ((ImU64)1 << ImGuiKey_PageDown); // FIXME-NAV: Page up/down actually not supported yet by widget, but claim them ahead.
         if (flags & (ImGuiInputTextFlags_CallbackCompletion | ImGuiInputTextFlags_AllowTabInput))  // Disable keyboard tabbing out as we will use the \t character.
-            g.ActiveIdBlockNavInputFlags |= (1 << ImGuiNavInput_KeyTab_);
-        if (!is_multiline && !(flags & ImGuiInputTextFlags_CallbackHistory))
-            g.ActiveIdAllowNavDirFlags = ((1 << ImGuiDir_Up) | (1 << ImGuiDir_Down));
+            g.ActiveIdUsingKeyInputMask |= ((ImU64)1 << ImGuiKey_Tab);
     }
 
     // We have an edge case if ActiveId was set through another widget (e.g. widget being swapped), clear id immediately (don't wait until the end of the function)

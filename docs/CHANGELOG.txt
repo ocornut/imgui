@@ -34,10 +34,10 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
-- 
+-
 
 Other Changes:
-- 
+- InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
 
 
 -----------------------------------------------------------------------
