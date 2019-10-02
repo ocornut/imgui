@@ -3423,6 +3423,8 @@ static ImDrawList* GetViewportDrawList(ImGuiViewportP* viewport, size_t drawlist
         viewport->DrawLists[drawlist_no] = draw_list;
     }
 
+    draw_list->_FringeScale = viewport->DpiScale;
+
     // Our ImDrawList system requires that there is always a command
     if (viewport->LastFrameDrawLists[drawlist_no] != g.FrameCount)
     {
@@ -6419,6 +6421,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Setup draw list and outer clipping rectangle
         window->DrawList->Clear();
+        window->DrawList->_FringeScale = window->Viewport->DpiScale;
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
