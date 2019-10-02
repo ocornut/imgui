@@ -3024,6 +3024,8 @@ static void SetCurrentWindow(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     g.CurrentWindow = window;
+    // Reselect font with appropriate DPI in case window moved to another screen.
+    ImGui::SetCurrentFont(g.Font);
     if (window)
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
@@ -6850,6 +6852,10 @@ void ImGui::SetCurrentFont(ImFont* font)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
+
+    // Select appropriate font size based on DPI of current viewport.
+    font = g.IO.Fonts->MapFontToDpi(font, g.CurrentViewport ? g.CurrentViewport->DpiScale : 1.f);
+
     g.Font = font;
     g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
     g.FontSize = g.CurrentWindow ? g.CurrentWindow->CalcFontSize() : 0.0f;

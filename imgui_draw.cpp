@@ -1714,7 +1714,10 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     // Create new font
     if (!font_cfg->MergeMode)
+    {
         Fonts.push_back(IM_NEW(ImFont));
+        Fonts.back()->FontID = Fonts.Size - 1;
+    }
     else
         IM_ASSERT(!Fonts.empty() && "Cannot use MergeMode for the first font"); // When using MergeMode make sure that a font has already been added before. You can use ImGui::GetIO().Fonts->AddFontDefault() to add the default imgui font.
 
@@ -1891,6 +1894,112 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
     return true;
 }
 
+static int IMGUI_CDECL FloatReverseComparer(const void* lhs, const void* rhs)
+{
+    const float d = *(float*)lhs - *(float*)rhs;
+    if (d < 0.f)
+        return 1;
+    else if (d > 0.f)
+        return -1;
+    else
+        return 0;
+}
+
+void ImFontAtlas::CreatePerDpiFonts()
+{
+    // Duplicate all added fonts for each DPI. All font sizes are rendered into the same texture. Fonts are switched on
+    // the fly when window transitions through monitors of different dpi.
+
+    ImGuiPlatformIO& platform_io = GImGui->PlatformIO;
+    ImVector<float> dpi_set;
+
+    if (GImGui->IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        IM_ASSERT(platform_io.Monitors.Size > 0);
+        // Gather different DPIs
+        for (int i = 0; i < platform_io.Monitors.Size; i++)
+        {
+            ImGuiPlatformMonitor& monitor = platform_io.Monitors[i];
+            if (!dpi_set.contains(monitor.DpiScale))
+                dpi_set.push_back(monitor.DpiScale);
+        }
+        // High DPI goes to the front of the list so that custom rects get supersampled.
+        ImQsort(dpi_set.Data, sizeof(float), dpi_set.Size, FloatReverseComparer);
+    }
+    else
+    {
+        // Monitors are empty when viewports are not enabled. In that case we only handle dpi of main viewport at build
+        // time. This is incorrect, but will properly work at least in some cases (single hdpi monitor).
+        // TODO: DpiScale is not set yet at this point.
+        //dpi_set.push_back(platform_io.MainViewport->DpiScale);
+        return;
+    }
+
+    // Clone initial list of fonts for DPIs ranging 1..N.
+    const int total_configs = ConfigData.Size;    // Variables used there because these structures expand during
+    const int total_fonts = Fonts.Size;           // following loop and we only need to iterate initial list of 
+                                                  // fonts/configs.
+    // Duplicate fonts for each dpi
+    for (int dpi_index = 1; dpi_index < dpi_set.Size; dpi_index++)
+    {
+        const float dpi = dpi_set[dpi_index];
+        int font_index = 0;
+        for (int config_index = 0; config_index < total_configs; config_index++)
+        {
+            ImFont* src_font = Fonts[font_index];
+            ImFontConfig config = ConfigData[config_index];
+            config.SizePixels *= dpi;
+            config.FontDataOwnedByAtlas = false;
+            if (dpi > 1.f)
+            {
+                int end = strlen(config.Name);
+                ImFormatString(config.Name + end, sizeof(config.Name) - end, "(x%.02f)", dpi);
+            }
+            if (config.MergeMode)
+            {
+                // Find offset of destination font and use that offset to pick a cloned font as a new destination.
+                for (int merge_font_index = 0; merge_font_index < total_fonts; merge_font_index++)
+                {
+                    if (config.DstFont == Fonts[merge_font_index])
+                    {
+                        config.DstFont = Fonts[total_fonts + merge_font_index];
+                        break;
+                    }
+                }
+            }
+            else
+            {
+                config.DstFont = NULL;
+                font_index++;
+            }
+            ImFont* dpi_font = AddFont(&config);
+            dpi_font->FontID = src_font->FontID;
+            dpi_font->DpiScale = dpi;
+        }
+    }
+
+    // Upscale first font for the first DPI.
+    const float dpi = dpi_set[0];
+    Fonts[0]->DpiScale = dpi;
+    ConfigData[0].SizePixels *= dpi;
+    if (dpi > 1.f)
+    {
+        int end = strlen(ConfigData[0].Name);
+        ImFormatString(ConfigData[0].Name + end, sizeof(ConfigData[0].Name) - end, "(x%.02f)", dpi);
+    }
+}
+
+ImFont* ImFontAtlas::MapFontToDpi(ImFont* base_font, float dpi)
+{
+    for (int i = 0; i < Fonts.Size; i++)
+    {
+        ImFont* font = Fonts[i];
+        if (font->FontID == base_font->FontID && font->DpiScale == dpi)
+            return font;
+    }
+    return base_font;
+}
+
 bool    ImFontAtlas::Build()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
@@ -1955,6 +2064,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
+    atlas->CreatePerDpiFonts();
     ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
@@ -2607,6 +2717,8 @@ ImFont::ImFont()
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
     memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
+    FontID = 0;
+    DpiScale = 0.0f;
 }
 
 ImFont::~ImFont()

@@ -323,6 +323,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
+    atlas->CreatePerDpiFonts();
     ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
