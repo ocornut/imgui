@@ -2047,55 +2047,99 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Text Baseline Alignment"))
     {
-        HelpMarker("This is testing the vertical alignment that gets applied on text to keep it aligned with widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets.");
+        {
+            ImGui::BulletText("Text baseline:");
+            ImGui::SameLine();
+            HelpMarker("This is testing the vertical alignment that gets applied on text to keep it aligned with widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets.");
+            ImGui::Indent();
 
-        ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("Banana");
+            ImGui::Text("KO Blahblah"); ImGui::SameLine();
+            ImGui::Button("Some framed item"); ImGui::SameLine();
+            HelpMarker("Baseline of button will look misaligned with text..");
 
-        ImGui::Text("Banana"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("One\nTwo\nThree");
+            // If your line starts with text, call AlignTextToFramePadding() to align text to upcoming widgets.
+            // Because we don't know what's coming after the Text() statement, we need to move the text baseline down by FramePadding.y
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("OK Blahblah"); ImGui::SameLine();
+            ImGui::Button("Some framed item"); ImGui::SameLine();
+            HelpMarker("We call AlignTextToFramePadding() to vertically align the text baseline by +FramePadding.y");
 
-        ImGui::Button("HOP##1"); ImGui::SameLine();
-        ImGui::Text("Banana"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("Banana");
+            // SmallButton() uses the same vertical padding as Text
+            ImGui::Button("TEST##1"); ImGui::SameLine();
+            ImGui::Text("TEST"); ImGui::SameLine();
+            ImGui::SmallButton("TEST##2");
 
-        ImGui::Button("HOP##2"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("Banana");
+            // If your line starts with text, call AlignTextToFramePadding() to align text to upcoming widgets.
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Text aligned to framed item"); ImGui::SameLine();
+            ImGui::Button("Item##1"); ImGui::SameLine();
+            ImGui::Text("Item"); ImGui::SameLine();
+            ImGui::SmallButton("Item##2"); ImGui::SameLine();
+            ImGui::Button("Item##3");
 
-        ImGui::Button("TEST##1"); ImGui::SameLine();
-        ImGui::Text("TEST"); ImGui::SameLine();
-        ImGui::SmallButton("TEST##2");
+            ImGui::Unindent();
+        }
 
-        ImGui::AlignTextToFramePadding(); // If your line starts with text, call this to align it to upcoming widgets.
-        ImGui::Text("Text aligned to Widget"); ImGui::SameLine();
-        ImGui::Button("Widget##1"); ImGui::SameLine();
-        ImGui::Text("Widget"); ImGui::SameLine();
-        ImGui::SmallButton("Widget##2"); ImGui::SameLine();
-        ImGui::Button("Widget##3");
+        ImGui::Spacing();
 
-        // Tree
-        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        ImGui::Button("Button##1");
-        ImGui::SameLine(0.0f, spacing);
-        if (ImGui::TreeNode("Node##1")) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }    // Dummy tree data
+        {
+            ImGui::BulletText("Multi-line text:");
+            ImGui::Indent();
+            ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
 
-        ImGui::AlignTextToFramePadding();         // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget. Otherwise you can use SmallButton (smaller fit).
-        bool node_open = ImGui::TreeNode("Node##2");  // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add child content.
-        ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
-        if (node_open) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
+            ImGui::Text("Banana"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("One\nTwo\nThree");
 
-        // Bullet
-        ImGui::Button("Button##3");
-        ImGui::SameLine(0.0f, spacing);
-        ImGui::BulletText("Bullet text");
+            ImGui::Button("HOP##1"); ImGui::SameLine();
+            ImGui::Text("Banana"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
 
-        ImGui::AlignTextToFramePadding();
-        ImGui::BulletText("Node");
-        ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+            ImGui::Button("HOP##2"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
+            ImGui::Unindent();
+        }
+
+        ImGui::Spacing();
+
+        {
+            ImGui::BulletText("Misc items:");
+            ImGui::Indent();
+
+            // SmallButton() sets FramePadding to zero. Text baseline is aligned to match baseline of previous Button
+            ImGui::Button("80x80", ImVec2(80, 80));
+            ImGui::SameLine();
+            ImGui::Button("50x50", ImVec2(50, 50));
+            ImGui::SameLine();
+            ImGui::Button("Button()");
+            ImGui::SameLine();
+            ImGui::SmallButton("SmallButton()");
+
+            // Tree
+            const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            ImGui::Button("Button##1");
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::TreeNode("Node##1")) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }    // Dummy tree data
+
+            ImGui::AlignTextToFramePadding();           // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget. Otherwise you can use SmallButton (smaller fit).
+            bool node_open = ImGui::TreeNode("Node##2");// Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add child content.
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
+            if (node_open) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
+
+            // Bullet
+            ImGui::Button("Button##3");
+            ImGui::SameLine(0.0f, spacing);
+            ImGui::BulletText("Bullet text");
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::BulletText("Node");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+            ImGui::Unindent();
+        }
 
         ImGui::TreePop();
     }
