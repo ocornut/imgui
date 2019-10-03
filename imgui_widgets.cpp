@@ -112,6 +112,7 @@ static ImVec2           InputTextCalcTextSizeW(const ImWchar* text_begin, const 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: Text, etc.
 //-------------------------------------------------------------------------
+// - TextEx() [Internal]
 // - TextUnformatted()
 // - Text()
 // - TextV()

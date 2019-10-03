@@ -383,6 +383,7 @@ enum ImGuiSeparatorFlags_
 // This is going to be exposed in imgui.h when stabilized enough.
 enum ImGuiItemFlags_
 {
+    ImGuiItemFlags_None                     = 0,
     ImGuiItemFlags_NoTabStop                = 1 << 0,  // false
     ImGuiItemFlags_ButtonRepeat             = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
     ImGuiItemFlags_Disabled                 = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
@@ -1541,8 +1542,8 @@ namespace ImGui
     IMGUI_API void          PushOverrideID(ImGuiID id);
 
     // Basic Helpers for widget code
-    IMGUI_API void          ItemSize(const ImVec2& size, float text_offset_y = 0.0f);
-    IMGUI_API void          ItemSize(const ImRect& bb, float text_offset_y = 0.0f);
+    IMGUI_API void          ItemSize(const ImVec2& size, float text_baseline_y = 0.0f);
+    IMGUI_API void          ItemSize(const ImRect& bb, float text_baseline_y = 0.0f);
     IMGUI_API bool          ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb = NULL);
     IMGUI_API bool          ItemHoverable(const ImRect& bb, ImGuiID id);
     IMGUI_API bool          IsClippedEx(const ImRect& bb, ImGuiID id, bool clip_even_when_logged);
@@ -1704,7 +1705,8 @@ namespace ImGui
     IMGUI_API void          ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp);
 
     // Debug Tools
-    inline void             DebugStartItemPicker() { GImGui->DebugItemPickerActive = true; }
+    inline void             DebugDrawItemRect(ImU32 col = IM_COL32(255,0,0,255))    { ImGuiContext& g = *GImGui; ImGuiWindow* window = g.CurrentWindow; GetForegroundDrawList(window)->AddRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max, col); }
+    inline void             DebugStartItemPicker()                                  { ImGuiContext& g = *GImGui; g.DebugItemPickerActive = true; }
 
 } // namespace ImGui
 
