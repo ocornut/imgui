@@ -2430,7 +2430,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                     FLOATTYPE v_new_off_f = (v_max - v_min) * clicked_t;
                     TYPE v_new_off_floor = (TYPE)(v_new_off_f);
                     TYPE v_new_off_round = (TYPE)(v_new_off_f + (FLOATTYPE)0.5);
-                    if (!is_decimal && v_new_off_floor < v_new_off_round)
+                    if (v_new_off_floor < v_new_off_round)
                         v_new = v_min + v_new_off_round;
                     else
                         v_new = v_min + v_new_off_floor;
