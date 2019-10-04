@@ -179,7 +179,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     gl_loader = "GLEW";
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
     gl_loader = "GLAD";
-#else IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#else // IMGUI_IMPL_OPENGL_LOADER_CUSTOM
     gl_loader = "Custom";
 #endif
 
