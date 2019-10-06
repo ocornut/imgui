@@ -31,3 +31,14 @@ Build:
 set ALLEGRODIR=path_to_your_allegro5_folder
 cl /Zi /MD /I %ALLEGRODIR%\include /DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" /I .. /I ..\.. main.cpp ..\imgui_impl_allegro5.cpp ..\..\imgui*.cpp /link /LIBPATH:%ALLEGRODIR%\lib allegro-5.0.10-monolith-md.lib user32.lib
 ```
+
+### On macOS
+
+Install Allegro with homebrew:
+
+`brew install allegro`
+
+Build:
+```bash
+g++ -DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" -I .. -I ../.. main.cpp ../imgui_impl_allegro5.cpp ../../imgui*.cpp -lallegro -lallegro_main -lallegro_primitives -o allegro5_example
+```
