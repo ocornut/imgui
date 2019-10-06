@@ -54,9 +54,16 @@ Breaking Changes:
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
-- ColorPicker: Fixed SV triangle gradient to block (broken in 1.73). (#2864, #2711). [@lewa-j]
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
 - InputText: Filter out ASCII 127 (DEL) emitted by low-level OSX layer, as we are using the Key value. (#2578)
+- Layout: Fixed a couple of subtle bounding box vertical positioning issues relating to the handling of text
+  baseline alignment. The issue would generally manifest when laying out multiple items on a same line,
+  with varying heights and text baseline offsets.
+  Some specific examples, e.g. a button with regular frame padding followed by another item with a
+  multi-line label and no frame padding, such as: multi-line text, small button, tree node item, etc.
+  The second item was correctly offset to match text baseline, and would interact/display correctly,
+  but it wouldn't push the contents area boundary low enough.
+- ColorPicker: Fixed SV triangle gradient to block (broken in 1.73). (#2864, #2711). [@lewa-j]
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
@@ -65,6 +72,7 @@ Other Changes:
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
+- Examples: Emscripten: Removed NO_FILESYSTEM from Makefile, seems to fail on some setup. (#2734) [@Funto]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
 - Backends: GLFW: Previously installed user callbacks are now restored on shutdown. (#2836) [@malte-v]
 
