@@ -38,6 +38,9 @@ Breaking Changes:
 
 Other Changes:
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
+- TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
+  incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
+- Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
 
 
 -----------------------------------------------------------------------
