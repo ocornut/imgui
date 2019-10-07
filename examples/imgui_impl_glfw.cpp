@@ -33,6 +33,7 @@
 //  2018-01-18: Inputs: Added mapping for ImGuiKey_Insert.
 //  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
+//  2019-10-07: Misc: Previously installed user callbacks are now restored on shutdown.
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
@@ -207,11 +208,13 @@ bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
-    if (g_InstalledCallbacks) {
+    if (g_InstalledCallbacks)
+    {
         glfwSetMouseButtonCallback(g_Window, g_PrevUserCallbackMousebutton);
         glfwSetScrollCallback(g_Window, g_PrevUserCallbackScroll);
         glfwSetKeyCallback(g_Window, g_PrevUserCallbackKey);
         glfwSetCharCallback(g_Window, g_PrevUserCallbackChar);
+        g_InstalledCallbacks = false;
     }
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
