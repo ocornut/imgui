@@ -120,9 +120,14 @@ On most platforms and when using C++, **you should be able to use a combination 
 
 Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you less than two hours to integrate Dear ImGui in your custom engine. **Make sure to spend time reading the FAQ, comments, and one of the examples/ application!**
 
-_NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users!). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
+_NB: third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users!). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
-Languages:
+Officially maintained bindings in repository:
+- Renderers: DirectX9, DirectX10, DirectX11, DirectX12, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, Metal.
+- Platforms: GLFW, SDL2, Win32, Glut, OSX.
+- Others: Allegro5, Marmalade.
+
+Third-party - Languages bindings:
 - C: [cimgui](https://github.com/cimgui/cimgui) (auto-generated! **you can use its json output to generate bindings for other languages**)
 - C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
 - ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
@@ -141,11 +146,7 @@ Languages:
 - Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs) or [imgui-rust](https://github.com/nsf/imgui-rust)
 - Swift: [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
-Frameworks:
-- Renderers: DirectX 9/10/11/12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Platform: GLFW, SDL, Win32, OSX, GLUT: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Framework: Allegro 5, Emscripten, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
+Third-party - Engines/Frameworks bindings:
 - bsf: [bsfimgui](https://github.com/pgruenbacher/bsfImgui)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
@@ -164,6 +165,7 @@ Frameworks:
 - SFML: [imgui-sfml](https://github.com/eliasdaler/imgui-sfml)
 - Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
 - Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
+- Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
 
 For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/). Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 

@@ -9,11 +9,13 @@ Note that the back-end supports _BOTH_ 16-bit and 32-bit indices, but 32-bit ind
 
 # How to Build
 
-### On Ubuntu 14.04+
+### On Ubuntu 14.04+ and macOS
 
 ```bash
-g++ -DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" -I .. -I ../.. main.cpp ../imgui_impl_allegro5.cpp ../../imgui*.cpp -lallegro -lallegro_primitives -o allegro5_example
+g++ -DIMGUI_USER_CONFIG=\"examples/example_allegro5/imconfig_allegro5.h\" -I .. -I ../.. main.cpp ../imgui_impl_allegro5.cpp ../../imgui*.cpp -lallegro -lallegro_main -lallegro_primitives -o allegro5_example
 ```
+
+On macOS, install Allegro with homebrew: `brew install allegro`.
 
 ### On Windows with Visual Studio's CLI
 
