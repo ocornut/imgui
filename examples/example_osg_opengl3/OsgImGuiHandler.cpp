@@ -50,45 +50,11 @@ OsgImGuiHandler::OsgImGuiHandler()
     init();
 }
 
-//////////////////////////////////////////////////////////////////////////////
-// Imporant Note: Dear ImGui expects the control Keys indices not to be	    //
-// greater thant 511. It actually uses an array of 512 elements. However,   //
-// OSG has indices greater than that. So here I do a conversion for special //
-// keys between ImGui and OSG.						                        //
-//////////////////////////////////////////////////////////////////////////////
-
 /**
- * Special keys that are usually greater than 512 in OSGga
- **/
-enum ConvertedKey : int
-{
-    ConvertedKey_Tab = 257,
-    ConvertedKey_Left,
-    ConvertedKey_Right,
-    ConvertedKey_Up,
-    ConvertedKey_Down,
-    ConvertedKey_PageUp,
-    ConvertedKey_PageDown,
-    ConvertedKey_Home,
-    ConvertedKey_End,
-    ConvertedKey_Delete,
-    ConvertedKey_BackSpace,
-    ConvertedKey_Enter,
-    ConvertedKey_Escape,
-    // Modifiers
-    ConvertedKey_LeftControl,
-    ConvertedKey_RightControl,
-    ConvertedKey_LeftShift,
-    ConvertedKey_RightShift,
-    ConvertedKey_LeftAlt,
-    ConvertedKey_RightAlt,
-    ConvertedKey_LeftSuper,
-    ConvertedKey_RightSuper
-};
-
-/**
- * Check for a special key and return the converted code (range [257, 511]) if
- * so. Otherwise returns -1
+ * Imporant Note: Dear ImGui expects the control Keys indices not to be
+ * greater thant 511. It actually uses an array of 512 elements. However,
+ * OSG has indices greater than that. So here I do a conversion for special
+ * keys between ImGui and OSG.
  */
 static int ConvertFromOSGKey(int key)
 {
@@ -96,53 +62,35 @@ static int ConvertFromOSGKey(int key)
 
     switch (key)
     {
+        case KEY::KEY_Tab:
+            return ImGuiKey_Tab;
+        case KEY::KEY_Left:
+            return ImGuiKey_LeftArrow;
+        case KEY::KEY_Right:
+            return ImGuiKey_RightArrow;
+        case KEY::KEY_Up:
+            return ImGuiKey_UpArrow;
+        case KEY::KEY_Down:
+            return ImGuiKey_DownArrow;
+        case KEY::KEY_Page_Up:
+            return ImGuiKey_PageUp;
+        case KEY::KEY_Page_Down:
+            return ImGuiKey_PageDown;
+        case KEY::KEY_Home:
+            return ImGuiKey_Home;
+        case KEY::KEY_End:
+            return ImGuiKey_End;
+        case KEY::KEY_Delete:
+            return ImGuiKey_Delete;
+        case KEY::KEY_BackSpace:
+            return ImGuiKey_Backspace;
+        case KEY::KEY_Return:
+            return ImGuiKey_Enter;
+        case KEY::KEY_Escape:
+            return ImGuiKey_Escape;
         default: // Not found
             return -1;
-        case KEY::KEY_Tab:
-            return ConvertedKey_Tab;
-        case KEY::KEY_Left:
-            return ConvertedKey_Left;
-        case KEY::KEY_Right:
-            return ConvertedKey_Right;
-        case KEY::KEY_Up:
-            return ConvertedKey_Up;
-        case KEY::KEY_Down:
-            return ConvertedKey_Down;
-        case KEY::KEY_Page_Up:
-            return ConvertedKey_PageUp;
-        case KEY::KEY_Page_Down:
-            return ConvertedKey_PageDown;
-        case KEY::KEY_Home:
-            return ConvertedKey_Home;
-        case KEY::KEY_End:
-            return ConvertedKey_End;
-        case KEY::KEY_Delete:
-            return ConvertedKey_Delete;
-        case KEY::KEY_BackSpace:
-            return ConvertedKey_BackSpace;
-        case KEY::KEY_Return:
-            return ConvertedKey_Enter;
-        case KEY::KEY_Escape:
-            return ConvertedKey_Escape;
-        case KEY::KEY_Control_L:
-            return ConvertedKey_LeftControl;
-        case KEY::KEY_Control_R:
-            return ConvertedKey_RightControl;
-        case KEY::KEY_Shift_L:
-            return ConvertedKey_LeftShift;
-        case KEY::KEY_Shift_R:
-            return ConvertedKey_RightShift;
-        case KEY::KEY_Alt_L:
-            return ConvertedKey_LeftAlt;
-        case KEY::KEY_Alt_R:
-            return ConvertedKey_RightAlt;
-        case KEY::KEY_Super_L:
-            return ConvertedKey_LeftSuper;
-        case KEY::KEY_Super_R:
-            return ConvertedKey_RightSuper;
     }
-    assert(false && "Switch has a default case");
-    return -1;
 }
 
 void OsgImGuiHandler::init()
@@ -150,19 +98,19 @@ void OsgImGuiHandler::init()
     ImGuiIO& io = ImGui::GetIO();
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
-    io.KeyMap[ImGuiKey_Tab] = ConvertedKey_Tab;
-    io.KeyMap[ImGuiKey_LeftArrow] = ConvertedKey_Left;
-    io.KeyMap[ImGuiKey_RightArrow] = ConvertedKey_Right;
-    io.KeyMap[ImGuiKey_UpArrow] = ConvertedKey_Up;
-    io.KeyMap[ImGuiKey_DownArrow] = ConvertedKey_Down;
-    io.KeyMap[ImGuiKey_PageUp] = ConvertedKey_PageUp;
-    io.KeyMap[ImGuiKey_PageDown] = ConvertedKey_PageDown;
-    io.KeyMap[ImGuiKey_Home] = ConvertedKey_Home;
-    io.KeyMap[ImGuiKey_End] = ConvertedKey_End;
-    io.KeyMap[ImGuiKey_Delete] = ConvertedKey_Delete;
-    io.KeyMap[ImGuiKey_Backspace] = ConvertedKey_BackSpace;
-    io.KeyMap[ImGuiKey_Enter] = ConvertedKey_Enter;
-    io.KeyMap[ImGuiKey_Escape] = ConvertedKey_Escape;
+    io.KeyMap[ImGuiKey_Tab] = ImGuiKey_Tab;
+    io.KeyMap[ImGuiKey_LeftArrow] = ImGuiKey_LeftArrow;
+    io.KeyMap[ImGuiKey_RightArrow] = ImGuiKey_RightArrow;
+    io.KeyMap[ImGuiKey_UpArrow] = ImGuiKey_UpArrow;
+    io.KeyMap[ImGuiKey_DownArrow] = ImGuiKey_DownArrow;
+    io.KeyMap[ImGuiKey_PageUp] = ImGuiKey_PageUp;
+    io.KeyMap[ImGuiKey_PageDown] = ImGuiKey_PageDown;
+    io.KeyMap[ImGuiKey_Home] = ImGuiKey_Home;
+    io.KeyMap[ImGuiKey_End] = ImGuiKey_End;
+    io.KeyMap[ImGuiKey_Delete] = ImGuiKey_Delete;
+    io.KeyMap[ImGuiKey_Backspace] = ImGuiKey_Backspace;
+    io.KeyMap[ImGuiKey_Enter] = ImGuiKey_Enter;
+    io.KeyMap[ImGuiKey_Escape] = ImGuiKey_Escape;
     io.KeyMap[ImGuiKey_A] = osgGA::GUIEventAdapter::KeySymbol::KEY_A;
     io.KeyMap[ImGuiKey_C] = osgGA::GUIEventAdapter::KeySymbol::KEY_C;
     io.KeyMap[ImGuiKey_V] = osgGA::GUIEventAdapter::KeySymbol::KEY_V;
@@ -230,60 +178,41 @@ bool OsgImGuiHandler::handle(const osgGA::GUIEventAdapter& ea, osgGA::GUIActionA
     switch (ea.getEventType())
     {
         case osgGA::GUIEventAdapter::KEYDOWN:
+        case osgGA::GUIEventAdapter::KEYUP:
         {
+            const bool isKeyDown = ea.getEventType() == osgGA::GUIEventAdapter::KEYDOWN;
             const int c = ea.getKey();
             const int special_key = ConvertFromOSGKey(c);
             if (special_key > 0)
             {
-                assert(special_key < 512 && "ImGui KeysDown is an array of 512");
-                assert(special_key > 256 && "ASCII stop at 127, but we use the range [257, 511]");
+                assert((special_key >= 0 && special_key < 512) && "ImGui KeysMap is an array of 512");
 
-                io.KeysDown[special_key] = true;
+                io.KeysDown[special_key] = isKeyDown;
 
-                io.KeyCtrl = io.KeysDown[ConvertedKey_LeftControl] || io.KeysDown[ConvertedKey_RightControl];
-                io.KeyShift = io.KeysDown[ConvertedKey_LeftShift] || io.KeysDown[ConvertedKey_RightShift];
-                io.KeyAlt = io.KeysDown[ConvertedKey_LeftAlt] || io.KeysDown[ConvertedKey_RightAlt];
-                io.KeySuper = io.KeysDown[ConvertedKey_LeftSuper] || io.KeysDown[ConvertedKey_RightSuper];
+                io.KeyCtrl = ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_CTRL;
+                io.KeyShift = ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_SHIFT;
+                io.KeyAlt = ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_ALT;
+                io.KeySuper = ea.getModKeyMask() & osgGA::GUIEventAdapter::MODKEY_SUPER;
             }
-            else if (c > 0 && c < 0x10000)
+            else if (isKeyDown && c > 0 && c < 0xFF)
             {
                 io.AddInputCharacter((unsigned short)c);
             }
             return wantCapureKeyboard;
         }
-        case osgGA::GUIEventAdapter::KEYUP:
-        {
-            const int c = ea.getKey();
-            const int special_key = ConvertFromOSGKey(c);
-            if (special_key > 0)
-            {
-                assert(special_key < 512 && "ImGui KeysMap is an array of 512");
-                assert(special_key > 256 && "ASCII stop at 127, but we use the range [257, 511]");
-
-                io.KeysDown[special_key] = false;
-
-                io.KeyCtrl = io.KeysDown[ConvertedKey_LeftControl] || io.KeysDown[ConvertedKey_RightControl];
-                io.KeyShift = io.KeysDown[ConvertedKey_LeftShift] || io.KeysDown[ConvertedKey_RightShift];
-                io.KeyAlt = io.KeysDown[ConvertedKey_LeftAlt] || io.KeysDown[ConvertedKey_RightAlt];
-                io.KeySuper = io.KeysDown[ConvertedKey_LeftSuper] || io.KeysDown[ConvertedKey_RightSuper];
-            }
-            return wantCapureKeyboard;
-        }
+        case (osgGA::GUIEventAdapter::RELEASE):
         case (osgGA::GUIEventAdapter::PUSH):
         {
             io.MousePos = ImVec2(ea.getX(), io.DisplaySize.y - ea.getY());
-            mousePressed_[0] = true;
+            mousePressed_[0] = ea.getButtonMask() & osgGA::GUIEventAdapter::LEFT_MOUSE_BUTTON;
+            mousePressed_[1] = ea.getButtonMask() & osgGA::GUIEventAdapter::RIGHT_MOUSE_BUTTON;
+            mousePressed_[2] = ea.getButtonMask() & osgGA::GUIEventAdapter::MIDDLE_MOUSE_BUTTON;
             return wantCapureMouse;
         }
         case (osgGA::GUIEventAdapter::DRAG):
         case (osgGA::GUIEventAdapter::MOVE):
         {
             io.MousePos = ImVec2(ea.getX(), io.DisplaySize.y - ea.getY());
-            return wantCapureMouse;
-        }
-        case (osgGA::GUIEventAdapter::RELEASE):
-        {
-            mousePressed_[0] = false;
             return wantCapureMouse;
         }
         case (osgGA::GUIEventAdapter::SCROLL):
