@@ -20,18 +20,32 @@ SOURCES += ../imgui_impl_sdl.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
+UNAME_M := $(shell uname -m)
 
 CXXFLAGS = -I../ -I../../
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
+# There seems to be no way to detect Raspberry Pi from preprocessor defines
+# (i.e. gcc -dM -E - < /dev/null), so define something manually
+# See also https://www.raspberrypi.org/forums/viewtopic.php?p=200638
+ifeq ($(UNAME_M), armv7l)
+RPI = 1
+endif
+
 ##---------------------------------------------------------------------
 ## OPENGL LOADER
 ##---------------------------------------------------------------------
 
+ifndef RPI
 ## Using OpenGL loader: gl3w [default]
 SOURCES += ../libs/gl3w/GL/gl3w.c
 CXXFLAGS += -I../libs/gl3w
+else
+## No opengl loader on RPi, force use of openGL ES 2.0
+# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_CUSTOM -DIMGUI_IMPL_OPENGL_ES2 -DRPI
+CXXFLAGS += -DIMGUI_IMPL_OPENGL_ES2 -DRPI
+endif
 
 ## Using OpenGL loader: glew
 ## (This assumes a system-wide installation)
@@ -47,9 +61,16 @@ CXXFLAGS += -I../libs/gl3w
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += -lGL -ldl `sdl2-config --libs`
 
+ifndef RPI
+	LIBS += -lGL -ldl `sdl2-config --libs`
 	CXXFLAGS += `sdl2-config --cflags`
+else
+	ECHO_MESSAGE = "Raspberry Pi"
+	LIBS += `PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig pkg-config --libs bcm_host brcmegl brcmglesv2` -ldl `sdl2-config --libs`
+	CXXFLAGS += `PKG_CONFIG_PATH=/opt/vc/lib/pkgconfig pkg-config --cflags bcm_host brcmegl brcmglesv2` `sdl2-config --cflags`
+endif
+
 	CFLAGS = $(CXXFLAGS)
 endif
 
