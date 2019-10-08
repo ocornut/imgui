@@ -276,12 +276,19 @@ static void RenderReorderTree(MyTreeNode* node)
 
     // Prevent dropping a parent node on to one of it's children.
     bool acceptable = false;
+    bool reorderable = false;
     MyTreeNode* dropped = NULL;
     const ImGuiPayload* payload = ImGui::GetDragDropPayload();
     if (payload != NULL && payload->IsDataType(PAYLOAD_TYPE))
     {
         memcpy(&dropped, payload->Data, sizeof(dropped));
-        acceptable = !node->IsDescendantOf(dropped);
+        acceptable = !node->IsDescendantOf(dropped);    // Parenting node to it's child breaks the tree
+        if (acceptable)
+        {
+            acceptable &= dropped->Parent != node;      // Reparenting node to it's parent is pointless
+            reorderable = dropped->Parent == node;      // Limit reordering within the same parent due to confusion when reordering drop areas overlap
+            reorderable &= node->Children.Size > 1;     // Drawing reordering drop areas with one child or less is pointless
+        }
     }
 
     if (acceptable && ImGui::BeginDragDropTarget())
@@ -312,7 +319,7 @@ static void RenderReorderTree(MyTreeNode* node)
             if (i >= 0)
                 RenderReorderTree(node->Children[i]);
 
-            if (acceptable && ImGui::AcceptReorderDropPayload(PAYLOAD_TYPE))
+            if (reorderable && ImGui::AcceptReorderDropPayload(PAYLOAD_TYPE))
             {
                 // This offset compensates for i starting at -1, however if we are moving a node within same parent
                 // and it is located at or before our destination position, deletion of this node does compensate
