@@ -959,6 +959,7 @@ ImGuiStyle::ImGuiStyle()
     ColorButtonPosition     = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign     = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
+    DragDropTargetPadding   = ImVec2(3.5f,3.5f);// Inner padding of rectangle drawn around area that accepts drag&drop payload. FIXME-DRAG: Settle on a proper default visuals for drop target.
     DisplayWindowPadding    = ImVec2(19,19);    // Window position are clamped to be visible within the display area or monitors by at least this amount. Only applies to regular windows.
     DisplaySafeAreaPadding  = ImVec2(3,3);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     MouseCursorScale        = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
@@ -998,6 +999,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     DisplayWindowPadding = ImFloor(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImFloor(DisplaySafeAreaPadding * scale_factor);
     MouseCursorScale = ImFloor(MouseCursorScale * scale_factor);
+    DragDropTargetPadding = ImFloor(DragDropTargetPadding * scale_factor);
 }
 
 ImGuiIO::ImGuiIO()
@@ -2410,6 +2412,7 @@ static const ImGuiStyleVarInfo GStyleVarInfo[] =
     { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, TabRounding) },         // ImGuiStyleVar_TabRounding
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ButtonTextAlign) },     // ImGuiStyleVar_ButtonTextAlign
     { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, SelectableTextAlign) }, // ImGuiStyleVar_SelectableTextAlign
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, DragDropTargetPadding) },// ImGuiStyleVar_DragDropTargetPadding
 };
 
 static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
@@ -9591,11 +9594,25 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     flags |= (g.DragDropSourceFlags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect); // Source can also inhibit the preview (useful for external sources that lives for 1 frame)
     if (!(flags & ImGuiDragDropFlags_AcceptNoDrawDefaultRect) && payload.Preview)
     {
-        // FIXME-DRAG: Settle on a proper default visuals for drop target.
-        r.Expand(3.5f);
+        const float line_thickness = 2.0f;
+        if (!(flags & ImGuiDragDropFlags_AcceptDrawLine))
+            r.Expand(g.Style.DragDropTargetPadding);
+
         bool push_clip_rect = !window->ClipRect.Contains(r);
         if (push_clip_rect) window->DrawList->PushClipRect(r.Min - ImVec2(1, 1), r.Max + ImVec2(1, 1));
-        window->DrawList->AddRect(r.Min, r.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, ~0, 2.0f);
+        if (!(flags & ImGuiDragDropFlags_AcceptDrawLine))
+        {
+            window->DrawList->AddRect(r.Min, r.Max, GetColorU32(ImGuiCol_DragDropTarget), 0.0f, ~0, line_thickness);
+        }
+        else
+        {
+            ImVec2 half_width;
+            if (flags & ImGuiDragDropFlags_ReorderHorizontal)
+                half_width.y = r.GetHeight() / 2;
+            else
+                half_width.x = r.GetWidth() / 2;
+            window->DrawList->AddLine(r.GetCenter() - half_width, r.GetCenter() + half_width, GetColorU32(ImGuiCol_DragDropTarget), line_thickness);
+        }
         if (push_clip_rect) window->DrawList->PopClipRect();
     }
 
@@ -9611,6 +9628,33 @@ const ImGuiPayload* ImGui::GetDragDropPayload()
 {
     ImGuiContext& g = *GImGui;
     return g.DragDropActive ? &g.DragDropPayload : NULL;
+}
+
+const ImGuiPayload* ImGui::AcceptReorderDropPayload(const char* type, ImGuiDragDropFlags flags)
+{
+    ImGuiContext& g = *GImGui;
+    const ImGuiPayload* payload = NULL;
+    ImRect bb(GetCursorScreenPos(), GetCursorScreenPos());
+
+    if (flags & ImGuiDragDropFlags_ReorderHorizontal)
+    {
+        bb.Max.y += g.FontSize;
+        bb.Min.x -= g.Style.ItemSpacing.x * 2.f;
+        bb.Max.x += g.Style.ItemSpacing.x;
+    }
+    else
+    {
+        bb.Max.x += GetContentRegionAvail().x;
+        bb.Min.y -= g.Style.ItemSpacing.y * 2.f;
+        bb.Max.y += g.Style.ItemSpacing.y;
+    }
+
+    if (BeginDragDropTargetCustom(bb, GetID(type)))
+    {
+        payload = AcceptDragDropPayload(type, flags | ImGuiDragDropFlags_AcceptDrawLine);
+        EndDragDropTarget();
+    }
+    return payload;
 }
 
 // We don't really use/need this now, but added it for the sake of consistency and because we might need it later.

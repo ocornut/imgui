@@ -218,6 +218,122 @@ static void ShowDemoWindowPopups();
 static void ShowDemoWindowColumns();
 static void ShowDemoWindowMisc();
 
+struct MyTreeNode
+{
+    char*                   Name;       // Owned
+    MyTreeNode*             Parent;
+    ImVector<MyTreeNode*>   Children;
+
+    MyTreeNode(const char* node_name, MyTreeNode* parent_node = NULL)
+    {
+        Name = (char*)IM_ALLOC(strlen(node_name) + 1);
+        strcpy(Name, node_name);
+        Parent = parent_node;
+    }
+
+    ~MyTreeNode()
+    {
+        IM_FREE(Name);
+        Name = NULL;
+        Parent = NULL;
+        for (int i = 0; i < Children.Size; i++)
+            IM_DELETE(Children[i]);
+        Children.clear();
+    }
+
+    MyTreeNode* AddChild(const char* name)
+    {
+        MyTreeNode* node = IM_NEW(MyTreeNode(name, this));
+        Children.push_back(node);
+        return node;
+    }
+
+    bool IsDescendantOf(MyTreeNode* node)
+    {
+        for (MyTreeNode* n = this; n->Parent != NULL; n = n->Parent)
+            if (n == node)
+                return true;
+        return false;
+    }
+};
+
+static void RenderReorderTree(MyTreeNode* node)
+{
+    ImGui::SetNextItemOpen(true, ImGuiCond_Once);
+    bool open = ImGui::TreeNode(node->Name);
+
+    const char* PAYLOAD_TYPE = "DND_DEMO_ANIMAL";
+
+    if (node->Parent != NULL)   // Can not move root node itself
+    {
+        if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+        {
+            ImGui::SetDragDropPayload(PAYLOAD_TYPE, &node, sizeof(node));
+            ImGui::TextUnformatted(node->Name);
+            ImGui::EndDragDropSource();
+        }
+    }
+
+    // Prevent dropping a parent node on to one of it's children.
+    bool acceptable = false;
+    MyTreeNode* dropped = NULL;
+    const ImGuiPayload* payload = ImGui::GetDragDropPayload();
+    if (payload != NULL && payload->IsDataType(PAYLOAD_TYPE))
+    {
+        memcpy(&dropped, payload->Data, sizeof(dropped));
+        acceptable = !node->IsDescendantOf(dropped);
+    }
+
+    if (acceptable && ImGui::BeginDragDropTarget())
+    {
+        // Drop directly on to node and append to the end of it's children list.
+        if (ImGui::AcceptDragDropPayload(PAYLOAD_TYPE))
+        {
+            if (dropped->Parent->Children.find_erase(dropped))
+            {
+                node->Children.push_back(dropped);
+                dropped->Parent = node;
+            }
+        }
+        ImGui::EndDragDropTarget();
+    }
+    else if (!acceptable)
+    {
+        // FIXME: Feedback when not acceptable?
+        //ImGui::SetMouseCursor(ImGuiMouseCursor_Arrow)
+    }
+
+    if (open)
+    {
+        // Drop at specific position within a tree.
+        // (we start from -1 so submit a reordering drop target before the first children)
+        for (int i = -1; i < node->Children.Size; i++)
+        {
+            if (i >= 0)
+                RenderReorderTree(node->Children[i]);
+
+            if (acceptable && ImGui::AcceptReorderDropPayload(PAYLOAD_TYPE))
+            {
+                // This offset compensates for i starting at -1, however if we are moving a node within same parent
+                // and it is located at or before our destination position, deletion of this node does compensate
+                // for this offset already.
+                int offset = 1;
+                if (node->Children.contains(dropped))
+                {
+                    int prev_i = node->Children.index_from_ptr(node->Children.find(dropped));
+                    if (prev_i <= i)
+                        offset = 0;
+                }
+
+                dropped->Parent->Children.find_erase(dropped);
+                node->Children.insert(node->Children.begin() + i + offset, dropped);
+                dropped->Parent = node;
+            }
+        }
+        ImGui::TreePop();
+    }
+}
+
 // Demonstrate most Dear ImGui features (this is big function!)
 // You may execute this function to experiment with the UI and understand what it does.
 // You may then search for keywords in the code when you are interested by a specific feature.
@@ -1923,6 +2039,79 @@ static void ShowDemoWindowWidgets()
                     }
                 }
             }
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Drag to reorder items (dnd api)"))
+        {
+            static bool horizontal_list = false;
+            static ImVector<const char*> items;
+            if (items.empty())
+            {
+                items.push_back("Red");
+                items.push_back("Green");
+                items.push_back("Blue");
+                items.push_back("Orange");
+                items.push_back("Black");
+                items.push_back("White");
+            }
+
+            ImGui::Checkbox("Horizontal list", &horizontal_list);
+
+            for (int i = -1; i < items.Size; i++)
+            {
+                // Submit item
+                if (i >= 0)
+                {
+                    const char* item = items[i];
+                    ImGui::Selectable(item);
+                    if (horizontal_list)
+                        ImGui::SameLine();
+                    if (ImGui::BeginDragDropSource(ImGuiDragDropFlags_SourceAllowNullID))
+                    {
+                        ImGui::SetDragDropPayload("DND_DEMO_COLOR", &item, sizeof(item)); // We store pointer (instead of storing the actual string!)
+                        ImGui::TextUnformatted(item);
+                        ImGui::EndDragDropSource();
+                    }
+                }
+
+                // Submit "separating" drop area
+                if (const ImGuiPayload* dropped = ImGui::AcceptReorderDropPayload("DND_DEMO_COLOR", horizontal_list ? ImGuiDragDropFlags_ReorderHorizontal : 0))
+                {
+                    // Move item after this one.
+                    const char* item = NULL;
+                    memcpy(&item, dropped->Data, sizeof(item));
+                    int prev_i = items.index_from_ptr(items.find(item));
+                    items.erase(items.begin() + prev_i);
+                    items.insert(items.begin() + i + (prev_i > i ? 1 : 0), item);
+                }
+            }
+            if (horizontal_list)
+                ImGui::NewLine();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Drag to reorder/reparent a tree"))
+        {
+            static MyTreeNode* root = NULL;
+            if (root == NULL)
+            {
+                // Initialize tree with sample data
+                char name_buffer[32];
+                const char* colors[] = { "Red", "Green", "Blue", "Black" };
+                const char* animals[] = { "Seal", "Wolf", "Crow", "Horse" };
+                root = new MyTreeNode("Root");
+                for (int i = 0; i < 4; i++)
+                {
+                    MyTreeNode* parent = root->AddChild(colors[i]);
+                    for (int j = 0; j < 4; j++)
+                    {
+                        snprintf(name_buffer, sizeof(name_buffer), "%s %s", colors[i], animals[j]);
+                        parent->AddChild(name_buffer);
+                    }
+                }
+            }
+            RenderReorderTree(root);
             ImGui::TreePop();
         }
 
