@@ -4,8 +4,12 @@
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
+#if _WIN32
+#include "imgui_impl_win32.h"
+#endif
 #include <stdio.h>
 #include <SDL.h>
 
@@ -36,6 +40,9 @@ using namespace gl;
 // Main code
 int main(int, char**)
 {
+#if _WIN32
+    ImGui_ImplWin32_EnableDpiAwareness();
+#endif
     // Setup SDL
     // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
     // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
