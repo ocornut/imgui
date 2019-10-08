@@ -1471,6 +1471,9 @@ struct ImGuiContext
         MouseViewport = MouseLastHoveredViewport = NULL;
         PlatformLastFocusedViewport = 0;
         ViewportFrontMostStampCount = 0;
+        LastMousePos = ImVec2(0, 0);
+        LastDisplaySize = ImVec2(0, 0);
+        LastDisplayScale = 1.f;
 
         NavWindow = NULL;
         NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;

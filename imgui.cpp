@@ -4648,10 +4648,6 @@ void ImGui::Render()
     if (g.Viewports[0]->DrawData->CmdListsCount > 0 && g.IO.RenderDrawListsFn != NULL)
         g.IO.RenderDrawListsFn(g.Viewports[0]->DrawData);
 #endif
-
-    // (Viewports) Save mouse position so we can detect position change in NewFrame(). Poition is DPI-scaled there.
-    g.LastMousePos = g.IO.MousePos;
-    g.LastDisplaySize = g.IO.DisplaySize;
 }
 
 // Calculate text size. Text can be multi-line. Optionally ignore text after a ## marker.
@@ -10889,6 +10885,7 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
+    // (Viewports/DPI) A workaround for allowing user to not scale DisplaySize manually.
     float scale = g.PlatformIO.MainViewport->DpiScale;
     bool display_size_changed = g.LastDisplaySize.x != g.IO.DisplaySize.x || g.LastDisplaySize.y != g.IO.DisplaySize.y;
     bool scale_changed = scale != g.LastDisplayScale;
@@ -10904,6 +10901,9 @@ static void ImGui::UpdateViewportsNewFrame()
         g.IO.DisplaySize.x /= scale;
         g.IO.DisplaySize.y /= scale;
     }
+    g.LastMousePos = g.IO.MousePos;
+    g.LastDisplaySize = g.IO.DisplaySize;
+    g.LastDisplayScale = g.PlatformIO.MainViewport->DpiScale;
 
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
     const bool viewports_enabled = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != 0;
