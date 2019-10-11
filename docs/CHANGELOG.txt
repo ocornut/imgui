@@ -43,6 +43,7 @@ Other Changes:
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
   to clarify how they are used, and more comments redirecting to the demo code. (#2844)
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
+- Backends: OSX: Fix using Backspace key. (#2817, #2818) [@DiligentGraphics]
 
 
 -----------------------------------------------------------------------
