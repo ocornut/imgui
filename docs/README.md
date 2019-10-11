@@ -150,6 +150,7 @@ Third-party - Engines/Frameworks bindings:
 - bsf: [bsfimgui](https://github.com/pgruenbacher/bsfImgui)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
+- Diligent Engine: [ImGuiImplDiligent.cpp](https://github.com/DiligentGraphics/DiligentTools/blob/master/Imgui/src/ImGuiImplDiligent.cpp) ([example](https://github.com/DiligentGraphics/DiligentSamples/tree/master/Samples/ImguiDemo))
 - Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
 - GML/GameMakerStudio2: [ImGuiGML](https://marketplace.yoyogames.com/assets/6221/imguigml)
 - Irrlicht: [IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
