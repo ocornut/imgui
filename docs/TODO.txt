@@ -262,16 +262,17 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag and drop: fix/support/options for overlapping drag sources.
  - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
  - drag and drop: drag source on a group object (would need e.g. an invisible button covering group in EndGroup) https://twitter.com/paniq/status/1121446364909535233
- - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov.
+ - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov. (see 2018/01/11 post in #143)
  - drag and drop: allow preview tooltip to be submitted from a different place than the drag source. (#1725)
  - drag and drop: allow using with other mouse buttons (where activeid won't be set). (#1637)
  - drag and drop: make it easier and provide a demo to have tooltip both are source and target site, with a more detailed one on target site (tooltip ordering problem)
  - drag and drop: demo with reordering nodes (in a list, or a tree node). (#143)
  - drag and drop: test integrating with os drag and drop (make it easy to do a naive WM_DROPFILE integration)
  - drag and drop: allow for multiple payload types. (#143)
- - drag and drop: make payload optional? (#143)
+ - drag and drop: make payload optional? payload promise? (see 2018/01/11 post in #143)
  - drag and drop: (#143) "both an in-process pointer and a promise to generate a serialized version, for whether the drag ends inside or outside the same process"
  - drag and drop: feedback when hovering a region blocked by modal (mouse cursor "NO"?)
+
  - node/graph editor (#306)
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)

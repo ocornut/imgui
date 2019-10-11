@@ -3,7 +3,7 @@ dear imgui
 [![Build Status](https://api.travis-ci.com/ocornut/imgui.svg?branch=master)](https://travis-ci.com/ocornut/imgui)
 [![Coverity Status](https://scan.coverity.com/projects/4720/badge.svg)](https://scan.coverity.com/projects/4720)
 
-<sub>(This library is available under a free and permissive licence, but needs financial support to sustain its continued improvements. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal.)</sub>
+<sub>(This library is available under a free and permissive license, but needs financial support to sustain its continued improvements. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal.)</sub>
 
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
@@ -120,9 +120,14 @@ On most platforms and when using C++, **you should be able to use a combination 
 
 Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you less than two hours to integrate Dear ImGui in your custom engine. **Make sure to spend time reading the FAQ, comments, and one of the examples/ application!**
 
-_NB: those third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users!). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
+_NB: third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users!). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
-Languages:
+Officially maintained bindings in repository:
+- Renderers: DirectX9, DirectX10, DirectX11, DirectX12, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, Metal.
+- Platforms: GLFW, SDL2, Win32, Glut, OSX.
+- Others: Allegro5, Marmalade.
+
+Third-party - Languages bindings:
 - C: [cimgui](https://github.com/cimgui/cimgui) (auto-generated! **you can use its json output to generate bindings for other languages**)
 - C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
 - ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
@@ -141,11 +146,7 @@ Languages:
 - Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs) or [imgui-rust](https://github.com/nsf/imgui-rust)
 - Swift: [swift-imgui](https://github.com/mnmly/Swift-imgui)
 
-Frameworks:
-- Renderers: DirectX 9/10/11/12, Metal, OpenGL2, OpenGL3+/ES2/ES3, Vulkan: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Platform: GLFW, SDL, Win32, OSX, GLUT: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Framework: Allegro 5, Emscripten, Marmalade: [examples/](https://github.com/ocornut/imgui/tree/master/examples)
-- Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
+Third-party - Engines/Frameworks bindings:
 - bsf: [bsfimgui](https://github.com/pgruenbacher/bsfImgui)
 - Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
 - Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
@@ -164,6 +165,7 @@ Frameworks:
 - SFML: [imgui-sfml](https://github.com/eliasdaler/imgui-sfml)
 - Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
 - Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
+- Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
 
 For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/). Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 
@@ -206,7 +208,7 @@ See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [B
 
 If you are new to Dear ImGui and have issues with: compiling, linking, adding fonts, wiring inputs, running or displaying Dear ImGui: you can use [Discord server](https://discord.gg/NgJ4SEP) or [Discourse forums](https://discourse.dearimgui.org).
 
-Otherwise for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
+Otherwise, for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
 Private support is available for paying customers.
 
@@ -218,8 +220,8 @@ Private support is available for paying customers.
  - The demo covers most features of Dear ImGui, so you can read the code and see its output.
  - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
  - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder to explain how to integrate Dear ImGui with your own engine/application.
- - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
- - We obviously needs better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
+ - Your programming IDE is your friend, find the type or function declaration to find comments associated with it.
+ - We obviously need better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
 **Which version should I get?**
 
@@ -233,7 +235,7 @@ See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software usi
 
 **Why the odd dual naming, "Dear ImGui" vs "ImGui"?**
 
-The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). To reduce this ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library. Please try to refer to this library as "Dear ImGui".
+The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses its own implementation of the IMGUI paradigm). To reduce this ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library. Please try to refer to this library as "Dear ImGui".
 
 **How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?**
 <br>**How can I display an image? What is ImTextureID, how does it works?** ([examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples))
@@ -256,7 +258,7 @@ See the FAQ in [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cp
 
 Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
 
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might requires you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
+Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
 
 **Can you reskin the look of Dear ImGui?**
 
@@ -282,7 +284,7 @@ How to help
 
 **How can I help financing further development of Dear ImGui?**
 
-Your contributions are keeping this project alive. The library is available under a free and permissive licence, but continued maintenance and development are a full-time endeavor and I would like to grow the team. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for invoiced technical support and maintenance contracts. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal. Thank you!
+Your contributions are keeping this project alive. The library is available under a free and permissive license, but continued maintenance and development are a full-time endeavor and I would like to grow the team. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using dear imgui, please consider reaching out for invoiced technical support and maintenance contracts. If you are an individual using dear imgui, please consider supporting the project via Patreon or PayPal. Thank you!
 
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
 <br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_

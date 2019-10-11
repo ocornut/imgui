@@ -14,7 +14,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2019-07-21: Readded clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
+//  2019-10-11: Inputs:  Fix using Backspace key.
+//  2019-07-21: Re-added clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
 //  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
 //  2019-05-18: Misc: Removed clipboard handlers as they are now supported by core imgui.cpp.
 //  2019-05-11: Inputs: Don't filter character values before calling AddInputCharacter() apart from 0xF700..0xFFFF range.
@@ -40,13 +41,13 @@ bool ImGui_ImplOSX_Init()
     ImGuiIO& io = ImGui::GetIO();
 
     // Setup back-end capabilities flags
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
     io.KeyMap[ImGuiKey_Tab]             = '\t';
     io.KeyMap[ImGuiKey_LeftArrow]       = NSLeftArrowFunctionKey + offset_for_function_keys;
@@ -232,7 +233,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
         }
         else
-        #endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
+        #endif // MAC_OS_X_VERSION_MAX_ALLOWED
         {
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
@@ -253,7 +254,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         for (int i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
-            if (!io.KeyCtrl && !((c >= 0xF700 && c <= 0xFFFF) || c == 127))
+            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
                 io.AddInputCharacter((unsigned int)c);
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed

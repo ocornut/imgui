@@ -1506,24 +1506,21 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Drag and Drop"))
     {
+        if (ImGui::TreeNode("Drag and drop in standard widgets"))
         {
             // ColorEdit widgets automatically act as drag source and drag target.
             // They are using standardized payload strings IMGUI_PAYLOAD_TYPE_COLOR_3F and IMGUI_PAYLOAD_TYPE_COLOR_4F to allow your own widgets
             // to use colors in their drag and drop interaction. Also see the demo in Color Picker -> Palette demo.
-            ImGui::BulletText("Drag and drop in standard widgets");
-            ImGui::SameLine();
             HelpMarker("You can drag from the colored squares.");
-            ImGui::Indent();
-            static float col1[3] = { 1.0f,0.0f,0.2f };
-            static float col2[4] = { 0.4f,0.7f,0.0f,0.5f };
+            static float col1[3] = { 1.0f, 0.0f, 0.2f };
+            static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
             ImGui::ColorEdit3("color 1", col1);
             ImGui::ColorEdit4("color 2", col2);
-            ImGui::Unindent();
+            ImGui::TreePop();
         }
 
+        if (ImGui::TreeNode("Drag and drop to copy/swap items"))
         {
-            ImGui::BulletText("Drag and drop to copy/swap items");
-            ImGui::Indent();
             enum Mode
             {
                 Mode_Copy,
@@ -1577,7 +1574,31 @@ static void ShowDemoWindowWidgets()
                 }
                 ImGui::PopID();
             }
-            ImGui::Unindent();
+            ImGui::TreePop();
+        }
+
+        if (ImGui::TreeNode("Drag to reorder items (simple)"))
+        {
+            // Simple reordering
+            HelpMarker("We don't use the drag and drop api at all here! Instead we query when the item is held but not hovered, and order items accordingly.");
+            static const char* item_names[] = { "Item One", "Item Two", "Item Three", "Item Four", "Item Five" };
+            for (int n = 0; n < IM_ARRAYSIZE(item_names); n++)
+            {
+                const char* item = item_names[n];
+                ImGui::Selectable(item);
+
+                if (ImGui::IsItemActive() && !ImGui::IsItemHovered())
+                {
+                    int n_next = n + (ImGui::GetMouseDragDelta(0).y < 0.f ? -1 : 1);
+                    if (n_next >= 0 && n_next < IM_ARRAYSIZE(item_names))
+                    {
+                        item_names[n] = item_names[n_next];
+                        item_names[n_next] = item;
+                        ImGui::ResetMouseDragDelta();
+                    }
+                }
+            }
+            ImGui::TreePop();
         }
 
         ImGui::TreePop();
@@ -1607,10 +1628,10 @@ static void ShowDemoWindowWidgets()
         if (item_type == 10){ ret = ImGui::TreeNodeEx("ITEM: TreeNode w/ ImGuiTreeNodeFlags_OpenOnDoubleClick", ImGuiTreeNodeFlags_OpenOnDoubleClick | ImGuiTreeNodeFlags_NoTreePushOnOpen); } // Testing tree node with ImGuiButtonFlags_PressedOnDoubleClick button policy.
         if (item_type == 11){ const char* items[] = { "Apple", "Banana", "Cherry", "Kiwi" }; static int current = 1; ret = ImGui::ListBox("ITEM: ListBox", &current, items, IM_ARRAYSIZE(items), IM_ARRAYSIZE(items)); }
 
-        // Display the value of IsItemHovered() and other common item state functions. 
+        // Display the value of IsItemHovered() and other common item state functions.
         // Note that the ImGuiHoveredFlags_XXX flags can be combined.
-        // Because BulletText is an item itself and that would affect the output of IsItemXXX functions, 
-        // we query every state in a single call to avoid storing them and to simplify the code 
+        // Because BulletText is an item itself and that would affect the output of IsItemXXX functions,
+        // we query every state in a single call to avoid storing them and to simplify the code
         ImGui::BulletText(
             "Return value = %d\n"
             "IsItemFocused() = %d\n"
@@ -1653,7 +1674,7 @@ static void ShowDemoWindowWidgets()
         if (embed_all_inside_a_child_window)
             ImGui::BeginChild("outer_child", ImVec2(0, ImGui::GetFontSize() * 20), true);
 
-        // Testing IsWindowFocused() function with its various flags. 
+        // Testing IsWindowFocused() function with its various flags.
         // Note that the ImGuiFocusedFlags_XXX flags can be combined.
         ImGui::BulletText(
             "IsWindowFocused() = %d\n"
@@ -2047,55 +2068,99 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Text Baseline Alignment"))
     {
-        HelpMarker("This is testing the vertical alignment that gets applied on text to keep it aligned with widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets.");
+        {
+            ImGui::BulletText("Text baseline:");
+            ImGui::SameLine();
+            HelpMarker("This is testing the vertical alignment that gets applied on text to keep it aligned with widgets. Lines only composed of text or \"small\" widgets fit in less vertical spaces than lines with normal widgets.");
+            ImGui::Indent();
 
-        ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("Banana");
+            ImGui::Text("KO Blahblah"); ImGui::SameLine();
+            ImGui::Button("Some framed item"); ImGui::SameLine();
+            HelpMarker("Baseline of button will look misaligned with text..");
 
-        ImGui::Text("Banana"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("One\nTwo\nThree");
+            // If your line starts with text, call AlignTextToFramePadding() to align text to upcoming widgets.
+            // Because we don't know what's coming after the Text() statement, we need to move the text baseline down by FramePadding.y
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("OK Blahblah"); ImGui::SameLine();
+            ImGui::Button("Some framed item"); ImGui::SameLine();
+            HelpMarker("We call AlignTextToFramePadding() to vertically align the text baseline by +FramePadding.y");
 
-        ImGui::Button("HOP##1"); ImGui::SameLine();
-        ImGui::Text("Banana"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("Banana");
+            // SmallButton() uses the same vertical padding as Text
+            ImGui::Button("TEST##1"); ImGui::SameLine();
+            ImGui::Text("TEST"); ImGui::SameLine();
+            ImGui::SmallButton("TEST##2");
 
-        ImGui::Button("HOP##2"); ImGui::SameLine();
-        ImGui::Text("Hello\nWorld"); ImGui::SameLine();
-        ImGui::Text("Banana");
+            // If your line starts with text, call AlignTextToFramePadding() to align text to upcoming widgets.
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Text aligned to framed item"); ImGui::SameLine();
+            ImGui::Button("Item##1"); ImGui::SameLine();
+            ImGui::Text("Item"); ImGui::SameLine();
+            ImGui::SmallButton("Item##2"); ImGui::SameLine();
+            ImGui::Button("Item##3");
 
-        ImGui::Button("TEST##1"); ImGui::SameLine();
-        ImGui::Text("TEST"); ImGui::SameLine();
-        ImGui::SmallButton("TEST##2");
+            ImGui::Unindent();
+        }
 
-        ImGui::AlignTextToFramePadding(); // If your line starts with text, call this to align it to upcoming widgets.
-        ImGui::Text("Text aligned to Widget"); ImGui::SameLine();
-        ImGui::Button("Widget##1"); ImGui::SameLine();
-        ImGui::Text("Widget"); ImGui::SameLine();
-        ImGui::SmallButton("Widget##2"); ImGui::SameLine();
-        ImGui::Button("Widget##3");
+        ImGui::Spacing();
 
-        // Tree
-        const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
-        ImGui::Button("Button##1");
-        ImGui::SameLine(0.0f, spacing);
-        if (ImGui::TreeNode("Node##1")) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }    // Dummy tree data
+        {
+            ImGui::BulletText("Multi-line text:");
+            ImGui::Indent();
+            ImGui::Text("One\nTwo\nThree"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
 
-        ImGui::AlignTextToFramePadding();         // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget. Otherwise you can use SmallButton (smaller fit).
-        bool node_open = ImGui::TreeNode("Node##2");  // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add child content.
-        ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
-        if (node_open) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
+            ImGui::Text("Banana"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("One\nTwo\nThree");
 
-        // Bullet
-        ImGui::Button("Button##3");
-        ImGui::SameLine(0.0f, spacing);
-        ImGui::BulletText("Bullet text");
+            ImGui::Button("HOP##1"); ImGui::SameLine();
+            ImGui::Text("Banana"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
 
-        ImGui::AlignTextToFramePadding();
-        ImGui::BulletText("Node");
-        ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+            ImGui::Button("HOP##2"); ImGui::SameLine();
+            ImGui::Text("Hello\nWorld"); ImGui::SameLine();
+            ImGui::Text("Banana");
+            ImGui::Unindent();
+        }
+
+        ImGui::Spacing();
+
+        {
+            ImGui::BulletText("Misc items:");
+            ImGui::Indent();
+
+            // SmallButton() sets FramePadding to zero. Text baseline is aligned to match baseline of previous Button
+            ImGui::Button("80x80", ImVec2(80, 80));
+            ImGui::SameLine();
+            ImGui::Button("50x50", ImVec2(50, 50));
+            ImGui::SameLine();
+            ImGui::Button("Button()");
+            ImGui::SameLine();
+            ImGui::SmallButton("SmallButton()");
+
+            // Tree
+            const float spacing = ImGui::GetStyle().ItemInnerSpacing.x;
+            ImGui::Button("Button##1");
+            ImGui::SameLine(0.0f, spacing);
+            if (ImGui::TreeNode("Node##1")) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }    // Dummy tree data
+
+            ImGui::AlignTextToFramePadding();           // Vertically align text node a bit lower so it'll be vertically centered with upcoming widget. Otherwise you can use SmallButton (smaller fit).
+            bool node_open = ImGui::TreeNode("Node##2");// Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add child content.
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
+            if (node_open) { for (int i = 0; i < 6; i++) ImGui::BulletText("Item %d..", i); ImGui::TreePop(); }   // Dummy tree data
+
+            // Bullet
+            ImGui::Button("Button##3");
+            ImGui::SameLine(0.0f, spacing);
+            ImGui::BulletText("Bullet text");
+
+            ImGui::AlignTextToFramePadding();
+            ImGui::BulletText("Node");
+            ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##4");
+            ImGui::Unindent();
+        }
 
         ImGui::TreePop();
     }
