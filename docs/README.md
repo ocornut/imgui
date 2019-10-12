@@ -123,7 +123,7 @@ Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/
 Officially maintained bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, Metal.
 - Platforms: GLFW, SDL2, Win32, Glut, OSX.
-- Frameworks: Allegro5, Marmalade.
+- Frameworks: Emscripten, Allegro5, Marmalade.
 
 Third-party bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
 - Languages: C, C#/.Net, ChaiScript, D, Go, Haxe/hxcpp, Java, JavaScript, Julia, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
