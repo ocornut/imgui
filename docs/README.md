@@ -97,7 +97,7 @@ Dear ImGui allows you **create elaborate tools** as well as very short-lived one
 
 ### How it works
 
-Check out the [References](#references) section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize superfluous state duplication, state synchronization and state retention from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces.
+Check out the Wiki's [About the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#About-the-IMGUI-paradigm) section if you want to understand the core principles behind the IMGUI paradigm. An IMGUI tries to minimize superfluous state duplication, state synchronization and state retention from the user's point of view. It is less error prone (less code and less bugs) than traditional retained-mode interfaces, and lends itself to create dynamic user interfaces.
 
 Dear ImGui outputs vertex buffers and command lists that you can easily render in your application. The number of draw calls and state changes required to render them is fairly small. Because Dear ImGui doesn't know or touch graphics state directly, you can call its functions  anywhere in your code (e.g. in the middle of a running algorithm, or in the middle of your own rendering process). Refer to the sample applications in the examples/ folder for instructions on how to integrate dear imgui with your existing codebase.
 
@@ -192,17 +192,11 @@ Custom engine
 [Tracy Profiler](https://bitbucket.org/wolfpld/tracy)
 ![tracy profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/tracy_profiler.png)
 
-### References
+### Wiki
 
-The Immediate Mode GUI paradigm may at first appear unusual to some users. This is mainly because "Retained Mode" GUIs have been so widespread and predominant. The following links can give you a better understanding about how Immediate Mode GUIs works.
-- [Johannes 'johno' Norneby's article](http://www.johno.se/book/imgui.html).
-- [A presentation by Rickard Gustafsson and Johannes Algelind](http://www.cse.chalmers.se/edu/year/2011/course/TDA361/Advanced%20Computer%20Graphics/IMGUI.pdf).
-- [Jari Komppa's tutorial on building an IMGUI library](http://iki.fi/sol/imgui/).
-- [Casey Muratori's original video that popularized the concept](https://mollyrocket.com/861).
-- [Nicolas Guillemot's CppCon'16 flash-talk about Dear ImGui](https://www.youtube.com/watch?v=LSRJ1jZq90k).
-- [Thierry Excoffier's Zero Memory Widget](http://perso.univ-lyon1.fr/thierry.excoffier/ZMW/).
+See [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, articles.
 
-See the [Wiki](https://github.com/ocornut/imgui/wiki) for more references and [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for third-party bindings to different languages and frameworks.
+See [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#Articles-about-the-IMGUI-paradigm) to read/watch about the Immediate Mode GUI paradigm.
 
 ### Support, Frequently Asked Questions (FAQ)
 
@@ -210,7 +204,7 @@ If you are new to Dear ImGui and have issues with: compiling, linking, adding fo
 
 Otherwise, for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
-Private support is available for paying customers.
+Paid private support is available for business customers (E-mail: _contact @ dearimgui dot org_).
 
 **Where is the documentation?**
 
