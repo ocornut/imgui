@@ -120,19 +120,15 @@ On most platforms and when using C++, **you should be able to use a combination 
 
 Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you less than two hours to integrate Dear ImGui in your custom engine. **Make sure to spend time reading the FAQ, comments, and one of the examples/ application!**
 
-_NB: third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users!). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
-
 Officially maintained bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, Metal.
 - Platforms: GLFW, SDL2, Win32, Glut, OSX.
-- Others: Allegro5, Marmalade.
+- Frameworks: Allegro5, Marmalade.
 
-Third-party Languages bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
-- C, C#/.Net, ChaiScript, D, Go, Haxe/hxcpp, Java, JavaScript, Julia, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
-- The C ([cimgui](https://github.com/cimgui/cimgui)) bindings are auto-generated, **you can use its json output to generate bindings for other languages**.
-
-Third-party Engines/Frameworks bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
-- bsf, Cinder, Cocos2d-x, Flexium, GML/GameMakerStudio2, Irrlicht, Ogre, OpenFrameworks, OpenSceneGraph/OSG, ORX, px_render, LÖVE+Lua, Magnum, NanoRT, Qt, QtDirect3D, SFML, Software Rasterizers, Unreal Engine 4...
+Third-party bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
+- Languages: C, C#/.Net, ChaiScript, D, Go, Haxe/hxcpp, Java, JavaScript, Julia, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
+- Frameworks: bsf, Cinder, Cocos2d-x, Flexium, GML/GameMakerStudio2, Irrlicht, Ogre, OpenFrameworks, OpenSceneGraph/OSG, ORX, px_render, LÖVE+Lua, Magnum, NanoRT, Qt, QtDirect3D, SFML, Software Rasterizers, Unreal Engine 4...
+- Note that C bindings ([cimgui](https://github.com/cimgui/cimgui)) are auto-generated, you can use its json/lua output to generate bindings for other languages.
 
 Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 
