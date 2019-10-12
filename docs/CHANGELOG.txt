@@ -38,12 +38,13 @@ Breaking Changes:
 
 Other Changes:
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
+- InputText: Filter out Ascii 127 (DEL) emitted by low-level OSX layer, as we are using the Key value. (#2578)
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
   to clarify how they are used, and more comments redirecting to the demo code. (#2844)
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
-- Backends: OSX: Fix using Backspace key. (#2817, #2818) [@DiligentGraphics]
+- Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
 
 
 -----------------------------------------------------------------------
