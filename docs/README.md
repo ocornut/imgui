@@ -122,52 +122,19 @@ Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/
 
 _NB: third-party bindings may be more or less maintained, more or less close to the original API (as people who create language bindings sometimes haven't used the C++ API themselves.. for the good reason that they aren't C++ users!). Dear ImGui was designed with C++ in mind and some of the subtleties may be lost in translation with other languages. If your language supports it, I would suggest replicating the function overloading and default parameters used in the original, else the API may be harder to use. In doubt, please check the original C++ version first!_
 
-Officially maintained bindings in repository:
+Officially maintained bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, Metal.
 - Platforms: GLFW, SDL2, Win32, Glut, OSX.
 - Others: Allegro5, Marmalade.
 
-Third-party - Languages bindings:
-- C: [cimgui](https://github.com/cimgui/cimgui) (auto-generated! **you can use its json output to generate bindings for other languages**)
-- C#/.Net: [ImGui.NET](https://github.com/mellinoe/ImGui.NET)
-- ChaiScript: [imgui-chaiscript](https://github.com/JuJuBoSc/imgui-chaiscript)
-- D: [DerelictImgui](https://github.com/Extrawurst/DerelictImgui)
-- Go: [imgui-go](https://github.com/inkyblackness/imgui-go) or [go-imgui](https://github.com/Armored-Dragon/go-imgui)
-- Haxe/hxcpp: [linc_imgui](https://github.com/Aidan63/linc_imgui)
-- Java: [jimgui](https://github.com/ice1000/jimgui)
-- JavaScript: [imgui-js](https://github.com/flyover/imgui-js)
-- Julia: [CImGui.jl](https://github.com/Gnimuc/CImGui.jl)
-- Lua: [LuaJIT-ImGui](https://github.com/sonoro1234/LuaJIT-ImGui), [imgui_lua_bindings](https://github.com/patrickriordan/imgui_lua_bindings) or [lua-ffi-bindings](https://github.com/thenumbernine/lua-ffi-bindings)
-- Odin: [odin-dear_imgui](https://github.com/ThisDrunkDane/odin-dear_imgui)
-- Pascal: [imgui-pas](https://github.com/dpethes/imgui-pas)
-- PureBasic: [pb-cimgui](https://github.com/hippyau/pb-cimgui)
-- Python: [pyimgui](https://github.com/swistakm/pyimgui) or [bimpy](https://github.com/podgorskiy/bimpy) or [ogre-imgui](https://github.com/OGRECave/ogre-imgui)
-- Ruby: [ruby-imgui](https://github.com/vaiorabbit/ruby-imgui)
-- Rust: [imgui-rs](https://github.com/Gekkio/imgui-rs) or [imgui-rust](https://github.com/nsf/imgui-rust)
-- Swift: [swift-imgui](https://github.com/mnmly/Swift-imgui)
+Third-party Languages bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
+- C, C#/.Net, ChaiScript, D, Go, Haxe/hxcpp, Java, JavaScript, Julia, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
+- The C ([cimgui](https://github.com/cimgui/cimgui)) bindings are auto-generated, **you can use its json output to generate bindings for other languages**.
 
-Third-party - Engines/Frameworks bindings:
-- bsf: [bsfimgui](https://github.com/pgruenbacher/bsfImgui)
-- Cinder: [Cinder-ImGui](https://github.com/simongeilfus/Cinder-ImGui)
-- Cocos2d-x: [imguix](https://github.com/c0i/imguix), [#551](https://github.com/ocornut/imgui/issues/551)
-- Flexium: [FlexGUI](https://github.com/DXsmiley/FlexGUI)
-- GML/GameMakerStudio2: [ImGuiGML](https://marketplace.yoyogames.com/assets/6221/imguigml)
-- Irrlicht: [IrrIMGUI](https://github.com/ZahlGraf/IrrIMGUI)
-- Ogre: [ogre-imgui](https://github.com/OGRECave/ogre-imgui)
-- OpenFrameworks: [ofxImGui](https://github.com/jvcleave/ofxImGui)
-- OpenSceneGraph/OSG: [gist](https://gist.github.com/fulezi/d2442ca7626bf270226014501357042c)
-- ORX: [ImGuiOrx](https://github.com/thegwydd/ImGuiOrx), [#1843](https://github.com/ocornut/imgui/pull/1843)
-- px_render: [px_render_imgui.h](https://github.com/pplux/px/blob/master/px_render_imgui.h), [#1935](https://github.com/ocornut/imgui/pull/1935)
-- LÖVE+Lua: [love-imgui](https://github.com/slages/love-imgui)
-- Magnum: [ImGuiIntegration](https://doc.magnum.graphics/magnum/namespaceMagnum_1_1ImGuiIntegration.html) ([example](https://doc.magnum.graphics/magnum/examples-imgui.html))
-- NanoRT: [syoyo/imgui](https://github.com/syoyo/imgui/tree/nanort)
-- Qt: [imgui-qt3d](https://github.com/alpqr/imgui-qt3d) / [QOpenGLWindow (qtimgui)](https://github.com/ocornut/imgui/issues/1910) / [QtDirect3D](https://github.com/giladreich/QtDirect3D) / [qt6](https://github.com/alpqr/qvk6/tree/imgui/examples/rhi/imguidemo)
-- SFML: [imgui-sfml](https://github.com/eliasdaler/imgui-sfml)
-- Software renderer: [imgui_software_renderer](https://github.com/emilk/imgui_software_renderer)
-- Unreal Engine 4: [segross/UnrealImGui](https://github.com/segross/UnrealImGui) or [sronsse/UnrealEngine_ImGui](https://github.com/sronsse/UnrealEngine_ImGui)
-- Unmerged PR: Android: [#421](https://github.com/ocornut/imgui/pull/421)
+Third-party Engines/Frameworks bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
+- bsf, Cinder, Cocos2d-x, Flexium, GML/GameMakerStudio2, Irrlicht, Ogre, OpenFrameworks, OpenSceneGraph/OSG, ORX, px_render, LÖVE+Lua, Magnum, NanoRT, Qt, QtDirect3D, SFML, Software Rasterizers, Unreal Engine 4...
 
-For other bindings: see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/). Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
+Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 
 ### Upcoming Changes
 
