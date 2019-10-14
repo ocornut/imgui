@@ -955,9 +955,6 @@ CODE
  - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window.
         this is also useful to set yourself in the context of another window (to get/set other settings)
  - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug".
- - tip: the ImGuiOnceUponAFrame helper will allow run the block of code only once a frame. You can use it to quickly add custom UI in the middle
-        of a deep nested inner loop in your code.
- - tip: you can call Render() multiple times (e.g for VR renders).
  - tip: call and read the ShowDemoWindow() code in imgui_demo.cpp for more example of how to use ImGui!
 
 */
@@ -7511,19 +7508,6 @@ void ImGui::OpenPopupEx(ImGuiID id)
     }
 }
 
-bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-    {
-        ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
-        IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-        OpenPopupEx(id);
-        return true;
-    }
-    return false;
-}
-
 void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup)
 {
     ImGuiContext& g = *GImGui;
@@ -7691,6 +7675,19 @@ void ImGui::EndPopup()
     NavMoveRequestTryWrapping(g.CurrentWindow, ImGuiNavMoveFlags_LoopY);
 
     End();
+}
+
+bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    {
+        ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+        IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+        OpenPopupEx(id);
+        return true;
+    }
+    return false;
 }
 
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
@@ -8181,6 +8178,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     if (!(window->Flags & ImGuiWindowFlags_NoNavInputs))
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
             init_for_nav = true;
+    //IMGUI_DEBUG_LOG("[Nav] NavInitWindow() init_for_nav=%d, window=\"%s\", layer=%d\n", init_for_nav, window->Name, g.NavLayer);
     if (init_for_nav)
     {
         SetNavID(0, g.NavLayer);
@@ -8297,6 +8295,7 @@ static void ImGui::NavUpdate()
     if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitRequestFromMove) && g.NavWindow)
     {
         // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
+        //IMGUI_DEBUG_LOG("[Nav] Apply NavInitRequest result: 0x%08X Layer %d in \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
         if (g.NavInitRequestFromMove)
             SetNavIDWithRectRel(g.NavInitResultId, g.NavLayer, g.NavInitResultRectRel);
         else
@@ -8455,6 +8454,7 @@ static void ImGui::NavUpdate()
     }
     if (g.NavMoveRequest && g.NavId == 0)
     {
+        //IMGUI_DEBUG_LOG("[Nav] NavInitRequest from move, window \"%s\", layer=%d\n", g.NavWindow->Name, g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
         g.NavInitResultId = 0;
         g.NavDisableHighlight = false;
