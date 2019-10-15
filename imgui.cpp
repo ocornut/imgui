@@ -2327,7 +2327,7 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
 
         float ellipsis_glyph_width = glyph->X1;                 // Width of the glyph with no padding on either side
         float ellipsis_total_width = ellipsis_glyph_width;      // Full width of entire ellipsis
-        
+
         if (ellipsis_char_count > 1)
         {
             // Full ellipsis size without free spacing after it.
@@ -2335,7 +2335,7 @@ void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, con
             ellipsis_glyph_width = glyph->X1 - glyph->X0 + spacing_between_dots;
             ellipsis_total_width = ellipsis_glyph_width * (float)ellipsis_char_count - spacing_between_dots;
         }
-        
+
         // We can now claim the space between pos_max.x and ellipsis_max.x
         const float text_avail_width = ImMax((ImMax(pos_max.x, ellipsis_max_x) - ellipsis_total_width) - pos_min.x, 1.0f);
         float text_size_clipped_x = font->CalcTextSizeA(font_size, text_avail_width, 0.0f, text, text_end_full, &text_end_ellipsis).x;
