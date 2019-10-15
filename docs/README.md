@@ -118,7 +118,7 @@ The demo applications are not DPI aware so expect some blurriness on a 4K screen
 
 On most platforms and when using C++, **you should be able to use a combination of the [imgui_impl_xxxx](https://github.com/ocornut/imgui/tree/master/examples) files without modification** (e.g. `imgui_impl_win32.cpp` + `imgui_impl_dx11.cpp`). If your engine supports multiple platforms, consider using more of the imgui_impl_xxxx files instead of rewriting them: this will be less work for you and you can get Dear ImGui running immediately. You can _later_ decide to rewrite a custom binding using your custom engine functions if you wish so.
 
-Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you less than two hours to integrate Dear ImGui in your custom engine. **Make sure to spend time reading the FAQ, comments, and one of the examples/ application!**
+Integrating Dear ImGui within your custom engine is a matter of 1) wiring mouse/keyboard/gamepad inputs 2) uploading one texture to your GPU/render engine 3) providing a render function that can bind textures and render textured triangles. The [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder is populated with applications doing just that. If you are an experienced programmer at ease with those concepts, it should take you less than two hours to integrate Dear ImGui in your custom engine. **Make sure to spend time reading the [FAQ](https://github.com/ocornut/imgui/wiki/FAQ), comments, and one of the examples/ application!**
 
 Officially maintained bindings (in repository):
 - Renderers: DirectX9, DirectX10, DirectX11, DirectX12, OpenGL (legacy), OpenGL3/ES/ES2 (modern), Vulkan, Metal.
@@ -144,7 +144,7 @@ Some of the goals for 2019 are:
 
 ### Gallery
 
-For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/2529)!
+For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/2847)!
 
 Custom engine
 [![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
@@ -155,30 +155,52 @@ Custom engine
 [Tracy Profiler](https://bitbucket.org/wolfpld/tracy)
 ![tracy profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/tracy_profiler.png)
 
-### Wiki
-
-See [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, articles.
-
-See [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#Articles-about-the-IMGUI-paradigm) to read/watch about the Immediate Mode GUI paradigm.
-
 ### Support, Frequently Asked Questions (FAQ)
+
+Most common questions will be answered by the [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/wiki/FAQ) page, e.g.:
+
+**Basics**
+- "Where is the documentation?"
+- "Which version should I get?"
+- "Why the names "Dear ImGui" vs "ImGui"?"
+
+**Community**
+- "How can I help?"
+
+**Concerns**
+- "Who uses Dear ImGui?"
+- "Can you create elaborate/serious tools with Dear ImGui?"
+- "Can you reskin the look of Dear ImGui?"
+- "Why using C++ (as opposed to C)?"
+
+**Integration**
+- "How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?"
+- "How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)"
+- "I integrated Dear ImGui in my engine and the text or lines are blurry.."
+- "I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around.."
+
+**Usage**
+- "Why are multiple widgets reacting when I interact with a single one? How can I have multiple widgets with the same label or with an empty label?"
+- "How can I display an image? What is ImTextureID, how does it work?"
+- "How can I use my own math types instead of ImVec2/ImVec4?"
+- "How can I interact with standard C++ types (such as std::string and std::vector)?"
+- "How can I use low-level drawing facilities? (using ImDrawList API)"
+
+**Fonts, Text**
+- "How can I load a different font than the default?"
+- "How can I easily use icons in my application?"
+- "How can I load multiple fonts?"
+- "How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?"
+
+See: [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, articles.
+
+See: [Articles about the IMGUI paradigm](https://github.com/ocornut/imgui/wiki#Articles-about-the-IMGUI-paradigm) to read/learn about the Immediate Mode GUI paradigm.
 
 If you are new to Dear ImGui and have issues with: compiling, linking, adding fonts, wiring inputs, running or displaying Dear ImGui: you can use [Discord server](https://discord.gg/NgJ4SEP) or [Discourse forums](https://discourse.dearimgui.org).
 
 Otherwise, for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
 Paid private support is available for business customers (E-mail: _contact @ dearimgui dot org_).
-
-**Where is the documentation?**
-
- This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.
- - Run the examples/ applications and explore them.
- - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function.
- - The demo covers most features of Dear ImGui, so you can read the code and see its output.
- - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
- - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/ folder to explain how to integrate Dear ImGui with your own engine/application.
- - Your programming IDE is your friend, find the type or function declaration to find comments associated with it.
- - We obviously need better documentation! Consider contributing or becoming a [Patron](http://www.patreon.com/imgui) to promote this effort.
 
 **Which version should I get?**
 
@@ -188,46 +210,7 @@ You may also peak at the [Multi-Viewport](https://github.com/ocornut/imgui/issue
 
 **Who uses Dear ImGui?**
 
-See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for a list of games/software which are publicly known to use dear imgui. Please add yours if you can!
-
-**Why the odd dual naming, "Dear ImGui" vs "ImGui"?**
-
-The library started its life as "ImGui" due to the fact that I didn't give it a proper name when I released 1.0 and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses its own implementation of the IMGUI paradigm). To reduce this ambiguity without affecting existing codebases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library. Please try to refer to this library as "Dear ImGui".
-
-**How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?**
-<br>**How can I display an image? What is ImTextureID, how does it works?** ([examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples))
-<br>**Why are multiple widgets reacting when I interact with a single one? How can I have multiple widgets with the same label or with an empty label? A primer on labels and the ID Stack...**
-<br>**How can I use my own math types instead of ImVec2/ImVec4?**
-<br>**How can I load a different font than the default?**
-<br>**How can I easily use icons in my application?**
-<br>**How can I load multiple fonts?**
-<br>**How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?** ([examples](https://github.com/ocornut/imgui/wiki/Loading-Font-Example))
-<br>**How can I interact with standard C++ types (such as std::string and std::vector)?**
-<br>**How can I use the drawing facilities without a Dear ImGui window? (using ImDrawList API)**
-<br>**How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)**
-<br>**I integrated Dear ImGui in my engine and the text or lines are blurry..**
-<br>**I integrated Dear ImGui in my engine and some elements are disappearing when I move windows around..**
-<br>**How can I help?**
-
-See the FAQ in [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for answers.
-
-**Can you create elaborate/serious tools with Dear ImGui?**
-
-Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
-
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
-
-**Can you reskin the look of Dear ImGui?**
-
-You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Below is a screenshot from [LumixEngine](https://github.com/nem0/LumixEngine) with custom colors + a docking/tabs extension (both of which you can find in the Issues section and will eventually be merged):
-
-![LumixEngine](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v151/lumix-201710-rearranged.png)
-
-**Why using C++ (as opposed to C)?**
-
-Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
-
-There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. It is designed for creating binding to other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for various third-party bindings.
+See the [Quotes](https://github.com/ocornut/imgui/wiki/Quotes) and [Software using dear imgui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages for a list of games/software which are publicly known to use dear imgui. Please add yours if you can! Also see the [Gallery Threads](https://github.com/ocornut/imgui/issues/2847)!
 
 How to help
 -----------
