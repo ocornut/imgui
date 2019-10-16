@@ -28,7 +28,7 @@ DOCUMENTATION
 
 - MISSION STATEMENT
 - END-USER GUIDE
-- PROGRAMMER GUIDE (read me!)
+- PROGRAMMER GUIDE
   - Read first.
   - How to update to a newer version of Dear ImGui.
   - Getting started with integrating Dear ImGui in your code/engine.
@@ -37,26 +37,7 @@ DOCUMENTATION
   - Using gamepad/keyboard navigation controls.
 - API BREAKING CHANGES (read me when you update!)
 - FREQUENTLY ASKED QUESTIONS (FAQ)
-  - All answers in https://github.com/ocornut/imgui/wiki/FAQ
-  - Where is the documentation?
-  - Which version should I get?
-  - Who uses Dear ImGui?
-  - Why the odd dual naming, "Dear ImGui" vs "ImGui"?
-  - How can I tell whether to dispatch mouse/keyboard to imgui or to my application?
-  - How can I display an image? What is ImTextureID, how does it works?
-  - Why are multiple widgets reacting when I interact with a single one? How can I have
-    multiple widgets with the same label or with an empty label? A primer on labels and the ID Stack...
-  - How can I use my own math types instead of ImVec2/ImVec4?
-  - How can I load a different font than the default?
-  - How can I easily use icons in my application?
-  - How can I load multiple fonts?
-  - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
-  - How can I interact with standard C++ types (such as std::string and std::vector)?
-  - How can I use the drawing facilities without a Dear ImGui window? (using ImDrawList API)
-  - How can I use Dear ImGui on a platform that doesn't have a mouse or a keyboard? (input share, remoting, gamepad)
-  - I integrated Dear ImGui in my engine and the text or lines are blurry..
-  - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-  - How can I help?
+  - Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
 
 CODE
 (search for "[SECTION]" in the code to find them)
@@ -138,7 +119,7 @@ CODE
 
  READ FIRST:
 
- - Read the FAQ below this section!
+ - Remember to read the FAQ (https://www.dearimgui.org/faq)
  - Your code creates the UI, if your code doesn't run the UI is gone! The UI can be highly dynamic, there are no construction
    or destruction steps, less superfluous data retention on your side, less state duplication, less state synchronization, less bugs.
  - Call and read ImGui::ShowDemoWindow() for demo code demonstrating most features.
@@ -235,7 +216,7 @@ CODE
 
      // At this point you've got the texture data and you need to upload that your your graphic system:
      // After we have created the texture, store its pointer/identifier (_in whichever format your engine uses_) in 'io.Fonts->TexID'.
-     // This will be passed back to your via the renderer. Basically ImTextureID == void*. Read FAQ below for details about ImTextureID.
+     // This will be passed back to your via the renderer. Basically ImTextureID == void*. Read FAQ for details about ImTextureID.
      MyTexture* texture = MyEngine::CreateTextureFromMemoryPixels(pixels, width, height, TEXTURE_TYPE_RGBA32)
      io.Fonts->TexID = (void*)texture;
 
@@ -321,8 +302,8 @@ CODE
  - The examples/ folders contains many actual implementation of the pseudo-codes above.
  - When calling NewFrame(), the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags are updated.
    They tell you if Dear ImGui intends to use your inputs. When a flag is set you want to hide the corresponding inputs from the
-   rest of your application. In every cases you need to pass on the inputs to Dear ImGui. Refer to the FAQ for more information.
- - Please read the FAQ below!. Amusingly, it is called a FAQ because people frequently run into the same issues!
+   rest of your application. In every cases you need to pass on the inputs to Dear ImGui. 
+ - Refer to the FAQ for more information. Amusingly, it is called a FAQ because people frequently run into the same issues!
 
  USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
 
@@ -574,12 +555,11 @@ CODE
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
- FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
- ======================================
+ FREQUENTLY ASKED QUESTIONS (FAQ)
+ ================================
 
- All answers in: https://github.com/ocornut/imgui/wiki/FAQ
- Some answers are copied down here to facilitate searching in code or because they are most likely to
- be varying depending on your version of the code.
+ Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
+ Some answers are copied down here to facilitate searching in code.
 
  Q&A: Basics
  ===========
@@ -597,7 +577,7 @@ CODE
 
  Q: Which version should I get?
  Q: Why the names "Dear ImGui" vs "ImGui"?
- A: See https://github.com/ocornut/imgui/wiki/FAQ
+ >> See https://www.dearimgui.org/faq
 
  Q&A: Concerns
  =============
@@ -606,7 +586,7 @@ CODE
  Q: Can you create elaborate/serious tools with Dear ImGui?
  Q: Can you reskin the look of Dear ImGui?
  Q: Why using C++ (as opposed to C)?
- A: See https://github.com/ocornut/imgui/wiki/FAQ
+ >> See https://www.dearimgui.org/faq
 
  Q&A: Integration
  ================
@@ -629,7 +609,7 @@ CODE
  Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
  Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
  Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- A: See https://github.com/ocornut/imgui/wiki/FAQ
+ >> See https://www.dearimgui.org/faq
 
  Q&A: Usage
  ----------
@@ -751,12 +731,12 @@ CODE
        node open/closed state differently. See what makes more sense in your situation!
 
  Q: How can I display an image? What is ImTextureID, how does it works?
- A: See https://github.com/ocornut/imgui/wiki/FAQ and https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+ >> See https://www.dearimgui.org/faq and https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
 
  Q: How can I use my own math types instead of ImVec2/ImVec4?
  Q: How can I interact with standard C++ types (such as std::string and std::vector)?
  Q: How can I use low-level drawing facilities? (using ImDrawList API)
- A: See https://github.com/ocornut/imgui/wiki/FAQ
+ >> See https://www.dearimgui.org/faq
 
  Q&A: Fonts, Text
  ================
@@ -765,7 +745,7 @@ CODE
  Q: How can I easily use icons in my application?
  Q: How can I load multiple fonts?
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
- A: See https://github.com/ocornut/imgui/wiki/FAQ and misc/fonts/README.txt
+ >> See https://www.dearimgui.org/faq and misc/fonts/README.txt
 
  Q&A: Community
  ==============
