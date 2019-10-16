@@ -157,7 +157,7 @@ Custom engine
 
 ### Support, Frequently Asked Questions (FAQ)
 
-Most common questions will be answered by the [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/wiki/FAQ) page, e.g.:
+Most common questions will be answered by the [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) page, e.g.:
 
 **Basics**
 - "Where is the documentation?"

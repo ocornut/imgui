@@ -1,8 +1,10 @@
 # FAQ (Frequenty Asked Questions)
 
-You may browse this document at:
+You may link to this document using short form:
+  https://www.dearimgui.org/faq
+or its real address:
   https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
-or use any Markdown viewer.
+or view this file with any Markdown viewer.
 
 
 ## Index
@@ -24,13 +26,13 @@ or use any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | **Q&A: Usage** |
 | [Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label) |
-| [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)| 
+| [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
 | [How can I use low-level drawing facilities? (using ImDrawList API)](#q-how-can-i-use-low-level-drawing-facilities-using-imdrawlist-api) |
 | **Q&A: Fonts, Text** |
 | [How can I load a different font than the default?](#q-how-can-i-load-a-different-font-than-the-default) |
-| [How can I easily use icons in my application?](#q-how-can-i-easily-use-icons-in-my-application) | 
+| [How can I easily use icons in my application?](#q-how-can-i-easily-use-icons-in-my-application) |
 | [How can I load multiple fonts?](#q-how-can-i-load-multiple-fonts) |
 | [How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?](#q-how-can-i-display-and-input-non-latin-characters-such-as-chinese-japanese-korean-cyrillic) |
 | **Q&A: Community** |
@@ -52,7 +54,7 @@ or use any Markdown viewer.
 ---
 
 ### Q: Which version should I get?
-I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported. 
+I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported.
 
 You may also peak at the [docking](https://github.com/ocornut/imgui/tree/docking) branch which includes:
 - [Docking/Merging features](https://github.com/ocornut/imgui/issues/2109)
@@ -87,11 +89,11 @@ Yes. People have written game editors, data browsers, debuggers, profilers and a
 
 Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
 
-Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization that the more typical RMGUI paradigm. 
+Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization that the more typical RMGUI paradigm.
 
 ### Q: Can you reskin the look of Dear ImGui?
 
-Somehow. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create user interface for games, although with ingenious use of the low-level API you can do it. 
+Somehow. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create user interface for games, although with ingenious use of the low-level API you can do it.
 
 A reasonably skinned application may look like (screenshot from [#2529](https://github.com/ocornut/imgui/issues/2529#issuecomment-524281119))
 ![minipars](https://user-images.githubusercontent.com/314805/63589441-d9794f00-c5b1-11e9-8d96-cfc1b93702f7.png)
@@ -110,7 +112,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 ### Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
 
 You can read the `io.WantCaptureMouse`, `io.WantCaptureKeyboard` and `io.WantTextInput` flags from the ImGuiIO structure.
- 
+
 e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 
 - When `io.WantCaptureMouse` is set, imgui wants to use your mouse state, and you may want to discard/hide the inputs from the rest of your application.
@@ -150,9 +152,9 @@ Also make sure your orthographic projection matrix and io.DisplaySize matches yo
 
 ### Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
 You are probably mishandling the clipping rectangles in your render function.
-Rectangles provided by ImGui are defined as 
-`(x1=left,y1=top,x2=right,y2=bottom)` 
-and **NOT** as 
+Rectangles provided by ImGui are defined as
+`(x1=left,y1=top,x2=right,y2=bottom)`
+and **NOT** as
 `(x1,y1,width,height)`
 
 ##### [Return to Index](#index)
@@ -282,7 +284,7 @@ node open/closed state differently. See what makes more sense in your situation!
 
 Short explanation:
 - Please read Wiki entry for examples: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-- You may use functions such as ImGui::Image(), ImGui::ImageButton() or lower-level ImDrawList::AddImage() to emit draw calls that will use your own textures.
+- You may use functions such as `ImGui::Image()`, `ImGui::ImageButton()` or lower-level `ImDrawList::AddImage()` to emit draw calls that will use your own textures.
 - Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as ImTextureID (void*) value.
 - Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason).
 
@@ -294,21 +296,21 @@ Long explanation:
  We carry the information to identify a "texture" in the ImTextureID type.
 ImTextureID is nothing more that a void*, aka 4/8 bytes worth of data: just enough to store 1 pointer or 1 integer of your choice.
 Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely pass ImTextureID values until they reach your rendering function.
-- In the examples/ bindings, for each graphics API binding we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
+- In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) bindings, for each graphics API binding we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
 ```
 OpenGL:
 - ImTextureID = GLuint
 - See ImGui_ImplOpenGL3_RenderDrawData() function in imgui_impl_opengl3.cpp
 
-DirectX9:   
+DirectX9:
 - ImTextureID = LPDIRECT3DTEXTURE9
 - See ImGui_ImplDX9_RenderDrawData() function in imgui_impl_dx9.cpp
 
-DirectX11:  
+DirectX11:
 - ImTextureID = ID3D11ShaderResourceView*
 - See ImGui_ImplDX11_RenderDrawData() function in imgui_impl_dx11.cpp
 
-DirectX12:  
+DirectX12:
 - ImTextureID = D3D12_GPU_DESCRIPTOR_HANDLE
 - See ImGui_ImplDX12_RenderDrawData() function in imgui_impl_dx12.cpp
 ```
@@ -331,7 +333,7 @@ The renderer function called after ImGui::Render() will receive that same value 
 MyTexture* texture = (MyTexture*)pcmd->TextureId;
 MyEngineBindTexture2D(texture);
 ```
-Once you understand this design you will understand that loading image files and turning them into displayable textures is not within the scope of Dear ImGui. 
+Once you understand this design you will understand that loading image files and turning them into displayable textures is not within the scope of Dear ImGui.
 This is by design and is actually a good thing, because it means your code has full control over your data types and how you display them.
 If you want to display an image file (e.g. PNG file) into the screen, please refer to documentation and tutorials for the graphics API you are using.
 
