@@ -40,3 +40,7 @@ example_sdl_opengl3/example_sdl_opengl3
 
 ## Dear ImGui Ini files
 imgui.ini
+
+## JetBrains IDEs
+.idea
+cmake-build-*

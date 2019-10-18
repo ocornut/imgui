@@ -2,7 +2,7 @@
 // Marmalade code: Copyright (C) 2015 by Giovanni Zito (this file is part of Dear ImGui)
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID!
 // Missing features:
 //  [ ] Renderer: Clipping rectangles are not honored.
 

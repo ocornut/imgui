@@ -69,7 +69,7 @@ static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 static SDL_Window*  g_Window = NULL;
 static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
-static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static char*        g_ClipboardTextData = NULL;
 
 // Forward Declarations

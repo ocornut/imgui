@@ -6,7 +6,7 @@
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
 // Technical Support for Getting Started https://discourse.dearimgui.org/c/getting-started
-// Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/2529
+// Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/2847
 
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
@@ -28,7 +28,7 @@ DOCUMENTATION
 
 - MISSION STATEMENT
 - END-USER GUIDE
-- PROGRAMMER GUIDE (read me!)
+- PROGRAMMER GUIDE
   - Read first.
   - How to update to a newer version of Dear ImGui.
   - Getting started with integrating Dear ImGui in your code/engine.
@@ -36,26 +36,8 @@ DOCUMENTATION
   - This is how a simple rendering function may look like.
   - Using gamepad/keyboard navigation controls.
 - API BREAKING CHANGES (read me when you update!)
-- FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
-  - Where is the documentation?
-  - Which version should I get?
-  - Who uses Dear ImGui?
-  - Why the odd dual naming, "Dear ImGui" vs "ImGui"?
-  - How can I tell whether to dispatch mouse/keyboard to imgui or to my application?
-  - How can I display an image? What is ImTextureID, how does it works?
-  - Why are multiple widgets reacting when I interact with a single one? How can I have
-    multiple widgets with the same label or with an empty label? A primer on labels and the ID Stack...
-  - How can I use my own math types instead of ImVec2/ImVec4?
-  - How can I load a different font than the default?
-  - How can I easily use icons in my application?
-  - How can I load multiple fonts?
-  - How can I display and input non-latin characters such as Chinese, Japanese, Korean, Cyrillic?
-  - How can I interact with standard C++ types (such as std::string and std::vector)?
-  - How can I use the drawing facilities without a Dear ImGui window? (using ImDrawList API)
-  - How can I use Dear ImGui on a platform that doesn't have a mouse or a keyboard? (input share, remoting, gamepad)
-  - I integrated Dear ImGui in my engine and the text or lines are blurry..
-  - I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
-  - How can I help?
+- FREQUENTLY ASKED QUESTIONS (FAQ)
+  - Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
 
 CODE
 (search for "[SECTION]" in the code to find them)
@@ -139,7 +121,7 @@ CODE
 
  READ FIRST:
 
- - Read the FAQ below this section!
+ - Remember to read the FAQ (https://www.dearimgui.org/faq)
  - Your code creates the UI, if your code doesn't run the UI is gone! The UI can be highly dynamic, there are no construction
    or destruction steps, less superfluous data retention on your side, less state duplication, less state synchronization, less bugs.
  - Call and read ImGui::ShowDemoWindow() for demo code demonstrating most features.
@@ -236,7 +218,7 @@ CODE
 
      // At this point you've got the texture data and you need to upload that your your graphic system:
      // After we have created the texture, store its pointer/identifier (_in whichever format your engine uses_) in 'io.Fonts->TexID'.
-     // This will be passed back to your via the renderer. Basically ImTextureID == void*. Read FAQ below for details about ImTextureID.
+     // This will be passed back to your via the renderer. Basically ImTextureID == void*. Read FAQ for details about ImTextureID.
      MyTexture* texture = MyEngine::CreateTextureFromMemoryPixels(pixels, width, height, TEXTURE_TYPE_RGBA32)
      io.Fonts->TexID = (void*)texture;
 
@@ -322,8 +304,8 @@ CODE
  - The examples/ folders contains many actual implementation of the pseudo-codes above.
  - When calling NewFrame(), the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags are updated.
    They tell you if Dear ImGui intends to use your inputs. When a flag is set you want to hide the corresponding inputs from the
-   rest of your application. In every cases you need to pass on the inputs to Dear ImGui. Refer to the FAQ for more information.
- - Please read the FAQ below!. Amusingly, it is called a FAQ because people frequently run into the same issues!
+   rest of your application. In every cases you need to pass on the inputs to Dear ImGui.
+ - Refer to the FAQ for more information. Amusingly, it is called a FAQ because people frequently run into the same issues!
 
  USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
 
@@ -380,6 +362,10 @@ CODE
  - 2019/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 
 
+ - 2019/10/14 (1.74) - inputs: Fixed a miscalculation in the keyboard/mouse "typematic" repeat delay/rate calculation, used by keys and e.g. repeating mouse buttons as well as the GetKeyPressedAmount() function.
+                       if you were using a non-default value for io.KeyRepeatRate (previous default was 0.250), you can add +io.KeyRepeatDelay to it to compensate for the fix.
+                       The function was triggering on: 0.0 and (delay+rate*N) where (N>=1). Fixed formula responds to (N>=0). Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
+                       If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
  - 2019/07/15 (1.72) - removed TreeAdvanceToLabelPos() which is rarely used and only does SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()). Kept redirection function (will obsolete).
  - 2019/07/12 (1.72) - renamed ImFontAtlas::CustomRect to ImFontAtlasCustomRect. Kept redirection typedef (will obsolete).
  - 2019/06/14 (1.72) - removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017): ImGuiCol_Column*, ImGuiSetCond_*, IsItemHoveredRect(), IsPosHoveringAnyWindow(), IsMouseHoveringAnyWindow(), IsMouseHoveringWindow(), IMGUI_ONCE_UPON_A_FRAME. Grep this log for details and new names.
@@ -580,8 +566,14 @@ CODE
  - 2014/08/28 (1.09) - changed the behavior of IO.PixelCenterOffset following various rendering fixes
 
 
- FREQUENTLY ASKED QUESTIONS (FAQ), TIPS
- ======================================
+ FREQUENTLY ASKED QUESTIONS (FAQ)
+ ================================
+
+ Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
+ Some answers are copied down here to facilitate searching in code.
+
+ Q&A: Basics
+ ===========
 
  Q: Where is the documentation?
  A: This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.
@@ -595,26 +587,20 @@ CODE
       associated to it.
 
  Q: Which version should I get?
- A: I occasionally tag Releases (https://github.com/ocornut/imgui/releases) but it is generally safe
-    and recommended to sync to master/latest. The library is fairly stable and regressions tend to be
-    fixed fast when reported. You may also peak at the 'docking' branch which includes:
-    - Docking/Merging features (https://github.com/ocornut/imgui/issues/2109)
-    - Multi-viewport features (https://github.com/ocornut/imgui/issues/1542)
-    Many projects are using this branch and it is kept in sync with master regularly.
+ Q: Why the names "Dear ImGui" vs "ImGui"?
+ >> See https://www.dearimgui.org/faq
+
+ Q&A: Concerns
+ =============
 
  Q: Who uses Dear ImGui?
- A: See "Quotes" (https://github.com/ocornut/imgui/wiki/Quotes) and
-    "Software using Dear ImGui" (https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui) Wiki pages
-    for a list of games/software which are publicly known to use dear imgui. Please add yours if you can!
+ Q: Can you create elaborate/serious tools with Dear ImGui?
+ Q: Can you reskin the look of Dear ImGui?
+ Q: Why using C++ (as opposed to C)?
+ >> See https://www.dearimgui.org/faq
 
- Q: Why the odd dual naming, "Dear ImGui" vs "ImGui"?
- A: The library started its life as "ImGui" due to the fact that I didn't give it a proper name when
-    when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI
-    (immediate-mode graphical user interface) was coined before and is being used in variety of other
-    situations (e.g. Unity uses it own implementation of the IMGUI paradigm).
-    To reduce the ambiguity without affecting existing code bases, I have decided on an alternate,
-    longer name "Dear ImGui" that people can use to refer to this specific library.
-    Please try to refer to this library as "Dear ImGui".
+ Q&A: Integration
+ ================
 
  Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
  A: You can read the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags from the ImGuiIO structure (e.g. if (ImGui::GetIO().WantCaptureMouse) { ... } )
@@ -631,75 +617,13 @@ CODE
      have 'io.WantCaptureKeyboard=false'. Depending on your application logic it may or not be inconvenient. You might want to track which key-downs
      were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
 
- Q: How can I display an image? What is ImTextureID, how does it works?
- A: Short explanation:
-    - Please read Wiki entry for examples: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-    - You may use functions such as ImGui::Image(), ImGui::ImageButton() or lower-level ImDrawList::AddImage() to emit draw calls that will use your own textures.
-    - Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as ImTextureID (void*) value.
-    - Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason).
-      Please read documentations or tutorials on your graphics API to understand how to display textures on the screen before moving onward.
+ Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
+ Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
+ Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+ >> See https://www.dearimgui.org/faq
 
-    Long explanation:
-    - Dear ImGui's job is to create "meshes", defined in a renderer-agnostic format made of draw commands and vertices.
-      At the end of the frame those meshes (ImDrawList) will be displayed by your rendering function. They are made up of textured polygons and the code
-      to render them is generally fairly short (a few dozen lines). In the examples/ folder we provide functions for popular graphics API (OpenGL, DirectX, etc.).
-    - Each rendering function decides on a data type to represent "textures". The concept of what is a "texture" is entirely tied to your underlying engine/graphics API.
-      We carry the information to identify a "texture" in the ImTextureID type.
-      ImTextureID is nothing more that a void*, aka 4/8 bytes worth of data: just enough to store 1 pointer or 1 integer of your choice.
-      Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely pass ImTextureID values until they reach your rendering function.
-    - In the examples/ bindings, for each graphics API binding we decided on a type that is likely to be a good representation for specifying
-      an image from the end-user perspective. This is what the _examples_ rendering functions are using:
-
-         OpenGL:     ImTextureID = GLuint                       (see ImGui_ImplOpenGL3_RenderDrawData() function in imgui_impl_opengl3.cpp)
-         DirectX9:   ImTextureID = LPDIRECT3DTEXTURE9           (see ImGui_ImplDX9_RenderDrawData()     function in imgui_impl_dx9.cpp)
-         DirectX11:  ImTextureID = ID3D11ShaderResourceView*    (see ImGui_ImplDX11_RenderDrawData()    function in imgui_impl_dx11.cpp)
-         DirectX12:  ImTextureID = D3D12_GPU_DESCRIPTOR_HANDLE  (see ImGui_ImplDX12_RenderDrawData()    function in imgui_impl_dx12.cpp)
-
-      For example, in the OpenGL example binding we store raw OpenGL texture identifier (GLuint) inside ImTextureID.
-      Whereas in the DirectX11 example binding we store a pointer to ID3D11ShaderResourceView inside ImTextureID, which is a higher-level structure
-      tying together both the texture and information about its format and how to read it.
-    - If you have a custom engine built over e.g. OpenGL, instead of passing GLuint around you may decide to use a high-level data type to carry information about
-      the texture as well as how to display it (shaders, etc.). The decision of what to use as ImTextureID can always be made better knowing how your codebase
-      is designed. If your engine has high-level data types for "textures" and "material" then you may want to use them.
-      If you are starting with OpenGL or DirectX or Vulkan and haven't built much of a rendering engine over them, keeping the default ImTextureID
-      representation suggested by the example bindings is probably the best choice.
-      (Advanced users may also decide to keep a low-level type in ImTextureID, and use ImDrawList callback and pass information to their renderer)
-
-    User code may do:
-
-        // Cast our texture type to ImTextureID / void*
-        MyTexture* texture = g_CoffeeTableTexture;
-        ImGui::Image((void*)texture, ImVec2(texture->Width, texture->Height));
-
-    The renderer function called after ImGui::Render() will receive that same value that the user code passed:
-
-        // Cast ImTextureID / void* stored in the draw command as our texture type
-        MyTexture* texture = (MyTexture*)pcmd->TextureId;
-        MyEngineBindTexture2D(texture);
-
-    Once you understand this design you will understand that loading image files and turning them into displayable textures is not within the scope of Dear ImGui.
-    This is by design and is actually a good thing, because it means your code has full control over your data types and how you display them.
-    If you want to display an image file (e.g. PNG file) into the screen, please refer to documentation and tutorials for the graphics API you are using.
-
-    Refer to the Wiki to find simplified examples for loading textures with OpenGL, DirectX9 and DirectX11:
-
-        https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-
-    C/C++ tip: a void* is pointer-sized storage. You may safely store any pointer or integer into it by casting your value to ImTextureID / void*, and vice-versa.
-    Because both end-points (user code and rendering function) are under your control, you know exactly what is stored inside the ImTextureID / void*.
-    Examples:
-
-        GLuint my_tex = XXX;
-        void* my_void_ptr;
-        my_void_ptr = (void*)(intptr_t)my_tex;                  // cast a GLuint into a void* (we don't take its address! we literally store the value inside the pointer)
-        my_tex = (GLuint)(intptr_t)my_void_ptr;                 // cast a void* into a GLuint
-
-        ID3D11ShaderResourceView* my_dx11_srv = XXX;
-        void* my_void_ptr;
-        my_void_ptr = (void*)my_dx11_srv;                       // cast a ID3D11ShaderResourceView* into an opaque void*
-        my_dx11_srv = (ID3D11ShaderResourceView*)my_void_ptr;   // cast a void* into a ID3D11ShaderResourceView*
-
-    Finally, you may call ImGui::ShowMetricsWindow() to explore/visualize/understand how the ImDrawList are generated.
+ Q&A: Usage
+ ----------
 
  Q: Why are multiple widgets reacting when I interact with a single one?
  Q: How can I have multiple widgets with the same label or with an empty label?
@@ -817,141 +741,25 @@ CODE
       e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
        node open/closed state differently. See what makes more sense in your situation!
 
+ Q: How can I display an image? What is ImTextureID, how does it works?
+ >> See https://www.dearimgui.org/faq and https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+
  Q: How can I use my own math types instead of ImVec2/ImVec4?
- A: You can edit imconfig.h and setup the IM_VEC2_CLASS_EXTRA/IM_VEC4_CLASS_EXTRA macros to add implicit type conversions.
-    This way you'll be able to use your own types everywhere, e.g. passing glm::vec2 to ImGui functions instead of ImVec2.
+ Q: How can I interact with standard C++ types (such as std::string and std::vector)?
+ Q: How can I display custom shapes? (using low-level ImDrawList API)
+ >> See https://www.dearimgui.org/faq
+
+ Q&A: Fonts, Text
+ ================
 
  Q: How can I load a different font than the default?
- A: Use the font atlas to load the TTF/OTF file you want:
-      ImGuiIO& io = ImGui::GetIO();
-      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
-    Default is ProggyClean.ttf, monospace, rendered at size 13, embedded in dear imgui's source code.
-    (Tip: monospace fonts are convenient because they allow to facilitate horizontal alignment directly at the string level.)
-    (Read the 'misc/fonts/README.txt' file for more details about font loading.)
-
-    New programmers: remember that in C/C++ and most programming languages if you want to use a
-    backslash \ within a string literal, you need to write it double backslash "\\":
-      io.Fonts->AddFontFromFileTTF("MyDataFolder\MyFontFile.ttf", size_in_pixels);   // WRONG (you are escape the M here!)
-      io.Fonts->AddFontFromFileTTF("MyDataFolder\\MyFontFile.ttf", size_in_pixels);  // CORRECT
-      io.Fonts->AddFontFromFileTTF("MyDataFolder/MyFontFile.ttf", size_in_pixels);   // ALSO CORRECT
-
  Q: How can I easily use icons in my application?
- A: The most convenient and practical way is to merge an icon font such as FontAwesome inside you
-    main font. Then you can refer to icons within your strings.
-    You may want to see ImFontConfig::GlyphMinAdvanceX to make your icon look monospace to facilitate alignment.
-    (Read the 'misc/fonts/README.txt' file for more details about icons font loading.)
-    With some extra effort, you may use colorful icon by registering custom rectangle space inside the font atlas,
-    and copying your own graphics data into it. See misc/fonts/README.txt about using the AddCustomRectFontGlyph API.
-
  Q: How can I load multiple fonts?
- A: Use the font atlas to pack them into a single texture:
-    (Read the 'misc/fonts/README.txt' file and the code in ImFontAtlas for more details.)
-
-      ImGuiIO& io = ImGui::GetIO();
-      ImFont* font0 = io.Fonts->AddFontDefault();
-      ImFont* font1 = io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels);
-      ImFont* font2 = io.Fonts->AddFontFromFileTTF("myfontfile2.ttf", size_in_pixels);
-      io.Fonts->GetTexDataAsRGBA32() or GetTexDataAsAlpha8()
-      // the first loaded font gets used by default
-      // use ImGui::PushFont()/ImGui::PopFont() to change the font at runtime
-
-      // Options
-      ImFontConfig config;
-      config.OversampleH = 2;
-      config.OversampleV = 1;
-      config.GlyphOffset.y -= 1.0f;      // Move everything by 1 pixels up
-      config.GlyphExtraSpacing.x = 1.0f; // Increase spacing between characters
-      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, &config);
-
-      // Combine multiple fonts into one (e.g. for icon fonts)
-      static ImWchar ranges[] = { 0xf000, 0xf3ff, 0 };
-      ImFontConfig config;
-      config.MergeMode = true;
-      io.Fonts->AddFontDefault();
-      io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges); // Merge icon font
-      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
-
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
- A: When loading a font, pass custom Unicode ranges to specify the glyphs to load.
+ >> See https://www.dearimgui.org/faq and misc/fonts/README.txt
 
-      // Add default Japanese ranges
-      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
-
-      // Or create your own custom ranges (e.g. for a game you can feed your entire game script and only build the characters the game need)
-      ImVector<ImWchar> ranges;
-      ImFontGlyphRangesBuilder builder;
-      builder.AddText("Hello world");                        // Add a string (here "Hello world" contains 7 unique characters)
-      builder.AddChar(0x7262);                               // Add a specific character
-      builder.AddRanges(io.Fonts->GetGlyphRangesJapanese()); // Add one of the default ranges
-      builder.BuildRanges(&ranges);                          // Build the final result (ordered ranges with all the unique characters submitted)
-      io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_in_pixels, NULL, ranges.Data);
-
-    All your strings needs to use UTF-8 encoding. In C++11 you can encode a string literal in UTF-8
-    by using the u8"hello" syntax. Specifying literal in your source code using a local code page
-    (such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
-    Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
-
-    Text input: it is up to your application to pass the right character code by calling io.AddInputCharacter().
-    The applications in examples/ are doing that.
-    Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
-    You may also use MultiByteToWideChar() or ToUnicode() to retrieve Unicode codepoints from MultiByte characters or keyboard state.
-    Windows: if your language is relying on an Input Method Editor (IME), you copy the HWND of your window to io.ImeWindowHandle in order for
-    the default implementation of io.ImeSetInputScreenPosFn() to set your Microsoft IME position correctly.
-
- Q: How can I interact with standard C++ types (such as std::string and std::vector)?
- A: - Being highly portable (bindings for several languages, frameworks, programming style, obscure or older platforms/compilers),
-      and aiming for compatibility & performance suitable for every modern real-time game engines, dear imgui does not use
-      any of std C++ types. We use raw types (e.g. char* instead of std::string) because they adapt to more use cases.
-    - To use ImGui::InputText() with a std::string or any resizable string class, see misc/cpp/imgui_stdlib.h.
-    - To use combo boxes and list boxes with std::vector or any other data structure: the BeginCombo()/EndCombo() API
-      lets you iterate and submit items yourself, so does the ListBoxHeader()/ListBoxFooter() API.
-      Prefer using them over the old and awkward Combo()/ListBox() api.
-    - Generally for most high-level types you should be able to access the underlying data type.
-      You may write your own one-liner wrappers to facilitate user code (tip: add new functions in ImGui:: namespace from your code).
-    - Dear ImGui applications often need to make intensive use of strings. It is expected that many of the strings you will pass
-      to the API are raw literals (free in C/C++) or allocated in a manner that won't incur a large cost on your application.
-      Please bear in mind that using std::string on applications with large amount of UI may incur unsatisfactory performances.
-      Modern implementations of std::string often include small-string optimization (which is often a local buffer) but those
-      are not configurable and not the same across implementations.
-    - If you are finding your UI traversal cost to be too large, make sure your string usage is not leading to excessive amount
-      of heap allocations. Consider using literals, statically sized buffers and your own helper functions. A common pattern
-      is that you will need to build lots of strings on the fly, and their maximum length can be easily be scoped ahead.
-      One possible implementation of a helper to facilitate printf-style building of strings: https://github.com/ocornut/Str
-      This is a small helper where you can instance strings with configurable local buffers length. Many game engines will
-      provide similar or better string helpers.
-
- Q: How can I use the drawing facilities without an ImGui window? (using ImDrawList API)
- A: - You can create a dummy window. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags.
-      (The ImGuiWindowFlags_NoDecoration flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse)
-      Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
-    - You can call ImGui::GetBackgroundDrawList() or ImGui::GetForegroundDrawList() and use those draw list to display
-      contents behind or over every other imgui windows (one bg/fg drawlist per viewport).
-    - You can create your own ImDrawList instance. You'll need to initialize them ImGui::GetDrawListSharedData(), or create
-      your own ImDrawListSharedData, and then call your rendered code with your own ImDrawList or ImDrawData data.
-
- Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
- A: - You can control Dear ImGui with a gamepad. Read about navigation in "Using gamepad/keyboard navigation controls".
-      (short version: map gamepad inputs into the io.NavInputs[] array + set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad)
-    - You can share your computer mouse seamlessly with your console/tablet/phone using Synergy (https://symless.com/synergy)
-      This is the preferred solution for developer productivity.
-      In particular, the "micro-synergy-client" repository (https://github.com/symless/micro-synergy-client) has simple
-      and portable source code (uSynergy.c/.h) for a small embeddable client that you can use on any platform to connect
-      to your host computer, based on the Synergy 1.x protocol. Make sure you download the Synergy 1 server on your computer.
-      Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-like protocols.
-    - You may also use a third party solution such as Remote ImGui (https://github.com/JordiRos/remoteimgui) which sends
-      the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine.
-    - For touch inputs, you can increase the hit box of widgets (via the style.TouchPadding setting) to accommodate
-      for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing
-      for screen real-estate and precision.
-
- Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
- A: In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
-    Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
-
- Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- A: You are probably mishandling the clipping rectangles in your render function.
-    Rectangles provided by ImGui are defined as (x1=left,y1=top,x2=right,y2=bottom) and NOT as (x1,y1,width,height).
+ Q&A: Community
+ ==============
 
  Q: How can I help?
  A: - If you are experienced with Dear ImGui and C++, look at the github issues, look at the Wiki, read docs/TODO.txt
@@ -959,17 +767,9 @@ CODE
     - Businesses: convince your company to fund development via support contracts/sponsoring! This is among the most useful thing you can do for dear imgui.
     - Individuals: you can also become a Patron (http://www.patreon.com/imgui) or donate on PayPal! See README.
     - Disclose your usage of dear imgui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
-      You may post screenshot or links in the gallery threads (github.com/ocornut/imgui/issues/1902). Visuals are ideal as they inspire other programmers.
+      You may post screenshot or links in the gallery threads (github.com/ocornut/imgui/issues/2847). Visuals are ideal as they inspire other programmers.
       But even without visuals, disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
     - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues (on github or privately).
-
- - tip: you can call Begin() multiple times with the same name during the same frame, it will keep appending to the same window.
-        this is also useful to set yourself in the context of another window (to get/set other settings)
- - tip: you can create widgets without a Begin()/End() block, they will go in an implicit window called "Debug".
- - tip: the ImGuiOnceUponAFrame helper will allow run the block of code only once a frame. You can use it to quickly add custom UI in the middle
-        of a deep nested inner loop in your code.
- - tip: you can call Render() multiple times (e.g for VR renders).
- - tip: call and read the ShowDemoWindow() code in imgui_demo.cpp for more example of how to use ImGui!
 
 */
 
@@ -1236,7 +1036,7 @@ ImGuiIO::ImGuiIO()
     MouseDoubleClickMaxDist = 6.0f;
     for (int i = 0; i < ImGuiKey_COUNT; i++)
         KeyMap[i] = -1;
-    KeyRepeatDelay = 0.250f;
+    KeyRepeatDelay = 0.275f;
     KeyRepeatRate = 0.050f;
     UserData = NULL;
 
@@ -3044,8 +2844,8 @@ void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
     //if (g.IO.KeyAlt) window->DrawList->AddRect(window->DC.CursorPos, window->DC.CursorPos + ImVec2(size.x, line_height), IM_COL32(255,0,0,200)); // [DEBUG]
     window->DC.CursorPosPrevLine.x = window->DC.CursorPos.x + size.x;
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y;
-    window->DC.CursorPos.x = (float)(int)(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);    // Next line
-    window->DC.CursorPos.y = (float)(int)(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y);        // Next line
+    window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);    // Next line
+    window->DC.CursorPos.y = IM_FLOOR(window->DC.CursorPos.y + line_height + g.Style.ItemSpacing.y);        // Next line
     window->DC.CursorMaxPos.x = ImMax(window->DC.CursorMaxPos.x, window->DC.CursorPosPrevLine.x);
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, window->DC.CursorPos.y - g.Style.ItemSpacing.y);
     //if (g.IO.KeyAlt) window->DrawList->AddCircle(window->DC.CursorMaxPos, 3.0f, IM_COL32(255,0,0,255), 4); // [DEBUG]
@@ -4661,7 +4461,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
     // Round
-    text_size.x = (float)(int)(text_size.x + 0.95f);
+    text_size.x = IM_FLOOR(text_size.x + 0.95f);
 
     return text_size;
 }
@@ -4769,14 +4569,22 @@ bool ImGui::IsKeyDown(int user_key_index)
     return g.IO.KeysDown[user_key_index];
 }
 
-int ImGui::CalcTypematicPressedRepeatAmount(float t, float t_prev, float repeat_delay, float repeat_rate)
+// t0 = previous time (e.g.: g.Time - g.IO.DeltaTime)
+// t1 = current time (e.g.: g.Time)
+// An event is triggered at:
+//  t = 0.0f     t = repeat_delay,    t = repeat_delay + repeat_rate*N
+int ImGui::CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate)
 {
-    if (t == 0.0f)
+    if (t1 == 0.0f)
         return 1;
-    if (t <= repeat_delay || repeat_rate <= 0.0f)
+    if (t0 >= t1)
         return 0;
-    const int count = (int)((t - repeat_delay) / repeat_rate) - (int)((t_prev - repeat_delay) / repeat_rate);
-    return (count > 0) ? count : 0;
+    if (repeat_rate <= 0.0f)
+        return (t0 < repeat_delay) && (t1 >= repeat_delay);
+    const int count_t0 = (t0 < repeat_delay) ? -1 : (int)((t0 - repeat_delay) / repeat_rate);
+    const int count_t1 = (t1 < repeat_delay) ? -1 : (int)((t1 - repeat_delay) / repeat_rate);
+    const int count = count_t1 - count_t0;
+    return count;
 }
 
 int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_rate)
@@ -4786,7 +4594,7 @@ int ImGui::GetKeyPressedAmount(int key_index, float repeat_delay, float repeat_r
         return 0;
     IM_ASSERT(key_index >= 0 && key_index < IM_ARRAYSIZE(g.IO.KeysDown));
     const float t = g.IO.KeysDownDuration[key_index];
-    return CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, repeat_delay, repeat_rate);
+    return CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, repeat_delay, repeat_rate);
 }
 
 bool ImGui::IsKeyPressed(int user_key_index, bool repeat)
@@ -4838,7 +4646,7 @@ bool ImGui::IsMouseClicked(int button, bool repeat)
     if (repeat && t > g.IO.KeyRepeatDelay)
     {
         // FIXME: 2019/05/03: Our old repeat code was wrong here and led to doubling the repeat rate, which made it an ok rate for repeat on mouse hold.
-        int amount = CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate * 0.5f);
+        int amount = CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay, g.IO.KeyRepeatRate * 0.50f);
         if (amount > 0)
             return true;
     }
@@ -5343,8 +5151,8 @@ static ImVec2 CalcWindowContentSize(ImGuiWindow* window)
         return window->ContentSize;
 
     ImVec2 sz;
-    sz.x = (float)(int)((window->ContentSizeExplicit.x != 0.0f) ? window->ContentSizeExplicit.x : window->DC.CursorMaxPos.x - window->DC.CursorStartPos.x);
-    sz.y = (float)(int)((window->ContentSizeExplicit.y != 0.0f) ? window->ContentSizeExplicit.y : window->DC.CursorMaxPos.y - window->DC.CursorStartPos.y);
+    sz.x = IM_FLOOR((window->ContentSizeExplicit.x != 0.0f) ? window->ContentSizeExplicit.x : window->DC.CursorMaxPos.x - window->DC.CursorStartPos.x);
+    sz.y = IM_FLOOR((window->ContentSizeExplicit.y != 0.0f) ? window->ContentSizeExplicit.y : window->DC.CursorMaxPos.y - window->DC.CursorStartPos.y);
     return sz;
 }
 
@@ -5462,8 +5270,8 @@ static bool ImGui::UpdateManualResize(ImGuiWindow* window, const ImVec2& size_au
 
     bool ret_auto_fit = false;
     const int resize_border_count = g.IO.ConfigWindowsResizeFromEdges ? 4 : 0;
-    const float grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
-    const float grip_hover_inner_size = (float)(int)(grip_draw_size * 0.75f);
+    const float grip_draw_size = IM_FLOOR(ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
+    const float grip_hover_inner_size = IM_FLOOR(grip_draw_size * 0.75f);
     const float grip_hover_outer_size = g.IO.ConfigWindowsResizeFromEdges ? WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS : 0.0f;
 
     ImVec2 pos_target(FLT_MAX, FLT_MAX);
@@ -5821,7 +5629,7 @@ void ImGui::RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& titl
     if (flags & ImGuiWindowFlags_UnsavedDocument)
     {
         ImVec2 marker_pos = ImVec2(ImMax(layout_r.Min.x, layout_r.Min.x + (layout_r.GetWidth() - text_size.x) * style.WindowTitleAlign.x) + text_size.x, layout_r.Min.y) + ImVec2(2 - marker_size_x, 0.0f);
-        ImVec2 off = ImVec2(0.0f, (float)(int)(-g.FontSize * 0.25f));
+        ImVec2 off = ImVec2(0.0f, IM_FLOOR(-g.FontSize * 0.25f));
         RenderTextClipped(marker_pos + off, layout_r.Max + off, UNSAVED_DOCUMENT_MARKER, NULL, NULL, ImVec2(0, style.WindowTitleAlign.y), &clip_r);
     }
 }
@@ -6293,9 +6101,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_held = -1;
-        ImU32 resize_grip_col[4] = { 0 };
+        ImU32 resize_grip_col[4] = {};
         const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // 4
-        const float resize_grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
+        const float resize_grip_draw_size = IM_FLOOR(ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
         if (handle_borders_and_resize_grips && !window->Collapsed)
             if (UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]))
                 use_current_size_for_scrollbar_x = use_current_size_for_scrollbar_y = true;
@@ -6378,9 +6186,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Default item width. Make it proportional to window size if window manually resizes
         if (window->Size.x > 0.0f && !(flags & ImGuiWindowFlags_Tooltip) && !(flags & ImGuiWindowFlags_AlwaysAutoResize))
-            window->ItemWidthDefault = (float)(int)(window->Size.x * 0.65f);
+            window->ItemWidthDefault = ImFloor(window->Size.x * 0.65f);
         else
-            window->ItemWidthDefault = (float)(int)(g.FontSize * 16.0f);
+            window->ItemWidthDefault = ImFloor(g.FontSize * 16.0f);
 
         // SCROLLING
 
@@ -6851,8 +6659,8 @@ void ImGui::PushMultiItemsWidths(int components, float w_full)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     const ImGuiStyle& style = g.Style;
-    const float w_item_one  = ImMax(1.0f, (float)(int)((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, (float)(int)(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
+    const float w_item_one  = ImMax(1.0f, IM_FLOOR((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, IM_FLOOR(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
     window->DC.ItemWidthStack.push_back(w_item_last);
     for (int i = 0; i < components-1; i++)
         window->DC.ItemWidthStack.push_back(w_item_one);
@@ -6883,7 +6691,7 @@ float ImGui::CalcItemWidth()
         float region_max_x = GetContentRegionMaxAbs().x;
         w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
     }
-    w = (float)(int)w;
+    w = IM_FLOOR(w);
     return w;
 }
 
@@ -8056,7 +7864,7 @@ void ImGui::SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x
 {
     // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
-    window->ScrollTarget.x = (float)(int)(local_x + window->Scroll.x);
+    window->ScrollTarget.x = IM_FLOOR(local_x + window->Scroll.x);
     window->ScrollTargetCenterRatio.x = center_x_ratio;
 }
 
@@ -8066,7 +7874,7 @@ void ImGui::SetScrollFromPosY(ImGuiWindow* window, float local_y, float center_y
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
     const float decoration_up_height = window->TitleBarHeight() + window->MenuBarHeight();
     local_y -= decoration_up_height;
-    window->ScrollTarget.y = (float)(int)(local_y + window->Scroll.y);
+    window->ScrollTarget.y = IM_FLOOR(local_y + window->Scroll.y);
     window->ScrollTargetCenterRatio.y = center_y_ratio;
 }
 
@@ -8250,19 +8058,6 @@ void ImGui::OpenPopupEx(ImGuiID id)
     }
 }
 
-bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-    {
-        ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
-        IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-        OpenPopupEx(id);
-        return true;
-    }
-    return false;
-}
-
 void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup)
 {
     ImGuiContext& g = *GImGui;
@@ -8434,6 +8229,19 @@ void ImGui::EndPopup()
     NavMoveRequestTryWrapping(g.CurrentWindow, ImGuiNavMoveFlags_LoopY);
 
     End();
+}
+
+bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+    {
+        ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
+        IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+        OpenPopupEx(id);
+        return true;
+    }
+    return false;
 }
 
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
@@ -8944,6 +8752,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     if (!(window->Flags & ImGuiWindowFlags_NoNavInputs))
         if (!(window->Flags & ImGuiWindowFlags_ChildWindow) || (window->Flags & ImGuiWindowFlags_Popup) || (window->NavLastIds[0] == 0) || force_reinit)
             init_for_nav = true;
+    //IMGUI_DEBUG_LOG("[Nav] NavInitWindow() init_for_nav=%d, window=\"%s\", layer=%d\n", init_for_nav, window->Name, g.NavLayer);
     if (init_for_nav)
     {
         SetNavID(0, g.NavLayer);
@@ -8993,11 +8802,11 @@ float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
     if (mode == ImGuiInputReadMode_Pressed)               // Return 1.0f when just pressed, no repeat, ignore analog input.
         return (t == 0.0f) ? 1.0f : 0.0f;
     if (mode == ImGuiInputReadMode_Repeat)
-        return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.80f);
+        return (float)CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay * 0.72f, g.IO.KeyRepeatRate * 0.80f);
     if (mode == ImGuiInputReadMode_RepeatSlow)
-        return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 1.00f, g.IO.KeyRepeatRate * 2.00f);
+        return (float)CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay * 1.25f, g.IO.KeyRepeatRate * 2.00f);
     if (mode == ImGuiInputReadMode_RepeatFast)
-        return (float)CalcTypematicPressedRepeatAmount(t, t - g.IO.DeltaTime, g.IO.KeyRepeatDelay * 0.80f, g.IO.KeyRepeatRate * 0.30f);
+        return (float)CalcTypematicRepeatAmount(t - g.IO.DeltaTime, t, g.IO.KeyRepeatDelay * 0.72f, g.IO.KeyRepeatRate * 0.30f);
     return 0.0f;
 }
 
@@ -9060,6 +8869,7 @@ static void ImGui::NavUpdate()
     if (g.NavInitResultId != 0 && (!g.NavDisableHighlight || g.NavInitRequestFromMove) && g.NavWindow)
     {
         // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
+        //IMGUI_DEBUG_LOG("[Nav] Apply NavInitRequest result: 0x%08X Layer %d in \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
         if (g.NavInitRequestFromMove)
             SetNavIDWithRectRel(g.NavInitResultId, g.NavLayer, g.NavInitResultRectRel);
         else
@@ -9218,6 +9028,7 @@ static void ImGui::NavUpdate()
     }
     if (g.NavMoveRequest && g.NavId == 0)
     {
+        //IMGUI_DEBUG_LOG("[Nav] NavInitRequest from move, window \"%s\", layer=%d\n", g.NavWindow->Name, g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
         g.NavInitResultId = 0;
         g.NavDisableHighlight = false;
@@ -13026,12 +12837,12 @@ void ImGui::DockNodeCalcSplitRects(ImVec2& pos_old, ImVec2& size_old, ImVec2& po
     if (size_new_desired[axis] > 0.0f && size_new_desired[axis] <= w_avail * 0.5f)
     {
         size_new[axis] = size_new_desired[axis];
-        size_old[axis] = (float)(int)(w_avail - size_new[axis]);
+        size_old[axis] = IM_FLOOR(w_avail - size_new[axis]);
     }
     else
     {
-        size_new[axis] = (float)(int)(w_avail * 0.5f);
-        size_old[axis] = (float)(int)(w_avail - size_new[axis]);
+        size_new[axis] = IM_FLOOR(w_avail * 0.5f);
+        size_old[axis] = IM_FLOOR(w_avail - size_new[axis]);
     }
 
     // Position each node
