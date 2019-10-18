@@ -735,7 +735,7 @@ CODE
 
  Q: How can I use my own math types instead of ImVec2/ImVec4?
  Q: How can I interact with standard C++ types (such as std::string and std::vector)?
- Q: How can I use low-level drawing facilities? (using ImDrawList API)
+ Q: How can I display custom shapes? (using low-level ImDrawList API)
  >> See https://www.dearimgui.org/faq
 
  Q&A: Fonts, Text
@@ -5522,7 +5522,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_held = -1;
-        ImU32 resize_grip_col[4] = { 0 };
+        ImU32 resize_grip_col[4] = {};
         const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // 4
         const float resize_grip_draw_size = (float)(int)ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f);
         if (!window->Collapsed)

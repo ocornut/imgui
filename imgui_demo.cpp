@@ -923,7 +923,7 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("In columns"))
         {
             ImGui::Columns(3, NULL, false);
-            static bool selected[16] = { 0 };
+            static bool selected[16] = {};
             for (int i = 0; i < 16; i++)
             {
                 char label[32]; sprintf(label, "Item %d", i);
@@ -1075,7 +1075,7 @@ static void ShowDemoWindowWidgets()
 
         // Create a dummy array of contiguous float values to plot
         // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float and the sizeof() of your structure in the Stride parameter.
-        static float values[90] = { 0 };
+        static float values[90] = {};
         static int values_offset = 0;
         static double refresh_time = 0.0;
         if (!animate || refresh_time == 0.0)
@@ -1176,7 +1176,7 @@ static void ShowDemoWindowWidgets()
 
         // Generate a dummy default palette. The palette will persist and can be edited.
         static bool saved_palette_init = true;
-        static ImVec4 saved_palette[32] = { };
+        static ImVec4 saved_palette[32] = {};
         if (saved_palette_init)
         {
             for (int n = 0; n < IM_ARRAYSIZE(saved_palette); n++)

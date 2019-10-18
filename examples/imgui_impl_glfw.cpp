@@ -61,7 +61,7 @@ static GLFWwindow*          g_Window = NULL;    // Main window
 static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
 static double               g_Time = 0.0;
 static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
-static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 
 // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
 static GLFWmousebuttonfun   g_PrevUserCallbackMousebutton = NULL;

@@ -363,6 +363,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - demo: add vertical separator demo
  - demo: add virtual scrolling example?
  - demo: demonstrate Plot offset
+ - demo: window size constraint: square demo is broken when resizing from edges (#1975), would need to rework the callback system to solve this
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
  - examples: apple: example_apple should be using modern GL3.

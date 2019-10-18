@@ -13,7 +13,7 @@ or view this file with any Markdown viewer.
 :---------------------------------------------------------- |
 | [Where is the documentation?](#q-where-is-the-documentation) |
 | [Which version should I get?](#q-which-version-should-i-get) |
-| [Why the names "Dear ImGui" vs "ImGui"?](#q-why-names-dear-imgui-vs-imgui) |
+| [Why the names "Dear ImGui" vs "ImGui"?](#q-why-the-names-dear-imgui-vs-imgui) |
 | **Q&A: Concerns** |
 | [Who uses Dear ImGui?](#q-who-uses-dear-imgui) |
 | [Can you create elaborate/serious tools with Dear ImGui?](#q-can-you-create-elaborateserious-tools-with-dear-imgui)  |
@@ -29,7 +29,7 @@ or view this file with any Markdown viewer.
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
-| [How can I use low-level drawing facilities? (using ImDrawList API)](#q-how-can-i-use-low-level-drawing-facilities-using-imdrawlist-api) |
+| [How can I display custom shapes? (using low-level ImDrawList API)](#q-how-can-i-display-custom-shapes-using-low-level-imdrawlist-api) |
 | **Q&A: Fonts, Text** |
 | [How can I load a different font than the default?](#q-how-can-i-load-a-different-font-than-the-default) |
 | [How can I easily use icons in my application?](#q-how-can-i-easily-use-icons-in-my-application) |
@@ -386,13 +386,37 @@ provide similar or better string helpers.
 
 ---
 
-### Q: How can I use low-level drawing facilities? (using ImDrawList API)
-- You can create a dummy window. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags.
-(The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse)
-Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
-- You can call `ImGui::GetBackgroundDrawList()` or `ImGui::GetForegroundDrawList()` and use those draw list to display
-contents behind or over every other imgui windows (one bg/fg drawlist per viewport).
-- You can create your own ImDrawList instance. You'll need to initialize them with ImGui::GetDrawListSharedData(), or create your own instancing ImDrawListSharedData, and then call your rendered code with your own ImDrawList or ImDrawData data.
+### Q: How can I display custom shapes? (using low-level ImDrawList API)
+
+- You can use the low-level `ImDrawList` api to render shapes within a window.
+
+```
+ImGui::Begin("My shapes");
+
+ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+// Get the current ImGui cursor position
+ImVec2 p = ImGui::GetCursorScreenPos();
+
+// Draw a red circle
+draw_list->AddCircleFilled(ImVec2(p.x + 50, p.y + 50), 30.0f, IM_COL32(255, 0, 0, 255), 16);
+
+// Draw a 3 pixel thick yellow line
+draw_list->AddLine(ImVec2(p.x, p.y), ImVec2(p.x + 100.0f, p.y + 100.0f), IM_COL32(255, 255, 0, 255), 3.0f);
+
+// Advance the ImGui cursor to claim space in the window (otherwise the window will appears small and needs to be resized)
+ImGui::Dummy(ImVec2(200, 200));
+
+ImGui::End();
+```
+![ImDrawList usage](https://raw.githubusercontent.com/wiki/ocornut/imgui/tutorials/CustomRendering01.png)
+
+- Refer to "Demo > Examples > Custom Rendering" in the demo window and read the code of `ShowExampleAppCustomRendering()` in `imgui_demo.cpp` from more examples.
+- To generate colors: you can use the macro `IM_COL32(255,255,255,255)` to generate them at compile time, or use `ImGui::GetColorU32(IM_COL32(255,255,255,255))` or `ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f))` to generate a color that is multiplied by the current value of `style.Alpha`.
+- Math operators: if you have setup `IM_VEC2_CLASS_EXTRA` in `imconfig.h` to bind your own math types, you can use your own math types and their natural operators instead of ImVec2. ImVec2 by default doesn't export any math operators in the public API. You may use `#define IMGUI_DEFINE_MATH_OPERATORS` `#include "imgui_internal.h"` to use the internally defined math operators, but instead prefer using your own math library and set it up in `imconfig.h`.
+- You can use `ImGui::GetBackgroundDrawList()` or `ImGui::GetForegroundDrawList()` to access draw lists which will be displayed behind and over every other dear imgui windows (one bg/fg drawlist per viewport). This is very convenient if you need to quickly display something on the screen that is not associated to a dear imgui window.
+- You can also create your own dummy window and draw inside it. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags (The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse). Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
+- You can create your own ImDrawList instance. You'll need to initialize them with `ImGui::GetDrawListSharedData()`, or create your own instancing ImDrawListSharedData, and then call your renderer function with your own ImDrawList or ImDrawData data.
 
 ##### [Return to Index](#index)
 

@@ -24,7 +24,7 @@
 
 // Data
 static CFAbsoluteTime g_Time = 0.0;
-static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool           g_MouseCursorHidden = false;
 
 // Undocumented methods for creating cursors.
