@@ -42,6 +42,8 @@ Breaking Changes:
   Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
   Fixed the code and altered default io.KeyRepeatRate,Delay from 0.250,0.050 to 0.300,0.050 to compensate.
   If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
+- Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function. 
+  The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
