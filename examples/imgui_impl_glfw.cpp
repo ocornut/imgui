@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-10-18: Misc: Previously installed user callbacks are now restored on shutdown.
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2019-03-12: Misc: Preserve DisplayFramebufferScale when main window is minimized.
@@ -62,6 +63,7 @@ static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
 static double               g_Time = 0.0;
 static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
 static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
+static bool                 g_InstalledCallbacks = false;
 
 // Chain GLFW callbacks: our callbacks will call the user's previously installed callbacks, if any.
 static GLFWmousebuttonfun   g_PrevUserCallbackMousebutton = NULL;
@@ -183,6 +185,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_PrevUserCallbackChar = NULL;
     if (install_callbacks)
     {
+        g_InstalledCallbacks = true;
         g_PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
         g_PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         g_PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
@@ -205,6 +208,15 @@ bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks)
 
 void ImGui_ImplGlfw_Shutdown()
 {
+    if (g_InstalledCallbacks)
+    {
+        glfwSetMouseButtonCallback(g_Window, g_PrevUserCallbackMousebutton);
+        glfwSetScrollCallback(g_Window, g_PrevUserCallbackScroll);
+        glfwSetKeyCallback(g_Window, g_PrevUserCallbackKey);
+        glfwSetCharCallback(g_Window, g_PrevUserCallbackChar);
+        g_InstalledCallbacks = false;
+    }
+
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
     {
         glfwDestroyCursor(g_MouseCursors[cursor_n]);

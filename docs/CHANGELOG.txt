@@ -54,6 +54,7 @@ Other Changes:
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
+- Backends: GLFW: Previously installed user callbacks are now restored on shutdown. (#2836) [@malte-v]
 
 
 -----------------------------------------------------------------------
