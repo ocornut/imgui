@@ -788,20 +788,18 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     sd1.Scaling = DXGI_SCALING_STRETCH;
     sd1.Stereo = FALSE;
 
-    IM_ASSERT(data->SwapChain == NULL);
-    IM_ASSERT(data->FrameCtx[0].RenderTarget == NULL && data->FrameCtx[1].RenderTarget == NULL && data->FrameCtx[2].RenderTarget == NULL);
-
-    IDXGIFactory4* dxgi_factory = nullptr;
-    res = CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
+    IDXGIFactory4* dxgi_factory = NULL;
+    res = ::CreateDXGIFactory1(IID_PPV_ARGS(&dxgi_factory));
     IM_ASSERT(res == S_OK);
 
-    IDXGISwapChain1* swap_chain = nullptr;
+    IDXGISwapChain1* swap_chain = NULL;
     res = dxgi_factory->CreateSwapChainForHwnd(data->CommandQueue, hwnd, &sd1, NULL, NULL, &swap_chain);
     IM_ASSERT(res == S_OK);
 
     dxgi_factory->Release();
 
     // Or swapChain.As(&mSwapChain)
+    IM_ASSERT(data->SwapChain == NULL);
     swap_chain->QueryInterface(IID_PPV_ARGS(&data->SwapChain));
     swap_chain->Release();
 
@@ -827,6 +825,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
         ID3D12Resource* back_buffer;
         for (UINT i = 0; i < g_numFramesInFlight; i++)
         {
+            IM_ASSERT(data->FrameCtx[i].RenderTarget == NULL);
             data->SwapChain->GetBuffer(i, IID_PPV_ARGS(&back_buffer));
             g_pd3dDevice->CreateRenderTargetView(back_buffer, NULL, data->FrameCtx[i].RenderTargetCpuDescriptors);
             data->FrameCtx[i].RenderTarget = back_buffer;
@@ -860,7 +859,6 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
             SafeRelease(data->Resources[i].IndexBuffer);
             SafeRelease(data->Resources[i].VertexBuffer);
         }
-
         IM_DELETE(data);
     }
     viewport->RendererUserData = NULL;
