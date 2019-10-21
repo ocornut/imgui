@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Binding (e.g. OSX)
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
 // Missing features:
 //  [ ] Renderer: Multi-viewport / platform windows.

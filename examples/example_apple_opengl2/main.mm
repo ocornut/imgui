@@ -141,12 +141,6 @@
     return (YES);
 }
 
-// Flip coordinate system upside down on Y
--(BOOL)isFlipped
-{
-    return (YES);
-}
-
 -(void)dealloc
 {
     animationTimer = nil;
@@ -189,6 +183,7 @@
 
     _window = [[NSWindow alloc] initWithContentRect:viewRect styleMask:NSWindowStyleMaskTitled|NSWindowStyleMaskMiniaturizable|NSWindowStyleMaskResizable|NSWindowStyleMaskClosable backing:NSBackingStoreBuffered defer:YES];
     [_window setTitle:@"Dear ImGui OSX+OpenGL2 Example"];
+    [_window setAcceptsMouseMovedEvents:YES];
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
     [_window setDelegate:self];

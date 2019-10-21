@@ -17,6 +17,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2019-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2019-10-18: Misc: Previously installed user callbacks are now restored on shutdown.
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2019-03-12: Misc: Preserve DisplayFramebufferScale when main window is minimized.
@@ -66,7 +67,8 @@ static GLFWwindow*          g_Window = NULL;    // Main window
 static GlfwClientApi        g_ClientApi = GlfwClientApi_Unknown;
 static double               g_Time = 0.0;
 static bool                 g_MouseJustPressed[5] = { false, false, false, false, false };
-static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
+static GLFWcursor*          g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
+static bool                 g_InstalledCallbacks = false;
 static bool                 g_WantUpdateMonitors = true;
 
 // Chain GLFW callbacks for main viewport: our callbacks will call the user's previously installed callbacks, if any.
@@ -195,6 +197,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_PrevUserCallbackChar = NULL;
     if (install_callbacks)
     {
+        g_InstalledCallbacks = true;
         g_PrevUserCallbackMousebutton = glfwSetMouseButtonCallback(window, ImGui_ImplGlfw_MouseButtonCallback);
         g_PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         g_PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
@@ -227,6 +230,15 @@ bool ImGui_ImplGlfw_InitForVulkan(GLFWwindow* window, bool install_callbacks)
 void ImGui_ImplGlfw_Shutdown()
 {
     ImGui_ImplGlfw_ShutdownPlatformInterface();
+
+    if (g_InstalledCallbacks)
+    {
+        glfwSetMouseButtonCallback(g_Window, g_PrevUserCallbackMousebutton);
+        glfwSetScrollCallback(g_Window, g_PrevUserCallbackScroll);
+        glfwSetKeyCallback(g_Window, g_PrevUserCallbackKey);
+        glfwSetCharCallback(g_Window, g_PrevUserCallbackChar);
+        g_InstalledCallbacks = false;
+    }
 
     for (ImGuiMouseCursor cursor_n = 0; cursor_n < ImGuiMouseCursor_COUNT; cursor_n++)
     {
@@ -433,8 +445,8 @@ static void ImGui_ImplGlfw_WindowSizeCallback(GLFWwindow* window, int, int)
             // GLFW may dispatch window size event after calling glfwSetWindowSize().
             // However depending on the platform the callback may be invoked at different time: on Windows it
             // appears to be called within the glfwSetWindowSize() call whereas on Linux it is queued and invoked
-            // during glfwPollEvents(). 
-            // Because the event doesn't always fire on glfwSetWindowSize() we use a frame counter tag to only 
+            // during glfwPollEvents().
+            // Because the event doesn't always fire on glfwSetWindowSize() we use a frame counter tag to only
             // ignore recent glfwSetWindowSize() calls.
             bool ignore_event = (ImGui::GetFrameCount() <= data->IgnoreWindowSizeEventFrame + 1);
             data->IgnoreWindowSizeEventFrame = -1;

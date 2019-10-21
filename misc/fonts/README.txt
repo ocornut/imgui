@@ -1,7 +1,9 @@
-dear imgui, v1.73 WIP
-(Font Readme)
-
----------------------------------------
+----------------------------------------------------------------------
+ dear imgui, v1.74 WIP
+----------------------------------------------------------------------
+ misc/fonts/README.txt
+ This is the Readme dedicated to fonts.
+----------------------------------------------------------------------
 
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default.
@@ -11,7 +13,7 @@ You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
 
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
-Also read dear imgui FAQ in imgui.cpp!
+Also read the FAQ: https://www.dearimgui.org/faq
 
 If you have other loading/merging/adding fonts, you can post on the Dear ImGui "Getting Started" forum:
   https://discourse.dearimgui.org/c/getting-started

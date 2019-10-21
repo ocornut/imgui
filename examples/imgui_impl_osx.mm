@@ -15,8 +15,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-10-11: Inputs:  Fix using Backspace key.
 //  2019-09-07: Implement Multi-viewport.
-//  2019-07-21: Readded clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
+//  2019-07-21: Re-added clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
 //  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
 //  2019-05-18: Misc: Removed clipboard handlers as they are now supported by core imgui.cpp.
 //  2019-05-11: Inputs: Don't filter character values before calling AddInputCharacter() apart from 0xF700..0xFFFF range.
@@ -24,11 +25,11 @@
 //  2018-07-07: Initial version.
 
 // Data
-static NSWindow*        g_Window = nil;
-static CFAbsoluteTime   g_Time = 0.0;
-static NSCursor*        g_MouseCursors[ImGuiMouseCursor_COUNT] = { 0 };
-static bool             g_MouseCursorHidden = false;
-static bool             g_WantUpdateMonitors = true;
+static NSWindow*      g_Window = nil;
+static CFAbsoluteTime g_Time = 0.0;
+static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
+static bool           g_MouseCursorHidden = false;
+static bool           g_WantUpdateMonitors = true;
 
 // Forward Declarations
 static void ImGui_ImplOSX_InitPlatformInterface();
@@ -49,7 +50,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     ImGuiIO& io = ImGui::GetIO();
 
     // Setup back-end capabilities flags
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
@@ -66,7 +67,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplOSX_InitPlatformInterface();
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
     io.KeyMap[ImGuiKey_Tab]             = '\t';
     io.KeyMap[ImGuiKey_LeftArrow]       = NSLeftArrowFunctionKey + offset_for_function_keys;
@@ -172,10 +173,12 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
-    NSSize size = [view bounds].size;
-    NSSize scale = [view convertSizeToBacking:NSMakeSize(1, 1)];
-    io.DisplaySize = ImVec2(size.width, size.height);
-    io.DisplayFramebufferScale = ImVec2(scale.width, scale.height);
+    if (view)
+    {
+        const float dpi = [view.window backingScaleFactor];
+        io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
+        io.DisplayFramebufferScale = ImVec2(dpi, dpi);
+    }
     if (g_WantUpdateMonitors)
         ImGui_ImplOSX_UpdateMonitors();
 
@@ -265,7 +268,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
         }
         else
-        #endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
+        #endif // MAC_OS_X_VERSION_MAX_ALLOWED
         {
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
@@ -286,7 +289,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         for (int i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
-            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF))
+            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
                 io.AddInputCharacter((unsigned int)c);
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
