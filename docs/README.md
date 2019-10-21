@@ -29,23 +29,15 @@ Dear ImGui is particularly suited to integration in games engine (for tooling), 
 
 ### Usage
 
-Dear ImGui is self-contained within a few files that you can easily copy and compile into your application/engine:
-- imgui.cpp
-- imgui.h
-- imgui_demo.cpp
-- imgui_draw.cpp
-- imgui_widgets.cpp
-- imgui_internal.h
-- imconfig.h (empty by default, user-editable)
-- imstb_rectpack.h
-- imstb_textedit.h
-- imstb_truetype.h
+**The core of Dear ImGui is self-contained within a few platform-agnostic files** which you can easily copy and compile into your application/engine. They are all the files in the root folder of the repository (imgui.cpp, imgui.h, imgui_demo.cpp, imgui_draw.cpp etc.).
 
-No specific build process is required. You can add the .cpp files to your project or #include them from an existing file.
+**No specific build process is required**. You can add the .cpp files to your existing project.
 
-Backends for a variety of graphics api and rendering platforms along with example applications are provided in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder.
+You will need a backend to integrate Dear ImGui in your app. The backend passes mouse/keyboard/gamepad inputs and variety of settings to Dear ImGui, and is in charge of rendering the resulting vertices. 
 
-The backend passes mouse/keyboard/gamepad inputs and variety of settings to Dear ImGui, and is in charge of rendering the resulting vertices. After Dear ImGui is setup in your application, you can use it from \_anywhere\_ in your program loop:
+**Backends for a variety of graphics api and rendering platforms** are provided in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder, along with example applications. See the [Integration](#integration) section of this document for details. You may also create your own backend. Anywhere where you can render textured triangles, you can render Dear ImGui.
+
+After Dear ImGui is setup in your application, you can use it from \_anywhere\_ in your program loop:
 
 Code:
 ```cp
@@ -153,44 +145,11 @@ Custom engine
 [![screenshot tool](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white_preview.jpg)](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/editor_white.png)
 
 [Tracy Profiler](https://bitbucket.org/wolfpld/tracy)
-![tracy profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v167/tracy_profiler.png)
+![tracy profiler](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v173/tracy_profiler.jpg)
 
 ### Support, Frequently Asked Questions (FAQ)
 
-Most common questions will be answered by the [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) page, e.g.:
-
-**Basics**
-- "Where is the documentation?"
-- "Which version should I get?"
-- "Why the names "Dear ImGui" vs "ImGui"?"
-
-**Community**
-- "How can I help?"
-
-**Concerns**
-- "Who uses Dear ImGui?"
-- "Can you create elaborate/serious tools with Dear ImGui?"
-- "Can you reskin the look of Dear ImGui?"
-- "Why using C++ (as opposed to C)?"
-
-**Integration**
-- "How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?"
-- "How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)"
-- "I integrated Dear ImGui in my engine and the text or lines are blurry.."
-- "I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around.."
-
-**Usage**
-- "Why are multiple widgets reacting when I interact with a single one? How can I have multiple widgets with the same label or with an empty label?"
-- "How can I display an image? What is ImTextureID, how does it work?"
-- "How can I use my own math types instead of ImVec2/ImVec4?"
-- "How can I interact with standard C++ types (such as std::string and std::vector)?"
-- "How can I display custom shapes? (using low-level ImDrawList API)"
-
-**Fonts, Text**
-- "How can I load a different font than the default?"
-- "How can I easily use icons in my application?"
-- "How can I load multiple fonts?"
-- "How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?"
+Most common questions will be answered by the [Frequently Asked Questions (FAQ)](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md) page.
 
 See: [Wiki](https://github.com/ocornut/imgui/wiki) for many links, references, articles.
 
