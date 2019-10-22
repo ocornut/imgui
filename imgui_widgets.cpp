@@ -4784,7 +4784,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         draw_list->PrimVtx(trb, uv_white, hue_color32);
         draw_list->PrimVtx(trc, uv_white, col_white);
         draw_list->PrimVtx(tra, uv_white, 0);
-        draw_list->PrimVtx(trb, uv_white, col_white);
+        draw_list->PrimVtx(trb, uv_white, col_black);
         draw_list->PrimVtx(trc, uv_white, 0);
         draw_list->AddTriangle(tra, trb, trc, col_midgrey, 1.5f);
         sv_cursor_pos = ImLerp(ImLerp(trc, tra, ImSaturate(S)), trb, ImSaturate(1 - V));
