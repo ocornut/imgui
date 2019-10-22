@@ -54,6 +54,7 @@ Breaking Changes:
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
+- ColorPicker: Fixed SV triangle gradient to block (broken in 1.73). (#2864, #2711). [@lewa-j]
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
 - InputText: Filter out ASCII 127 (DEL) emitted by low-level OSX layer, as we are using the Key value. (#2578)
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
