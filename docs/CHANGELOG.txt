@@ -34,6 +34,14 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
+- Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
+  - Begin() [old 5 args version]     -> use Begin() [3 args], use SetNextWindowSize() SetNextWindowBgAlpha() if needed
+  - IsRootWindowOrAnyChildHovered()  -> use IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)
+  - AlignFirstTextHeightToWidgets()  -> use AlignTextToFramePadding()
+  - SetNextWindowPosCenter()         -> use SetNextWindowPos() with a pivot of (0.5f, 0.5f)
+  - ImFont::Glyph                    -> use ImFontGlyph
+  If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
+  the new names or equivalent features, or see how they were implemented until 1.73.
 - Inputs: Fixed a miscalculation in the keyboard/mouse "typematic" repeat delay/rate calculation, used
   by keys and e.g. repeating mouse buttons as well as the GetKeyPressedAmount() function.
   If you were using a non-default value for io.KeyRepeatRate (previous default was 0.250), you can
@@ -42,7 +50,7 @@ Breaking Changes:
   Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
   Fixed the code and altered default io.KeyRepeatRate,Delay from 0.250,0.050 to 0.300,0.050 to compensate.
   If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
-- Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function. 
+- Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
