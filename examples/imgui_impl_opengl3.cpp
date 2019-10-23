@@ -85,12 +85,14 @@
 #undef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #undef IMGUI_IMPL_OPENGL_LOADER_GLAD
 #undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#undef IMGUI_IMPL_OPENGL_VERSION
 #elif defined(__EMSCRIPTEN__)
 #define IMGUI_IMPL_OPENGL_ES2           // Emscripten    -> GL ES 2, "#version 100"
 #undef IMGUI_IMPL_OPENGL_LOADER_GL3W
 #undef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #undef IMGUI_IMPL_OPENGL_LOADER_GLAD
 #undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
+#undef IMGUI_IMPL_OPENGL_VERSION
 #endif
 #endif
 
@@ -119,8 +121,36 @@
 #endif
 #endif
 
+// Define desktop GL version
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GLAD) && !defined(IMGUI_IMPL_OPENGL_VERSION)
+//  This attempts to define automatically based on GLAD defines
+#if defined(GL_VERSION_4_6)
+#define IMGUI_IMPL_OPENGL_VERSION 46
+#elif defined(GL_VERSION_4_5)
+#define IMGUI_IMPL_OPENGL_VERSION 45
+#elif defined(GL_VERSION_4_4)
+#define IMGUI_IMPL_OPENGL_VERSION 44
+#elif defined(GL_VERSION_4_3)
+#define IMGUI_IMPL_OPENGL_VERSION 43
+#elif defined(GL_VERSION_4_2)
+#define IMGUI_IMPL_OPENGL_VERSION 42
+#elif defined(GL_VERSION_4_1)
+#define IMGUI_IMPL_OPENGL_VERSION 41
+#elif defined(GL_VERSION_4_0)
+#define IMGUI_IMPL_OPENGL_VERSION 40
+#elif defined(GL_VERSION_3_2)
+#define IMGUI_IMPL_OPENGL_VERSION 32
+#elif defined(GL_VERSION_3_1)
+#define IMGUI_IMPL_OPENGL_VERSION 31
+#elif defined(GL_VERSION_3_0)
+#define IMGUI_IMPL_OPENGL_VERSION 30
+#endif
+#endif
+#endif
+
 // Desktop GL has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
-#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3)
+#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(IMGUI_IMPL_OPENGL_VERSION) || IMGUI_IMPL_OPENGL_VERSION < 32
 #define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     0
 #else
 #define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     1
