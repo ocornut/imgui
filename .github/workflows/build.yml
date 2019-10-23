@@ -1,0 +1,108 @@
+name: build
+
+on: [push, pull_request]
+
+jobs:
+  Windows:
+    runs-on: windows-2019
+    env:
+      MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Fix Projects
+        shell: powershell
+        run: |
+          # Replace v110 toolset with v142. Only v141 and v142 toolsets are available on CI workers.
+          # Replace 8.1 platform sdk with 10.0.18362.0. Workers do not contain legacy SDKs.
+          # WARNING: This will need updating if toolset/sdk change in project files!
+          gci -recurse -filter "*.vcxproj" | ForEach-Object {
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v110</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" -Replace "<WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+          }
+
+      - name: Build x86
+        shell: cmd
+        run: |
+          "%MSBUILD_PATH%\MSBuild.exe" /p:Platform=Win32 /p:Configuration=Release examples/imgui_examples.sln
+
+      - name: Build x64
+        shell: cmd
+        run: |
+          "%MSBUILD_PATH%\MSBuild.exe" /p:Platform=x64 /p:Configuration=Release examples/imgui_examples.sln
+
+  Linux:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libglfw3-dev libsdl2-dev
+
+    - name: Build
+      run: |
+        make -C examples/example_null
+        make -C examples/example_glfw_opengl2
+        make -C examples/example_glfw_opengl3
+        make -C examples/example_sdl_opengl2
+        make -C examples/example_sdl_opengl3
+
+  MacOS:
+    runs-on: macOS-10.14
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Install Dependencies
+      run: |
+        brew install glfw3
+        brew install sdl2
+
+    - name: Build
+      run: |
+        make -C examples/example_null
+        make -C examples/example_glfw_opengl2
+        make -C examples/example_glfw_opengl3
+        make -C examples/example_glfw_metal
+        make -C examples/example_sdl_opengl2
+        make -C examples/example_sdl_opengl3
+        xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
+        xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
+
+  iOS:
+    runs-on: macOS-10.14
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Build
+      run: |
+        # Code signing is required, but we disable it because it is irrelevant for CI builds.
+        xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+  Emscripten:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Install Dependencies
+      run: |
+        wget -q https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
+        tar -xvf emsdk-portable.tar.gz
+        emsdk-portable/emsdk update
+        emsdk-portable/emsdk install latest
+        emsdk-portable/emsdk activate latest
+
+    - name: Build
+      run: |
+        source emsdk-portable/emsdk_env.sh
+        make -C examples/example_emscripten

@@ -67,6 +67,8 @@ Other Changes:
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
 - Backends: GLFW: Previously installed user callbacks are now restored on shutdown. (#2836) [@malte-v]
+- CI: Set up a bunch of continuous-integration tests using GitHub Actions. We now compile many of the example
+  applications on Windows, Linux, MacOS, iOS, Emscripten. Removed Travis integration. (#2865) [@rokups]
 
 
 -----------------------------------------------------------------------
