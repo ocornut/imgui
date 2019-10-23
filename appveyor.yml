@@ -1,0 +1,32 @@
+version: 1.0.{build}
+
+image:
+  - Visual Studio 2015
+  - Visual Studio 2017
+for:
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2017
+    environment:
+      GENERATOR: "Visual Studio 15 2017 Win64"
+    install:
+      # Install Vulkan
+      - cmd: curl -L --silent --show-error --output VulkanSDK.exe https://vulkan.lunarg.com/sdk/download/1.1.121.2/windows/VulkanSDK-1.1.121.2-Installer.exe?Human=true
+      - cmd: .\VulkanSDK.exe /S
+      - cmd: set VULKAN_SDK=C:\VulkanSDK\1.1.121.2
+
+      # Use vcpkg to provide glfw and sdl2
+      - cmd: call "C:\Program Files (x86)\Microsoft Visual Studio\2017\Community\VC\Auxiliary\Build\vcvarsall.bat" amd64
+      - cmd: vcpkg install glfw3:x64-windows sdl2[vulkan]:x64-windows
+    build_script:
+      - cmd: cmake -Hexamples -B_build_%TOOLCHAIN%_Debug -G "%GENERATOR%" -DBUILD_EXAMPLES_SDL=ON -DBUILD_EXAMPLES_GLFW=ON -DBUILD_EXAMPLES_OPENGL2=ON -DBUILD_EXAMPLES_OPENGL3=ON -DBUILD_EXAMPLES_VULKAN=ON -DCMAKE_TOOLCHAIN_FILE=c:/tools/vcpkg/scripts/buildsystems/vcpkg.cmake
+      - cmd: cmake --build _build_%TOOLCHAIN%_Debug --config Debug
+
+  -
+    matrix:
+      only:
+        - image: Visual Studio 2015
+    build_script:
+      - cmd: msbuild "C:\projects\imgui\examples\imgui_examples.sln" /verbosity:minimal /logger:"C:\Program Files\AppVeyor\BuildAgent\Appveyor.MSBuildLogger.dll"
+
