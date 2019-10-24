@@ -139,10 +139,14 @@ static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
     // query for GL version
+#if defined(IMGUI_IMPL_OPENGL_ES2)
     GLint major, minor;
     glGetIntegerv (GL_MAJOR_VERSION, &major);
     glGetIntegerv (GL_MINOR_VERSION, &minor);
     g_GlVersion = major * 1000 + minor;
+#else
+    g_GlVersion = 2000; // GLES 2
+#endif
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
