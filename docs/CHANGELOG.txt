@@ -103,6 +103,14 @@ Other changes:
 -----------------------------------------------------------------------
 
 Breaking Changes:
+- Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
+  - Begin() [old 5 args version]     -> use Begin() [3 args], use SetNextWindowSize() SetNextWindowBgAlpha() if needed
+  - IsRootWindowOrAnyChildHovered()  -> use IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)
+  - AlignFirstTextHeightToWidgets()  -> use AlignTextToFramePadding()
+  - SetNextWindowPosCenter()         -> use SetNextWindowPos() with a pivot of (0.5f, 0.5f)
+  - ImFont::Glyph                    -> use ImFontGlyph
+  If you were still using the old names, read "API Breaking Changes" section of imgui.cpp to find out
+  the new names or equivalent features, or see how they were implemented until 1.73.
 - Inputs: Fixed a miscalculation in the keyboard/mouse "typematic" repeat delay/rate calculation, used
   by keys and e.g. repeating mouse buttons as well as the GetKeyPressedAmount() function.
   If you were using a non-default value for io.KeyRepeatRate (previous default was 0.250), you can
@@ -111,10 +119,20 @@ Breaking Changes:
   Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
   Fixed the code and altered default io.KeyRepeatRate,Delay from 0.250,0.050 to 0.300,0.050 to compensate.
   If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
+- Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
+  The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
 - InputText: Filter out ASCII 127 (DEL) emitted by low-level OSX layer, as we are using the Key value. (#2578)
+- Layout: Fixed a couple of subtle bounding box vertical positioning issues relating to the handling of text
+  baseline alignment. The issue would generally manifest when laying out multiple items on a same line,
+  with varying heights and text baseline offsets.
+  Some specific examples, e.g. a button with regular frame padding followed by another item with a
+  multi-line label and no frame padding, such as: multi-line text, small button, tree node item, etc.
+  The second item was correctly offset to match text baseline, and would interact/display correctly,
+  but it wouldn't push the contents area boundary low enough.
+- ColorPicker: Fixed SV triangle gradient to block (broken in 1.73). (#2864, #2711). [@lewa-j]
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
@@ -122,8 +140,12 @@ Other Changes:
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
+- Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
+- Examples: Emscripten: Removed NO_FILESYSTEM from Makefile, seems to fail on some setup. (#2734) [@Funto]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
 - Backends: GLFW: Previously installed user callbacks are now restored on shutdown. (#2836) [@malte-v]
+- CI: Set up a bunch of continuous-integration tests using GitHub Actions. We now compile many of the example
+  applications on Windows, Linux, MacOS, iOS, Emscripten. Removed Travis integration. (#2865) [@rokups]
 
 
 -----------------------------------------------------------------------

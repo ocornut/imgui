@@ -9,7 +9,12 @@
 #include <dxgi1_4.h>
 #include <tchar.h>
 
-#define DX12_ENABLE_DEBUG_LAYER     0
+//#define DX12_ENABLE_DEBUG_LAYER
+
+#ifdef DX12_ENABLE_DEBUG_LAYER
+#include <dxgidebug.h>
+#pragma comment(lib, "dxguid.lib")
+#endif
 
 struct FrameContext
 {
@@ -252,15 +257,14 @@ bool CreateDeviceD3D(HWND hWnd)
         sd.Stereo = FALSE;
     }
 
-    if (DX12_ENABLE_DEBUG_LAYER)
+#ifdef DX12_ENABLE_DEBUG_LAYER
+    ID3D12Debug* pdx12Debug = NULL;
+    if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&pdx12Debug))))
     {
-        ID3D12Debug* dx12Debug = NULL;
-        if (SUCCEEDED(D3D12GetDebugInterface(IID_PPV_ARGS(&dx12Debug))))
-        {
-            dx12Debug->EnableDebugLayer();
-            dx12Debug->Release();
-        }
+        pdx12Debug->EnableDebugLayer();
+        pdx12Debug->Release();
     }
+#endif
 
     D3D_FEATURE_LEVEL featureLevel = D3D_FEATURE_LEVEL_11_0;
     if (D3D12CreateDevice(NULL, featureLevel, IID_PPV_ARGS(&g_pd3dDevice)) != S_OK)
@@ -348,6 +352,15 @@ void CleanupDeviceD3D()
     if (g_fence) { g_fence->Release(); g_fence = NULL; }
     if (g_fenceEvent) { CloseHandle(g_fenceEvent); g_fenceEvent = NULL; }
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
+
+#ifdef DX12_ENABLE_DEBUG_LAYER
+    IDXGIDebug1* pDebug = NULL;
+    if (SUCCEEDED(DXGIGetDebugInterface1(0, IID_PPV_ARGS(&pDebug))))
+    {
+        pDebug->ReportLiveObjects(DXGI_DEBUG_ALL, DXGI_DEBUG_RLO_SUMMARY);
+        pDebug->Release();
+    }
+#endif
 }
 
 void CreateRenderTarget()
