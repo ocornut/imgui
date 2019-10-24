@@ -120,14 +120,15 @@
 #endif
 
 // Desktop GL has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
-#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3)
-#define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     0
+#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(GL_VERSION_3_2)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_WITH_BASE_VERTEX     0
 #else
-#define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     1
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_WITH_BASE_VERTEX     1
 #endif
 
 // OpenGL Data
 static char         g_GlslVersionString[32] = "";
+static GLuint       g_GlVersion = 0;
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
@@ -137,11 +138,18 @@ static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
+    // query for GL version
+    GLint major, minor;
+    glGetIntegerv (GL_MAJOR_VERSION, &major);
+    glGetIntegerv (GL_MINOR_VERSION, &minor);
+    g_GlVersion = major * 1000 + minor;
+
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
-#if IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+#if IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_WITH_BASE_VERTEX
+    if (g_GlVersion >= 3200)
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
 
     // Store GLSL version string so we can refer to it later in case we recreate shaders. Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
@@ -344,8 +352,11 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-#if IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX
-                    glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
+#if IMGUI_IMPL_OPENGL_MAY_HAVE_DRAW_WITH_BASE_VERTEX
+                    if (g_GlVersion >= 3200)
+                        glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
+                    else
+                        glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));                    
 #else
                     glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
 #endif
