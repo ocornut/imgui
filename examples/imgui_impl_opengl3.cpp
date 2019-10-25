@@ -114,6 +114,9 @@
 #include <GL/glew.h>    // Needs to be initialized with glewInit() in user's code
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>  // Needs to be initialized with gladLoadGL() in user's code
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+#include <glbinding/gl/gl.h> // Needs to be initialized with gladLoadGL() in user's code
+using namespace gl;  // Has to be set to expose OpenGL to the global namespace
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
