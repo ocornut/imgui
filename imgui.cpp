@@ -5,7 +5,7 @@
 // Newcomers, read 'Programmer guide' below for notes on how to setup Dear ImGui in your codebase.
 // Get latest version at https://github.com/ocornut/imgui
 // Releases change-log at https://github.com/ocornut/imgui/releases
-// Technical Support for Getting Started https://discourse.dearimgui.org/c/getting-started
+// Technical Support for Getting Started https://github.com/ocornut/imgui/wiki
 // Gallery (please post your screenshots/video there!): https://github.com/ocornut/imgui/issues/2847
 
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
