@@ -73,6 +73,8 @@ Other Changes:
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
 - Examples: Emscripten: Removed NO_FILESYSTEM from Makefile, seems to fail on some setup. (#2734) [@Funto]
+- Backends: OpenGL3: Fix building with pre-3.2 GL loaders which do not expose glDrawElementsBaseVertex(),
+  using runtime GL version to decide if we set ImGuiBackendFlags_RendererHasVtxOffset. (#2866, #2852) [@dpilawa]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
 - Backends: GLFW: Previously installed user callbacks are now restored on shutdown. (#2836) [@malte-v]
 - CI: Set up a bunch of continuous-integration tests using GitHub Actions. We now compile many of the example
