@@ -1345,7 +1345,7 @@ void ImDrawData::DeIndexAllBuffers()
 // Helper to scale the ClipRect field of each ImDrawCmd.
 // Use if your final output buffer is at a different scale than draw_data->DisplaySize,
 // or if there is a difference between your window resolution and framebuffer resolution.
-void ImDrawData::ScaleClipRects(const ImVec2& fb_scale)
+void ImDrawData::ScaleClipRects(const ImVec2& fb_scale) const
 {
     for (int i = 0; i < CmdListsCount; i++)
     {
@@ -1752,7 +1752,7 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int
     return CustomRects.Size - 1; // Return index
 }
 
-void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max)
+void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
 {
     IM_ASSERT(TexWidth > 0 && TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
     IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
@@ -2465,7 +2465,7 @@ void ImFontGlyphRangesBuilder::AddRanges(const ImWchar* ranges)
             AddChar(c);
 }
 
-void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges)
+void ImFontGlyphRangesBuilder::BuildRanges(ImVector<ImWchar>* out_ranges) const
 {
     int max_codepoint = 0x10000;
     for (int n = 0; n < max_codepoint; n++)

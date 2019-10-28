@@ -1739,7 +1739,7 @@ static ImGuiStorage::ImGuiStoragePair* LowerBound(ImVector<ImGuiStorage::ImGuiSt
 }
 
 // For quicker full rebuild of a storage (instead of an incremental one), you may add all your contents and then sort once.
-void ImGuiStorage::BuildSortByKey()
+void ImGuiStorage::BuildSortByKey() const
 {
     struct StaticFunc
     {

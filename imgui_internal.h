@@ -623,7 +623,7 @@ struct IMGUI_API ImGuiMenuColumns
     ImGuiMenuColumns();
     void        Update(int count, float spacing, bool clear);
     float       DeclColumns(float w0, float w1, float w2);
-    float       CalcExtraSpace(float avail_w);
+    float       CalcExtraSpace(float avail_w) const;
 };
 
 // Internal state of the currently focused/edited text input box
