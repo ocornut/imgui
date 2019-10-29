@@ -10252,8 +10252,11 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
         viewport->LastFrameActive = g.FrameCount;
     if (g.CurrentViewport == viewport)
         return;
-    g.CurrentDpiScale = viewport->DpiScale;
-    g.CurrentViewport = viewport;
+    if (viewport)
+    {
+        g.CurrentDpiScale = viewport->DpiScale;
+        g.CurrentViewport = viewport;
+    }
     //IMGUI_DEBUG_LOG_VIEWPORT("SetCurrentViewport changed '%s' 0x%08X\n", current_window ? current_window->Name : NULL, viewport ? viewport->ID : 0);
 
     // Notify platform layer of viewport changes
