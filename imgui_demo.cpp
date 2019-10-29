@@ -101,10 +101,15 @@ Index of this file:
 // Play it nice with Windows users. Notepad in 2017 still doesn't display text data with Unix-style \n.
 #ifdef _WIN32
 #define IM_NEWLINE  "\r\n"
-#define snprintf    _snprintf
-#define vsnprintf   _vsnprintf
 #else
 #define IM_NEWLINE  "\n"
+#endif
+
+#if defined(_MSC_VER) && !defined(snprintf)
+#define snprintf    _snprintf
+#endif
+#if defined(_MSC_VER) && !defined(vsnprintf)
+#define vsnprintf   _vsnprintf
 #endif
 
 //-----------------------------------------------------------------------------

@@ -13,10 +13,8 @@ You may also load external .TTF/.OTF files.
 The files in this folder are suggested fonts, provided as a convenience.
 
 Fonts are rasterized in a single texture at the time of calling either of io.Fonts->GetTexDataAsAlpha8()/GetTexDataAsRGBA32()/Build().
-Also read the FAQ: https://www.dearimgui.org/faq
-
-If you have other loading/merging/adding fonts, you can post on the Dear ImGui "Getting Started" forum:
-  https://discourse.dearimgui.org/c/getting-started
+Please read the FAQ: https://www.dearimgui.org/faq
+Please use the Discord server: http://discord.dearimgui.org and not the Github issue tracker for basic font loading questions.
 
 
 ---------------------------------------
@@ -45,7 +43,6 @@ If you have other loading/merging/adding fonts, you can post on the Dear ImGui "
       u8"hello"
       u8"こんにちは"   // this will be encoded as UTF-8
 - If you want to include a backslash \ character in your string literal, you need to double them e.g. "folder\\filename".
-- Please use the Discourse forum (https://discourse.dearimgui.org) and not the Github issue tracker for basic font loading questions.
 
 
 ---------------------------------------

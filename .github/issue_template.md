@@ -4,7 +4,7 @@
 
 2. PLEASE CAREFULLY READ: https://github.com/ocornut/imgui/issues/2261
 
-2. FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING/LOADING FONTS,  please use the [Discord server](https://discord.gg/NgJ4SEP) or [Discourse forum](https://discourse.dearimgui.org/c/getting-started).
+2. FOR FIRST-TIME USERS ISSUES COMPILING/LINKING/RUNNING/LOADING FONTS,  please use the [Discord server](http://discord.dearimgui.org).
 
 3. PLEASE MAKE SURE that you have: read the FAQ; explored the contents of `ShowDemoWindow()` including the Examples menu; searched among Issues; used your IDE to search for keywords in all sources and text files; and read the link provided in (1) (2).
 
