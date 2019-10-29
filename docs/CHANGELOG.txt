@@ -68,6 +68,7 @@ Other Changes:
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
   to clarify how they are used, and more comments redirecting to the demo code. (#2844)
+- Misc: Windows: Do not use _wfopen() if IMGUI_DISABLE_WIN32_FUNCTIONS is defined. (#2815)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
