@@ -353,6 +353,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2019/11/21 (1.74) - ImFontAtlas::AddCustomRectRegular() now requires an ID larger than 0x110000 (instead of 0x10000) to conform with supporting Unicode planes 1-16 in a future update. ID below 0x110000 will now assert.
  - 2019/11/19 (1.74) - renamed IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS to IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS for consistency.
  - 2019/11/19 (1.74) - renamed IMGUI_DISABLE_MATH_FUNCTIONS to IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS for consistency.
  - 2019/10/22 (1.74) - removed redirecting functions/enums that were marked obsolete in 1.52 (October 2017): Begin() (5 arguments signature), IsRootWindowOrAnyChildHovered(), AlignFirstTextHeightToWidgets(), SetNextWindowPosCenter(), ImFont::Glyph. See docs/Changelog.txt or grep this log for details and new names, or see how they were implemented until 1.73.
@@ -1061,7 +1062,7 @@ ImGuiIO::ImGuiIO()
 // - on Windows you can get those using ToAscii+keyboard state, or via the WM_CHAR message
 void ImGuiIO::AddInputCharacter(unsigned int c)
 {
-    if (c > 0 && c < 0x10000)
+    if (c > 0 && c <= IM_UNICODE_CODEPOINT_MAX)
         InputQueueCharacters.push_back((ImWchar)c);
 }
 
@@ -1071,7 +1072,7 @@ void ImGuiIO::AddInputCharactersUTF8(const char* utf8_chars)
     {
         unsigned int c = 0;
         utf8_chars += ImTextCharFromUtf8(&c, utf8_chars, NULL);
-        if (c > 0 && c < 0x10000)
+        if (c > 0 && c <= IM_UNICODE_CODEPOINT_MAX)
             InputQueueCharacters.push_back((ImWchar)c);
     }
 }
@@ -1463,7 +1464,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     }
     if ((*str & 0xe0) == 0xc0)
     {
-        *out_char = 0xFFFD; // will be invalid but not end of string
+        *out_char = IM_UNICODE_CODEPOINT_INVALID; // will be invalid but not end of string
         if (in_text_end && in_text_end - (const char*)str < 2) return 1;
         if (*str < 0xc2) return 2;
         c = (unsigned int)((*str++ & 0x1f) << 6);
@@ -1474,7 +1475,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     }
     if ((*str & 0xf0) == 0xe0)
     {
-        *out_char = 0xFFFD; // will be invalid but not end of string
+        *out_char = IM_UNICODE_CODEPOINT_INVALID; // will be invalid but not end of string
         if (in_text_end && in_text_end - (const char*)str < 3) return 1;
         if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 3;
         if (*str == 0xed && str[1] > 0x9f) return 3; // str[1] < 0x80 is checked below
@@ -1488,7 +1489,7 @@ int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* 
     }
     if ((*str & 0xf8) == 0xf0)
     {
-        *out_char = 0xFFFD; // will be invalid but not end of string
+        *out_char = IM_UNICODE_CODEPOINT_INVALID; // will be invalid but not end of string
         if (in_text_end && in_text_end - (const char*)str < 4) return 1;
         if (*str > 0xf4) return 4;
         if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 4;
@@ -1519,7 +1520,7 @@ int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const cha
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
         if (c == 0)
             break;
-        if (c < 0x10000)    // FIXME: Losing characters that don't fit in 2 bytes
+        if (c <= IM_UNICODE_CODEPOINT_MAX)    // FIXME: Losing characters that don't fit in 2 bytes
             *buf_out++ = (ImWchar)c;
     }
     *buf_out = 0;
@@ -1537,7 +1538,7 @@ int ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end)
         in_text += ImTextCharFromUtf8(&c, in_text, in_text_end);
         if (c == 0)
             break;
-        if (c < 0x10000)
+        if (c <= IM_UNICODE_CODEPOINT_MAX)
             char_count++;
     }
     return char_count;

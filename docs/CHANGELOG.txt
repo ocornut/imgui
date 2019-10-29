@@ -52,6 +52,8 @@ Breaking Changes:
   If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
 - Misc: Renamed IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS to IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS. (#1038)
 - Misc: Renamed IMGUI_DISABLE_MATH_FUNCTIONS to IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS.
+- Fonts: ImFontAtlas::AddCustomRectRegular() now requires an ID larger than 0x110000 (instead of 0x10000) to
+  conform with supporting Unicode planes 1-16 in a future update. ID below 0x110000 will now assert.
 - Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 

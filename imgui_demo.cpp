@@ -3416,10 +3416,10 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                     if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
                     {
                         // Display all glyphs of the fonts in separate pages of 256 characters
-                        for (int base = 0; base < 0x10000; base += 256)
+                        for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
                         {
                             int count = 0;
-                            for (int n = 0; n < 256; n++)
+                            for (unsigned int n = 0; n < 256; n++)
                                 count += font->FindGlyphNoFallback((ImWchar)(base + n)) ? 1 : 0;
                             if (count > 0 && ImGui::TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
                             {
@@ -3427,7 +3427,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                                 float cell_spacing = style.ItemSpacing.y;
                                 ImVec2 base_pos = ImGui::GetCursorScreenPos();
                                 ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                                for (int n = 0; n < 256; n++)
+                                for (unsigned int n = 0; n < 256; n++)
                                 {
                                     ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
                                     ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);

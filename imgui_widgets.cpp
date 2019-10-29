@@ -3157,7 +3157,7 @@ namespace ImStb
 static int     STB_TEXTEDIT_STRINGLEN(const STB_TEXTEDIT_STRING* obj)                             { return obj->CurLenW; }
 static ImWchar STB_TEXTEDIT_GETCHAR(const STB_TEXTEDIT_STRING* obj, int idx)                      { return obj->TextW[idx]; }
 static float   STB_TEXTEDIT_GETWIDTH(STB_TEXTEDIT_STRING* obj, int line_start_idx, int char_idx)  { ImWchar c = obj->TextW[line_start_idx + char_idx]; if (c == '\n') return STB_TEXTEDIT_GETWIDTH_NEWLINE; ImGuiContext& g = *GImGui; return g.Font->GetCharAdvance(c) * (g.FontSize / g.Font->FontSize); }
-static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x10000 ? 0 : key; }
+static int     STB_TEXTEDIT_KEYTOTEXT(int key)                                                    { return key >= 0x200000 ? 0 : key; }
 static ImWchar STB_TEXTEDIT_NEWLINE = '\n';
 static void    STB_TEXTEDIT_LAYOUTROW(StbTexteditRow* r, STB_TEXTEDIT_STRING* obj, int line_start_idx)
 {
@@ -3338,6 +3338,10 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
 
     // Filter private Unicode range. GLFW on OSX seems to send private characters for special keys like arrow keys (FIXME)
     if (c >= 0xE000 && c <= 0xF8FF)
+        return false;
+
+    // Filter Unicode ranges we are not handling in this build.
+    if (c > IM_UNICODE_CODEPOINT_MAX)
         return false;
 
     // Generic named filters
@@ -3763,7 +3767,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
                     s += ImTextCharFromUtf8(&c, s, NULL);
                     if (c == 0)
                         break;
-                    if (c >= 0x10000 || !InputTextFilterCharacter(&c, flags, callback, callback_user_data))
+                    if (!InputTextFilterCharacter(&c, flags, callback, callback_user_data))
                         continue;
                     clipboard_filtered[clipboard_filtered_len++] = (ImWchar)c;
                 }

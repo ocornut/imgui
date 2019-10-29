@@ -80,6 +80,8 @@ Index of this file:
 #else
 #define IM_OFFSETOF(_TYPE,_MEMBER)  ((size_t)&(((_TYPE*)0)->_MEMBER))           // Offset of _MEMBER within _TYPE. Old style macro.
 #endif
+#define IM_UNICODE_CODEPOINT_MAX     0xFFFF                                     // Last Unicode code point supported by this build.
+#define IM_UNICODE_CODEPOINT_INVALID 0xFFFD                                     // Standard invalid Unicode code point.
 
 // Warnings
 #if defined(__clang__)
@@ -2045,7 +2047,7 @@ struct ImFontGlyphRangesBuilder
     ImVector<ImU32> UsedChars;            // Store 1-bit per Unicode code point (0=unused, 1=used)
 
     ImFontGlyphRangesBuilder()          { Clear(); }
-    inline void     Clear()             { int size_in_bytes = 0x10000 / 8; UsedChars.resize(size_in_bytes / (int)sizeof(ImU32)); memset(UsedChars.Data, 0, (size_t)size_in_bytes); }
+    inline void     Clear()             { int size_in_bytes = (IM_UNICODE_CODEPOINT_MAX+1) / 8; UsedChars.resize(size_in_bytes / (int)sizeof(ImU32)); memset(UsedChars.Data, 0, (size_t)size_in_bytes); }
     inline bool     GetBit(int n) const { int off = (n >> 5); ImU32 mask = 1u << (n & 31); return (UsedChars[off] & mask) != 0; }  // Get bit n in the array
     inline void     SetBit(int n)       { int off = (n >> 5); ImU32 mask = 1u << (n & 31); UsedChars[off] |= mask; }               // Set bit n in the array
     inline void     AddChar(ImWchar c)  { SetBit(c); }                          // Add character
@@ -2057,12 +2059,12 @@ struct ImFontGlyphRangesBuilder
 // See ImFontAtlas::AddCustomRectXXX functions.
 struct ImFontAtlasCustomRect
 {
-    unsigned int    ID;             // Input    // User ID. Use <0x10000 to map into a font glyph, >=0x10000 for other/internal/custom texture data.
+    unsigned int    ID;             // Input    // User ID. Use < 0x110000 to map into a font glyph, >= 0x110000 for other/internal/custom texture data.
     unsigned short  Width, Height;  // Input    // Desired rectangle dimension
     unsigned short  X, Y;           // Output   // Packed position in Atlas
-    float           GlyphAdvanceX;  // Input    // For custom font glyphs only (ID<0x10000): glyph xadvance
-    ImVec2          GlyphOffset;    // Input    // For custom font glyphs only (ID<0x10000): glyph display offset
-    ImFont*         Font;           // Input    // For custom font glyphs only (ID<0x10000): target font
+    float           GlyphAdvanceX;  // Input    // For custom font glyphs only (ID < 0x110000): glyph xadvance
+    ImVec2          GlyphOffset;    // Input    // For custom font glyphs only (ID < 0x110000): glyph display offset
+    ImFont*         Font;           // Input    // For custom font glyphs only (ID < 0x110000): target font
     ImFontAtlasCustomRect()         { ID = 0xFFFFFFFF; Width = Height = 0; X = Y = 0xFFFF; GlyphAdvanceX = 0.0f; GlyphOffset = ImVec2(0,0); Font = NULL; }
     bool IsPacked() const           { return X != 0xFFFF; }
 };
@@ -2142,8 +2144,8 @@ struct ImFontAtlas
     // You can also request your rectangles to be mapped as font glyph (given a font + Unicode point),
     // so you can render e.g. custom colorful icons and use them as regular glyphs.
     // Read misc/fonts/README.txt for more details about using colorful icons.
-    IMGUI_API int               AddCustomRectRegular(unsigned int id, int width, int height);                                                                   // Id needs to be >= 0x10000. Id >= 0x80000000 are reserved for ImGui and ImDrawList
-    IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0,0));   // Id needs to be < 0x10000 to register a rectangle to map into a specific font.
+    IMGUI_API int               AddCustomRectRegular(unsigned int id, int width, int height);                                                                   // Id needs to be >= 0x110000. Id >= 0x80000000 are reserved for ImGui and ImDrawList
+    IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0,0));   // Id needs to be < 0x110000 to register a rectangle to map into a specific font.
     const ImFontAtlasCustomRect*GetCustomRectByIndex(int index) const { if (index < 0) return NULL; return &CustomRects[index]; }
 
     // [Internal]
