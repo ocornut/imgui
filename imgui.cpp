@@ -7391,8 +7391,7 @@ ImDrawList* ImGui::GetWindowDrawList()
 float ImGui::GetWindowDpiScale()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentViewport != NULL);
-    return g.CurrentViewport->DpiScale;
+    return g.CurrentDpiScale;
 }
 
 ImGuiViewport* ImGui::GetWindowViewport()
@@ -10253,6 +10252,7 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
         viewport->LastFrameActive = g.FrameCount;
     if (g.CurrentViewport == viewport)
         return;
+    g.CurrentDpiScale = viewport->DpiScale;
     g.CurrentViewport = viewport;
     //IMGUI_DEBUG_LOG_VIEWPORT("SetCurrentViewport changed '%s' 0x%08X\n", current_window ? current_window->Name : NULL, viewport ? viewport->ID : 0);
 
@@ -10408,6 +10408,7 @@ static void ImGui::UpdateViewportsNewFrame()
         main_viewport_platform_pos = (main_viewport->Flags & ImGuiViewportFlags_Minimized) ? main_viewport->Pos : g.PlatformIO.Platform_GetWindowPos(main_viewport);
     AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, main_viewport_platform_size, ImGuiViewportFlags_CanHostOtherWindows);
 
+    g.CurrentDpiScale = 0.0f;
     g.CurrentViewport = NULL;
     g.MouseViewport = NULL;
     for (int n = 0; n < g.Viewports.Size; n++)
