@@ -1,6 +1,10 @@
 name: build
 
-on: [push, pull_request]
+on:
+  push: {}
+  pull_request: {}
+  schedule:
+    - cron:  '0 9 * * *'
 
 jobs:
   Windows:
@@ -44,18 +48,22 @@ jobs:
       - name: Build Win32 example_glfw_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build Win32 example_glfw_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build Win32 example_sdl_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build Win32 example_sdl_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build Win32 example_sdl_opengl3
         shell: cmd
@@ -64,6 +72,7 @@ jobs:
       - name: Build Win32 example_sdl_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_directx11/example_sdl_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build Win32 example_win32_directx9
         shell: cmd
@@ -76,10 +85,12 @@ jobs:
       - name: Build Win32 example_win32_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_glfw_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_glfw_opengl3
         shell: cmd
@@ -92,14 +103,17 @@ jobs:
       - name: Build x64 example_sdl_vulkan
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_sdl_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_sdl_opengl3
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl3/example_sdl_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_sdl_directx11
         shell: cmd
@@ -108,14 +122,17 @@ jobs:
       - name: Build x64 example_win32_directx9
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_win32_directx10
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_win32_directx11
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
 
       - name: Build x64 example_win32_directx12
         shell: cmd
@@ -141,9 +158,11 @@ jobs:
 
     - name: Build example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
+      if: github.event_name == 'schedule'
 
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
+      if: github.event_name == 'schedule'
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
@@ -168,12 +187,14 @@ jobs:
 
     - name: Build example_glfw_opengl3
       run: make -C examples/example_glfw_opengl3
+      if: github.event_name == 'schedule'
 
     - name: Build example_glfw_metal
       run: make -C examples/example_glfw_metal
 
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
+      if: github.event_name == 'schedule'
 
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
