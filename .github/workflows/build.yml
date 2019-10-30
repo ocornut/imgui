@@ -25,15 +25,51 @@ jobs:
             (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
           }
 
-      - name: Build x86
-        shell: cmd
-        run: |
-          "%MSBUILD_PATH%\MSBuild.exe" /p:Platform=Win32 /p:Configuration=Release examples/imgui_examples.sln
+      # Not using matrix here because it would inflate job count too much. Check out and setup is done for every job and that makes build times way too long.
 
-      - name: Build x64
+      - name: Build Win32 example_glfw_opengl2
         shell: cmd
-        run: |
-          "%MSBUILD_PATH%\MSBuild.exe" /p:Platform=x64 /p:Configuration=Release examples/imgui_examples.sln
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_glfw_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_win32_directx9
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_win32_directx10
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_win32_directx11
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build x64 example_glfw_opengl2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_glfw_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_win32_directx9
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_win32_directx10
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_win32_directx11
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_win32_directx12
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
   Linux:
     runs-on: ubuntu-18.04
@@ -47,13 +83,20 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y libglfw3-dev libsdl2-dev
 
-    - name: Build
-      run: |
-        make -C examples/example_null
-        make -C examples/example_glfw_opengl2
-        make -C examples/example_glfw_opengl3
-        make -C examples/example_sdl_opengl2
-        make -C examples/example_sdl_opengl3
+    - name: Build example_null
+      run: make -C examples/example_null
+
+    - name: Build example_glfw_opengl2
+      run: make -C examples/example_glfw_opengl2
+
+    - name: Build example_glfw_opengl3
+      run: make -C examples/example_glfw_opengl3
+
+    - name: Build example_sdl_opengl2
+      run: make -C examples/example_sdl_opengl2
+
+    - name: Build example_sdl_opengl3
+      run: make -C examples/example_sdl_opengl3
 
   MacOS:
     runs-on: macOS-10.14
@@ -67,16 +110,29 @@ jobs:
         brew install glfw3
         brew install sdl2
 
-    - name: Build
-      run: |
-        make -C examples/example_null
-        make -C examples/example_glfw_opengl2
-        make -C examples/example_glfw_opengl3
-        make -C examples/example_glfw_metal
-        make -C examples/example_sdl_opengl2
-        make -C examples/example_sdl_opengl3
-        xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
-        xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
+    - name: Build example_null
+      run: make -C examples/example_null
+
+    - name: Build example_glfw_opengl2
+      run: make -C examples/example_glfw_opengl2
+
+    - name: Build example_glfw_opengl3
+      run: make -C examples/example_glfw_opengl3
+
+    - name: Build example_glfw_metal
+      run: make -C examples/example_glfw_metal
+
+    - name: Build example_sdl_opengl2
+      run: make -C examples/example_sdl_opengl2
+
+    - name: Build example_sdl_opengl3
+      run: make -C examples/example_sdl_opengl3
+
+    - name: Build example_apple_metal
+      run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
+
+    - name: Build example_apple_opengl2
+      run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
   iOS:
     runs-on: macOS-10.14
@@ -85,7 +141,7 @@ jobs:
       with:
         fetch-depth: 1
 
-    - name: Build
+    - name: Build example_apple_metal
       run: |
         # Code signing is required, but we disable it because it is irrelevant for CI builds.
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
@@ -105,7 +161,7 @@ jobs:
         emsdk-portable/emsdk install latest
         emsdk-portable/emsdk activate latest
 
-    - name: Build
+    - name: Build example_emscripten
       run: |
         source emsdk-portable/emsdk_env.sh
         make -C examples/example_emscripten
