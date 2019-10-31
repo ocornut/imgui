@@ -9762,7 +9762,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     NodeColumns(&window->ColumnsStorage[n]);
                 ImGui::TreePop();
             }
-            ImGui::BulletText("Storage: %d bytes", window->StateStorage.Data.size_in_bytes());
+            NodeStorage(&window->StateStorage, "Storage");
             ImGui::TreePop();
         }
 
@@ -9786,6 +9786,18 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 }
                 ImGui::TreePop();
             }
+        }
+
+        static void NodeStorage(ImGuiStorage* storage, const char* label)
+        {
+            if (!ImGui::TreeNode(label, "%s: %d entries, %d bytes", label, storage->Data.Size, storage->Data.size_in_bytes()))
+                return;
+            for (int n = 0; n < storage->Data.Size; n++)
+            {
+                const ImGuiStorage::ImGuiStoragePair& p = storage->Data[n];
+                ImGui::BulletText("Key 0x%08X Value { i: %d }", p.key, p.val_i); // Important: we currently don't store a type, real value may not be integer.
+            }
+            ImGui::TreePop();
         }
     };
 
