@@ -226,13 +226,13 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        wget -q https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
-        tar -xvf emsdk-portable.tar.gz
-        emsdk-portable/emsdk update
-        emsdk-portable/emsdk install latest
-        emsdk-portable/emsdk activate latest
+        wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
+        tar -xvf master.tar.gz
+        emsdk-master/emsdk update
+        emsdk-master/emsdk install latest-fastcomp
+        emsdk-master/emsdk activate latest-fastcomp
 
     - name: Build example_emscripten
       run: |
-        source emsdk-portable/emsdk_env.sh
+        source emsdk-master/emsdk_env.sh
         make -C examples/example_emscripten
