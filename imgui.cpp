@@ -15485,6 +15485,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::BulletText("Viewport: %d%s, ViewportId: 0x%08X, ViewportPos: (%.1f,%.1f)", window->Viewport ? window->Viewport->Idx : -1, window->ViewportOwned ? " (Owned)" : "", window->ViewportId, window->ViewportPos.x, window->ViewportPos.y);
             ImGui::BulletText("ViewportMonitor: %d", window->Viewport ? window->Viewport->PlatformMonitor : -1);
             ImGui::BulletText("DockId: 0x%04X, DockOrder: %d, Act: %d, Vis: %d", window->DockId, window->DockOrder, window->DockIsActive, window->DockTabIsVisible);
+            ImGui::BulletText("CursorStartPos: %.2f %.2f", window->DC.CursorStartPos.x, window->DC.CursorStartPos.y);
+            ImGui::BulletText("CursorMaxPos: %.2f %.2f", window->DC.CursorMaxPos.x, window->DC.CursorMaxPos.y);
             if (window->DockNode || window->DockNodeAsHost)
                 NodeDockNode(window->DockNodeAsHost ? window->DockNodeAsHost : window->DockNode, window->DockNodeAsHost ? "DockNodeAsHost" : "DockNode");
             if (window->RootWindow != window) NodeWindow(window->RootWindow, "RootWindow");
