@@ -3809,8 +3809,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.PrivateClipboard.clear();
     g.InputTextState.ClearFreeMemory();
 
-    for (int i = 0; i < g.SettingsWindows.Size; i++)
-        IM_DELETE(g.SettingsWindows[i].Name);
+    g.SettingsWindowsNames.clear();
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
 
@@ -9205,8 +9204,10 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(const char* name)
     if (const char* p = strstr(name, "###"))
         name = p;
 #endif
-    settings->Name = ImStrdup(name);
-    settings->ID = ImHashStr(name);
+    size_t name_len = strlen(name);
+    settings->NameOffset = g.SettingsWindowsNames.size();
+    g.SettingsWindowsNames.append(name, name + name_len + 1); // Append with zero terminator
+    settings->ID = ImHashStr(name, name_len);
     return settings;
 }
 
@@ -9387,7 +9388,8 @@ static void SettingsHandlerWindow_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
     for (int i = 0; i != g.SettingsWindows.Size; i++)
     {
         const ImGuiWindowSettings* settings = &g.SettingsWindows[i];
-        buf->appendf("[%s][%s]\n", handler->TypeName, settings->Name);
+        const char* settings_name = g.SettingsWindowsNames.c_str() + settings->NameOffset;
+        buf->appendf("[%s][%s]\n", handler->TypeName, settings_name);
         buf->appendf("Pos=%d,%d\n", settings->Pos.x, settings->Pos.y);
         buf->appendf("Size=%d,%d\n", settings->Size.x, settings->Size.y);
         buf->appendf("Collapsed=%d\n", settings->Collapsed);

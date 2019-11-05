@@ -662,15 +662,16 @@ struct IMGUI_API ImGuiInputTextState
 };
 
 // Windows data saved in imgui.ini file
+// Because we never destroy or rename ImGuiWindowSettings, we can store the names in a separate buffer easily.
 struct ImGuiWindowSettings
 {
-    char*       Name;
+    int         NameOffset;     // Offset into SettingsWindowNames[]
     ImGuiID     ID;
     ImVec2ih    Pos;
     ImVec2ih    Size;
     bool        Collapsed;
 
-    ImGuiWindowSettings() { Name = NULL; ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = false; }
+    ImGuiWindowSettings()       { NameOffset = -1; ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = false; }
 };
 
 struct ImGuiSettingsHandler
@@ -1039,6 +1040,7 @@ struct ImGuiContext
     ImGuiTextBuffer                SettingsIniData;             // In memory .ini settings
     ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
     ImVector<ImGuiWindowSettings>  SettingsWindows;             // ImGuiWindow .ini settings entries (parsed from the last loaded .ini file and maintained on saving)
+    ImGuiTextBuffer                SettingsWindowsNames;        // Names for SettingsWindows
 
     // Logging
     bool                    LogEnabled;
