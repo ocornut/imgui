@@ -3024,6 +3024,7 @@ void ImGui::SetActiveID(ImGuiID id, ImGuiWindow* window)
     }
     g.ActiveId = id;
     g.ActiveIdAllowOverlap = false;
+    g.ActiveIdBlockScrolling = false;
     g.ActiveIdWindow = window;
     g.ActiveIdHasBeenEditedThisFrame = false;
     if (id)
@@ -3049,6 +3050,7 @@ void ImGui::SetHoveredID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     g.HoveredId = id;
     g.HoveredIdAllowOverlap = false;
+    g.HoveredIdBlockScrolling = false;
     if (id != 0 && g.HoveredIdPreviousFrame != id)
         g.HoveredIdTimer = g.HoveredIdNotActiveTimer = 0.0f;
 }
@@ -3567,6 +3569,9 @@ void ImGui::UpdateMouseWheel()
     if (g.IO.MouseWheel == 0.0f && g.IO.MouseWheelH == 0.0f)
         return;
 
+    if ((g.ActiveIdBlockScrolling && g.ActiveId == g.HoveredIdPreviousFrame) || g.HoveredIdBlockScrolling)
+        return;
+
     ImGuiWindow* window = g.WheelingWindow ? g.WheelingWindow : g.HoveredWindow;
     if (!window || window->Collapsed)
         return;
@@ -3799,6 +3804,7 @@ void ImGui::NewFrame()
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
+    g.HoveredIdBlockScrolling = false;
 
     // Update ActiveId data (clear reference to active widget if the widget isn't alive anymore)
     if (g.ActiveIdIsAlive != g.ActiveId && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)
@@ -4707,6 +4713,15 @@ void ImGui::SetItemAllowOverlap()
         g.HoveredIdAllowOverlap = true;
     if (g.ActiveId == g.CurrentWindow->DC.LastItemId)
         g.ActiveIdAllowOverlap = true;
+}
+
+void ImGui::SetItemBlocksScrolling()
+{
+    ImGuiContext& g = *GImGui;
+    if (g.HoveredId == g.CurrentWindow->DC.LastItemId)
+        g.HoveredIdBlockScrolling = true;
+    if (g.ActiveId == g.CurrentWindow->DC.LastItemId)
+        g.ActiveIdBlockScrolling = true;
 }
 
 ImVec2 ImGui::GetItemRectMin()
