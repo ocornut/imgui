@@ -128,6 +128,7 @@ struct ImGuiWindowSettings;         // Storage for a window .ini settings (we ke
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
+typedef int ImGuiTextResetType;         // -> enum ImGuiTextResetType_      // Enum: To control cursor behavior when performing text reinitialization
 typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag()
 typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for DC.LastItemStatusFlags
 typedef int ImGuiOldColumnFlags;        // -> enum ImGuiOldColumnFlags_     // Flags: for BeginColumns()
@@ -783,6 +784,15 @@ enum ImGuiTextFlags_
     ImGuiTextFlags_NoWidthForLargeClippedText = 1 << 0
 };
 
+enum ImGuiTextResetType_
+{
+    ImGuiTextResetType_None                = 0,
+    ImGuiTextResetType_KeepSelection       = 1,            // Attempt to keep the same selected character from before the reset
+    ImGuiTextResetType_SelectAll           = 2,
+    ImGuiTextResetType_MoveCursorToStart   = 3,
+    ImGuiTextResetType_MoveCursorToEnd     = 4
+};
+
 enum ImGuiTooltipFlags_
 {
     ImGuiTooltipFlags_None = 0,
@@ -976,6 +986,7 @@ struct IMGUI_API ImGuiInputTextState
     bool                    CursorFollow;           // set when we want scrolling to follow the current cursor position (not always!)
     bool                    SelectedAllMouseLock;   // after a double-click to select all, we ignore further mouse drags to update selection
     bool                    Edited;                 // edited this frame
+    ImGuiTextResetType      ResetType;              // Force text input to reset its state from the source data next update;
     ImGuiInputTextFlags     UserFlags;              // Temporarily set while we call user's callback
     ImGuiInputTextCallback  UserCallback;           // "
     void*                   UserCallbackData;       // "

@@ -3925,6 +3925,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
     // We are only allowed to access the state if we are already the active widget.
     ImGuiInputTextState* state = GetInputTextState(id);
+    const ImGuiTextResetType reset_type = state != NULL ? state->ResetType : ImGuiTextResetType_None;
 
     const bool focus_requested = FocusableItemRegister(window, id);
     const bool focus_requested_by_code = focus_requested && (g.FocusRequestCurrWindow == window && g.FocusRequestCurrCounterRegular == window->DC.FocusCounterRegular);
@@ -3943,11 +3944,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     const bool init_changed_specs = (state != NULL && state->Stb.single_line != !is_multiline);
     const bool init_make_active = (focus_requested || user_clicked || user_scroll_finish || user_nav_input_start);
     const bool init_state = (init_make_active || user_scroll_active);
-    if ((init_state && g.ActiveId != id) || init_changed_specs)
+    if ((init_state && g.ActiveId != id) || init_changed_specs || reset_type != ImGuiTextResetType_None)
     {
         // Access state even if we don't own it yet.
         state = &g.InputTextState;
         state->CursorAnimReset();
+        state->ResetType = ImGuiTextResetType_None;
 
         // Take a copy of the initial buffer value (both in original UTF-8 format and converted to wchar)
         // From the moment we focused we are ignoring the content of 'buf' (unless we are in read-only mode)
@@ -3965,7 +3967,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
         // Preserve cursor position and undo/redo stack if we come back to same widget
         // FIXME: For non-readonly widgets we might be able to require that TextAIsValid && TextA == buf ? (untested) and discard undo stack if user buffer has changed.
-        const bool recycle_state = (state->ID == id && !init_changed_specs);
+        const bool recycle_state = (state->ID == id && !init_changed_specs && reset_type == ImGuiTextResetType_None);
         if (recycle_state)
         {
             // Recycle existing cursor/selection/undo stack but clamp position
@@ -3976,9 +3978,37 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         {
             state->ID = id;
             state->ScrollX = 0.0f;
+
+            const int last_cursor = state->Stb.cursor;
+            const int last_select_start = state->Stb.select_start;
+            const int last_select_end = state->Stb.select_end;
+
             stb_textedit_initialize_state(&state->Stb, !is_multiline);
-            if (!is_multiline && focus_requested_by_code)
+
+            switch (reset_type)
+            {
+            case ImGuiTextResetType_None:
+                if (!is_multiline && focus_requested_by_code)
+                    select_all = true;
+                break;
+            case ImGuiTextResetType_KeepSelection:
+                state->Stb.cursor = last_cursor;
+                state->Stb.select_start = last_select_start;
+                state->Stb.select_end = last_select_end;
+                state->CursorClamp();
+                break;
+            case ImGuiTextResetType_SelectAll:
                 select_all = true;
+                break;
+            case ImGuiTextResetType_MoveCursorToStart:
+                state->Stb.cursor = 0;
+                state->ClearSelection();
+                break;
+            case ImGuiTextResetType_MoveCursorToEnd:
+                state->Stb.cursor = state->CurLenW;
+                state->ClearSelection();
+                break;
+            }
         }
         if (flags & ImGuiInputTextFlags_AlwaysOverwrite)
             state->Stb.insert_mode = 1; // stb field name is indeed incorrect (see #2863)
