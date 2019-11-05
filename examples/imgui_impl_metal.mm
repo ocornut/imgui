@@ -23,7 +23,22 @@
 #include "imgui_impl_metal.h"
 
 #import <Metal/Metal.h>
+#if TARGET_OS_SIMULATOR == 0 || __IPHONE_13_0
 #import <QuartzCore/CAMetalLayer.h>
+#else
+// Compatible for Xcode version below 12.X
+#import <QuartzCore/CALayer.h>
+@protocol CAMetalDrawable <MTLDrawable>
+@property(readonly) id<MTLTexture> texture;
+@end
+@interface CAMetalLayer : CALayer
+@property(nullable, retain) id<MTLDevice> device;
+@property MTLPixelFormat pixelFormat;
+@property BOOL framebufferOnly;
+@property CGSize drawableSize;
+- (nullable id<CAMetalDrawable>)nextDrawable;
+@end
+#endif
 #import <simd/simd.h>
 #if TARGET_OS_OSX
 #import <Cocoa/Cocoa.h>
