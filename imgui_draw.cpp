@@ -1937,7 +1937,7 @@ void ImFontAtlas::CreatePerDpiFonts()
 
     // Clone initial list of fonts for DPIs ranging 1..N.
     const int total_configs = ConfigData.Size;    // Variables used there because these structures expand during
-    const int total_fonts = Fonts.Size;           // following loop and we only need to iterate initial list of 
+    const int total_fonts = Fonts.Size;           // following loop and we only need to iterate initial list of
                                                   // fonts/configs.
     // Duplicate fonts for each dpi
     for (int dpi_index = 1; dpi_index < dpi_set.Size; dpi_index++)
@@ -1948,7 +1948,7 @@ void ImFontAtlas::CreatePerDpiFonts()
         {
             ImFont* src_font = Fonts[font_index];
             ImFontConfig config = ConfigData[config_index];
-            config.SizePixels *= dpi;
+            config.SizePixels = IM_ROUND(config.SizePixels * dpi);
             config.FontDataOwnedByAtlas = false;
             if (dpi > 1.f)
             {
@@ -1981,7 +1981,7 @@ void ImFontAtlas::CreatePerDpiFonts()
     // Upscale first font for the first DPI.
     const float dpi = dpi_set[0];
     Fonts[0]->DpiScale = dpi;
-    ConfigData[0].SizePixels *= dpi;
+    ConfigData[0].SizePixels = IM_ROUND(ConfigData[0].SizePixels * dpi);
     if (dpi > 1.f)
     {
         int end = strlen(ConfigData[0].Name);
@@ -2284,8 +2284,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&src_tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
-        const float ascent = ImFloor(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
-        const float descent = ImFloor(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
+        const float ascent = IM_FLOOR(unscaled_ascent * font_scale + ((unscaled_ascent > 0.0f) ? +1 : -1));
+        const float descent = IM_FLOOR(unscaled_descent * font_scale + ((unscaled_descent > 0.0f) ? +1 : -1));
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         const float font_off_x = cfg.GlyphOffset.x;
         const float font_off_y = cfg.GlyphOffset.y + IM_ROUND(dst_font->Ascent);
@@ -2843,7 +2843,7 @@ void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1,
     glyph.AdvanceX = advance_x + ConfigData->GlyphExtraSpacing.x;  // Bake spacing into AdvanceX
 
     if (ConfigData->PixelSnapH)
-        glyph.AdvanceX = IM_ROUND(glyph.AdvanceX);
+        glyph.AdvanceX = ImRound(glyph.AdvanceX);
 
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
     DirtyLookupTables = true;
@@ -3084,8 +3084,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (!glyph || !glyph->Visible)
         return;
     float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
-    pos.x = IM_FLOOR(pos.x + DisplayOffset.x);
-    pos.y = IM_FLOOR(pos.y + DisplayOffset.y);
+    pos.x = ImRound(pos.x + DisplayOffset.x);
+    pos.y = ImRound(pos.y + DisplayOffset.y);
     draw_list->PrimReserve(6, 4);
     draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
@@ -3096,8 +3096,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
 
     // Align to be pixel perfect
-    pos.x = IM_FLOOR(pos.x + DisplayOffset.x);
-    pos.y = IM_FLOOR(pos.y + DisplayOffset.y);
+    pos.x = ImRound(pos.x + DisplayOffset.x);
+    pos.y = ImRound(pos.y + DisplayOffset.y);
     float x = pos.x;
     float y = pos.y;
     if (y > clip_rect.w)

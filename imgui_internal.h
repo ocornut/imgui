@@ -198,7 +198,23 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
 #define IM_FLOOR(_VAL)                  ((float)(int)(_VAL))                                    // ImFloor() is not inlined in MSVC debug builds
-#define IM_ROUND(_VAL)                  ((float)(int)((_VAL) + 0.5f))                           //
+#define IM_ROUND(_VAL)                  ((float)(int)((_VAL) + ((_VAL) < 0 ? -0.501f : 0.501f)))
+// This rounding function contains a workaround for an edgecase where we may round incorrectly due to floating point
+// imprecision. Consider a following situation:
+//   float dpi = 1.13440943f;
+//   float f = 885.482727f;
+//
+// Upscaling value to size on physical screen yields almost 1005, however it will be rounded down by (float)(int)f method.
+//   f * dpi = 1004.49994
+// Adding 0.001f to upscaled value essentially achieves rounding by fractional part by 3 decimal points before adding
+// 0.5f flooring and flooring resulting number by casting it to integer.
+//   f * dpi + 0.001f = 1004.50092
+//
+// These are rounding results we get with and without rounding fix:
+//   IM_ROUND(f * dpi)          / dpi = 885.04199
+//   IM_ROUND(f * dpi + 0.001f) / dpi = 885.92352
+// Difference is rather big, which is enough to introduce shaking of UI elements in rare conditions. However this
+// issue is non-deterministic (thanks float!) therefore catching it in action may take several attempts.
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
 #ifdef _MSC_VER
@@ -350,8 +366,10 @@ static inline float  ImSaturate(float f)                                        
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / ImSqrt(d); return fail_value; }
-static inline float  ImFloor(float f)                                           { return (float)(int)(f); }
-static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2((float)(int)(v.x), (float)(int)(v.y)); }
+static inline float  ImFloor(float v);
+static inline float  ImRound(float v);
+static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2(ImFloor(v.x), ImFloor(v.y)); }
+static inline ImVec2 ImRound(const ImVec2& v)                                   { return ImVec2(ImRound(v.x), ImRound(v.y)); }
 static inline int    ImModPositive(int a, int b)                                { return (a + b) % b; }
 static inline float  ImDot(const ImVec2& a, const ImVec2& b)                    { return a.x * b.x + a.y * b.y; }
 static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        { return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a); }
@@ -726,7 +744,7 @@ struct IMGUI_API ImRect
     void        TranslateY(float dy)                { Min.y += dy; Max.y += dy; }
     void        ClipWith(const ImRect& r)           { Min = ImMax(Min, r.Min); Max = ImMin(Max, r.Max); }                   // Simple version, may lead to an inverted rectangle, which is fine for Contains/Overlaps test but not for display.
     void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
-    void        Floor()                             { Min.x = IM_FLOOR(Min.x); Min.y = IM_FLOOR(Min.y); Max.x = IM_FLOOR(Max.x); Max.y = IM_FLOOR(Max.y); }
+    void        Floor()                             { Min.x = ImFloor(Min.x); Min.y = ImFloor(Min.y); Max.x = ImFloor(Max.x); Max.y = ImFloor(Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
 };
 #ifdef IMGUI_DEFINE_MATH_OPERATORS
@@ -1264,6 +1282,7 @@ struct ImGuiContext
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (always 1+, and generally 1 unless multi-viewports are enabled). Each viewports hold their copy of ImDrawData.
     float                   CurrentDpiScale;                    // == CurrentViewport->DpiScale
+    float                   CurrentDpiScaleInverse;             // == 1.f / CurrentViewport->DpiScale
     ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
     ImGuiViewportP*         MouseViewport;
     ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more) + honoring the _NoInputs flag.
@@ -1466,7 +1485,8 @@ struct ImGuiContext
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
 
-        CurrentDpiScale = 0.0f;
+        CurrentDpiScale = 1.0f;
+        CurrentDpiScaleInverse = 1.0f;
         CurrentViewport = NULL;
         MouseViewport = MouseLastHoveredViewport = NULL;
         PlatformLastFocusedViewport = 0;
@@ -2200,6 +2220,16 @@ IMGUI_API void              ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, 
 IMGUI_API void              ImFontAtlasBuildFinish(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
 IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
+
+static inline float ImFloor(float f)
+{
+    return IM_FLOOR(f * GImGui->CurrentDpiScale) * GImGui->CurrentDpiScaleInverse;
+}
+
+static inline float ImRound(float f)
+{
+    return IM_ROUND(f * GImGui->CurrentDpiScale) * GImGui->CurrentDpiScaleInverse;
+}
 
 // Debug Tools
 // Use 'Metrics->Tools->Item Picker' to break into the call-stack of a specific item.
