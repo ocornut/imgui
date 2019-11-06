@@ -64,6 +64,7 @@ Index of this file:
 // Forward declarations
 //-----------------------------------------------------------------------------
 
+struct ImBoolVector;                // Store 1-bit per value
 struct ImRect;                      // An axis-aligned rectangle (2 points)
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
@@ -87,6 +88,7 @@ struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame)
 struct ImGuiWindowSettings;         // Storage for window settings stored in .ini file (we keep one of those even if the actual window wasn't instanced during this session)
+template<typename T> struct ImPool; // Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
@@ -133,7 +135,19 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 //-----------------------------------------------------------------------------
 // Generic helpers
 //-----------------------------------------------------------------------------
+// - Macros
+// - Helpers: Misc
+// - Helpers: Bit manipulation
+// - Helpers: Geometry
+// - Helpers: String, Formatting
+// - Helpers: UTF-8 <> wchar conversions
+// - Helpers: ImVec2/ImVec4 operators
+// - Helpers: Maths
+// - Helper: ImBoolVector
+// - Helper: ImPool<>
+//-----------------------------------------------------------------------------
 
+// Macros
 #define IM_PI           3.14159265358979323846f
 #ifdef _WIN32
 #define IM_NEWLINE      "\r\n"   // Play it nice with Windows users (2018/05 news: Microsoft announced that Notepad will finally display Unix-style carriage returns!)
@@ -159,27 +173,19 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IMGUI_CDECL
 #endif
 
-// Helpers: UTF-8 <> wchar
-IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
-IMGUI_API int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // read one character. return input UTF-8 bytes count
-IMGUI_API int           ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
-IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
-IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end);                        // return number of bytes to express one char in UTF-8
-IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string in UTF-8
-
 // Helpers: Misc
-IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
-IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
 IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 IMGUI_API FILE*         ImFileOpen(const char* filename, const char* file_open_mode);
-static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
-static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
-static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
-static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 #define ImQsort         qsort
+IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
+IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 static inline ImU32     ImHash(const void* data, int size, ImU32 seed = 0) { return size ? ImHashData(data, (size_t)size, seed) : ImHashStr((const char*)data, 0, seed); } // [moved to ImHashStr/ImHashData in 1.68]
 #endif
+
+// Helpers: Bit manipulation
+static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
+static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: Geometry
 IMGUI_API ImVec2        ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p);
@@ -188,7 +194,7 @@ IMGUI_API ImVec2        ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b,
 IMGUI_API void          ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w);
 IMGUI_API ImGuiDir      ImGetDirQuadrantFromDelta(float dx, float dy);
 
-// Helpers: String
+// Helpers: String, Formatting
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);
 IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);
@@ -206,6 +212,16 @@ IMGUI_API const char*   ImParseFormatFindStart(const char* format);
 IMGUI_API const char*   ImParseFormatFindEnd(const char* format);
 IMGUI_API const char*   ImParseFormatTrimDecorations(const char* format, char* buf, size_t buf_size);
 IMGUI_API int           ImParseFormatPrecision(const char* format, int default_value);
+static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
+static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
+
+// Helpers: UTF-8 <> wchar conversions
+IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
+IMGUI_API int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // read one character. return input UTF-8 bytes count
+IMGUI_API int           ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
+IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end);                        // return number of bytes to express one char in UTF-8
+IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string in UTF-8
 
 // Helpers: ImVec2/ImVec4 operators
 // We are keeping those disabled by default so they don't leak in user space, to allow user enabling implicit cast operators between ImVec2 and their own types (using IM_VEC2_CLASS_EXTRA etc.)
@@ -271,9 +287,9 @@ static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        
 static inline float  ImLinearSweep(float current, float target, float speed)    { if (current < target) return ImMin(current + speed, target); if (current > target) return ImMax(current - speed, target); return current; }
 static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 
-// Helper: ImBoolVector. Store 1-bit per value.
-// Note that Resize() currently clears the whole vector.
-struct ImBoolVector
+// Helper: ImBoolVector
+// Store 1-bit per value. Note that Resize() currently clears the whole vector.
+struct IMGUI_API ImBoolVector
 {
     ImVector<int>   Storage;
     ImBoolVector()  { }
@@ -283,7 +299,8 @@ struct ImBoolVector
     void            SetBit(int n, bool v)   { int off = (n >> 5); int mask = 1 << (n & 31); if (v) Storage[off] |= mask; else Storage[off] &= ~mask; }
 };
 
-// Helper: ImPool<>. Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot buffer,
+// Helper: ImPool<>
+// Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot buffer,
 // Honor constructor/destructor. Add/remove invalidate all pointers. Indexes have the same lifetime as the associated object.
 typedef int ImPoolIdx;
 template<typename T>
