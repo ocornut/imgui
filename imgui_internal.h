@@ -88,7 +88,6 @@ struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame)
 struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
-template<typename T> struct ImPool; // Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
@@ -145,6 +144,7 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 // - Helpers: Maths
 // - Helper: ImBoolVector
 // - Helper: ImPool<>
+// - Helper: ImChunkStream<>
 //-----------------------------------------------------------------------------
 
 // Macros
@@ -324,6 +324,28 @@ struct IMGUI_API ImPool
     void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *(int*)&Buf[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); }
     void        Reserve(int capacity)               { Buf.reserve(capacity); Map.Data.reserve(capacity); }
     int         GetSize() const                     { return Buf.Size; }
+};
+
+// Helper: ImChunkStream<>
+// Build and iterate a contiguous stream of variable-sized structures.
+// This is used by Settings to store persistent data while reducing allocation count.
+// We store the chunk size first, and align the final size on 4 bytes boundaries (this what the '(X + 3) & ~3' statement is for)
+// The tedious/zealous amount of casting is to avoid -Wcast-align warnings.
+template<typename T>
+struct IMGUI_API ImChunkStream
+{
+    ImVector<char>  Buf;
+
+    void    clear()                     { Buf.clear(); }
+    bool    empty() const               { return Buf.Size == 0; }
+    int     size() const                { return Buf.Size; }
+    T*      alloc_chunk(size_t sz)      { size_t HDR_SZ = 4; sz = ((HDR_SZ + sz) + 3u) & ~3u; int off = Buf.Size; Buf.resize(off + (int)sz); ((int*)(void*)(Buf.Data + off))[0] = (int)sz; return (T*)(void*)(Buf.Data + off + (int)HDR_SZ); }
+    T*      begin()                     { size_t HDR_SZ = 4; if (!Buf.Data) return NULL; return (T*)(void*)(Buf.Data + HDR_SZ); }
+    T*      next_chunk(T* p)            { size_t HDR_SZ = 4; IM_ASSERT(p >= begin() && p < end()); p = (T*)(void*)((char*)(void*)p + chunk_size(p)); if (p == (T*)(void*)((char*)end() + HDR_SZ)) return (T*)0; IM_ASSERT(p < end()); return p; }
+    int     chunk_size(const T* p)      { return ((const int*)p)[-1]; }
+    T*      end()                       { return (T*)(void*)(Buf.Data + Buf.Size); }
+    int     offset_from_ptr(const T* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = (const char*)p - Buf.Data; return (int)off; }
+    T*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return (T*)(void*)(Buf.Data + off); }
 };
 
 //-----------------------------------------------------------------------------
@@ -681,15 +703,16 @@ struct IMGUI_API ImGuiInputTextState
 
 // Windows data saved in imgui.ini file
 // Because we never destroy or rename ImGuiWindowSettings, we can store the names in a separate buffer easily.
+// (this is designed to be stored in a ImChunkStream buffer, with the variable-length Name following our structure)
 struct ImGuiWindowSettings
 {
-    int         NameOffset;     // Offset into SettingsWindowNames[]
     ImGuiID     ID;
     ImVec2ih    Pos;
     ImVec2ih    Size;
     bool        Collapsed;
 
-    ImGuiWindowSettings()       { NameOffset = -1; ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = false; }
+    ImGuiWindowSettings()       { ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = false; }
+    char* GetName()             { return (char*)(this + 1); }
 };
 
 struct ImGuiSettingsHandler
@@ -1053,12 +1076,11 @@ struct ImGuiContext
     ImVec2                  PlatformImeLastPos;
 
     // Settings
-    bool                           SettingsLoaded;
-    float                          SettingsDirtyTimer;          // Save .ini Settings to memory when time reaches zero
-    ImGuiTextBuffer                SettingsIniData;             // In memory .ini settings
-    ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
-    ImVector<ImGuiWindowSettings>  SettingsWindows;             // ImGuiWindow .ini settings entries (parsed from the last loaded .ini file and maintained on saving)
-    ImGuiTextBuffer                SettingsWindowsNames;        // Names for SettingsWindows
+    bool                    SettingsLoaded;
+    float                   SettingsDirtyTimer;                 // Save .ini Settings to memory when time reaches zero
+    ImGuiTextBuffer         SettingsIniData;                    // In memory .ini settings
+    ImVector<ImGuiSettingsHandler>      SettingsHandlers;       // List of .ini settings handlers
+    ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
 
     // Logging
     bool                    LogEnabled;
@@ -1369,7 +1391,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumns>  ColumnsStorage;
     float                   FontWindowScale;                    // User scale multiplier per-window, via SetWindowFontScale()
-    int                     SettingsIdx;                        // Index into SettingsWindow[] (indices are always valid as we only grow the array from the back)
+    int                     SettingsOffset;                     // Offset into SettingsWindows[] (offsets are always valid as we only grow the array from the back)
 
     ImDrawList*             DrawList;                           // == &DrawListInst (for backward compatibility reason with code using imgui_internal.h we keep this a pointer)
     ImDrawList              DrawListInst;
