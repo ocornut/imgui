@@ -63,6 +63,8 @@ Other Changes:
   multi-line label and no frame padding, such as: multi-line text, small button, tree node item, etc.
   The second item was correctly offset to match text baseline, and would interact/display correctly,
   but it wouldn't push the contents area boundary low enough.
+- Scrollbar: Fixed an issue where scrollbars wouldn't display on the frame following a frame where
+  all child window contents would be culled.
 - ColorPicker: Fixed SV triangle gradient to block (broken in 1.73). (#2864, #2711). [@lewa-j]
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
