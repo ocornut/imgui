@@ -135,8 +135,13 @@ Other Changes:
 - ColorPicker: Fixed SV triangle gradient to block (broken in 1.73). (#2864, #2711). [@lewa-j]
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
+- TreeNode: The collapsing arrow accepts click even if modifier keys are being held, facilitating
+  interactions with custom multi-selections patterns. (#2886, #1896, #1861)
+- TreeNode: Added IsItemToggledOpen() to explicitly query if item was just open/closed, facilitating
+  interactions with custom multi-selections patterns. (#1896, #1861)
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
   to clarify how they are used, and more comments redirecting to the demo code. (#2844)
+- Misc: Optimized storage of window settings data (reducing allocation count).
 - Misc: Windows: Do not use _wfopen() if IMGUI_DISABLE_WIN32_FUNCTIONS is defined. (#2815)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
@@ -144,6 +149,8 @@ Other Changes:
 - Metrics: Expose basic details of each window key/value state storage.
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
 - Examples: Emscripten: Removed NO_FILESYSTEM from Makefile, seems to fail on some setup. (#2734) [@Funto]
+- Examples: Emscripten: Removed BINARYEN_TRAP_MODE=clamp from Makefile which was removed in Emscripten 1.39.0
+  but required prior to 1.39.0, making life easier for absolutely no-one. (#2877, #2878) [@podsvirov]
 - Backends: OpenGL3: Fix building with pre-3.2 GL loaders which do not expose glDrawElementsBaseVertex(),
   using runtime GL version to decide if we set ImGuiBackendFlags_RendererHasVtxOffset. (#2866, #2852) [@dpilawa]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]

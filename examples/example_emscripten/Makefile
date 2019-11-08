@@ -22,9 +22,11 @@ OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
 EMS = -s USE_SDL=2 -s WASM=1
-EMS += -s ALLOW_MEMORY_GROWTH=1 -s BINARYEN_TRAP_MODE=clamp
+EMS += -s ALLOW_MEMORY_GROWTH=1
 EMS += -s DISABLE_EXCEPTION_CATCHING=1 -s NO_EXIT_RUNTIME=0
 EMS += -s ASSERTIONS=1
+# Uncomment next line to fix possible rendering bugs with emscripten version older then 1.39.0 (https://github.com/ocornut/imgui/issues/2877)
+#EMS += -s BINARYEN_TRAP_MODE=clamp
 #EMS += -s NO_FILESYSTEM=1 ## Getting "error: undefined symbol: $FS" if filesystem is removed
 #EMS += -s SAFE_HEAP=1    ## Adds overhead
 

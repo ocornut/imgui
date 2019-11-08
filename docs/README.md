@@ -214,6 +214,10 @@ Ongoing Dear ImGui development is financially supported by users and private spo
 And all other past and present supporters; THANK YOU!
 (Please contact me if you would like to be added or removed from this list)
 
+Dear ImGui is using software and services kindly provided free of charge for open source projects:
+- [PVS-Studio](https://www.viva64.com/en/b/0570/) for static analysis.
+- [GitHub actions](https://github.com/features/actions) for continuous integration systems.
+
 Credits
 -------
 

@@ -64,6 +64,7 @@ Index of this file:
 // Forward declarations
 //-----------------------------------------------------------------------------
 
+struct ImBoolVector;                // Store 1-bit per value
 struct ImRect;                      // An axis-aligned rectangle (2 points)
 struct ImDrawDataBuilder;           // Helper to build a ImDrawData instance
 struct ImDrawListSharedData;        // Data shared between all ImDrawList instances
@@ -89,7 +90,7 @@ struct ImGuiTabBar;                 // Storage for a tab bar
 struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame)
-struct ImGuiWindowSettings;         // Storage for window settings stored in .ini file (we keep one of those even if the actual window wasn't instanced during this session)
+struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiDataAuthority;         // -> enum ImGuiDataAuthority_      // Enum: for storing the source authority (dock node vs window) of a field
@@ -140,7 +141,20 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 //-----------------------------------------------------------------------------
 // Generic helpers
 //-----------------------------------------------------------------------------
+// - Macros
+// - Helpers: Misc
+// - Helpers: Bit manipulation
+// - Helpers: Geometry
+// - Helpers: String, Formatting
+// - Helpers: UTF-8 <> wchar conversions
+// - Helpers: ImVec2/ImVec4 operators
+// - Helpers: Maths
+// - Helper: ImBoolVector
+// - Helper: ImPool<>
+// - Helper: ImChunkStream<>
+//-----------------------------------------------------------------------------
 
+// Macros
 #define IM_PI           3.14159265358979323846f
 #ifdef _WIN32
 #define IM_NEWLINE      "\r\n"   // Play it nice with Windows users (2018/05 news: Microsoft announced that Notepad will finally display Unix-style carriage returns!)
@@ -170,27 +184,19 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IMGUI_CDECL
 #endif
 
-// Helpers: UTF-8 <> wchar
-IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
-IMGUI_API int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // read one character. return input UTF-8 bytes count
-IMGUI_API int           ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
-IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
-IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end);                        // return number of bytes to express one char in UTF-8
-IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string in UTF-8
-
 // Helpers: Misc
-IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
-IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
 IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 IMGUI_API FILE*         ImFileOpen(const char* filename, const char* file_open_mode);
-static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
-static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
-static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
-static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 #define ImQsort         qsort
+IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
+IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 static inline ImU32     ImHash(const void* data, int size, ImU32 seed = 0) { return size ? ImHashData(data, (size_t)size, seed) : ImHashStr((const char*)data, 0, seed); } // [moved to ImHashStr/ImHashData in 1.68]
 #endif
+
+// Helpers: Bit manipulation
+static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
+static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: Geometry
 IMGUI_API ImVec2        ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p);
@@ -199,7 +205,7 @@ IMGUI_API ImVec2        ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b,
 IMGUI_API void          ImTriangleBarycentricCoords(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p, float& out_u, float& out_v, float& out_w);
 IMGUI_API ImGuiDir      ImGetDirQuadrantFromDelta(float dx, float dy);
 
-// Helpers: String
+// Helpers: String, Formatting
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);
 IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);
@@ -218,6 +224,16 @@ IMGUI_API const char*   ImParseFormatFindStart(const char* format);
 IMGUI_API const char*   ImParseFormatFindEnd(const char* format);
 IMGUI_API const char*   ImParseFormatTrimDecorations(const char* format, char* buf, size_t buf_size);
 IMGUI_API int           ImParseFormatPrecision(const char* format, int default_value);
+static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
+static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
+
+// Helpers: UTF-8 <> wchar conversions
+IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
+IMGUI_API int           ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end);          // read one character. return input UTF-8 bytes count
+IMGUI_API int           ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_remaining = NULL);   // return input UTF-8 bytes count
+IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char* in_text_end);                            // return number of UTF-8 code-points (NOT bytes count)
+IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end);                        // return number of bytes to express one char in UTF-8
+IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                   // return number of bytes to express string in UTF-8
 
 // Helpers: ImVec2/ImVec4 operators
 // We are keeping those disabled by default so they don't leak in user space, to allow user enabling implicit cast operators between ImVec2 and their own types (using IM_VEC2_CLASS_EXTRA etc.)
@@ -283,9 +299,9 @@ static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        
 static inline float  ImLinearSweep(float current, float target, float speed)    { if (current < target) return ImMin(current + speed, target); if (current > target) return ImMax(current - speed, target); return current; }
 static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 
-// Helper: ImBoolVector. Store 1-bit per value.
-// Note that Resize() currently clears the whole vector.
-struct ImBoolVector
+// Helper: ImBoolVector
+// Store 1-bit per value. Note that Resize() currently clears the whole vector.
+struct IMGUI_API ImBoolVector
 {
     ImVector<int>   Storage;
     ImBoolVector()  { }
@@ -295,29 +311,52 @@ struct ImBoolVector
     void            SetBit(int n, bool v)   { int off = (n >> 5); int mask = 1 << (n & 31); if (v) Storage[off] |= mask; else Storage[off] &= ~mask; }
 };
 
-// Helper: ImPool<>. Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot buffer,
+// Helper: ImPool<>
+// Basic keyed storage for contiguous instances, slow/amortized insertion, O(1) indexable, O(Log N) queries by ID over a dense/hot buffer,
 // Honor constructor/destructor. Add/remove invalidate all pointers. Indexes have the same lifetime as the associated object.
 typedef int ImPoolIdx;
 template<typename T>
 struct IMGUI_API ImPool
 {
-    ImVector<T>     Data;       // Contiguous data
+    ImVector<T>     Buf;        // Contiguous data
     ImGuiStorage    Map;        // ID->Index
     ImPoolIdx       FreeIdx;    // Next free idx to use
 
     ImPool()    { FreeIdx = 0; }
     ~ImPool()   { Clear(); }
-    T*          GetByKey(ImGuiID key)               { int idx = Map.GetInt(key, -1); return (idx != -1) ? &Data[idx] : NULL; }
-    T*          GetByIndex(ImPoolIdx n)             { return &Data[n]; }
-    ImPoolIdx   GetIndex(const T* p) const          { IM_ASSERT(p >= Data.Data && p < Data.Data + Data.Size); return (ImPoolIdx)(p - Data.Data); }
-    T*          GetOrAddByKey(ImGuiID key)          { int* p_idx = Map.GetIntRef(key, -1); if (*p_idx != -1) return &Data[*p_idx]; *p_idx = FreeIdx; return Add(); }
-    bool        Contains(const T* p) const          { return (p >= Data.Data && p < Data.Data + Data.Size); }
-    void        Clear()                             { for (int n = 0; n < Map.Data.Size; n++) { int idx = Map.Data[n].val_i; if (idx != -1) Data[idx].~T(); } Map.Clear(); Data.clear(); FreeIdx = 0; }
-    T*          Add()                               { int idx = FreeIdx; if (idx == Data.Size) { Data.resize(Data.Size + 1); FreeIdx++; } else { FreeIdx = *(int*)&Data[idx]; } IM_PLACEMENT_NEW(&Data[idx]) T(); return &Data[idx]; }
+    T*          GetByKey(ImGuiID key)               { int idx = Map.GetInt(key, -1); return (idx != -1) ? &Buf[idx] : NULL; }
+    T*          GetByIndex(ImPoolIdx n)             { return &Buf[n]; }
+    ImPoolIdx   GetIndex(const T* p) const          { IM_ASSERT(p >= Buf.Data && p < Buf.Data + Buf.Size); return (ImPoolIdx)(p - Buf.Data); }
+    T*          GetOrAddByKey(ImGuiID key)          { int* p_idx = Map.GetIntRef(key, -1); if (*p_idx != -1) return &Buf[*p_idx]; *p_idx = FreeIdx; return Add(); }
+    bool        Contains(const T* p) const          { return (p >= Buf.Data && p < Buf.Data + Buf.Size); }
+    void        Clear()                             { for (int n = 0; n < Map.Data.Size; n++) { int idx = Map.Data[n].val_i; if (idx != -1) Buf[idx].~T(); } Map.Clear(); Buf.clear(); FreeIdx = 0; }
+    T*          Add()                               { int idx = FreeIdx; if (idx == Buf.Size) { Buf.resize(Buf.Size + 1); FreeIdx++; } else { FreeIdx = *(int*)&Buf[idx]; } IM_PLACEMENT_NEW(&Buf[idx]) T(); return &Buf[idx]; }
     void        Remove(ImGuiID key, const T* p)     { Remove(key, GetIndex(p)); }
-    void        Remove(ImGuiID key, ImPoolIdx idx)  { Data[idx].~T(); *(int*)&Data[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); }
-    void        Reserve(int capacity)               { Data.reserve(capacity); Map.Data.reserve(capacity); }
-    int         GetSize() const                     { return Data.Size; }
+    void        Remove(ImGuiID key, ImPoolIdx idx)  { Buf[idx].~T(); *(int*)&Buf[idx] = FreeIdx; FreeIdx = idx; Map.SetInt(key, -1); }
+    void        Reserve(int capacity)               { Buf.reserve(capacity); Map.Data.reserve(capacity); }
+    int         GetSize() const                     { return Buf.Size; }
+};
+
+// Helper: ImChunkStream<>
+// Build and iterate a contiguous stream of variable-sized structures.
+// This is used by Settings to store persistent data while reducing allocation count.
+// We store the chunk size first, and align the final size on 4 bytes boundaries (this what the '(X + 3) & ~3' statement is for)
+// The tedious/zealous amount of casting is to avoid -Wcast-align warnings.
+template<typename T>
+struct IMGUI_API ImChunkStream
+{
+    ImVector<char>  Buf;
+
+    void    clear()                     { Buf.clear(); }
+    bool    empty() const               { return Buf.Size == 0; }
+    int     size() const                { return Buf.Size; }
+    T*      alloc_chunk(size_t sz)      { size_t HDR_SZ = 4; sz = ((HDR_SZ + sz) + 3u) & ~3u; int off = Buf.Size; Buf.resize(off + (int)sz); ((int*)(void*)(Buf.Data + off))[0] = (int)sz; return (T*)(void*)(Buf.Data + off + (int)HDR_SZ); }
+    T*      begin()                     { size_t HDR_SZ = 4; if (!Buf.Data) return NULL; return (T*)(void*)(Buf.Data + HDR_SZ); }
+    T*      next_chunk(T* p)            { size_t HDR_SZ = 4; IM_ASSERT(p >= begin() && p < end()); p = (T*)(void*)((char*)(void*)p + chunk_size(p)); if (p == (T*)(void*)((char*)end() + HDR_SZ)) return (T*)0; IM_ASSERT(p < end()); return p; }
+    int     chunk_size(const T* p)      { return ((const int*)p)[-1]; }
+    T*      end()                       { return (T*)(void*)(Buf.Data + Buf.Size); }
+    int     offset_from_ptr(const T* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = (const char*)p - Buf.Data; return (int)off; }
+    T*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return (T*)(void*)(Buf.Data + off); }
 };
 
 //-----------------------------------------------------------------------------
@@ -337,7 +376,7 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_DontClosePopups        = 1 << 7,   // disable automatically closing parent popup on press // [UNUSED]
     ImGuiButtonFlags_Disabled               = 1 << 8,   // disable interactions
     ImGuiButtonFlags_AlignTextBaseLine      = 1 << 9,   // vertically align button to match text baseline - ButtonEx() only // FIXME: Should be removed and handled by SmallButton(), not possible currently because of DC.CursorPosPrevLine
-    ImGuiButtonFlags_NoKeyModifiers         = 1 << 10,  // disable interaction if a key modifier is held
+    ImGuiButtonFlags_NoKeyModifiers         = 1 << 10,  // disable mouse interaction if a key modifier is held
     ImGuiButtonFlags_NoHoldingActiveID      = 1 << 11,  // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
     ImGuiButtonFlags_PressedOnDragDropHold  = 1 << 12,  // press when held into while we are drag and dropping another item (used by e.g. tree nodes, collapsing headers)
     ImGuiButtonFlags_NoNavFocus             = 1 << 13,  // don't override navigation focus when activated
@@ -416,8 +455,9 @@ enum ImGuiItemStatusFlags_
     ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1,
     ImGuiItemStatusFlags_Edited             = 1 << 2,   // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
     ImGuiItemStatusFlags_ToggledSelection   = 1 << 3,   // Set when Selectable(), TreeNode() reports toggling a selection. We can't report "Selected" because reporting the change allows us to handle clipping with less issues.
-    ImGuiItemStatusFlags_HasDeactivated     = 1 << 4,   // Set if the widget/group is able to provide data for the ImGuiItemStatusFlags_Deactivated flag.
-    ImGuiItemStatusFlags_Deactivated        = 1 << 5    // Only valid if ImGuiItemStatusFlags_HasDeactivated is set.
+    ImGuiItemStatusFlags_ToggledOpen        = 1 << 4,   // Set when TreeNode() reports toggling their open state. 
+    ImGuiItemStatusFlags_HasDeactivated     = 1 << 5,   // Set if the widget/group is able to provide data for the ImGuiItemStatusFlags_Deactivated flag.
+    ImGuiItemStatusFlags_Deactivated        = 1 << 6    // Only valid if ImGuiItemStatusFlags_HasDeactivated is set.
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     , // [imgui_tests only]
@@ -675,9 +715,10 @@ struct IMGUI_API ImGuiInputTextState
 };
 
 // Windows data saved in imgui.ini file
+// Because we never destroy or rename ImGuiWindowSettings, we can store the names in a separate buffer easily.
+// (this is designed to be stored in a ImChunkStream buffer, with the variable-length Name following our structure)
 struct ImGuiWindowSettings
 {
-    char*       Name;
     ImGuiID     ID;
     ImVec2ih    Pos;            // NB: Settings position are stored RELATIVE to the viewport! Whereas runtime ones are absolute positions.
     ImVec2ih    Size;
@@ -688,7 +729,8 @@ struct ImGuiWindowSettings
     short       DockOrder;      // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
     bool        Collapsed;
 
-    ImGuiWindowSettings() { Name = NULL; ID = 0; Pos = Size = ViewportPos = ImVec2ih(0, 0); ViewportId = DockId = ClassId = 0; DockOrder = -1; Collapsed = false; }
+    ImGuiWindowSettings()       { ID = 0; Pos = Size = ViewportPos = ImVec2ih(0, 0); ViewportId = DockId = ClassId = 0; DockOrder = -1; Collapsed = false; }
+    char* GetName()             { return (char*)(this + 1); }
 };
 
 struct ImGuiSettingsHandler
@@ -1194,11 +1236,11 @@ struct ImGuiContext
     ImGuiDockContext*       DockContext;
 
     // Settings
-    bool                           SettingsLoaded;
-    float                          SettingsDirtyTimer;          // Save .ini Settings to memory when time reaches zero
-    ImGuiTextBuffer                SettingsIniData;             // In memory .ini settings
-    ImVector<ImGuiSettingsHandler> SettingsHandlers;            // List of .ini settings handlers
-    ImVector<ImGuiWindowSettings>  SettingsWindows;             // ImGuiWindow .ini settings entries (parsed from the last loaded .ini file and maintained on saving)
+    bool                    SettingsLoaded;
+    float                   SettingsDirtyTimer;                 // Save .ini Settings to memory when time reaches zero
+    ImGuiTextBuffer         SettingsIniData;                    // In memory .ini settings
+    ImVector<ImGuiSettingsHandler>      SettingsHandlers;       // List of .ini settings handlers
+    ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
 
     // Logging
     bool                    LogEnabled;
@@ -1529,7 +1571,7 @@ struct IMGUI_API ImGuiWindow
     ImVector<ImGuiColumns>  ColumnsStorage;
     float                   FontWindowScale;                    // User scale multiplier per-window, via SetWindowFontScale()
     float                   FontDpiScale;
-    int                     SettingsIdx;                        // Index into SettingsWindow[] (indices are always valid as we only grow the array from the back)
+    int                     SettingsOffset;                     // Offset into SettingsWindows[] (offsets are always valid as we only grow the array from the back)
 
     ImDrawList*             DrawList;                           // == &DrawListInst (for backward compatibility reason with code using imgui_internal.h we keep this a pointer)
     ImDrawList              DrawListInst;
