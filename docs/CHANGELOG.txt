@@ -67,7 +67,9 @@ Other Changes:
 - TreeNode: Fixed combination of ImGuiTreeNodeFlags_SpanFullWidth and ImGuiTreeNodeFlags_OpenOnArrow
   incorrectly locating the arrow hit position to the left of the frame. (#2451, #2438, #1897)
 - TreeNode: The collapsing arrow accepts click even if modifier keys are being held, facilitating
-  interactions with multi-select patterns. (#2886, #1896, #1861)
+  interactions with custom multi-selections patterns. (#2886, #1896, #1861)
+- TreeNode: Added IsItemToggledOpen() to explicitly query if item was just open/closed, facilitating
+  interactions with custom multi-selections patterns. (#1896, #1861)
 - DragScalar, SliderScalar, InputScalar: Added p_ prefix to parameter that are pointers to the data
   to clarify how they are used, and more comments redirecting to the demo code. (#2844)
 - Misc: Optimized storage of window settings data (reducing allocation count).
