@@ -129,8 +129,8 @@ static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_wid
 void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays (screen coordinates != framebuffer coordinates)
-    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x * draw_data->OwnerViewport->DpiScale);
-    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y * draw_data->OwnerViewport->DpiScale);
+    int fb_width = (int)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    int fb_height = (int)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     if (fb_width == 0 || fb_height == 0)
         return;
 
@@ -148,8 +148,6 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     // Will project scissor/clipping rectangles into framebuffer space
     ImVec2 clip_off = draw_data->DisplayPos;         // (0,0) unless using multi-viewports
     ImVec2 clip_scale = draw_data->FramebufferScale; // (1,1) unless using retina display which are often (2,2)
-    clip_scale.x *= draw_data->OwnerViewport->DpiScale;
-    clip_scale.y *= draw_data->OwnerViewport->DpiScale;
 
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)

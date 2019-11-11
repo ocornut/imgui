@@ -62,7 +62,8 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	SOURCES += ../imgui_impl_osx.mm
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo -framework CoreFoundation -framework AppKit `sdl2-config --libs`
 	LIBS += -L/usr/local/lib -L/opt/local/lib
 
 	CXXFLAGS += `sdl2-config --cflags`
@@ -87,6 +88,9 @@ endif
 
 %.o:../%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../%.mm
+	$(CXX) $(CXXFLAGS) -std=c++11 -c -o $@ $<
 
 %.o:../../%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<

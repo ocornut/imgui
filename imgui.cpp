@@ -3972,7 +3972,10 @@ void ImGui::NewFrame()
     g.FramerateSecPerFrameIdx = (g.FramerateSecPerFrameIdx + 1) % IM_ARRAYSIZE(g.FramerateSecPerFrame);
     g.IO.Framerate = (g.FramerateSecPerFrameAccum > 0.0f) ? (1.0f / (g.FramerateSecPerFrameAccum / (float)IM_ARRAYSIZE(g.FramerateSecPerFrame))) : FLT_MAX;
 
+#ifndef __APPLE__
+    // On MacOS window size is in 96 DPI units and mouse position does not need scaling.
     DpiScaleMousePosition();
+#endif
     UpdateViewportsNewFrame();
 
     // Setup current font and draw list shared data
@@ -4401,6 +4404,7 @@ void ImDrawDataBuilder::FlattenIntoSingleLayer()
 
 static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*>* draw_lists)
 {
+    ImGuiContext& g = *GImGui;
     ImDrawData* draw_data = &viewport->DrawDataP;
     viewport->DrawData = draw_data; // Make publicly accessible
     draw_data->Valid = true;
@@ -4409,7 +4413,10 @@ static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = viewport->Size;
-    draw_data->FramebufferScale = ImGui::GetIO().DisplayFramebufferScale; // FIXME-VIEWPORT: This may vary on a per-monitor/viewport basis?
+    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
+        draw_data->FramebufferScale = ImVec2(viewport->DpiScale, viewport->DpiScale);
+    else
+        draw_data->FramebufferScale = g.IO.DisplayFramebufferScale;
     draw_data->OwnerViewport = viewport;
     for (int n = 0; n < draw_lists->Size; n++)
     {
@@ -10897,6 +10904,7 @@ static void ImGui::UpdateViewportsNewFrame()
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
     // (Viewports/DPI) A workaround for allowing user to not scale DisplaySize manually.
+#ifndef __APPLE__
     float scale = g.PlatformIO.MainViewport->DpiScale;
     bool display_size_changed = g.LastDisplaySize.x != g.IO.DisplaySize.x || g.LastDisplaySize.y != g.IO.DisplaySize.y;
     bool scale_changed = scale != g.LastDisplayScale;
@@ -10915,7 +10923,7 @@ static void ImGui::UpdateViewportsNewFrame()
     g.LastMousePos = g.IO.MousePos;
     g.LastDisplaySize = g.IO.DisplaySize;
     g.LastDisplayScale = g.PlatformIO.MainViewport->DpiScale;
-
+#endif
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
     const bool viewports_enabled = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != 0;
     if (viewports_enabled)
@@ -10940,7 +10948,7 @@ static void ImGui::UpdateViewportsNewFrame()
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     IM_ASSERT(main_viewport->Window == NULL);
-    ImVec2 main_viewport_pos = viewports_enabled ? (g.PlatformIO.Platform_GetWindowPos(main_viewport) / main_viewport->DpiScale) : ImVec2(0.0f, 0.0f);
+    ImVec2 main_viewport_pos = viewports_enabled ? (g.PlatformIO.Platform_GetWindowPos(main_viewport) / main_viewport->CoordinateScale) : ImVec2(0.0f, 0.0f);
     ImVec2 main_viewport_size = g.IO.DisplaySize;
     if (viewports_enabled && (main_viewport->Flags & ImGuiViewportFlags_Minimized))
     {
@@ -10989,9 +10997,9 @@ static void ImGui::UpdateViewportsNewFrame()
             if (!(viewport->Flags & ImGuiViewportFlags_Minimized) && platform_funcs_available)
             {
                 if (viewport->PlatformRequestMove)
-                    viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / viewport->DpiScale;
+                    viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / viewport->CoordinateScale;
                 if (viewport->PlatformRequestResize)
-                    viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport) / viewport->DpiScale;
+                    viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport) / viewport->CoordinateScale;
             }
         }
 
@@ -11014,12 +11022,17 @@ static void ImGui::UpdateViewportsNewFrame()
 
         // Update DPI scale
         float new_dpi_scale;
+        float new_coordinate_scale = 1.0f;
         if (g.PlatformIO.Platform_GetWindowDpiScale && platform_funcs_available)
             new_dpi_scale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
         else if (viewport->PlatformMonitor != -1)
             new_dpi_scale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
         else
             new_dpi_scale = (viewport->DpiScale != 0.0f) ? viewport->DpiScale : 1.0f;
+
+#ifndef __APPLE__
+        new_coordinate_scale = new_dpi_scale;
+#endif
 
         // Moving windows do not transition their DPI.
         if (g.MovingWindow == NULL || g.MovingWindow->Viewport != viewport)
@@ -11032,11 +11045,12 @@ static void ImGui::UpdateViewportsNewFrame()
                 g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * new_dpi_scale);
                 // Reupdate viewport position from native window. Not doing this causes discrepancy between where ImGui
                 // thinks window is and where it actually is and it breaks any mouse input.
-                viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / new_dpi_scale;
+                viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / new_coordinate_scale;
                 if (viewport->Window != NULL)
                     viewport->Window->Pos = viewport->Pos;
             }
             viewport->DpiScale = new_dpi_scale;
+            viewport->CoordinateScale = new_coordinate_scale;
         }
     }
 
@@ -11162,7 +11176,12 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         // Store initial DpiScale before the OS platform window creation, based on expected monitor data.
         // This is so we can select an appropriate font size on the first frame of our window lifetime
         if (viewport->PlatformMonitor != -1)
+        {
             viewport->DpiScale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
+#ifndef __APPLE__
+            viewport->CoordinateScale = viewport->DpiScale;
+#endif
+        }
     }
 
     viewport->Window = window;
@@ -11342,8 +11361,8 @@ void ImGui::UpdatePlatformWindows()
             // TODO: Ugly workaround to allow user to not care about this
             ImVec2 pos_bkp = viewport->Pos;                   // TODO: Sucks
             ImVec2 size_bkp = viewport->Size;                 // TODO: Sucks
-            viewport->Pos *= viewport->DpiScale;              // TODO: Sucks
-            viewport->Size *= viewport->DpiScale;             // TODO: Sucks
+            viewport->Pos *= viewport->CoordinateScale;       // TODO: Sucks
+            viewport->Size *= viewport->CoordinateScale;      // TODO: Sucks
             g.PlatformIO.Platform_CreateWindow(viewport);
             viewport->Pos = pos_bkp;                          // TODO: Sucks
             viewport->Size = size_bkp;                        // TODO: Sucks
@@ -11357,9 +11376,9 @@ void ImGui::UpdatePlatformWindows()
 
         // Apply Position and Size (from ImGui to Platform/Renderer back-ends)
         if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !viewport->PlatformRequestMove)
-            g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos * viewport->DpiScale);
+            g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos * viewport->CoordinateScale);
         if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !viewport->PlatformRequestResize)
-            g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * viewport->DpiScale);
+            g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * viewport->CoordinateScale);
         if ((viewport->LastRendererSize.x != viewport->Size.x || viewport->LastRendererSize.y != viewport->Size.y) && g.PlatformIO.Renderer_SetWindowSize)
             g.PlatformIO.Renderer_SetWindowSize(viewport, viewport->Size);
         viewport->LastPlatformPos = viewport->Pos;
@@ -11513,7 +11532,7 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 // Update monitor from viewport rectangle (we'll use this info to clamp windows and save windows lost in a removed monitor)
 static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
 {
-    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect() * viewport->DpiScale);
+    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect() * viewport->CoordinateScale);
 }
 
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
