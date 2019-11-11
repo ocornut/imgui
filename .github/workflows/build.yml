@@ -168,7 +168,7 @@ jobs:
       run: make -C examples/example_sdl_opengl3
 
   MacOS:
-    runs-on: macOS-10.14
+    runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v1
       with:
@@ -206,7 +206,7 @@ jobs:
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
   iOS:
-    runs-on: macOS-10.14
+    runs-on: macOS-latest
     steps:
     - uses: actions/checkout@v1
       with:

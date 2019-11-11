@@ -351,7 +351,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2019/10/22 (1.74) - removed redirecting functions/enums that were marked obsolete in 1.52 (October 2017): Begin() (5 arguments signature), IsRootWindowOrAnyChildHovered(), AlignFirstTextHeightToWidgets(), SetNextWindowPosCenter(), ImFont::Glyph. Grep this log for details and new names, or see how they were implemented until 1.73.
+ - 2019/10/22 (1.74) - removed redirecting functions/enums that were marked obsolete in 1.52 (October 2017): Begin() (5 arguments signature), IsRootWindowOrAnyChildHovered(), AlignFirstTextHeightToWidgets(), SetNextWindowPosCenter(), ImFont::Glyph. See docs/Changelog.txt or grep this log for details and new names, or see how they were implemented until 1.73.
  - 2019/10/14 (1.74) - inputs: Fixed a miscalculation in the keyboard/mouse "typematic" repeat delay/rate calculation, used by keys and e.g. repeating mouse buttons as well as the GetKeyPressedAmount() function.
                        if you were using a non-default value for io.KeyRepeatRate (previous default was 0.250), you can add +io.KeyRepeatDelay to it to compensate for the fix.
                        The function was triggering on: 0.0 and (delay+rate*N) where (N>=1). Fixed formula responds to (N>=0). Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
@@ -9607,6 +9607,19 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
+static void HelpMarker(const char* desc)
+{
+    ImGui::TextDisabled("(?)");
+    if (ImGui::IsItemHovered())
+    {
+        ImGui::BeginTooltip();
+        ImGui::PushTextWrapPos(ImGui::GetFontSize() * 35.0f);
+        ImGui::TextUnformatted(desc);
+        ImGui::PopTextWrapPos();
+        ImGui::EndTooltip();
+    }
+}
+
 void ImGui::ShowMetricsWindow(bool* p_open)
 {
     if (!ImGui::Begin("Dear ImGui Metrics", p_open))
@@ -9890,6 +9903,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
         if (ImGui::Button("Item Picker.."))
             ImGui::DebugStartItemPicker();
+        ImGui::SameLine();
+        HelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
 
         ImGui::Checkbox("Show windows begin order", &show_windows_begin_order);
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
