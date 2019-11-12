@@ -1896,13 +1896,7 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 
 static int IMGUI_CDECL FloatReverseComparer(const void* lhs, const void* rhs)
 {
-    const float d = *(float*)lhs - *(float*)rhs;
-    if (d < 0.f)
-        return 1;
-    else if (d > 0.f)
-        return -1;
-    else
-        return 0;
+    return (int)(*(float*)rhs - *(float*)lhs);
 }
 
 void ImFontAtlas::CreatePerDpiFonts()
@@ -1924,7 +1918,7 @@ void ImFontAtlas::CreatePerDpiFonts()
                 dpi_set.push_back(monitor.DpiScale);
         }
         // High DPI goes to the front of the list so that custom rects get supersampled.
-        ImQsort(dpi_set.Data, sizeof(float), dpi_set.Size, FloatReverseComparer);
+        ImQsort(dpi_set.Data, dpi_set.Size, sizeof(float), FloatReverseComparer);
     }
     else
     {
