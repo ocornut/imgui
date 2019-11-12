@@ -55,7 +55,7 @@
 #include <SDL_syswm.h>
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
-float GetBackingScaleFactor(int screen);
+float GetBackingScaleFactorForPoint(float x, float y);
 #endif
 
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    SDL_VERSION_ATLEAST(2,0,4)
@@ -437,7 +437,7 @@ static void ImGui_ImplSDL2_UpdateMonitors()
 #endif
 #if __APPLE__
         // On MacOS SDL reports DPI scale reduced by scaling factor.
-        monitor.DpiScale = GetBackingScaleFactor(n);
+        monitor.DpiScale = GetBackingScaleFactorForPoint(r.x, r.y);
 #elif SDL_HAS_PER_MONITOR_DPI
         float dpi = 0.0f;
         if (!SDL_GetDisplayDPI(n, &dpi, NULL, NULL))
