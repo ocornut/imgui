@@ -9639,7 +9639,8 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
-static void HelpMarker(const char* desc)
+// Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
+static void MetricsHelpMarker(const char* desc)
 {
     ImGui::TextDisabled("(?)");
     if (ImGui::IsItemHovered())
@@ -9936,7 +9937,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         if (ImGui::Button("Item Picker.."))
             ImGui::DebugStartItemPicker();
         ImGui::SameLine();
-        HelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
+        MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
 
         ImGui::Checkbox("Show windows begin order", &show_windows_begin_order);
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
