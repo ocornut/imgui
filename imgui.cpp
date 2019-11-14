@@ -7516,13 +7516,19 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
 void ImGui::EndPopup()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.CurrentWindow->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(window->Flags & ImGuiWindowFlags_Popup);  // Mismatched BeginPopup()/EndPopup() calls
     IM_ASSERT(g.BeginPopupStack.Size > 0);
 
     // Make all menus and popups wrap around for now, may need to expose that policy.
-    NavMoveRequestTryWrapping(g.CurrentWindow, ImGuiNavMoveFlags_LoopY);
+    NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY);
 
+    // Child-popups don't need to be layed out
+    IM_ASSERT(g.WithinEndChild == false);
+    if (window->Flags & ImGuiWindowFlags_ChildWindow)
+        g.WithinEndChild = true;
     End();
+    g.WithinEndChild = false;
 }
 
 bool ImGui::OpenPopupOnItemClick(const char* str_id, int mouse_button)
