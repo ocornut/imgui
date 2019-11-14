@@ -77,6 +77,7 @@ Other Changes:
 - Error handling: Assert if user mistakenly calls End() instead of EndChild() on a child window. (#1651)
 - Misc: Optimized storage of window settings data (reducing allocation count).
 - Misc: Windows: Do not use _wfopen() if IMGUI_DISABLE_WIN32_FUNCTIONS is defined. (#2815)
+- Misc: Using static_assert() when using C++11, instead of our own construct (avoid zealous Clang warnings).
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
