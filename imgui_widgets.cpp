@@ -549,7 +549,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.NavActivateDownId == id)
     {
         bool nav_activated_by_code = (g.NavActivateId == id);
-        bool nav_activated_by_inputs = IsNavInputPressed(ImGuiNavInput_Activate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiInputReadMode_Repeat : ImGuiInputReadMode_Pressed);
+        bool nav_activated_by_inputs = IsNavInputTest(ImGuiNavInput_Activate, (flags & ImGuiButtonFlags_Repeat) ? ImGuiInputReadMode_Repeat : ImGuiInputReadMode_Pressed);
         if (nav_activated_by_code || nav_activated_by_inputs)
             pressed = true;
         if (nav_activated_by_code || nav_activated_by_inputs || g.ActiveId == id)
@@ -6491,8 +6491,8 @@ void    ImGui::EndTabBar()
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
     if (tab_bar == NULL)
     {
-        IM_ASSERT(tab_bar != NULL && "Mismatched BeginTabBar()/EndTabBar()!");
-        return; // FIXME-ERRORHANDLING
+        IMGUI_USER_ERROR(tab_bar != NULL, "Mismatched BeginTabBar()/EndTabBar()!");
+        return;
     }
     if (tab_bar->WantLayout)
         TabBarLayout(tab_bar);
@@ -6923,8 +6923,8 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
     if (tab_bar == NULL)
     {
-        IM_ASSERT(tab_bar && "Needs to be called between BeginTabBar() and EndTabBar()!");
-        return false; // FIXME-ERRORHANDLING
+        IMGUI_USER_ERROR(tab_bar, "BeginTabItem() Needs to be called between BeginTabBar() and EndTabBar()!");
+        return false;
     }
     bool ret = TabItemEx(tab_bar, label, p_open, flags, NULL);
     if (ret && !(flags & ImGuiTabItemFlags_NoPushId))
