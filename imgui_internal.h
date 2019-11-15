@@ -1053,7 +1053,7 @@ struct ImGuiContext
     ImGuiID                 DragDropAcceptIdPrev;               // Target item id from previous frame (we need to store this to allow for overlapping drag and drop targets)
     int                     DragDropAcceptFrameCount;           // Last time a target expressed a desire to accept the source
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly
-    unsigned char           DragDropPayloadBufLocal[8];         // Local buffer for small payloads
+    unsigned char           DragDropPayloadBufLocal[16];        // Local buffer for small payloads
 
     // Tab bars
     ImGuiTabBar*                    CurrentTabBar;
