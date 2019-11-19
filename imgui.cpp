@@ -29,12 +29,12 @@ DOCUMENTATION
 - MISSION STATEMENT
 - END-USER GUIDE
 - PROGRAMMER GUIDE
-  - Read first.
-  - How to update to a newer version of Dear ImGui.
-  - Getting started with integrating Dear ImGui in your code/engine.
-  - This is how a simple application may look like (2 variations).
-  - This is how a simple rendering function may look like.
-  - Using gamepad/keyboard navigation controls.
+  - READ FIRST
+  - HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI
+  - GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE
+  - HOW A SIMPLE APPLICATION MAY LOOK LIKE (2 variations)
+  - HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
+  - USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
 - API BREAKING CHANGES (read me when you update!)
 - FREQUENTLY ASKED QUESTIONS (FAQ)
   - Read all answers online: https://www.dearimgui.org/faq, or in docs/FAQ.md (with a Markdown viewer)
@@ -118,8 +118,8 @@ CODE
  PROGRAMMER GUIDE
  ================
 
- READ FIRST:
-
+ READ FIRST
+ ----------
  - Remember to read the FAQ (https://www.dearimgui.org/faq)
  - Your code creates the UI, if your code doesn't run the UI is gone! The UI can be highly dynamic, there are no construction
    or destruction steps, less superfluous data retention on your side, less state duplication, less state synchronization, less bugs.
@@ -140,8 +140,8 @@ CODE
    However, imgui_internal.h can optionally export math operators for ImVec2/ImVec4, which we use in this codebase.
  - C++: pay attention that ImVector<> manipulates plain-old-data and does not honor construction/destruction (avoid using it in your code!).
 
- HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI:
-
+ HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI
+ ----------------------------------------------
  - Overwrite all the sources files except for imconfig.h (if you have made modification to your copy of imconfig.h)
  - Or maintain your own branch where you have imconfig.h modified.
  - Read the "API BREAKING CHANGES" section (below). This is where we list occasional API breaking changes.
@@ -150,8 +150,8 @@ CODE
    likely be a comment about it. Please report any issue to the GitHub page!
  - Try to keep your copy of dear imgui reasonably up to date.
 
- GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE:
-
+ GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE
+ ---------------------------------------------------------------
  - Run and study the examples and demo in imgui_demo.cpp to get acquainted with the library.
  - Add the Dear ImGui source files to your projects or using your preferred build system.
    It is recommended you build and statically link the .cpp files as part of your project and not as shared library (DLL).
@@ -163,7 +163,8 @@ CODE
  - Refer to the bindings and demo applications in the examples/ folder for instruction on how to setup your code.
  - If you are running over a standard OS with a common graphics API, you should be able to use unmodified imgui_impl_*** files from the examples/ folder.
 
- HOW A SIMPLE APPLICATION MAY LOOK LIKE:
+ HOW A SIMPLE APPLICATION MAY LOOK LIKE
+ --------------------------------------
  EXHIBIT 1: USING THE EXAMPLE BINDINGS (imgui_impl_XXX.cpp files from the examples/ folder).
 
      // Application init: create a dear imgui context, setup some options, load fonts
@@ -199,8 +200,7 @@ CODE
      ImGui_ImplWin32_Shutdown();
      ImGui::DestroyContext();
 
- HOW A SIMPLE APPLICATION MAY LOOK LIKE:
- EXHIBIT 2: IMPLEMENTING CUSTOM BINDING / CUSTOM ENGINE.
+ EXHIBIT 2: IMPLEMENTING CUSTOM BINDING / CUSTOM ENGINE
 
      // Application init: create a dear imgui context, setup some options, load fonts
      ImGui::CreateContext();
@@ -254,8 +254,8 @@ CODE
      // Shutdown
      ImGui::DestroyContext();
 
- HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE:
-
+ HOW A SIMPLE RENDERING FUNCTION MAY LOOK LIKE
+ ---------------------------------------------
     void void MyImGuiRenderFunction(ImDrawData* draw_data)
     {
        // TODO: Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled
@@ -307,7 +307,7 @@ CODE
  - Refer to the FAQ for more information. Amusingly, it is called a FAQ because people frequently run into the same issues!
 
  USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
-
+ ------------------------------------------
  - The gamepad/keyboard navigation is fairly functional and keeps being improved.
  - Gamepad support is particularly useful to use dear imgui on a console system (e.g. PS4, Switch, XB1) without a mouse!
  - You can ask questions and report issues at https://github.com/ocornut/imgui/issues/787
@@ -470,14 +470,9 @@ CODE
  - 2016/09/25 (1.50) - style.WindowTitleAlign is now a ImVec2 (ImGuiAlign enum was removed). set to (0.5f,0.5f) for horizontal+vertical centering, (0.0f,0.0f) for upper-left, etc.
  - 2016/07/30 (1.50) - SameLine(x) with x>0.0f is now relative to left of column/group if any, and not always to left of window. This was sort of always the intent and hopefully breakage should be minimal.
  - 2016/05/12 (1.49) - title bar (using ImGuiCol_TitleBg/ImGuiCol_TitleBgActive colors) isn't rendered over a window background (ImGuiCol_WindowBg color) anymore.
-                       If your TitleBg/TitleBgActive alpha was 1.0f or you are using the default theme it will not affect you.
-                       If your TitleBg/TitleBgActive alpha was <1.0f you need to tweak your custom theme to readjust for the fact that we don't draw a WindowBg background behind the title bar.
-                       This helper function will convert an old TitleBg/TitleBgActive color into a new one with the same visual output, given the OLD color and the OLD WindowBg color.
-                           ImVec4 ConvertTitleBgCol(const ImVec4& win_bg_col, const ImVec4& title_bg_col)
-                           {
-                               float new_a = 1.0f - ((1.0f - win_bg_col.w) * (1.0f - title_bg_col.w)), k = title_bg_col.w / new_a;
-                               return ImVec4((win_bg_col.x * win_bg_col.w + title_bg_col.x) * k, (win_bg_col.y * win_bg_col.w + title_bg_col.y) * k, (win_bg_col.z * win_bg_col.w + title_bg_col.z) * k, new_a);
-                           }
+                       If your TitleBg/TitleBgActive alpha was 1.0f or you are using the default theme it will not affect you, otherwise if <1.0f you need tweak your custom theme to readjust for the fact that we don't draw a WindowBg background behind the title bar.
+                       This helper function will convert an old TitleBg/TitleBgActive color into a new one with the same visual output, given the OLD color and the OLD WindowBg color: 
+                       ImVec4 ConvertTitleBgCol(const ImVec4& win_bg_col, const ImVec4& title_bg_col) { float new_a = 1.0f - ((1.0f - win_bg_col.w) * (1.0f - title_bg_col.w)), k = title_bg_col.w / new_a; return ImVec4((win_bg_col.x * win_bg_col.w + title_bg_col.x) * k, (win_bg_col.y * win_bg_col.w + title_bg_col.y) * k, (win_bg_col.z * win_bg_col.w + title_bg_col.z) * k, new_a); }
                        If this is confusing, pick the RGB value from title bar from an old screenshot and apply this as TitleBg/TitleBgActive. Or you may just create TitleBgActive from a tweaked TitleBg color.
  - 2016/05/07 (1.49) - removed confusing set of GetInternalState(), GetInternalStateSize(), SetInternalState() functions. Now using CreateContext(), DestroyContext(), GetCurrentContext(), SetCurrentContext().
  - 2016/05/02 (1.49) - renamed SetNextTreeNodeOpened() to SetNextTreeNodeOpen(), no redirection.
@@ -5534,7 +5529,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // Handle manual resize: Resize Grips, Borders, Gamepad
         int border_held = -1;
         ImU32 resize_grip_col[4] = {};
-        const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // 4
+        const int resize_grip_count = g.IO.ConfigWindowsResizeFromEdges ? 2 : 1; // Allow resize from lower-left if we have the mouse cursor feedback for it.
         const float resize_grip_draw_size = IM_FLOOR(ImMax(g.FontSize * 1.35f, window->WindowRounding + 1.0f + g.FontSize * 0.2f));
         if (!window->Collapsed)
             if (UpdateManualResize(window, size_auto_fit, &border_held, resize_grip_count, &resize_grip_col[0]))
@@ -9354,18 +9349,12 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
             line_end[-1] = 0;
             const char* name_end = line_end - 1;
             const char* type_start = line + 1;
-            char* type_end = (char*)(intptr_t)ImStrchrRange(type_start, name_end, ']');
+            char* type_end = (char*)(void*)ImStrchrRange(type_start, name_end, ']');
             const char* name_start = type_end ? ImStrchrRange(type_end + 1, name_end, '[') : NULL;
             if (!type_end || !name_start)
-            {
-                name_start = type_start; // Import legacy entries that have no type
-                type_start = "Window";
-            }
-            else
-            {
-                *type_end = 0; // Overwrite first ']'
-                name_start++;  // Skip second '['
-            }
+                continue;
+            *type_end = 0; // Overwrite first ']'
+            name_start++;  // Skip second '['
             entry_handler = FindSettingsHandler(type_start);
             entry_data = entry_handler ? entry_handler->ReadOpenFn(&g, entry_handler, name_start) : NULL;
         }

@@ -159,10 +159,10 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
 
- - button: provide a button that looks framed. (?)
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
  - image button: not taking an explicit id can be problematic. (#2464, #1390)
+ - button: provide a button that looks framed. (?)
  - slider/drag: ctrl+click when format doesn't include a % character.. disable? display underlying value in default format? (see TempInputTextScalar)
  - slider: allow using the [-]/[+] buttons used by InputFloat()/InputInt()
  - slider: initial absolute click is imprecise. change to relative movement slider (same as scrollbar). (#1946)
@@ -233,7 +233,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
- - stb: add defines to disable stb implementations
+ - settings/persistence: helpers to make TreeNodeBehavior persist (even during dev!) - may need to store some semantic and/or data type in ImGuiStoragePair
 
  - style: better default styles. (#707)
  - style: add a highlighted text color (for headers, etc.)
