@@ -31,7 +31,7 @@ Index of this file:
 #error Must include imgui.h before imgui_internal.h
 #endif
 
-#include <stdio.h>      // FILE*
+#include <stdio.h>      // FILE*, sscanf
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi, atof
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
@@ -58,6 +58,14 @@ Index of this file:
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wclass-memaccess"          // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#endif
+
+// Legacy defines
+#ifdef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS                // Obsolete Since 1.74
+#error Use IMGUI_DISABLE_DEFAULT_FORMAT_STRING_FUNCTIONS
+#endif
+#ifdef IMGUI_DISABLE_MATH_FUNCTIONS                         // Obsolete Since 1.74
+#error Use IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #endif
 
 //-----------------------------------------------------------------------------
@@ -254,7 +262,7 @@ static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            
 
 // Helpers: Maths
 // - Wrapper for standard libs functions. (Note that imgui_demo.cpp does _not_ use them to keep the code easy to copy)
-#ifndef IMGUI_DISABLE_MATH_FUNCTIONS
+#ifndef IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 static inline float  ImFabs(float x)                                            { return fabsf(x); }
 static inline float  ImSqrt(float x)                                            { return sqrtf(x); }
 static inline float  ImPow(float x, float y)                                    { return powf(x, y); }
