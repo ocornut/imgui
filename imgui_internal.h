@@ -61,10 +61,10 @@ Index of this file:
 #endif
 
 // Legacy defines
-#ifdef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS                // Obsolete Since 1.74
-#error Use IMGUI_DISABLE_DEFAULT_FORMAT_STRING_FUNCTIONS
+#ifdef IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS                // Renamed in 1.74
+#error Use IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 #endif
-#ifdef IMGUI_DISABLE_MATH_FUNCTIONS                         // Obsolete Since 1.74
+#ifdef IMGUI_DISABLE_MATH_FUNCTIONS                         // Renamed in 1.74
 #error Use IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
 #endif
 

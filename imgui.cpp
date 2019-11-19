@@ -353,7 +353,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
- - 2019/11/19 (1.74) - renamed IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS to IMGUI_DISABLE_DEFAULT_FORMAT_STRING_FUNCTIONS for consistency.
+ - 2019/11/19 (1.74) - renamed IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS to IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS for consistency.
  - 2019/11/19 (1.74) - renamed IMGUI_DISABLE_MATH_FUNCTIONS to IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS for consistency.
  - 2019/10/22 (1.74) - removed redirecting functions/enums that were marked obsolete in 1.52 (October 2017): Begin() (5 arguments signature), IsRootWindowOrAnyChildHovered(), AlignFirstTextHeightToWidgets(), SetNextWindowPosCenter(), ImFont::Glyph. See docs/Changelog.txt or grep this log for details and new names, or see how they were implemented until 1.73.
  - 2019/10/14 (1.74) - inputs: Fixed a miscalculation in the keyboard/mouse "typematic" repeat delay/rate calculation, used by keys and e.g. repeating mouse buttons as well as the GetKeyPressedAmount() function.
@@ -1254,12 +1254,16 @@ const char* ImStrSkipBlank(const char* str)
 // A) MSVC version appears to return -1 on overflow, whereas glibc appears to return total count (which may be >= buf_size).
 // Ideally we would test for only one of those limits at runtime depending on the behavior the vsnprintf(), but trying to deduct it at compile time sounds like a pandora can of worm.
 // B) When buf==NULL vsnprintf() will return the output size.
-#ifndef IMGUI_DISABLE_DEFAULT_FORMAT_STRING_FUNCTIONS
+#ifndef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 
+// We support stb_sprintf which is much faster (see: https://github.com/nothings/stb/blob/master/stb_sprintf.h)
+// You may set IMGUI_USE_STB_SPRINTF to use our default wrapper, or set IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS 
+// and setup the wrapper yourself. (FIXME-OPT: Some of our high-level operations such as ImGuiTextBuffer::appendfv() are 
+// designed using two-passes worst case, which probably could be improved using the stbsp_vsprintfcb() function.)
 //#define IMGUI_USE_STB_SPRINTF
 #ifdef IMGUI_USE_STB_SPRINTF
 #define STB_SPRINTF_IMPLEMENTATION
-#include "imstb_sprintf.h"
+#include "stb_sprintf.h"
 #endif
 
 #if defined(_MSC_VER) && !defined(vsnprintf)
@@ -1298,7 +1302,7 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
     buf[w] = 0;
     return w;
 }
-#endif // #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_STRING_FUNCTIONS
+#endif // #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 
 // CRC32 needs a 1KB lookup table (not cache friendly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
