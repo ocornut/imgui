@@ -46,6 +46,7 @@ CODE
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
 // [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
 // [SECTION] MISC HELPERS/UTILITIES (Maths, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (File functions)
 // [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
 // [SECTION] ImGuiStorage
@@ -1369,10 +1370,16 @@ ImU32 ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
     return ~crc;
 }
 
-FILE* ImFileOpen(const char* filename, const char* mode)
+//-----------------------------------------------------------------------------
+// [SECTION] MISC HELPERS/UTILITIES (File functions)
+//-----------------------------------------------------------------------------
+
+// Default file functions
+#ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
+ImFileHandle ImFileOpen(const char* filename, const char* mode)
 {
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
-    // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames. Converting both strings from UTF-8 to wchar format (using a single allocation, because we can)
+    // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames. 
     const int filename_wsize = ImTextCountCharsFromUtf8(filename, NULL) + 1;
     const int mode_wsize = ImTextCountCharsFromUtf8(mode, NULL) + 1;
     ImVector<ImWchar> buf;
@@ -1384,43 +1391,47 @@ FILE* ImFileOpen(const char* filename, const char* mode)
     return fopen(filename, mode);
 #endif
 }
+int     ImFileClose(ImFileHandle f)     { return fclose(f); }
+size_t  ImFileGetSize(ImFileHandle f)   { long off = 0, sz = 0; return ((off = ftell(f)) != -1 && !fseek(f, 0, SEEK_END) && (sz = ftell(f)) != -1 && !fseek(f, off, SEEK_SET)) ? (size_t)sz : (size_t)-1; }
+size_t  ImFileRead(void* data, size_t sz, size_t count, ImFileHandle f)         { return fread(data, sz, count, f); }
+size_t  ImFileWrite(const void* data, size_t sz, size_t count, ImFileHandle f)  { return fwrite(data, sz, count, f); }
+#endif // #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
 
-// Load file content into memory
+// Helper: Load file content into memory
 // Memory allocated with IM_ALLOC(), must be freed by user using IM_FREE() == ImGui::MemFree()
-void* ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size, int padding_bytes)
+void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size, int padding_bytes)
 {
-    IM_ASSERT(filename && file_open_mode);
+    IM_ASSERT(filename && mode);
     if (out_file_size)
         *out_file_size = 0;
 
-    FILE* f;
-    if ((f = ImFileOpen(filename, file_open_mode)) == NULL)
+    ImFileHandle f;
+    if ((f = ImFileOpen(filename, mode)) == NULL)
         return NULL;
 
-    long file_size_signed;
-    if (fseek(f, 0, SEEK_END) || (file_size_signed = ftell(f)) == -1 || fseek(f, 0, SEEK_SET))
+    size_t file_size = ImFileGetSize(f);
+    if (file_size == (size_t)-1)
     {
-        fclose(f);
+        ImFileClose(f);
         return NULL;
     }
 
-    size_t file_size = (size_t)file_size_signed;
     void* file_data = IM_ALLOC(file_size + padding_bytes);
     if (file_data == NULL)
     {
-        fclose(f);
+        ImFileClose(f);
         return NULL;
     }
-    if (fread(file_data, 1, file_size, f) != file_size)
+    if (ImFileRead(file_data, 1, file_size, f) != file_size)
     {
-        fclose(f);
+        ImFileClose(f);
         IM_FREE(file_data);
         return NULL;
     }
     if (padding_bytes > 0)
         memset((void*)(((char*)file_data) + file_size), 0, (size_t)padding_bytes);
 
-    fclose(f);
+    ImFileClose(f);
     if (out_file_size)
         *out_file_size = file_size;
 
@@ -3822,9 +3833,12 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
 
-    if (g.LogFile && g.LogFile != stdout)
+    if (g.LogFile)
     {
-        fclose(g.LogFile);
+#ifndef IMGUI_DISABLE_TTY_FUNCTIONS
+        if (g.LogFile != stdout)
+#endif
+            ImFileClose(g.LogFile);
         g.LogFile = NULL;
     }
     g.LogBuffer.clear();
@@ -9055,9 +9069,15 @@ void ImGui::LogText(const char* fmt, ...)
     va_list args;
     va_start(args, fmt);
     if (g.LogFile)
-        vfprintf(g.LogFile, fmt, args);
-    else
+    {
+        g.LogBuffer.Buf.resize(0);
         g.LogBuffer.appendfv(fmt, args);
+        ImFileWrite(g.LogBuffer.c_str(), sizeof(char), (size_t)g.LogBuffer.size(), g.LogFile);
+    }
+    else
+    {
+        g.LogBuffer.appendfv(fmt, args);
+    }
     va_end(args);
 }
 
@@ -9134,8 +9154,11 @@ void ImGui::LogToTTY(int auto_open_depth)
     ImGuiContext& g = *GImGui;
     if (g.LogEnabled)
         return;
+    IM_UNUSED(auto_open_depth);
+#ifndef IMGUI_DISABLE_TTY_FUNCTIONS
     LogBegin(ImGuiLogType_TTY, auto_open_depth);
     g.LogFile = stdout;
+#endif
 }
 
 // Start logging/capturing text output to given file
@@ -9152,8 +9175,8 @@ void ImGui::LogToFile(int auto_open_depth, const char* filename)
         filename = g.IO.LogFilename;
     if (!filename || !filename[0])
         return;
-    FILE* f = ImFileOpen(filename, "ab");
-    if (f == NULL)
+    ImFileHandle f = ImFileOpen(filename, "ab");
+    if (!f)
     {
         IM_ASSERT(0);
         return;
@@ -9190,10 +9213,12 @@ void ImGui::LogFinish()
     switch (g.LogType)
     {
     case ImGuiLogType_TTY:
+#ifndef IMGUI_DISABLE_TTY_FUNCTIONS
         fflush(g.LogFile);
+#endif
         break;
     case ImGuiLogType_File:
-        fclose(g.LogFile);
+        ImFileClose(g.LogFile);
         break;
     case ImGuiLogType_Buffer:
         break;
@@ -9219,7 +9244,11 @@ void ImGui::LogButtons()
     ImGuiContext& g = *GImGui;
 
     PushID("LogButtons");
+#ifndef IMGUI_DISABLE_TTY_FUNCTIONS
     const bool log_to_tty = Button("Log To TTY"); SameLine();
+#else
+    const bool log_to_tty = false;
+#endif
     const bool log_to_file = Button("Log To File"); SameLine();
     const bool log_to_clipboard = Button("Log To Clipboard"); SameLine();
     PushAllowKeyboardFocus(false);
@@ -9379,11 +9408,11 @@ void ImGui::SaveIniSettingsToDisk(const char* ini_filename)
 
     size_t ini_data_size = 0;
     const char* ini_data = SaveIniSettingsToMemory(&ini_data_size);
-    FILE* f = ImFileOpen(ini_filename, "wt");
+    ImFileHandle f = ImFileOpen(ini_filename, "wt");
     if (!f)
         return;
-    fwrite(ini_data, sizeof(char), ini_data_size, f);
-    fclose(f);
+    ImFileWrite(ini_data, sizeof(char), ini_data_size, f);
+    ImFileClose(f);
 }
 
 // Call registered handlers (e.g. SettingsHandlerWindow_WriteAll() + custom handlers) to write their stuff into a text buffer

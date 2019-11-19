@@ -81,6 +81,8 @@ Other Changes:
 - Misc: Windows: Do not use _wfopen() if IMGUI_DISABLE_WIN32_FUNCTIONS is defined. (#2815)
 - Misc: Windows: Disabled win32 function by default when building with UWP. (#2892, #2895)
 - Misc: Using static_assert() when using C++11, instead of our own construct (avoid zealous Clang warnings).
+- Misc: Added IMGUI_DISABLE_FILE_FUNCTIONS/IMGUI_DISABLE_DEFAULT_FILE_FUNCTION to nullify or disable
+  default implementationof ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]

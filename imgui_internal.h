@@ -191,8 +191,6 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #endif
 
 // Helpers: Misc
-IMGUI_API void*         ImFileLoadToMemory(const char* filename, const char* file_open_mode, size_t* out_file_size = NULL, int padding_bytes = 0);
-IMGUI_API FILE*         ImFileOpen(const char* filename, const char* file_open_mode);
 #define ImQsort         qsort
 IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
 IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
@@ -259,6 +257,32 @@ static inline ImVec4 operator+(const ImVec4& lhs, const ImVec4& rhs)            
 static inline ImVec4 operator-(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x-rhs.x, lhs.y-rhs.y, lhs.z-rhs.z, lhs.w-rhs.w); }
 static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            { return ImVec4(lhs.x*rhs.x, lhs.y*rhs.y, lhs.z*rhs.z, lhs.w*rhs.w); }
 #endif
+
+// Helpers: File System
+#if defined(__EMSCRIPTEN__) && !defined(IMGUI_DISABLE_FILE_FUNCTIONS)
+#define IMGUI_DISABLE_FILE_FUNCTIONS
+#endif
+#ifdef IMGUI_DISABLE_FILE_FUNCTIONS
+#define IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
+typedef void* ImFileHandle;
+static inline ImFileHandle  ImFileOpen(const char*, const char*)                    { return NULL; }
+static inline int           ImFileClose(ImFileHandle)                               { return -1; }
+static inline size_t        ImFileGetSize(ImFileHandle)                             { return (size_t)-1; }
+static inline size_t        ImFileRead(void*, size_t, size_t, ImFileHandle)         { return 0; }
+static inline size_t        ImFileWrite(const void*, size_t, size_t, ImFileHandle)  { return 0; }
+#endif
+
+#ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
+typedef FILE* ImFileHandle;
+IMGUI_API ImFileHandle      ImFileOpen(const char* filename, const char* mode);
+IMGUI_API int               ImFileClose(ImFileHandle file);
+IMGUI_API size_t            ImFileGetSize(ImFileHandle file);
+IMGUI_API size_t            ImFileRead(void* data, size_t size, size_t count, ImFileHandle file);
+IMGUI_API size_t            ImFileWrite(const void* data, size_t size, size_t count, ImFileHandle file);
+#else
+#define IMGUI_DISABLE_TTY_FUNCTIONS // Can't use stdout, fflush if we are not using default file functions
+#endif
+IMGUI_API void*             ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_file_size = NULL, int padding_bytes = 0);
 
 // Helpers: Maths
 // - Wrapper for standard libs functions. (Note that imgui_demo.cpp does _not_ use them to keep the code easy to copy)
@@ -1103,7 +1127,7 @@ struct ImGuiContext
     // Capture/Logging
     bool                    LogEnabled;
     ImGuiLogType            LogType;
-    FILE*                   LogFile;                            // If != NULL log to stdout/ file
+    ImFileHandle            LogFile;                            // If != NULL log to stdout/ file
     ImGuiTextBuffer         LogBuffer;                          // Accumulation buffer when log to clipboard. This is pointer so our GImGui static constructor doesn't call heap allocators.
     float                   LogLinePosY;
     bool                    LogLineFirstItem;
