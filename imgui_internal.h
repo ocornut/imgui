@@ -266,19 +266,19 @@ static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            
 #define IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
 typedef void* ImFileHandle;
 static inline ImFileHandle  ImFileOpen(const char*, const char*)                    { return NULL; }
-static inline int           ImFileClose(ImFileHandle)                               { return -1; }
-static inline size_t        ImFileGetSize(ImFileHandle)                             { return (size_t)-1; }
-static inline size_t        ImFileRead(void*, size_t, size_t, ImFileHandle)         { return 0; }
-static inline size_t        ImFileWrite(const void*, size_t, size_t, ImFileHandle)  { return 0; }
+static inline bool          ImFileClose(ImFileHandle)                               { return false; }
+static inline ImU64         ImFileGetSize(ImFileHandle)                             { return (ImU64)-1; }
+static inline ImU64         ImFileRead(void*, ImU64, ImU64, ImFileHandle)           { return 0; }
+static inline ImU64         ImFileWrite(const void*, ImU64, ImU64, ImFileHandle)    { return 0; }
 #endif
 
 #ifndef IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
 typedef FILE* ImFileHandle;
 IMGUI_API ImFileHandle      ImFileOpen(const char* filename, const char* mode);
-IMGUI_API int               ImFileClose(ImFileHandle file);
-IMGUI_API size_t            ImFileGetSize(ImFileHandle file);
-IMGUI_API size_t            ImFileRead(void* data, size_t size, size_t count, ImFileHandle file);
-IMGUI_API size_t            ImFileWrite(const void* data, size_t size, size_t count, ImFileHandle file);
+IMGUI_API bool              ImFileClose(ImFileHandle file);
+IMGUI_API ImU64             ImFileGetSize(ImFileHandle file);
+IMGUI_API ImU64             ImFileRead(void* data, ImU64 size, ImU64 count, ImFileHandle file);
+IMGUI_API ImU64             ImFileWrite(const void* data, ImU64 size, ImU64 count, ImFileHandle file);
 #else
 #define IMGUI_DISABLE_TTY_FUNCTIONS // Can't use stdout, fflush if we are not using default file functions
 #endif
@@ -1512,7 +1512,7 @@ struct ImGuiTabItem
     float               Width;                  // Width currently displayed
     float               ContentWidth;           // Width of actual contents, stored during BeginTabItem() call
 
-    ImGuiTabItem()      { ID = Flags = 0; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = ContentWidth = 0.0f; }
+    ImGuiTabItem()      { ID = 0; Flags = 0; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = ContentWidth = 0.0f; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
