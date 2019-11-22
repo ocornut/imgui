@@ -9768,7 +9768,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (window && !window->WasActive)
                 ImGui::Text("(Note: owning Window is inactive: DrawList is not being rendered!)");
 
-            int elem_offset = 0;
+            unsigned int elem_offset = 0;
             for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
             {
                 if (pcmd->UserCallback == NULL && pcmd->ElemCount == 0)
@@ -9778,16 +9778,44 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
                     continue;
                 }
+
                 ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
+
+                // Calculate approximate coverage area (touched pixel count)
+                // This will be in pixels squared as long there's no post-scaling happening to the ImGui output
+                // Optionally also draw all the polys in the list in wireframe when hovering over 
+
+                float total_area = 0.0f;
+
+                for (unsigned int base_idx = elem_offset; base_idx < (elem_offset + pcmd->ElemCount); base_idx += 3)
+                {
+                    ImVec2 triangles_pos[3];
+                    for (int n = 0; n < 3; n++)
+                    {
+                        int vtx_i = idx_buffer ? idx_buffer[base_idx + n] : (base_idx + n);
+                        ImDrawVert& v = draw_list->VtxBuffer[vtx_i];
+                        triangles_pos[n] = v.pos;                            
+                    }
+
+                    // Calculate triangle area and accumulate
+
+                    float area = abs((triangles_pos[0].x * (triangles_pos[1].y - triangles_pos[2].y)) +
+                                 (triangles_pos[1].x * (triangles_pos[2].y - triangles_pos[0].y)) +
+                                 (triangles_pos[2].x * (triangles_pos[0].y - triangles_pos[1].y))) * 0.5f;
+
+                    total_area += area;
+                }
+
                 char buf[300];
-                ImFormatString(buf, IM_ARRAYSIZE(buf), "Draw %4d triangles, tex 0x%p, clip_rect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
-                    pcmd->ElemCount/3, (void*)(intptr_t)pcmd->TextureId, pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "Draw %4d triangles, tex 0x%p, area %.0fpx^2, clip_rect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
+                    pcmd->ElemCount/3, (void*)(intptr_t)pcmd->TextureId, total_area,
+                    pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
                 bool pcmd_node_open = ImGui::TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "%s", buf);
                 if (show_drawcmd_clip_rects && fg_draw_list && ImGui::IsItemHovered())
                 {
                     ImRect clip_rect = pcmd->ClipRect;
                     ImRect vtxs_rect;
-                    for (int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
+                    for (unsigned int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
                         vtxs_rect.Add(draw_list->VtxBuffer[idx_buffer ? idx_buffer[i] : i].pos);
                     clip_rect.Floor(); fg_draw_list->AddRect(clip_rect.Min, clip_rect.Max, IM_COL32(255,0,255,255));
                     vtxs_rect.Floor(); fg_draw_list->AddRect(vtxs_rect.Min, vtxs_rect.Max, IM_COL32(255,255,0,255));
@@ -9795,8 +9823,34 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (!pcmd_node_open)
                     continue;
 
+                // Display vertex information summary. Hover to get all triangles drawn in wireframe
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "ElemCount: %d, ElemCount/3: %d, VtxOffset: +%d, IdxOffset: +%d", pcmd->ElemCount, pcmd->ElemCount/3, pcmd->VtxOffset, pcmd->IdxOffset);
+                ImGui::Selectable(buf, false);
+
+                if (fg_draw_list && ImGui::IsItemHovered())
+                {
+                    // Draw wireframe version of everything
+
+                    ImDrawListFlags backup_flags = fg_draw_list->Flags;
+                    fg_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; // Disable AA on triangle outlines at is more readable for very large and thin triangles.
+
+                    for (unsigned int base_idx = elem_offset; base_idx < (elem_offset + pcmd->ElemCount); base_idx += 3)
+                    {
+                        ImVec2 triangles_pos[3];
+                        for (int n = 0; n < 3; n++)
+                        {
+                            int vtx_i = idx_buffer ? idx_buffer[base_idx + n] : (base_idx + n);
+                            ImDrawVert& v = draw_list->VtxBuffer[vtx_i];
+                            triangles_pos[n] = v.pos;
+                        }
+
+                        fg_draw_list->AddPolyline(triangles_pos, 3, IM_COL32(255, 255, 0, 255), true, 1.0f);
+                    }
+
+                    fg_draw_list->Flags = backup_flags;
+                }
+
                 // Display individual triangles/vertices. Hover on to get the corresponding triangle highlighted.
-                ImGui::Text("ElemCount: %d, ElemCount/3: %d, VtxOffset: +%d, IdxOffset: +%d", pcmd->ElemCount, pcmd->ElemCount/3, pcmd->VtxOffset, pcmd->IdxOffset);
                 ImGuiListClipper clipper(pcmd->ElemCount/3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
                 while (clipper.Step())
                     for (int prim = clipper.DisplayStart, idx_i = elem_offset + clipper.DisplayStart*3; prim < clipper.DisplayEnd; prim++)
@@ -9811,6 +9865,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                             buf_p += ImFormatString(buf_p, buf_end - buf_p, "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n",
                                 (n == 0) ? "elem" : "    ", idx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
                         }
+
                         ImGui::Selectable(buf, false);
                         if (fg_draw_list && ImGui::IsItemHovered())
                         {
