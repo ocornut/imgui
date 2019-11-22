@@ -9900,7 +9900,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::PushID(tab);
                     if (ImGui::SmallButton("<")) { TabBarQueueChangeTabOrder(tab_bar, tab, -1); } ImGui::SameLine(0, 2);
                     if (ImGui::SmallButton(">")) { TabBarQueueChangeTabOrder(tab_bar, tab, +1); } ImGui::SameLine();
-                    ImGui::Text("%02d%c Tab 0x%08X", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID);
+                    ImGui::Text("%02d%c Tab 0x%08X '%s'", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, (tab->NameOffset != -1) ? tab_bar->GetTabName(tab) : "");
                     ImGui::PopID();
                 }
                 ImGui::TreePop();

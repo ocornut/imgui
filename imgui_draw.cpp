@@ -3021,9 +3021,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         x += char_width;
     }
 
-    // Give back unused vertices
-    draw_list->VtxBuffer.resize((int)(vtx_write - draw_list->VtxBuffer.Data));
-    draw_list->IdxBuffer.resize((int)(idx_write - draw_list->IdxBuffer.Data));
+    // Give back unused vertices (clipped ones, blanks) ~ this is essentially a PrimUnreserve() action.
+    draw_list->VtxBuffer.Size = (int)(vtx_write - draw_list->VtxBuffer.Data); // Same as calling shrink()
+    draw_list->IdxBuffer.Size = (int)(idx_write - draw_list->IdxBuffer.Data);
     draw_list->CmdBuffer[draw_list->CmdBuffer.Size-1].ElemCount -= (idx_expected_size - draw_list->IdxBuffer.Size);
     draw_list->_VtxWritePtr = vtx_write;
     draw_list->_IdxWritePtr = idx_write;
