@@ -84,10 +84,11 @@ Other Changes:
 - Misc: Windows: Disabled win32 function by default when building with UWP. (#2892, #2895)
 - Misc: Using static_assert() when using C++11, instead of our own construct (avoid zealous Clang warnings).
 - Misc: Added IMGUI_DISABLE_FILE_FUNCTIONS/IMGUI_DISABLE_DEFAULT_FILE_FUNCTION to nullify or disable
-  default implementationof ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
+  default implementation of ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
+- Metrics: Show wire-frame mesh and approximate surface area when hovering ImDrawCmd. [@ShironekoBen]
 - Metrics: Expose basic details of each window key/value state storage.
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
 - Examples: Emscripten: Removed BINARYEN_TRAP_MODE=clamp from Makefile which was removed in Emscripten 1.39.0
