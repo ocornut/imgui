@@ -1,10 +1,7 @@
-----------------------------------------------------------------------
- dear imgui, v1.74 WIP
-----------------------------------------------------------------------
- docs/FONTS.txt
- This is the Readme dedicated to fonts.
- Also read https://www.dearimgui.org/faq for more ideas.
-----------------------------------------------------------------------
+dear imgui
+FONTS DOCUMENTATION
+
+Also read https://www.dearimgui.org/faq for more fonts related infos.
 
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default.
