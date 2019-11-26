@@ -13278,7 +13278,6 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
 {
     // During the regular dock node update we write to all nodes.
     // 'only_write_to_marked_nodes' is only set when turning a node visible mid-frame and we need its size right-away.
-    IM_ASSERT(size.x > 0.0f && size.y > 0.0f);
     const bool write_to_node = (only_write_to_marked_nodes == false) || (node->MarkedForPosSizeWrite);
     if (write_to_node)
     {
@@ -14223,9 +14222,10 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         return;
     }
 
+    // We can have zero-sized nodes (e.g. children of a small-size dockspace)
     IM_ASSERT(node->HostWindow);
     IM_ASSERT(node->IsLeafNode());
-    IM_ASSERT(node->Size.x > 0.0f && node->Size.y > 0.0f);
+    IM_ASSERT(node->Size.x >= 0.0f && node->Size.y >= 0.0f);
     node->State = ImGuiDockNodeState_HostWindowVisible;
 
     // Undock if we are submitted earlier than the host window
