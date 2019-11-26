@@ -154,10 +154,27 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglfw3-dev libsdl2-dev
+        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib
 
-    - name: Build example_null (extra warnings)
-      run: make -C examples/example_null EXTRA_WARNINGS=1
+    - name: Build example_null (extra warnings, gcc 32-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m32" make -C examples/example_null EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, gcc 64-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m64" make -C examples/example_null EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, clang 32-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m32" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, clang 64-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m64" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
 
     - name: Build example_null (unity build)
       run: make -C examples/example_null UNITY_BUILD=1

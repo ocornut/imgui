@@ -15,7 +15,7 @@ endif
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
-CXXFLAGS = -I../ -I../../
+CXXFLAGS += -I../ -I../../
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
