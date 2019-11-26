@@ -10476,7 +10476,8 @@ static void ImGui::UpdateViewportsNewFrame()
     IM_ASSERT(g.PlatformIO.Viewports.Size <= g.Viewports.Size);
 
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
-    if ((g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable))
+    const bool viewports_enabled = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != 0;
+    if (viewports_enabled)
     {
         for (int n = 0; n < g.Viewports.Size; n++)
         {
@@ -10493,15 +10494,19 @@ static void ImGui::UpdateViewportsNewFrame()
         }
     }
 
-    // Create/update main viewport with current platform position and size
+    // Create/update main viewport with current platform position. 
+    // FIXME-VIEWPORT: Size is driven by back-end/user code for backward-compatibility but we should aim to make this more consistent.
     ImGuiViewportP* main_viewport = g.Viewports[0];
     IM_ASSERT(main_viewport->ID == IMGUI_VIEWPORT_DEFAULT_ID);
     IM_ASSERT(main_viewport->Window == NULL);
-    ImVec2 main_viewport_platform_pos = ImVec2(0.0f, 0.0f);
-    ImVec2 main_viewport_platform_size = g.IO.DisplaySize;
-    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
-        main_viewport_platform_pos = (main_viewport->Flags & ImGuiViewportFlags_Minimized) ? main_viewport->Pos : g.PlatformIO.Platform_GetWindowPos(main_viewport);
-    AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_platform_pos, main_viewport_platform_size, ImGuiViewportFlags_CanHostOtherWindows);
+    ImVec2 main_viewport_pos = viewports_enabled ? g.PlatformIO.Platform_GetWindowPos(main_viewport) : ImVec2(0.0f, 0.0f);
+    ImVec2 main_viewport_size = g.IO.DisplaySize;
+    if (viewports_enabled && (main_viewport->Flags & ImGuiViewportFlags_Minimized))
+    {
+        main_viewport_pos = main_viewport->Pos;    // Preserve last pos/size when minimized (FIXME: We don't do the same for Size outside of the viewport path)
+        main_viewport_size = main_viewport->Size;
+    }
+    AddUpdateViewport(NULL, IMGUI_VIEWPORT_DEFAULT_ID, main_viewport_pos, main_viewport_size, ImGuiViewportFlags_CanHostOtherWindows);
 
     g.CurrentDpiScale = 0.0f;
     g.CurrentViewport = NULL;
@@ -10535,7 +10540,7 @@ static void ImGui::UpdateViewportsNewFrame()
         }
 
         const bool platform_funcs_available = viewport->PlatformWindowCreated;
-        if ((g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable))
+        if (viewports_enabled)
         {
             // Update Position and Size (from Platform Window to ImGui) if requested.
             // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
@@ -10585,7 +10590,7 @@ static void ImGui::UpdateViewportsNewFrame()
         viewport->DpiScale = new_dpi_scale;
     }
 
-    if (!(g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable))
+    if (!viewports_enabled)
     {
         g.MouseViewport = main_viewport;
         return;
