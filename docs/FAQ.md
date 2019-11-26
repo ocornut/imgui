@@ -436,7 +436,7 @@ Default is ProggyClean.ttf, monospace, rendered at size 13, embedded in dear img
 
 (Tip: monospace fonts are convenient because they allow to facilitate horizontal alignment directly at the string level.)
 
-(Read the [misc/fonts/README.txt](https://github.com/ocornut/imgui/blob/master/misc/fonts/README.txt) file for more details about font loading.)
+(Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file for more details about font loading.)
 
 New programmers: remember that in C/C++ and most programming languages if you want to use a
 backslash \ within a string literal, you need to write it double backslash "\\":
@@ -453,15 +453,15 @@ io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 The most convenient and practical way is to merge an icon font such as FontAwesome inside you
 main font. Then you can refer to icons within your strings.
 You may want to see ImFontConfig::GlyphMinAdvanceX to make your icon look monospace to facilitate alignment.
-(Read the [misc/fonts/README.txt](https://github.com/ocornut/imgui/blob/master/misc/fonts/README.txt) file for more details about icons font loading.)
+(Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file for more details about icons font loading.)
 With some extra effort, you may use colorful icon by registering custom rectangle space inside the font atlas,
-and copying your own graphics data into it. See misc/fonts/README.txt about using the AddCustomRectFontGlyph API.
+and copying your own graphics data into it. See docs/FONTS.txt about using the AddCustomRectFontGlyph API.
 
 ---
 
 ### Q: How can I load multiple fonts?
 Use the font atlas to pack them into a single texture:
-(Read the [misc/fonts/README.txt](https://github.com/ocornut/imgui/blob/master/misc/fonts/README.txt) file and the code in ImFontAtlas for more details.)
+(Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file and the code in ImFontAtlas for more details.)
 
 ```cpp
 ImGuiIO& io = ImGui::GetIO();

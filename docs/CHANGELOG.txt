@@ -30,6 +30,7 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+<<<<<<< HEAD
  DOCKING BRANCH (In Progress)
 -----------------------------------------------------------------------
 
@@ -100,6 +101,9 @@ Other changes:
 
 -----------------------------------------------------------------------
  VERSION 1.74 WIP (In Progress)
+=======
+ VERSION 1.74 (Released 2019-11-25)
+>>>>>>> master
 -----------------------------------------------------------------------
 
 Breaking Changes:
@@ -119,6 +123,10 @@ Breaking Changes:
   Effectively it made io.KeyRepeatRate behave like it was set to (io.KeyRepeatRate + io.KeyRepeatDelay).
   Fixed the code and altered default io.KeyRepeatRate,Delay from 0.250,0.050 to 0.300,0.050 to compensate.
   If you never altered io.KeyRepeatRate nor used GetKeyPressedAmount() this won't affect you.
+- Misc: Renamed IMGUI_DISABLE_FORMAT_STRING_FUNCTIONS to IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS. (#1038)
+- Misc: Renamed IMGUI_DISABLE_MATH_FUNCTIONS to IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS.
+- Fonts: ImFontAtlas::AddCustomRectRegular() now requires an ID larger than 0x110000 (instead of 0x10000) to
+  conform with supporting Unicode planes 1-16 in a future update. ID below 0x110000 will now assert.
 - Backends: DX12: Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
@@ -148,12 +156,15 @@ Other Changes:
 - Misc: Windows: Do not use _wfopen() if IMGUI_DISABLE_WIN32_FUNCTIONS is defined. (#2815)
 - Misc: Windows: Disabled win32 function by default when building with UWP. (#2892, #2895)
 - Misc: Using static_assert() when using C++11, instead of our own construct (avoid zealous Clang warnings).
+- Misc: Added IMGUI_DISABLE_FILE_FUNCTIONS/IMGUI_DISABLE_DEFAULT_FILE_FUNCTION to nullify or disable
+  default implementation of ImFileXXX functions linking with fopen/fclose/fread/fwrite. (#2734)
 - Docs: Improved and moved FAQ to docs/FAQ.md so it can be readable on the web. [@ButternCream, @ocornut]
+- Docs: Moved misc/fonts/README.txt to docs/FONTS.txt.
 - Docs: Added permanent redirect from https://www.dearimgui.org/faq to FAQ page.
 - Demo: Added simple item reordering demo in Widgets -> Drag and Drop section. (#2823, #143) [@rokups]
+- Metrics: Show wire-frame mesh and approximate surface area when hovering ImDrawCmd. [@ShironekoBen]
 - Metrics: Expose basic details of each window key/value state storage.
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
-- Examples: Emscripten: Removed NO_FILESYSTEM from Makefile, seems to fail on some setup. (#2734) [@Funto]
 - Examples: Emscripten: Removed BINARYEN_TRAP_MODE=clamp from Makefile which was removed in Emscripten 1.39.0
   but required prior to 1.39.0, making life easier for absolutely no-one. (#2877, #2878) [@podsvirov]
 - Backends: OpenGL3: Fix building with pre-3.2 GL loaders which do not expose glDrawElementsBaseVertex(),
@@ -376,11 +387,11 @@ Other Changes:
   collapsing/docking button to the other side of the title bar.
 - Style: Made window close button cross slightly smaller.
 - Log/Capture: Fixed BeginTabItem() label not being included in a text log/capture.
-- ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bits indices.
+- ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bit indices.
   The renderer back-end needs to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' to enable
   this, and honor the ImDrawCmd::VtxOffset field. Otherwise the value will always be zero.
   This has the advantage of preserving smaller index buffers and allowing to execute on hardware that do not
-  support 32-bits indices. Most examples back-ends have been modified to support the VtxOffset field.
+  support 32-bit indices. Most examples back-ends have been modified to support the VtxOffset field.
 - ImDrawList: Added ImDrawCmd::IdxOffset value, equivalent to summing element count for each draw command.
   This is provided for convenience and consistency with VtxOffset.
 - ImDrawCallback: Allow to override the signature of ImDrawCallback by #define-ing it. This is meant to
@@ -394,7 +405,7 @@ Other Changes:
   dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
 - Backends: OSX: imgui_impl_osx: Added mouse cursor support. (#2585, #1873) [@actboy168]
 - Examples/Backends: DirectX9/10/11/12, Metal, Vulkan, OpenGL3 (Desktop GL only): Added support for large meshes
-  (64k+ vertices) with 16-bits indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those back-ends.
+  (64k+ vertices) with 16-bit indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those back-ends.
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)
@@ -1802,7 +1813,7 @@ Changes:
 - Fixed border rendering in various situations when using non-pixel aligned glyphs.
 - Fixed border rendering of windows to always contain the border within the window.
 - Fixed Shutdown() leaking font atlas data if NewFrame() was never called. (#396, #303)
-- Fixed int>void\* warnings for 64-bits architectures with fancy warnings enabled.
+- Fixed int>void\* warnings for 64-bit architectures with fancy warnings enabled.
 - Renamed the dubious Color() helpers to ValueColor() - dangerously named, rarely used and probably to be made obsolete.
 - InputText(): Fixed and better handling of using keyboard while mouse button if being held and dragging. (#429)
 - InputText(): Replace OS IME (Input Method Editor) cursor on top-left when we are not text editing.

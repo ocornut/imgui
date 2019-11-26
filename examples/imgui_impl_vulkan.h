@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 // Missing features:
 //  [ ] Platform: Multi-viewport / platform windows.
 //  [ ] Renderer: User texture binding. Changes of ImTextureID aren't supported by this binding! See https://github.com/ocornut/imgui/pull/914
