@@ -169,6 +169,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - docking: B~ tidy up tab list popup buttons features (available with manual tab-bar, see ImGuiTabBarFlags_NoTabListPopupButton code, not used by docking nodes)
  - docking: B- SetNextWindowDockId(0) with a second Begin() in the frame will asserts
  - docking: B: resize grip drawn in host window typically appears under scrollbar.
+ - docking: B: resize grip auto-resize on multiple node hierarchy doesn't make much sense or should be improved?
  - docking: B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
  - docking: B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
  - docking: B- dpi: look at interaction with the hi-dpi and multi-dpi stuff.

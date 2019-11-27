@@ -3382,10 +3382,10 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
     }
 }
 
-// Initiate moving window, handle left-click and right-click focus
+// Initiate moving window when clicking on empty space or title bar.
+// Handle left-click and right-click focus.
 void ImGui::UpdateMouseMovingWindowEndFrame()
 {
-    // Initiate moving window
     ImGuiContext& g = *GImGui;
     if (g.ActiveId != 0 || g.HoveredId != 0)
         return;
@@ -3394,15 +3394,18 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     if (g.NavWindow && g.NavWindow->Appearing)
         return;
 
-    // Click to focus window and start moving (after we're done with all our widgets)
+    // Click on void to focus window and start moving 
+    // (after we're done with all our widgets, so e.g. clicking on docking tab-bar which have set HoveredId already and not get us here!)
     if (g.IO.MouseClicked[0])
     {
-        if (g.HoveredRootWindow != NULL)
+        ImGuiWindow* root_window = g.HoveredWindow->RootWindowDockStop;
+        if (root_window != NULL)
         {
             StartMouseMovingWindow(g.HoveredWindow);
-            if (g.IO.ConfigWindowsMoveFromTitleBarOnly && (!(g.HoveredRootWindow->Flags & ImGuiWindowFlags_NoTitleBar) || g.HoveredWindow->RootWindowDockStop->DockIsActive))
-                if (!g.HoveredRootWindow->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
-                    g.MovingWindow = NULL;
+            if (g.IO.ConfigWindowsMoveFromTitleBarOnly)
+                if (!(root_window->Flags & ImGuiWindowFlags_NoTitleBar) || root_window->DockIsActive)
+                    if (!root_window->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
+                        g.MovingWindow = NULL;
         }
         else if (g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
         {
@@ -6406,17 +6409,16 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable)
         {
             // Docking: Dragging a dockable window (or any of its child) turns it into a drag and drop source.
-            // We need to do this _before_ we overwrite window->DC.LastItemId below because BeginAsDockableDragDropSource() also overwrites it.
-            if ((g.ActiveId == window->MoveId) && (g.IO.ConfigDockingWithShift == g.IO.KeyShift))
-                if ((window->Flags & ImGuiWindowFlags_NoMove) == 0)
-                    if ((window->RootWindow->Flags & (ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoDocking)) == 0)
-                        BeginAsDockableDragDropSource(window);
+            // We need to do this _before_ we overwrite window->DC.LastItemId below because BeginDockableDragDropSource() also overwrites it.
+            if ((g.MovingWindow == window) && (g.IO.ConfigDockingWithShift == g.IO.KeyShift))
+                if ((window->RootWindow->Flags & ImGuiWindowFlags_NoDocking) == 0)
+                    BeginDockableDragDropSource(window);
 
-            // Docking: Any dockable window can act as a target. For dock node hosts we call BeginAsDockableDragDropTarget() in DockNodeUpdate() instead.
+            // Docking: Any dockable window can act as a target. For dock node hosts we call BeginDockableDragDropTarget() in DockNodeUpdate() instead.
             if (g.DragDropActive && !(flags & ImGuiWindowFlags_NoDocking))
                 if (g.MovingWindow == NULL || g.MovingWindow->RootWindow != window)
                     if ((window == window->RootWindow) && !(window->Flags & ImGuiWindowFlags_DockNodeHost))
-                        BeginAsDockableDragDropTarget(window);
+                        BeginDockableDragDropTarget(window);
         }
 
         // We fill last item data based on Title Bar/Tab, in order for IsItemHovered() and IsItemActive() to be usable after Begin().
@@ -11817,8 +11819,7 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         DockSettingsRenameNodeReferences(node->ID, new_node->ID);
         for (int n = 0; n < new_node->Windows.Size; n++)
             UpdateWindowParentAndRootLinks(new_node->Windows[n], new_node->Windows[n]->Flags, NULL);
-        new_node->AuthorityForPos = new_node->AuthorityForSize = ImGuiDataAuthority_Window;
-        new_node->WantMouseMove = true;
+        node = new_node;
     }
     else
     {
@@ -11829,9 +11830,9 @@ void ImGui::DockContextProcessUndockNode(ImGuiContext* ctx, ImGuiDockNode* node)
         DockNodeTreeMerge(ctx, node->ParentNode, node->ParentNode->ChildNodes[index_in_parent ^ 1]);
         node->ParentNode->AuthorityForViewport = ImGuiDataAuthority_Window; // The node that stays in place keeps the viewport, so our newly dragged out node will create a new viewport
         node->ParentNode = NULL;
-        node->AuthorityForPos = node->AuthorityForSize = ImGuiDataAuthority_Window;
-        node->WantMouseMove = true;
     }
+    node->AuthorityForPos = node->AuthorityForSize = ImGuiDataAuthority_Window;
+    node->WantMouseMove = true;
     MarkIniSettingsDirty();
 }
 
@@ -12525,7 +12526,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
     // Draw payload drop target
     if (host_window && node->IsVisible)
         if (node->IsRootNode() && (g.MovingWindow == NULL || g.MovingWindow->RootWindow != host_window))
-            BeginAsDockableDragDropTarget(host_window);
+            BeginDockableDragDropTarget(host_window);
 
     // We update this after DockNodeUpdateTabBar()
     node->LastFrameActive = g.FrameCount;
@@ -14099,9 +14100,10 @@ void ImGui::DockBuilderFinish(ImGuiID root_id)
 // Docking: Begin/End Support Functions (called from Begin/End)
 //-----------------------------------------------------------------------------
 // - GetWindowAlwaysWantOwnTabBar()
+// - DockContextBindNodeToWindow()
 // - BeginDocked()
-// - BeginAsDockableDragDropSource()
-// - BeginAsDockableDragDropTarget()
+// - BeginDockableDragDropSource()
+// - BeginDockableDragDropTarget()
 //-----------------------------------------------------------------------------
 
 bool ImGui::GetWindowAlwaysWantOwnTabBar(ImGuiWindow* window)
@@ -14281,10 +14283,11 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
     window->ChildId = parent_window->GetID(window->Name);
 }
 
-void ImGui::BeginAsDockableDragDropSource(ImGuiWindow* window)
+void ImGui::BeginDockableDragDropSource(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.ActiveId == window->MoveId);
+    IM_ASSERT(g.MovingWindow == window);
 
     window->DC.LastItemId = window->MoveId;
     window = window->RootWindow;
@@ -14297,7 +14300,7 @@ void ImGui::BeginAsDockableDragDropSource(ImGuiWindow* window)
     }
 }
 
-void ImGui::BeginAsDockableDragDropTarget(ImGuiWindow* window)
+void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
 {
     ImGuiContext* ctx = GImGui;
     ImGuiContext& g = *ctx;
