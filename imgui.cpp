@@ -3296,26 +3296,32 @@ void ImGui::StartMouseMovingWindow(ImGuiWindow* window)
         g.MovingWindow = window;
 }
 
-void ImGui::StartMouseDragFromTitleBar(ImGuiWindow* window, ImGuiDockNode* node, bool from_collapse_button)
+// We use 'undock_floating_node == false' when dragging from title bar to allow moving groups of floating nodes without undocking them.
+// - undock_floating_node == true: when dragging from a floating node within a hierarchy, always undock the node.
+// - undock_floating_node == false: when dragging from a floating node within a hierarchy, move root window.
+void ImGui::StartMouseMovingWindowOrNode(ImGuiWindow* window, ImGuiDockNode* node, bool undock_floating_node)
 {
     ImGuiContext& g = *GImGui;
-    bool can_extract_dock_node = false;
+    bool can_undock_node = false;
     if (node != NULL && node->VisibleWindow && (node->VisibleWindow->Flags & ImGuiWindowFlags_NoMove) == 0)
     {
+        // Can undock if:
+        // - part of a floating node hierarchy with more than one visible node (if only one is visible, we'll just move the whole hierarchy)
+        // - part of a dockspace node hierarchy (trivia: undocking from a fixed/central node will create a new node and copy windows)
         ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-        if (root_node->OnlyNodeWithWindows != node || (root_node->CentralNode != NULL))
-            if (from_collapse_button || root_node->IsDockSpace())
-                can_extract_dock_node = true;
+        if (root_node->OnlyNodeWithWindows != node || root_node->CentralNode != NULL)
+            if (undock_floating_node || root_node->IsDockSpace())
+                can_undock_node = true;
     }
 
     const bool clicked = IsMouseClicked(0);
     const bool dragging = IsMouseDragging(0, g.IO.MouseDragThreshold * 1.70f);
-    if (can_extract_dock_node && dragging)
+    if (can_undock_node && dragging)
     {
         DockContextQueueUndockNode(&g, node);
         g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - node->Pos;
     }
-    else if (!can_extract_dock_node && (clicked || dragging) && g.MovingWindow != window)
+    else if (!can_undock_node && (clicked || dragging) && g.MovingWindow != window)
     {
         StartMouseMovingWindow(window);
         g.ActiveIdClickOffset = g.IO.MouseClickedPos[0] - window->RootWindow->Pos;
@@ -5541,7 +5547,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
             if (ButtonBehavior(r, window->GetID("#UNHIDE"), &hovered, &held, ImGuiButtonFlags_FlattenChildren))
                 node->WantHiddenTabBarToggle = true;
             else if (held && IsMouseDragging(0))
-                StartMouseDragFromTitleBar(window, node, true);
+                StartMouseMovingWindowOrNode(window, node, true);
 
             // FIXME-DOCK: Ideally we'd use ImGuiCol_TitleBgActive/ImGuiCol_TitleBg here, but neither is guaranteed to be visible enough at this sort of size..
             ImU32 col = GetColorU32(((held && hovered) || (node->IsFocused && !hovered)) ? ImGuiCol_ButtonActive : hovered ? ImGuiCol_ButtonHovered : ImGuiCol_Button);
@@ -12188,18 +12194,19 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         remove |= node_was_active && (window->LastFrameActive + 1 < g.FrameCount);
         remove |= node_was_active && (node->WantCloseAll || node->WantCloseTabID == window->ID) && window->HasCloseButton && !(window->Flags & ImGuiWindowFlags_UnsavedDocument);  // Submit all _expected_ closure from last frame
         remove |= (window->DockTabWantClose);
-        if (!remove)
-            continue;
-        window->DockTabWantClose = false;
-        if (node->Windows.Size == 1 && !node->IsCentralNode())
+        if (remove)
         {
-            DockNodeHideHostWindow(node);
-            node->State = ImGuiDockNodeState_HostWindowHiddenBecauseSingleWindow;
-            DockNodeRemoveWindow(node, window, node->ID); // Will delete the node so it'll be invalid on return
-            return;
+            window->DockTabWantClose = false;
+            if (node->Windows.Size == 1 && !node->IsCentralNode())
+            {
+                DockNodeHideHostWindow(node);
+                node->State = ImGuiDockNodeState_HostWindowHiddenBecauseSingleWindow;
+                DockNodeRemoveWindow(node, window, node->ID); // Will delete the node so it'll be invalid on return
+                return;
+            }
+            DockNodeRemoveWindow(node, window, node->ID);
+            window_n--;
         }
-        DockNodeRemoveWindow(node, window, node->ID);
-        window_n--;
     }
 
     // Auto-hide tab bar option
@@ -12798,7 +12805,7 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
 
             // Forward moving request to selected window
             if (ImGuiTabItem* tab = TabBarFindTabByID(tab_bar, tab_bar->SelectedTabId))
-                StartMouseDragFromTitleBar(tab->Window, node, false);
+                StartMouseMovingWindowOrNode(tab->Window, node, false);
         }
     }
 

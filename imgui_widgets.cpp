@@ -776,7 +776,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos, ImGuiDockNode* dock_no
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
     if (IsItemActive() && IsMouseDragging(0))
-        StartMouseDragFromTitleBar(window, dock_node, true);
+        StartMouseMovingWindowOrNode(window, dock_node, true);
 
     return pressed;
 }
