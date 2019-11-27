@@ -3693,22 +3693,8 @@ static void NewFrameSanityChecks()
     // Perform simple check: the beta io.ConfigWindowsResizeFromEdges option requires back-end to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
     if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
         g.IO.ConfigWindowsResizeFromEdges = false;
-}
-
-void ImGui::NewFrame()
-{
-    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
-    ImGuiContext& g = *GImGui;
-
-#ifdef IMGUI_ENABLE_TEST_ENGINE
-    ImGuiTestEngineHook_PreNewFrame(&g);
-#endif
-
-    // Check and assert for various common IO and Configuration mistakes
-    NewFrameSanityChecks();
 
     // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.
-    g.ConfigFlagsLastFrame = g.ConfigFlagsCurrFrame;
     if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable) && (g.ConfigFlagsLastFrame & ImGuiConfigFlags_DockingEnable) == 0)
         IM_ASSERT(0 && "Please set DockingEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
     if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (g.ConfigFlagsLastFrame & ImGuiConfigFlags_ViewportsEnable) == 0)
@@ -3720,12 +3706,12 @@ void ImGui::NewFrame()
         if ((g.IO.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasViewports))
         {
             IM_ASSERT((g.FrameCount == 0 || g.FrameCount == g.FrameCountPlatformEnded) && "Forgot to call UpdatePlatformWindows() in main loop after EndFrame()? Check examples/ applications for reference.");
-            IM_ASSERT(g.PlatformIO.Platform_CreateWindow != NULL  && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_CreateWindow  != NULL && "Platform init didn't install handlers?");
             IM_ASSERT(g.PlatformIO.Platform_DestroyWindow != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_GetWindowPos != NULL  && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_SetWindowPos != NULL  && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_GetWindowSize != NULL  && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_SetWindowSize != NULL  && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_GetWindowPos  != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_SetWindowPos  != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_GetWindowSize != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_SetWindowSize != NULL && "Platform init didn't install handlers?");
             IM_ASSERT(g.PlatformIO.Monitors.Size > 0 && "Platform init didn't setup Monitors list?");
             IM_ASSERT((g.Viewports[0]->PlatformUserData != NULL || g.Viewports[0]->PlatformHandle != NULL) && "Platform init didn't setup main viewport.");
             if (g.IO.ConfigDockingTransparentPayload && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
@@ -3750,6 +3736,20 @@ void ImGui::NewFrame()
             IM_ASSERT(mon.DpiScale != 0.0f);
         }
     }
+}
+
+void ImGui::NewFrame()
+{
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
+    ImGuiContext& g = *GImGui;
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngineHook_PreNewFrame(&g);
+#endif
+
+    // Check and assert for various common IO and Configuration mistakes
+    g.ConfigFlagsLastFrame = g.ConfigFlagsCurrFrame;
+    NewFrameSanityChecks();
     g.ConfigFlagsCurrFrame = g.IO.ConfigFlags;
 
     // Load settings on first frame (if not explicitly loaded manually before)
@@ -11232,6 +11232,7 @@ namespace ImGui
     static void             DockNodeRemoveWindow(ImGuiDockNode* node, ImGuiWindow* window, ImGuiID save_dock_id);
     static void             DockNodeHideHostWindow(ImGuiDockNode* node);
     static void             DockNodeUpdate(ImGuiDockNode* node);
+    static void             DockNodeUpdateForRootNode(ImGuiDockNode* node);
     static void             DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node);
     static void             DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window);
     static void             DockNodeAddTabBar(ImGuiDockNode* node);
@@ -12168,7 +12169,6 @@ static ImGuiWindow* ImGui::DockNodeFindWindowByID(ImGuiDockNode* node, ImGuiID i
 static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
-
     IM_ASSERT(node->ParentNode == NULL || node->ParentNode->ChildNodes[0] == node || node->ParentNode->ChildNodes[1] == node);
 
     // Inherit most flags
@@ -12247,6 +12247,36 @@ static void ImGui::DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWind
     g.ActiveIdClickOffset = backup_active_click_offset;
 }
 
+// Update CentralNode, OnlyNodeWithWindows, LastFocusedNodeID. Copy window class.
+static void ImGui::DockNodeUpdateForRootNode(ImGuiDockNode* node)
+{
+    DockNodeUpdateVisibleFlagAndInactiveChilds(node);
+
+    // FIXME-DOCK: Merge this scan into the one above.
+    // - Setup central node pointers
+    // - Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
+    ImGuiDockNodeFindInfoResults results;
+    DockNodeFindInfo(node, &results);
+    node->CentralNode = results.CentralNode;
+    node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1) ? results.FirstNodeWithWindows : NULL;
+    if (node->LastFocusedNodeID == 0 && results.FirstNodeWithWindows != NULL)
+        node->LastFocusedNodeID = results.FirstNodeWithWindows->ID;
+
+    // Copy the window class from of our first window so it can be used for proper dock filtering.
+    // When node has mixed windows, prioritize the class with the most constraint (DockingAllowUnclassed = false) as the reference to copy.
+    // FIXME-DOCK: We don't recurse properly, this code could be reworked to work from DockNodeUpdateScanRec.
+    if (ImGuiDockNode* first_node_with_windows = results.FirstNodeWithWindows)
+    {
+        node->WindowClass = first_node_with_windows->Windows[0]->WindowClass;
+        for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
+            if (first_node_with_windows->Windows[n]->WindowClass.DockingAllowUnclassed == false)
+            {
+                node->WindowClass = first_node_with_windows->Windows[n]->WindowClass;
+                break;
+            }
+    }
+}
+
 static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 {
     ImGuiContext& g = *GImGui;
@@ -12256,33 +12286,7 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
 
     node->CentralNode = node->OnlyNodeWithWindows = NULL;
     if (node->IsRootNode())
-    {
-        DockNodeUpdateVisibleFlagAndInactiveChilds(node);
-
-        // FIXME-DOCK: Merge this scan into the one above.
-        // - Setup central node pointers
-        // - Find if there's only a single visible window in the hierarchy (in which case we need to display a regular title bar -> FIXME-DOCK: that last part is not done yet!)
-        ImGuiDockNodeFindInfoResults results;
-        DockNodeFindInfo(node, &results);
-        node->CentralNode = results.CentralNode;
-        node->OnlyNodeWithWindows = (results.CountNodesWithWindows == 1) ? results.FirstNodeWithWindows : NULL;
-        if (node->LastFocusedNodeID == 0 && results.FirstNodeWithWindows != NULL)
-            node->LastFocusedNodeID = results.FirstNodeWithWindows->ID;
-
-        // Copy the window class from of our first window so it can be used for proper dock filtering.
-        // When node has mixed windows, prioritize the class with the most constraint (DockingAllowUnclassed = false) as the reference to copy.
-        // FIXME-DOCK: We don't recurse properly, this code could be reworked to work from DockNodeUpdateScanRec.
-        if (ImGuiDockNode* first_node_with_windows = results.FirstNodeWithWindows)
-        {
-            node->WindowClass = first_node_with_windows->Windows[0]->WindowClass;
-            for (int n = 1; n < first_node_with_windows->Windows.Size; n++)
-                if (first_node_with_windows->Windows[n]->WindowClass.DockingAllowUnclassed == false)
-                {
-                    node->WindowClass = first_node_with_windows->Windows[n]->WindowClass;
-                    break;
-                }
-        }
-    }
+        DockNodeUpdateForRootNode(node);
 
     // Remove tab bar if not needed
     if (node->TabBar && node->IsNoTabBar())
