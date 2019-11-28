@@ -11241,7 +11241,7 @@ namespace ImGui
     static void             DockNodeUpdateVisibleFlag(ImGuiDockNode* node);
     static void             DockNodeStartMouseMovingWindow(ImGuiDockNode* node, ImGuiWindow* window);
     static bool             DockNodeIsDropAllowed(ImGuiWindow* host_window, ImGuiWindow* payload_window);
-    static void             DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* payload_window, ImGuiDockPreviewData* preview_data, bool is_explicit_target, bool is_outer_docking);
+    static void             DockNodePreviewDockSetup(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* payload_window, ImGuiDockPreviewData* preview_data, bool is_explicit_target, bool is_outer_docking);
     static void             DockNodePreviewDockRender(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* payload_window, const ImGuiDockPreviewData* preview_data);
     static void             DockNodeCalcTabBarLayout(const ImGuiDockNode* node, ImRect* out_title_rect, ImRect* out_tab_bar_rect, ImVec2* out_window_menu_button_pos);
     static void             DockNodeCalcSplitRects(ImVec2& pos_old, ImVec2& size_old, ImVec2& pos_new, ImVec2& size_new, ImGuiDir dir, ImVec2 size_new_desired);
@@ -11740,7 +11740,7 @@ void ImGui::DockContextProcessDock(ImGuiContext* ctx, ImGuiDockRequest* req)
                     // We can dock a split payload into a node that already has windows _only_ if our payload is a node tree with a single visible node.
                     // In this situation, we move the windows of the target node into the currently visible node of the payload.
                     // This allows us to preserve some of the underlying dock tree settings nicely.
-                    IM_ASSERT(payload_node->OnlyNodeWithWindows != NULL); // The docking should have been blocked by DockNodePreviewDockCalc() early on and never submitted.
+                    IM_ASSERT(payload_node->OnlyNodeWithWindows != NULL); // The docking should have been blocked by DockNodePreviewDockSetup() early on and never submitted.
                     ImGuiDockNode* visible_node = payload_node->OnlyNodeWithWindows;
                     if (visible_node->TabBar)
                         IM_ASSERT(visible_node->TabBar->Tabs.Size > 0);
@@ -11847,7 +11847,7 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
     else
     {
         ImGuiDockPreviewData split_data;
-        DockNodePreviewDockCalc(target, target_node, payload, &split_data, false, split_outer);
+        DockNodePreviewDockSetup(target, target_node, payload, &split_data, false, split_outer);
         if (split_data.DropRectsDraw[split_dir+1].IsInverted())
             return false;
         *out_pos = split_data.DropRectsDraw[split_dir+1].GetCenter();
@@ -11882,7 +11882,7 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 // - DockNodeCalcTabBarLayout()
 // - DockNodeCalcSplitRects()
 // - DockNodeCalcDropRectsAndTestMousePos()
-// - DockNodePreviewDockCalc()
+// - DockNodePreviewDockSetup()
 // - DockNodePreviewDockRender()
 //-----------------------------------------------------------------------------
 
@@ -13007,39 +13007,41 @@ bool ImGui::DockNodeCalcDropRectsAndTestMousePos(const ImRect& parent, ImGuiDir 
 
 // host_node may be NULL if the window doesn't have a DockNode already.
 // FIXME-DOCK: This is misnamed since it's also doing the filtering.
-static void ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* root_payload, ImGuiDockPreviewData* data, bool is_explicit_target, bool is_outer_docking)
+static void ImGui::DockNodePreviewDockSetup(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* root_payload, ImGuiDockPreviewData* data, bool is_explicit_target, bool is_outer_docking)
 {
     ImGuiContext& g = *GImGui;
 
     // There is an edge case when docking into a dockspace which only has inactive nodes.
     // In this case DockNodeTreeFindNodeByPos() will have selected a leaf node which is inactive.
     // Because the inactive leaf node doesn't have proper pos/size yet, we'll use the root node as reference.
+    ImGuiDockNode* root_payload_as_host = root_payload->DockNodeAsHost;
     ImGuiDockNode* ref_node_for_rect = (host_node && !host_node->IsVisible) ? DockNodeGetRootNode(host_node) : host_node;
     if (ref_node_for_rect)
         IM_ASSERT(ref_node_for_rect->IsVisible);
 
-    // Build a tentative future node (reuse same structure because it is practical)
-    data->FutureNode.HasCloseButton = (host_node ? host_node->HasCloseButton : host_window->HasCloseButton) || (root_payload->HasCloseButton);
-    data->FutureNode.HasWindowMenuButton = host_node ? true : ((host_window->Flags & ImGuiWindowFlags_NoCollapse) == 0);
-    data->FutureNode.Pos = host_node ? ref_node_for_rect->Pos : host_window->Pos;
-    data->FutureNode.Size = host_node ? ref_node_for_rect->Size : host_window->Size;
-
-    // Figure out here we are allowed to dock
+    // Filter, figure out where we are allowed to dock
     ImGuiDockNodeFlags host_node_flags = host_node ? host_node->GetMergedFlags() : 0;
-    const bool src_is_visibly_splitted = root_payload->DockNodeAsHost && root_payload->DockNodeAsHost->IsSplitNode() && (root_payload->DockNodeAsHost->OnlyNodeWithWindows == NULL);
-    data->IsCenterAvailable = !is_outer_docking;
-    if (src_is_visibly_splitted && (!host_node || !host_node->IsEmpty()))
+    data->IsCenterAvailable = true;
+    if (is_outer_docking)
         data->IsCenterAvailable = false;
-    if (host_node && (host_node_flags & ImGuiDockNodeFlags_NoDocking))
+    else if (host_node && (host_node_flags & ImGuiDockNodeFlags_NoDocking))
         data->IsCenterAvailable = false;
-    if (host_node && (host_node_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) && host_node->IsCentralNode())
+    else if (host_node && (host_node_flags & ImGuiDockNodeFlags_NoDockingInCentralNode) && host_node->IsCentralNode())
+        data->IsCenterAvailable = false;
+    else if ((!host_node || !host_node->IsEmpty()) && root_payload_as_host && root_payload_as_host->IsSplitNode() && (root_payload_as_host->OnlyNodeWithWindows == NULL)) // Is _visibly_ split?
         data->IsCenterAvailable = false;
 
     data->IsSidesAvailable = true;
     if ((host_node && (host_node_flags & ImGuiDockNodeFlags_NoSplit)) || g.IO.ConfigDockingNoSplit)
         data->IsSidesAvailable = false;
-    if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsCentralNode())
+    else if (!is_outer_docking && host_node && host_node->ParentNode == NULL && host_node->IsCentralNode())
         data->IsSidesAvailable = false;
+
+    // Build a tentative future node (reuse same structure because it is practical. Shape will be readjusted when previewing a split)
+    data->FutureNode.HasCloseButton = (host_node ? host_node->HasCloseButton : host_window->HasCloseButton) || (root_payload->HasCloseButton);
+    data->FutureNode.HasWindowMenuButton = host_node ? true : ((host_window->Flags & ImGuiWindowFlags_NoCollapse) == 0);
+    data->FutureNode.Pos = host_node ? ref_node_for_rect->Pos : host_window->Pos;
+    data->FutureNode.Size = host_node ? ref_node_for_rect->Size : host_window->Size;
 
     // Calculate drop shapes geometry for allowed splitting directions
     IM_ASSERT(ImGuiDir_None == -1);
@@ -14353,11 +14355,11 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
             if (node && (node->ParentNode || node->IsCentralNode()))
                 if (ImGuiDockNode* root_node = DockNodeGetRootNode(node))
                 {
-                    DockNodePreviewDockCalc(window, root_node, payload_window, &split_outer, is_explicit_target, true);
+                    DockNodePreviewDockSetup(window, root_node, payload_window, &split_outer, is_explicit_target, true);
                     if (split_outer.IsSplitDirExplicit)
                         split_data = &split_outer;
                 }
-            DockNodePreviewDockCalc(window, node, payload_window, &split_inner, is_explicit_target, false);
+            DockNodePreviewDockSetup(window, node, payload_window, &split_inner, is_explicit_target, false);
             if (split_data == &split_outer)
                 split_inner.IsDropAllowed = false;
 
