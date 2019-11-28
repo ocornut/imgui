@@ -12313,6 +12313,7 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
         DockNodeUpdateVisibleFlagAndInactiveChilds(node->ChildNodes[1]);
 
     // Remove inactive windows
+    // Merge node flags overrides stored in windows
     for (int window_n = 0; window_n < node->Windows.Size; window_n++)
     {
         ImGuiWindow* window = node->Windows[window_n];
@@ -12336,6 +12337,11 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
             DockNodeRemoveWindow(node, window, node->ID);
             window_n--;
         }
+        else
+        {
+            node->LocalFlags &= ~window->WindowClass.DockNodeFlagsOverrideClear;
+            node->LocalFlags |= window->WindowClass.DockNodeFlagsOverrideSet;
+        }
     }
 
     // Auto-hide tab bar option
@@ -12343,6 +12349,10 @@ static void ImGui::DockNodeUpdateVisibleFlagAndInactiveChilds(ImGuiDockNode* nod
     if (node->WantHiddenTabBarUpdate && node->Windows.Size == 1 && (node_flags & ImGuiDockNodeFlags_AutoHideTabBar) && !node->IsHiddenTabBar())
         node->WantHiddenTabBarToggle = true;
     node->WantHiddenTabBarUpdate = false;
+
+    // Cancel toggling if we know our tab bar is enforced to be hidden at all times
+    if (node->WantHiddenTabBarToggle && node->VisibleWindow && (node->VisibleWindow->WindowClass.DockNodeFlagsOverrideSet & ImGuiDockNodeFlags_HiddenTabBar))
+        node->WantHiddenTabBarToggle = false;
 
     // Apply toggles at a single point of the frame (here!)
     if (node->Windows.Size > 1)
