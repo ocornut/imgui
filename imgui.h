@@ -1609,8 +1609,13 @@ struct ImGuiSizeCallbackData
     ImVec2  DesiredSize;    // Read-write.  Desired size, based on user's mouse position. Write to this field to restrain resizing.
 };
 
-// [BETA] Rarely used / very advanced uses only. Use with SetNextWindowClass() and DockSpace() functions.
-// Provide hints to the platform back-end via altered viewport flags (enable/disable OS decoration, OS task bar icons, etc.) and OS level parent/child relationships.
+// [ALPHA] Rarely used / very advanced uses only. Use with SetNextWindowClass() and DockSpace() functions.
+// Important: the content of this class is still highly WIP and likely to change and be refactored
+// before we stabilize Docking features. Please be mindful if using this.
+// Provide hints:
+// - To the platform back-end via altered viewport flags (enable/disable OS decoration, OS task bar icons, etc.) 
+// - To the platform back-end for OS level parent/child relationships of viewport.
+// - To the docking system for various options and filtering.
 struct ImGuiWindowClass
 {
     ImGuiID             ClassId;                    // User data. 0 = Default class (unclassed). Windows of different classes cannot be docked with each others.

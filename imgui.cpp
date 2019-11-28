@@ -3398,7 +3398,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     // (after we're done with all our widgets, so e.g. clicking on docking tab-bar which have set HoveredId already and not get us here!)
     if (g.IO.MouseClicked[0])
     {
-        ImGuiWindow* root_window = g.HoveredWindow->RootWindowDockStop;
+        ImGuiWindow* root_window = g.HoveredWindow ? g.HoveredWindow->RootWindowDockStop : NULL;
         if (root_window != NULL)
         {
             StartMouseMovingWindow(g.HoveredWindow);
@@ -13006,6 +13006,7 @@ bool ImGui::DockNodeCalcDropRectsAndTestMousePos(const ImRect& parent, ImGuiDir 
 }
 
 // host_node may be NULL if the window doesn't have a DockNode already.
+// FIXME-DOCK: This is misnamed since it's also doing the filtering.
 static void ImGui::DockNodePreviewDockCalc(ImGuiWindow* host_window, ImGuiDockNode* host_node, ImGuiWindow* root_payload, ImGuiDockPreviewData* data, bool is_explicit_target, bool is_outer_docking)
 {
     ImGuiContext& g = *GImGui;
@@ -14253,7 +14254,7 @@ void ImGui::BeginDocked(ImGuiWindow* window, bool* p_open)
         return;
     }
 
-    // Position window
+    // Position/Size window
     SetNextWindowPos(node->Pos);
     SetNextWindowSize(node->Size);
     g.NextWindowData.PosUndock = false; // Cancel implicit undocking of SetNextWindowPos()
@@ -14346,7 +14347,8 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
         const bool do_preview = payload->IsPreview() || payload->IsDelivery();
         if (do_preview && (node != NULL || allow_null_target_node))
         {
-            ImGuiDockPreviewData split_inner, split_outer;
+            ImGuiDockPreviewData split_inner;
+            ImGuiDockPreviewData split_outer;
             ImGuiDockPreviewData* split_data = &split_inner;
             if (node && (node->ParentNode || node->IsCentralNode()))
                 if (ImGuiDockNode* root_node = DockNodeGetRootNode(node))
