@@ -1904,10 +1904,11 @@ void ImFontAtlas::CreatePerDpiFonts()
     // Duplicate all added fonts for each DPI. All font sizes are rendered into the same texture. Fonts are switched on
     // the fly when window transitions through monitors of different dpi.
 
-    ImGuiPlatformIO& platform_io = GImGui->PlatformIO;
+    ImGuiContext& g = *GImGui;
+    ImGuiPlatformIO& platform_io = g.PlatformIO;
     ImVector<float> dpi_set;
 
-    if (GImGui->IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
     {
         IM_ASSERT(platform_io.Monitors.Size > 0);
         // Gather different DPIs
@@ -1920,14 +1921,14 @@ void ImFontAtlas::CreatePerDpiFonts()
         // High DPI goes to the front of the list so that custom rects get supersampled.
         ImQsort(dpi_set.Data, dpi_set.Size, sizeof(float), FloatReverseComparer);
     }
-    else
+    else if (g.IO.DisplayFramebufferScale.x != 1.0f)
     {
         // Monitors are empty when viewports are not enabled. In that case we only handle dpi of main viewport at build
         // time. This is incorrect, but will properly work at least in some cases (single hdpi monitor).
-        // TODO: DpiScale is not set yet at this point.
-        //dpi_set.push_back(platform_io.MainViewport->DpiScale);
-        return;
+        dpi_set.push_back(g.IO.DisplayFramebufferScale.x);
     }
+    else
+        return;
 
     // Clone initial list of fonts for DPIs ranging 1..N.
     const int total_configs = ConfigData.Size;    // Variables used there because these structures expand during
