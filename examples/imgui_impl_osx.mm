@@ -78,6 +78,7 @@ bool ImGui_ImplOSX_Init()
     g_MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
     g_MouseCursors[ImGuiMouseCursor_ResizeAll] = [NSCursor closedHandCursor];
     g_MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_NotAllowed] = [NSCursor operationNotAllowedCursor];
     g_MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)] ? [NSCursor _windowResizeNorthSouthCursor] : [NSCursor resizeUpDownCursor];
     g_MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)] ? [NSCursor _windowResizeEastWestCursor] : [NSCursor resizeLeftRightCursor];
     g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)] ? [NSCursor _windowResizeNorthEastSouthWestCursor] : [NSCursor closedHandCursor];
