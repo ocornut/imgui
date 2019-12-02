@@ -3910,6 +3910,10 @@ ImGuiKeyModFlags ImGui::GetMergedKeyModFlags()
 static void DpiScaleMousePosition()
 {
     ImGuiContext& g = *GImGui;
+
+    if (!(g.ConfigFlagsCurrFrame & ImGuiConfigFlags_DpiEnableScaleViewports))
+        return;
+
     if (g.IO.MousePos.x == g.LastMousePos.x && g.IO.MousePos.y == g.LastMousePos.y)
         // Mouse position did not change since the last frame therefore it is already scaled.
         return;
@@ -4413,7 +4417,7 @@ static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*
     draw_data->TotalVtxCount = draw_data->TotalIdxCount = 0;
     draw_data->DisplayPos = viewport->Pos;
     draw_data->DisplaySize = viewport->Size;
-    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
+    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_DpiEnableScaleViewports)
         draw_data->FramebufferScale = ImVec2(viewport->DpiScale, viewport->DpiScale);
     else
         draw_data->FramebufferScale = g.IO.DisplayFramebufferScale;
@@ -7602,6 +7606,8 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
             IM_ASSERT(mon.DpiScale != 0.0f);
         }
     }
+    else
+        IM_ASSERT(g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports && "Viewports are not enabled.");
 }
 
 static void ImGui::ErrorCheckEndFrameSanityChecks()
@@ -10761,15 +10767,18 @@ void ImGui::SetCurrentViewport(ImGuiWindow* current_window, ImGuiViewportP* view
     if (g.CurrentViewport == viewport)
         return;
 
-    if (viewport)
+    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_DpiEnableScaleViewports)
     {
-        g.CurrentDpiScale = viewport->DpiScale;
-        g.CurrentDpiScaleInverse = 1.0f / g.CurrentDpiScale;
-    }
-    else
-    {
-        g.CurrentDpiScale = 1.0f;
-        g.CurrentDpiScaleInverse = 1.0f;
+        if (viewport)
+        {
+            g.CurrentDpiScale = viewport->DpiScale;
+            g.CurrentDpiScaleInverse = 1.0f / g.CurrentDpiScale;
+        }
+        else
+        {
+            g.CurrentDpiScale = 1.0f;
+            g.CurrentDpiScaleInverse = 1.0f;
+        }
     }
 
     g.CurrentViewport = viewport;
@@ -10905,24 +10914,27 @@ static void ImGui::UpdateViewportsNewFrame()
 
     // (Viewports/DPI) A workaround for allowing user to not scale DisplaySize manually.
 #ifndef __APPLE__
-    float scale = g.PlatformIO.MainViewport->DpiScale;
-    bool display_size_changed = g.LastDisplaySize.x != g.IO.DisplaySize.x || g.LastDisplaySize.y != g.IO.DisplaySize.y;
-    bool scale_changed = scale != g.LastDisplayScale;
-    if (display_size_changed || scale_changed)
+    if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_DpiEnableScaleViewports && g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable)
     {
-        if (!display_size_changed)
+        float scale = g.PlatformIO.MainViewport->DpiScale;
+        bool display_size_changed = g.LastDisplaySize.x != g.IO.DisplaySize.x || g.LastDisplaySize.y != g.IO.DisplaySize.y;
+        bool scale_changed = scale != g.LastDisplayScale;
+        if (display_size_changed || scale_changed)
         {
-            // Scale changed but not display size. Reverse downscaling.
-            g.IO.DisplaySize.x *= g.LastDisplayScale;
-            g.IO.DisplaySize.y *= g.LastDisplayScale;
+            if (!display_size_changed)
+            {
+                // Scale changed but not display size. Reverse downscaling.
+                g.IO.DisplaySize.x *= g.LastDisplayScale;
+                g.IO.DisplaySize.y *= g.LastDisplayScale;
+            }
+            // Downscale main viewport to 96 DPI.
+            g.IO.DisplaySize.x /= scale;
+            g.IO.DisplaySize.y /= scale;
         }
-        // Downscale main viewport to 96 DPI.
-        g.IO.DisplaySize.x /= scale;
-        g.IO.DisplaySize.y /= scale;
+        g.LastMousePos = g.IO.MousePos;
+        g.LastDisplaySize = g.IO.DisplaySize;
+        g.LastDisplayScale = g.PlatformIO.MainViewport->DpiScale;
     }
-    g.LastMousePos = g.IO.MousePos;
-    g.LastDisplaySize = g.IO.DisplaySize;
-    g.LastDisplayScale = g.PlatformIO.MainViewport->DpiScale;
 #endif
     // Update Minimized status (we need it first in order to decide if we'll apply Pos/Size of the main viewport)
     const bool viewports_enabled = (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable) != 0;
@@ -11021,36 +11033,45 @@ static void ImGui::UpdateViewportsNewFrame()
             TranslateWindowsInViewport(viewport, viewport->LastPos, viewport->Pos);
 
         // Update DPI scale
-        float new_dpi_scale;
-        float new_coordinate_scale = 1.0f;
-        if (g.PlatformIO.Platform_GetWindowDpiScale && platform_funcs_available)
-            new_dpi_scale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
-        else if (viewport->PlatformMonitor != -1)
-            new_dpi_scale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
-        else
-            new_dpi_scale = (viewport->DpiScale != 0.0f) ? viewport->DpiScale : 1.0f;
+        if (g.ConfigFlagsCurrFrame & ImGuiConfigFlags_DpiEnableScaleViewports)
+        {
+            float new_dpi_scale;
+            float new_coordinate_scale = 1.0f;
+            if (g.PlatformIO.Platform_GetWindowDpiScale && platform_funcs_available)
+                new_dpi_scale = g.PlatformIO.Platform_GetWindowDpiScale(viewport);
+            else if (viewport->PlatformMonitor != -1)
+                new_dpi_scale = g.PlatformIO.Monitors[viewport->PlatformMonitor].DpiScale;
+            else
+                new_dpi_scale = (viewport->DpiScale != 0.0f) ? viewport->DpiScale : 1.0f;
 
 #ifndef __APPLE__
-        new_coordinate_scale = new_dpi_scale;
+            new_coordinate_scale = new_dpi_scale;
 #endif
-
-        // Moving windows do not transition their DPI.
-        if (g.MovingWindow == NULL || g.MovingWindow->Viewport != viewport)
-        {
-            if (new_dpi_scale != viewport->DpiScale && viewport != GetMainViewport() && platform_funcs_available)
+            // Moving windows do not transition their DPI.
+            if (g.MovingWindow == NULL || g.MovingWindow->Viewport != viewport)
             {
-                // DPI changed and we have to update window that transitioned to new DPI. Main viewport is an exception.
-                // It's size (native window with OS decorations) remains static while ImGui windows in it get scaled
-                // automatically.
-                g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * new_dpi_scale);
-                // Reupdate viewport position from native window. Not doing this causes discrepancy between where ImGui
-                // thinks window is and where it actually is and it breaks any mouse input.
-                viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / new_coordinate_scale;
-                if (viewport->Window != NULL)
-                    viewport->Window->Pos = viewport->Pos;
+                if (new_dpi_scale != viewport->DpiScale && viewport != GetMainViewport() && platform_funcs_available)
+                {
+                    // DPI changed and we have to update window that transitioned to new DPI. Main viewport is an exception.
+                    // It's size (native window with OS decorations) remains static while ImGui windows in it get scaled
+                    // automatically.
+                    g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * new_dpi_scale);
+                    // Reupdate viewport position from native window. Not doing this causes discrepancy between where ImGui
+                    // thinks window is and where it actually is and it breaks any mouse input.
+                    viewport->Pos = viewport->LastPlatformPos =
+                        g.PlatformIO.Platform_GetWindowPos(viewport) / new_coordinate_scale;
+                    if (viewport->Window != NULL)
+                        viewport->Window->Pos = viewport->Pos;
+                }
+
+                viewport->DpiScale = new_dpi_scale;
+                viewport->CoordinateScale = new_coordinate_scale;
             }
-            viewport->DpiScale = new_dpi_scale;
-            viewport->CoordinateScale = new_coordinate_scale;
+        }
+        else
+        {
+            viewport->DpiScale = 1.0f;
+            viewport->CoordinateScale = 1.0f;
         }
     }
 

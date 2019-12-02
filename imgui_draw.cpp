@@ -1907,7 +1907,7 @@ void ImFontAtlas::CreatePerDpiFonts()
     ImGuiPlatformIO& platform_io = GImGui->PlatformIO;
     ImVector<float> dpi_set;
 
-    if (GImGui->IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    if (GImGui->IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports)
     {
         IM_ASSERT(platform_io.Monitors.Size > 0);
         // Gather different DPIs
