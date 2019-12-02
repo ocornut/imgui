@@ -2,7 +2,7 @@
 // Marmalade code: Copyright (C) 2015 by Giovanni Zito (this file is part of Dear ImGui)
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID!
 // Missing features:
 //  [ ] Renderer: Clipping rectangles are not honored.
 
@@ -12,6 +12,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_Marmalade_RenderDrawData() in the .h file so you can call it yourself.
@@ -235,6 +236,7 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_Space] = s3eKeySpace;
     io.KeyMap[ImGuiKey_Enter] = s3eKeyEnter;
     io.KeyMap[ImGuiKey_Escape] = s3eKeyEsc;
+    io.KeyMap[ImGuiKey_KeyPadEnter] = s3eKeyNumPadEnter;
     io.KeyMap[ImGuiKey_A] = s3eKeyA;
     io.KeyMap[ImGuiKey_C] = s3eKeyC;
     io.KeyMap[ImGuiKey_V] = s3eKeyV;

@@ -59,6 +59,7 @@ bool ImGui_ImplGLUT_Init()
     io.KeyMap[ImGuiKey_Space]       = ' ';
     io.KeyMap[ImGuiKey_Enter]       = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_Escape]      = 27;
+    io.KeyMap[ImGuiKey_KeyPadEnter] = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_A]           = 'A';
     io.KeyMap[ImGuiKey_C]           = 'C';
     io.KeyMap[ImGuiKey_V]           = 'V';
