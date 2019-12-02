@@ -1896,7 +1896,13 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 
 static int IMGUI_CDECL FloatReverseComparer(const void* lhs, const void* rhs)
 {
-    return (int)(*(float*)rhs - *(float*)lhs);
+    const float diff = *(float*)rhs - *(float*)lhs;
+    if (diff > 0.0f)
+        return 1;
+    else if (diff < 0.0f)
+        return -1;
+    else
+        return 0;
 }
 
 void ImFontAtlas::CreatePerDpiFonts()
