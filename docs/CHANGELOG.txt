@@ -33,6 +33,10 @@ HOW TO UPDATE?
  VERSION 1.75 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+- Removed implicit default parameter to IsMouseDragging(int button = 0) to be consistent
+  with other mouse functions (none of the other functions have it).
+
 Other Changes:
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]

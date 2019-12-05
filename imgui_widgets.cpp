@@ -768,7 +768,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     RenderArrow(window->DrawList, bb.Min + g.Style.FramePadding, text_col, window->Collapsed ? ImGuiDir_Right : ImGuiDir_Down, 1.0f);
 
     // Switch to moving the window after mouse is moved beyond the initial drag threshold
-    if (IsItemActive() && IsMouseDragging())
+    if (IsItemActive() && IsMouseDragging(0))
         StartMouseMovingWindow(window);
 
     return pressed;
