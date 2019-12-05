@@ -340,7 +340,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs: support track pad style scrolling & slider edit.
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
- - inputs: add mouse cursor for unavailable/no? IDC_NO/SDL_SYSTEM_CURSOR_NO.
  - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
  - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.

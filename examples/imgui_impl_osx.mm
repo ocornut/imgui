@@ -14,6 +14,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
 //  2019-10-11: Inputs:  Fix using Backspace key.
 //  2019-07-21: Re-added clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
 //  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
