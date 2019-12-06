@@ -4217,7 +4217,8 @@ int ImGui::GetKeyIndex(ImGuiKey imgui_key)
     return g.IO.KeyMap[imgui_key];
 }
 
-// Note that imgui doesn't know the semantic of each entry of io.KeysDown[]. Use your own indices/enums according to how your back-end/engine stored them into io.KeysDown[]!
+// Note that dear imgui doesn't know the semantic of each entry of io.KeysDown[]!
+// Use your own indices/enums according to how your back-end/engine stored them into io.KeysDown[]!
 bool ImGui::IsKeyDown(int user_key_index)
 {
     if (user_key_index < 0)
@@ -4284,15 +4285,6 @@ bool ImGui::IsMouseDown(int button)
     return g.IO.MouseDown[button];
 }
 
-bool ImGui::IsAnyMouseDown()
-{
-    ImGuiContext& g = *GImGui;
-    for (int n = 0; n < IM_ARRAYSIZE(g.IO.MouseDown); n++)
-        if (g.IO.MouseDown[n])
-            return true;
-    return false;
-}
-
 bool ImGui::IsMouseClicked(int button, bool repeat)
 {
     ImGuiContext& g = *GImGui;
@@ -4347,7 +4339,8 @@ bool ImGui::IsMouseDragging(int button, float lock_threshold)
 
 ImVec2 ImGui::GetMousePos()
 {
-    return GImGui->IO.MousePos;
+    ImGuiContext& g = *GImGui;
+    return g.IO.MousePos;
 }
 
 // NB: prefer to call right after BeginPopup(). At the time Selectable/MenuItem is activated, the popup is already closed!
@@ -4368,6 +4361,15 @@ bool ImGui::IsMousePosValid(const ImVec2* mouse_pos)
     const float MOUSE_INVALID = -256000.0f;
     ImVec2 p = mouse_pos ? *mouse_pos : GImGui->IO.MousePos;
     return p.x >= MOUSE_INVALID && p.y >= MOUSE_INVALID;
+}
+
+bool ImGui::IsAnyMouseDown()
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = 0; n < IM_ARRAYSIZE(g.IO.MouseDown); n++)
+        if (g.IO.MouseDown[n])
+            return true;
+    return false;
 }
 
 // Return the delta from the initial clicking position while the mouse button is clicked or was just released.
