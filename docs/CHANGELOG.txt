@@ -38,6 +38,8 @@ Breaking Changes:
   with other mouse functions (none of the other functions have it).
 
 Other Changes:
+- Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
+  We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
