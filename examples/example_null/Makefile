@@ -65,10 +65,6 @@ endif
 %.o:../../%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
-%.o:../libs/gl3w/GL/%.c
-# %.o:../libs/glad/src/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
 all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
 
