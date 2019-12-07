@@ -6927,6 +6927,12 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         return false;
     }
 
+    // Store into ImGuiTabItemFlags_NoCloseButton, also honor ImGuiTabItemFlags_NoCloseButton passed by user (although not documented)
+    if (flags & ImGuiTabItemFlags_NoCloseButton)
+        p_open = NULL;
+    else if (p_open == NULL)
+        flags |= ImGuiTabItemFlags_NoCloseButton;
+
     // Calculate tab contents size
     ImVec2 size = TabItemCalcSize(label, p_open != NULL);
 
@@ -6943,9 +6949,6 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     }
     tab_bar->LastTabItemIdx = (short)tab_bar->Tabs.index_from_ptr(tab);
     tab->ContentWidth = size.x;
-
-    if (p_open == NULL)
-        flags |= ImGuiTabItemFlags_NoCloseButton;
 
     const bool tab_bar_appearing = (tab_bar->PrevFrameVisible + 1 < g.FrameCount);
     const bool tab_bar_focused = (tab_bar->Flags & ImGuiTabBarFlags_IsFocused) != 0;

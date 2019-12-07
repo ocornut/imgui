@@ -1512,7 +1512,7 @@ enum ImGuiTabBarFlagsPrivate_
 // Extend ImGuiTabItemFlags_
 enum ImGuiTabItemFlagsPrivate_
 {
-    ImGuiTabItemFlags_NoCloseButton             = 1 << 20   // Store whether p_open is set or not, which we need to recompute ContentWidth during layout.
+    ImGuiTabItemFlags_NoCloseButton             = 1 << 20   // Track whether p_open was set or not (we'll need this info on the next frame to recompute ContentWidth during layout)
 };
 
 // Storage for one active tab item (sizeof() 26~32 bytes)
