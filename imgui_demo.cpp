@@ -115,10 +115,6 @@ Index of this file:
 // [SECTION] Forward Declarations, Helpers
 //-----------------------------------------------------------------------------
 
-#if !defined(IMGUI_DISABLE_OBSOLETE_FUNCTIONS) && defined(IMGUI_DISABLE_TEST_WINDOWS) && !defined(IMGUI_DISABLE_DEMO_WINDOWS)   // Obsolete name since 1.53, TEST->DEMO
-#define IMGUI_DISABLE_DEMO_WINDOWS
-#endif
-
 #if !defined(IMGUI_DISABLE_DEMO_WINDOWS)
 
 // Forward Declarations

@@ -815,11 +815,6 @@ enum ImGuiTreeNodeFlags_
     ImGuiTreeNodeFlags_NavLeftJumpsBackHere = 1 << 13,  // (WIP) Nav: left direction may move to this TreeNode() from any of its child (items submitted between TreeNode and TreePop)
     //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 14,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
     ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog
-
-    // Obsolete names (will be removed)
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    , ImGuiTreeNodeFlags_AllowOverlapMode = ImGuiTreeNodeFlags_AllowItemOverlap // [renamed in 1.53]
-#endif
 };
 
 // Flags for ImGui::Selectable()
@@ -1095,9 +1090,7 @@ enum ImGuiCol_
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     , ImGuiCol_ModalWindowDarkening = ImGuiCol_ModalWindowDimBg                      // [renamed in 1.63]
-    , ImGuiCol_ChildWindowBg = ImGuiCol_ChildBg                                      // [renamed in 1.53]
-    //ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered, // [unused since 1.60+] the close button now uses regular button colors.
-    //ImGuiCol_ComboBg,                                                              // [unused since 1.53+] ComboBg has been merged with PopupBg, so a redirect isn't accurate.
+    //, ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered// [unused since 1.60+] the close button now uses regular button colors.
 #endif
 };
 
@@ -1134,8 +1127,7 @@ enum ImGuiStyleVar_
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    , ImGuiStyleVar_Count_ = ImGuiStyleVar_COUNT                        // [renamed in 1.60]
-    , ImGuiStyleVar_ChildWindowRounding = ImGuiStyleVar_ChildRounding   // [renamed in 1.53]
+    , ImGuiStyleVar_Count_ = ImGuiStyleVar_COUNT                    // [renamed in 1.60]
 #endif
 };
 
@@ -1410,9 +1402,9 @@ struct ImGuiIO
     // Optional: Platform/Renderer back-end name (informational only! will be displayed in About Window) + User data for back-end/wrappers to store their own stuff.
     const char* BackendPlatformName;            // = NULL
     const char* BackendRendererName;            // = NULL
-    void*       BackendPlatformUserData;        // = NULL
-    void*       BackendRendererUserData;        // = NULL
-    void*       BackendLanguageUserData;        // = NULL
+    void*       BackendPlatformUserData;        // = NULL           // User data for platform back-end
+    void*       BackendRendererUserData;        // = NULL           // User data for renderer back-end
+    void*       BackendLanguageUserData;        // = NULL           // User data for non C++ programming language back-end
 
     // Optional: Access OS clipboard
     // (default to use native Win32 clipboard on Windows, otherwise uses a private clipboard. Override to access OS clipboard on other architectures)
@@ -1474,7 +1466,7 @@ struct ImGuiIO
     ImVec2      MouseDelta;                     // Mouse delta. Note that this is zero if either current or previous position are invalid (-FLT_MAX,-FLT_MAX), so a disappearing/reappearing mouse won't have a huge delta.
 
     //------------------------------------------------------------------
-    // [Internal] ImGui will maintain those fields. Forward compatibility not guaranteed!
+    // [Internal] Dear ImGui will maintain those fields. Forward compatibility not guaranteed!
     //------------------------------------------------------------------
 
     ImVec2      MousePosPrev;                   // Previous mouse position (note that MouseDelta is not necessary == MousePos-MousePosPrev, in case either position is invalid)
@@ -1598,12 +1590,6 @@ namespace ImGui
     static inline bool  IsAnyWindowFocused()                  { return IsWindowFocused(ImGuiFocusedFlags_AnyWindow); }
     static inline bool  IsAnyWindowHovered()                  { return IsWindowHovered(ImGuiHoveredFlags_AnyWindow); }
     static inline ImVec2 CalcItemRectClosestPoint(const ImVec2& pos, bool on_edge = false, float outward = 0.f) { IM_UNUSED(on_edge); IM_UNUSED(outward); IM_ASSERT(0); return pos; }
-    // OBSOLETED in 1.53 (between Oct 2017 and Dec 2017)
-    static inline void  ShowTestWindow()                      { return ShowDemoWindow(); }
-    static inline bool  IsRootWindowFocused()                 { return IsWindowFocused(ImGuiFocusedFlags_RootWindow); }
-    static inline bool  IsRootWindowOrAnyChildFocused()       { return IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows); }
-    static inline void  SetNextWindowContentWidth(float w)    { SetNextWindowContentSize(ImVec2(w, 0.0f)); }
-    static inline float GetItemsLineHeightWithSpacing()       { return GetFrameHeightWithSpacing(); }
 }
 typedef ImGuiInputTextCallback      ImGuiTextEditCallback;    // OBSOLETED in 1.63 (from Aug 2018): made the names consistent
 typedef ImGuiInputTextCallbackData  ImGuiTextEditCallbackData;

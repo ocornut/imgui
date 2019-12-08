@@ -34,6 +34,19 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
+- Removed redirecting functions/enums names that were marked obsolete in 1.53 (December 2017):
+  - ShowTestWindow()                    -> use ShowDemoWindow()
+  - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
+  - IsRootWindowOrAnyChildFocused()     -> use IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f)
+  - GetItemsLineHeightWithSpacing()     -> use GetFrameHeightWithSpacing()
+  - ImGuiCol_ChildWindowBg              -> use ImGuiCol_ChildBg
+  - ImGuiStyleVar_ChildWindowRounding   -> use ImGuiStyleVar_ChildRounding
+  - ImGuiTreeNodeFlags_AllowOverlapMode -> use ImGuiTreeNodeFlags_AllowItemOverlap
+  - IMGUI_DISABLE_TEST_WINDOWS          -> use IMGUI_DISABLE_DEMO_WINDOWS
+  If you were still using the old names, while you are cleaning up, considering enabling
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
+  and removing up old API calls, if any remaining.
 - Removed implicit default parameter to IsMouseDragging(int button = 0) to be consistent
   with other mouse functions (none of the other functions have it).
 - Obsoleted calling ImDrawList::PrimReserve() with a negative count (which was vaguely
