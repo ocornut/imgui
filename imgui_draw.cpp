@@ -348,6 +348,8 @@ ImDrawListSharedData::ImDrawListSharedData()
     Font = NULL;
     FontSize = 0.0f;
     CurveTessellationTol = 0.0f;
+    CircleSegmentMaxError = 0.0f;
+    CircleSegmentCountsMaxCircleSegmentError = -FLT_MIN; // Impossible value to force recalculation
     ClipRectFullscreen = ImVec4(-8192.0f, -8192.0f, +8192.0f, +8192.0f);
     InitialFlags = ImDrawListFlags_None;
 
@@ -1083,10 +1085,33 @@ void ImDrawList::AddTriangleFilled(const ImVec2& p1, const ImVec2& p2, const ImV
     PathFillConvex(col);
 }
 
+void ImDrawListSharedData::RecalculateCircleSegmentCounts()
+{
+    for (int i = 0; i < NumCircleSegmentCounts; i++)
+    {
+        const float radius = i + 1.0f;
+        CircleSegmentCounts[i] = ImClamp((int)((IM_PI * 2.0f) / ImAcos((radius - CircleSegmentMaxError) / radius)), 3, 10000);
+    }
+
+    CircleSegmentCountsMaxCircleSegmentError = CircleSegmentMaxError;
+}
+
 void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
+    if ((col & IM_COL32_A_MASK) == 0 || (radius <= 0.0f))
         return;
+
+    // Calculate number of segments if required
+    if (num_segments <= 0)
+    {
+        int radius_int = (int)radius;
+        if (radius_int <= ImDrawListSharedData::NumCircleSegmentCounts)
+            num_segments = _Data->CircleSegmentCounts[radius_int - 1]; // Use cached value
+        else
+            num_segments = ImClamp((int)((IM_PI * 2.0f) / ImAcos((radius - _Data->CircleSegmentMaxError) / radius)), 3, 10000);
+    }
+    else    
+        num_segments = ImClamp(num_segments, 3, 10000); // Clamp to avoid drawing insanely tessellated shapes
 
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;
@@ -1096,8 +1121,20 @@ void ImDrawList::AddCircle(const ImVec2& center, float radius, ImU32 col, int nu
 
 void ImDrawList::AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments)
 {
-    if ((col & IM_COL32_A_MASK) == 0 || num_segments <= 2)
+    if ((col & IM_COL32_A_MASK) == 0 || (radius <= 0.0f))
         return;
+
+    // Calculate number of segments if required
+    if (num_segments <= 0)
+    {
+        int radius_int = (int)radius;
+        if (radius_int <= ImDrawListSharedData::NumCircleSegmentCounts)
+            num_segments = _Data->CircleSegmentCounts[radius_int - 1]; // Use cached value
+        else
+            num_segments = ImClamp((int)((IM_PI * 2.0f) / ImAcos((radius - _Data->CircleSegmentMaxError) / radius)), 3, 10000);
+    }
+    else
+        num_segments = ImClamp(num_segments, 3, 10000); // Clamp to avoid drawing insanely tessellated shapes
 
     // Because we are filling a closed shape we remove 1 from the count of segments/points
     const float a_max = (IM_PI * 2.0f) * ((float)num_segments - 1.0f) / (float)num_segments;

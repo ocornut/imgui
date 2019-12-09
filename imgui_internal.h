@@ -855,12 +855,20 @@ struct IMGUI_API ImDrawListSharedData
     ImFont*         Font;                       // Current/default font (optional, for simplified AddText overload)
     float           FontSize;                   // Current/default font size (optional, for simplified AddText overload)
     float           CurveTessellationTol;       // Tessellation tolerance when using PathBezierCurveTo()
+    float           CircleSegmentMaxError;      // Number of circle segments to use per pixel of radius for AddCircle() etc
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
     // Const data
     // FIXME: Bake rounded corners fill/borders in atlas
     ImVec2          CircleVtx12[12];
+
+    // Cached circle segment counts for the first <n> radii (to avoid calculation overhead)
+    static const int NumCircleSegmentCounts = 64;// Number of circle segment counts to cache (i.e. the maximum radius before we calculate dynamically)
+    int             CircleSegmentCounts[NumCircleSegmentCounts]; // The segment count for radius (array index + 1)
+    float           CircleSegmentCountsMaxCircleSegmentError; // The MaxCircleSegmentError used to calculate these counts
+
+    void RecalculateCircleSegmentCounts();      // Recalculate circle segment counts based on the current MaxCircleSegmentError
 
     ImDrawListSharedData();
 };
