@@ -21,7 +21,8 @@ or view this file with any Markdown viewer.
 | [Why using C++ (as opposed to C)?](#q-why-using-c-as-opposed-to-c) |
 | **Q&A: Integration** |
 | [How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application) |
-| [How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)](#q-how-can-i-use-this-without-a-mouse-without-a-keyboard-or-without-a-screen-gamepad-input-share-remote-display) |
+| [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
+| [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
 | [I integrated Dear ImGui in my engine and the text or lines are blurry..](#q-i-integrated-dear-imgui-in-my-engine-and-the-text-or-lines-are-blurry) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | **Q&A: Usage** |
@@ -48,6 +49,7 @@ or view this file with any Markdown viewer.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
 - The [Wiki](https://github.com/ocornut/imgui/wiki) has many resources and links.
+- The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
 - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
 
 ---
@@ -65,7 +67,7 @@ Many projects are using this branch and it is kept in sync with master regularly
 
 ### Q: Why the names "Dear ImGui" vs "ImGui"?
 
-**TL;DR: Please try to refer to this library as "Dear ImGui".**
+**TL;DR: Please refer to this library as "Dear ImGui".**
 
 The library started its life as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). To reduce the ambiguity without affecting existing code bases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library.
 
@@ -127,16 +129,23 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 
 ---
 
-### Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
-- You can control Dear ImGui with a gamepad. Read about navigation in "Using gamepad/keyboard navigation controls".
-(short version: map gamepad inputs into the io.NavInputs[] array + set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad`).
-- See navigation [control sheets for gamepads](http://www.dearimgui.org/controls_sheets) (for PS4, XB1, Switch gamepads).
-- You can share your computer mouse seamlessly with your console/tablet/phone using [Synergy](https://symless.com/synergy)
+### Q: How can I enable keyboard or gamepad controls?
+- The gamepad/keyboard navigation is fairly functional and keeps being improved. The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable. Gamepad support is particularly useful to use Dear ImGui on a game console (e.g. PS4, Switch, XB1) without a mouse connected!
+- Keyboard: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard` to enable.
+- Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting back-end).
+- See [Control Sheets for Gamepads](http://www.dearimgui.org/controls_sheets) (reference PNG/PSD for for PS4, XB1, Switch gamepads).
+- See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
+
+---
+
+### Q: How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)
+- You can share your computer mouse seamlessly with your console/tablet/phone using solutions such as [Synergy](https://symless.com/synergy)
 This is the preferred solution for developer productivity.
 In particular, the [micro-synergy-client repository](https://github.com/symless/micro-synergy-client) has simple
 and portable source code (uSynergy.c/.h) for a small embeddable client that you can use on any platform to connect
 to your host computer, based on the Synergy 1.x protocol. Make sure you download the Synergy 1 server on your computer.
 Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-like protocols.
+- Game console users: consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
 - You may also use a third party solution such as [Remote ImGui](https://github.com/JordiRos/remoteimgui) or [imgui-ws](https://github.com/ggerganov/imgui-ws) which sends the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine. See [Wiki](https://github.com/ocornut/imgui/wiki) index for most details.
 - For touch inputs, you can increase the hit box of widgets (via the `style.TouchPadding` setting) to accommodate
 for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing
@@ -536,4 +545,4 @@ You may post screenshot or links in the [gallery threads](https://github.com/oco
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)
-    
+
