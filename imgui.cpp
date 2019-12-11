@@ -7607,7 +7607,7 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
         }
     }
     else
-        IM_ASSERT(g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports && "Viewports are not enabled.");
+        IM_ASSERT(!(g.IO.ConfigFlags & ImGuiConfigFlags_DpiEnableScaleViewports) && "Viewports are not enabled.");
 }
 
 static void ImGui::ErrorCheckEndFrameSanityChecks()
