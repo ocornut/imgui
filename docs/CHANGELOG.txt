@@ -55,6 +55,9 @@ Breaking Changes:
   documented (can only unreserve from the last reserve call). If you suspect you ever
   used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
   calls. [@ShironekoBen]
+- imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
+  of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
+  adding multiple points into it, you may need to fix your initial value.
 
 Other Changes:
 - Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
