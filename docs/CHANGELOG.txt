@@ -99,6 +99,54 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.75 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+- Removed redirecting functions/enums names that were marked obsolete in 1.53 (December 2017):
+  - ShowTestWindow()                    -> use ShowDemoWindow()
+  - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
+  - IsRootWindowOrAnyChildFocused()     -> use IsWindowFocused(ImGuiFocusedFlags_RootAndChildWindows)
+  - SetNextWindowContentWidth(w)        -> use SetNextWindowContentSize(ImVec2(w, 0.0f)
+  - GetItemsLineHeightWithSpacing()     -> use GetFrameHeightWithSpacing()
+  - ImGuiCol_ChildWindowBg              -> use ImGuiCol_ChildBg
+  - ImGuiStyleVar_ChildWindowRounding   -> use ImGuiStyleVar_ChildRounding
+  - ImGuiTreeNodeFlags_AllowOverlapMode -> use ImGuiTreeNodeFlags_AllowItemOverlap
+  - IMGUI_DISABLE_TEST_WINDOWS          -> use IMGUI_DISABLE_DEMO_WINDOWS
+  If you were still using the old names, while you are cleaning up, considering enabling
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
+  and removing up old API calls, if any remaining.
+- Removed implicit default parameter to IsMouseDragging(int button = 0) to be consistent
+  with other mouse functions (none of the other functions have it).
+- Obsoleted calling ImDrawList::PrimReserve() with a negative count (which was vaguely
+  documented and rarely if ever used). Instead we added an explicit PrimUnreserve() API
+  which can be implemented faster. Also clarified pre-existing constraints which weren't
+  documented (can only unreserve from the last reserve call). If you suspect you ever
+  used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
+  calls. [@ShironekoBen]
+- imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
+  of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
+  adding multiple points into it, you may need to fix your initial value.
+
+Other Changes:
+- Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
+  We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
+- Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
+  In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
+  we will rework the circle rendering functions to use textures and automatic segment count
+  selection, those new api can fill a gap. [@ShironekoBen]
+- Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
+- Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
+- Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
+  settings (otherwise if another loader such as Glew is accessible, the opengl3 backend might
+  automatically use it). [#2919, #2798]
+- Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
+  even if underlying system event loop gets paused due to app nap (#2910, #2917). [@bear24rw]
+>>>>>>> refs/heads/master
+
+
+-----------------------------------------------------------------------
  VERSION 1.74 (Released 2019-11-25)
 -----------------------------------------------------------------------
 

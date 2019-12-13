@@ -21,7 +21,8 @@ or view this file with any Markdown viewer.
 | [Why using C++ (as opposed to C)?](#q-why-using-c-as-opposed-to-c) |
 | **Q&A: Integration** |
 | [How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application) |
-| [How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)](#q-how-can-i-use-this-without-a-mouse-without-a-keyboard-or-without-a-screen-gamepad-input-share-remote-display) |
+| [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
+| [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
 | [I integrated Dear ImGui in my engine and the text or lines are blurry..](#q-i-integrated-dear-imgui-in-my-engine-and-the-text-or-lines-are-blurry) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | **Q&A: Usage** |
@@ -44,11 +45,11 @@ or view this file with any Markdown viewer.
 ### Q: Where is the documentation?
 
 **This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.**
-- Run the examples/ and explore them.
-- See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function.
-- The demo covers most features of Dear ImGui, so you can read the code and see its output.
+- Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
+- See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
-- Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application.
+- The [Wiki](https://github.com/ocornut/imgui/wiki) has many resources and links.
+- The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
 - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
 
 ---
@@ -66,7 +67,7 @@ Many projects are using this branch and it is kept in sync with master regularly
 
 ### Q: Why the names "Dear ImGui" vs "ImGui"?
 
-**TL;DR: Please try to refer to this library as "Dear ImGui".**
+**TL;DR: Please refer to this library as "Dear ImGui".**
 
 The library started its life as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). To reduce the ambiguity without affecting existing code bases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library.
 
@@ -128,16 +129,24 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 
 ---
 
-### Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
-- You can control Dear ImGui with a gamepad. Read about navigation in "Using gamepad/keyboard navigation controls".
-(short version: map gamepad inputs into the io.NavInputs[] array + set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad`).
-- You can share your computer mouse seamlessly with your console/tablet/phone using [Synergy](https://symless.com/synergy)
+### Q: How can I enable keyboard or gamepad controls?
+- The gamepad/keyboard navigation is fairly functional and keeps being improved. The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable. Gamepad support is particularly useful to use Dear ImGui on a game console (e.g. PS4, Switch, XB1) without a mouse connected!
+- Keyboard: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard` to enable.
+- Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting back-end).
+- See [Control Sheets for Gamepads](http://www.dearimgui.org/controls_sheets) (reference PNG/PSD for for PS4, XB1, Switch gamepads).
+- See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
+
+---
+
+### Q: How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)
+- You can share your computer mouse seamlessly with your console/tablet/phone using solutions such as [Synergy](https://symless.com/synergy)
 This is the preferred solution for developer productivity.
 In particular, the [micro-synergy-client repository](https://github.com/symless/micro-synergy-client) has simple
 and portable source code (uSynergy.c/.h) for a small embeddable client that you can use on any platform to connect
 to your host computer, based on the Synergy 1.x protocol. Make sure you download the Synergy 1 server on your computer.
 Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-like protocols.
-- You may also use a third party solution such as [Remote ImGui](https://github.com/JordiRos/remoteimgui) or [imgui-ws](https://github.com/ggerganov/imgui-ws) which sends the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine. See Wiki index for most details.
+- Game console users: consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
+- You may also use a third party solution such as [Remote ImGui](https://github.com/JordiRos/remoteimgui) or [imgui-ws](https://github.com/ggerganov/imgui-ws) which sends the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine. See [Wiki](https://github.com/ocornut/imgui/wiki) index for most details.
 - For touch inputs, you can increase the hit box of widgets (via the `style.TouchPadding` setting) to accommodate
 for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing
 for screen real-estate and precision.
@@ -283,7 +292,7 @@ node open/closed state differently. See what makes more sense in your situation!
 ### Q: How can I display an image? What is ImTextureID, how does it work?
 
 Short explanation:
-- Please read Wiki entry for examples: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+- Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki).
 - You may use functions such as `ImGui::Image()`, `ImGui::ImageButton()` or lower-level `ImDrawList::AddImage()` to emit draw calls that will use your own textures.
 - Actual textures are identified in a way that is up to the user/engine. Those identifiers are stored and passed as ImTextureID (void*) value.
 - Loading image files from the disk and turning them into a texture is not within the scope of Dear ImGui (for a good reason).
@@ -301,15 +310,18 @@ Dear ImGui doesn't know or understand what you are storing in ImTextureID, it me
 OpenGL:
 - ImTextureID = GLuint
 - See ImGui_ImplOpenGL3_RenderDrawData() function in imgui_impl_opengl3.cpp
-
+```
+```
 DirectX9:
 - ImTextureID = LPDIRECT3DTEXTURE9
 - See ImGui_ImplDX9_RenderDrawData() function in imgui_impl_dx9.cpp
-
+```
+```
 DirectX11:
 - ImTextureID = ID3D11ShaderResourceView*
 - See ImGui_ImplDX11_RenderDrawData() function in imgui_impl_dx11.cpp
-
+```
+```
 DirectX12:
 - ImTextureID = D3D12_GPU_DESCRIPTOR_HANDLE
 - See ImGui_ImplDX12_RenderDrawData() function in imgui_impl_dx12.cpp
@@ -337,7 +349,7 @@ Once you understand this design you will understand that loading image files and
 This is by design and is actually a good thing, because it means your code has full control over your data types and how you display them.
 If you want to display an image file (e.g. PNG file) into the screen, please refer to documentation and tutorials for the graphics API you are using.
 
-Refer to the Wiki to find simplified examples for loading textures with OpenGL, DirectX9 and DirectX11: https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
+Refer to [Image Loading and Displaying Examples](https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples) on the [Wiki](https://github.com/ocornut/imgui/wiki) to find simplified examples for loading textures with OpenGL, DirectX9 and DirectX11.
 
 C/C++ tip: a void* is pointer-sized storage. You may safely store any pointer or integer into it by casting your value to ImTextureID / void*, and vice-versa.
 Because both end-points (user code and rendering function) are under your control, you know exactly what is stored inside the ImTextureID / void*.
@@ -442,7 +454,7 @@ New programmers: remember that in C/C++ and most programming languages if you wa
 backslash \ within a string literal, you need to write it double backslash "\\":
 
 ```c
-io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escape the M here!)
+io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
 io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
@@ -452,7 +464,7 @@ io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ### Q: How can I easily use icons in my application?
 The most convenient and practical way is to merge an icon font such as FontAwesome inside you
 main font. Then you can refer to icons within your strings.
-You may want to see ImFontConfig::GlyphMinAdvanceX to make your icon look monospace to facilitate alignment.
+You may want to see `ImFontConfig::GlyphMinAdvanceX` to make your icon look monospace to facilitate alignment.
 (Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file for more details about icons font loading.)
 With some extra effort, you may use colorful icon by registering custom rectangle space inside the font atlas,
 and copying your own graphics data into it. See docs/FONTS.txt about using the AddCustomRectFontGlyph API.
@@ -513,7 +525,7 @@ by using the u8"hello" syntax. Specifying literal in your source code using a lo
 (such as CP-923 for Japanese or CP-1251 for Cyrillic) will NOT work!
 Otherwise you can convert yourself to UTF-8 or load text data from file already saved as UTF-8.
 
-Text input: it is up to your application to pass the right character code by calling io.AddInputCharacter().
+Text input: it is up to your application to pass the right character code by calling `io.AddInputCharacter()`.
 The applications in examples/ are doing that.
 Windows: you can use the WM_CHAR or WM_UNICHAR or WM_IME_CHAR message (depending if your app is built using Unicode or MultiByte mode).
 You may also use MultiByteToWideChar() or ToUnicode() to retrieve Unicode codepoints from MultiByte characters or keyboard state.
@@ -529,8 +541,8 @@ the default implementation of io.ImeSetInputScreenPosFn() to set your Microsoft 
 - Businesses: convince your company to fund development via support contracts/sponsoring! This is among the most useful thing you can do for Dear ImGui. With increased funding we will be able to hire more people working on this project.
 - Individuals: you can also become a [Patron](http://www.patreon.com/imgui) or donate on PayPal! See README.
 - Disclose your usage of dear imgui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
-You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/2847). Visuals are ideal as they inspire other programmers.
-But even without visuals, disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
-- If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete pR.
+You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/2847). Visuals are ideal as they inspire other programmers. Disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
+- If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
 ##### [Return to Index](#index)
+

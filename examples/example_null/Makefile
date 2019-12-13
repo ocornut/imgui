@@ -4,13 +4,18 @@
 #
 
 EXE = example_null
-SOURCES = main.cpp
-SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
+EXTRA_WARNINGS ?= 0
+UNITY_BUILD ?= 0
+ifeq ($(UNITY_BUILD), 1)
+	SOURCES = unity_build.cpp
+else
+	SOURCES = main.cpp
+	SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
+endif
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
-EXTRA_WARNINGS ?= 0
 
-CXXFLAGS = -I../ -I../../
+CXXFLAGS += -I../ -I../../
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
@@ -59,10 +64,6 @@ endif
 
 %.o:../../%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-
-%.o:../libs/gl3w/GL/%.c
-# %.o:../libs/glad/src/%.c
-	$(CC) $(CFLAGS) -c -o $@ $<
 
 all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)

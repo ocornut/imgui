@@ -8,6 +8,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - doc/test: add a proper documentation+regression testing system (#435)
  - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
+ - doc/wiki: work on the wiki https://github.com/ocornut/imgui/wiki
 
  - window: preserve/restore relative focus ordering (persistent or not) (#2304) -> also see docking reference to same #.
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
@@ -27,6 +28,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
  - window: top most window flag? (#2574)
+ - window: the size_on_first_use path of Begin() can probably be removed
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/child: border could be emitted in parent as well.
@@ -58,7 +60,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - main: find a way to preserve relative orders of multiple reappearing windows (so an app toggling between "modes" e.g. fullscreen vs all tools) won't lose relative ordering.
  - main: IsItemHovered() make it more consistent for various type of widgets, widgets with multiple components, etc. also effectively IsHovered() region sometimes differs from hot region, e.g tree nodes
  - main: IsItemHovered() info stored in a stack? so that 'if TreeNode() { Text; TreePop; } if IsHovered' return the hover state of the TreeNode?
- - main: rename the main "Debug" window to avoid ID collision with user who may want to use "Debug" with specific flags.
 
  - widgets: display mode: widget-label, label-widget (aligned on column or using fixed size), label-newline-tab-widget etc. (#395)
  - widgets: clean up widgets internal toward exposing everything and stabilizing imgui_internals.h.
@@ -301,7 +302,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drag and drop: (#143) "both an in-process pointer and a promise to generate a serialized version, for whether the drag ends inside or outside the same process"
  - drag and drop: feedback when hovering a region blocked by modal (mouse cursor "NO"?)
 
- - node/graph editor (#306)
+ - node/graph editors (#306) (also see https://github.com/ocornut/imgui/wiki#node-editors)
  - pie menus patterns (#434)
  - markup: simple markup language for color change? (#902)
 
@@ -329,12 +330,15 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
  - font: add a simpler CalcTextSizeA() api? current one ok but not welcome if user needs to call it directly (without going through ImGui::CalcTextSize)
  - font: fix AddRemapChar() to work before atlas  has been built.
- - font: what would it take to support codepoint higher than 0xFFFF? (smileys, etc.) (#2538, #2541)
+ - font: support for unicode codepoints higher than 0xFFFF? (pr #2815)
  - font: (api breaking) remove "TTF" from symbol names. also because it now supports OTF.
  - font/opt: Considering storing standalone AdvanceX table as 16-bit fixed point integer?
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16 bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
 
  - nav: some features such as PageUp/Down/Home/End should probably work without ImGuiConfigFlags_NavEnableKeyboard? (where do we draw the line?)
+ ! nav: never clear NavId on some setup (e.g. gamepad centric)
+ - nav: restore NavId on reappearing non-child window.
+ - nav: code to focus child-window on restoring NavId appears to have issue (to investigate)
  - nav: configuration flag to disable global shortcuts (currently only CTRL-Tab) ?
  - nav: Home/End behavior when navigable item is not fully visible at the edge of scrolling? should be backtrack to keep item into view?
  - nav: NavScrollToBringItemIntoView() with item bigger than view should focus top-right? Repro: using Nav in "About Window"
@@ -382,7 +386,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs: support track pad style scrolling & slider edit.
  - inputs/io: backspace and arrows in the context of a text input could use system repeat rate.
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
- - inputs: add mouse cursor for unavailable/no? IDC_NO/SDL_SYSTEM_CURSOR_NO.
  - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
  - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
@@ -395,9 +398,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: possible compile-time support for string view/range instead of char* would e.g. facilitate usage with Rust (#683)
  - misc: possible compile-time support for wchar_t instead of char*?
 
- - backend: bgfx? https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
- - emscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
-
  - remote: make a system like RemoteImGui first-class citizen/project (#75)
 
  - demo: find a way to demonstrate textures in the examples application, as it such a common issue for new users.
@@ -406,14 +406,19 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - demo: add virtual scrolling example?
  - demo: demonstrate Plot offset
  - demo: window size constraint: square demo is broken when resizing from edges (#1975), would need to rework the callback system to solve this
+
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
- - examples: apple: example_apple should be using modern GL3.
- - examples: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
- - examples: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
- - examples: opengl: could use a single vertex buffer and glBufferSubData for uploads?
- - examples: opengl: explicitly disable GL_STENCIL_TEST in bindings.
- - examples: vulkan: viewport: support for synchronized swapping of multiple swap chains.
+ - backends: apple: example_apple should be using modern GL3.
+ - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
+ - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
+ - backends: opengl: could use a single vertex buffer and glBufferSubData for uploads?
+ - backends: opengl: explicitly disable GL_STENCIL_TEST in bindings.
+ - backends: opengl: consider gl_lite loader https://github.com/ApoorvaJ/Papaya/blob/3808e39b0f45d4ca4972621c847586e4060c042a/src/libs/gl_lite.h
+ - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
+ - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
+ - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
+
  - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
