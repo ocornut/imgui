@@ -1540,6 +1540,7 @@ ImFontConfig::ImFontConfig()
     EllipsisChar = (ImWchar)-1;
     memset(Name, 0, sizeof(Name));
     DstFont = NULL;
+    DpiScale = 1.0f;
 }
 
 //-----------------------------------------------------------------------------
@@ -1909,6 +1910,7 @@ void ImFontAtlas::CreatePerDpiFonts()
 {
     // Duplicate all added fonts for each DPI. All font sizes are rendered into the same texture. Fonts are switched on
     // the fly when window transitions through monitors of different dpi.
+    IM_ASSERT(Fonts.Size > 0);
 
     ImGuiContext& g = *GImGui;
     ImGuiPlatformIO& platform_io = g.PlatformIO;
@@ -1941,21 +1943,43 @@ void ImFontAtlas::CreatePerDpiFonts()
     const int total_fonts = Fonts.Size;           // following loop and we only need to iterate initial list of
                                                   // fonts/configs.
     // Duplicate fonts for each dpi
-    for (int dpi_index = 1; dpi_index < dpi_set.Size; dpi_index++)
+    for (int conf_i = 0; conf_i < total_configs; conf_i++)
     {
-        const float dpi = dpi_set[dpi_index];
-        int font_index = 0;
-        for (int config_index = 0; config_index < total_configs; config_index++)
+        ImFontConfig& source_config = ConfigData[conf_i];
+        ImFont* src_font = source_config.DstFont;
+
+        for (int dpi_i = 0; dpi_i < dpi_set.Size; dpi_i++)
         {
-            ImFont* src_font = Fonts[font_index];
-            ImFontConfig config = ConfigData[config_index];
-            config.SizePixels = IM_ROUND(config.SizePixels * dpi);
-            config.FontDataOwnedByAtlas = false;
-            if (dpi > 1.f)
+            ImFont* dpi_font = NULL;
+
+            // Find if font was already upscaled.
+            for (int font_i = 0; font_i < Fonts.Size; font_i++)
             {
-                int end = strlen(config.Name);
-                ImFormatString(config.Name + end, sizeof(config.Name) - end, "(x%.02f)", dpi);
+                ImFont* font = Fonts[font_i];
+                if (font->FontID == src_font->FontID && font->ConfigData && src_font->ConfigData && font->ConfigData->DpiScale == src_font->ConfigData->DpiScale)
+                {
+                    dpi_font = font;
+                    break;
+                }
             }
+
+            // Upscaled font exists already.
+            if (dpi_font != NULL)
+                continue;
+
+            const float dpi = dpi_set[dpi_i];
+            if (dpi_i == 0)
+            {
+                // Upscale first font in-pace.
+                source_config.DpiScale = dpi;
+                continue;
+            }
+
+            // Other fonts have to be duplicated.
+            ImFontConfig config = source_config;
+            config.DpiScale = dpi;
+            config.FontDataOwnedByAtlas = false;
+
             if (config.MergeMode)
             {
                 // Find offset of destination font and use that offset to pick a cloned font as a new destination.
@@ -1969,24 +1993,11 @@ void ImFontAtlas::CreatePerDpiFonts()
                 }
             }
             else
-            {
                 config.DstFont = NULL;
-                font_index++;
-            }
-            ImFont* dpi_font = AddFont(&config);
-            dpi_font->FontID = src_font->FontID;
-            dpi_font->DpiScale = dpi;
-        }
-    }
 
-    // Upscale first font for the first DPI.
-    const float dpi = dpi_set[0];
-    Fonts[0]->DpiScale = dpi;
-    ConfigData[0].SizePixels = IM_ROUND(ConfigData[0].SizePixels * dpi);
-    if (dpi > 1.f)
-    {
-        int end = strlen(ConfigData[0].Name);
-        ImFormatString(ConfigData[0].Name + end, sizeof(ConfigData[0].Name) - end, "(x%.02f)", dpi);
+            dpi_font = AddFont(&config);
+            dpi_font->FontID = src_font->FontID;
+        }
     }
 }
 
@@ -1995,7 +2006,7 @@ ImFont* ImFontAtlas::MapFontToDpi(ImFont* base_font, float dpi)
     for (int i = 0; i < Fonts.Size; i++)
     {
         ImFont* font = Fonts[i];
-        if (font->FontID == base_font->FontID && font->DpiScale == dpi)
+        if (font->FontID == base_font->FontID && font->ConfigData->DpiScale == dpi)
             return font;
     }
     return base_font;
@@ -2180,7 +2191,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
         // Convert our ranges in the format stb_truetype wants
         ImFontConfig& cfg = atlas->ConfigData[src_i];
-        src_tmp.PackRange.font_size = cfg.SizePixels;
+        const float pixel_size = cfg.SizePixels * cfg.DpiScale;
+        src_tmp.PackRange.font_size = pixel_size;
         src_tmp.PackRange.first_unicode_codepoint_in_range = 0;
         src_tmp.PackRange.array_of_unicode_codepoints = src_tmp.GlyphsList.Data;
         src_tmp.PackRange.num_chars = src_tmp.GlyphsList.Size;
@@ -2189,7 +2201,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         src_tmp.PackRange.v_oversample = (unsigned char)cfg.OversampleV;
 
         // Gather the sizes of all rectangles we will need to pack (this loop is based on stbtt_PackFontRangesGatherRects)
-        const float scale = (cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
+        const float scale = (pixel_size > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, pixel_size) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -pixel_size);
         const int padding = atlas->TexGlyphPadding;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
@@ -2281,7 +2293,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontConfig& cfg = atlas->ConfigData[src_i];
         ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
 
-        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels);
+        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels * cfg.DpiScale);
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&src_tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
@@ -2719,7 +2731,6 @@ ImFont::ImFont()
     MetricsTotalSurface = 0;
     memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
     FontID = 0;
-    DpiScale = 0.0f;
 }
 
 ImFont::~ImFont()
@@ -2991,7 +3002,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
 
     const float line_height = size;
-    const float scale = size / FontSize;
+    const float scale = size / FontSize / ConfigData->DpiScale;
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -3084,7 +3095,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const ImFontGlyph* glyph = FindGlyph(c);
     if (!glyph || !glyph->Visible)
         return;
-    float scale = (size >= 0.0f) ? (size / FontSize) : 1.0f;
+    float scale = (size >= 0.0f) ? (size / FontSize / ConfigData->DpiScale) : 1.0f;
     pos.x = ImRound(pos.x + DisplayOffset.x);
     pos.y = ImRound(pos.y + DisplayOffset.y);
     draw_list->PrimReserve(6, 4);
@@ -3104,8 +3115,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (y > clip_rect.w)
         return;
 
-    const float scale = size / FontSize;
-    const float line_height = FontSize * scale;
+    const float scale = size / FontSize / ConfigData->DpiScale;
+    const float line_height = size;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 

@@ -2219,6 +2219,7 @@ struct ImFontConfig
     unsigned int    RasterizerFlags;        // 0x00     // Settings for custom font rasterizer (e.g. ImGuiFreeType). Leave as zero if you aren't using one.
     float           RasterizerMultiply;     // 1.0f     // Brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable.
     ImWchar         EllipsisChar;           // -1       // Explicitly specify unicode codepoint of ellipsis character. When fonts are being merged first specified ellipsis will be used.
+    float           DpiScale;               // 1.0f     //
 
     // [Internal]
     char            Name[40];               // Name (strictly to ease debugging)
@@ -2409,7 +2410,6 @@ struct ImFont
     int                         MetricsTotalSurface;// 4     // out //            // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     int                         FontID;             // 4     // out //            // Identifier different for distinct fonts.
-    float                       DpiScale;           // 4     // out //            // A font on which current font is based.
 
     // Methods
     IMGUI_API ImFont();
