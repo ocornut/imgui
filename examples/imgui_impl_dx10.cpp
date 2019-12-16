@@ -68,8 +68,8 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     // Setup viewport
     D3D10_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D10_VIEWPORT));
-    vp.Width = (DWORD)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
-    vp.Height = (DWORD)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
+    vp.Width = (UINT)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    vp.Height = (UINT)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0;
@@ -580,8 +580,8 @@ static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
     // Create swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferDesc.Width = (UINT)viewport->Size.x;
-    sd.BufferDesc.Height = (UINT)viewport->Size.y;
+    sd.BufferDesc.Width = (UINT)(viewport->Size.x * viewport->DpiScale);
+    sd.BufferDesc.Height = (UINT)(viewport->Size.y * viewport->DpiScale);
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;
