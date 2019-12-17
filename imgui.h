@@ -584,6 +584,7 @@ namespace ImGui
     // Columns
     // - You can also use SameLine(pos_x) to mimic simplified columns.
     // - The columns API is work-in-progress and rather lacking (columns are arguably the worst part of dear imgui at the moment!)
+    // - There is a maximum of 64 columns.
     // - By end of the 2019 we will expose a new 'Table' api which will replace columns.
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border = true);
     IMGUI_API void          NextColumn();                                                       // next column, defaults to current row or next row if the current row is finished

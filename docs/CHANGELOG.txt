@@ -55,6 +55,8 @@ Breaking Changes:
   documented (can only unreserve from the last reserve call). If you suspect you ever
   used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
   calls. [@ShironekoBen]
+- Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
+  technically supports it, future code may not so we're putting the restriction ahead.
 - imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
   of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
   adding multiple points into it, you may need to fix your initial value.
