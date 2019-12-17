@@ -71,6 +71,8 @@ Other Changes:
   selection, those new api can fill a gap. [@ShironekoBen]
 - Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
+- Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
+  on Wayland). (#2800, #2802) [@NeroBurner]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the opengl3 backend might
   automatically use it). [#2919, #2798]
