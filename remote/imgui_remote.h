@@ -174,7 +174,6 @@ struct WebSocketServer : public IWebSocketServer
 						FrameReceived = Frame;
 						Input.KeyShift = shift > 0;
 						Input.KeyCtrl = ctrl > 0;
-                        mapRemoteKey(&key, Input.KeyCtrl);
 						Input.KeysDown[key] = true;
 					}
 				}
