@@ -45,7 +45,8 @@ CODE
 // [SECTION] FORWARD DECLARATIONS
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
 // [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
-// [SECTION] MISC HELPERS/UTILITIES (Geometry, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
+// [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
 // [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
@@ -310,9 +311,18 @@ CODE
  USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS
  ------------------------------------------
  - The gamepad/keyboard navigation is fairly functional and keeps being improved.
- - Gamepad support is particularly useful to use dear imgui on a console system (e.g. PS4, Switch, XB1) without a mouse!
+ - Gamepad support is particularly useful to use Dear ImGui on a console system (e.g. PS4, Switch, XB1) without a mouse!
  - You can ask questions and report issues at https://github.com/ocornut/imgui/issues/787
  - The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable.
+ - Keyboard:
+    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable.
+      NewFrame() will automatically fill io.NavInputs[] based on your io.KeysDown[] + io.KeyMap[] arrays.
+    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag
+      will be set. For more advanced uses, you may want to read from:
+       - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
+       - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
+       - or query focus information with e.g. IsWindowFocused(ImGuiFocusedFlags_AnyWindow), IsItemFocused() etc. functions.
+      Please reach out if you think the game vs navigation input sharing could be improved.
  - Gamepad:
     - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad to enable.
     - Backend: Set io.BackendFlags |= ImGuiBackendFlags_HasGamepad + fill the io.NavInputs[] fields before calling NewFrame().
@@ -324,15 +334,6 @@ CODE
     - You can download PNG/PSD files depicting the gamepad controls for common controllers at: http://goo.gl/9LgVZW.
     - If you need to share inputs between your game and the imgui parts, the easiest approach is to go all-or-nothing, with a buttons combo
       to toggle the target. Please reach out if you think the game vs navigation input sharing could be improved.
- - Keyboard:
-    - Set io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard to enable.
-      NewFrame() will automatically fill io.NavInputs[] based on your io.KeysDown[] + io.KeyMap[] arrays.
-    - When keyboard navigation is active (io.NavActive + ImGuiConfigFlags_NavEnableKeyboard), the io.WantCaptureKeyboard flag
-      will be set. For more advanced uses, you may want to read from:
-       - io.NavActive: true when a window is focused and it doesn't have the ImGuiWindowFlags_NoNavInputs flag set.
-       - io.NavVisible: true when the navigation cursor is visible (and usually goes false when mouse is used).
-       - or query focus information with e.g. IsWindowFocused(ImGuiFocusedFlags_AnyWindow), IsItemFocused() etc. functions.
-      Please reach out if you think the game vs navigation input sharing could be improved.
  - Mouse:
     - PS4 users: Consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
     - Consoles/Tablet/Phone users: Consider using a Synergy 1.x server (on your PC) + uSynergy.c (on your console/tablet/phone app) to share your PC mouse/keyboard.
@@ -353,6 +354,8 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2019/12/17 (1.75) - made Columns() limited to 64 columns by asserting above that limit. While the current code technically supports it, future code may not so we're putting the restriction ahead.
+ - 2019/12/13 (1.75) - [imgui_internal.h] changed ImRect() default constructor initializes all fields to 0.0f instead of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by adding multiple points into it, you may need to fix your initial value.
  - 2019/12/08 (1.75) - removed redirecting functions/enums that were marked obsolete in 1.53 (December 2017):
                        - ShowTestWindow()                    -> use ShowDemoWindow()
                        - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
@@ -587,13 +590,16 @@ CODE
     - See demo code in imgui_demo.cpp and particularly the ImGui::ShowDemoWindow() function.
     - The demo covers most features of Dear ImGui, so you can read the code and see its output.
     - See documentation and comments at the top of imgui.cpp + effectively imgui.h.
-    - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the examples/
-      folder to explain how to integrate Dear ImGui with your own engine/application.
+    - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the
+      examples/ folder to explain how to integrate Dear ImGui with your own engine/application.
+    - The Wiki (https://github.com/ocornut/imgui/wiki) has many resources and links.
+    - The Glossary (https://github.com/ocornut/imgui/wiki/Glossary) page also may be useful.
     - Your programming IDE is your friend, find the type or function declaration to find comments
       associated to it.
 
  Q: Which version should I get?
  Q: Why the names "Dear ImGui" vs "ImGui"?
+ >> This library is called "Dear ImGui", please don't call it "ImGui" :)
  >> See https://www.dearimgui.org/faq
 
  Q&A: Concerns
@@ -623,6 +629,7 @@ CODE
      have 'io.WantCaptureKeyboard=false'. Depending on your application logic it may or not be inconvenient. You might want to track which key-downs
      were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
 
+ Q. How can I enable keyboard controls?
  Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
  Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
  Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
@@ -1100,8 +1107,76 @@ void ImGuiIO::ClearInputCharacters()
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] MISC HELPERS/UTILITIES (Geometry, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 //-----------------------------------------------------------------------------
+
+ImVec2 ImBezierClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments)
+{
+    IM_ASSERT(num_segments > 0); // Use ImBezierClosestPointCasteljau()
+    ImVec2 p_last = p1;
+    ImVec2 p_closest;
+    float p_closest_dist2 = FLT_MAX;
+    float t_step = 1.0f / (float)num_segments;
+    for (int i_step = 1; i_step <= num_segments; i_step++)
+    {
+        ImVec2 p_current = ImBezierCalc(p1, p2, p3, p4, t_step * i_step);
+        ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
+        float dist2 = ImLengthSqr(p - p_line);
+        if (dist2 < p_closest_dist2)
+        {
+            p_closest = p_line;
+            p_closest_dist2 = dist2;
+        }
+        p_last = p_current;
+    }
+    return p_closest;
+}
+
+// Closely mimics PathBezierToCasteljau() in imgui_draw.cpp
+static void BezierClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
+{
+    float dx = x4 - x1;
+    float dy = y4 - y1;
+    float d2 = ((x2 - x4) * dy - (y2 - y4) * dx);
+    float d3 = ((x3 - x4) * dy - (y3 - y4) * dx);
+    d2 = (d2 >= 0) ? d2 : -d2;
+    d3 = (d3 >= 0) ? d3 : -d3;
+    if ((d2+d3) * (d2+d3) < tess_tol * (dx*dx + dy*dy))
+    {
+        ImVec2 p_current(x4, y4);
+        ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
+        float dist2 = ImLengthSqr(p - p_line);
+        if (dist2 < p_closest_dist2)
+        {
+            p_closest = p_line;
+            p_closest_dist2 = dist2;
+        }
+        p_last = p_current;
+    }
+    else if (level < 10)
+    {
+        float x12 = (x1+x2)*0.5f,       y12 = (y1+y2)*0.5f;
+        float x23 = (x2+x3)*0.5f,       y23 = (y2+y3)*0.5f;
+        float x34 = (x3+x4)*0.5f,       y34 = (y3+y4)*0.5f;
+        float x123 = (x12+x23)*0.5f,    y123 = (y12+y23)*0.5f;
+        float x234 = (x23+x34)*0.5f,    y234 = (y23+y34)*0.5f;
+        float x1234 = (x123+x234)*0.5f, y1234 = (y123+y234)*0.5f;
+        BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1, y1, x12, y12, x123, y123, x1234, y1234, tess_tol, level + 1);
+        BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1234, y1234, x234, y234, x34, y34, x4, y4, tess_tol, level + 1);
+    }
+}
+
+// tess_tol is generally the same value you would find in ImGui::GetStyle().CurveTessellationTol
+// Because those ImXXX functions are lower-level than ImGui:: we cannot access this value automatically.
+ImVec2 ImBezierClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol)
+{
+    IM_ASSERT(tess_tol > 0.0f);
+    ImVec2 p_last = p1;
+    ImVec2 p_closest;
+    float p_closest_dist2 = FLT_MAX;
+    BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, tess_tol, 0);
+    return p_closest;
+}
 
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
 {
@@ -1150,6 +1225,10 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
         return proj_bc;
     return proj_ca;
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
+//-----------------------------------------------------------------------------
 
 // Consider using _stricmp/_strnicmp under Windows or strcasecmp/strncasecmp. We don't actually use either ImStricmp/ImStrnicmp in the codebase any more.
 int ImStricmp(const char* str1, const char* str2)
@@ -1721,38 +1800,6 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
     }
 }
 
-ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
-{
-    ImGuiStyle& style = GImGui->Style;
-    ImVec4 c = style.Colors[idx];
-    c.w *= style.Alpha * alpha_mul;
-    return ColorConvertFloat4ToU32(c);
-}
-
-ImU32 ImGui::GetColorU32(const ImVec4& col)
-{
-    ImGuiStyle& style = GImGui->Style;
-    ImVec4 c = col;
-    c.w *= style.Alpha;
-    return ColorConvertFloat4ToU32(c);
-}
-
-const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx)
-{
-    ImGuiStyle& style = GImGui->Style;
-    return style.Colors[idx];
-}
-
-ImU32 ImGui::GetColorU32(ImU32 col)
-{
-    float style_alpha = GImGui->Style.Alpha;
-    if (style_alpha >= 1.0f)
-        return col;
-    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (ImU32)(a * style_alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
-    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
-}
-
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiStorage
 // Helper: Key->value storage
@@ -2210,9 +2257,41 @@ bool ImGuiListClipper::Step()
 
 //-----------------------------------------------------------------------------
 // [SECTION] RENDER HELPERS
-// Those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
+// Some of those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
 // Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
 //-----------------------------------------------------------------------------
+
+ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
+{
+    ImGuiStyle& style = GImGui->Style;
+    ImVec4 c = style.Colors[idx];
+    c.w *= style.Alpha * alpha_mul;
+    return ColorConvertFloat4ToU32(c);
+}
+
+ImU32 ImGui::GetColorU32(const ImVec4& col)
+{
+    ImGuiStyle& style = GImGui->Style;
+    ImVec4 c = col;
+    c.w *= style.Alpha;
+    return ColorConvertFloat4ToU32(c);
+}
+
+const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx)
+{
+    ImGuiStyle& style = GImGui->Style;
+    return style.Colors[idx];
+}
+
+ImU32 ImGui::GetColorU32(ImU32 col)
+{
+    ImGuiStyle& style = GImGui->Style;
+    if (style.Alpha >= 1.0f)
+        return col;
+    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+    a = (ImU32)(a * style.Alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
+    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
 
 const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
 {
@@ -4629,7 +4708,7 @@ void ImGui::EndChild()
     ImGuiWindow* window = g.CurrentWindow;
 
     IM_ASSERT(g.WithinEndChild == false);
-    IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);   // Mismatched BeginChild()/EndChild() callss
+    IM_ASSERT(window->Flags & ImGuiWindowFlags_ChildWindow);   // Mismatched BeginChild()/EndChild() calls
 
     g.WithinEndChild = true;
     if (window->BeginCount > 1)
@@ -9806,7 +9885,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 if (show_drawcmd_details && fg_draw_list && ImGui::IsItemHovered())
                 {
                     ImRect clip_rect = pcmd->ClipRect;
-                    ImRect vtxs_rect;
+                    ImRect vtxs_rect(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
                     for (unsigned int i = elem_offset; i < elem_offset + (int)pcmd->ElemCount; i++)
                         vtxs_rect.Add(draw_list->VtxBuffer[idx_buffer ? idx_buffer[i] : i].pos);
                     fg_draw_list->AddRect(ImFloor(clip_rect.Min), ImFloor(clip_rect.Max), IM_COL32(255,0,255,255));

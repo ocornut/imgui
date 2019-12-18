@@ -907,6 +907,17 @@ void ImDrawList::PathArcTo(const ImVec2& center, float radius, float a_min, floa
     }
 }
 
+ImVec2 ImBezierCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, float t)
+{
+    float u = 1.0f - t;
+    float w1 = u*u*u;
+    float w2 = 3*u*u*t;
+    float w3 = 3*u*t*t;
+    float w4 = t*t*t;
+    return ImVec2(w1*p1.x + w2*p2.x + w3*p3.x + w4*p4.x, w1*p1.y + w2*p2.y + w3*p3.y + w4*p4.y);
+}
+
+// Closely mimics BezierClosestPointCasteljauStep() in imgui.cpp
 static void PathBezierToCasteljau(ImVector<ImVec2>* path, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
 {
     float dx = x4 - x1;
@@ -927,7 +938,6 @@ static void PathBezierToCasteljau(ImVector<ImVec2>* path, float x1, float y1, fl
         float x123 = (x12+x23)*0.5f,    y123 = (y12+y23)*0.5f;
         float x234 = (x23+x34)*0.5f,    y234 = (y23+y34)*0.5f;
         float x1234 = (x123+x234)*0.5f, y1234 = (y123+y234)*0.5f;
-
         PathBezierToCasteljau(path, x1,y1,        x12,y12,    x123,y123,  x1234,y1234, tess_tol, level+1);
         PathBezierToCasteljau(path, x1234,y1234,  x234,y234,  x34,y34,    x4,y4,       tess_tol, level+1);
     }
@@ -938,22 +948,13 @@ void ImDrawList::PathBezierCurveTo(const ImVec2& p2, const ImVec2& p3, const ImV
     ImVec2 p1 = _Path.back();
     if (num_segments == 0)
     {
-        // Auto-tessellated
-        PathBezierToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, _Data->CurveTessellationTol, 0);
+        PathBezierToCasteljau(&_Path, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, _Data->CurveTessellationTol, 0); // Auto-tessellated
     }
     else
     {
         float t_step = 1.0f / (float)num_segments;
         for (int i_step = 1; i_step <= num_segments; i_step++)
-        {
-            float t = t_step * i_step;
-            float u = 1.0f - t;
-            float w1 = u*u*u;
-            float w2 = 3*u*u*t;
-            float w3 = 3*u*t*t;
-            float w4 = t*t*t;
-            _Path.push_back(ImVec2(w1*p1.x + w2*p2.x + w3*p3.x + w4*p4.x, w1*p1.y + w2*p2.y + w3*p3.y + w4*p4.y));
-        }
+            _Path.push_back(ImBezierCalc(p1, p2, p3, p4, t_step * i_step));
     }
 }
 
@@ -1128,13 +1129,14 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     PathFillConvex(col);
 }
 
-void ImDrawList::AddBezierCurve(const ImVec2& pos0, const ImVec2& cp0, const ImVec2& cp1, const ImVec2& pos1, ImU32 col, float thickness, int num_segments)
+// Cubic Bezier takes 4 controls points
+void ImDrawList::AddBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    PathLineTo(pos0);
-    PathBezierCurveTo(cp0, cp1, pos1, num_segments);
+    PathLineTo(p1);
+    PathBezierCurveTo(p2, p3, p4, num_segments);
     PathStroke(col, false, thickness);
 }
 
