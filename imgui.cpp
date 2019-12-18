@@ -45,7 +45,8 @@ CODE
 // [SECTION] FORWARD DECLARATIONS
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
 // [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
-// [SECTION] MISC HELPERS/UTILITIES (Geometry, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
+// [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
 // [SECTION] MISC HELPERS/UTILITIES (ImText* functions)
 // [SECTION] MISC HELPERS/UTILITIES (Color functions)
@@ -364,6 +365,7 @@ CODE
  - 2019/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 
 
+ - 2019/12/17 (1.75) - made Columns() limited to 64 columns by asserting above that limit. While the current code technically supports it, future code may not so we're putting the restriction ahead.
  - 2019/12/13 (1.75) - [imgui_internal.h] changed ImRect() default constructor initializes all fields to 0.0f instead of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by adding multiple points into it, you may need to fix your initial value.
  - 2019/12/08 (1.75) - removed redirecting functions/enums that were marked obsolete in 1.53 (December 2017):
                        - ShowTestWindow()                    -> use ShowDemoWindow()
@@ -1143,8 +1145,76 @@ void ImGuiIO::ClearInputCharacters()
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] MISC HELPERS/UTILITIES (Geometry, String, Format, Hash, File functions)
+// [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 //-----------------------------------------------------------------------------
+
+ImVec2 ImBezierClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments)
+{
+    IM_ASSERT(num_segments > 0); // Use ImBezierClosestPointCasteljau()
+    ImVec2 p_last = p1;
+    ImVec2 p_closest;
+    float p_closest_dist2 = FLT_MAX;
+    float t_step = 1.0f / (float)num_segments;
+    for (int i_step = 1; i_step <= num_segments; i_step++)
+    {
+        ImVec2 p_current = ImBezierCalc(p1, p2, p3, p4, t_step * i_step);
+        ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
+        float dist2 = ImLengthSqr(p - p_line);
+        if (dist2 < p_closest_dist2)
+        {
+            p_closest = p_line;
+            p_closest_dist2 = dist2;
+        }
+        p_last = p_current;
+    }
+    return p_closest;
+}
+
+// Closely mimics PathBezierToCasteljau() in imgui_draw.cpp
+static void BezierClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
+{
+    float dx = x4 - x1;
+    float dy = y4 - y1;
+    float d2 = ((x2 - x4) * dy - (y2 - y4) * dx);
+    float d3 = ((x3 - x4) * dy - (y3 - y4) * dx);
+    d2 = (d2 >= 0) ? d2 : -d2;
+    d3 = (d3 >= 0) ? d3 : -d3;
+    if ((d2+d3) * (d2+d3) < tess_tol * (dx*dx + dy*dy))
+    {
+        ImVec2 p_current(x4, y4);
+        ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
+        float dist2 = ImLengthSqr(p - p_line);
+        if (dist2 < p_closest_dist2)
+        {
+            p_closest = p_line;
+            p_closest_dist2 = dist2;
+        }
+        p_last = p_current;
+    }
+    else if (level < 10)
+    {
+        float x12 = (x1+x2)*0.5f,       y12 = (y1+y2)*0.5f;
+        float x23 = (x2+x3)*0.5f,       y23 = (y2+y3)*0.5f;
+        float x34 = (x3+x4)*0.5f,       y34 = (y3+y4)*0.5f;
+        float x123 = (x12+x23)*0.5f,    y123 = (y12+y23)*0.5f;
+        float x234 = (x23+x34)*0.5f,    y234 = (y23+y34)*0.5f;
+        float x1234 = (x123+x234)*0.5f, y1234 = (y123+y234)*0.5f;
+        BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1, y1, x12, y12, x123, y123, x1234, y1234, tess_tol, level + 1);
+        BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1234, y1234, x234, y234, x34, y34, x4, y4, tess_tol, level + 1);
+    }
+}
+
+// tess_tol is generally the same value you would find in ImGui::GetStyle().CurveTessellationTol
+// Because those ImXXX functions are lower-level than ImGui:: we cannot access this value automatically.
+ImVec2 ImBezierClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol)
+{
+    IM_ASSERT(tess_tol > 0.0f);
+    ImVec2 p_last = p1;
+    ImVec2 p_closest;
+    float p_closest_dist2 = FLT_MAX;
+    BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, tess_tol, 0);
+    return p_closest;
+}
 
 ImVec2 ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p)
 {
@@ -1193,6 +1263,10 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
         return proj_bc;
     return proj_ca;
 }
+
+//-----------------------------------------------------------------------------
+// [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
+//-----------------------------------------------------------------------------
 
 // Consider using _stricmp/_strnicmp under Windows or strcasecmp/strncasecmp. We don't actually use either ImStricmp/ImStrnicmp in the codebase any more.
 int ImStricmp(const char* str1, const char* str2)
@@ -1764,38 +1838,6 @@ void ImGui::ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float&
     }
 }
 
-ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
-{
-    ImGuiStyle& style = GImGui->Style;
-    ImVec4 c = style.Colors[idx];
-    c.w *= style.Alpha * alpha_mul;
-    return ColorConvertFloat4ToU32(c);
-}
-
-ImU32 ImGui::GetColorU32(const ImVec4& col)
-{
-    ImGuiStyle& style = GImGui->Style;
-    ImVec4 c = col;
-    c.w *= style.Alpha;
-    return ColorConvertFloat4ToU32(c);
-}
-
-const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx)
-{
-    ImGuiStyle& style = GImGui->Style;
-    return style.Colors[idx];
-}
-
-ImU32 ImGui::GetColorU32(ImU32 col)
-{
-    float style_alpha = GImGui->Style.Alpha;
-    if (style_alpha >= 1.0f)
-        return col;
-    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
-    a = (ImU32)(a * style_alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
-    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
-}
-
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiStorage
 // Helper: Key->value storage
@@ -2253,9 +2295,41 @@ bool ImGuiListClipper::Step()
 
 //-----------------------------------------------------------------------------
 // [SECTION] RENDER HELPERS
-// Those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
+// Some of those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
 // Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
 //-----------------------------------------------------------------------------
+
+ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
+{
+    ImGuiStyle& style = GImGui->Style;
+    ImVec4 c = style.Colors[idx];
+    c.w *= style.Alpha * alpha_mul;
+    return ColorConvertFloat4ToU32(c);
+}
+
+ImU32 ImGui::GetColorU32(const ImVec4& col)
+{
+    ImGuiStyle& style = GImGui->Style;
+    ImVec4 c = col;
+    c.w *= style.Alpha;
+    return ColorConvertFloat4ToU32(c);
+}
+
+const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx)
+{
+    ImGuiStyle& style = GImGui->Style;
+    return style.Colors[idx];
+}
+
+ImU32 ImGui::GetColorU32(ImU32 col)
+{
+    ImGuiStyle& style = GImGui->Style;
+    if (style.Alpha >= 1.0f)
+        return col;
+    ImU32 a = (col & IM_COL32_A_MASK) >> IM_COL32_A_SHIFT;
+    a = (ImU32)(a * style.Alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
+    return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
+}
 
 const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
 {

@@ -20,6 +20,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2019-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2019-12-17: Inputs: On Wayland, use SDL_GetMouseState (because there is no global mouse state).
 //  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
 //  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
 //  2019-04-23: Inputs: Added support for SDL_GameController (if ImGuiConfigFlags_NavEnableGamepad is set by user application).
@@ -72,6 +73,7 @@ static Uint64       g_Time = 0;
 static bool         g_MousePressed[3] = { false, false, false };
 static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static char*        g_ClipboardTextData = NULL;
+static bool         g_MouseCanUseGlobalState = true;
 
 // Forward Declarations
 static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_gl_context);
@@ -191,6 +193,7 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     io.GetClipboardTextFn = ImGui_ImplSDL2_GetClipboardText;
     io.ClipboardUserData = NULL;
 
+    // Load mouse cursors
     g_MouseCursors[ImGuiMouseCursor_Arrow] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_ARROW);
     g_MouseCursors[ImGuiMouseCursor_TextInput] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_IBEAM);
     g_MouseCursors[ImGuiMouseCursor_ResizeAll] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZEALL);
@@ -200,6 +203,9 @@ static bool ImGui_ImplSDL2_Init(SDL_Window* window, void* sdl_gl_context)
     g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_SIZENWSE);
     g_MouseCursors[ImGuiMouseCursor_Hand] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_HAND);
     g_MouseCursors[ImGuiMouseCursor_NotAllowed] = SDL_CreateSystemCursor(SDL_SYSTEM_CURSOR_NO);
+
+    // Check and store if we are on Wayland
+    g_MouseCanUseGlobalState = strncmp(SDL_GetCurrentVideoDriver(), "wayland", 7) != 0;
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -291,26 +297,34 @@ static void ImGui_ImplSDL2_UpdateMousePosAndButtons()
 
 #if SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE && !defined(__EMSCRIPTEN__) && !defined(__ANDROID__) && !(defined(__APPLE__) && TARGET_OS_IOS)
 
-    // SDL 2.0.4 and later has SDL_GetGlobalMouseState() and SDL_CaptureMouse()
-    int mouse_x_global, mouse_y_global;
-    SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
-
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    if (g_MouseCanUseGlobalState)
     {
-        // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
-        if (SDL_Window* focused_window = SDL_GetKeyboardFocus())
-            if (ImGui::FindViewportByPlatformHandle((void*)focused_window) != NULL)
-                io.MousePos = ImVec2((float)mouse_x_global, (float)mouse_y_global);
+        // SDL 2.0.4 and later has SDL_GetGlobalMouseState() and SDL_CaptureMouse()
+        int mouse_x_global, mouse_y_global;
+        SDL_GetGlobalMouseState(&mouse_x_global, &mouse_y_global);
+
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+        {
+            // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
+            if (SDL_Window* focused_window = SDL_GetKeyboardFocus())
+                if (ImGui::FindViewportByPlatformHandle((void*)focused_window) != NULL)
+                    io.MousePos = ImVec2((float)mouse_x_global, (float)mouse_y_global);
+        }
+        else
+        {
+            // Single-viewport mode: mouse position in client window coordinatesio.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
+            if (SDL_GetWindowFlags(g_Window) & SDL_WINDOW_INPUT_FOCUS)
+            {
+                int window_x, window_y;
+                SDL_GetWindowPosition(g_Window, &window_x, &window_y);
+                io.MousePos = ImVec2((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
+            }
+        }
     }
     else
     {
-        // Single-viewport mode: mouse position in client window coordinatesio.MousePos is (0,0) when the mouse is on the upper-left corner of the app window)
         if (SDL_GetWindowFlags(g_Window) & SDL_WINDOW_INPUT_FOCUS)
-        {
-            int window_x, window_y;
-            SDL_GetWindowPosition(g_Window, &window_x, &window_y);
-            io.MousePos = ImVec2((float)(mouse_x_global - window_x), (float)(mouse_y_global - window_y));
-        }
+            io.MousePos = ImVec2((float)mouse_x_local, (float)mouse_y_local);
     }
 
     // SDL_CaptureMouse() let the OS know e.g. that our imgui drag outside the SDL window boundaries shouldn't e.g. trigger the OS window resize cursor.
