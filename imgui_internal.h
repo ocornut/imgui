@@ -111,6 +111,10 @@ struct ImGuiStackSizes;             // Storage of stack sizes for debugging/asse
 struct ImGuiStyleMod;               // Stacked style modifier, backup of modified data so we can restore it
 struct ImGuiTabBar;                 // Storage for a tab bar
 struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
+struct ImGuiTable;                  // Storage for a table
+struct ImGuiTableColumn;            // Storage for one column of a table
+struct ImGuiTableSettings;          // Storage for a table .ini settings
+struct ImGuiTableColumnsSettings;   // Storage for a column .ini settings
 struct ImGuiWindow;                 // Storage for one window
 struct ImGuiWindowTempData;         // Temporary storage for one window (that's the data which in theory we could ditch at the end of the frame)
 struct ImGuiWindowSettings;         // Storage for a window .ini settings (we keep one of those even if the actual window wasn't instanced during this session)
@@ -264,6 +268,7 @@ IMGUI_API ImU32         ImAlphaBlendColors(ImU32 col_a, ImU32 col_b);
 
 // Helpers: Bit manipulation
 static inline bool      ImIsPowerOfTwo(int v)           { return v != 0 && (v & (v - 1)) == 0; }
+static inline bool      ImIsPowerOfTwo(ImU64 v)         { return v != 0 && (v & (v - 1)) == 0; }
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: String, Formatting
@@ -1329,6 +1334,12 @@ struct ImGuiContext
     ImVector<unsigned char> DragDropPayloadBufHeap;             // We don't expose the ImVector<> directly, ImGuiPayload only holds pointer+size
     unsigned char           DragDropPayloadBufLocal[16];        // Local buffer for small payloads
 
+    // Table
+    ImGuiTable*                     CurrentTable;
+    ImPool<ImGuiTable>              Tables;
+    ImVector<ImGuiPtrOrIndex>       CurrentTableStack;
+    ImVector<ImDrawChannel>         DrawChannelsTempMergeBuffer;
+
     // Tab bars
     ImGuiTabBar*                    CurrentTabBar;
     ImPool<ImGuiTabBar>             TabBars;
@@ -1366,6 +1377,7 @@ struct ImGuiContext
     ImGuiTextBuffer         SettingsIniData;                    // In memory .ini settings
     ImVector<ImGuiSettingsHandler>      SettingsHandlers;       // List of .ini settings handlers
     ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
+    ImChunkStream<ImGuiTableSettings>   SettingsTables;         // ImGuiTable .ini settings entries
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
 
     // Capture/Logging
@@ -1496,6 +1508,7 @@ struct ImGuiContext
         DragDropHoldJustPressedId = 0;
         memset(DragDropPayloadBufLocal, 0, sizeof(DragDropPayloadBufLocal));
 
+        CurrentTable = NULL;
         CurrentTabBar = NULL;
 
         LastValidMousePos = ImVec2(0.0f, 0.0f);
@@ -1581,6 +1594,7 @@ struct IMGUI_API ImGuiWindowTempData
     ImVector<ImGuiWindow*>  ChildWindows;
     ImGuiStorage*           StateStorage;           // Current persistent per-window storage (store e.g. tree node open/close state)
     ImGuiOldColumns*        CurrentColumns;         // Current columns set
+    ImGuiTable*             CurrentTable;           // Current table set
     ImGuiLayoutType         LayoutType;
     ImGuiLayoutType         ParentLayoutType;       // Layout type of parent window at the time of Begin()
     int                     FocusCounterRegular;    // (Legacy Focus/Tabbing system) Sequential counter, start at -1 and increase as assigned via FocusableItemRegister() (FIXME-NAV: Needs redesign)
@@ -1805,7 +1819,185 @@ struct ImGuiTabBar
 //-----------------------------------------------------------------------------
 
 #ifdef IMGUI_HAS_TABLE
-// <this is filled in 'tables' branch>
+
+#define IM_COL32_DISABLE            IM_COL32(0,0,0,1)   // Special sentinel code
+#define IMGUI_TABLE_MAX_COLUMNS     64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
+
+// [Internal] sizeof() ~ 96
+struct ImGuiTableColumn
+{
+    ImGuiID                 UserID;                         // Optional, value passed to TableSetupColumn()
+    ImGuiTableColumnFlags   FlagsIn;                        // Flags as input by user. See ImGuiTableColumnFlags_
+    ImGuiTableColumnFlags   Flags;                          // Effective flags. See ImGuiTableColumnFlags_
+    float                   ResizeWeight;                   //  ~1.0f. Master width data when (Flags & _WidthStretch)
+    float                   MinX;                           // Absolute positions
+    float                   MaxX;
+    float                   WidthRequested;                 // Master width data when !(Flags & _WidthStretch)
+    float                   WidthGiven;                     // == (MaxX - MinX). FIXME-TABLE: Store all persistent width in multiple of FontSize?
+    float                   StartXRows;                     // Start position for the frame, currently ~(MinX + CellPaddingX)
+    float                   StartXHeaders;                  
+    ImS16                   ContentWidthRowsFrozen;         // Contents width. Because freezing is non correlated from headers we need all 4 variants (ImDrawCmd merging uses different data than alignment code).
+    ImS16                   ContentWidthRowsUnfrozen;       // (encoded as ImS16 because we actually rarely use those width)
+    ImS16                   ContentWidthHeadersUsed;        // TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
+    ImS16                   ContentWidthHeadersDesired;
+    float                   ContentMaxPosRowsFrozen;        // Submitted contents absolute maximum position, from which we can infer width.
+    float                   ContentMaxPosRowsUnfrozen;      // (kept as float because we need to manipulate those between each cell change)
+    float                   ContentMaxPosHeadersUsed;
+    float                   ContentMaxPosHeadersDesired;
+    ImRect                  ClipRect;
+    ImS16                   NameOffset;                     // Offset into parent ColumnsName[]
+    bool                    IsActive;                       // Is the column not marked Hidden by the user (regardless of clipping). We're not calling this "Visible" here because visibility also depends on clipping.
+    bool                    NextIsActive;
+    ImS8                    IndexDisplayOrder;              // Index within DisplayOrder[] (column may be reordered by users)
+    ImS8                    IndexWithinActiveSet;           // Index within active set (<= IndexOrder)
+    ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
+    ImS8                    DrawChannelRowsBeforeFreeze;
+    ImS8                    DrawChannelRowsAfterFreeze;
+    ImS8                    PrevActiveColumn;               // Index of prev active column within Columns[], -1 if first active column
+    ImS8                    NextActiveColumn;               // Index of next active column within Columns[], -1 if last active column
+    ImS8                    AutoFitFrames;
+    ImS8                    SortOrder;                      // -1: Not sorting on this column
+    ImS8                    SortDirection;                  // enum ImGuiSortDirection_
+
+    ImGuiTableColumn()
+    {
+        memset(this, 0, sizeof(*this));
+        ResizeWeight = 1.0f;
+        WidthRequested = WidthGiven = -1.0f;
+        NameOffset = -1;
+        IsActive = NextIsActive = true;
+        IndexDisplayOrder = IndexWithinActiveSet = -1;
+        DrawChannelCurrent = DrawChannelRowsBeforeFreeze = DrawChannelRowsAfterFreeze = -1;
+        PrevActiveColumn = NextActiveColumn = -1;
+        AutoFitFrames = 3;
+        SortOrder = -1;
+        SortDirection = ImGuiSortDirection_Ascending;
+    }
+};
+
+// FIXME-OPT: Since CountColumns is invariant, we could use a single alloc for ImGuiTable + the three vectors it is carrying.
+struct ImGuiTable
+{
+    ImGuiID                     ID;
+    ImGuiTableFlags             Flags;
+    ImVector<ImGuiTableColumn>  Columns;
+    ImVector<ImU8>              DisplayOrder;               // Store display order of columns (when not reordered, the values are 0...Count-1)
+    ImU64                       ActiveMaskByIndex;          // Column Index -> IsActive map (Active == not hidden by user/api) in a format adequate for iterating column without touching cold data
+    ImU64                       ActiveMaskByDisplayOrder;   // Column DisplayOrder -> IsActive map
+    ImGuiTableFlags             SettingsSaveFlags;          // Pre-compute which data we are going to save into the .ini file (e.g. when order is not altered we won't save order)
+    int                         SettingsOffset;             // Offset in g.SettingsTables
+    int                         LastFrameActive;
+    int                         ColumnsCount;               // Number of columns declared in BeginTable()
+    int                         ColumnsActiveCount;         // Number of non-hidden columns (<= ColumnsCount)
+    int                         CurrentColumn;
+    int                         CurrentRow;
+    float                       RowPosY1;
+    float                       RowPosY2;
+    float                       RowTextBaseline;
+    ImGuiTableRowFlags          RowFlags : 16;              // Current row flags, see ImGuiTableRowFlags_
+    ImGuiTableRowFlags          LastRowFlags : 16;
+    int                         RowBgColorCounter;          // Counter for alternating background colors (can be fast-forwarded by e.g clipper)
+    ImU32                       RowBgColor;                 // Request for current row background color
+    ImU32                       BorderOuterColor;
+    ImU32                       BorderInnerColor;
+    float                       BorderX1;
+    float                       BorderX2;
+    float                       CellPaddingX1;              // Padding from each borders
+    float                       CellPaddingX2;
+    float                       CellPaddingY;
+    float                       CellSpacingX;               // Spacing between non-bordered cells
+    float                       LastOuterHeight;            // Outer height from last frame
+    float                       LastFirstRowHeight;         // Height of first row from last frame
+    float                       ColumnsTotalWidth;
+    float                       InnerWidth;
+    ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
+    ImRect                      WorkRect;
+    ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
+    ImRect                      InnerClipRect;
+    ImRect                      BackgroundClipRect;         // We use this to cpu-clip cell background color fill
+    ImGuiWindow*                OuterWindow;                // Parent window for the table
+    ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
+    ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names
+    ImDrawListSplitter          DrawSplitter;               // We carry our own ImDrawList splitter to allow recursion (could be stored outside?)
+    ImVector<ImGuiTableSortSpecsColumn> SortSpecsData;      // FIXME-OPT: Fixed-size array / small-vector pattern, optimize for single sort spec
+    ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
+    ImS8                        SortSpecsCount;
+    ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
+    ImS8                        HoveredColumnBody;          // [DEBUG] Unlike HoveredColumnBorder this doesn't fulfill all Hovering rules properly. Used for debugging/tools for now.
+    ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
+    ImS8                        ResizedColumn;              // Index of column being resized.
+    ImS8                        LastResizedColumn;
+    ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
+    ImS8                        ReorderColumnDir;           // -1 or +1
+    ImS8                        RightMostActiveColumn;      // Index of right-most non-hidden column.
+    ImS8                        LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
+    ImS8                        ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
+    ImS8                        DummyDrawChannel;           // Redirect non-visible columns here.
+    ImS8                        FreezeRowsRequest;          // Requested frozen rows count
+    ImS8                        FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
+    ImS8                        FreezeColumnsRequest;       // Requested frozen columns count
+    ImS8                        FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
+    bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
+    bool                        IsInsideRow;                // Set if inside TableBeginRow()/TableEndRow().
+    bool                        IsFirstFrame;
+    bool                        IsSortSpecsDirty;
+    bool                        IsUsingHeaders;             // Set if the first row had the ImGuiTableRowFlags_Headers flag.
+    bool                        IsContextPopupOpen;
+    bool                        IsSettingsRequestLoad;
+    bool                        IsSettingsLoaded;
+    bool                        IsSettingsDirty;            // Set when table settings have changed and needs to be reported into ImGuiTableSetttings data.
+    bool                        IsDefaultDisplayOrder;      // Set when display order is unchanged from default (DisplayOrder contains 0...Count-1)
+    bool                        IsResetDisplayOrderRequest;
+    bool                        IsFreezeRowsPassed;         // Set when we got past the frozen row (the first one).
+    bool                        BackupSkipItems;            // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
+    ImRect                      BackupWorkRect;             // Backup of InnerWindow->WorkRect at the end of BeginTable()
+    ImVec2                      BackupCursorMaxPos;         // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
+
+    ImGuiTable()
+    {
+        memset(this, 0, sizeof(*this));
+        SettingsOffset = -1;
+        LastFrameActive = -1;
+        LastResizedColumn = -1;
+        ContextPopupColumn = -1;
+        ReorderColumn = -1;
+    }
+};
+
+// sizeof() ~ 12
+struct ImGuiTableColumnSettings
+{
+    float   WidthOrWeight;
+    ImGuiID UserID;
+    ImS8    Index;
+    ImS8    DisplayOrder;
+    ImS8    SortOrder;
+    ImS8    SortDirection : 7;
+    ImU8    Visible : 1;        // This is called Active in ImGuiTableColumn, in .ini file we call it Visible.
+
+    ImGuiTableColumnSettings()
+    {
+        WidthOrWeight = 0.0f;
+        UserID = 0;
+        Index = -1;
+        DisplayOrder = SortOrder = -1;
+        SortDirection = ImGuiSortDirection_None;
+        Visible = 1;
+    }
+};
+
+// This is designed to be stored in a single ImChunkStream (1 header followed by N ImGuiTableColumnSettings, etc.)
+struct ImGuiTableSettings
+{
+    ImGuiID                     ID;                     // Set to 0 to invalidate/delete the setting
+    ImGuiTableFlags             SaveFlags;
+    ImS8                        ColumnsCount;
+    ImS8                        ColumnsCountMax;
+
+    ImGuiTableSettings()        { memset(this, 0, sizeof(*this)); }
+    ImGuiTableColumnSettings*   GetColumnSettings()     { return (ImGuiTableColumnSettings*)(this + 1); }
+};
+
 #endif // #ifdef IMGUI_HAS_TABLE
 
 //-----------------------------------------------------------------------------
@@ -1977,6 +2169,35 @@ namespace ImGui
     IMGUI_API float         GetColumnOffsetFromNorm(const ImGuiOldColumns* columns, float offset_norm);
     IMGUI_API float         GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offset);
 
+    // Tables
+    //IMGUI_API int         GetTableColumnNo();
+    //IMGUI_API bool        SetTableColumnNo(int column_n);
+    //IMGUI_API int         GetTableLineNo();
+    IMGUI_API void          TableBeginInitVisibility(ImGuiTable* table);
+    IMGUI_API void          TableBeginInitDrawChannels(ImGuiTable* table);
+    IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
+    IMGUI_API void          TableUpdateBorders(ImGuiTable* table);
+    IMGUI_API void          TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column, float width);
+    IMGUI_API void          TableDrawBorders(ImGuiTable* table);
+    IMGUI_API void          TableDrawMergeChannels(ImGuiTable* table);
+    IMGUI_API void          TableDrawContextMenu(ImGuiTable* table, int column_n);
+    IMGUI_API void          TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* column, bool add_to_existing_sort_orders);
+    IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
+    IMGUI_API void          TableBeginRow(ImGuiTable* table);
+    IMGUI_API void          TableEndRow(ImGuiTable* table);
+    IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_no);
+    IMGUI_API void          TableEndCell(ImGuiTable* table);
+    IMGUI_API ImRect        TableGetCellRect();
+    IMGUI_API const char*   TableGetColumnName(ImGuiTable* table, int column_no);
+    IMGUI_API void          PushTableBackground();
+    IMGUI_API void          PopTableBackground();
+    IMGUI_API void          TableLoadSettings(ImGuiTable* table);
+    IMGUI_API void          TableSaveSettings(ImGuiTable* table);
+    IMGUI_API ImGuiTableSettings* TableFindSettings(ImGuiTable* table);
+    IMGUI_API void*         TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
+    IMGUI_API void          TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
+    IMGUI_API void          TableSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
+
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);
     IMGUI_API ImGuiTabItem* TabBarFindTabByID(ImGuiTabBar* tab_bar, ImGuiID tab_id);
@@ -2094,6 +2315,7 @@ namespace ImGui
     IMGUI_API void          DebugNodeDrawCmdShowMeshAndBoundingBox(ImGuiWindow* window, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb);
     IMGUI_API void          DebugNodeStorage(ImGuiStorage* storage, const char* label);
     IMGUI_API void          DebugNodeTabBar(ImGuiTabBar* tab_bar, const char* label);
+    IMGUI_API void          DebugNodeTable(ImGuiTable* table);
     IMGUI_API void          DebugNodeWindow(ImGuiWindow* window, const char* label);
     IMGUI_API void          DebugNodeWindowSettings(ImGuiWindowSettings* settings);
     IMGUI_API void          DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* label);

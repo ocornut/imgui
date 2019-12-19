@@ -5999,6 +5999,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     // which would be advantageous since most selectable are not selected.
     if (span_all_columns && window->DC.CurrentColumns)
         PushColumnsBackground();
+    else if ((flags & ImGuiSelectableFlags_SpanAllColumns) && g.CurrentTable)
+        PushTableBackground();
 
     // We use NoHoldingActiveID on menus so user can click and _hold_ on a menu then drag to browse child entries
     ImGuiButtonFlags button_flags = 0;
@@ -6047,6 +6049,8 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     if (span_all_columns && window->DC.CurrentColumns)
         PopColumnsBackground();
+    else if (span_all_columns && g.CurrentTable)
+        PopTableBackground();
 
     if (flags & ImGuiSelectableFlags_Disabled) PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
     RenderTextClipped(text_min, text_max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
