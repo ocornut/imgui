@@ -1541,6 +1541,8 @@ ImFontConfig::ImFontConfig()
     memset(Name, 0, sizeof(Name));
     DstFont = NULL;
     DpiScale = 1.0f;
+    IsDuplicated = false;
+    IsUpsacled = false;
 }
 
 //-----------------------------------------------------------------------------
@@ -1906,6 +1908,28 @@ static int IMGUI_CDECL FloatReverseComparer(const void* lhs, const void* rhs)
         return 0;
 }
 
+static ImFont* FindFontForDpi(ImFontAtlas* atlas, int font_id, float dpi)
+{
+    for (int i = 0; i < atlas->Fonts.Size; i++)
+    {
+        ImFont* font = atlas->Fonts[i];
+        if (font->FontID == font_id && font->DpiScale == dpi)
+            return font;
+    }
+    return NULL;
+}
+
+static ImFontConfig* FindFontConfigForDpi(ImFontAtlas* atlas, int font_id, float dpi, bool merge_mode)
+{
+    for (int i = 0; i < atlas->ConfigData.Size; i++)
+    {
+        ImFontConfig* config = &atlas->ConfigData[i];
+        if (config->MergeMode == merge_mode && config->DstFont != NULL && config->DstFont->FontID == font_id && config->DpiScale == dpi)
+            return config;
+    }
+    return NULL;
+}
+
 void ImFontAtlas::CreatePerDpiFonts()
 {
     // Duplicate all added fonts for each DPI. All font sizes are rendered into the same texture. Fonts are switched on
@@ -1938,65 +1962,86 @@ void ImFontAtlas::CreatePerDpiFonts()
     else
         return;
 
-    // Clone initial list of fonts for DPIs ranging 1..N.
-    const int total_configs = ConfigData.Size;    // Variables used there because these structures expand during
-    const int total_fonts = Fonts.Size;           // following loop and we only need to iterate initial list of
-                                                  // fonts/configs.
+    // printf("---------------------------------------\n");
+
     // Duplicate fonts for each dpi
-    for (int conf_i = 0; conf_i < total_configs; conf_i++)
+    for (int conf_i = 0, conf_total = ConfigData.Size; conf_i < conf_total; conf_i++)
     {
-        ImFontConfig& source_config = ConfigData[conf_i];
-        ImFont* src_font = source_config.DstFont;
+        ImFontConfig& config = ConfigData[conf_i];
+        ImFont* src_font = config.DstFont;
+
+        // Duplicated fonts are a result of font duplication, not a source data.
+        if (config.IsDuplicated)
+        {
+            // printf("[cnf] Skip %s x%.2f (skip-duplicated)\n", config.Name, config.DpiScale);
+            continue;
+        }
 
         for (int dpi_i = 0; dpi_i < dpi_set.Size; dpi_i++)
         {
-            ImFont* dpi_font = NULL;
-
-            // Find if font was already upscaled.
-            for (int font_i = 0; font_i < Fonts.Size; font_i++)
-            {
-                ImFont* font = Fonts[font_i];
-                if (font->FontID == src_font->FontID && font->ConfigData && src_font->ConfigData && font->ConfigData->DpiScale == src_font->ConfigData->DpiScale)
-                {
-                    dpi_font = font;
-                    break;
-                }
-            }
-
-            // Upscaled font exists already.
-            if (dpi_font != NULL)
-                continue;
-
+            ImFontConfig conf_new;
             const float dpi = dpi_set[dpi_i];
-            if (dpi_i == 0)
-            {
-                // Upscale first font in-pace.
-                source_config.DpiScale = dpi;
-                continue;
-            }
+            ImFont* dst_font = config.DstFont;
+            IM_ASSERT(dst_font != NULL);
 
-            // Other fonts have to be duplicated.
-            ImFontConfig config = source_config;
-            config.DpiScale = dpi;
-            config.FontDataOwnedByAtlas = false;
-
+            bool upscale_in_place = dpi_i == 0 && !config.IsUpsacled;
             if (config.MergeMode)
             {
-                // Find offset of destination font and use that offset to pick a cloned font as a new destination.
-                for (int merge_font_index = 0; merge_font_index < total_fonts; merge_font_index++)
+                // Search for same font config with identical DPI scale. Font config search is required because merged
+                // fonts do not create a new font entry.
+                if (FindFontConfigForDpi(this, config.DstFont->FontID, dpi, true) != NULL)
                 {
-                    if (config.DstFont == Fonts[merge_font_index])
-                    {
-                        config.DstFont = Fonts[total_fonts + merge_font_index];
-                        break;
-                    }
+                    // printf("[dpi] Skip %s x%.2f (merge) (skip-exists)\n", config.Name, dpi);
+                    continue;
                 }
+
+                // Walk configs back and find first config with matching font id and DPI to merge current font into.
+                dst_font = FindFontForDpi(this, config.DstFont->FontID, dpi);
+                IM_ASSERT(dst_font != NULL);
             }
             else
-                config.DstFont = NULL;
+            {
+                // Search for same font with identical DPI scale. Font search has to be used because font configs do not
+                // get font assigned until baking and we need font id.
+                if (FindFontForDpi(this, config.DstFont->FontID, dpi) != NULL)
+                {
+                    // printf("[dpi] Skip %s x%.2f (normal) (skip-exists)\n", config.Name, dpi);
+                    continue;
+                }
 
-            dpi_font = AddFont(&config);
-            dpi_font->FontID = src_font->FontID;
+                // Destination font has to be cleared only when we are duplicating current font for new DPI.
+                if (!upscale_in_place)
+                    dst_font = NULL;
+            }
+
+            // Either use original config, or duplicate original config and use a new copy.
+            ImFontConfig* conf_dpi = upscale_in_place ? &config : &(conf_new = config);
+
+            conf_dpi->DpiScale = dpi;
+            conf_dpi->DstFont = dst_font;
+            // DpiScale and IsDuplicated can not be used to infer IsUpsacled value because we may have monitors with
+            // DPI=1.0f and because we are upscaling one font without duplicating it in order to not keep unused font
+            // with 1.0f scale.
+            conf_dpi->IsUpsacled = true;
+
+            if (upscale_in_place)
+            {
+                IM_ASSERT(dst_font != NULL);
+                // printf("[dpi] Update %s %d x%.2f\n", config.Name, dst_font->FontID, dpi);
+            }
+            else
+            {
+                // Font is scaled up in-place for first DPI and duplicated for subsequent ones.
+                conf_new.FontDataOwnedByAtlas = false;
+                conf_new.IsDuplicated = true;
+                dst_font = AddFont(&conf_new);
+                // printf("[dpi] Duplicate %s %d x%.2f\n", config.Name, dst_font->FontID, dpi);
+                dst_font->FontID = src_font->FontID;
+                dst_font->DpiScale = dpi;
+            }
+            // DpiScale can not be assigned in ImFontAtlasBuildSetupFont() because it is needed for existing duplicated
+            // font search in this function.
+            dst_font->DpiScale = dpi;
         }
     }
 }
@@ -2731,6 +2776,7 @@ ImFont::ImFont()
     MetricsTotalSurface = 0;
     memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
     FontID = 0;
+    DpiScale = 1.0f;
 }
 
 ImFont::~ImFont()
