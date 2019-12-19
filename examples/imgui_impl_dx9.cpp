@@ -339,8 +339,8 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
     data->d3dpp.Windowed = TRUE;
     data->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    data->d3dpp.BackBufferWidth = (UINT)(viewport->Size.x * viewport->DpiScale);
-    data->d3dpp.BackBufferHeight = (UINT)(viewport->Size.y * viewport->DpiScale);
+    data->d3dpp.BackBufferWidth = (UINT)viewport->PlatformSize.x;
+    data->d3dpp.BackBufferHeight = (UINT)viewport->PlatformSize.y;
     data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
     data->d3dpp.hDeviceWindow = hwnd;
     data->d3dpp.EnableAutoDepthStencil = FALSE;

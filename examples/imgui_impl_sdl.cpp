@@ -527,7 +527,7 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
 #if SDL_HAS_ALWAYS_ON_TOP
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
 #endif
-    data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y, (int)viewport->PlatformSize.x, (int)viewport->PlatformSize.y, sdl_flags);
     data->WindowOwned = true;
     if (use_opengl)
     {

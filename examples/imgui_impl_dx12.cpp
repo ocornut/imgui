@@ -789,8 +789,8 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     DXGI_SWAP_CHAIN_DESC1 sd1;
     ZeroMemory(&sd1, sizeof(sd1));
     sd1.BufferCount = g_numFramesInFlight;
-    sd1.Width = (UINT)(viewport->Size.x * viewport->DpiScale);
-    sd1.Height = (UINT)(viewport->Size.y * viewport->DpiScale);
+    sd1.Width = (UINT)viewport->PlatformSize.x;
+    sd1.Height = (UINT)viewport->PlatformSize.y;
     sd1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd1.SampleDesc.Count = 1;

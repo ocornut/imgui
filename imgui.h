@@ -2591,6 +2591,8 @@ struct ImGuiViewport
     ImVec2              Size;                   // Main Area: Size of the viewport.
     ImVec2              WorkOffsetMin;          // Work Area: Offset from Pos to top-left corner of Work Area. Generally (0,0) or (0,+main_menu_bar_height). Work Area is Full Area but without menu-bars/status-bars (so WorkArea always fit inside Pos/Size!)
     ImVec2              WorkOffsetMax;          // Work Area: Offset from Pos+Size to bottom-right corner of Work Area. Generally (0,0) or (0,-status_bar_height).
+    ImVec2              PlatformPos;            // Position of viewport in OS desktop/native space
+    ImVec2              PlatformSize;           // Size of viewport in OS desktop/native space
     float               DpiScale;               // 1.0f = 96 DPI = No extra scale.
     float               CoordinateScale;        // Native viewport coordinate scale compared to virtual 96 DPI Dear ImGui. Equals to DpiScale on most platforms and 1.0f on MacOS.
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().

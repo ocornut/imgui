@@ -596,8 +596,8 @@ static void ImGui_ImplDX11_CreateWindow(ImGuiViewport* viewport)
     // Create swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferDesc.Width = (UINT)(viewport->Size.x * viewport->DpiScale);
-    sd.BufferDesc.Height = (UINT)(viewport->Size.y * viewport->DpiScale);
+    sd.BufferDesc.Width = (UINT)viewport->PlatformSize.x;
+    sd.BufferDesc.Height = (UINT)viewport->PlatformSize.y;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;

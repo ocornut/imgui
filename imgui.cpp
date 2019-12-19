@@ -3541,7 +3541,7 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
                 MarkIniSettingsDirty(moving_window);
                 SetWindowPos(moving_window, pos, ImGuiCond_Always);
                 if (moving_window->ViewportOwned) // Synchronize viewport immediately because some overlays may relies on clipping rectangle before we Begin() into the window.
-                    moving_window->Viewport->Pos = pos;
+                    moving_window->Viewport->SetPos(pos);
             }
             FocusWindow(g.MovingWindow);
         }
@@ -6261,7 +6261,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             else if (memcmp(&window->Viewport->Pos, &window->Pos, sizeof(window->Pos)) != 0)
             {
                 viewport_rect_changed = true;
-                window->Viewport->Pos = window->Pos;
+                window->Viewport->SetPos(window->Pos);
             }
 
             if (window->Viewport->PlatformRequestResize)
@@ -6272,7 +6272,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             else if (memcmp(&window->Viewport->Size, &window->Size, sizeof(window->Size)) != 0)
             {
                 viewport_rect_changed = true;
-                window->Viewport->Size = window->Size;
+                window->Viewport->SetSize(window->Size);
             }
 
             // The viewport may have changed monitor since the global update in UpdateViewportsNewFrame()
@@ -6375,9 +6375,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         if (window->ViewportOwned)
         {
             if (!window->Viewport->PlatformRequestMove)
-                window->Viewport->Pos = window->Pos;
+                window->Viewport->SetPos(window->Pos);
             if (!window->Viewport->PlatformRequestResize)
-                window->Viewport->Size = window->Size;
+                window->Viewport->SetSize(window->Size);
             viewport_rect = window->Viewport->GetMainRect();
         }
 
@@ -11007,9 +11007,15 @@ static void ImGui::UpdateViewportsNewFrame()
             if (!(viewport->Flags & ImGuiViewportFlags_Minimized) && platform_funcs_available)
             {
                 if (viewport->PlatformRequestMove)
-                    viewport->Pos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport) / viewport->CoordinateScale;
+                {
+                    viewport->PlatformPos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
+                    viewport->Pos = viewport->PlatformPos / viewport->CoordinateScale;
+                }
                 if (viewport->PlatformRequestResize)
-                    viewport->Size = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport) / viewport->CoordinateScale;
+                {
+                    viewport->PlatformSize = viewport->LastPlatformSize = g.PlatformIO.Platform_GetWindowSize(viewport);
+                    viewport->Size = viewport->PlatformSize / viewport->CoordinateScale;
+                }
             }
         }
 
@@ -11050,14 +11056,15 @@ static void ImGui::UpdateViewportsNewFrame()
             {
                 if (new_dpi_scale != viewport->DpiScale && viewport != GetMainViewport() && platform_funcs_available)
                 {
-                    // DPI changed and we have to update window that transitioned to new DPI. Main viewport is an exception.
-                    // It's size (native window with OS decorations) remains static while ImGui windows in it get scaled
-                    // automatically.
-                    g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * new_dpi_scale);
-                    // Reupdate viewport position from native window. Not doing this causes discrepancy between where ImGui
-                    // thinks window is and where it actually is and it breaks any mouse input.
-                    viewport->Pos = viewport->LastPlatformPos =
-                        g.PlatformIO.Platform_GetWindowPos(viewport) / new_coordinate_scale;
+                    // DPI changed and we have to update window that transitioned to new DPI. Main viewport is an
+                    // exception. It's size (native window with OS decorations) remains static while ImGui windows in
+                    // it get scaled automatically.
+                    viewport->PlatformSize = viewport->Size * new_dpi_scale;
+                    g.PlatformIO.Platform_SetWindowSize(viewport, viewport->PlatformSize);
+                    // Reupdate viewport position from native window. Not doing this causes discrepancy between where
+                    // ImGui thinks window is and where it actually is and it breaks any mouse input.
+                    viewport->PlatformPos = viewport->LastPlatformPos = g.PlatformIO.Platform_GetWindowPos(viewport);
+                    viewport->Pos = viewport->PlatformPos / new_coordinate_scale;
                     if (viewport->Window != NULL)
                         viewport->Window->Pos = viewport->Pos;
                 }
@@ -11167,9 +11174,9 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
     if (viewport)
     {
         if (!viewport->PlatformRequestMove)
-            viewport->Pos = pos;
+            viewport->SetPos(pos);
         if (!viewport->PlatformRequestResize)
-            viewport->Size = size;
+            viewport->SetSize(size);
         viewport->Flags = flags | (viewport->Flags & ImGuiViewportFlags_Minimized); // Preserve existing flags
     }
     else
@@ -11178,8 +11185,9 @@ ImGuiViewportP* ImGui::AddUpdateViewport(ImGuiWindow* window, ImGuiID id, const 
         viewport = IM_NEW(ImGuiViewportP)();
         viewport->ID = id;
         viewport->Idx = g.Viewports.Size;
-        viewport->Pos = viewport->LastPos = pos;
-        viewport->Size = size;
+        viewport->SetPos(pos);
+        viewport->LastPos = pos;
+        viewport->SetSize(size);
         viewport->Flags = flags;
         UpdateViewportPlatformMonitor(viewport);
         g.Viewports.push_back(viewport);
@@ -11380,14 +11388,7 @@ void ImGui::UpdatePlatformWindows()
         if (is_new_platform_window)
         {
             IMGUI_DEBUG_LOG_VIEWPORT("Create Platform Window %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
-            // TODO: Ugly workaround to allow user to not care about this
-            ImVec2 pos_bkp = viewport->Pos;                   // TODO: Sucks
-            ImVec2 size_bkp = viewport->Size;                 // TODO: Sucks
-            viewport->Pos *= viewport->CoordinateScale;       // TODO: Sucks
-            viewport->Size *= viewport->CoordinateScale;      // TODO: Sucks
             g.PlatformIO.Platform_CreateWindow(viewport);
-            viewport->Pos = pos_bkp;                          // TODO: Sucks
-            viewport->Size = size_bkp;                        // TODO: Sucks
             if (g.PlatformIO.Renderer_CreateWindow != NULL)
                 g.PlatformIO.Renderer_CreateWindow(viewport);
             viewport->LastNameHash = 0;
@@ -11397,14 +11398,15 @@ void ImGui::UpdatePlatformWindows()
         }
 
         // Apply Position and Size (from ImGui to Platform/Renderer back-ends)
-        if ((viewport->LastPlatformPos.x != viewport->Pos.x || viewport->LastPlatformPos.y != viewport->Pos.y) && !viewport->PlatformRequestMove)
-            g.PlatformIO.Platform_SetWindowPos(viewport, viewport->Pos * viewport->CoordinateScale);
-        if ((viewport->LastPlatformSize.x != viewport->Size.x || viewport->LastPlatformSize.y != viewport->Size.y) && !viewport->PlatformRequestResize)
-            g.PlatformIO.Platform_SetWindowSize(viewport, viewport->Size * viewport->CoordinateScale);
+        if ((viewport->LastPlatformPos.x != viewport->PlatformPos.x || viewport->LastPlatformPos.y != viewport->PlatformPos.y) && !viewport->PlatformRequestMove)
+            g.PlatformIO.Platform_SetWindowPos(viewport, viewport->PlatformPos);
+        if ((viewport->LastPlatformSize.x != viewport->PlatformSize.x || viewport->LastPlatformSize.y != viewport->PlatformSize.y) && !viewport->PlatformRequestResize)
+            g.PlatformIO.Platform_SetWindowSize(viewport, viewport->PlatformSize);
         if ((viewport->LastRendererSize.x != viewport->Size.x || viewport->LastRendererSize.y != viewport->Size.y) && g.PlatformIO.Renderer_SetWindowSize)
             g.PlatformIO.Renderer_SetWindowSize(viewport, viewport->Size);
-        viewport->LastPlatformPos = viewport->Pos;
-        viewport->LastPlatformSize = viewport->LastRendererSize = viewport->Size;
+        viewport->LastPlatformPos = viewport->PlatformPos;
+        viewport->LastPlatformSize = viewport->PlatformSize;
+        viewport->LastRendererSize = viewport->Size;
 
         // Update title bar (if it changed)
         if (ImGuiWindow* window_for_title = GetWindowForTitleDisplay(viewport->Window))
@@ -11554,7 +11556,7 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 // Update monitor from viewport rectangle (we'll use this info to clamp windows and save windows lost in a removed monitor)
 static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
 {
-    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect() * viewport->CoordinateScale);
+    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetPlatformRect());
 }
 
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
