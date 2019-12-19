@@ -307,7 +307,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     return false;
 }
 
-float GetBackingScaleFactorForPoint(float x, float y)
+float ImGui_ImplOSX_GetBackingScaleFactorForPoint(float x, float y)
 {
     for (unsigned i = 0; i < [NSScreen screens].count; i++)
     {
