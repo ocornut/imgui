@@ -4106,6 +4106,21 @@ void ImGui::Initialize(ImGuiContext* context)
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
         g.SettingsHandlers.push_back(ini_handler);
     }
+    
+#if 0   // FIXME-WIP: This is a placeholder to facilitate merging of Tables branch into multiple branches.
+
+    // Add .ini handle for ImGuiTable type
+    {
+        ImGuiSettingsHandler ini_handler;
+        ini_handler.TypeName = "Table";
+        ini_handler.TypeHash = ImHashStr("Table");
+        ini_handler.ReadOpenFn = TableSettingsHandler_ReadOpen;
+        ini_handler.ReadLineFn = TableSettingsHandler_ReadLine;
+        ini_handler.WriteAllFn = TableSettingsHandler_WriteAll;
+        g.SettingsHandlers.push_back(ini_handler);
+    }
+
+#endif
 
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
@@ -14909,12 +14924,18 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         return;
     }
 
-    // State
+    // Debugging enums
     enum { WRT_OuterRect, WRT_OuterRectClipped, WRT_InnerRect, WRT_InnerClipRect, WRT_WorkRect, WRT_Content, WRT_ContentRegionRect, WRT_Count }; // Windows Rect Type
     const char* wrt_rects_names[WRT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Content", "ContentRegionRect" };
+    enum { TRT_OuterRect, TRT_WorkRect, TRT_HostClipRect, TRT_InnerClipRect, TRT_BackgroundClipRect, TRT_ColumnsRect, TRT_ColumnsClipRect, TRT_ColumnsContentHeadersUsed, TRT_ColumnsContentHeadersDesired, TRT_ColumnsContentRowsFrozen, TRT_ColumnsContentRowsUnfrozen, TRT_Count }; // Tables Rect Type
+    const char* trt_rects_names[TRT_Count] = { "OuterRect", "WorkRect", "HostClipRect", "InnerClipRect", "BackgroundClipRect", "ColumnsRect", "ColumnsClipRect", "ColumnsContentHeadersUsed", "ColumnsContentHeadersDesired", "ColumnsContentRowsFrozen", "ColumnsContentRowsUnfrozen" };
+
+    // State
     static bool show_windows_rects = false;
     static int  show_windows_rect_type = WRT_WorkRect;
     static bool show_windows_begin_order = false;
+    static bool show_tables_rects = false;
+    static int  show_tables_rect_type = TRT_WorkRect;
     static bool show_drawcmd_details = true;
     static bool show_docking_nodes = false;
 
@@ -14929,13 +14950,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     ImGui::Separator();
 
     // Helper functions to display common structures:
-    // - NodeDrawList
-    // - NodeColumns
-    // - NodeWindow
-    // - NodeWindows
-    // - NodeViewport
-    // - NodeDockNode
-    // - NodeTabBar
+    // - NodeDrawList()
+    // - NodeColumns()
+    // - NodeWindow()
+    // - NodeWindows()
+    // - NodeViewport()
+    // - NodeDockNode()
+    // - NodeTabBar()
+    // - NodeStorage()
     struct Funcs
     {
         static ImRect GetWindowRect(ImGuiWindow* window, int rect_type)
@@ -15255,6 +15277,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
+    // Details for Popups
     if (ImGui::TreeNode("Popups", "Popups (%d)", g.OpenPopupStack.Size))
     {
         for (int i = 0; i < g.OpenPopupStack.Size; i++)
@@ -15265,6 +15288,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
+    // Details for TabBars
     if (ImGui::TreeNode("TabBars", "Tab Bars (%d)", g.TabBars.GetSize()))
     {
         for (int n = 0; n < g.TabBars.GetSize(); n++)
@@ -15272,6 +15296,18 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
+    // Details for Tables
+    IM_UNUSED(trt_rects_names);
+    IM_UNUSED(show_tables_rects);
+    IM_UNUSED(show_tables_rect_type);
+#if 0
+    if (ImGui::TreeNode("Tables", "Tables (%d)", g.Tables.GetSize()))
+    {
+        ImGui::TreePop();
+    }
+#endif
+
+    // Details for Docking
     if (ImGui::TreeNode("Docking"))
     {
         ImGuiDockContext* dc = g.DockContext;
@@ -15318,17 +15354,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             }
             ImGui::TreePop();
         }
-
         ImGui::TreePop();
     }
-
-#if 0
-    if (ImGui::TreeNode("Tables", "Tables (%d)", g.Tables.GetSize()))
-    {
-        ImGui::TreePop();
-    }
-#endif
-
+    
+    // Misc Details
     if (ImGui::TreeNode("Internal state"))
     {
         const char* input_source_names[] = { "None", "Mouse", "Nav", "NavKeyboard", "NavGamepad" }; IM_ASSERT(IM_ARRAYSIZE(input_source_names) == ImGuiInputSource_COUNT);
@@ -15351,6 +15380,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
+    // Tools
     if (ImGui::TreeNode("Tools"))
     {
         // The Item Picker tool is super useful to visually select an item and break into the call-stack of where it was submitted.
@@ -15363,7 +15393,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Checkbox("Show windows rectangles", &show_windows_rects);
         ImGui::SameLine();
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-        show_windows_rects |= ImGui::Combo("##show_windows_rect_type", &show_windows_rect_type, wrt_rects_names, WRT_Count);
+        show_windows_rects |= ImGui::Combo("##show_windows_rect_type", &show_windows_rect_type, wrt_rects_names, WRT_Count, WRT_Count);
         if (show_windows_rects && g.NavWindow)
         {
             ImGui::BulletText("'%s':", g.NavWindow->Name);
@@ -15379,7 +15409,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 
-    // Tool: Display windows Rectangles and Begin Order
+    // Overlay: Display windows Rectangles and Begin Order
     if (show_windows_rects || show_windows_begin_order)
     {
         for (int n = 0; n < g.Windows.Size; n++)
@@ -15404,6 +15434,19 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
     }
 
+    // FIXME-WIP: This is a placeholder to facilitate merging of Tables branch into multiple branches.
+#if 0
+    // Overlay: Display Tables Rectangles
+    if (show_tables_rects)
+    {
+        for (int table_n = 0; table_n < g.Tables.GetSize(); table_n++)
+        {
+            ImGuiTable* table = g.Tables.GetByIndex(table_n);
+        }
+    }
+#endif
+
+    // Overlay: Display Docking info
     if (show_docking_nodes && g.IO.KeyCtrl)
     {
         for (int n = 0; n < g.DockContext->Nodes.Data.Size; n++)

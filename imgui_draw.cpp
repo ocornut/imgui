@@ -1321,7 +1321,7 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
             // Merge previous channel last draw command with current channel first draw command if matching.
             last_cmd->ElemCount += ch._CmdBuffer[0].ElemCount;
             idx_offset += ch._CmdBuffer[0].ElemCount;
-            ch._CmdBuffer.erase(ch._CmdBuffer.Data);
+            ch._CmdBuffer.erase(ch._CmdBuffer.Data); // FIXME-OPT: Improve for multiple merges.
         }
         if (ch._CmdBuffer.Size > 0)
             last_cmd = &ch._CmdBuffer.back();
