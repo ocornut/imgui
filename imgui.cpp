@@ -893,8 +893,6 @@ static void             SetClipboardTextFn_DefaultImpl(void* user_data, const ch
 
 namespace ImGui
 {
-static bool             BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags);
-
 // Navigation
 static void             NavUpdate();
 static void             NavUpdateWindowing();
@@ -4107,8 +4105,7 @@ void ImGui::Initialize(ImGuiContext* context)
         g.SettingsHandlers.push_back(ini_handler);
     }
     
-#if 0   // FIXME-WIP: This is a placeholder to facilitate merging of Tables branch into multiple branches.
-
+#ifdef IMGUI_HAS_TABLE
     // Add .ini handle for ImGuiTable type
     {
         ImGuiSettingsHandler ini_handler;
@@ -4119,9 +4116,9 @@ void ImGui::Initialize(ImGuiContext* context)
         ini_handler.WriteAllFn = TableSettingsHandler_WriteAll;
         g.SettingsHandlers.push_back(ini_handler);
     }
+#endif // #ifdef IMGUI_HAS_TABLE
 
-#endif
-
+#ifdef IMGUI_HAS_DOCK
     // Create default viewport
     ImGuiViewportP* viewport = IM_NEW(ImGuiViewportP)();
     viewport->ID = IMGUI_VIEWPORT_DEFAULT_ID;
@@ -4134,6 +4131,7 @@ void ImGui::Initialize(ImGuiContext* context)
     // Extensions
     IM_ASSERT(g.DockContext == NULL);
     DockContextInitialize(&g);
+#endif // #ifdef IMGUI_HAS_DOCK
 
     g.Initialized = true;
 }
@@ -5021,7 +5019,7 @@ ImVec2 ImGui::GetItemRectSize()
     return window->DC.LastItemRect.GetSize();
 }
 
-static bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags)
+bool ImGui::BeginChildEx(const char* name, ImGuiID id, const ImVec2& size_arg, bool border, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
@@ -15300,14 +15298,17 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     IM_UNUSED(trt_rects_names);
     IM_UNUSED(show_tables_rects);
     IM_UNUSED(show_tables_rect_type);
-#if 0
+#ifdef IMGUI_HAS_TABLE
     if (ImGui::TreeNode("Tables", "Tables (%d)", g.Tables.GetSize()))
     {
+        for (int n = 0; n < g.Tables.GetSize(); n++)
+            Funcs::NodeTable(g.Tables.GetByIndex(n));
         ImGui::TreePop();
     }
-#endif
+#endif // #define IMGUI_HAS_TABLE
 
     // Details for Docking
+#ifdef IMGUI_HAS_DOCK
     if (ImGui::TreeNode("Docking"))
     {
         ImGuiDockContext* dc = g.DockContext;
@@ -15356,6 +15357,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
         ImGui::TreePop();
     }
+#endif // #define IMGUI_HAS_DOCK
     
     // Misc Details
     if (ImGui::TreeNode("Internal state"))
@@ -15434,8 +15436,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
     }
 
-    // FIXME-WIP: This is a placeholder to facilitate merging of Tables branch into multiple branches.
-#if 0
+#ifdef IMGUI_HAS_TABLE
     // Overlay: Display Tables Rectangles
     if (show_tables_rects)
     {
@@ -15444,8 +15445,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGuiTable* table = g.Tables.GetByIndex(table_n);
         }
     }
-#endif
+#endif // #define IMGUI_HAS_TABLE
 
+#ifdef IMGUI_HAS_DOCK
     // Overlay: Display Docking info
     if (show_docking_nodes && g.IO.KeyCtrl)
     {
@@ -15470,6 +15472,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 overlay_draw_list->AddText(NULL, 0.0f, pos, IM_COL32(255, 255, 255, 255), buf);
             }
     }
+#endif // #define IMGUI_HAS_DOCK
 
     ImGui::End();
 }
