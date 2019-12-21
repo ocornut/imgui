@@ -7248,10 +7248,10 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     // Auto-select as you navigate a list
     if (g.NavJustMovedToId == id)
     {
-        if (!g.IO.KeyCtrl)
-            selected = pressed = true;
-        else if (g.IO.KeyCtrl && g.IO.KeyShift)
+        if (is_ctrl && is_shift)
             pressed = true;
+        else if (!is_ctrl)
+            selected = pressed = true;
     }
 
     // Right-click handling: this could be moved at the Selectable() level.
@@ -7320,9 +7320,9 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
         }
         else if (input_source == ImGuiInputSource_Keyboard || input_source == ImGuiInputSource_Gamepad)
         {
-            if (!is_multiselect)
+            if (is_multiselect && is_shift && !is_ctrl)
                 ms->Out.RequestClear = true;
-            else if (is_shift && !is_ctrl && is_multiselect)
+            else if (!is_multiselect)
                 ms->Out.RequestClear = true;
         }
     }
