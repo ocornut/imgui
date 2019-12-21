@@ -1730,11 +1730,13 @@ enum ImGuiMouseCursor_
 };
 
 // Flags for BeginMultiSelect().
-// This system is designed to allow mouse/keyboard multi-selection, including support for range-selection (SHIFT + click) which is difficult to re-implement manually.
-// If you disable multi-selection with ImGuiMultiSelectFlags_NoMultiSelect (which is provided for consistency and flexibility), the whole BeginMultiSelect() system
-// becomes largely overkill as you can handle single-selection in a simpler manner by just calling Selectable() and reacting on clicks yourself.
+// This system is designed to allow mouse/keyboard multi-selection, including support for range-selection (SHIFT + click),
+// which is difficult to re-implement manually. If you disable multi-selection with ImGuiMultiSelectFlags_NoMultiSelect
+// (which is provided for consistency and flexibility), the whole BeginMultiSelect() system becomes largely overkill as
+// you can handle single-selection in a simpler manner by just calling Selectable() and reacting on clicks yourself.
 enum ImGuiMultiSelectFlags_
 {
+    ImGuiMultiSelectFlags_None              = 0,
     ImGuiMultiSelectFlags_NoMultiSelect     = 1 << 0,
     ImGuiMultiSelectFlags_NoUnselect        = 1 << 1,   // Disable unselecting items with CTRL+Click, CTRL+Space etc.
     ImGuiMultiSelectFlags_NoSelectAll       = 1 << 2    // Disable CTRL+A shortcut to set RequestSelectAll

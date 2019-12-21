@@ -554,6 +554,38 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::End();
 }
 
+// [Advanced] Helper class to simulate storage of a multi-selection state, used by the advanced multi-selection demos.
+// We use ImGuiStorage (simple key->value storage) to avoid external dependencies but it's probably not optimal.
+// To store a single-selection:
+// - You only need a single variable and don't need any of this!
+// To store a multi-selection, in your real application you could:
+// - Use intrusively stored selection (e.g. 'bool IsSelected' inside your object). This is by far the simplest
+//   way to store your selection data, but it means you cannot have multiple simultaneous views over your objects.
+//   This is what may of the simpler demos in this file are using (so they are not using this class).
+// - Otherwise, any externally stored unordered_set/set/hash/map/interval trees (storing indices, objects id, etc.)
+//   are generally appropriate. Even a large array of bool might work for you...
+struct ExampleSelectionData
+{
+    ImGuiStorage                        Storage;
+    int                                 SelectedCount;  // Number of selected items (storage will keep this updated)
+
+    ExampleSelectionData()              { Clear(); }
+    void Clear()                        { Storage.Clear(); SelectedCount = 0; }
+    bool GetSelected(int id) const      { return Storage.GetInt((ImGuiID)id) != 0; }
+    void SetSelected(int id, bool v)    { int* p_int = Storage.GetIntRef((ImGuiID)id); if (*p_int == (int)v) return; SelectedCount = v ? (SelectedCount + 1) : (SelectedCount - 1); *p_int = (bool)v; }
+    int  GetSelectedCount() const       { return SelectedCount; }
+
+    // When using SelectAll() / SetRange() we assume that our objects ID are indices.
+    // In this demo we always store selection using indices and never in another manner (e.g. object ID or pointers).
+    // If your selection system is storing selection using object ID and you want to support Shift+Click range-selection,
+    // you will need a way to iterate from one object to another given the ID you use.
+    // You are likely to need some kind of data structure to convert 'view index' from/to 'ID'.
+    // FIXME-MULTISELECT: Would be worth providing a demo of doing this.
+    // FIXME-MULTISELECT: SetRange() is currently very inefficient since it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
+    void SetRange(int a, int b, bool v) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) SetSelected(n, v); }
+    void SelectAll(int count)           { Storage.Data.resize(count); for (int n = 0; n < count; n++) Storage.Data[n] = ImGuiStorage::ImGuiStoragePair((ImGuiID)n, 1); SelectedCount = count; } // This could be using SetRange() but this is faster.
+};
+
 static void ShowDemoWindowWidgets()
 {
     IMGUI_DEMO_MARKER("Widgets");
@@ -1218,22 +1250,8 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("Selection State: Multiple Selection (Full)"))
         {
             // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
-            // In this demo we use ImGuiStorage (simple key->value storage) to avoid external dependencies but it's probably not optimal.
-            // In your real code you could use e.g std::unordered_set<> or your own data structure for storing selection.
-            // If you don't mind being limited to one view over your objects, the simplest way is to use an intrusive selection (e.g. store bool inside object, as used in examples above).
-            // Otherwise external set/hash/map/interval trees (storing indices, etc.) may be appropriate.
-            struct MySelection
-            {
-                ImGuiStorage Storage;
-                void Clear()                         { Storage.Clear(); }
-                void SelectAll(int count)            { Storage.Data.reserve(count); Storage.Data.resize(0); for (int n = 0; n < count; n++) Storage.Data.push_back(ImGuiStorage::ImGuiStoragePair((ImGuiID)n, 1)); }
-                void SetRange(int a, int b, int sel) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) Storage.SetInt((ImGuiID)n, sel); }
-                bool GetSelected(int id) const       { return Storage.GetInt((ImGuiID)id) != 0; }
-                void SetSelected(int id, bool v)     { SetRange(id, id, v ? 1 : 0); }
-            };
-
             static int selection_ref = 0;   // Selection pivot (last clicked item, we need to preserve this to handle range-select)
-            static MySelection selection;
+            static ExampleSelectionData selection;
             const char* random_names[] =
             {
                 "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
@@ -1247,7 +1265,7 @@ static void ShowDemoWindowWidgets()
 
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
-                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(0, (void*)(intptr_t)selection_ref, selection.GetSelected((int)selection_ref));
+                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection_ref, selection.GetSelected((int)selection_ref));
                 if (multi_select_data->RequestClear) { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(COUNT); }
                 ImGuiListClipper clipper;
