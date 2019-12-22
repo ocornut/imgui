@@ -895,7 +895,8 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
     else
     {
         const float angle_segments = 2 * IM_PI / 12;
-        PathArcTo(center, radius, a_min_of_12 * angle_segments, a_max_of_12 * angle_segments, g.IO.RoundingSteps);
+        int diff = (int)(ImMax(a_min_of_12, a_max_of_12) - ImMin(a_min_of_12, a_max_of_12));
+        PathArcTo(center, radius, a_min_of_12 * angle_segments, a_max_of_12 * angle_segments, g.IO.RoundingSteps / (12 / diff));
     }
 }
 
