@@ -517,7 +517,7 @@ void ImDrawList::PopTextureID()
 }
 
 // Reserve space for a number of vertices and indices.
-// You must finish filling your reserved data before calling PrimReserve() again, as it may reallocate or 
+// You must finish filling your reserved data before calling PrimReserve() again, as it may reallocate or
 // submit the intermediate results. PrimUnreserve() can be used to release unused allocations.
 void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
@@ -881,11 +881,21 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
         _Path.push_back(center);
         return;
     }
-    _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
-    for (int a = a_min_of_12; a <= a_max_of_12; a++)
+
+    ImGuiContext& g = *GImGui;
+    if (g.IO.RoundingSteps == 12)
     {
-        const ImVec2& c = _Data->CircleVtx12[a % IM_ARRAYSIZE(_Data->CircleVtx12)];
-        _Path.push_back(ImVec2(center.x + c.x * radius, center.y + c.y * radius));
+        _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
+        for (int a = a_min_of_12; a <= a_max_of_12; a++)
+        {
+            const ImVec2& c = _Data->CircleVtx12[a % IM_ARRAYSIZE(_Data->CircleVtx12)];
+            _Path.push_back(ImVec2(center.x + c.x * radius, center.y + c.y * radius));
+        }
+    }
+    else
+    {
+        const float angle_segments = 2 * IM_PI / 12;
+        PathArcTo(center, radius, a_min_of_12 * angle_segments, a_max_of_12 * angle_segments, g.IO.RoundingSteps);
     }
 }
 
