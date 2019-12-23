@@ -57,6 +57,8 @@ static GLuint       g_FontTexture = 0;
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
+    g_FontTexture = 0;
+
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl2";

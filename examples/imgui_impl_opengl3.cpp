@@ -139,6 +139,20 @@ static unsigned int g_VboHandle = 0, g_ElementsHandle = 0;
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
+    g_GlVersion = 0;
+    memset(g_GlslVersionString, 0, sizeof(g_GlslVersionString));
+    g_FontTexture = 0;
+    g_ShaderHandle = 0;
+    g_VertHandle = 0;
+    g_FragHandle = 0;
+    g_AttribLocationTex = 0;
+    g_AttribLocationProjMtx = 0;
+    g_AttribLocationVtxPos = 0;
+    g_AttribLocationVtxUV = 0;
+    g_AttribLocationVtxColor = 0;
+    g_VboHandle = 0;
+    g_ElementsHandle = 0;
+
     // Query for GL version
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
     GLint major, minor;
@@ -157,7 +171,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
 
-    // Store GLSL version string so we can refer to it later in case we recreate shaders. 
+    // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     if (glsl_version == NULL)
