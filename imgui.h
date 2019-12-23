@@ -330,13 +330,20 @@ namespace ImGui
     // Parameters stacks (shared)
     IMGUI_API void          PushFont(ImFont* font);                                         // use NULL as a shortcut to push default font
     IMGUI_API void          PopFont();
+    IMGUI_API void          SetStyleLinearColor(bool is_linear);                            // configures styling to work correctly with sRGB
     IMGUI_API void          PushStyleColor(ImGuiCol idx, ImU32 col);
     IMGUI_API void          PushStyleColor(ImGuiCol idx, const ImVec4& col);
+    IMGUI_API void          PushStyleLinearColor(ImGuiCol idx, ImU32 col);                  // same as PushStyleColor, but performs colour space conversions if necessary from linear color
+    IMGUI_API void          PushStyleLinearColor(ImGuiCol idx, const ImVec4& col);
+    IMGUI_API void          PushStyleSRGBColor(ImGuiCol idx, ImU32 col);                    // same as PushStyleColor, but performs colour space conversions if necessary from sRGB
+    IMGUI_API void          PushStyleSRGBColor(ImGuiCol idx, const ImVec4& col);
     IMGUI_API void          PopStyleColor(int count = 1);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, float val);
     IMGUI_API void          PushStyleVar(ImGuiStyleVar idx, const ImVec2& val);
     IMGUI_API void          PopStyleVar(int count = 1);
     IMGUI_API const ImVec4& GetStyleColorVec4(ImGuiCol idx);                                // retrieve style color as stored in ImGuiStyle structure. use to feed back into PushStyleColor(), otherwise use GetColorU32() to get style color with style alpha baked in.
+    IMGUI_API ImVec4        GetStyleLinearColor(ImGuiCol idx);                              // same as above, but always in the linear color space
+    IMGUI_API ImVec4        GetStyleSRGBColor(ImGuiCol idx);                                // same as above, but always in the sRGB color space
     IMGUI_API ImFont*       GetFont();                                                      // get current font
     IMGUI_API float         GetFontSize();                                                  // get current font size (= height in pixels) of current font with current scale applied
     IMGUI_API ImVec2        GetFontTexUvWhitePixel();                                       // get UV coordinate for a while pixel, useful to draw custom shapes via the ImDrawList API
@@ -684,6 +691,12 @@ namespace ImGui
     IMGUI_API ImU32         ColorConvertFloat4ToU32(const ImVec4& in);
     IMGUI_API void          ColorConvertRGBtoHSV(float r, float g, float b, float& out_h, float& out_s, float& out_v);
     IMGUI_API void          ColorConvertHSVtoRGB(float h, float s, float v, float& out_r, float& out_g, float& out_b);
+
+    IMGUI_API float         SRGBToLinear(float srgb_color);
+    IMGUI_API float         LinearToSRGB(float linear_color);
+
+    IMGUI_API ImVec4        SRGBToLinear(ImVec4 srgb_color);
+    IMGUI_API ImVec4        LinearToSRGB(ImVec4 linear_color);
 
     // Inputs Utilities: Keyboard
     // - For 'int user_key_index' you can use your own indices/enums according to how your backend/engine stored them in io.KeysDown[].
