@@ -7923,9 +7923,8 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
     ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
 
-    // If an outer size is specified ahead we will be able to early out when not visible,
-    // The exact rules here can evolve.
-    if (use_child_window && IsClippedEx(outer_rect, id, false))
+    // If an outer size is specified ahead we will be able to early out when not visible. Exact clipping rules may evolve.
+    if (use_child_window && IsClippedEx(outer_rect, 0, false))
     {
         ItemSize(outer_rect);
         return false;
@@ -7938,9 +7937,16 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
     const ImGuiTableFlags table_last_flags = table->Flags;
+    const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceNo + 1;
+    const ImGuiID instance_id = id + instance_no;
+    if (instance_no > 0)
+        IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
+
+    // Initialize
     table->ID = id;
     table->Flags = flags;
     table->IsFirstFrame = (table->LastFrameActive == -1);
+    table->InstanceNo = (ImS16)instance_no;
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
@@ -7968,7 +7974,7 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
 
         // Create scrolling region (without border = zero window padding)
         ImGuiWindowFlags child_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
-        BeginChildEx(str_id, id, table->OuterRect.GetSize(), false, child_flags);
+        BeginChildEx(str_id, instance_id, table->OuterRect.GetSize(), false, child_flags);
         table->InnerWindow = g.CurrentWindow;
         table->WorkRect = table->InnerWindow->WorkRect;
         table->OuterRect = table->InnerWindow->Rect();
@@ -7976,7 +7982,7 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     else
     {
         // WorkRect.Max will grow as we append contents.
-        PushID(id);
+        PushID(instance_id);
     }
 
     const bool has_cell_padding_x = (flags & (ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV)) != 0;
@@ -8009,7 +8015,6 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     table->HoveredColumnBody = -1;
     table->HoveredColumnBorder = -1;
     table->RightMostActiveColumn = -1;
-    table->LeftMostStretchedColumnDisplayOrder = -1;
     table->IsFirstFrame = false;
 
     // FIXME-TABLE FIXME-STYLE: Using opaque colors facilitate overlapping elements of the grid
@@ -8056,18 +8061,36 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     if (table->IsFirstFrame || table->IsSettingsRequestLoad)
         TableLoadSettings(table);
 
+    // Handle resizing request
+    // (We process this at the first beginning of the frame)
+    // FIXME-TABLE: Preserve contents width _while resizing down_ until releasing.
+    // FIXME-TABLE: Contains columns if our work area doesn't allow for scrolling. 
+    if (table->InstanceNo == 0)
+    {
+        if (table->ResizedColumn != -1 && table->ResizedColumnNextWidth != FLT_MAX)
+            TableSetColumnWidth(table, &table->Columns[table->ResizedColumn], table->ResizedColumnNextWidth);
+        table->ResizedColumnNextWidth = FLT_MAX;
+        table->ResizedColumn = -1;
+    }
+
     // Handle reordering request
     // Note: we don't clear ReorderColumn after handling the request.
-    if (table->ReorderColumn != -1 && table->ReorderColumnDir != 0)
+    if (table->InstanceNo == 0)
     {
-        IM_ASSERT(table->ReorderColumnDir == -1 || table->ReorderColumnDir == +1);
-        IM_ASSERT(table->Flags & ImGuiTableFlags_Reorderable);
-        ImGuiTableColumn* dragged_column = &table->Columns[table->ReorderColumn];
-        ImGuiTableColumn* target_column = &table->Columns[(table->ReorderColumnDir == -1) ? dragged_column->PrevActiveColumn : dragged_column->NextActiveColumn];
-        ImSwap(table->DisplayOrder[dragged_column->IndexDisplayOrder], table->DisplayOrder[target_column->IndexDisplayOrder]);
-        ImSwap(dragged_column->IndexDisplayOrder, target_column->IndexDisplayOrder);
-        table->ReorderColumnDir = 0;
-        table->IsSettingsDirty = true;
+        if (table->HeadHeaderColumn == -1 && table->ReorderColumn != -1)
+            table->ReorderColumn = -1;
+        table->HeadHeaderColumn = -1;
+        if (table->ReorderColumn != -1 && table->ReorderColumnDir != 0)
+        {
+            IM_ASSERT(table->ReorderColumnDir == -1 || table->ReorderColumnDir == +1);
+            IM_ASSERT(table->Flags & ImGuiTableFlags_Reorderable);
+            ImGuiTableColumn* dragged_column = &table->Columns[table->ReorderColumn];
+            ImGuiTableColumn* target_column = &table->Columns[(table->ReorderColumnDir == -1) ? dragged_column->PrevActiveColumn : dragged_column->NextActiveColumn];
+            ImSwap(table->DisplayOrder[dragged_column->IndexDisplayOrder], table->DisplayOrder[target_column->IndexDisplayOrder]);
+            ImSwap(dragged_column->IndexDisplayOrder, target_column->IndexDisplayOrder);
+            table->ReorderColumnDir = 0;
+            table->IsSettingsDirty = true;
+        }
     }
 
     // Handle display order reset request
@@ -8478,7 +8501,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     table->IsUsingHeaders = false;
 
     // Context menu
-    if (table->IsContextPopupOpen)
+    if (table->IsContextPopupOpen && table->InstanceNo == table->InstanceInteracted)
     {
         if (BeginPopup("##TableContextMenu"))
         {
@@ -8528,7 +8551,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         if (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_))
             continue;
 
-        ImGuiID column_id = table->ID + (ImGuiID)column_n;
+        ImGuiID column_id = table->ID + (table->InstanceNo * table->ColumnsCount) + column_n;
         ImRect hit_rect(column->MaxX - hit_half_width, hit_y1, column->MaxX + hit_half_width, hit_y2);
         //GetForegroundDrawList()->AddRect(hit_rect.Min, hit_rect.Max, IM_COL32(255, 0, 0, 100));
         KeepAliveID(column_id);
@@ -8536,7 +8559,10 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         bool hovered = false, held = false;
         ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
         if (held)
+        {
             table->ResizedColumn = (ImS8)column_n;
+            table->InstanceInteracted = table->InstanceNo;
+        }
         if ((hovered && g.HoveredIdTimer > TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER) || held)
         {
             table->HoveredColumnBorder = (ImS8)column_n;
@@ -8626,14 +8652,12 @@ void    ImGui::EndTable()
     }
 
     // Apply resizing/dragging at the end of the frame
-    // FIXME-TABLE: Preserve contents width _while resizing down_ until releasing.
-    // FIXME-TABLE: Contains columns if our work area doesn't allow for scrolling. 
     if (table->ResizedColumn != -1)
     {
         ImGuiTableColumn* column = &table->Columns[table->ResizedColumn];
         const float new_x2 = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + TABLE_RESIZE_SEPARATOR_HALF_THICKNESS);
         const float new_width = ImFloor(new_x2 - column->MinX);
-        TableSetColumnWidth(table, column, new_width);
+        table->ResizedColumnNextWidth = new_width;
     }
 
     // Layout in outer window
@@ -8705,7 +8729,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             const int column_n = table->DisplayOrder[order_n];
             ImGuiTableColumn* column = &table->Columns[column_n];
             const bool is_hovered = (table->HoveredColumnBorder == column_n);
-            const bool is_resized = (table->ResizedColumn == column_n);
+            const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceNo);
             const bool draw_right_border = (column->MaxX <= table->InnerClipRect.Max.x) || (is_resized || is_hovered);
             if (draw_right_border && column->MaxX > column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
             {
@@ -9489,7 +9513,7 @@ void    ImGui::TableAutoHeaders()
         // [DEBUG]
         //if (g.IO.KeyCtrl) { static char buf[32]; name = buf; ImGuiTableColumn* c = &table->Columns[column_n]; if (c->Flags & ImGuiTableColumnFlags_WidthStretch) ImFormatString(buf, 32, "%.3f>%.1f", c->ResizeWeight, c->WidthGiven); else ImFormatString(buf, 32, "%.1f", c->WidthGiven); }
 
-        PushID(column_n); // Allow unnamed labels (generally accidental, but let's behave nicely with them)
+        PushID(table->InstanceNo * table->ColumnsCount + column_n); // Allow unnamed labels (generally accidental, but let's behave nicely with them)
         TableHeader(name);
         PopID();
 
@@ -9532,6 +9556,7 @@ void    ImGui::TableAutoHeaders()
     {
         table->IsContextPopupOpen = true;
         table->ContextPopupColumn = (ImS8)open_context_popup;
+        table->InstanceInteracted = table->InstanceNo;
         OpenPopup("##TableContextMenu");
     }
 }
@@ -9572,9 +9597,11 @@ void    ImGui::TableHeader(const char* label)
     //window->DC.CursorPos.x = column->MinX + table->CellPadding.x;
 
     // Keep header highlighted when context menu is open. (FIXME-TABLE: however we cannot assume the ID of said popup if it has been created by the user...)
-    const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n);
+    const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceNo);
     const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld, ImVec2(0.0f, row_height));
     const bool held = IsItemActive();
+    if (held)
+        table->HeadHeaderColumn = (ImS8)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
 
     // Drag and drop: re-order columns. Frozen columns are not reorderable.
@@ -9583,6 +9610,7 @@ void    ImGui::TableHeader(const char* label)
     {
         // While moving a column it will jump on the other side of the mouse, so we also test for MouseDelta.x
         table->ReorderColumn = (ImS8)column_n;
+        table->InstanceInteracted = table->InstanceNo;
         if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < cell_r.Min.x)
             if (column->PrevActiveColumn != -1 && (column->IndexWithinActiveSet < table->FreezeColumnsRequest) == (table->Columns[column->PrevActiveColumn].IndexWithinActiveSet < table->FreezeColumnsRequest))
                 table->ReorderColumnDir = -1;
@@ -9628,8 +9656,6 @@ void    ImGui::TableHeader(const char* label)
         if (pressed && table->ReorderColumn != column_n)
             TableSortSpecsClickColumn(table, column, g.IO.KeyShift);
     }
-    if (!held && table->ReorderColumn == column_n)
-        table->ReorderColumn = -1;
 
     // Render clipped label
     // Clipping here ensure that in the majority of situations, all our header cells will be merged into a single draw call.
