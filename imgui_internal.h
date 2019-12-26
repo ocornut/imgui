@@ -1851,6 +1851,8 @@ struct ImGuiTable
     int                         ColumnsActiveCount;         // Number of non-hidden columns (<= ColumnsCount)
     int                         CurrentColumn;
     int                         CurrentRow;
+    ImS16                       InstanceNo;                 // Count of BeginTable() calls with same ID in the same frame (generally 0)
+    ImS16                       InstanceInteracted;
     float                       RowPosY1;
     float                       RowPosY2;
     float                       RowTextBaseline;
@@ -1870,6 +1872,7 @@ struct ImGuiTable
     float                       LastFirstRowHeight;         // Height of first row from last frame
     float                       ColumnsTotalWidth;
     float                       InnerWidth;
+    float                       ResizedColumnNextWidth;
     ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
     ImRect                      WorkRect;
     ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
@@ -1885,7 +1888,8 @@ struct ImGuiTable
     ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
     ImS8                        HoveredColumnBody;          // [DEBUG] Unlike HoveredColumnBorder this doesn't fulfill all Hovering rules properly. Used for debugging/tools for now.
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
-    ImS8                        ResizedColumn;              // Index of column being resized.
+    ImS8                        ResizedColumn;              // Index of column being resized. Reset by InstanceNo==0.
+    ImS8                        HeadHeaderColumn;           // Index of column header being held. 
     ImS8                        LastResizedColumn;
     ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
     ImS8                        ReorderColumnDir;           // -1 or +1
@@ -1917,6 +1921,7 @@ struct ImGuiTable
     {
         memset(this, 0, sizeof(*this));
         SettingsOffset = -1;
+        InstanceInteracted = -1;
         LastFrameActive = -1;
         LastResizedColumn = -1;
         ContextPopupColumn = -1;
