@@ -7830,13 +7830,13 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 // - BeginTable()                               user begin into a table
 //    - BeginChild()                            - (if ScrollX/ScrollY is set)
 //    - TableBeginInitVisibility()              - lock columns visibility
-//    - TableBeginInitDrawChannels()            - setup ImDrawList channels
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
 //    - TableSortSpecsClickColumn()
 // - TableGetSortSpecs()                        user queries updated sort specs (optional)
 // - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableAutoHeaders()
 //    - TableUpdateLayout()                     - called by the FIRST call to TableNextRow()
+//      - TableUpdateDrawChannels()             - setup ImDrawList channels
 //      - TableUpdateBorders()                  - detect hovering columns for resize, ahead of contents submission
 //      - TableDrawContextMenu()                - draw right-click context menu
 // - [...]                                      user emit contents
@@ -8103,7 +8103,6 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     }
 
     TableBeginInitVisibility(table);
-    TableBeginInitDrawChannels(table);
 
     // Grab a copy of window fields we will modify
     table->BackupSkipItems = inner_window->SkipItems;
@@ -8143,7 +8142,7 @@ void ImGui::TableBeginInitVisibility(ImGuiTable* table)
         }
         if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_MultiSortable))
             table->IsSortSpecsDirty = true;
-        if (column->AutoFitFrames > 0)
+        if (column->AutoFitQueue != 0x00)
             want_column_auto_fit = true;
 
         ImU64 index_mask = (ImU64)1 << column_n;
@@ -8170,6 +8169,7 @@ void ImGui::TableBeginInitVisibility(ImGuiTable* table)
         }
         IM_ASSERT(column->IndexWithinActiveSet <= column->IndexDisplayOrder);
     }
+    table->VisibleMaskByIndex = table->ActiveMaskByIndex; // Columns will be masked out by TableUpdateLayout() when Clipped
     table->RightMostActiveColumn = (ImS8)(last_active_column ? table->Columns.index_from_ptr(last_active_column) : -1);
 
     // Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
@@ -8178,7 +8178,7 @@ void ImGui::TableBeginInitVisibility(ImGuiTable* table)
         table->InnerWindow->SkipItems = false;
 }
 
-void ImGui::TableBeginInitDrawChannels(ImGuiTable* table)
+void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
 {
     // Allocate draw channels.
     // - We allocate them following the storage order instead of the display order so reordering won't needlessly increase overall dormant memory cost
@@ -8193,7 +8193,7 @@ void ImGui::TableBeginInitDrawChannels(ImGuiTable* table)
     const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
     const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClipX) ? 1 : table->ColumnsActiveCount;
     const int channels_for_background = 1;
-    const int channels_for_dummy = (table->ColumnsActiveCount < table->ColumnsCount) ? +1 : 0;
+    const int channels_for_dummy = (table->ColumnsActiveCount < table->ColumnsCount || table->VisibleMaskByIndex != table->ActiveMaskByIndex) ? +1 : 0;
     const int channels_total = channels_for_background + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
     table->DummyDrawChannel = channels_for_dummy ? (ImS8)(channels_total - 1) : -1;
@@ -8202,7 +8202,7 @@ void ImGui::TableBeginInitDrawChannels(ImGuiTable* table)
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
-        if (column->IsActive)
+        if (!column->IsClipped)
         {
             column->DrawChannelRowsBeforeFreeze = (ImS8)(draw_channel_current);
             column->DrawChannelRowsAfterFreeze = (ImS8)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row : 0));
@@ -8299,7 +8299,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         {
             // Latch initial size for fixed columns
             count_fixed += 1;
-            const bool init_size = (column->AutoFitFrames > 0) || (column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize);
+            const bool init_size = (column->AutoFitQueue != 0x00) || (column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize);
             if (init_size)
             {
                 // Combine width from regular rows + width from headers unless requested not to
@@ -8311,7 +8311,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
                 // FIXME-TABLE: Increase minimum size during init frame so avoid biasing auto-fitting widgets (e.g. TextWrapped) too much.
                 // Otherwise what tends to happen is that TextWrapped would output a very large height (= first frame scrollbar display very off + clipper would skip lots of items)
                 // This is merely making the side-effect less extreme, but doesn't properly fixes it.
-                if (column->AutoFitFrames > 1 && table->IsFirstFrame)
+                if (column->AutoFitQueue > 0x01 && table->IsFirstFrame)
                     column->WidthRequested = ImMax(column->WidthRequested, min_column_width * 4.0f);
             }
             width_fixed += column->WidthRequested;
@@ -8324,10 +8324,6 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             if (table->LeftMostStretchedColumnDisplayOrder == -1)
                 table->LeftMostStretchedColumnDisplayOrder = (ImS8)column->IndexDisplayOrder;
         }
-
-        // Don't increment auto-fit until container window got a chance to submit its items
-        if (column->AutoFitFrames > 0 && table->BackupSkipItems == false)
-            column->AutoFitFrames--;
     }
 
     // Layout
@@ -8443,6 +8439,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             column->ClipRect.Max.x = offset_x;
             column->ClipRect.Max.y = FLT_MAX;
             column->ClipRect.ClipWithFull(host_clip_rect);
+            column->IsClipped = true;
             continue;
         }
 
@@ -8458,27 +8455,44 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         column->MinX = offset_x;
         column->MaxX = column->MinX + column->WidthGiven;
 
-        const float initial_max_pos_x = column->MinX + table->CellPaddingX1;
-        column->ContentMaxPosRowsFrozen = column->ContentMaxPosRowsUnfrozen = initial_max_pos_x;
-        column->ContentMaxPosHeadersUsed = column->ContentMaxPosHeadersDesired = initial_max_pos_x;
-
-        // Starting cursor position
-        column->StartXRows = column->StartXHeaders = column->MinX + table->CellPaddingX1;
-
-        // Alignment
-        // FIXME-TABLE: This align based on the whole column width, not per-cell, and therefore isn't useful in many cases.
-        // (To be able to honor this we might be able to store a log of cells width, per row, for visible rows, but nav/programmatic scroll would have visible artifacts.)
-        //if (column->Flags & ImGuiTableColumnFlags_AlignRight)
-        //    column->StartXRows = ImMax(column->StartXRows, column->MaxX - column->WidthContent[0]);
-        //else if (column->Flags & ImGuiTableColumnFlags_AlignCenter)
-        //    column->StartXRows = ImLerp(column->StartXRows, ImMax(column->StartXRows, column->MaxX - column->WidthContent[0]), 0.5f);
-
         //// A one pixel padding on the right side makes clipping more noticeable and contents look less cramped.
         column->ClipRect.Min.x = column->MinX;
         column->ClipRect.Min.y = work_rect.Min.y;
         column->ClipRect.Max.x = column->MaxX;// -1.0f;
         column->ClipRect.Max.y = FLT_MAX;
         column->ClipRect.ClipWithFull(host_clip_rect);
+        
+        column->IsClipped = (column->ClipRect.Max.x <= column->ClipRect.Min.x) && (column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0;
+        if (column->IsClipped)
+        {
+            // Columns with the _WidthAlwaysAutoResize sizing policy will never be updated then.
+            table->VisibleMaskByIndex &= ~((ImU64)1 << column_n);
+        }
+        else
+        {
+            // Starting cursor position
+            column->StartXRows = column->StartXHeaders = column->MinX + table->CellPaddingX1;
+
+            // Alignment
+            // FIXME-TABLE: This align based on the whole column width, not per-cell, and therefore isn't useful in many cases.
+            // (To be able to honor this we might be able to store a log of cells width, per row, for visible rows, but nav/programmatic scroll would have visible artifacts.)
+            //if (column->Flags & ImGuiTableColumnFlags_AlignRight)
+            //    column->StartXRows = ImMax(column->StartXRows, column->MaxX - column->WidthContent[0]);
+            //else if (column->Flags & ImGuiTableColumnFlags_AlignCenter)
+            //    column->StartXRows = ImLerp(column->StartXRows, ImMax(column->StartXRows, column->MaxX - column->WidthContent[0]), 0.5f);
+
+            // Reset content width variables
+            const float initial_max_pos_x = column->MinX + table->CellPaddingX1;
+            column->ContentMaxPosRowsFrozen = column->ContentMaxPosRowsUnfrozen = initial_max_pos_x;
+            column->ContentMaxPosHeadersUsed = column->ContentMaxPosHeadersDesired = initial_max_pos_x;
+        }
+
+        // Don't decrement auto-fit counters until container window got a chance to submit its items
+        if (table->BackupSkipItems == false)
+        {
+            column->AutoFitQueue >>= 1;
+            column->CannotSkipItemsQueue >>= 1;
+        }
 
         if (active_n < table->FreezeColumnsCount)
             host_clip_rect.Min.x = ImMax(host_clip_rect.Min.x, column->MaxX + 2.0f);
@@ -8491,6 +8505,9 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // This will hide the resizing option from the context menu.
     if (count_resizable == 0 && (table->Flags & ImGuiTableFlags_Resizable))
         table->Flags &= ~ImGuiTableFlags_Resizable;
+
+    // Allocate draw channels
+    TableUpdateDrawChannels(table);
 
     // Borders
     if (table->Flags & ImGuiTableFlags_Resizable)
@@ -8832,7 +8849,7 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
     // - W1 F2 F3  resize from F2|          --> FIXME should resize F2, F3 and not have effect on W1 (Stretch columns are _before_ the Fixed column).
 
     // Rules:
-    // - [Resize Rule 1] Can't resize from right of right-most visible column if there is any Stretch column. Implemented in TableSetupLayout().
+    // - [Resize Rule 1] Can't resize from right of right-most visible column if there is any Stretch column. Implemented in TableUpdateLayout().
     // - [Resize Rule 2] Resizing from right-side of a Stretch column before a fixed column froward sizing to left-side of fixed column.
     // - [Resize Rule 3] If we are are followed by a fixed column and we have a Stretch column before, we need to ensure that our left border won't move.
 
@@ -8953,7 +8970,7 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
             
             // 2019/10/22: (1) This is breaking table_2_draw_calls but I cannot seem to repro what it is attempting to fix...
             // cf git fce2e8dc "Fixed issue with clipping when outerwindow==innerwindow / support ScrollH without ScrollV."
-            // 2019/10/22: (2) Clamping code in TableSetupLayout() seemingly made this not necessary...
+            // 2019/10/22: (2) Clamping code in TableUpdateLayout() seemingly made this not necessary...
 #if 0
             if (column->MinX < table->InnerClipRect.Min.x || column->MaxX > table->InnerClipRect.Max.x)
                 merge_set_all_fit_within_inner_rect = false;
@@ -9054,7 +9071,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
         if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
         {
             column->WidthRequested = init_width_or_weight;
-            column->AutoFitFrames = 0;
+            column->AutoFitQueue = 0x00;
         }
         if (flags & ImGuiTableColumnFlags_WidthStretch)
         {
@@ -9267,7 +9284,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     // FIXME-COLUMNS: Setup baseline, preserve across columns (how can we obtain first line baseline tho..)
     // window->DC.CurrLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, g.Style.FramePadding.y);
 
-    window->SkipItems = column->IsActive ? table->BackupSkipItems : true;
+    window->SkipItems = column->IsClipped ? true : table->BackupSkipItems;
     if (table->Flags & ImGuiTableFlags_NoClipX)
     {
         table->DrawSplitter.SetCurrentChannel(window->DrawList, 1);
@@ -9323,8 +9340,8 @@ bool    ImGui::TableNextCell()
         TableNextRow();
     }
 
-    ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
-    return column->IsActive;
+    int column_n = table->CurrentColumn;
+    return (table->VisibleMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
 const char*   ImGui::TableGetColumnName(int column_n)
@@ -9346,7 +9363,7 @@ bool    ImGui::TableGetColumnIsVisible(int column_n)
         return false;
     if (column_n < 0)
         column_n = table->CurrentColumn;
-    return (table->ActiveMaskByIndex & ((ImU64)1 << column_n)) != 0;
+    return (table->VisibleMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
 int     ImGui::TableGetColumnIndex()
@@ -9373,7 +9390,7 @@ bool    ImGui::TableSetColumnIndex(int column_idx)
         TableBeginCell(table, column_idx);
     }
 
-    return (table->ActiveMaskByIndex & ((ImU64)1 << column_idx)) != 0;
+    return (table->VisibleMaskByIndex & ((ImU64)1 << column_idx)) != 0;
 }
 
 ImRect  ImGui::TableGetCellRect()
@@ -9390,6 +9407,15 @@ const char* ImGui::TableGetColumnName(ImGuiTable* table, int column_no)
     if (column->NameOffset == -1)
         return NULL;
     return &table->ColumnsNames.Buf[column->NameOffset];
+}
+
+void    ImGui::TableSetColumnAutofit(ImGuiTable* table, int column_no)
+{
+    // Disable clipping then auto-fit, will take 2 frames 
+    // (we don't take a shortcut for unclipped columns to reduce inconsistencies when e.g. resizing multiple columns)
+    ImGuiTableColumn* column = &table->Columns[column_no];
+    column->CannotSkipItemsQueue = (1 << 0);
+    column->AutoFitQueue = (1 << 1);
 }
 
 void    ImGui::PushTableBackground()
@@ -9429,7 +9455,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
         {
             const bool can_resize = !(selected_column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_WidthStretch)) && selected_column->IsActive;
             if (MenuItem("Size column to fit", NULL, false, can_resize))
-                selected_column->AutoFitFrames = 1;
+                TableSetColumnAutofit(table, selected_column_n);
         }
 
         if (MenuItem("Size all columns to fit", NULL))
@@ -9438,7 +9464,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
             {
                 ImGuiTableColumn* column = &table->Columns[column_n];
                 if (column->IsActive)
-                    column->AutoFitFrames = 1;
+                    TableSetColumnAutofit(table, column_n);
             }
         }
         want_separator = true;

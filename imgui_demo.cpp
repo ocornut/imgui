@@ -3358,7 +3358,9 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextRow();
                 for (int column = 0; column < 7; column++)
                 {
-                    ImGui::TableSetColumnIndex(column);
+                    // Both TableNextCell() and TableSetColumnIndex() return false when a column is not visible, which can be used for clipping.
+                    if (!ImGui::TableSetColumnIndex(column))
+                        continue;
                     if (column == 0)
                         ImGui::Text("Line %d", row);
                     else

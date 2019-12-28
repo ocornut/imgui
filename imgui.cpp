@@ -10460,11 +10460,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGuiTableColumn* column = &table->Columns[n];
                     const char* name = TableGetColumnName(table, n);
                     ImGui::BulletText("Column %d order %d name '%s': +%.1f to +%.1f\n"
-                        "Active: %d, DrawChannels: %d,%d\n"
+                        "Active: %d, Clipped: %d, DrawChannels: %d,%d\n"
                         "WidthGiven/Requested: %.1f/%.1f, Weight: %.2f\n"
                         "UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
                         n, column->IndexDisplayOrder, name ? name : "NULL", column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
-                        column->IsActive, column->DrawChannelRowsBeforeFreeze, column->DrawChannelRowsAfterFreeze,
+                        column->IsActive, column->IsClipped, column->DrawChannelRowsBeforeFreeze, column->DrawChannelRowsAfterFreeze,
                         column->WidthGiven, column->WidthRequested, column->ResizeWeight,
                         column->UserID, column->Flags,
                         (column->Flags & ImGuiTableColumnFlags_WidthFixed) ? "WidthFixed " : "",
