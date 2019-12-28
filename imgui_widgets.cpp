@@ -7911,12 +7911,17 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
 // Even if not really useful, we allow 'inner_scroll_width < outer_size.x' for consistency and to facilitate understanding of what the value does.
 bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
+    ImGuiID id = GetID(str_id);
+    return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
+}
+
+bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
+{
     ImGuiContext& g = *GImGui;
     ImGuiWindow* outer_window = GetCurrentWindow();
     IM_ASSERT(columns_count > 0 && columns_count < IMGUI_TABLE_MAX_COLUMNS && "Only 0..63 columns allowed!");
     if (flags & ImGuiTableFlags_ScrollX)
         IM_ASSERT(inner_width >= 0.0f);
-    ImGuiID id = GetID(str_id);
 
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
     const ImVec2 avail_size = GetContentRegionAvail();
@@ -7974,7 +7979,7 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
 
         // Create scrolling region (without border = zero window padding)
         ImGuiWindowFlags child_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
-        BeginChildEx(str_id, instance_id, table->OuterRect.GetSize(), false, child_flags);
+        BeginChildEx(name, instance_id, table->OuterRect.GetSize(), false, child_flags);
         table->InnerWindow = g.CurrentWindow;
         table->WorkRect = table->InnerWindow->WorkRect;
         table->OuterRect = table->InnerWindow->Rect();
@@ -8575,7 +8580,14 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         KeepAliveID(column_id);
 
         bool hovered = false, held = false;
-        ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap);
+        bool pressed = ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick);
+        if (pressed && IsMouseDoubleClicked(0) && !(column->Flags & ImGuiTableColumnFlags_WidthStretch))
+        {
+            // FIXME-TABLE: Double-clicking on column edge could auto-fit weighted column?
+            TableSetColumnAutofit(table, column_n);
+            ClearActiveID();
+            held = hovered = false;
+        }
         if (held)
         {
             table->ResizedColumn = (ImS8)column_n;
