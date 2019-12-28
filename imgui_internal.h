@@ -1848,6 +1848,7 @@ struct ImGuiTableColumn
     ImS16                   NameOffset;                     // Offset into parent ColumnsName[]
     bool                    IsActive;                       // Is the column not marked Hidden by the user (regardless of clipping). We're not calling this "Visible" here because visibility also depends on clipping.
     bool                    NextIsActive;
+    bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle. We don't use the opposite "!Visible" name because Clipped can be altered by events.
     ImS8                    IndexDisplayOrder;              // Index within DisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinActiveSet;           // Index within active set (<= IndexOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
@@ -1855,7 +1856,8 @@ struct ImGuiTableColumn
     ImS8                    DrawChannelRowsAfterFreeze;
     ImS8                    PrevActiveColumn;               // Index of prev active column within Columns[], -1 if first active column
     ImS8                    NextActiveColumn;               // Index of next active column within Columns[], -1 if last active column
-    ImS8                    AutoFitFrames;
+    ImS8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
+    ImS8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
     ImS8                    SortOrder;                      // -1: Not sorting on this column
     ImS8                    SortDirection;                  // enum ImGuiSortDirection_
 
@@ -1869,7 +1871,7 @@ struct ImGuiTableColumn
         IndexDisplayOrder = IndexWithinActiveSet = -1;
         DrawChannelCurrent = DrawChannelRowsBeforeFreeze = DrawChannelRowsAfterFreeze = -1;
         PrevActiveColumn = NextActiveColumn = -1;
-        AutoFitFrames = 3;
+        AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_Ascending;
     }
@@ -1884,6 +1886,7 @@ struct ImGuiTable
     ImVector<ImU8>              DisplayOrder;               // Store display order of columns (when not reordered, the values are 0...Count-1)
     ImU64                       ActiveMaskByIndex;          // Column Index -> IsActive map (Active == not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImU64                       ActiveMaskByDisplayOrder;   // Column DisplayOrder -> IsActive map
+    ImU64                       VisibleMaskByIndex;         // Visible (== Active and not Clipped)
     ImGuiTableFlags             SettingsSaveFlags;          // Pre-compute which data we are going to save into the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
@@ -2179,7 +2182,7 @@ namespace ImGui
     //IMGUI_API bool        SetTableColumnNo(int column_n);
     //IMGUI_API int         GetTableLineNo();
     IMGUI_API void          TableBeginInitVisibility(ImGuiTable* table);
-    IMGUI_API void          TableBeginInitDrawChannels(ImGuiTable* table);
+    IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
     IMGUI_API void          TableUpdateBorders(ImGuiTable* table);
     IMGUI_API void          TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column, float width);
@@ -2194,6 +2197,7 @@ namespace ImGui
     IMGUI_API void          TableEndCell(ImGuiTable* table);
     IMGUI_API ImRect        TableGetCellRect();
     IMGUI_API const char*   TableGetColumnName(ImGuiTable* table, int column_no);
+    IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_no);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
     IMGUI_API void          TableLoadSettings(ImGuiTable* table);
