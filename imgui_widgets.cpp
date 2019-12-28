@@ -8264,8 +8264,8 @@ static float TableGetMinColumnWidth()
 
 // Layout columns for the frame
 // Runs on the first call to TableNextRow(), to give a chance for TableSetupColumn() to be called first.
-// FIXME-TABLE: Our width (and therefore our WorkRect) will be minimal in the first frame for WidthAuto columns, 
-// increase feedback side-effect with widgets relying on WorkRect.Max.x. Maybe provide a default distribution for WidthAuto columns?
+// FIXME-TABLE: Our width (and therefore our WorkRect) will be minimal in the first frame for WidthAlwaysAutoResize columns, 
+// increase feedback side-effect with widgets relying on WorkRect.Max.x. Maybe provide a default distribution for WidthAlwaysAutoResize columns?
 void    ImGui::TableUpdateLayout(ImGuiTable* table)
 {
     IM_ASSERT(table->IsLayoutLocked == false);
@@ -8287,6 +8287,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
 
         // Adjust flags: default width mode + weighted columns are not allowed when auto extending
+        // FIXME-TABLE: Clarify why we need to do this again here and not just in TableSetupColumn()
         column->Flags = TableFixColumnFlags(table, column->FlagsIn);
 
         // We have a unusual edge case where if the user doesn't call TableGetSortSpecs() but has sorting enabled
@@ -9033,6 +9034,12 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
 
     ImGuiTableColumn* column = &table->Columns[table->DeclColumnsCount];
     table->DeclColumnsCount++;
+
+    // When passing a width automatically enforce WidthFixed policy (vs TableFixColumnFlags would default to WidthAlwaysAutoResize)
+    // (we write down to FlagsIn which is a little misleading, another solution would be to pass init_width_or_weight to TableFixColumnFlags)
+    if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
+        if ((table->Flags & ImGuiTableFlags_SizingPolicyFixedX) && (init_width_or_weight > 0.0f))
+            flags |= ImGuiTableColumnFlags_WidthFixed;
 
     column->UserID = user_id;
     column->FlagsIn = flags;
