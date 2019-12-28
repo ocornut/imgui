@@ -2181,6 +2181,8 @@ namespace ImGui
     //IMGUI_API int         GetTableColumnNo();
     //IMGUI_API bool        SetTableColumnNo(int column_n);
     //IMGUI_API int         GetTableLineNo();
+
+    IMGUI_API bool          BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          TableBeginInitVisibility(ImGuiTable* table);
     IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
