@@ -480,7 +480,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ShowDemoWindowLayout();
     ShowDemoWindowPopups();
     ShowDemoWindowTables();
-    ShowDemoWindowColumns();
     ShowDemoWindowMisc();
 
     // End of ShowDemoWindow()
@@ -3028,7 +3027,7 @@ const ImGuiTableSortSpecs* MyItem::s_current_sort_specs = NULL;
 static void ShowDemoWindowTables()
 {
     //ImGui::SetNextItemOpen(true, ImGuiCond_Once);
-    if (!ImGui::CollapsingHeader("Tables"))
+    if (!ImGui::CollapsingHeader("Tables & Columns"))
         return;
 
     ImGui::PushID("Tables");
@@ -3914,27 +3913,23 @@ static void ShowDemoWindowTables()
         ImGui::TreePop();
     }
 
+    ImGui::PopID();
+
+    ShowDemoWindowColumns();
+
     if (disable_indent)
         ImGui::PopStyleVar();
-    ImGui::PopID();
 }
 
-// 2020: Columns are under-featured and not maintained. Prefer using the more flexible and powerful Tables API!
+// Demonstrate old/legacy Columns API!
+// [2020: Columns are under-featured and not maintained. Prefer using the more flexible and powerful BeginTable() API!]
 static void ShowDemoWindowColumns()
 {
-    if (!ImGui::CollapsingHeader("Columns"))
-        return;
-
-    ImGui::PushID("Columns");
-
-    static bool disable_indent = false;
-    ImGui::Checkbox("Disable tree indentation", &disable_indent);
+    bool open = ImGui::TreeNode("Legacy Columns API");
     ImGui::SameLine();
-    HelpMarker("Disable the indenting of tree nodes so demo columns can use the full window width.");
-    if (disable_indent)
-        ImGui::PushStyleVar(ImGuiStyleVar_IndentSpacing, 0.0f);
-
-    ImGui::TextWrapped("Note: Columns are under-featured and not maintained. Prefer using the more flexible and powerful Tables API!");
+    HelpMarker("Columns() is an old API! Prefer using the more flexible and powerful BeginTable() API!");
+    if (!open)
+        return;
 
     // Basic columns
     if (ImGui::TreeNode("Basic"))
@@ -4145,9 +4140,7 @@ static void ShowDemoWindowColumns()
         ImGui::TreePop();
     }
 
-    if (disable_indent)
-        ImGui::PopStyleVar();
-    ImGui::PopID();
+    ImGui::TreePop();
 }
 
 static void ShowDemoWindowMisc()
