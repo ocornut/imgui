@@ -7829,7 +7829,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 // Typical call flow: (root level is public API):
 // - BeginTable()                               user begin into a table
 //    - BeginChild()                            - (if ScrollX/ScrollY is set)
-//    - TableBeginInitVisibility()              - lock columns visibility
+//    - TableBeginUpdateColumns()               - apply resize/order requests, lock columns active state, order
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
 //    - TableSortSpecsClickColumn()
@@ -8071,8 +8071,26 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->IsFirstFrame || table->IsSettingsRequestLoad)
         TableLoadSettings(table);
 
+    // Grab a copy of window fields we will modify
+    table->BackupSkipItems = inner_window->SkipItems;
+    table->BackupWorkRect = inner_window->WorkRect;
+    table->BackupCursorMaxPos = inner_window->DC.CursorMaxPos;
+
+    // Disable output until user calls TableNextRow() or TableNextCell() leading to the TableUpdateLayout() call..
+    // This is not strictly necessary but will reduce cases were misleading "out of table" output will be confusing to the user.
+    // Because we cannot safely assert in EndTable() when no rows have been created, this seems like our best option.
+    inner_window->SkipItems = true;
+    
+    // Update/lock which columns will be Active for the frame
+    TableBeginUpdateColumns(table);
+
+    return true;
+}
+
+void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
+{
     // Handle resizing request
-    // (We process this at the first beginning of the frame)
+    // (We process this at the first TableBegin of the frame)
     // FIXME-TABLE: Preserve contents width _while resizing down_ until releasing.
     // FIXME-TABLE: Contains columns if our work area doesn't allow for scrolling. 
     if (table->InstanceNo == 0)
@@ -8106,29 +8124,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Handle display order reset request
     if (table->IsResetDisplayOrderRequest)
     {
-        for (int n = 0; n < columns_count; n++)
+        for (int n = 0; n < table->ColumnsCount; n++)
             table->DisplayOrder[n] = table->Columns[n].IndexDisplayOrder = (ImU8)n;
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
     }
 
-    TableBeginInitVisibility(table);
-
-    // Grab a copy of window fields we will modify
-    table->BackupSkipItems = inner_window->SkipItems;
-    table->BackupWorkRect = inner_window->WorkRect;
-    table->BackupCursorMaxPos = inner_window->DC.CursorMaxPos;
-
-    if (flags & ImGuiTableFlags_NoClipX)
-        table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 1);
-    else
-        inner_window->DrawList->PushClipRect(inner_window->ClipRect.Min, inner_window->ClipRect.Max, false);
-
-    return true;
-}
-
-void ImGui::TableBeginInitVisibility(ImGuiTable* table)
-{
     // Setup and lock Active state and order
     table->ColumnsActiveCount = 0;
     table->IsDefaultDisplayOrder = true;
@@ -8541,6 +8542,13 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             table->IsContextPopupOpen = false;
         }
     }
+
+    // Initial state
+    ImGuiWindow* inner_window = table->InnerWindow;
+    if (table->Flags & ImGuiTableFlags_NoClipX)
+        table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 1);
+    else
+        inner_window->DrawList->PushClipRect(inner_window->ClipRect.Min, inner_window->ClipRect.Max, false);
 }
 
 // Process interaction on resizing borders. Actual size change will be applied in EndTable()
@@ -8611,6 +8619,15 @@ void    ImGui::EndTable()
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Only call EndTable() is BeginTable() returns true!");
+    
+    // This assert would be very useful to catch a common error... unfortunately it would probably trigger in some cases,
+    // and for consistency user may sometimes output empty tables (and still benefit from e.g. outer border)
+    //IM_ASSERT(table->IsLayoutLocked && "Table unused: never called TableNextRow(), is that the intent?");
+
+    // If the user never got to call TableNextRow() or TableNextCell(), we call layout ourselves to ensure all our
+    // code paths are consistent (instead of just hoping that TableBegin/TableEnd will work), get borders drawn, etc.
+    if (!table->IsLayoutLocked)
+        TableUpdateLayout(table);
 
     const ImGuiTableFlags flags = table->Flags;
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -9524,23 +9541,23 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
 }
 
 // This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
-// The intent is that advanced users would not need to use this helper and may create their own.
+// The intent is that advanced users willing to create customized headers would not need to use this helper and may create their own.
+// However presently this function uses too many internal structures/calls.
 void    ImGui::TableAutoHeaders()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    if (window->SkipItems)
-        return;
 
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
-    IM_ASSERT(table->CurrentRow == -1);
 
-    int open_context_popup = INT_MAX;
+    TableNextRow(ImGuiTableRowFlags_Headers, GetTextLineHeight());
+    if (window->SkipItems)
+        return;
 
     // This for loop is constructed to not make use of internal functions,
     // as this is intended to be a base template to copy and build from.
-    TableNextRow(ImGuiTableRowFlags_Headers, GetTextLineHeight());
+    int open_context_popup = INT_MAX;
     const int columns_count = table->ColumnsCount;
     for (int column_n = 0; column_n < columns_count; column_n++)
     {
@@ -9553,7 +9570,7 @@ void    ImGui::TableAutoHeaders()
 #if 0
         if (column_n < 2)
         {
-            static bool b[10] = {};
+            static bool b[2] = {};
             PushID(column_n);
             PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
             Checkbox("##", &b[column_n]);
@@ -9566,7 +9583,8 @@ void    ImGui::TableAutoHeaders()
         // [DEBUG]
         //if (g.IO.KeyCtrl) { static char buf[32]; name = buf; ImGuiTableColumn* c = &table->Columns[column_n]; if (c->Flags & ImGuiTableColumnFlags_WidthStretch) ImFormatString(buf, 32, "%.3f>%.1f", c->ResizeWeight, c->WidthGiven); else ImFormatString(buf, 32, "%.1f", c->WidthGiven); }
 
-        PushID(table->InstanceNo * table->ColumnsCount + column_n); // Allow unnamed labels (generally accidental, but let's behave nicely with them)
+        // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
+        PushID(table->InstanceNo * table->ColumnsCount + column_n);
         TableHeader(name);
         PopID();
 
@@ -9576,15 +9594,19 @@ void    ImGui::TableAutoHeaders()
     }
 
     // FIXME-TABLE: This is not user-land code any more... 
+    // FIXME-TABLE: Need to explain why this is here!
     window->SkipItems = table->BackupSkipItems;
 
     // Allow opening popup from the right-most section after the last column
     // FIXME-TABLE: This is not user-land code any more... perhaps instead we should expose hovered column.
     // and allow some sort of row-centric IsItemHovered() for full flexibility?
-    const float unused_x1 = (table->RightMostActiveColumn != -1) ? table->Columns[table->RightMostActiveColumn].MaxX : table->WorkRect.Min.x;
+    float unused_x1 = table->WorkRect.Min.x;
+    if (table->RightMostActiveColumn != -1)
+        unused_x1 = ImMax(unused_x1, table->Columns[table->RightMostActiveColumn].MaxX);
     if (unused_x1 < table->WorkRect.Max.x)
     {
-        // FIXME: We inherit ClipRect/SkipItem from last submitted column (active or not), let's override
+        // FIXME: We inherit ClipRect/SkipItem from last submitted column (active or not), let's temporarily override it.
+        // Because we don't perform any rendering here we just overwrite window->ClipRect used by logic.
         window->ClipRect = table->InnerClipRect;
 
         ImVec2 backup_cursor_max_pos = window->DC.CursorMaxPos;
@@ -9604,7 +9626,7 @@ void    ImGui::TableAutoHeaders()
         window->ClipRect = window->DrawList->_ClipRectStack.back();
     }
 
-    // Context Menu
+    // Open Context Menu
     if (open_context_popup != INT_MAX)
         if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
         {
