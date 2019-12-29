@@ -1855,7 +1855,7 @@ struct ImGuiTable
     int                         CurrentColumn;
     int                         CurrentRow;
     ImS16                       InstanceNo;                 // Count of BeginTable() calls with same ID in the same frame (generally 0)
-    ImS16                       InstanceInteracted;
+    ImS16                       InstanceInteracted;         // Mark which instance (generally 0) of the same ID is being interacted with
     float                       RowPosY1;
     float                       RowPosY2;
     float                       RowTextBaseline;

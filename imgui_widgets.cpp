@@ -7766,6 +7766,7 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
         flags |= ImGuiTableFlags_BordersV;
 
     // Adjust flags: disable top rows freezing if there's no scrolling
+    // In theory we could want to assert if ScrollFreeze was set without the corresponding scroll flag, but that would hinder demos.
     if ((flags & ImGuiTableFlags_ScrollX) == 0)
         flags &= ~ImGuiTableFlags_ScrollFreezeColumnsMask_;
     if ((flags & ImGuiTableFlags_ScrollY) == 0)
@@ -7814,6 +7815,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* outer_window = GetCurrentWindow();
+
+    // Sanity checks
     IM_ASSERT(columns_count > 0 && columns_count < IMGUI_TABLE_MAX_COLUMNS && "Only 0..63 columns allowed!");
     if (flags & ImGuiTableFlags_ScrollX)
         IM_ASSERT(inner_width >= 0.0f);
@@ -8500,7 +8503,7 @@ void    ImGui::EndTable()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL);
+    IM_ASSERT(table != NULL && "Only call EndTable() is BeginTable() returns true!");
 
     const ImGuiTableFlags flags = table->Flags;
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -8952,8 +8955,8 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && "Can only call TableSetupColumn() after BeginTable()!");
-    IM_ASSERT(!table->IsLayoutLocked && "Can only call TableSetupColumn() before first row!");
+    IM_ASSERT(table != NULL && "Need to call TableSetupColumn() after BeginTable()!");
+    IM_ASSERT(!table->IsLayoutLocked && "Need to call call TableSetupColumn() before first row!");
     IM_ASSERT(table->DeclColumnsCount >= 0 && table->DeclColumnsCount < table->ColumnsCount && "Called TableSetupColumn() too many times!");
 
     ImGuiTableColumn* column = &table->Columns[table->DeclColumnsCount];
@@ -9165,7 +9168,8 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     table->IsInsideRow = false;
 }
 
-// [Internal] This is called a lot, so we need to be mindful of unnecessary overhead!
+// [Internal] Called by TableNextRow()TableNextCell()!
+// This is called a lot, so we need to be mindful of unnecessary overhead.
 void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
 {
     table->CurrentColumn = column_no;
@@ -9210,7 +9214,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     }
 }
 
-// [Internal]
+// [Internal] Called by TableNextRow()TableNextCell()!
 void    ImGui::TableEndCell(ImGuiTable* table)
 {
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
@@ -9344,6 +9348,7 @@ void    ImGui::PopTableBackground()
     PopClipRect();
 }
 
+// Output context menu into current window (generally a popup)
 // FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
 void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
 {
@@ -9411,7 +9416,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
     }
 }
 
-// This is a helper to output headers based on the column names declared in TableSetupColumn()
+// This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
 // The intent is that advanced users would not need to use this helper and may create their own.
 void    ImGui::TableAutoHeaders()
 {
@@ -9421,7 +9426,8 @@ void    ImGui::TableAutoHeaders()
         return;
 
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table && table->CurrentRow == -1);
+    IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
+    IM_ASSERT(table->CurrentRow == -1);
 
     int open_context_popup = INT_MAX;
 
@@ -9512,6 +9518,7 @@ void    ImGui::TableHeader(const char* label)
         return;
 
     ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
     IM_ASSERT(table->CurrentColumn != -1);
     const int column_n = table->CurrentColumn;
     ImGuiTableColumn* column = &table->Columns[column_n];
