@@ -671,6 +671,8 @@ namespace ImGui
     // - In most situations you can use TableNextRow() + TableSetColumnIndex() to populate a table.
     // - If you are using tables as a sort of grid, populating every columns with the same type of contents,
     //   you may prefer using TableNextCell() instead of TableNextRow() + TableSetColumnIndex().
+    // - See Demo->Tables for details.
+    // - See ImGuiTableFlags_ enums for a description of available flags. 
     #define IMGUI_HAS_TABLE 1
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
@@ -678,14 +680,14 @@ namespace ImGui
     IMGUI_API bool          TableNextCell();                            // append into the next column (next column, or next row if currently in last column). Return true if column is visible.
     IMGUI_API bool          TableSetColumnIndex(int column_n);          // append into the specified column. Return true if column is visible.
     IMGUI_API int           TableGetColumnIndex();                      // return current column index.
-    IMGUI_API const char*   TableGetColumnName(int column_n = -1);      // return NULL if column didn't have a name declared by TableSetupColumn(). Use pass -1 to use current column.
-    IMGUI_API bool          TableGetColumnIsVisible(int column_n = -1); // return true if column is visible. Same value is also returned by TableNextCell() and TableSetColumnIndex(). Use pass -1 to use current column.
-    IMGUI_API bool          TableGetColumnIsSorted(int column_n = -1);  // return true if column is included in the sort specs. Rarely used, can be useful to tell if a data change should trigger resort. Equivalent to test ImGuiTableSortSpecs's ->ColumnsMask & (1 << column_n). Use pass -1 to use current column.
+    IMGUI_API const char*   TableGetColumnName(int column_n = -1);      // return NULL if column didn't have a name declared by TableSetupColumn(). Pass -1 to use current column.
+    IMGUI_API bool          TableGetColumnIsVisible(int column_n = -1); // return true if column is visible. Same value is also returned by TableNextCell() and TableSetColumnIndex(). Pass -1 to use current column.
+    IMGUI_API bool          TableGetColumnIsSorted(int column_n = -1);  // return true if column is included in the sort specs. Rarely used, can be useful to tell if a data change should trigger resort. Equivalent to test ImGuiTableSortSpecs's ->ColumnsMask & (1 << column_n). Pass -1 to use current column.
     // Tables: Headers & Columns declaration
-    // - Use TableSetupColumn() to specify resizing policy, default width, name, id, specific flags etc.
+    // - Use TableSetupColumn() to specify label, resizing policy, default width, id, various other flags etc.
     // - The name passed to TableSetupColumn() is used by TableAutoHeaders() and by the context-menu
     // - Use TableAutoHeaders() to submit the whole header row, otherwise you may treat the header row as a regular row, manually call TableHeader() and other widgets.
-    // - Headers are required to perform some interactions: reordering, sorting, context menu // FIXME-TABLES: remove context from this list!
+    // - Headers are required to perform some interactions: reordering, sorting, context menu // FIXME-TABLE: remove context from this list!
     IMGUI_API void          TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = -1.0f, ImU32 user_id = 0);
     IMGUI_API void          TableAutoHeaders();                         // submit all headers cells based on data provided to TableSetupColumn() + submit context menu
     IMGUI_API void          TableHeader(const char* label);             // submit one header cell manually.
@@ -1005,6 +1007,10 @@ enum ImGuiTabItemFlags_
 };
 
 // Flags for ImGui::BeginTable()
+// - Columns can either varying resizing policy: "Fixed", "Stretch" or "AlwaysAutoResize". Toggling ScrollX needs to alter default sizing policy.
+// - Sizing policy have many subtle side effects which may be hard to fully comprehend at first.. They'll eventually make sense.
+//   - with SizingPolicyFixedX (default is ScrollX is on):     Columns can be enlarged as needed. Enable scrollbar if ScrollX is enabled, otherwise extend parent window's contents rect. Only Fixed columns allowed. Weighted columns will calculate their width assuming no scrolling.
+//   - with SizingPolicyStretchX (default is ScrollX is off):  Fit all columns within available table width (so it doesn't make sense to use ScrollX with Stretch columns!). Fixed and Weighted columns allowed.
 enum ImGuiTableFlags_
 {
     // Features
@@ -1023,26 +1029,26 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_BordersFullHeight               = 1 << 10,  // Borders covers all lines even when Headers are being used, allow resizing all rows.
     ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersH,
     // Padding, Sizing
-    ImGuiTableFlags_NoClipX                         = 1 << 12,  // Disable pushing clipping rectangle for every individual columns (reduce draw command count, items with be able to overflow)
-    ImGuiTableFlags_SizingPolicyStretchX            = 1 << 13,  // (Default if ScrollX is off) Columns will default to use ImGuiTableColumnFlags_WidthStretch. Fit all columns within available width. Fixed and Weighted columns allowed.
-    ImGuiTableFlags_SizingPolicyFixedX              = 1 << 14,  // (Default if ScrollX is on) Columns will default to use ImGuiTableColumnFlags_WidthFixed or WidthAuto. Enlarge as needed: enable scrollbar if ScrollX is enabled, otherwise extend parent window's contents rect. Only Fixed columns allowed. Weighted columns will calculate their width assuming no scrolling.
-    ImGuiTableFlags_NoHeadersWidth                  = 1 << 15,  // Disable header width contribute to automatic width calculation for every columns.
+    ImGuiTableFlags_NoClipX                         = 1 << 12,  // Disable pushing clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow)
+    ImGuiTableFlags_SizingPolicyFixedX              = 1 << 13,  // Default if ScrollX is on. Columns will default to use WidthFixed or WidthAlwaysAutoResize policy. Read description above for more details.
+    ImGuiTableFlags_SizingPolicyStretchX            = 1 << 14,  // Default if ScrollX is off. Columns will default to use WidthStretch policy. Read description above for more details.
+    ImGuiTableFlags_NoHeadersWidth                  = 1 << 15,  // Disable header width contribution to automatic width calculation.
     ImGuiTableFlags_NoHostExtendY                   = 1 << 16,  // (FIXME-TABLE: Reword as SizingPolicy?) Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
     // Scrolling
     ImGuiTableFlags_ScrollX                         = 1 << 17,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
     ImGuiTableFlags_ScrollY                         = 1 << 18,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
     ImGuiTableFlags_Scroll                          = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY,
-    ImGuiTableFlags_ScrollFreezeRowsShift_          = 19,       // We can lock 1 to 3 rows (starting from the top). Encode each of those values as dedicated flags.
-    ImGuiTableFlags_ScrollFreezeTopRow              = 1 << ImGuiTableFlags_ScrollFreezeRowsShift_,
-    ImGuiTableFlags_ScrollFreeze2Rows               = 2 << ImGuiTableFlags_ScrollFreezeRowsShift_,
-    ImGuiTableFlags_ScrollFreeze3Rows               = 3 << ImGuiTableFlags_ScrollFreezeRowsShift_,
-    ImGuiTableFlags_ScrollFreezeColumnsShift_       = 21,       // We can lock 1 to 3 columns (starting from the left). Encode each of those values as dedicated flags.
-    ImGuiTableFlags_ScrollFreezeLeftColumn          = 1 << ImGuiTableFlags_ScrollFreezeColumnsShift_,
-    ImGuiTableFlags_ScrollFreeze2Columns            = 2 << ImGuiTableFlags_ScrollFreezeColumnsShift_,
-    ImGuiTableFlags_ScrollFreeze3Columns            = 3 << ImGuiTableFlags_ScrollFreezeColumnsShift_,
+    ImGuiTableFlags_ScrollFreezeTopRow              = 1 << 19,  // We can lock 1 to 3 rows (starting from the top). Use with ScrollY enabled.
+    ImGuiTableFlags_ScrollFreeze2Rows               = 2 << 19,
+    ImGuiTableFlags_ScrollFreeze3Rows               = 3 << 19,
+    ImGuiTableFlags_ScrollFreezeLeftColumn          = 1 << 21,  // We can lock 1 to 3 columns (starting from the left). Use with ScrollX enabled.
+    ImGuiTableFlags_ScrollFreeze2Columns            = 2 << 21,
+    ImGuiTableFlags_ScrollFreeze3Columns            = 3 << 21,
 
-    // Combinations and masks
+    // [Internal] Combinations and masks
     ImGuiTableFlags_SizingPolicyMaskX_              = ImGuiTableFlags_SizingPolicyStretchX | ImGuiTableFlags_SizingPolicyFixedX,
+    ImGuiTableFlags_ScrollFreezeRowsShift_          = 19,
+    ImGuiTableFlags_ScrollFreezeColumnsShift_       = 21,
     ImGuiTableFlags_ScrollFreezeRowsMask_           = 0x03 << ImGuiTableFlags_ScrollFreezeRowsShift_,
     ImGuiTableFlags_ScrollFreezeColumnsMask_        = 0x03 << ImGuiTableFlags_ScrollFreezeColumnsShift_
 };
@@ -1066,13 +1072,13 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_NoHeaderWidth             = 1 << 11,  // Header width don't contribute to automatic column width.
     ImGuiTableColumnFlags_PreferSortAscending       = 1 << 12,  // Make the initial sort direction Ascending when first sorting on this column (default).
     ImGuiTableColumnFlags_PreferSortDescending      = 1 << 13,  // Make the initial sort direction Descending when first sorting on this column.
+
+    // [Internal] Combinations and masks
+    ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthAlwaysAutoResize,
+    ImGuiTableColumnFlags_NoDirectResize_           = 1 << 20   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
     //ImGuiTableColumnFlags_AlignLeft               = 1 << 14,
     //ImGuiTableColumnFlags_AlignCenter             = 1 << 15,
     //ImGuiTableColumnFlags_AlignRight              = 1 << 16,
-
-    // Combinations and masks
-    ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthAlwaysAutoResize,
-    ImGuiTableColumnFlags_NoDirectResize_           = 1 << 20   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
     //ImGuiTableColumnFlags_AlignMask_              = ImGuiTableColumnFlags_AlignLeft | ImGuiTableColumnFlags_AlignCenter | ImGuiTableColumnFlags_AlignRight
 };
 
