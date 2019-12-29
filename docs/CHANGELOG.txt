@@ -75,6 +75,8 @@ Other Changes:
   we will rework the circle rendering functions to use textures and automatic segment count
   selection, those new api can fill a gap. [@ShironekoBen]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- Misc: Disable format checks when using stb_printf, to allow using extra formats.
+  Made IMGUI_USE_STB_SPRINTF a properly documented imconfig.h flag. (#2954) [@loicmolinari]
 - Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp
   files in a same compilation unit. Actual users of that technique (also called "Unity builds")
   can generally provide this themselves, so we don't really recommend you use this. [@rokups]
