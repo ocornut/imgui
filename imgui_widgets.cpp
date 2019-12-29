@@ -7920,6 +7920,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* outer_window = GetCurrentWindow();
+    if (outer_window->SkipItems) // Consistent with other tables + beneficial side effect that assert on miscalling EndTable() will be more visible.
+        return false;
 
     // Sanity checks
     IM_ASSERT(columns_count > 0 && columns_count < IMGUI_TABLE_MAX_COLUMNS && "Only 0..63 columns allowed!");
@@ -9604,12 +9606,13 @@ void    ImGui::TableAutoHeaders()
 
     // Context Menu
     if (open_context_popup != INT_MAX)
-    {
-        table->IsContextPopupOpen = true;
-        table->ContextPopupColumn = (ImS8)open_context_popup;
-        table->InstanceInteracted = table->InstanceNo;
-        OpenPopup("##TableContextMenu");
-    }
+        if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+        {
+            table->IsContextPopupOpen = true;
+            table->ContextPopupColumn = (ImS8)open_context_popup;
+            table->InstanceInteracted = table->InstanceNo;
+            OpenPopup("##TableContextMenu");
+        }
 }
 
 // Emit a column header (text + optional sort order)
