@@ -3118,17 +3118,31 @@ static void ShowDemoWindowTables()
 
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode("With borders, background"))
+    if (ImGui::TreeNode("Borders, background"))
     {
         // Expose a few Borders related flags interactively
         static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
         static bool display_width = false;
         ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
         ImGui::CheckboxFlags("ImGuiTableFlags_Borders", (unsigned int*)&flags, ImGuiTableFlags_Borders);
-        ImGui::SameLine(); HelpMarker("ImGuiTableFlags_Borders\n = ImGuiTableFlags_BordersOuter\n | ImGuiTableFlags_BordersV\n | ImGuiTableFlags_BordersH");
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
+        ImGui::SameLine(); HelpMarker("ImGuiTableFlags_Borders\n = ImGuiTableFlags_BordersVInner\n | ImGuiTableFlags_BordersVOuter\n | ImGuiTableFlags_BordersHInner\n | ImGuiTableFlags_BordersHOuter");
+        ImGui::Indent();
+
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
+        ImGui::Indent();
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersHOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
+        ImGui::Unindent();
+
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
+        ImGui::Indent();
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersVOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVInner", (unsigned int*)&flags, ImGuiTableFlags_BordersVInner);
+        ImGui::Unindent();
+
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInner", (unsigned int*)&flags, ImGuiTableFlags_BordersInner);
+        ImGui::Unindent();
         ImGui::Checkbox("Debug Display width", &display_width);
 
         if (ImGui::BeginTable("##table1", 3, flags))
@@ -3435,7 +3449,7 @@ static void ShowDemoWindowTables()
     {
         HelpMarker("This demonstrate embedding a table into another table cell.");
         
-        if (ImGui::BeginTable("recurse1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
+        if (ImGui::BeginTable("recurse1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersVFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
         {
             ImGui::TableSetupColumn("A0");
             ImGui::TableSetupColumn("A1");
@@ -3444,7 +3458,7 @@ static void ShowDemoWindowTables()
             ImGui::TableNextRow();  ImGui::Text("A0 Cell 0");
             {
                 float rows_height = ImGui::GetTextLineHeightWithSpacing() * 2;
-                if (ImGui::BeginTable("recurse2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
+                if (ImGui::BeginTable("recurse2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersVFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
                 {
                     ImGui::TableSetupColumn("B0");
                     ImGui::TableSetupColumn("B1");
@@ -3476,13 +3490,15 @@ static void ShowDemoWindowTables()
     {
         HelpMarker("This section allows you to interact and see the effect of StretchX vs FixedX sizing policies depending on whether Scroll is enabled and the contents of your columns.");
         enum ContentsType { CT_ShortText, CT_LongText, CT_Button, CT_StretchButton, CT_InputText };
-        static int contents_type = CT_ShortText;
+        static int contents_type = CT_StretchButton;
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
         ImGui::Combo("Contents", &contents_type, "Short Text\0Long Text\0Button\0Stretch Button\0InputText\0");
 
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersHOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVInner", (unsigned int*)&flags, ImGuiTableFlags_BordersVInner);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersVOuter);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
         if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyStretchX))
@@ -3691,10 +3707,13 @@ static void ShowDemoWindowTables()
             ImGui::BulletText("Decoration:");
             ImGui::Indent();
             ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
             ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersFullHeight", (unsigned int*)&flags, ImGuiTableFlags_BordersFullHeight);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersVOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersVOuter);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersVInner", (unsigned int*)&flags, ImGuiTableFlags_BordersVInner);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersHOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersHOuter);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersVFullHeight", (unsigned int*)&flags, ImGuiTableFlags_BordersVFullHeight);
             ImGui::Unindent();
 
             ImGui::BulletText("Padding, Sizing:");

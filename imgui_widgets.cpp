@@ -7870,7 +7870,7 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
 
     // Adjust flags: enforce borders when resizable
     if (flags & ImGuiTableFlags_Resizable)
-        flags |= ImGuiTableFlags_BordersV;
+        flags |= ImGuiTableFlags_BordersVInner;
 
     // Adjust flags: disable top rows freezing if there's no scrolling
     // In theory we could want to assert if ScrollFreeze was set without the corresponding scroll flag, but that would hinder demos.
@@ -7997,18 +7997,23 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         PushID(instance_id);
     }
 
-    const bool has_cell_padding_x = (flags & (ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV)) != 0;
-    ImGuiWindow* inner_window = table->InnerWindow;
-    table->CurrentColumn = -1;
-    table->CurrentRow = -1;
-    table->RowBgColorCounter = 0;
-    table->LastRowFlags = ImGuiTableRowFlags_None;
+    // Borders
+    // - None               ........Content..... Pad .....Content........
+    // - VOuter             | Pad ..Content..... Pad .....Content.. Pad |       // FIXME-TABLE: Not handled properly
+    // - VInner             ........Content.. Pad | Pad ..Content........       // FIXME-TABLE: Not handled properly
+    // - VOuter+VInner      | Pad ..Content.. Pad | Pad ..Content.. Pad |
 
+    const bool has_cell_padding_x = (flags & ImGuiTableFlags_BordersVOuter) != 0;
+    ImGuiWindow* inner_window = table->InnerWindow;
     table->CellPaddingX1 = has_cell_padding_x ? g.Style.CellPadding.x + 1.0f : 0.0f;
     table->CellPaddingX2 = has_cell_padding_x ? g.Style.CellPadding.x : 0.0f;
     table->CellPaddingY = g.Style.CellPadding.y;
     table->CellSpacingX = has_cell_padding_x ? 0.0f : g.Style.CellPadding.x;
 
+    table->CurrentColumn = -1;
+    table->CurrentRow = -1;
+    table->RowBgColorCounter = 0;
+    table->LastRowFlags = ImGuiTableRowFlags_None;
     table->HostClipRect = inner_window->ClipRect;
     table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
     table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
@@ -8030,8 +8035,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // FIXME-TABLE FIXME-STYLE: Using opaque colors facilitate overlapping elements of the grid
     //table->BorderOuterColor = GetColorU32(ImGuiCol_Separator, 1.00f);
     //table->BorderInnerColor = GetColorU32(ImGuiCol_Separator, 0.60f);
-    table->BorderOuterColor = GetColorU32(ImVec4(0.31f, 0.31f, 0.35f, 1.00f));
-    table->BorderInnerColor = GetColorU32(ImVec4(0.23f, 0.23f, 0.25f, 1.00f));
+    table->BorderColorStrong = GetColorU32(ImVec4(0.31f, 0.31f, 0.35f, 1.00f));
+    table->BorderColorLight = GetColorU32(ImVec4(0.23f, 0.23f, 0.25f, 1.00f));
     //table->BorderOuterColor = IM_COL32(255, 0, 0, 255);
     //table->BorderInnerColor = IM_COL32(255, 255, 0, 255);
     table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
@@ -8563,7 +8568,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
     // the final height from last frame. Because this is only affecting _interaction_ with columns, it is not really problematic.
     // (whereas the actual visual will be displayed in EndTable() and using the current frame height)
     // Actual columns highlight/render will be performed in EndTable() and not be affected.
-    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersFullHeight);
+    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersVFullHeight);
     const float hit_half_width = TABLE_RESIZE_SEPARATOR_HALF_THICKNESS;
     const float hit_y1 = table->OuterRect.Min.y;
     const float hit_y2_full = ImMax(table->OuterRect.Max.y, hit_y1 + table->LastOuterHeight);
@@ -8744,6 +8749,7 @@ void    ImGui::EndTable()
     g.CurrentTable = g.CurrentTableStack.Size ? g.Tables.GetByIndex(g.CurrentTableStack.back().Index) : NULL;
 }
 
+// FIXME-TABLE: This is a mess, need to redesign how we render borders.
 void ImGui::TableDrawBorders(ImGuiTable* table)
 {
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -8751,28 +8757,29 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 0);
     if (inner_window->Hidden || !table->HostClipRect.Overlaps(table->InnerClipRect))
         return;
+    ImDrawList* inner_drawlist = inner_window->DrawList;
+    ImDrawList* outer_drawlist = outer_window->DrawList;
 
     // Draw inner border and resizing feedback
     const float draw_y1 = table->OuterRect.Min.y;
     float draw_y2_base = (table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight;
     float draw_y2_full = table->OuterRect.Max.y;
     ImU32 border_base_col;
-    if (!table->IsUsingHeaders || (table->Flags & ImGuiTableFlags_BordersFullHeight))
+    if (!table->IsUsingHeaders || (table->Flags & ImGuiTableFlags_BordersVFullHeight))
     {
         draw_y2_base = draw_y2_full;
-        border_base_col = table->BorderInnerColor;
+        border_base_col = table->BorderColorLight;
     }
     else
     {
-        border_base_col = table->BorderOuterColor;
+        border_base_col = table->BorderColorStrong;
     }
 
-    if (table->Flags & ImGuiTableFlags_BordersV)
-    {
-        const bool draw_left_most_border = (table->Flags & ImGuiTableFlags_BordersOuter) == 0;
-        if (draw_left_most_border)
-            inner_window->DrawList->AddLine(ImVec2(table->OuterRect.Min.x, draw_y1), ImVec2(table->OuterRect.Min.x, draw_y2_base), border_base_col, 1.0f);
+    if ((table->Flags & ImGuiTableFlags_BordersVOuter) && (table->InnerWindow == table->OuterWindow))
+        inner_drawlist->AddLine(ImVec2(table->OuterRect.Min.x, draw_y1), ImVec2(table->OuterRect.Min.x, draw_y2_base), border_base_col, 1.0f);
 
+    if (table->Flags & ImGuiTableFlags_BordersVInner)
+    {
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
         {
             if (!(table->ActiveMaskByDisplayOrder & ((ImU64)1 << order_n)))
@@ -8782,7 +8789,10 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             ImGuiTableColumn* column = &table->Columns[column_n];
             const bool is_hovered = (table->HoveredColumnBorder == column_n);
             const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceNo);
-            const bool draw_right_border = (column->MaxX <= table->InnerClipRect.Max.x) || (is_resized || is_hovered);
+            const bool is_resizable = (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_)) == 0;
+            bool draw_right_border = (column->MaxX <= table->InnerClipRect.Max.x) || (is_resized || is_hovered);
+            if (column->NextActiveColumn == -1 && !is_resizable)
+                draw_right_border = false;
             if (draw_right_border && column->MaxX > column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
             {
                 // Draw in outer window so right-most column won't be clipped
@@ -8795,7 +8805,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
                 float draw_y2 = draw_y2_base;
                 if (is_hovered || is_resized || (table->FreezeColumnsCount != -1 && table->FreezeColumnsCount == order_n + 1))
                     draw_y2 = draw_y2_full;
-                inner_window->DrawList->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), col, 1.0f);
+                inner_drawlist->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), col, 1.0f);
             }
         }
     }
@@ -8809,16 +8819,28 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         // and the part that's over scrollbars in the outer window..)
         // Either solution currently won't allow us to use a larger border size: the border would clipped.
         ImRect outer_border = table->OuterRect;
+        const ImU32 outer_col = table->BorderColorStrong;
         if (inner_window != outer_window)
             outer_border.Expand(1.0f);
-        outer_window->DrawList->AddRect(outer_border.Min, outer_border.Max, table->BorderOuterColor); // IM_COL32(255, 0, 0, 255));
+        if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
+            outer_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col);
+        else if (table->Flags & ImGuiTableFlags_BordersVOuter)
+        {
+            outer_drawlist->AddLine(outer_border.Min, ImVec2(outer_border.Min.x, outer_border.Max.y), outer_col);
+            outer_drawlist->AddLine(ImVec2(outer_border.Max.x, outer_border.Min.y), outer_border.Max, outer_col);
+        }
+        else if (table->Flags & ImGuiTableFlags_BordersHOuter)
+        {
+            outer_drawlist->AddLine(outer_border.Min, ImVec2(outer_border.Max.x, outer_border.Min.y), outer_col);
+            outer_drawlist->AddLine(ImVec2(outer_border.Min.x, outer_border.Max.y), outer_border.Max, outer_col);
+        }
     }
-    else if (table->Flags & ImGuiTableFlags_BordersH)
+    if ((table->Flags & ImGuiTableFlags_BordersHInner) && table->RowPosY2 < table->OuterRect.Max.y)
     {
-        // Draw bottom-most border
+        // Draw bottom-most row border
         const float border_y = table->RowPosY2;
         if (border_y >= table->BackgroundClipRect.Min.y && border_y < table->BackgroundClipRect.Max.y)
-            inner_window->DrawList->AddLine(ImVec2(table->BorderX1, border_y), ImVec2(table->BorderX2, border_y), table->BorderOuterColor);
+            inner_drawlist->AddLine(ImVec2(table->BorderX1, border_y), ImVec2(table->BorderX2, border_y), table->BorderColorLight);
     }
 }
 
@@ -9216,21 +9238,22 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         else if (table->Flags & ImGuiTableFlags_RowBg)
             bg_col = GetColorU32((table->RowBgColorCounter & 1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg);
 
-        // Decide of separating border color
+        // Decide of top border color
         ImU32 border_col = 0;
         if (table->CurrentRow != 0 || table->InnerWindow == table->OuterWindow)
         {
-            if (table->Flags & ImGuiTableFlags_BordersH)
+            if (table->Flags & ImGuiTableFlags_BordersHInner)
             {
-                if (table->CurrentRow == 0 && table->InnerWindow == table->OuterWindow)
-                    border_col = table->BorderOuterColor;
-                else if (!(table->LastRowFlags & ImGuiTableRowFlags_Headers))
-                    border_col = table->BorderInnerColor;
+                //if (table->CurrentRow == 0 && table->InnerWindow == table->OuterWindow)
+                //    border_col = table->BorderOuterColor;
+                //else
+                if (table->CurrentRow > 0)// && !(table->LastRowFlags & ImGuiTableRowFlags_Headers))
+                    border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
             }
             else
             {
-                if (table->RowFlags & ImGuiTableRowFlags_Headers)
-                    border_col = table->BorderOuterColor;
+                //if (table->RowFlags & ImGuiTableRowFlags_Headers)
+                //    border_col = table->BorderOuterColor;
             }
         }
 
@@ -9256,10 +9279,10 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     const bool unfreeze_rows = (table->CurrentRow + 1 == table->FreezeRowsCount && table->FreezeRowsCount > 0);
 
     // Draw bottom border (always strong)
-    const bool draw_separating_border = unfreeze_rows || (table->RowFlags & ImGuiTableRowFlags_Headers);
+    const bool draw_separating_border = unfreeze_rows;// || (table->RowFlags & ImGuiTableRowFlags_Headers);
     if (draw_separating_border)
         if (bg_y2 >= table->BackgroundClipRect.Min.y && bg_y2 < table->BackgroundClipRect.Max.y)
-            window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y2), ImVec2(table->BorderX2, bg_y2), table->BorderOuterColor);
+            window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y2), ImVec2(table->BorderX2, bg_y2), table->BorderColorStrong);
 
     // End frozen rows (when we are past the last frozen row line, teleport cursor and alter clipping rectangle)
     // We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark end of row and get the new cursor position.
@@ -9566,7 +9589,7 @@ void    ImGui::TableAutoHeaders()
 
         const char* name = TableGetColumnName(column_n);
 
-        // FIXME-TABLE: Test custom user elements
+        // [DEBUG] Test custom user elements
 #if 0
         if (column_n < 2)
         {
