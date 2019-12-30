@@ -1892,8 +1892,8 @@ struct ImGuiTable
     ImS8                        HoveredColumnBody;          // [DEBUG] Unlike HoveredColumnBorder this doesn't fulfill all Hovering rules properly. Used for debugging/tools for now.
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
     ImS8                        ResizedColumn;              // Index of column being resized. Reset by InstanceNo==0.
-    ImS8                        HeadHeaderColumn;           // Index of column header being held. 
-    ImS8                        LastResizedColumn;
+    ImS8                        LastResizedColumn;          // Index of column being resized from previous frame.
+    ImS8                        HeldHeaderColumn;           // Index of column header being held. 
     ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
     ImS8                        ReorderColumnDir;           // -1 or +1
     ImS8                        RightMostActiveColumn;      // Index of right-most non-hidden column.
@@ -1905,11 +1905,11 @@ struct ImGuiTable
     ImS8                        FreezeColumnsRequest;       // Requested frozen columns count
     ImS8                        FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
     bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
-    bool                        IsInsideRow;                // Set if inside TableBeginRow()/TableEndRow().
-    bool                        IsFirstFrame;
+    bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
+    bool                        IsInitializing;
     bool                        IsSortSpecsDirty;
-    bool                        IsUsingHeaders;             // Set if the first row had the ImGuiTableRowFlags_Headers flag.
-    bool                        IsContextPopupOpen;
+    bool                        IsUsingHeaders;             // Set when the first row had the ImGuiTableRowFlags_Headers flag.
+    bool                        IsContextPopupOpen;         // Set when default context menu is open (also see: ContextPopupColumn, InstanceInteracted).
     bool                        IsSettingsRequestLoad;
     bool                        IsSettingsLoaded;
     bool                        IsSettingsDirty;            // Set when table settings have changed and needs to be reported into ImGuiTableSetttings data.
