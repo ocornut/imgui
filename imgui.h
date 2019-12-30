@@ -1023,11 +1023,16 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_NoSavedSettings                 = 1 << 5,   // Disable persisting columns order, width and sort settings in the .ini file.
     // Decoration
     ImGuiTableFlags_RowBg                           = 1 << 6,   // Use ImGuiCol_TableRowBg and ImGuiCol_TableRowBgAlt colors behind each rows.
-    ImGuiTableFlags_BordersOuter                    = 1 << 7,   // Draw outer borders.
-    ImGuiTableFlags_BordersV                        = 1 << 8,   // Draw vertical borders between columns.
-    ImGuiTableFlags_BordersH                        = 1 << 9,   // Draw horizontal borders between rows.
-    ImGuiTableFlags_BordersFullHeight               = 1 << 10,  // Borders covers all lines even when Headers are being used, allow resizing all rows.
-    ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersH,
+    ImGuiTableFlags_BordersHInner                   = 1 << 7,   // Draw horizontal borders between rows.
+    ImGuiTableFlags_BordersHOuter                   = 1 << 8,   // Draw horizontal borders at the top and bottom.
+    ImGuiTableFlags_BordersVInner                   = 1 << 9,   // Draw vertical borders between columns.
+    ImGuiTableFlags_BordersVOuter                   = 1 << 10,  // Draw vertical borders on the left and right sides.
+    ImGuiTableFlags_BordersH                        = ImGuiTableFlags_BordersHInner | ImGuiTableFlags_BordersHOuter, // Draw horizontal borders.
+    ImGuiTableFlags_BordersV                        = ImGuiTableFlags_BordersVInner | ImGuiTableFlags_BordersVOuter, // Draw vertical borders.
+    ImGuiTableFlags_BordersInner                    = ImGuiTableFlags_BordersVInner | ImGuiTableFlags_BordersHInner, // Draw inner borders.
+    ImGuiTableFlags_BordersOuter                    = ImGuiTableFlags_BordersVOuter | ImGuiTableFlags_BordersHOuter, // Draw outer borders.
+    ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,   // Draw all borders.
+    ImGuiTableFlags_BordersVFullHeight              = 1 << 11,  // Borders covers all rows even when Headers are being used. Allow resizing from any rows.
     // Padding, Sizing
     ImGuiTableFlags_NoClipX                         = 1 << 12,  // Disable pushing clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow)
     ImGuiTableFlags_SizingPolicyFixedX              = 1 << 13,  // Default if ScrollX is on. Columns will default to use WidthFixed or WidthAlwaysAutoResize policy. Read description above for more details.
