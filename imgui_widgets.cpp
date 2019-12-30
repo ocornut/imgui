@@ -7826,6 +7826,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 // [SECTION] Widgets: BeginTable, EndTable, etc.
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
 // Typical call flow: (root level is public API):
 // - BeginTable()                               user begin into a table
 //    - BeginChild()                            - (if ScrollX/ScrollY is set)
@@ -7846,6 +7847,7 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
 //    - TableSetColumnWidth()                   - apply resizing width
 //      - TableUpdateColumnsWeightFromWidth()
 //      - EndChild()                            - (if ScrollX/ScrollY is set)
+//-----------------------------------------------------------------------------
 
 // Configuration
 static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
@@ -7955,12 +7957,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Initialize
     table->ID = id;
     table->Flags = flags;
-    table->IsFirstFrame = (table->LastFrameActive == -1);
     table->InstanceNo = (ImS16)instance_no;
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
     table->ColumnsNames.Buf.resize(0);
+    table->IsInitializing = false;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
     table->OuterRect = outer_rect;
@@ -8021,11 +8023,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->FreezeColumnsCount = (inner_window->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
     table->IsFreezeRowsPassed = (table->FreezeRowsCount == 0);
     table->DeclColumnsCount = 0;
-    table->LastResizedColumn = table->ResizedColumn;
     table->HoveredColumnBody = -1;
     table->HoveredColumnBorder = -1;
     table->RightMostActiveColumn = -1;
-    table->IsFirstFrame = false;
 
     // FIXME-TABLE FIXME-STYLE: Using opaque colors facilitate overlapping elements of the grid
     //table->BorderOuterColor = GetColorU32(ImGuiCol_Separator, 1.00f);
@@ -8054,8 +8054,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Setup default columns state
     if (table->Columns.Size == 0)
     {
-        table->IsFirstFrame = true;
-        table->IsSortSpecsDirty = true;
+        table->IsInitializing = table->IsSettingsRequestLoad = table->IsSortSpecsDirty = true;
         table->Columns.reserve(columns_count);
         table->DisplayOrder.reserve(columns_count);
         for (int n = 0; n < columns_count; n++)
@@ -8068,7 +8067,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     }
 
     // Load settings
-    if (table->IsFirstFrame || table->IsSettingsRequestLoad)
+    if (table->IsSettingsRequestLoad)
         TableLoadSettings(table);
 
     // Grab a copy of window fields we will modify
@@ -8097,6 +8096,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     {
         if (table->ResizedColumn != -1 && table->ResizedColumnNextWidth != FLT_MAX)
             TableSetColumnWidth(table, &table->Columns[table->ResizedColumn], table->ResizedColumnNextWidth);
+        table->LastResizedColumn = table->ResizedColumn;
         table->ResizedColumnNextWidth = FLT_MAX;
         table->ResizedColumn = -1;
     }
@@ -8105,9 +8105,9 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     // Note: we don't clear ReorderColumn after handling the request.
     if (table->InstanceNo == 0)
     {
-        if (table->HeadHeaderColumn == -1 && table->ReorderColumn != -1)
+        if (table->HeldHeaderColumn == -1 && table->ReorderColumn != -1)
             table->ReorderColumn = -1;
-        table->HeadHeaderColumn = -1;
+        table->HeldHeaderColumn = -1;
         if (table->ReorderColumn != -1 && table->ReorderColumnDir != 0)
         {
             IM_ASSERT(table->ReorderColumnDir == -1 || table->ReorderColumnDir == +1);
@@ -8319,10 +8319,10 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
                     width_request = ImMax(width_request, (float)column->ContentWidthHeadersDesired);
                 column->WidthRequested = ImMax(width_request + padding_auto_x, min_column_width);
 
-                // FIXME-TABLE: Increase minimum size during init frame so avoid biasing auto-fitting widgets (e.g. TextWrapped) too much.
+                // FIXME-TABLE: Increase minimum size during init frame to avoid biasing auto-fitting widgets (e.g. TextWrapped) too much.
                 // Otherwise what tends to happen is that TextWrapped would output a very large height (= first frame scrollbar display very off + clipper would skip lots of items)
                 // This is merely making the side-effect less extreme, but doesn't properly fixes it.
-                if (column->AutoFitQueue > 0x01 && table->IsFirstFrame)
+                if (column->AutoFitQueue > 0x01 && table->IsInitializing)
                     column->WidthRequested = ImMax(column->WidthRequested, min_column_width * 4.0f);
             }
             width_fixed += column->WidthRequested;
@@ -8694,7 +8694,7 @@ void    ImGui::EndTable()
     {
         inner_window->Scroll.x = 0.0f;
     }
-    else if (table->LastResizedColumn != -1 && table->ResizedColumn == -1 && inner_window->ScrollbarX)
+    else if (table->LastResizedColumn != -1 && table->ResizedColumn == -1 && inner_window->ScrollbarX && table->InstanceInteracted == table->InstanceNo)
     {
         ImGuiTableColumn* column = &table->Columns[table->LastResizedColumn];
         if (column->MaxX < table->InnerClipRect.Min.x)
@@ -9098,7 +9098,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     flags = column->Flags;
 
     // Initialize defaults
-    if (table->IsFirstFrame && !table->IsSettingsLoaded)
+    if (table->IsInitializing && !table->IsSettingsLoaded)
     {
         // Init width or weight
         // Disable auto-fit if a default fixed width has been specified
@@ -9678,7 +9678,7 @@ void    ImGui::TableHeader(const char* label)
     const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld, ImVec2(0.0f, row_height));
     const bool held = IsItemActive();
     if (held)
-        table->HeadHeaderColumn = (ImS8)column_n;
+        table->HeldHeaderColumn = (ImS8)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
 
     // Drag and drop: re-order columns. Frozen columns are not reorderable.
@@ -9888,7 +9888,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
     }
 
     // Fallback default sort order (if no column has the ImGuiTableColumnFlags_DefaultSort flag)
-    if (sort_order_count == 0 && table->IsFirstFrame)
+    if (sort_order_count == 0 && table->IsInitializing)
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
