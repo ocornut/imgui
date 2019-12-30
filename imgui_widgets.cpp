@@ -8032,13 +8032,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HoveredColumnBorder = -1;
     table->RightMostActiveColumn = -1;
 
-    // FIXME-TABLE FIXME-STYLE: Using opaque colors facilitate overlapping elements of the grid
-    //table->BorderOuterColor = GetColorU32(ImGuiCol_Separator, 1.00f);
-    //table->BorderInnerColor = GetColorU32(ImGuiCol_Separator, 0.60f);
-    table->BorderColorStrong = GetColorU32(ImVec4(0.31f, 0.31f, 0.35f, 1.00f));
-    table->BorderColorLight = GetColorU32(ImVec4(0.23f, 0.23f, 0.25f, 1.00f));
-    //table->BorderOuterColor = IM_COL32(255, 0, 0, 255);
-    //table->BorderInnerColor = IM_COL32(255, 255, 0, 255);
+    // Using opaque colors facilitate overlapping elements of the grid
+    table->BorderColorStrong = GetColorU32(ImGuiCol_TableBorderStrong);
+    table->BorderColorLight = GetColorU32(ImGuiCol_TableBorderLight);
     table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
     table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
 

@@ -3052,10 +3052,12 @@ static void ShowDemoWindowTables()
     // About Styling of tables
     // Most settings are configured on a per-table basis via the flags passed to BeginTable() and TableSetupColumns APIs.
     // There are however a few settings that a shared and part of the ImGuiStyle structure:
-    //   style.CellPadding                      // Padding within each cell
-    //   style.Colors[ImGuiCol_TableHeaderBg]   // Table header background
-    //   style.Colors[ImGuiCol_TableRowBg]      // Table row background when ImGuiTableFlags_RowBg is enabled (even rows)
-    //   style.Colors[ImGuiCol_TableRowBgAlt]   // Table row background when ImGuiTableFlags_RowBg is enabled (odds rows)
+    //   style.CellPadding                          // Padding within each cell
+    //   style.Colors[ImGuiCol_TableHeaderBg]       // Table header background
+    //   style.Colors[ImGuiCol_TableBorderStrong]   // Table outer and header borders
+    //   style.Colors[ImGuiCol_TableBorderLight]    // Table inner borders
+    //   style.Colors[ImGuiCol_TableRowBg]          // Table row background when ImGuiTableFlags_RowBg is enabled (even rows)
+    //   style.Colors[ImGuiCol_TableRowBgAlt]       // Table row background when ImGuiTableFlags_RowBg is enabled (odds rows)
 
     // Demos
     if (open_action != -1)
