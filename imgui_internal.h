@@ -1863,8 +1863,8 @@ struct ImGuiTable
     ImGuiTableRowFlags          LastRowFlags : 16;
     int                         RowBgColorCounter;          // Counter for alternating background colors (can be fast-forwarded by e.g clipper)
     ImU32                       RowBgColor;                 // Request for current row background color
-    ImU32                       BorderOuterColor;
-    ImU32                       BorderInnerColor;
+    ImU32                       BorderColorStrong;
+    ImU32                       BorderColorLight;
     float                       BorderX1;
     float                       BorderX2;
     float                       CellPaddingX1;              // Padding from each borders
