@@ -13703,6 +13703,12 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
         return;
 
+    // Early out if parent window is hidden/collapsed
+    // This is faster but also DockNodeUpdateTabBar() relies on TabBarLayout() running (which won't if SkipItems=true) to set NextSelectedTabId = 0). See #2960.
+    // If for whichever reason this is causing problem we would need to ensure that DockNodeUpdateTabBar() ends up clearing NextSelectedTabId even if SkipItems=true.
+    if (window->SkipItems)
+        flags |= ImGuiDockNodeFlags_KeepAliveOnly;
+
     IM_ASSERT((flags & ImGuiDockNodeFlags_DockSpace) == 0);
     ImGuiDockNode* node = DockContextFindNodeByID(ctx, id);
     if (!node)
