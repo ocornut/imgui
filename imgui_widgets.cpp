@@ -8489,9 +8489,9 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             // FIXME-TABLE: This align based on the whole column width, not per-cell, and therefore isn't useful in many cases.
             // (To be able to honor this we might be able to store a log of cells width, per row, for visible rows, but nav/programmatic scroll would have visible artifacts.)
             //if (column->Flags & ImGuiTableColumnFlags_AlignRight)
-            //    column->StartXRows = ImMax(column->StartXRows, column->MaxX - column->WidthContent[0]);
+            //    column->StartXRows = ImMax(column->StartXRows, column->MaxX - column->ContentWidthRowsUnfrozen);
             //else if (column->Flags & ImGuiTableColumnFlags_AlignCenter)
-            //    column->StartXRows = ImLerp(column->StartXRows, ImMax(column->StartXRows, column->MaxX - column->WidthContent[0]), 0.5f);
+            //    column->StartXRows = ImLerp(column->StartXRows, ImMax(column->StartXRows, column->MaxX - column->ContentWidthRowsUnfrozen), 0.5f);
 
             // Reset content width variables
             const float initial_max_pos_x = column->MinX + table->CellPaddingX1;
@@ -9166,8 +9166,10 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float min_row_height)
     table->RowFlags = row_flags;
     TableBeginRow(table);
 
-    // We honor min_height requested by user, but cannot guarantee per-row maximum height as that would essentially require a unique clipping rectangle per-cell.
-    table->RowPosY2 += min_row_height;
+    // We honor min_row_height requested by user, but cannot guarantee per-row maximum height,
+    // because that would essentially require a unique clipping rectangle per-cell.
+    table->RowPosY2 += table->CellPaddingY * 2.0f;
+    table->RowPosY2 = ImMax(table->RowPosY2, table->RowPosY1 + min_row_height);
 
     TableBeginCell(table, 0);
 }
@@ -9211,8 +9213,6 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     IM_ASSERT(table->IsInsideRow);
 
     TableEndCell(table);
-
-    table->RowPosY2 += table->CellPaddingY;
 
     // Position cursor at the bottom of our row so it can be used for e.g. clipping calculation.
     // However it is likely that the next call to TableBeginCell() will reposition the cursor to take account of vertical padding.
@@ -9370,7 +9370,7 @@ void    ImGui::TableEndCell(ImGuiTable* table)
     else
         p_max_pos_x = table->IsFreezeRowsPassed ? &column->ContentMaxPosRowsUnfrozen : &column->ContentMaxPosRowsFrozen;
     *p_max_pos_x = ImMax(*p_max_pos_x, window->DC.CursorMaxPos.x);
-    table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y);
+    table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->CellPaddingY);
 
     // Propagate text baseline for the entire row
     // FIXME-TABLE: Here we propagate text baseline from the last line of the cell.. instead of the first one.
@@ -9447,6 +9447,9 @@ bool    ImGui::TableSetColumnIndex(int column_idx)
     return (table->VisibleMaskByIndex & ((ImU64)1 << column_idx)) != 0;
 }
 
+// Return the cell rectangle based on currently known height.
+// Important: we generally don't know our row height until the end of the row, so Max.y will be incorrect in many situations.
+// The only case where this is correct is if we provided a min_row_height to TableNextRow() and don't go below it.
 ImRect  ImGui::TableGetCellRect()
 {
     ImGuiContext& g = *GImGui;
@@ -9570,7 +9573,7 @@ void    ImGui::TableAutoHeaders()
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
 
-    TableNextRow(ImGuiTableRowFlags_Headers, GetTextLineHeight());
+    TableNextRow(ImGuiTableRowFlags_Headers, GetTextLineHeight() + g.Style.CellPadding.y * 2.0f);
     if (window->SkipItems)
         return;
 
@@ -9674,6 +9677,7 @@ void    ImGui::TableHeader(const char* label)
 
     float row_height = GetTextLineHeight();
     ImRect cell_r = TableGetCellRect();
+    //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
     ImRect work_r = cell_r;
     work_r.Min.x = window->DC.CursorPos.x;
     work_r.Max.y = work_r.Min.y + row_height;

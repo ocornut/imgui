@@ -3581,6 +3581,27 @@ static void ShowDemoWindowTables()
         ImGui::TreePop();
     }
 
+    if (open_action != -1)
+        ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode("Row height"))
+    {
+        HelpMarker("You can pass a 'min_row_height' to TableNextRow().\n\nRows are padded with 'style.CellPadding.y' on top and bottom, so effectively the minimum row height will always be >= 'style.CellPadding.y * 2.0f'.\n\nWe cannot honor a _maximum_ row height as that would requires a unique clipping rectangle per row.");
+        if (ImGui::BeginTable("##2ways", 2, ImGuiTableFlags_Borders))
+        {
+            float min_row_height = ImGui::GetFontSize() + ImGui::GetStyle().CellPadding.y * 2.0f;
+            ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
+            ImGui::Text("min_row_height = %.2f", min_row_height);
+            for (int row = 0; row < 10; row++)
+            {
+                min_row_height = (float)(int)(ImGui::GetFontSize() * 0.30f * row);
+                ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
+                ImGui::Text("min_row_height = %.2f", min_row_height);
+            }
+            ImGui::EndTable();
+        }
+        ImGui::TreePop();
+    }
+
     static const char* template_items_names[] =
     {
         "Banana", "Apple", "Cherry", "Watermelon", "Grapefruit", "Strawberry", "Mango",
