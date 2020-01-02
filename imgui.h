@@ -1081,10 +1081,6 @@ enum ImGuiTableColumnFlags_
     // [Internal] Combinations and masks
     ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthAlwaysAutoResize,
     ImGuiTableColumnFlags_NoDirectResize_           = 1 << 20   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
-    //ImGuiTableColumnFlags_AlignLeft               = 1 << 14,
-    //ImGuiTableColumnFlags_AlignCenter             = 1 << 15,
-    //ImGuiTableColumnFlags_AlignRight              = 1 << 16,
-    //ImGuiTableColumnFlags_AlignMask_              = ImGuiTableColumnFlags_AlignLeft | ImGuiTableColumnFlags_AlignCenter | ImGuiTableColumnFlags_AlignRight
 };
 
 // Flags for ImGui::TableNextRow()
