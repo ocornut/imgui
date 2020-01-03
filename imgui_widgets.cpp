@@ -8111,12 +8111,26 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
         table->HeldHeaderColumn = -1;
         if (table->ReorderColumn != -1 && table->ReorderColumnDir != 0)
         {
-            IM_ASSERT(table->ReorderColumnDir == -1 || table->ReorderColumnDir == +1);
+            // We need to handle reordering across hidden columns.
+            // In the configuration below, moving C to the right of E will lead to:
+            //    ... C [D] E  --->  ... [D] E  C   (Column name/index)
+            //    ... 2  3  4        ...  2  3  4   (Display order)
+            const int reorder_dir = table->ReorderColumnDir;
+            IM_ASSERT(reorder_dir == -1 || reorder_dir == +1);
             IM_ASSERT(table->Flags & ImGuiTableFlags_Reorderable);
-            ImGuiTableColumn* dragged_column = &table->Columns[table->ReorderColumn];
-            ImGuiTableColumn* target_column = &table->Columns[(table->ReorderColumnDir == -1) ? dragged_column->PrevActiveColumn : dragged_column->NextActiveColumn];
-            ImSwap(table->DisplayOrder[dragged_column->IndexDisplayOrder], table->DisplayOrder[target_column->IndexDisplayOrder]);
-            ImSwap(dragged_column->IndexDisplayOrder, target_column->IndexDisplayOrder);
+            ImGuiTableColumn* src_column = &table->Columns[table->ReorderColumn];
+            ImGuiTableColumn* dst_column = &table->Columns[(reorder_dir == -1) ? src_column->PrevActiveColumn : src_column->NextActiveColumn];
+            IM_UNUSED(dst_column);
+            const int src_order = src_column->IndexDisplayOrder;
+            const int dst_order = dst_column->IndexDisplayOrder;
+            src_column->IndexDisplayOrder = (ImS8)dst_order;
+            for (int order_n = src_order + reorder_dir; order_n != dst_order + reorder_dir; order_n += reorder_dir)
+                table->Columns[table->DisplayOrder[order_n]].IndexDisplayOrder -= (ImS8)reorder_dir;
+            IM_ASSERT(dst_column->IndexDisplayOrder == dst_order - reorder_dir);
+
+            // Display order is stored in both columns->IndexDisplayOrder and table->DisplayOrder[], rebuild the later from the former.
+            for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+                table->DisplayOrder[table->Columns[column_n].IndexDisplayOrder] = (ImS8)column_n;
             table->ReorderColumnDir = 0;
             table->IsSettingsDirty = true;
         }
@@ -8455,14 +8469,21 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             continue;
         }
 
-        // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make sure they are all visible.
-        // Because of this we also know that all of the columns will always fit in table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
-        if (!(table->Flags & ImGuiTableFlags_ScrollX))
+        float max_x = FLT_MAX;
+        if (table->Flags & ImGuiTableFlags_ScrollX)
         {
-            float max_x = table->WorkRect.Max.x - (table->ColumnsActiveCount - (column->IndexWithinActiveSet + 1)) * min_column_width;
-            if (offset_x + column->WidthGiven > max_x)
-                column->WidthGiven = ImMax(max_x - offset_x, min_column_width);
+            // Frozen columns can't reach beyond visible width else scrolling will naturally break.
+            if (order_n < table->FreezeColumnsRequest)
+                max_x = table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - order_n) * min_column_width;
         }
+        else
+        {
+            // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make sure they are all visible.
+            // Because of this we also know that all of the columns will always fit in table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
+            max_x = table->WorkRect.Max.x - (table->ColumnsActiveCount - (column->IndexWithinActiveSet + 1)) * min_column_width;
+        }
+        if (offset_x + column->WidthGiven > max_x)
+            column->WidthGiven = ImMax(max_x - offset_x, min_column_width);
 
         column->MinX = offset_x;
         column->MaxX = column->MinX + column->WidthGiven;
