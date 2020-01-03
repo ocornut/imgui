@@ -618,7 +618,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     const ImVec2 uv = _Data->TexUvWhitePixel;
 
-    int count = points_count;
+    int count = points_count; // segment count
     if (!closed)
         count = points_count-1;
 
@@ -768,32 +768,90 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     else
     {
         // Non Anti-aliased Stroke
-        const int idx_count = count*6;
-        const int vtx_count = count*4;      // FIXME-OPT: Not sharing edges
+        const int idx_count = count*9;
+        const int vtx_count = points_count*3;
         PrimReserve(idx_count, vtx_count);
 
-        for (int i1 = 0; i1 < count; i1++)
+        unsigned int first_vtx_ptr = _VtxCurrentIdx;
+
+        float dx1, dy1;
+        if (closed) {
+            dx1 = points[0].x - points[points_count-1].x;
+            dy1 = points[0].y - points[points_count-1].y;
+            IM_NORMALIZE2F_OVER_ZERO(dx1, dy1);
+        }
+
+        for (int i1 = 0; i1 < points_count; i1++)
         {
-            const int i2 = (i1+1) == points_count ? 0 : i1+1;
             const ImVec2& p1 = points[i1];
+
+            const int i2 = i1+1 == points_count ? 0 : i1+1;
             const ImVec2& p2 = points[i2];
+            float dx2 = p1.x - p2.x;
+            float dy2 = p1.y - p2.y;
+            IM_NORMALIZE2F_OVER_ZERO(dx2, dy2);
+            if (!closed && i1 == 0) {
+                dx1 = -dx2;
+                dy1 = -dy2;
+            }
+            if (!closed && i1 == points_count-1) {
+                dx2 = -dx1;
+                dy2 = -dy1;
+            }
 
-            float dx = p2.x - p1.x;
-            float dy = p2.y - p1.y;
-            IM_NORMALIZE2F_OVER_ZERO(dx, dy);
-            dx *= (thickness * 0.5f);
-            dy *= (thickness * 0.5f);
+            float miter_l_recip = dx1 * dy2 - dy1 * dx2;
+            // miter_sign == 1, iff the outer (beveled) edge is on the right, -1 for the left side
+            int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
+            float mx, my;
+            if (abs(miter_l_recip) > 1e-5) {
+                float miter_l = (thickness * 0.5f) / miter_l_recip;
+                mx = p1.x - (dx1 + dx2) * abs(miter_l);
+                my = p1.y - (dy1 + dy2) * abs(miter_l);
+            } else {
+                // Avoid degeneracy for (nearly) straight lines
+                mx = p1.x + dy1 * thickness * 0.5f * miter_sign;
+                my = p1.y - dx1 * thickness * 0.5f * miter_sign;
+            }
+            // The two bevel vertices
+            float b1x, b1y, b2x, b2y;
+            b1x = p1.x - dy1 * thickness * 0.5f * miter_sign;
+            b1y = p1.y + dx1 * thickness * 0.5f * miter_sign;
+            b2x = p1.x + dy2 * thickness * 0.5f * miter_sign;
+            b2y = p1.y - dx2 * thickness * 0.5f * miter_sign;
 
-            _VtxWritePtr[0].pos.x = p1.x + dy; _VtxWritePtr[0].pos.y = p1.y - dx; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
-            _VtxWritePtr[1].pos.x = p2.x + dy; _VtxWritePtr[1].pos.y = p2.y - dx; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
-            _VtxWritePtr[2].pos.x = p2.x - dy; _VtxWritePtr[2].pos.y = p2.y + dx; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
-            _VtxWritePtr[3].pos.x = p1.x - dy; _VtxWritePtr[3].pos.y = p1.y + dx; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col;
-            _VtxWritePtr += 4;
+            dx1 = -dx2;
+            dy1 = -dy2;
 
-            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+2);
-            _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3);
-            _IdxWritePtr += 6;
-            _VtxCurrentIdx += 4;
+            int left_vtx_in  = miter_sign > 0 ? 0 : 1;
+            int right_vtx_in = miter_sign > 0 ? 1 : 0;
+            int left_vtx_out = miter_sign > 0 ? 0 : 2;
+            int right_vtx_out = miter_sign > 0 ? 2 : 1;
+
+            // Vertices for each point are ordered such that for the incoming edge,
+            // the left vertex has index 0, the right vertex has index 1, and the
+            // third vertex (which lies on the outcoming edge), has index 2, regardless of the
+            // side it is on. This is so that the faces can be created without having
+            // processed the target vertex.
+            _VtxWritePtr[left_vtx_in].pos.x = mx; _VtxWritePtr[left_vtx_in].pos.y = my; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+            _VtxWritePtr[right_vtx_in].pos.x = b1x; _VtxWritePtr[right_vtx_in].pos.y = b1y; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
+            _VtxWritePtr[2].pos.x = b2x; _VtxWritePtr[2].pos.y = b2y; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
+            _VtxWritePtr += 3;
+
+            if (i1 < count) {
+                _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx+left_vtx_out);
+                _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+right_vtx_out);
+                _IdxWritePtr[2] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+4 : first_vtx_ptr+1);
+
+                _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx+left_vtx_out);
+                _IdxWritePtr[4] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+4 : first_vtx_ptr+1);
+                _IdxWritePtr[5] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+3 : first_vtx_ptr);
+
+                _IdxWritePtr[6] = (ImDrawIdx)(_VtxCurrentIdx);
+                _IdxWritePtr[7] = (ImDrawIdx)(_VtxCurrentIdx+1);
+                _IdxWritePtr[8] = (ImDrawIdx)(_VtxCurrentIdx+2);
+                _IdxWritePtr += 9;
+            }
+            _VtxCurrentIdx += 3;
         }
     }
 }

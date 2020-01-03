@@ -225,7 +225,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     static bool show_app_constrained_resize = false;
     static bool show_app_simple_overlay = false;
     static bool show_app_window_titles = false;
-    static bool show_app_custom_rendering = false;
+    static bool show_app_custom_rendering = true;
 
     if (show_app_dockspace)           ShowExampleAppDockSpace(&show_app_dockspace);     // Process the Docking app first, as explicit DockSpace() nodes needs to be submitted early (read comments near the DockSpace function)
     if (show_app_documents)           ShowExampleAppDocuments(&show_app_documents);     // Process the Document app next, as it may also use a DockSpace()
@@ -4517,6 +4517,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
     // In this example we are not using the maths operators!
     ImDrawList* draw_list = ImGui::GetWindowDrawList();
 
+    ImGui::Checkbox("Antialiasing", &ImGui::GetStyle().AntiAliasedLines);
+
     if (ImGui::BeginTabBar("##TabBar"))
     {
         // Primitives
@@ -4567,7 +4569,30 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + 1, y + 1), col);                          x += sz;            // Pixel (faster than AddLine)
             draw_list->AddRectFilledMultiColor(ImVec2(x, y), ImVec2(x + sz, y + sz), IM_COL32(0, 0, 0, 255), IM_COL32(255, 0, 0, 255), IM_COL32(255, 255, 0, 255), IM_COL32(0, 255, 0, 255));
             ImGui::Dummy(ImVec2((sz + spacing) * 9.8f, (sz + spacing) * 3));
+
+            x = p.x + 4;
+            y += sz + spacing;
+            // (const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
+            // ImVec2 points[4] = {{x, y}, {x+100, y}, {x+100, y+100}, {x+200, y+100}};
+            // draw_list->AddPolyline(points, 4, col, false, 10);
+            ImVec2 points1[3] = {{x, y}, {x+100, y}, {x+100, y+100}};
+            draw_list->AddPolyline(points1, 3, col, true, 10);
+            x += 120;
+            ImVec2 points2[3] = {{x, y}, {x+100, y+100}, {x+100, y}};
+            draw_list->AddPolyline(points2, 3, col, true, 10);
+            x += 120;
+            ImVec2 points3[3] = {{x, y}, {x+100, y+100}, {x+100, y}};
+            draw_list->AddPolyline(points3, 3, col, false, 10);
             ImGui::EndTabItem();
+            x += 60 - 240;
+            y += 100 + 60;
+            static ImVec2 *bench_points = (ImVec2*)malloc(sizeof(ImVec2) * 100000);
+            for (int i = 0; i < 100000; i++) {
+                bench_points[i].x = x + 50*sin(i*0.3);
+                bench_points[i].y = y + 50*cos(i*0.3);
+            }
+            draw_list->AddPolyline(bench_points, 100000, col, false, 10);
+
         }
 
         if (ImGui::BeginTabItem("Canvas"))
@@ -4674,7 +4699,7 @@ void ShowExampleAppDockSpace(bool* p_open)
         window_flags |= ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoNavFocus;
     }
 
-    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background 
+    // When using ImGuiDockNodeFlags_PassthruCentralNode, DockSpace() will render our background
     // and handle the pass-thru hole, so we ask Begin() to not render a background.
     if (dockspace_flags & ImGuiDockNodeFlags_PassthruCentralNode)
         window_flags |= ImGuiWindowFlags_NoBackground;
