@@ -4575,13 +4575,13 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             // (const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
             // ImVec2 points[4] = {{x, y}, {x+100, y}, {x+100, y+100}, {x+200, y+100}};
             // draw_list->AddPolyline(points, 4, col, false, 10);
-            ImVec2 points1[3] = {{x, y}, {x+100, y}, {x+100, y+100}};
+            ImVec2 points1[3] = {ImVec2(x, y), ImVec2(x+100, y), ImVec2(x+100, y+100)};
             draw_list->AddPolyline(points1, 3, col, true, 10);
             x += 120;
-            ImVec2 points2[3] = {{x, y}, {x+100, y+100}, {x+100, y}};
+            ImVec2 points2[3] = {ImVec2(x, y), ImVec2(x+100, y+100), ImVec2(x+100, y)};
             draw_list->AddPolyline(points2, 3, col, true, 10);
             x += 120;
-            ImVec2 points3[3] = {{x, y}, {x+100, y+100}, {x+100, y}};
+            ImVec2 points3[3] = {ImVec2(x, y), ImVec2(x+100, y+100), ImVec2(x+100, y)};
             draw_list->AddPolyline(points3, 3, col, false, 10);
             ImGui::EndTabItem();
             x += 60 - 240;

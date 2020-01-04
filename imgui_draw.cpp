@@ -523,7 +523,7 @@ void ImDrawList::PopTextureID()
 }
 
 // Reserve space for a number of vertices and indices.
-// You must finish filling your reserved data before calling PrimReserve() again, as it may reallocate or 
+// You must finish filling your reserved data before calling PrimReserve() again, as it may reallocate or
 // submit the intermediate results. PrimUnreserve() can be used to release unused allocations.
 void ImDrawList::PrimReserve(int idx_count, int vtx_count)
 {
@@ -803,10 +803,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             // miter_sign == 1, iff the outer (beveled) edge is on the right, -1 for the left side
             int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
             float mx, my;
-            if (abs(miter_l_recip) > 1e-5) {
+            if (fabsf(miter_l_recip) > 1e-5) {
                 float miter_l = (thickness * 0.5f) / miter_l_recip;
-                mx = p1.x - (dx1 + dx2) * abs(miter_l);
-                my = p1.y - (dy1 + dy2) * abs(miter_l);
+                mx = p1.x - (dx1 + dx2) * fabsf(miter_l);
+                my = p1.y - (dy1 + dy2) * fabsf(miter_l);
             } else {
                 // Avoid degeneracy for (nearly) straight lines
                 mx = p1.x + dy1 * thickness * 0.5f * miter_sign;
