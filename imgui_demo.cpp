@@ -4573,7 +4573,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             x = p.x + 4;
             y += sz + spacing;
 
-            ImVec2 points1[5] = {ImVec2(x, y), ImVec2(x+50, y), ImVec2(x+100, y), ImVec2(x+100, y+100), ImVec2(x+40, y+60)};
+            ImVec2 points1[5] = {ImVec2(x, y), ImVec2(x+50, y), ImVec2(x+100, y), ImVec2(x+100, y+100), ImVec2(x+40, y+20)};
             draw_list->AddPolyline(points1, 5, col, true, 15);
             x += 120;
             ImVec2 points2[3] = {ImVec2(x, y), ImVec2(x+100, y+100), ImVec2(x+100, y)};
@@ -4585,8 +4585,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             y += 100 + 60;
             static ImVec2 *bench_points = (ImVec2*)malloc(sizeof(ImVec2) * 100000);
             for (int i = 0; i < 100000; i++) {
-                bench_points[i].x = x + 50*sin(i*0.3);
-                bench_points[i].y = y + 50*cos(i*0.3);
+                bench_points[i].x = x + 50*sin(i*3.3);
+                bench_points[i].y = y + 50*cos(i*3.3);
             }
             draw_list->AddPolyline(bench_points, 100000, col, false, 10);
             ImGui::EndTabItem();

@@ -779,10 +779,12 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         unsigned int unused_vertices = 0;
         unsigned int unused_indices = 0;
 
+        float sqlen1, sqlen2;
         float dx1, dy1;
         if (closed) {
             dx1 = points[0].x - points[points_count-1].x;
             dy1 = points[0].y - points[points_count-1].y;
+            sqlen1 = dx1 * dx1 + dy1 * dy1;
             IM_NORMALIZE2F_OVER_ZERO(dx1, dy1);
         }
 
@@ -794,22 +796,32 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             const ImVec2& p2 = points[i2];
             float dx2 = p1.x - p2.x;
             float dy2 = p1.y - p2.y;
+            sqlen2 = dx2 * dx2 + dy2 * dy2;
             IM_NORMALIZE2F_OVER_ZERO(dx2, dy2);
             if (!closed && i1 == 0) {
                 dx1 = -dx2;
                 dy1 = -dy2;
+                sqlen1 = sqlen2;
             }
             if (!closed && i1 == points_count-1) {
                 dx2 = -dx1;
                 dy2 = -dy1;
+                sqlen2 = sqlen1;
             }
 
             float miter_l_recip = dx1 * dy2 - dy1 * dx2;
-            // miter_sign == 1, iff the outer (maybe beveled) edge is on the right, -1 iff it is on the left
-            int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
             float mlx, mly, mrx, mry; // Left and right miters
             if (fabsf(miter_l_recip) > 1e-5) {
                 float miter_l = (thickness * 0.5f) / miter_l_recip;
+                float min_sqlen = sqlen1 > sqlen2 ? sqlen2 : sqlen1;
+                float miter_sqlen = ((dx1 + dx2) * (dx1 + dx2) + (dy1 + dy2) * (dy1 + dy2)) * miter_l * miter_l;
+                if (miter_sqlen > min_sqlen) {
+                    // Limit miter so it doesn't shoot away from the line in case of close to 180 degree turns 
+                    miter_l *= sqrtf(min_sqlen / miter_sqlen);
+                }
+                if (thickness == 60)
+                    printf("min_sql: %f, miter_sql: %f\n", min_sqlen, miter_sqlen);
+
                 mlx = p1.x - (dx1 + dx2) * miter_l;
                 mly = p1.y - (dy1 + dy2) * miter_l;
                 mrx = p1.x + (dx1 + dx2) * miter_l;
@@ -822,6 +834,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 mry = p1.y + dx1 * thickness * 0.5f;
             }
             // The two bevel vertices if the angle is right or obtuse
+            // miter_sign == 1, iff the outer (maybe bevelled) edge is on the right, -1 iff it is on the left
+            int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
             float b1x, b1y, b2x, b2y;
             bool bevel = dx1 * dx2 + dy1 * dy2 > 1e-5;
             if (bevel) {
@@ -830,13 +844,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 b2x = p1.x + (dx2 + dy2 * miter_sign) * thickness * 0.5f;
                 b2y = p1.y + (dy2 - dx2 * miter_sign) * thickness * 0.5f;
             }
-            if (thickness == 15) {
-                printf("bevel: %d, i: %d, miter: %f, dot: %f\n", bevel, i1, miter_l_recip, dx1 * dx2 + dy1 * dy2);
+            if (thickness == 60) {
+                printf("i: %d, miter: %f, sqlen1: %f, sqlen2: %f\n", i1, miter_l_recip, sqlen1, sqlen2);
             }
 
             // Set the previous line direction so it doesn't need to be recomputed
             dx1 = -dx2;
             dy1 = -dy2;
+            sqlen1 = sqlen2;
 
             // Vertices for each point are ordered such that for the incoming edge,
             // the left vertex has index 0, the right vertex has index 1, and the
@@ -857,11 +872,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
 
             if (i1 < count) {
-                _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + ((miter_sign < 0 && bevel) ? 2 : 0));
-                _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + ((miter_sign > 0 && bevel) ? 2 : 1));
+                _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 2 : 0));
+                _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign > 0) ? 2 : 1));
                 _IdxWritePtr[2] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+1 : first_vtx_ptr+1);
 
-                _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + ((miter_sign < 0 && bevel) ? 2 : 0));
+                _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 2 : 0));
                 _IdxWritePtr[4] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+1 : first_vtx_ptr+1);
                 _IdxWritePtr[5] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr);
 
