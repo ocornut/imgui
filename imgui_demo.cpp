@@ -4527,7 +4527,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             static float sz = 36.0f;
             static float thickness = 3.0f;
             static int ngon_sides = 6;
-            static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
+            static ImVec4 colf = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
             ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
             ImGui::DragFloat("Thickness", &thickness, 0.05f, 1.0f, 8.0f, "%.02f");
             ImGui::SliderInt("n-gon sides", &ngon_sides, 3, 12);
@@ -4572,18 +4572,15 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
             x = p.x + 4;
             y += sz + spacing;
-            // (const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
-            // ImVec2 points[4] = {{x, y}, {x+100, y}, {x+100, y+100}, {x+200, y+100}};
-            // draw_list->AddPolyline(points, 4, col, false, 10);
-            ImVec2 points1[3] = {ImVec2(x, y), ImVec2(x+100, y), ImVec2(x+100, y+100)};
-            draw_list->AddPolyline(points1, 3, col, true, 10);
+
+            ImVec2 points1[5] = {ImVec2(x, y), ImVec2(x+50, y), ImVec2(x+100, y), ImVec2(x+100, y+100), ImVec2(x+40, y+60)};
+            draw_list->AddPolyline(points1, 5, col, true, 15);
             x += 120;
             ImVec2 points2[3] = {ImVec2(x, y), ImVec2(x+100, y+100), ImVec2(x+100, y)};
-            draw_list->AddPolyline(points2, 3, col, true, 10);
+            draw_list->AddPolyline(points2, 3, col, true, 15);
             x += 120;
             ImVec2 points3[3] = {ImVec2(x, y), ImVec2(x+100, y+100), ImVec2(x+100, y)};
-            draw_list->AddPolyline(points3, 3, col, false, 10);
-            ImGui::EndTabItem();
+            draw_list->AddPolyline(points3, 3, col, false, 15);
             x += 60 - 240;
             y += 100 + 60;
             static ImVec2 *bench_points = (ImVec2*)malloc(sizeof(ImVec2) * 100000);
@@ -4592,6 +4589,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 bench_points[i].y = y + 50*cos(i*0.3);
             }
             draw_list->AddPolyline(bench_points, 100000, col, false, 10);
+            ImGui::EndTabItem();
 
         }
 
