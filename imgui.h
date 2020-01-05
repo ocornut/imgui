@@ -2173,6 +2173,7 @@ struct ImFontAtlas
     ImTextureID                 TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
     int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
     int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0.
+    ImVec2                      TexGlyphShadowOffset;  // If you would like to use shadows with your text use this to create big enough glyph quad to cover your shadow pixels. Defaults to (0, 0). Defines horizontal and vertical shadows. If positive creates shadows right-bottom else creates shadows top-left. In other words -x=left, -y=top, x=right and y=bottom.
 
     // [Internal]
     // NB: Access texture data via GetTexData*() calls! Which will setup a default font for you.
