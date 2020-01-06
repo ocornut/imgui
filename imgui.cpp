@@ -2222,7 +2222,7 @@ void ImGuiTextBuffer::appendfv(const char* fmt, va_list args)
 static bool GetSkipItemForListClipping()
 {
     ImGuiContext& g = *GImGui;
-    return (g.CurrentTable ? g.CurrentTable->BackupSkipItems : g.CurrentWindow->SkipItems);
+    return (g.CurrentTable ? g.CurrentTable->HostSkipItems : g.CurrentWindow->SkipItems);
 }
 
 // Helper to calculate coarse clipping of large list of evenly sized items.

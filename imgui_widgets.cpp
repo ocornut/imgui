@@ -7997,6 +7997,13 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         PushID(instance_id);
     }
 
+    // Backup a copy of host window members we will modify
+    ImGuiWindow* inner_window = table->InnerWindow;
+    table->HostClipRect = inner_window->ClipRect;
+    table->HostSkipItems = inner_window->SkipItems;
+    table->HostWorkRect = inner_window->WorkRect;
+    table->HostCursorMaxPos = inner_window->DC.CursorMaxPos;
+
     // Borders
     // - None               ........Content..... Pad .....Content........
     // - VOuter             | Pad ..Content..... Pad .....Content.. Pad |       // FIXME-TABLE: Not handled properly
@@ -8004,7 +8011,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // - VOuter+VInner      | Pad ..Content.. Pad | Pad ..Content.. Pad |
 
     const bool has_cell_padding_x = (flags & ImGuiTableFlags_BordersVOuter) != 0;
-    ImGuiWindow* inner_window = table->InnerWindow;
     table->CellPaddingX1 = has_cell_padding_x ? g.Style.CellPadding.x + 1.0f : 0.0f;
     table->CellPaddingX2 = has_cell_padding_x ? g.Style.CellPadding.x : 0.0f;
     table->CellPaddingY = g.Style.CellPadding.y;
@@ -8014,7 +8020,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->CurrentRow = -1;
     table->RowBgColorCounter = 0;
     table->LastRowFlags = ImGuiTableRowFlags_None;
-    table->HostClipRect = inner_window->ClipRect;
     table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
     table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
     table->InnerClipRect.ClipWith(table->HostClipRect);
@@ -8070,11 +8075,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Load settings
     if (table->IsSettingsRequestLoad)
         TableLoadSettings(table);
-
-    // Grab a copy of window fields we will modify
-    table->BackupSkipItems = inner_window->SkipItems;
-    table->BackupWorkRect = inner_window->WorkRect;
-    table->BackupCursorMaxPos = inner_window->DC.CursorMaxPos;
 
     // Disable output until user calls TableNextRow() or TableNextCell() leading to the TableUpdateLayout() call..
     // This is not strictly necessary but will reduce cases were misleading "out of table" output will be confusing to the user.
@@ -8521,7 +8521,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         }
 
         // Don't decrement auto-fit counters until container window got a chance to submit its items
-        if (table->BackupSkipItems == false)
+        if (table->HostSkipItems == false)
         {
             column->AutoFitQueue >>= 1;
             column->CannotSkipItemsQueue >>= 1;
@@ -8661,8 +8661,8 @@ void    ImGui::EndTable()
         TableEndRow(table);
 
     // Finalize table height
-    inner_window->SkipItems = table->BackupSkipItems;
-    inner_window->DC.CursorMaxPos = table->BackupCursorMaxPos;
+    inner_window->SkipItems = table->HostSkipItems;
+    inner_window->DC.CursorMaxPos = table->HostCursorMaxPos;
     if (inner_window != outer_window)
     {
         table->OuterRect.Max.y = ImMax(table->OuterRect.Max.y, inner_window->Pos.y + inner_window->Size.y);
@@ -8735,8 +8735,8 @@ void    ImGui::EndTable()
     }
 
     // Layout in outer window
-    inner_window->WorkRect = table->BackupWorkRect;
-    inner_window->SkipItems = table->BackupSkipItems;
+    inner_window->WorkRect = table->HostWorkRect;
+    inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
     outer_window->DC.ColumnsOffset.x = 0.0f;
     if (inner_window != outer_window)
@@ -9359,7 +9359,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     // FIXME-COLUMNS: Setup baseline, preserve across columns (how can we obtain first line baseline tho..)
     // window->DC.CurrLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, g.Style.FramePadding.y);
 
-    window->SkipItems = column->IsClipped ? true : table->BackupSkipItems;
+    window->SkipItems = column->IsClipped ? true : table->HostSkipItems;
     if (table->Flags & ImGuiTableFlags_NoClipX)
     {
         table->DrawSplitter.SetCurrentChannel(window->DrawList, 1);
@@ -9593,15 +9593,23 @@ void    ImGui::TableAutoHeaders()
 
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
+    const int columns_count = table->ColumnsCount;
 
-    TableNextRow(ImGuiTableRowFlags_Headers, GetTextLineHeight() + g.Style.CellPadding.y * 2.0f);
+    // Calculate row height (for the unlikely case that labels may be are multi-line)
+    float row_height = GetTextLineHeight();
+    for (int column_n = 0; column_n < columns_count; column_n++)
+        if (TableGetColumnIsVisible(column_n))
+            row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
+    row_height += g.Style.CellPadding.y * 2.0f;
+
+    // Open row
+    TableNextRow(ImGuiTableRowFlags_Headers, row_height);
     if (window->SkipItems)
         return;
 
     // This for loop is constructed to not make use of internal functions,
     // as this is intended to be a base template to copy and build from.
     int open_context_popup = INT_MAX;
-    const int columns_count = table->ColumnsCount;
     for (int column_n = 0; column_n < columns_count; column_n++)
     {
         if (!TableSetColumnIndex(column_n))
@@ -9638,7 +9646,7 @@ void    ImGui::TableAutoHeaders()
 
     // FIXME-TABLE: This is not user-land code any more... 
     // FIXME-TABLE: Need to explain why this is here!
-    window->SkipItems = table->BackupSkipItems;
+    window->SkipItems = table->HostSkipItems;
 
     // Allow opening popup from the right-most section after the last column
     // FIXME-TABLE: This is not user-land code any more... perhaps instead we should expose hovered column.
@@ -9683,6 +9691,7 @@ void    ImGui::TableAutoHeaders()
 // Emit a column header (text + optional sort order)
 // We cpu-clip text here so that all columns headers can be merged into a same draw call.
 // FIXME-TABLE: Should hold a selection state.
+// FIXME-TABLE: Style confusion between CellPadding.y and FramePadding.y
 void    ImGui::TableHeader(const char* label)
 {
     ImGuiContext& g = *GImGui;
@@ -9696,19 +9705,21 @@ void    ImGui::TableHeader(const char* label)
     const int column_n = table->CurrentColumn;
     ImGuiTableColumn* column = &table->Columns[column_n];
 
-    float row_height = GetTextLineHeight();
-    ImRect cell_r = TableGetCellRect();
-    //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
-    ImRect work_r = cell_r;
-    work_r.Min.x = window->DC.CursorPos.x;
-    work_r.Max.y = work_r.Min.y + row_height;
-
     // Label
     if (label == NULL)
         label = "";
     const char* label_end = FindRenderedTextEnd(label);
     ImVec2 label_size = CalcTextSize(label, label_end, true);
     ImVec2 label_pos = window->DC.CursorPos;
+
+    // If we already got a row height, there's use that.
+    ImRect cell_r = TableGetCellRect();
+    float label_height = ImMax(label_size.y, cell_r.GetHeight() - g.Style.CellPadding.y * 2.0f);
+
+    //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
+    ImRect work_r = cell_r;
+    work_r.Min.x = window->DC.CursorPos.x;
+    work_r.Max.y = work_r.Min.y + label_height;
     float ellipsis_max = work_r.Max.x;
 
     // Selectable
@@ -9719,7 +9730,7 @@ void    ImGui::TableHeader(const char* label)
 
     // Keep header highlighted when context menu is open. (FIXME-TABLE: however we cannot assume the ID of said popup if it has been created by the user...)
     const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceNo);
-    const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld, ImVec2(0.0f, row_height));
+    const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld, ImVec2(0.0f, label_height));
     const bool held = IsItemActive();
     if (held)
         table->HeldHeaderColumn = (ImS8)column_n;
@@ -9781,7 +9792,7 @@ void    ImGui::TableHeader(const char* label)
     // Render clipped label
     // Clipping here ensure that in the majority of situations, all our header cells will be merged into a single draw call.
     //window->DrawList->AddCircleFilled(ImVec2(ellipsis_max, label_pos.y), 40, IM_COL32_WHITE);
-    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + row_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
+    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
 
     // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering for merging.
     // FIXME-TABLE: Clarify policies of how label width and potential decorations (arrows) fit into auto-resize of the column
@@ -9831,7 +9842,7 @@ void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* click
 }
 
 // Return NULL if no sort specs.
-// Return ->WantSort == true when the specs have changed since the last query.
+// You can sort your data again when 'SpecsChanged == true'.It will be true with sorting specs have changed since last call, or the first time.
 const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 {
     ImGuiContext& g = *GImGui;
