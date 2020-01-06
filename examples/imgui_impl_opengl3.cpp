@@ -157,7 +157,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
 
-    // Store GLSL version string so we can refer to it later in case we recreate shaders. 
+    // Store GLSL version string so we can refer to it later in case we recreate shaders.
     // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     if (glsl_version == NULL)

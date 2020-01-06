@@ -514,7 +514,7 @@ static void ShowDemoWindowWidgets()
         }
 
         {
-            // To wire InputText() with std::string or any other custom string type, 
+            // To wire InputText() with std::string or any other custom string type,
             // see the "Text Input > Resize Callback" section of this demo, and the misc/cpp/imgui_stdlib.h file.
             static char str0[128] = "Hello, world!";
             ImGui::InputText("input text", str0, IM_ARRAYSIZE(str0));
@@ -991,7 +991,7 @@ static void ShowDemoWindowWidgets()
         ImGui::TreePop();
     }
 
-    // To wire InputText() with std::string or any other custom string type, 
+    // To wire InputText() with std::string or any other custom string type,
     // see the "Text Input > Resize Callback" section of this demo, and the misc/cpp/imgui_stdlib.h file.
     if (ImGui::TreeNode("Text Input"))
     {
@@ -1041,7 +1041,7 @@ static void ShowDemoWindowWidgets()
 
         if (ImGui::TreeNode("Resize Callback"))
         {
-            // To wire InputText() with std::string or any other custom string type, 
+            // To wire InputText() with std::string or any other custom string type,
             // you can use the ImGuiInputTextFlags_CallbackResize flag + create a custom ImGui::InputText() wrapper using your prefered type.
             // See misc/cpp/imgui_stdlib.h for an implementation of this using std::string.
             HelpMarker("Demonstrate using ImGuiInputTextFlags_CallbackResize to wire your resizable string type to InputText().\n\nSee misc/cpp/imgui_stdlib.h for an implementation of this for std::string.");
