@@ -693,7 +693,8 @@ namespace ImGui
     IMGUI_API void          TableHeader(const char* label);             // submit one header cell manually.
     // Tables: Sorting
     // - Call TableGetSortSpecs() to retrieve latest sort specs for the table. Return value will be NULL if no sorting.
-    // - Read ->SpecsChanged to tell if the specs have changed since last call.
+    // - You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since last call, or the first time.
+    // - Don't hold on this structure over multiple frames.
     IMGUI_API const ImGuiTableSortSpecs* TableGetSortSpecs();           // get latest sort specs for the table (NULL if not sorting).
 
     // Tab Bars, Tabs
@@ -1856,7 +1857,7 @@ struct ImGuiTableSortSpecs
 {
     const ImGuiTableSortSpecsColumn* Specs;     // Pointer to sort spec array.
     int                         SpecsCount;     // Sort spec count. Most often 1 unless e.g. ImGuiTableFlags_MultiSortable is enabled.
-    bool                        SpecsChanged;   // Set to true by TableGetSortSpecs() call if the specs have changed since the previous call.
+    bool                        SpecsChanged;   // Set to true by TableGetSortSpecs() call if the specs have changed since the previous call. Use this to sort again!
     ImU64                       ColumnsMask;    // Set to the mask of column indexes included in the Specs array. e.g. (1 << N) when column N is sorted.
 
     ImGuiTableSortSpecs()       { Specs = NULL; SpecsCount = 0; SpecsChanged = false; ColumnsMask = 0x00; }
