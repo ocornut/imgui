@@ -127,7 +127,7 @@ namespace
             return false;
 
         memset(&Info, 0, sizeof(Info));
-        SetPixelHeight((uint32_t)cfg.SizePixels);
+        SetPixelHeight((uint32_t)IM_ROUND(cfg.SizePixels * cfg.DpiScale));
 
         // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
         UserFlags = cfg.RasterizerFlags | extra_user_flags;

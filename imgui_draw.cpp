@@ -2236,7 +2236,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
         // Convert our ranges in the format stb_truetype wants
         ImFontConfig& cfg = atlas->ConfigData[src_i];
-        const float pixel_size = cfg.SizePixels * cfg.DpiScale;
+        const float pixel_size = IM_ROUND(cfg.SizePixels * cfg.DpiScale);
         src_tmp.PackRange.font_size = pixel_size;
         src_tmp.PackRange.first_unicode_codepoint_in_range = 0;
         src_tmp.PackRange.array_of_unicode_codepoints = src_tmp.GlyphsList.Data;
@@ -2338,7 +2338,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
         ImFontConfig& cfg = atlas->ConfigData[src_i];
         ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
 
-        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels * cfg.DpiScale);
+        const float font_scale = stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, IM_ROUND(cfg.SizePixels * cfg.DpiScale));
         int unscaled_ascent, unscaled_descent, unscaled_line_gap;
         stbtt_GetFontVMetrics(&src_tmp.FontInfo, &unscaled_ascent, &unscaled_descent, &unscaled_line_gap);
 
