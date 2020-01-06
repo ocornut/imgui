@@ -64,6 +64,7 @@ Breaking Changes:
 Other Changes:
 - Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
   We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
+- ColorEdit: Fix label alignment when using ImGuiColorEditFlags_NoInputs. (#2955) [@rokups]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
