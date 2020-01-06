@@ -366,10 +366,14 @@ static inline float  ImSaturate(float f)                                        
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / ImSqrt(d); return fail_value; }
-static inline float  ImFloor(float v);
-static inline float  ImRound(float v);
-static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2(ImFloor(v.x), ImFloor(v.y)); }
-static inline ImVec2 ImRound(const ImVec2& v)                                   { return ImVec2(ImRound(v.x), ImRound(v.y)); }
+static inline float  ImFloor(float v)                                           { return IM_FLOOR(v); }
+static inline float  ImRound(float v)                                           { return IM_ROUND(v); }
+static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2(IM_FLOOR(v.x), IM_FLOOR(v.y)); }
+static inline ImVec2 ImRound(const ImVec2& v)                                   { return ImVec2(IM_ROUND(v.x), IM_ROUND(v.y)); }
+static inline float  ImFloorToPixel(float v);
+static inline float  ImRoundToPixel(float v);
+static inline ImVec2 ImFloorToPixel(const ImVec2& v)                            { return ImVec2(ImFloorToPixel(v.x), ImFloorToPixel(v.y)); }
+static inline ImVec2 ImRoundToPixel(const ImVec2& v)                            { return ImVec2(ImRoundToPixel(v.x), ImRoundToPixel(v.y)); }
 static inline int    ImModPositive(int a, int b)                                { return (a + b) % b; }
 static inline float  ImDot(const ImVec2& a, const ImVec2& b)                    { return a.x * b.x + a.y * b.y; }
 static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        { return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a); }
@@ -744,7 +748,7 @@ struct IMGUI_API ImRect
     void        TranslateY(float dy)                { Min.y += dy; Max.y += dy; }
     void        ClipWith(const ImRect& r)           { Min = ImMax(Min, r.Min); Max = ImMin(Max, r.Max); }                   // Simple version, may lead to an inverted rectangle, which is fine for Contains/Overlaps test but not for display.
     void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
-    void        Floor()                             { Min.x = ImFloor(Min.x); Min.y = ImFloor(Min.y); Max.x = ImFloor(Max.x); Max.y = ImFloor(Max.y); }
+    void        Floor()                             { Min.x = ImFloorToPixel(Min.x); Min.y = ImFloorToPixel(Min.y); Max.x = ImFloorToPixel(Max.x); Max.y = ImFloorToPixel(Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
 };
 #ifdef IMGUI_DEFINE_MATH_OPERATORS
@@ -2223,12 +2227,12 @@ IMGUI_API void              ImFontAtlasBuildFinish(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
 IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
 
-static inline float ImFloor(float f)
+static inline float ImFloorToPixel(float f)
 {
     return IM_FLOOR(f * GImGui->CurrentDpiScale) * GImGui->CurrentDpiScaleInverse;
 }
 
-static inline float ImRound(float f)
+static inline float ImRoundToPixel(float f)
 {
     return IM_ROUND(f * GImGui->CurrentDpiScale) * GImGui->CurrentDpiScaleInverse;
 }

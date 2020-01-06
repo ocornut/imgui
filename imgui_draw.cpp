@@ -2901,7 +2901,7 @@ void ImFont::AddGlyph(ImWchar codepoint, float x0, float y0, float x1, float y1,
     glyph.AdvanceX = advance_x + ConfigData->GlyphExtraSpacing.x;  // Bake spacing into AdvanceX
 
     if (ConfigData->PixelSnapH)
-        glyph.AdvanceX = ImRound(glyph.AdvanceX);
+        glyph.AdvanceX = ImRoundToPixel(glyph.AdvanceX);
 
     // Compute rough surface usage metrics (+1 to account for average padding, +0.99 to round)
     DirtyLookupTables = true;
@@ -3142,8 +3142,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (!glyph || !glyph->Visible)
         return;
     float scale = (size >= 0.0f) ? (size / FontSize / ConfigData->DpiScale) : 1.0f;
-    pos.x = ImRound(pos.x + DisplayOffset.x);
-    pos.y = ImRound(pos.y + DisplayOffset.y);
+    pos.x = ImRoundToPixel(pos.x + DisplayOffset.x);
+    pos.y = ImRoundToPixel(pos.y + DisplayOffset.y);
     draw_list->PrimReserve(6, 4);
     draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
@@ -3154,8 +3154,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
 
     // Align to be pixel perfect
-    pos.x = ImRound(pos.x + DisplayOffset.x);
-    pos.y = ImRound(pos.y + DisplayOffset.y);
+    pos.x = ImRoundToPixel(pos.x + DisplayOffset.x);
+    pos.y = ImRoundToPixel(pos.y + DisplayOffset.y);
     float x = pos.x;
     float y = pos.y;
     if (y > clip_rect.w)
