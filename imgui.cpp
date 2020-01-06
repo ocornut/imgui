@@ -3921,21 +3921,15 @@ static void DpiScaleMousePosition()
     float dpi = 1.f;
     if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
-        if (g.MovingWindow)
-            // Windows and their viewpots do not transition DPI during window movement.
-            dpi = g.MovingWindow->Viewport->DpiScale;
+        // Windows and their viewpots do not transition DPI during window movement.
+        // Hovered window may still have DPI of another monitor.
+        if (ImGuiWindow* dpi_source = g.MovingWindow ? g.MovingWindow : g.HoveredWindow)
+            dpi = dpi_source->Viewport->DpiScale;
         else
         {
-            // Use DPI of monitor mouse hovers
-            for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
-            {
-                ImGuiPlatformMonitor* monitor = (ImGuiPlatformMonitor*)&g.PlatformIO.Monitors[i];
-                if (ImRect(monitor->MainPos, monitor->MainPos + monitor->MainSize).Contains(g.IO.MousePos))
-                {
-                    dpi = monitor->DpiScale;
-                    break;
-                }
-            }
+            int monitor_index = ImGui::FindPlatformMonitorForPos(g.IO.MousePos);
+            if (monitor_index != -1)
+                dpi = g.PlatformIO.Monitors[monitor_index].DpiScale;
         }
     }
     else
