@@ -4679,8 +4679,7 @@ ImVec2 ImGui::CalcTextSize(const char* text, const char* text_end, bool hide_tex
         return ImVec2(0.0f, font_size);
     ImVec2 text_size = font->CalcTextSizeA(font_size, FLT_MAX, wrap_width, text, text_display_end, NULL);
 
-    // Round
-    text_size.x = ImFloor(text_size.x + 0.95f);
+    text_size.x = ImRound(text_size.x);
 
     return text_size;
 }
