@@ -3166,7 +3166,7 @@ static ImVec2 InputTextCalcTextSizeW(const ImWchar* text_begin, const ImWchar* t
     ImGuiContext& g = *GImGui;
     ImFont* font = g.Font;
     const float line_height = g.FontSize;
-    const float scale = line_height / font->FontSize / font->ConfigData->DpiScale;
+    const float scale = line_height * font->FontScaleRatioInv;
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;

@@ -2392,6 +2392,7 @@ void ImFontAtlasBuildSetupFont(ImFontAtlas* atlas, ImFont* font, ImFontConfig* f
     {
         font->ClearOutputData();
         font->FontSize = font_config->SizePixels;
+        font->FontScaleRatioInv = 1.0f / font->FontSize / font->DpiScale;
         font->ConfigData = font_config;
         font->ContainerAtlas = atlas;
         font->Ascent = ascent;
@@ -3048,7 +3049,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
         text_end = text_begin + strlen(text_begin); // FIXME-OPT: Need to avoid this.
 
     const float line_height = size;
-    const float scale = size / FontSize / ConfigData->DpiScale;
+    const float scale = size * FontScaleRatioInv;
 
     ImVec2 text_size = ImVec2(0,0);
     float line_width = 0.0f;
@@ -3141,7 +3142,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     const ImFontGlyph* glyph = FindGlyph(c);
     if (!glyph || !glyph->Visible)
         return;
-    float scale = (size >= 0.0f) ? (size / FontSize / ConfigData->DpiScale) : 1.0f;
+    float scale = (size >= 0.0f) ? (size * FontScaleRatioInv) : 1.0f;
     pos.x = ImRoundToPixel(pos.x + DisplayOffset.x);
     pos.y = ImRoundToPixel(pos.y + DisplayOffset.y);
     draw_list->PrimReserve(6, 4);
@@ -3161,7 +3162,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (y > clip_rect.w)
         return;
 
-    const float scale = size / FontSize / ConfigData->DpiScale;
+    const float scale = size * FontScaleRatioInv;
     const float line_height = size;
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;

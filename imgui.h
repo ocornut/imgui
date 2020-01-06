@@ -2389,9 +2389,10 @@ struct ImFontAtlas
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Hot ~20/24 bytes (for CalcTextSize)
+    // Members: Hot ~24/28 bytes (for CalcTextSize)
     ImVector<float>             IndexAdvanceX;      // 12-16 // out //            // Sparse. Glyphs->AdvanceX in a directly indexable way (cache-friendly for CalcTextSize functions which only this this info, and are often bottleneck in large UI).
     float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
+    float                       FontScaleRatioInv;  // 4     // out // = 1.0f / FontSize / ConfigData->DpiScale
     float                       FontSize;           // 4     // in  //            // Height of characters/line, set during loading (don't change after loading)
 
     // Members: Hot ~36/48 bytes (for CalcTextSize + render loop)
