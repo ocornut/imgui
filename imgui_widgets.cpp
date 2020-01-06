@@ -3652,14 +3652,17 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Password pushes a temporary font with only a fallback glyph
     if (is_password && !is_displaying_hint)
     {
-        const ImFontGlyph* glyph = g.Font->FindGlyph('*');
+        ImFont* font = g.IO.Fonts->MapFontToDpi(g.Font, window->Viewport->DpiScale);
+        const ImFontGlyph* glyph = font->FindGlyph('*');
         ImFont* password_font = &g.InputTextPasswordFont;
-        password_font->FontSize = g.Font->FontSize;
-        password_font->Scale = g.Font->Scale;
-        password_font->DisplayOffset = g.Font->DisplayOffset;
-        password_font->Ascent = g.Font->Ascent;
-        password_font->Descent = g.Font->Descent;
-        password_font->ContainerAtlas = g.Font->ContainerAtlas;
+        password_font->FontSize = font->FontSize;
+        password_font->DpiScale = font->DpiScale;
+        password_font->FontScaleRatioInv = font->FontScaleRatioInv;
+        password_font->Scale = font->Scale;
+        password_font->DisplayOffset = font->DisplayOffset;
+        password_font->Ascent = font->Ascent;
+        password_font->Descent = font->Descent;
+        password_font->ContainerAtlas = font->ContainerAtlas;
         password_font->FallbackGlyph = glyph;
         password_font->FallbackAdvanceX = glyph->AdvanceX;
         IM_ASSERT(password_font->Glyphs.empty() && password_font->IndexAdvanceX.empty() && password_font->IndexLookup.empty());

@@ -6897,8 +6897,12 @@ void ImGui::SetCurrentFont(ImFont* font)
     IM_ASSERT(font && font->IsLoaded());    // Font Atlas not created. Did you call io.Fonts->GetTexDataAsRGBA32 / GetTexDataAsAlpha8 ?
     IM_ASSERT(font->Scale > 0.0f);
 
-    // Select appropriate font size based on DPI of current viewport.
-    font = g.IO.Fonts->MapFontToDpi(font, g.CurrentViewport ? g.CurrentViewport->DpiScale : 1.f);
+    // Password font is a fake font that is assembled from already dpi-mapped font.
+    if (font != &g.InputTextPasswordFont)
+    {
+        // Select appropriate font size based on DPI of current viewport.
+        font = g.IO.Fonts->MapFontToDpi(font, g.CurrentViewport ? g.CurrentViewport->DpiScale : 1.f);
+    }
 
     g.Font = font;
     g.FontBaseSize = ImMax(1.0f, g.IO.FontGlobalScale * g.Font->FontSize * g.Font->Scale);
