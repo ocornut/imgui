@@ -1878,9 +1878,11 @@ struct ImGuiTable
     float                       ResizedColumnNextWidth;
     ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
     ImRect                      WorkRect;
-    ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
     ImRect                      InnerClipRect;
     ImRect                      BackgroundClipRect;         // We use this to cpu-clip cell background color fill
+    ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
+    ImRect                      HostWorkRect;               // Backup of InnerWindow->WorkRect at the end of BeginTable()
+    ImVec2                      HostCursorMaxPos;           // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
     ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names
@@ -1916,9 +1918,7 @@ struct ImGuiTable
     bool                        IsDefaultDisplayOrder;      // Set when display order is unchanged from default (DisplayOrder contains 0...Count-1)
     bool                        IsResetDisplayOrderRequest;
     bool                        IsFreezeRowsPassed;         // Set when we got past the frozen row (the first one).
-    bool                        BackupSkipItems;            // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
-    ImRect                      BackupWorkRect;             // Backup of InnerWindow->WorkRect at the end of BeginTable()
-    ImVec2                      BackupCursorMaxPos;         // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
+    bool                        HostSkipItems;              // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
 
     ImGuiTable()
     {
