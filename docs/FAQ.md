@@ -371,23 +371,23 @@ Finally, you may call ImGui::ShowMetricsWindow() to explore/visualize/understand
 
 ### Q: How can I use my own math types instead of ImVec2/ImVec4?
 
-You can edit [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) and setup the IM_VEC2_CLASS_EXTRA/IM_VEC4_CLASS_EXTRA macros to add implicit type conversions.
-This way you'll be able to use your own types everywhere, e.g. passing MyVector2 or glm::vec2 to ImGui functions instead of ImVec2.
+You can edit [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) and setup the `IM_VEC2_CLASS_EXTRA`/`IM_VEC4_CLASS_EXTRA` macros to add implicit type conversions.
+This way you'll be able to use your own types everywhere, e.g. passing `MyVector2` or `glm::vec2` to ImGui functions instead of `ImVec2`.
 
 ---
 
 ### Q: How can I interact with standard C++ types (such as std::string and std::vector)?
 - Being highly portable (bindings for several languages, frameworks, programming style, obscure or older platforms/compilers), and aiming for compatibility & performance suitable for every modern real-time game engines, dear imgui does not use any of std C++ types. We use raw types (e.g. char* instead of std::string) because they adapt to more use cases.
 - To use ImGui::InputText() with a std::string or any resizable string class, see [misc/cpp/imgui_stdlib.h](https://github.com/ocornut/imgui/blob/master/misc/cpp/imgui_stdlib.h).
-- To use combo boxes and list boxes with std::vector or any other data structure: the BeginCombo()/EndCombo() API
-lets you iterate and submit items yourself, so does the ListBoxHeader()/ListBoxFooter() API.
-Prefer using them over the old and awkward Combo()/ListBox() api.
+- To use combo boxes and list boxes with `std::vector` or any other data structure: the `BeginCombo()/EndCombo()` API
+lets you iterate and submit items yourself, so does the `ListBoxHeader()/ListBoxFooter()` API.
+Prefer using them over the old and awkward `Combo()/ListBox()` api.
 - Generally for most high-level types you should be able to access the underlying data type.
 You may write your own one-liner wrappers to facilitate user code (tip: add new functions in ImGui:: namespace from your code).
 - Dear ImGui applications often need to make intensive use of strings. It is expected that many of the strings you will pass
 to the API are raw literals (free in C/C++) or allocated in a manner that won't incur a large cost on your application.
-Please bear in mind that using std::string on applications with large amount of UI may incur unsatisfactory performances.
-Modern implementations of std::string often include small-string optimization (which is often a local buffer) but those
+Please bear in mind that using `std::string` on applications with large amount of UI may incur unsatisfactory performances.
+Modern implementations of `std::string` often include small-string optimization (which is often a local buffer) but those
 are not configurable and not the same across implementations.
 - If you are finding your UI traversal cost to be too large, make sure your string usage is not leading to excessive amount
 of heap allocations. Consider using literals, statically sized buffers and your own helper functions. A common pattern
