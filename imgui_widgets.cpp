@@ -9109,6 +9109,7 @@ void    ImGui::TableBeginRow(ImGuiTable* table)
 
     table->RowPosY1 = table->RowPosY2 = next_y1;
     table->RowTextBaseline = 0.0f;
+    window->DC.PrevLineTextBaseOffset = 0.0f;
     window->DC.CursorMaxPos.y = next_y1;
 
     // Making the header BG color non-transparent will allow us to overlay it multiple times when handling smooth dragging.
@@ -9229,6 +9230,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
 
 // [Internal] Called by TableNextRow()TableNextCell()!
 // This is called a lot, so we need to be mindful of unnecessary overhead.
+// FIXME-TABLE FIXME-OPT: Could probably shortcut some things for non-active or clipped columns.
 void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
 {
     table->CurrentColumn = column_no;
@@ -9499,7 +9501,7 @@ void    ImGui::TableAutoHeaders()
 
     // Open row
     TableNextRow(ImGuiTableRowFlags_Headers, row_height);
-    if (window->SkipItems)
+    if (table->HostSkipItems) // Merely an optimization
         return;
 
     // This for loop is constructed to not make use of internal functions,
@@ -9539,8 +9541,7 @@ void    ImGui::TableAutoHeaders()
             open_context_popup = column_n;
     }
 
-    // FIXME-TABLE: This is not user-land code any more... 
-    // FIXME-TABLE: Need to explain why this is here!
+    // FIXME-TABLE: This is not user-land code any more + need to explain WHY this is here!
     window->SkipItems = table->HostSkipItems;
 
     // Allow opening popup from the right-most section after the last column
