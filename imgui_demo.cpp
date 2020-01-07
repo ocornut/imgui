@@ -4529,7 +4529,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             static int ngon_sides = 6;
             static ImVec4 colf = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
             ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
-            ImGui::DragFloat("Thickness", &thickness, 0.05f, 1.0f, 8.0f, "%.02f");
+            ImGui::DragFloat("Thickness", &thickness, 0.05f, 0.0f, 8.0f, "%.02f");
             ImGui::SliderInt("n-gon sides", &ngon_sides, 3, 12);
             ImGui::ColorEdit4("Color", &colf.x);
             const ImVec2 p = ImGui::GetCursorScreenPos();

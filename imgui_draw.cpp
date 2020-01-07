@@ -624,159 +624,51 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     if (!closed)
         count = points_count-1;
 
-    const bool thick_line = thickness > 1.0f;
-    if (Flags & ImDrawListFlags_AntiAliasedLines && !thick_line)
-    {
-        // Anti-aliased stroke
-        const float AA_SIZE = 1.0f;
-        const ImU32 col_trans = col & ~IM_COL32_A_MASK;
+    const bool antialias = Flags & ImDrawListFlags_AntiAliasedLines;
+    const float AA_SIZE = 1.0f;
+    const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-        const int idx_count = thick_line ? count*18 : count*12;
-        const int vtx_count = thick_line ? points_count*4 : points_count*3;
+    if (antialias && thickness <= 1.0) {
+        // Anti-aliased Stroke approximation
+        const int idx_count = count*12;
+        const int vtx_count = count*6;      // FIXME-OPT: Not sharing edges
         PrimReserve(idx_count, vtx_count);
-
-        // Temporary buffer
-        ImVec2* temp_normals = (ImVec2*)alloca(points_count * (thick_line ? 5 : 3) * sizeof(ImVec2)); //-V630
-        ImVec2* temp_points = temp_normals + points_count;
+        const ImU32 col_faded = col & ~IM_COL32_A_MASK | int(((col >> IM_COL32_A_SHIFT) & 0xFF) * thickness) << IM_COL32_A_SHIFT;
 
         for (int i1 = 0; i1 < count; i1++)
         {
             const int i2 = (i1+1) == points_count ? 0 : i1+1;
-            float dx = points[i2].x - points[i1].x;
-            float dy = points[i2].y - points[i1].y;
+            const ImVec2& p1 = points[i1];
+            const ImVec2& p2 = points[i2];
+
+            float dx = p2.x - p1.x;
+            float dy = p2.y - p1.y;
             IM_NORMALIZE2F_OVER_ZERO(dx, dy);
-            temp_normals[i1].x = dy;
-            temp_normals[i1].y = -dx;
+            dx *= AA_SIZE;
+            dy *= AA_SIZE;
+
+            _VtxWritePtr[0].pos.x = p1.x + dy; _VtxWritePtr[0].pos.y = p1.y - dx; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col_trans;
+            _VtxWritePtr[1].pos.x = p1.x     ; _VtxWritePtr[1].pos.y = p1.y     ; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_faded;
+            _VtxWritePtr[2].pos.x = p1.x - dy; _VtxWritePtr[2].pos.y = p1.y + dx; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col_trans;
+
+            _VtxWritePtr[3].pos.x = p2.x + dy; _VtxWritePtr[3].pos.y = p2.y - dx; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col_trans;
+            _VtxWritePtr[4].pos.x = p2.x     ; _VtxWritePtr[4].pos.y = p2.y     ; _VtxWritePtr[4].uv = uv; _VtxWritePtr[4].col = col_faded;
+            _VtxWritePtr[5].pos.x = p2.x - dy; _VtxWritePtr[5].pos.y = p2.y + dx; _VtxWritePtr[5].uv = uv; _VtxWritePtr[5].col = col_trans;
+            _VtxWritePtr += 6;
+
+            _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+4);
+            _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx); _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+4); _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+3);
+            _IdxWritePtr[6] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[7] = (ImDrawIdx)(_VtxCurrentIdx+2); _IdxWritePtr[8] = (ImDrawIdx)(_VtxCurrentIdx+5);
+            _IdxWritePtr[9] = (ImDrawIdx)(_VtxCurrentIdx+1); _IdxWritePtr[10] = (ImDrawIdx)(_VtxCurrentIdx+5); _IdxWritePtr[11] = (ImDrawIdx)(_VtxCurrentIdx+4);
+            _IdxWritePtr += 12;
+            _VtxCurrentIdx += 6;
         }
-        if (!closed)
-            temp_normals[points_count-1] = temp_normals[points_count-2];
-
-        if (!thick_line)
-        {
-            if (!closed)
-            {
-                temp_points[0] = points[0] + temp_normals[0] * AA_SIZE;
-                temp_points[1] = points[0] - temp_normals[0] * AA_SIZE;
-                temp_points[(points_count-1)*2+0] = points[points_count-1] + temp_normals[points_count-1] * AA_SIZE;
-                temp_points[(points_count-1)*2+1] = points[points_count-1] - temp_normals[points_count-1] * AA_SIZE;
-            }
-
-            // FIXME-OPT: Merge the different loops, possibly remove the temporary buffer.
-            unsigned int idx1 = _VtxCurrentIdx;
-            for (int i1 = 0; i1 < count; i1++)
-            {
-                const int i2 = (i1+1) == points_count ? 0 : i1+1;
-                unsigned int idx2 = (i1+1) == points_count ? _VtxCurrentIdx : idx1+3;
-
-                // Average normals
-                float dm_x = (temp_normals[i1].x + temp_normals[i2].x) * 0.5f;
-                float dm_y = (temp_normals[i1].y + temp_normals[i2].y) * 0.5f;
-                IM_FIXNORMAL2F(dm_x, dm_y)
-                dm_x *= AA_SIZE;
-                dm_y *= AA_SIZE;
-
-                // Add temporary vertexes
-                ImVec2* out_vtx = &temp_points[i2*2];
-                out_vtx[0].x = points[i2].x + dm_x;
-                out_vtx[0].y = points[i2].y + dm_y;
-                out_vtx[1].x = points[i2].x - dm_x;
-                out_vtx[1].y = points[i2].y - dm_y;
-
-                // Add indexes
-                _IdxWritePtr[0] = (ImDrawIdx)(idx2+0); _IdxWritePtr[1] = (ImDrawIdx)(idx1+0); _IdxWritePtr[2] = (ImDrawIdx)(idx1+2);
-                _IdxWritePtr[3] = (ImDrawIdx)(idx1+2); _IdxWritePtr[4] = (ImDrawIdx)(idx2+2); _IdxWritePtr[5] = (ImDrawIdx)(idx2+0);
-                _IdxWritePtr[6] = (ImDrawIdx)(idx2+1); _IdxWritePtr[7] = (ImDrawIdx)(idx1+1); _IdxWritePtr[8] = (ImDrawIdx)(idx1+0);
-                _IdxWritePtr[9] = (ImDrawIdx)(idx1+0); _IdxWritePtr[10]= (ImDrawIdx)(idx2+0); _IdxWritePtr[11]= (ImDrawIdx)(idx2+1);
-                _IdxWritePtr += 12;
-
-                idx1 = idx2;
-            }
-
-            // Add vertexes
-            for (int i = 0; i < points_count; i++)
-            {
-                _VtxWritePtr[0].pos = points[i];          _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
-                _VtxWritePtr[1].pos = temp_points[i*2+0]; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col_trans;
-                _VtxWritePtr[2].pos = temp_points[i*2+1]; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col_trans;
-                _VtxWritePtr += 3;
-            }
-        }
-        else
-        {
-            const float half_inner_thickness = (thickness - AA_SIZE) * 0.5f;
-            if (!closed)
-            {
-                temp_points[0] = points[0] + temp_normals[0] * (half_inner_thickness + AA_SIZE);
-                temp_points[1] = points[0] + temp_normals[0] * (half_inner_thickness);
-                temp_points[2] = points[0] - temp_normals[0] * (half_inner_thickness);
-                temp_points[3] = points[0] - temp_normals[0] * (half_inner_thickness + AA_SIZE);
-                temp_points[(points_count-1)*4+0] = points[points_count-1] + temp_normals[points_count-1] * (half_inner_thickness + AA_SIZE);
-                temp_points[(points_count-1)*4+1] = points[points_count-1] + temp_normals[points_count-1] * (half_inner_thickness);
-                temp_points[(points_count-1)*4+2] = points[points_count-1] - temp_normals[points_count-1] * (half_inner_thickness);
-                temp_points[(points_count-1)*4+3] = points[points_count-1] - temp_normals[points_count-1] * (half_inner_thickness + AA_SIZE);
-            }
-
-            // FIXME-OPT: Merge the different loops, possibly remove the temporary buffer.
-            unsigned int idx1 = _VtxCurrentIdx;
-            for (int i1 = 0; i1 < count; i1++)
-            {
-                const int i2 = (i1+1) == points_count ? 0 : i1+1;
-                unsigned int idx2 = (i1+1) == points_count ? _VtxCurrentIdx : idx1+4;
-
-                // Average normals
-                float dm_x = (temp_normals[i1].x + temp_normals[i2].x) * 0.5f;
-                float dm_y = (temp_normals[i1].y + temp_normals[i2].y) * 0.5f;
-                // IM_FIXNORMAL2F(dm_x, dm_y);
-                // IM_NORMALIZE2F_OVER_EPSILON_CLAMP(dm_x, dm_y, 0.000001f, 100.0f);
-                float dm_out_x = dm_x * (half_inner_thickness + AA_SIZE);
-                float dm_out_y = dm_y * (half_inner_thickness + AA_SIZE);
-                float dm_in_x = dm_x * half_inner_thickness;
-                float dm_in_y = dm_y * half_inner_thickness;
-
-                // Add temporary vertexes
-                ImVec2* out_vtx = &temp_points[i2*4];
-                out_vtx[0].x = points[i2].x + dm_out_x;
-                out_vtx[0].y = points[i2].y + dm_out_y;
-                out_vtx[1].x = points[i2].x + dm_in_x;
-                out_vtx[1].y = points[i2].y + dm_in_y;
-                out_vtx[2].x = points[i2].x - dm_in_x;
-                out_vtx[2].y = points[i2].y - dm_in_y;
-                out_vtx[3].x = points[i2].x - dm_out_x;
-                out_vtx[3].y = points[i2].y - dm_out_y;
-
-                // Add indexes
-                _IdxWritePtr[0]  = (ImDrawIdx)(idx2+1); _IdxWritePtr[1]  = (ImDrawIdx)(idx1+1); _IdxWritePtr[2]  = (ImDrawIdx)(idx1+2);
-                _IdxWritePtr[3]  = (ImDrawIdx)(idx1+2); _IdxWritePtr[4]  = (ImDrawIdx)(idx2+2); _IdxWritePtr[5]  = (ImDrawIdx)(idx2+1);
-                _IdxWritePtr[6]  = (ImDrawIdx)(idx2+1); _IdxWritePtr[7]  = (ImDrawIdx)(idx1+1); _IdxWritePtr[8]  = (ImDrawIdx)(idx1+0);
-                _IdxWritePtr[9]  = (ImDrawIdx)(idx1+0); _IdxWritePtr[10] = (ImDrawIdx)(idx2+0); _IdxWritePtr[11] = (ImDrawIdx)(idx2+1);
-                _IdxWritePtr[12] = (ImDrawIdx)(idx2+2); _IdxWritePtr[13] = (ImDrawIdx)(idx1+2); _IdxWritePtr[14] = (ImDrawIdx)(idx1+3);
-                _IdxWritePtr[15] = (ImDrawIdx)(idx1+3); _IdxWritePtr[16] = (ImDrawIdx)(idx2+3); _IdxWritePtr[17] = (ImDrawIdx)(idx2+2);
-                _IdxWritePtr += 18;
-
-                idx1 = idx2;
-            }
-
-            // Add vertexes
-            for (int i = 0; i < points_count; i++)
-            {
-                _VtxWritePtr[0].pos = temp_points[i*4+0]; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col_trans;
-                _VtxWritePtr[1].pos = temp_points[i*4+1]; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
-                _VtxWritePtr[2].pos = temp_points[i*4+2]; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col;
-                _VtxWritePtr[3].pos = temp_points[i*4+3]; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col_trans;
-                _VtxWritePtr += 4;
-            }
-        }
-        _VtxCurrentIdx += (ImDrawIdx)vtx_count;
     }
     else
     {
-        const bool antialias = Flags & ImDrawListFlags_AntiAliasedLines;
-        // const bool antialias = false;
-        const float AA_SIZE = 1.0f;
         if (antialias) {
             thickness -= AA_SIZE;
         }
-        const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
         // TODO: shorten the expressions (points are always doubled with AA)
         const int vtx_count = points_count * (antialias ? 6 : 3);
