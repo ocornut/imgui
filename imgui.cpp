@@ -9992,7 +9992,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (!ImGui::TreeNode(label, "%s (%d)", label, windows.Size))
                 return;
             for (int i = 0; i < windows.Size; i++)
+            {
+                ImGui::PushID(windows[i]);
                 Funcs::NodeWindow(windows[i], "Window");
+                ImGui::PopID();
+            }
             ImGui::TreePop();
         }
 
@@ -10003,7 +10007,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("%s: NULL", label);
                 return;
             }
-            bool open = ImGui::TreeNode(window, "%s '%s', %d @ 0x%p", label, window->Name, (window->Active || window->WasActive), window);
+            bool open = ImGui::TreeNode(label, "%s '%s', %d @ 0x%p", label, window->Name, (window->Active || window->WasActive), window);
             if (ImGui::IsItemHovered() && window->WasActive)
                 ImGui::GetForegroundDrawList()->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
             if (!open)
