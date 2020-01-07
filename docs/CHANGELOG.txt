@@ -79,6 +79,7 @@ Other Changes:
   automatically use it). [#2919, #2798]
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
   even if underlying system event loop gets paused due to app nap (#2910, #2917). [@bear24rw]
+- Examples: Added support for glbindings OpenGL loader.
 
 
 -----------------------------------------------------------------------
