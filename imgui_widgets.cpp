@@ -4227,7 +4227,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             if (f[1] == 0)
                 f[0] = g.ColorEditLastHue;
             if (f[2] == 0)
-                f[1] = g.ColorEditLastSaturation;
+                f[1] = g.ColorEditLastSat;
         }
     }
     int i[4] = { IM_F32_TO_INT8_UNBOUND(f[0]), IM_F32_TO_INT8_UNBOUND(f[1]), IM_F32_TO_INT8_UNBOUND(f[2]), IM_F32_TO_INT8_UNBOUND(f[3]) };
@@ -4358,7 +4358,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
         if ((flags & ImGuiColorEditFlags_DisplayHSV) && (flags & ImGuiColorEditFlags_InputRGB))
         {
             g.ColorEditLastHue = f[0];
-            g.ColorEditLastSaturation = f[1];
+            g.ColorEditLastSat = f[1];
             ColorConvertHSVtoRGB(f[0], f[1], f[2], f[0], f[1], f[2]);
             memcpy(g.ColorEditLastColor, f, sizeof(float) * 3);
         }
@@ -4546,7 +4546,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             if (S == 0)
                 H = g.ColorEditLastHue;
             if (V == 0)
-                S = g.ColorEditLastSaturation;
+                S = g.ColorEditLastSat;
         }
     }
     else if (flags & ImGuiColorEditFlags_InputHSV)
@@ -4675,7 +4675,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
         {
             ColorConvertHSVtoRGB(H >= 1.0f ? H - 10 * 1e-6f : H, S > 0.0f ? S : 10*1e-6f, V > 0.0f ? V : 1e-6f, col[0], col[1], col[2]);
             g.ColorEditLastHue = H;
-            g.ColorEditLastSaturation = S;
+            g.ColorEditLastSat = S;
             memcpy(g.ColorEditLastColor, col, sizeof(float) * 3);
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
@@ -4735,7 +4735,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
                 if (S == 0)
                     H = g.ColorEditLastHue;
                 if (V == 0)
-                    S = g.ColorEditLastSaturation;
+                    S = g.ColorEditLastSat;
             }
         }
         else if (flags & ImGuiColorEditFlags_InputHSV)
