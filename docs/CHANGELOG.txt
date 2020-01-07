@@ -55,6 +55,7 @@ Breaking Changes:
   documented (can only unreserve from the last reserve call). If you suspect you ever
   used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
   calls. [@ShironekoBen]
+- ImDrawList::AddCircle()/AddCircleFilled() functions don't accept negative radius.
 - Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
   technically supports it, future code may not so we're putting the restriction ahead.
 - imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
@@ -70,6 +71,8 @@ Other Changes:
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
 - ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
+- ImDrawList: AddCircle(), AddCircleFilled() API can now auto-tessellate when provided a segment
+  count of zero. Alter tessellation quality with 'style.CircleSegmentMaxError'. [@ShironekoBen]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count

@@ -848,7 +848,13 @@ struct ImGuiColumns
     }
 };
 
+// Helper function to calculate a circle's segment count given its radius and a "maximum error" value.
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     12
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
+#define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    ImClamp((int)((IM_PI * 2.0f) / ImAcos((_RAD - _MAXERROR) / _RAD)), IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
+
 // Data shared between all ImDrawList instances
+// You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
 struct IMGUI_API ImDrawListSharedData
 {
     ImVec2          TexUvWhitePixel;            // UV of white pixel in the atlas
@@ -859,18 +865,12 @@ struct IMGUI_API ImDrawListSharedData
     ImVec4          ClipRectFullscreen;         // Value for PushClipRectFullscreen()
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
-    // Const data
-    // FIXME: Bake rounded corners fill/borders in atlas
-    ImVec2          CircleVtx12[12];
-
-    // Cached circle segment counts for the first <n> radii (to avoid calculation overhead)
-    static const int NumCircleSegmentCounts = 64;// Number of circle segment counts to cache (i.e. the maximum radius before we calculate dynamically)
-    int             CircleSegmentCounts[NumCircleSegmentCounts]; // The segment count for radius (array index + 1)
-    float           CircleSegmentCountsMaxCircleSegmentError; // The MaxCircleSegmentError used to calculate these counts
-
-    void RecalculateCircleSegmentCounts();      // Recalculate circle segment counts based on the current MaxCircleSegmentError
+    // [Internal] Lookup tables
+    ImVec2          CircleVtx12[12];            // FIXME: Bake rounded corners fill/borders in atlas
+    ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius (array index + 1) before we calculate it dynamically (to avoid calculation overhead)
 
     ImDrawListSharedData();
+    void SetCircleSegmentMaxError(float max_error);
 };
 
 struct ImDrawDataBuilder
