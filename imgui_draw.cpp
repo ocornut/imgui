@@ -759,11 +759,14 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 b2y = p1.y + (dy2 - dx2 * miter_sign) * half_thickness;
             }
 
-            // Vertices for each point are ordered such that for the incoming edge,
-            // the left vertex has index 0, the right vertex has index 1, and the
-            // third vertex (which lies on the outcoming edge), has index 2, regardless of the
-            // side it is on. This is so that the faces can be created without having
-            // processed the target vertex.
+            // Vertices for each point are ordered like this (looking in the direction of the polyline):
+            // left vertex*
+            // right vertex*
+            // left vertex* AA fringe  (if antialias)
+            // right vertex* AA fringe (if antialias)
+            // the remaining vertex (if bevel)
+            // the remaining vertex AA fringe (if bevel and antialias)
+            // *) if there is bevel, these vertices are the ones on the incoming edge.
             int vertex_count = antialias ? (bevel ? 6 : 4) : (bevel ? 3 : 2); // TODO: shorten the expression
 
             if (bevel) {
@@ -793,8 +796,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             _VtxWritePtr += vertex_count;
 
 
-
-
             if (i1 < count) {
                 _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? (antialias? 4 : 2) : 0));
                 _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign > 0) ? (antialias? 4 : 2) : 1));
@@ -816,7 +817,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             }
 
             if (i1 < count && antialias) {
-                // For now, just duplicate valid triangles
                 _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 5 : 2));
                 _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 4 : 0));
                 _IdxWritePtr[2] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr);
