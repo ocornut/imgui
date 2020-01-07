@@ -629,7 +629,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
     if (antialias && thickness <= 1.0) {
-        // Anti-aliased Stroke approximation
+        // Anti-aliased stroke approximation
         const int idx_count = count*12;
         const int vtx_count = count*6;      // FIXME-OPT: Not sharing edges
         PrimReserve(idx_count, vtx_count);
@@ -666,16 +666,15 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
     }
     else
     {
-        if (antialias) {
-            thickness -= AA_SIZE;
-        }
-
-        // TODO: shorten the expressions (points are always doubled with AA)
-        const int vtx_count = points_count * (antialias ? 6 : 3);
-        const int idx_count = count * 3 * (antialias ? 9 : 3);
+        // Precise line with bevels on acute angles
+        const int max_n_vtx = antialias ? 6 : 3;
+        const int max_n_idx = 3 * (antialias ? 9 : 3);
+        const int vtx_count = points_count * max_n_vtx;
+        const int idx_count = count * max_n_idx;
         PrimReserve(idx_count, vtx_count);
 
-        const float half_thickness = thickness * 0.5f;
+        const float half_thickness = (antialias ? thickness - AA_SIZE : thickness) * 0.5f;
+        const float half_thickness_aa = half_thickness + AA_SIZE;
         unsigned int first_vtx_ptr = _VtxCurrentIdx;
         unsigned int unused_vertices = 0;
         unsigned int unused_indices = 0;
@@ -692,7 +691,6 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         for (int i1 = 0; i1 < points_count; i1++)
         {
             const ImVec2& p1 = points[i1];
-
             const int i2 = i1+1 == points_count ? 0 : i1+1;
             const ImVec2& p2 = points[i2];
             float dx2 = p1.x - p2.x;
@@ -711,15 +709,19 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             }
 
             float miter_l_recip = dx1 * dy2 - dy1 * dx2;
-            float mlx, mly, mrx, mry; // Left and right miters
+            float mlx, mly, mrx, mry;     // Left and right miters
             float mlax, mlay, mrax, mray; // Left and right miters incl. antialiasing
+            bool bevel = dx1 * dx2 + dy1 * dy2 > 1e-5;
             if (fabsf(miter_l_recip) > 1e-5) {
                 float miter_l = half_thickness / miter_l_recip;
-                float min_sqlen = sqlen1 > sqlen2 ? sqlen2 : sqlen1;
-                float miter_sqlen = ((dx1 + dx2) * (dx1 + dx2) + (dy1 + dy2) * (dy1 + dy2)) * miter_l * miter_l;
-                if (miter_sqlen > min_sqlen) {
-                    // Limit (inner) miter so it doesn't shoot away in the case when miter is longer than adjacent line segments
-                    miter_l *= sqrtf(min_sqlen / miter_sqlen);
+                // Limit (inner) miter so it doesn't shoot away when miter is longer than adjacent line segments on acute angles
+                if (bevel) {
+                    // This is too aggressive (not exacply precise)
+                    float min_sqlen = sqlen1 > sqlen2 ? sqlen2 : sqlen1;
+                    float miter_sqlen = ((dx1 + dx2) * (dx1 + dx2) + (dy1 + dy2) * (dy1 + dy2)) * miter_l * miter_l;
+                    if (miter_sqlen > min_sqlen) {
+                        miter_l *= sqrtf(min_sqlen / miter_sqlen);
+                    }
                 }
 
                 mlx = p1.x - (dx1 + dx2) * miter_l;
@@ -727,7 +729,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 mrx = p1.x + (dx1 + dx2) * miter_l;
                 mry = p1.y + (dy1 + dy2) * miter_l;
                 if (antialias) {
-                    float miter_al = miter_l + AA_SIZE / miter_l_recip;
+                    float miter_al = half_thickness_aa / miter_l_recip;
                     mlax = p1.x - (dx1 + dx2) * miter_al;
                     mlay = p1.y - (dy1 + dy2) * miter_al;
                     mrax = p1.x + (dx1 + dx2) * miter_al;
@@ -740,119 +742,121 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 mrx = p1.x - dy1 * half_thickness;
                 mry = p1.y + dx1 * half_thickness;
                 if (antialias) {
-                    mlax = p1.x + dy1 * (half_thickness + AA_SIZE);
-                    mlay = p1.y - dx1 * (half_thickness + AA_SIZE);
-                    mrax = p1.x - dy1 * (half_thickness + AA_SIZE);
-                    mray = p1.y + dx1 * (half_thickness + AA_SIZE);
+                    mlax = p1.x + dy1 * half_thickness_aa;
+                    mlay = p1.y - dx1 * half_thickness_aa;
+                    mrax = p1.x - dy1 * half_thickness_aa;
+                    mray = p1.y + dx1 * half_thickness_aa;
                 }
             }
             // The two bevel vertices if the angle is right or obtuse
             // miter_sign == 1, iff the outer (maybe bevelled) edge is on the right, -1 iff it is on the left
             int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
-            float b1x, b1y, b2x, b2y;
-            bool bevel = dx1 * dx2 + dy1 * dy2 > 1e-5;
-            // TODO: bring this close to vertex buffer manipulation code to save lines
+            float b1x, b1y, b2x, b2y;     // First and second bevel point
+            float b1ax, b1ay, b2ax, b2ay; // First and second bevel point incl. antialiasing
             if (bevel) {
+                // TODO: benchmark if doing these computations only once in AA case saves cycles
                 b1x = p1.x + (dx1 - dy1 * miter_sign) * half_thickness;
                 b1y = p1.y + (dy1 + dx1 * miter_sign) * half_thickness;
                 b2x = p1.x + (dx2 + dy2 * miter_sign) * half_thickness;
                 b2y = p1.y + (dy2 - dx2 * miter_sign) * half_thickness;
-            }
-
-            // Vertices for each point are ordered like this (looking in the direction of the polyline):
-            // left vertex*
-            // right vertex*
-            // left vertex* AA fringe  (if antialias)
-            // right vertex* AA fringe (if antialias)
-            // the remaining vertex (if bevel)
-            // the remaining vertex AA fringe (if bevel and antialias)
-            // *) if there is bevel, these vertices are the ones on the incoming edge.
-            int vertex_count = antialias ? (bevel ? 6 : 4) : (bevel ? 3 : 2); // TODO: shorten the expression
-
-            if (bevel) {
-                _VtxWritePtr[0].pos.x = miter_sign > 0 ? mlx : b1x; _VtxWritePtr[0].pos.y = miter_sign > 0 ? mly : b1y; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
-                _VtxWritePtr[1].pos.x = miter_sign > 0 ? b1x : mrx; _VtxWritePtr[1].pos.y = miter_sign > 0 ? b1y : mry; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
-                _VtxWritePtr[antialias ? 4 : 2].pos.x = b2x; _VtxWritePtr[antialias ? 4 : 2].pos.y = b2y; _VtxWritePtr[antialias ? 4 : 2].uv = uv; _VtxWritePtr[antialias ? 4 : 2].col = col;
-            } else {
-                _VtxWritePtr[0].pos.x = mlx; _VtxWritePtr[0].pos.y = mly; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
-                _VtxWritePtr[1].pos.x = mrx; _VtxWritePtr[1].pos.y = mry; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
-                unused_vertices += 1;
-            }
-            if (antialias) {
-                if (bevel) {
-                    float b1ax = p1.x + (dx1 - dy1 * miter_sign) * (half_thickness + sqrtf(2) * AA_SIZE);
-                    float b1ay = p1.y + (dy1 + dx1 * miter_sign) * (half_thickness + sqrtf(2) * AA_SIZE);
-                    float b2ax = p1.x + (dx2 + dy2 * miter_sign) * (half_thickness + sqrtf(2) * AA_SIZE);
-                    float b2ay = p1.y + (dy2 - dx2 * miter_sign) * (half_thickness + sqrtf(2) * AA_SIZE);
-                    _VtxWritePtr[2].pos.x = miter_sign > 0 ? mlax : b1ax; _VtxWritePtr[2].pos.y = miter_sign > 0 ? mlay : b1ay; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col_trans;
-                    _VtxWritePtr[3].pos.x = miter_sign > 0 ? b1ax : mrax; _VtxWritePtr[3].pos.y = miter_sign > 0 ? b1ay : mray; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col_trans;
-                    _VtxWritePtr[5].pos.x = b2ax; _VtxWritePtr[5].pos.y = b2ay; _VtxWritePtr[5].uv = uv; _VtxWritePtr[5].col = col_trans;
-                } else {
-                    _VtxWritePtr[2].pos.x = mlax; _VtxWritePtr[2].pos.y = mlay; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col_trans;
-                    _VtxWritePtr[3].pos.x = mrax; _VtxWritePtr[3].pos.y = mray; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col_trans;
-                    unused_vertices += 1;
+                if (antialias) {
+                    b1ax = p1.x + (dx1 - dy1 * miter_sign) * half_thickness_aa;
+                    b1ay = p1.y + (dy1 + dx1 * miter_sign) * half_thickness_aa;
+                    b2ax = p1.x + (dx2 + dy2 * miter_sign) * half_thickness_aa;
+                    b2ay = p1.y + (dy2 - dx2 * miter_sign) * half_thickness_aa;
                 }
             }
-            _VtxWritePtr += vertex_count;
-
-
-            if (i1 < count) {
-                _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? (antialias? 4 : 2) : 0));
-                _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign > 0) ? (antialias? 4 : 2) : 1));
-                _IdxWritePtr[2] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+1 : first_vtx_ptr+1);
-
-                _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? (antialias? 4 : 2) : 0));
-                _IdxWritePtr[4] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+1 : first_vtx_ptr+1);
-                _IdxWritePtr[5] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr);
-                _IdxWritePtr += 6;
-
-                if (bevel) {
-                    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx);
-                    _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1);
-                    _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+(antialias? 4 : 2));
-                    _IdxWritePtr += 3;
-                } else {
-                    unused_indices += 3;
-                }
-            }
-
-            if (i1 < count && antialias) {
-                _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 5 : 2));
-                _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 4 : 0));
-                _IdxWritePtr[2] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr);
-
-                _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign < 0) ? 5 : 2));
-                _IdxWritePtr[4] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr);
-                _IdxWritePtr[5] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+2 : first_vtx_ptr+2);
-
-                _IdxWritePtr[6] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign > 0) ? 4 : 1));
-                _IdxWritePtr[7] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign > 0) ? 5 : 3));
-                _IdxWritePtr[8] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+3 : first_vtx_ptr+3);
-
-                _IdxWritePtr[9] = (ImDrawIdx)(_VtxCurrentIdx + ((bevel && miter_sign > 0) ? 4 : 1));
-                _IdxWritePtr[10] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+3 : first_vtx_ptr+3);
-                _IdxWritePtr[11] = (ImDrawIdx)(i1 < points_count-1 ? _VtxCurrentIdx+vertex_count+1 : first_vtx_ptr+1);
-                _IdxWritePtr += 12;
-
-                if (bevel) {
-                    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx+(miter_sign > 0 ? 1 : 2));
-                    _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+(miter_sign > 0 ? 3 : 0));
-                    _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+(miter_sign > 0 ? 5 : 4));
-
-                    _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx+(miter_sign > 0 ? 1 : 2));
-                    _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+(miter_sign > 0 ? 5 : 4));
-                    _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+(miter_sign > 0 ? 4 : 5));
-                    _IdxWritePtr += 6;
-                } else {
-                    unused_indices += 6;
-                }
-            }
-            _VtxCurrentIdx += vertex_count;
 
             // Set the previous line direction so it doesn't need to be recomputed
             dx1 = -dx2;
             dy1 = -dy2;
             sqlen1 = sqlen2;
+
+            // Now that we have all the point coordinates, put them into buffers
+
+            // Vertices for each point are ordered in vertex buffer like this (looking in the direction of the polyline):
+            // left vertex*
+            // right vertex*
+            // left vertex AA fringe*  (if antialias)
+            // right vertex AA fringe* (if antialias)
+            // the remaining vertex (if bevel)
+            // the remaining vertex AA fringe (if bevel and antialias)
+            // *) if there is bevel, these vertices are the ones on the incoming edge.
+            // Having all the vertices of the incoming edge in predictable positions is important - we reference them
+            // even if we don't know relevant line properties yet
+
+            int vertex_count = antialias ? (bevel ? 6 : 4) : (bevel ? 3 : 2); // TODO: shorten the expression
+            unsigned int bi = antialias ? 4 : 2; // the extra bevel vertex index
+            const bool bevel_l = bevel && miter_sign < 0;
+            const bool bevel_r = bevel && miter_sign > 0;
+
+            _VtxWritePtr[0].pos.x = bevel_l ? b1x : mlx; _VtxWritePtr[0].pos.y = bevel_l ? b1y : mly; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
+            _VtxWritePtr[1].pos.x = bevel_r ? b1x : mrx; _VtxWritePtr[1].pos.y = bevel_r ? b1y : mry; _VtxWritePtr[1].uv = uv; _VtxWritePtr[1].col = col;
+            if (bevel)
+                _VtxWritePtr[bi].pos.x = b2x; _VtxWritePtr[bi].pos.y = b2y; _VtxWritePtr[bi].uv = uv; _VtxWritePtr[bi].col = col;
+
+            if (antialias) {
+                _VtxWritePtr[2].pos.x = bevel_l ? b1ax : mlax; _VtxWritePtr[2].pos.y = bevel_l ? b1ay : mlay; _VtxWritePtr[2].uv = uv; _VtxWritePtr[2].col = col_trans;
+                _VtxWritePtr[3].pos.x = bevel_r ? b1ax : mrax; _VtxWritePtr[3].pos.y = bevel_r ? b1ay : mray; _VtxWritePtr[3].uv = uv; _VtxWritePtr[3].col = col_trans;
+                if (bevel)
+                    _VtxWritePtr[5].pos.x = b2ax; _VtxWritePtr[5].pos.y = b2ay; _VtxWritePtr[5].uv = uv; _VtxWritePtr[5].col = col_trans;
+            }
+            unused_vertices += max_n_vtx - vertex_count;
+            _VtxWritePtr += vertex_count;
+
+            if (i1 < count) {
+                const int vtx_next_id = i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr;
+                _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_l ? bi : 0));
+                _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? bi : 1));
+                _IdxWritePtr[2] = (ImDrawIdx)(vtx_next_id+1);
+
+                _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_l ? bi : 0));
+                _IdxWritePtr[4] = (ImDrawIdx)(vtx_next_id+1);
+                _IdxWritePtr[5] = (ImDrawIdx)(vtx_next_id);
+                _IdxWritePtr += 6;
+
+                if (bevel) {
+                    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx);
+                    _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+1);
+                    _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+bi);
+                    _IdxWritePtr += 3;
+                } else {
+                    unused_indices += 3;
+                }
+
+                if (antialias) {
+                    _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_l ? 5 : 2));
+                    _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_l ? 4 : 0));
+                    _IdxWritePtr[2] = (ImDrawIdx)(vtx_next_id);
+
+                    _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_l ? 5 : 2));
+                    _IdxWritePtr[4] = (ImDrawIdx)(vtx_next_id);
+                    _IdxWritePtr[5] = (ImDrawIdx)(vtx_next_id+2);
+
+                    _IdxWritePtr[6] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 4 : 1));
+                    _IdxWritePtr[7] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 5 : 3));
+                    _IdxWritePtr[8] = (ImDrawIdx)(vtx_next_id+3);
+
+                    _IdxWritePtr[9] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 4 : 1));
+                    _IdxWritePtr[10] = (ImDrawIdx)(vtx_next_id+3);
+                    _IdxWritePtr[11] = (ImDrawIdx)(vtx_next_id+1);
+                    _IdxWritePtr += 12;
+
+                    if (bevel) {
+                        _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx+(bevel_r ? 1 : 2));
+                        _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx+(bevel_r ? 3 : 0));
+                        _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx+(bevel_r ? 5 : 4));
+
+                        _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx+(bevel_r ? 1 : 2));
+                        _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx+(bevel_r ? 5 : 4));
+                        _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx+(bevel_r ? 4 : 5));
+                        _IdxWritePtr += 6;
+                    } else {
+                        unused_indices += 6;
+                    }
+                }
+            }
+            _VtxCurrentIdx += vertex_count;
         }
         PrimUnreserve(unused_indices, unused_vertices);
     }
