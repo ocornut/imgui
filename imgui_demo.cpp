@@ -3357,7 +3357,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeTopRow", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeTopRow);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeLeftColumn", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeLeftColumn);
-        
+
         if (ImGui::BeginTable("##table1", 7, flags, size))
         {
             ImGui::TableSetupColumn("Line #", ImGuiTableColumnFlags_NoHide); // Make the first column not hideable to match our use of ImGuiTableFlags_ScrollFreezeLeftColumn
