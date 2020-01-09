@@ -4197,7 +4197,7 @@ void ImGui::Render()
     g.FrameCountRendered = g.FrameCount;
 
     // Gather ImDrawList to render (for each active window)
-    g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = g.IO.MetricsRenderWindows = 0;
+    g.IO.MetricsRenderWindows = 0;
     g.DrawDataBuilder.Clear();
     if (!g.BackgroundDrawList.VtxBuffer.empty())
         AddDrawListToDrawData(&g.DrawDataBuilder.Layers[0], &g.BackgroundDrawList);
@@ -8363,7 +8363,7 @@ static void ImGui::NavUpdate()
             IM_ASSERT(child_window->ChildId != 0);
             FocusWindow(parent_window);
             SetNavID(child_window->ChildId, 0);
-            g.NavIdIsAlive = false;
+            g.NavIdIsAlive = false;     // -V1048: Reassigning with same value, we're being explicit here.
             if (g.NavDisableMouseHover)
                 g.NavMousePosDirty = true;
         }
@@ -8453,7 +8453,7 @@ static void ImGui::NavUpdate()
     {
         //IMGUI_DEBUG_LOG("[Nav] NavInitRequest from move, window \"%s\", layer=%d\n", g.NavWindow->Name, g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
-        g.NavInitResultId = 0;
+        g.NavInitResultId = 0;     // -V1048: Reassigning with same value, we're being explicit here.
         g.NavDisableHighlight = false;
     }
     NavUpdateAnyRequestFlag();
