@@ -3418,6 +3418,8 @@ static void ShowDemoWindowTables()
                 ImGui::CheckboxFlags("_NoSortDescending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoSortDescending);
                 ImGui::CheckboxFlags("_PreferSortAscending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_PreferSortAscending);
                 ImGui::CheckboxFlags("_PreferSortDescending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_PreferSortDescending);
+                ImGui::CheckboxFlags("_IndentEnable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentEnable);
+                ImGui::CheckboxFlags("_IndentDisable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentDisable);
                 ImGui::PopID();
                 ImGui::PopStyleVar(2);
             }
@@ -3426,20 +3428,23 @@ static void ShowDemoWindowTables()
 
         // Create the real table we care about for the example!
         const ImGuiTableFlags flags = ImGuiTableFlags_SizingPolicyFixedX | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
-        if (ImGui::BeginTable("##table1", column_count, flags))
+        if (ImGui::BeginTable("##table", column_count, flags))
         {
             for (int column = 0; column < column_count; column++)
                 ImGui::TableSetupColumn(column_names[column], column_flags[column]);
             ImGui::TableAutoHeaders();
             for (int row = 0; row < 8; row++)
             {
+                ImGui::Indent(2.0f); // Add some indentation to demonstrate usage of per-column IndentEnable/IndentDisable flags.
                 ImGui::TableNextRow();
                 for (int column = 0; column < column_count; column++)
                 {
                     ImGui::TableSetColumnIndex(column);
-                    ImGui::Text("Hello %s", ImGui::TableGetColumnName(column));
+                    ImGui::Text("%s %s", (column == 0) ? "Indented" : "Hello", ImGui::TableGetColumnName(column));
                 }
             }
+            ImGui::Unindent(2.0f * 8.0f);
+
             ImGui::EndTable();
         }
         ImGui::TreePop();
@@ -3597,6 +3602,78 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
                 ImGui::Text("min_row_height = %.2f", min_row_height);
             }
+            ImGui::EndTable();
+        }
+        ImGui::TreePop();
+    }
+
+    if (open_action != -1)
+        ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode("Tree view"))
+    {
+        static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersHOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
+        //ImGui::CheckboxFlags("ImGuiTableFlags_Scroll", (unsigned int*)&flags, ImGuiTableFlags_Scroll);
+        //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeLeftColumn", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeLeftColumn);
+
+        if (ImGui::BeginTable("##3ways", 3, flags))
+        {
+            // The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
+            ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
+            ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 10);
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 20);
+            ImGui::TableAutoHeaders();
+
+            // Simple storage to output a dummy file-system.
+            struct MyTreeNode 
+            { 
+                const char*     Name; 
+                const char*     Type; 
+                int             Size; 
+                int             ChildIdx; 
+                int             ChildCount; 
+                static void DisplayNode(const MyTreeNode* node, const MyTreeNode* all_nodes)
+                {
+                    ImGui::TableNextRow();
+                    const bool is_folder = (node->ChildCount > 0);
+                    if (is_folder)
+                    {
+                        bool open = ImGui::TreeNodeEx(node->Name, ImGuiTreeNodeFlags_SpanFullWidth);
+                        ImGui::TableNextCell();
+                        ImGui::TextDisabled("--");
+                        ImGui::TableNextCell();
+                        ImGui::TextUnformatted(node->Type);
+                        if (open)
+                        {
+                            for (int child_n = 0; child_n < node->ChildCount; child_n++)
+                                DisplayNode(&all_nodes[node->ChildIdx + child_n], all_nodes);
+                            ImGui::TreePop();
+                        }
+                    }
+                    else
+                    {
+                        ImGui::TreeNodeEx(node->Name, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
+                        ImGui::TableNextCell();
+                        ImGui::Text("%d", node->Size);
+                        ImGui::TableNextCell();
+                        ImGui::TextUnformatted(node->Type);
+                    }
+                }
+            };
+            static const MyTreeNode nodes[] =
+            {
+                { "Root",                         "Folder",       -1,       1, 3    }, // 0
+                { "Music",                        "Folder",       -1,       4, 2    }, // 1
+                { "Textures",                     "Folder",       -1,       6, 3    }, // 2
+                { "desktop.ini",                  "System file",  1024,    -1,-1    }, // 3
+                { "File1_a.wav",                  "Audio file",   123000,  -1,-1    }, // 4
+                { "File1_b.wav",                  "Audio file",   456000,  -1,-1    }, // 5
+                { "Image001.png",                 "Image file",   203128,  -1,-1    }, // 6
+                { "Copy of Image001.png",         "Image file",   203256,  -1,-1    }, // 7
+                { "Copy of Image001 (Final2).png","Image file",   203512,  -1,-1    }, // 8
+            };
+
+            MyTreeNode::DisplayNode(&nodes[0], nodes);
+
             ImGui::EndTable();
         }
         ImGui::TreePop();

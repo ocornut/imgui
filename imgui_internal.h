@@ -1842,6 +1842,7 @@ struct ImGuiTable
     ImU32                       BorderColorLight;
     float                       BorderX1;
     float                       BorderX2;
+    float                       HostIndentX;
     float                       CellPaddingX1;              // Padding from each borders
     float                       CellPaddingX2;
     float                       CellPaddingY;

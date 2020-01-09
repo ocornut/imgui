@@ -8001,6 +8001,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Backup a copy of host window members we will modify
     ImGuiWindow* inner_window = table->InnerWindow;
+    table->HostIndentX = inner_window->DC.Indent.x;
     table->HostClipRect = inner_window->ClipRect;
     table->HostSkipItems = inner_window->SkipItems;
     table->HostWorkRect = inner_window->WorkRect;
@@ -8317,6 +8318,8 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         // Adjust flags: default width mode + weighted columns are not allowed when auto extending
         // FIXME-TABLE: Clarify why we need to do this again here and not just in TableSetupColumn()
         column->Flags = TableFixColumnFlags(table, column->FlagsIn);
+        if ((column->Flags & ImGuiTableColumnFlags_IndentMask_) == 0)
+            column->Flags |= (column_n == 0) ? ImGuiTableColumnFlags_IndentEnable : ImGuiTableColumnFlags_IndentDisable;
 
         // We have a unusual edge case where if the user doesn't call TableGetSortSpecs() but has sorting enabled
         // or varying sorting flags, we still want the sorting arrows to honor those flags.
@@ -9345,7 +9348,9 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     ImGuiTableColumn* column = &table->Columns[column_no];
     ImGuiWindow* window = table->InnerWindow;
 
-    const float start_x = (table->RowFlags & ImGuiTableRowFlags_Headers) ? column->StartXHeaders : column->StartXRows;
+    float start_x = (table->RowFlags & ImGuiTableRowFlags_Headers) ? column->StartXHeaders : column->StartXRows;
+    if (column->Flags & ImGuiTableColumnFlags_IndentEnable)
+        start_x += window->DC.Indent.x - table->HostIndentX;
 
     window->DC.LastItemId = 0;
     window->DC.CursorPos.x = start_x;
