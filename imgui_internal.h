@@ -1790,9 +1790,9 @@ struct ImGuiTableColumn
     ImGuiID                 UserID;                         // Optional, value passed to TableSetupColumn()
     ImGuiTableColumnFlags   FlagsIn;                        // Flags as they were provided by user. See ImGuiTableColumnFlags_
     ImGuiTableColumnFlags   Flags;                          // Effective flags. See ImGuiTableColumnFlags_
-    float                   ResizeWeight;                   //  ~1.0f. Master width data when (Flags & _WidthStretch)
     float                   MinX;                           // Absolute positions
     float                   MaxX;
+    float                   ResizeWeight;                   //  ~1.0f. Master width data when (Flags & _WidthStretch)
     float                   WidthRequested;                 // Master width data when !(Flags & _WidthStretch)
     float                   WidthGiven;                     // == (MaxX - MinX). FIXME-TABLE: Store all persistent width in multiple of FontSize?
     float                   StartXRows;                     // Start position for the frame, currently ~(MinX + CellPaddingX)
@@ -1825,8 +1825,7 @@ struct ImGuiTableColumn
     ImGuiTableColumn()
     {
         memset(this, 0, sizeof(*this));
-        ResizeWeight = 1.0f;
-        WidthRequested = WidthGiven = -1.0f;
+        ResizeWeight = WidthRequested = WidthGiven = -1.0f;
         NameOffset = -1;
         IsActive = NextIsActive = true;
         IndexDisplayOrder = IndexWithinActiveSet = -1;
