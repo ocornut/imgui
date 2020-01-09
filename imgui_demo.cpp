@@ -3400,14 +3400,14 @@ static void ShowDemoWindowTables()
         {
             for (int column = 0; column < column_count; column++)
             {
-                ImGui::TableNextCell();
                 // Make the UI compact because there are so many fields
+                ImGui::TableNextCell();
                 ImGuiStyle& style = ImGui::GetStyle();
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, 2));
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, 2));
                 ImGui::PushID(column);
                 ImGui::AlignTextToFramePadding(); // FIXME-TABLE: Workaround for wrong text baseline propagation
-                ImGui::Text("Column '%s'", column_names[column]);
+                ImGui::Text("Flags for '%s'", column_names[column]);
                 ImGui::CheckboxFlags("_NoResize", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoResize);
                 ImGui::CheckboxFlags("_NoClipX", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoClipX);
                 ImGui::CheckboxFlags("_NoHide", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoHide);
@@ -3619,8 +3619,8 @@ static void ShowDemoWindowTables()
         {
             // The first column will use the default _WidthStretch when ScrollX is Off and _WidthFixed when ScrollX is On
             ImGui::TableSetupColumn("Name", ImGuiTableColumnFlags_NoHide);
-            ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 10);
-            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 20);
+            ImGui::TableSetupColumn("Size", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 6);
+            ImGui::TableSetupColumn("Type", ImGuiTableColumnFlags_WidthFixed, ImGui::GetFontSize() * 10);
             ImGui::TableAutoHeaders();
 
             // Simple storage to output a dummy file-system.
@@ -3782,10 +3782,10 @@ static void ShowDemoWindowTables()
         static float inner_width_without_scroll = 0.0f; // Fill 
         static float inner_width_with_scroll = 0.0f; // Auto-extend
         static bool outer_size_enabled = true;
-        static bool lock_left_column_visibility = false;
+        static bool lock_first_column_visibility = false;
         static bool show_headers = true;
         static bool show_wrapped_text = false;
-        static ImGuiTextFilter filter;
+        //static ImGuiTextFilter filter;
         //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // FIXME-TABLE: Enabling this results in initial clipped first pass on table which affects sizing
         if (ImGui::TreeNodeEx("Options"))
         {
@@ -3869,10 +3869,10 @@ static void ShowDemoWindowTables()
             ImGui::SameLine(); HelpMarker("Specify height of the Selectable item.");
             ImGui::DragInt("items_count", &items_count, 0.1f, 0, 5000);
             ImGui::Combo("contents_type (first column)", &contents_type, contents_type_names, IM_ARRAYSIZE(contents_type_names));
-            filter.Draw("filter");
+            //filter.Draw("filter");
             ImGui::Checkbox("show_headers", &show_headers);
             ImGui::Checkbox("show_wrapped_text", &show_wrapped_text);
-            ImGui::Checkbox("lock_left_column_visibility", &lock_left_column_visibility);
+            ImGui::Checkbox("lock_first_column_visibility", &lock_first_column_visibility);
             ImGui::Unindent();
 
             ImGui::PopItemWidth();
@@ -3907,7 +3907,7 @@ static void ShowDemoWindowTables()
             // Declare columns
             // We use the "user_id" parameter of TableSetupColumn() to specify a user id that will be stored in the sort specifications.
             // This is so our sort function can identify a column given our own identifier. We could also identify them based on their index!
-            ImGui::TableSetupColumn("ID",          ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed | (lock_left_column_visibility ? ImGuiTableColumnFlags_NoHide : 0), -1.0f, MyItemColumnID_ID);
+            ImGui::TableSetupColumn("ID",          ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed | (lock_first_column_visibility ? ImGuiTableColumnFlags_NoHide : 0), -1.0f, MyItemColumnID_ID);
             ImGui::TableSetupColumn("Name",        ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Name);
             ImGui::TableSetupColumn("Action",      ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Action);
             ImGui::TableSetupColumn("Quantity Long Label", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthStretch, 1.0f, MyItemColumnID_Quantity);// , ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthAlwaysAutoResize);
@@ -3948,8 +3948,8 @@ static void ShowDemoWindowTables()
 #endif
                 {
                     MyItem* item = &items[row_n];
-                    if (!filter.PassFilter(item->Name))
-                        continue;
+                    //if (!filter.PassFilter(item->Name))
+                    //    continue;
 
                     const bool item_is_selected = selection.contains(item->ID);
                     ImGui::PushID(item->ID);

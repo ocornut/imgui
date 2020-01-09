@@ -8350,7 +8350,9 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         else
         {
             IM_ASSERT(column->Flags & ImGuiTableColumnFlags_WidthStretch);
-            IM_ASSERT(column->ResizeWeight > 0.0f);
+            const int init_size = (column->ResizeWeight < 0.0f);
+            if (init_size)
+                column->ResizeWeight = 1.0f;
             total_weights += column->ResizeWeight;
             if (table->LeftMostStretchedColumnDisplayOrder == -1)
                 table->LeftMostStretchedColumnDisplayOrder = (ImS8)column->IndexDisplayOrder;
@@ -9143,7 +9145,8 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     flags = column->Flags;
 
     // Initialize defaults
-    if (table->IsInitializing && !table->IsSettingsLoaded)
+    // FIXME-TABLE: We don't restore widths/weight so let's avoid using IsSettingsLoaded for now
+    if (table->IsInitializing && column->WidthRequested < 0.0f && column->ResizeWeight < 0.0f)// && !table->IsSettingsLoaded)
     {
         // Init width or weight
         // Disable auto-fit if a default fixed width has been specified
@@ -9161,7 +9164,9 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
         {
             column->ResizeWeight = 1.0f;
         }
-
+    }
+    if (table->IsInitializing && !table->IsSettingsLoaded)
+    {
         // Init default visibility/sort state
         if (flags & ImGuiTableColumnFlags_DefaultHide)
             column->IsActive = column->NextIsActive = false;
