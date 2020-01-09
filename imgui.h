@@ -694,7 +694,7 @@ namespace ImGui
     // Tables: Sorting
     // - Call TableGetSortSpecs() to retrieve latest sort specs for the table. Return value will be NULL if no sorting.
     // - You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since last call, or the first time.
-    // - Don't hold on this structure over multiple frames.
+    // - Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
     IMGUI_API const ImGuiTableSortSpecs* TableGetSortSpecs();           // get latest sort specs for the table (NULL if not sorting).
 
     // Tab Bars, Tabs

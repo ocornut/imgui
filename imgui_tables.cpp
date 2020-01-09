@@ -68,20 +68,22 @@
 //    - TableBeginUpdateColumns()               - apply resize/order requests, lock columns active state, order
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
-//    - TableSortSpecsClickColumn()
+//    - TableSortSpecsClickColumn()             - when clicked: alter sort order and sort direction
 // - TableGetSortSpecs()                        user queries updated sort specs (optional)
 // - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableAutoHeaders()
-//    - TableUpdateLayout()                     - called by the FIRST call to TableNextRow()
-//      - TableUpdateDrawChannels()             - setup ImDrawList channels
-//      - TableUpdateBorders()                  - detect hovering columns for resize, ahead of contents submission
-//      - TableDrawContextMenu()                - draw right-click context menu
+//    - TableUpdateLayout()                     - called by the FIRST call to TableNextRow()!
+//      - TableUpdateDrawChannels()               - setup ImDrawList channels
+//      - TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
+//      - TableDrawContextMenu()                  - draw right-click context menu
+//    - TableEndCell()                          - close existing cell if not the first time
+//    - TableBeginCell()                        - enter into current cell
 // - [...]                                      user emit contents
 // - EndTable()                                 user ends the table
 //    - TableDrawBorders()                      - draw outer borders, inner vertical borders
 //    - TableDrawMergeChannels()                - merge draw channels if clipping isn't required
 //    - TableSetColumnWidth()                   - apply resizing width
-//      - TableUpdateColumnsWeightFromWidth()
-//      - EndChild()                            - (if ScrollX/ScrollY is set)
+//      - TableUpdateColumnsWeightFromWidth()     - recompute columns weights (of weighted columns) from their respective width
+//      - EndChild()                              - (if ScrollX/ScrollY is set)
 //-----------------------------------------------------------------------------
 
 // Configuration
@@ -700,7 +702,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             column->ClipRect.Max.x = offset_x;
             column->ClipRect.Max.y = FLT_MAX;
             column->ClipRect.ClipWithFull(host_clip_rect);
-            column->IsClipped = true;
+            column->IsClipped = column->SkipItems = true;
             continue;
         }
 
@@ -731,6 +733,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         column->ClipRect.ClipWithFull(host_clip_rect);
 
         column->IsClipped = (column->ClipRect.Max.x <= column->ClipRect.Min.x) && (column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0;
+        column->SkipItems = column->IsClipped || table->HostSkipItems;
         if (column->IsClipped)
         {
             // Columns with the _WidthAlwaysAutoResize sizing policy will never be updated then.
@@ -1580,9 +1583,10 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     const float start_x = (table->RowFlags & ImGuiTableRowFlags_Headers) ? column->StartXHeaders : column->StartXRows;
 
     window->DC.LastItemId = 0;
-    window->DC.CursorPos = ImVec2(start_x, table->RowPosY1 + table->CellPaddingY);
+    window->DC.CursorPos.x = start_x;
+    window->DC.CursorPos.y = table->RowPosY1 + table->CellPaddingY;
     window->DC.CursorMaxPos.x = window->DC.CursorPos.x;
-    window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT // FIXME-TABLE: Recurse
+    window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
 
     window->WorkRect.Min.y = window->DC.CursorPos.y;
@@ -1593,10 +1597,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     if (!column->IsActive)
         window->DC.CursorPos.y = ImMax(window->DC.CursorPos.y, table->RowPosY2);
 
-    // FIXME-COLUMNS: Setup baseline, preserve across columns (how can we obtain first line baseline tho..)
-    // window->DC.CurrLineTextBaseOffset = ImMax(window->DC.CurrLineTextBaseOffset, g.Style.FramePadding.y);
-
-    window->SkipItems = column->IsClipped ? true : table->HostSkipItems;
+    window->SkipItems = column->SkipItems;
     if (table->Flags & ImGuiTableFlags_NoClipX)
     {
         table->DrawSplitter.SetCurrentChannel(window->DrawList, 1);
@@ -1615,7 +1616,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
     }
 }
 
-// [Internal] Called by TableNextRow()TableNextCell()!
+// [Internal] Called by TableNextRow()/TableNextCell()!
 void    ImGui::TableEndCell(ImGuiTable* table)
 {
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
@@ -2078,7 +2079,8 @@ void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* click
 }
 
 // Return NULL if no sort specs.
-// You can sort your data again when 'SpecsChanged == true'.It will be true with sorting specs have changed since last call, or the first time.
+// You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since last call, or the first time.
+// Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
 const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 {
     ImGuiContext& g = *GImGui;

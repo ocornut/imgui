@@ -1823,11 +1823,12 @@ struct ImGuiTabBar
 #define IM_COL32_DISABLE            IM_COL32(0,0,0,1)   // Special sentinel code
 #define IMGUI_TABLE_MAX_COLUMNS     64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 
-// [Internal] sizeof() ~ 96
+// [Internal] sizeof() ~ 100
 struct ImGuiTableColumn
 {
+    ImRect                  ClipRect;                       // Clipping rectangle for the column
     ImGuiID                 UserID;                         // Optional, value passed to TableSetupColumn()
-    ImGuiTableColumnFlags   FlagsIn;                        // Flags as input by user. See ImGuiTableColumnFlags_
+    ImGuiTableColumnFlags   FlagsIn;                        // Flags as they were provided by user. See ImGuiTableColumnFlags_
     ImGuiTableColumnFlags   Flags;                          // Effective flags. See ImGuiTableColumnFlags_
     float                   ResizeWeight;                   //  ~1.0f. Master width data when (Flags & _WidthStretch)
     float                   MinX;                           // Absolute positions
@@ -1836,19 +1837,19 @@ struct ImGuiTableColumn
     float                   WidthGiven;                     // == (MaxX - MinX). FIXME-TABLE: Store all persistent width in multiple of FontSize?
     float                   StartXRows;                     // Start position for the frame, currently ~(MinX + CellPaddingX)
     float                   StartXHeaders;                  
-    ImS16                   ContentWidthRowsFrozen;         // Contents width. Because freezing is non correlated from headers we need all 4 variants (ImDrawCmd merging uses different data than alignment code).
-    ImS16                   ContentWidthRowsUnfrozen;       // (encoded as ImS16 because we actually rarely use those width)
-    ImS16                   ContentWidthHeadersUsed;        // TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
-    ImS16                   ContentWidthHeadersDesired;
     float                   ContentMaxPosRowsFrozen;        // Submitted contents absolute maximum position, from which we can infer width.
     float                   ContentMaxPosRowsUnfrozen;      // (kept as float because we need to manipulate those between each cell change)
     float                   ContentMaxPosHeadersUsed;
     float                   ContentMaxPosHeadersDesired;
-    ImRect                  ClipRect;
-    ImS16                   NameOffset;                     // Offset into parent ColumnsName[]
+    ImS16                   ContentWidthRowsFrozen;         // Contents width. Because row freezing is not correlated with headers/not-headers we need all 4 variants (ImDrawCmd merging uses different data than alignment code).
+    ImS16                   ContentWidthRowsUnfrozen;       // (encoded as ImS16 because we actually rarely use those width)
+    ImS16                   ContentWidthHeadersUsed;        // TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
+    ImS16                   ContentWidthHeadersDesired;
+    ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
     bool                    IsActive;                       // Is the column not marked Hidden by the user (regardless of clipping). We're not calling this "Visible" here because visibility also depends on clipping.
     bool                    NextIsActive;
     bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle. We don't use the opposite "!Visible" name because Clipped can be altered by events.
+    bool                    SkipItems;
     ImS8                    IndexDisplayOrder;              // Index within DisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinActiveSet;           // Index within active set (<= IndexOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
@@ -2178,10 +2179,6 @@ namespace ImGui
     IMGUI_API float         GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offset);
 
     // Tables
-    //IMGUI_API int         GetTableColumnNo();
-    //IMGUI_API bool        SetTableColumnNo(int column_n);
-    //IMGUI_API int         GetTableLineNo();
-
     IMGUI_API bool          BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          TableBeginUpdateColumns(ImGuiTable* table);
     IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);
