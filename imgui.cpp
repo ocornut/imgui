@@ -8363,7 +8363,8 @@ static void ImGui::NavUpdate()
             IM_ASSERT(child_window->ChildId != 0);
             FocusWindow(parent_window);
             SetNavID(child_window->ChildId, 0);
-            g.NavIdIsAlive = false;     // -V1048: Reassigning with same value, we're being explicit here.
+            // Reassigning with same value, we're being explicit here.
+            g.NavIdIsAlive = false;     // -V1048
             if (g.NavDisableMouseHover)
                 g.NavMousePosDirty = true;
         }
@@ -8453,7 +8454,8 @@ static void ImGui::NavUpdate()
     {
         //IMGUI_DEBUG_LOG("[Nav] NavInitRequest from move, window \"%s\", layer=%d\n", g.NavWindow->Name, g.NavLayer);
         g.NavInitRequest = g.NavInitRequestFromMove = true;
-        g.NavInitResultId = 0;     // -V1048: Reassigning with same value, we're being explicit here.
+        // Reassigning with same value, we're being explicit here.
+        g.NavInitResultId = 0;     // -V1048
         g.NavDisableHighlight = false;
     }
     NavUpdateAnyRequestFlag();

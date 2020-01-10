@@ -77,6 +77,7 @@ Other Changes:
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
   on Wayland). (#2800, #2802) [@NeroBurner]
+- CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
   automatically use it). (#2919, #2798)
