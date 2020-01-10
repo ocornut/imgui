@@ -21,7 +21,7 @@
 // reentrant or used in multiple threads. This might be a pattern you will want to use in your code, but most of the real data
 // you would be editing is likely going to be stored outside your functions.
 
-// The Demo code is this file is designed to be easy to copy-and-paste in into your application!
+// The Demo code in this file is designed to be easy to copy-and-paste in into your application!
 // Because of this:
 // - We never omit the ImGui:: namespace when calling functions, even though most of our code is already in the same namespace.
 // - We try to declare static variables in the local scope, as close as possible to the code using them.
