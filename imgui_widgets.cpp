@@ -462,7 +462,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     }
 
     // Default behavior requires click+release on same spot
-    if ((flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick)) == 0)
+    if ((flags & (ImGuiButtonFlags_PressedOnMask_ & ~ImGuiButtonFlags_PressedOnDragDropHold)) == 0)
         flags |= ImGuiButtonFlags_PressedOnClickRelease;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
@@ -507,7 +507,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     {
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            if ((flags & ImGuiButtonFlags_PressedOnClickRelease) && g.IO.MouseClicked[0])
+            if ((flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere)) && g.IO.MouseClicked[0])
             {
                 SetActiveID(id, window);
                 if (!(flags & ImGuiButtonFlags_NoNavFocus))
@@ -577,7 +577,9 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             }
             else
             {
-                if (hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease) && !g.DragDropActive)
+                const bool release_in = hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease) != 0;
+                const bool release_anywhere = (flags & ImGuiButtonFlags_PressedOnClickReleaseAnywhere) != 0;
+                if ((release_in || release_anywhere) && !g.DragDropActive)
                 {
                     bool is_double_click_release = (flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDownWasDoubleClick[0];
                     bool is_repeating_already = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay; // Repeat mode trumps <on release>
@@ -5573,12 +5575,12 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     // We use NoHoldingActiveID on menus so user can click and _hold_ on a menu then drag to browse child entries
     ImGuiButtonFlags button_flags = 0;
-    if (flags & ImGuiSelectableFlags_NoHoldingActiveID) button_flags |= ImGuiButtonFlags_NoHoldingActiveID;
-    if (flags & ImGuiSelectableFlags_PressedOnClick) button_flags |= ImGuiButtonFlags_PressedOnClick;
-    if (flags & ImGuiSelectableFlags_PressedOnRelease) button_flags |= ImGuiButtonFlags_PressedOnRelease;
-    if (flags & ImGuiSelectableFlags_Disabled) button_flags |= ImGuiButtonFlags_Disabled;
-    if (flags & ImGuiSelectableFlags_AllowDoubleClick) button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick;
-    if (flags & ImGuiSelectableFlags_AllowItemOverlap) button_flags |= ImGuiButtonFlags_AllowItemOverlap;
+    if (flags & ImGuiSelectableFlags_NoHoldingActiveID) { button_flags |= ImGuiButtonFlags_NoHoldingActiveID; }
+    if (flags & ImGuiSelectableFlags_PressedOnClick)    { button_flags |= ImGuiButtonFlags_PressedOnClick; }
+    if (flags & ImGuiSelectableFlags_PressedOnRelease)  { button_flags |= ImGuiButtonFlags_PressedOnRelease; }
+    if (flags & ImGuiSelectableFlags_Disabled)          { button_flags |= ImGuiButtonFlags_Disabled; }
+    if (flags & ImGuiSelectableFlags_AllowDoubleClick)  { button_flags |= ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnDoubleClick; }
+    if (flags & ImGuiSelectableFlags_AllowItemOverlap)  { button_flags |= ImGuiButtonFlags_AllowItemOverlap; }
 
     if (flags & ImGuiSelectableFlags_Disabled)
         selected = false;
