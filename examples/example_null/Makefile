@@ -5,13 +5,8 @@
 
 EXE = example_null
 EXTRA_WARNINGS ?= 0
-UNITY_BUILD ?= 0
-ifeq ($(UNITY_BUILD), 1)
-	SOURCES = unity_build.cpp
-else
-	SOURCES = main.cpp
-	SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
-endif
+SOURCES = main.cpp
+SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 UNAME_S := $(shell uname -s)
 

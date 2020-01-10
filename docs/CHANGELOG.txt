@@ -68,11 +68,14 @@ Other Changes:
 - ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
   when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
-- Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count
   selection, those new api can fill a gap. [@ShironekoBen]
+- Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp
+  files in a same compilation unit. Actual users of that technique (also called "Unity builds")
+  can generally provide this themselves, so we don't really recommend you use this. [@rokups]
 - Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
