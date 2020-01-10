@@ -30,7 +30,7 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- DOCKING BRANCH (In Progress)
+ DOCKING+MULTI-VIEWPORT BRANCH (In Progress)
 -----------------------------------------------------------------------
 
 DOCKING FEATURES
@@ -133,6 +133,10 @@ Breaking Changes:
 Other Changes:
 - Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
   We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
+- ColorEdit: Fix label alignment when using ImGuiColorEditFlags_NoInputs. (#2955) [@rokups]
+- ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
+  when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
+  those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
@@ -143,11 +147,11 @@ Other Changes:
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
   on Wayland). (#2800, #2802) [@NeroBurner]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
-  settings (otherwise if another loader such as Glew is accessible, the opengl3 backend might
-  automatically use it). [#2919, #2798]
+  settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
+  automatically use it). (#2919, #2798)
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
-  even if underlying system event loop gets paused due to app nap (#2910, #2917). [@bear24rw]
->>>>>>> refs/heads/master
+  even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
+- Examples: Added support for glbindings OpenGL loader. (#2870) [@rokups]
 
 
 -----------------------------------------------------------------------
@@ -232,7 +236,7 @@ Other Changes:
 - Nav, Scrolling: Added support for Home/End key. (#787)
 - ColorEdit: Disable Hue edit when Saturation==0 instead of letting Hue values jump around.
 - ColorEdit, ColorPicker: In HSV display of a RGB stored value, attempt to locally preserve Hue
-  when Saturation==0, which reduces accidentally lossy interactions. (#2722, 2770) [@rokups]
+  when Saturation==0, which reduces accidentally lossy interactions. (#2722, #2770) [@rokups]
 - ColorPicker: Made rendering aware of global style alpha of the picker can be faded out. (#2711)
   Note that some elements won't accurately fade down with the same intensity, and the color wheel
   when enabled will have small overlap glitches with (style.Alpha < 1.0).

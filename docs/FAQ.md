@@ -371,23 +371,23 @@ Finally, you may call ImGui::ShowMetricsWindow() to explore/visualize/understand
 
 ### Q: How can I use my own math types instead of ImVec2/ImVec4?
 
-You can edit [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) and setup the IM_VEC2_CLASS_EXTRA/IM_VEC4_CLASS_EXTRA macros to add implicit type conversions.
-This way you'll be able to use your own types everywhere, e.g. passing MyVector2 or glm::vec2 to ImGui functions instead of ImVec2.
+You can edit [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) and setup the `IM_VEC2_CLASS_EXTRA`/`IM_VEC4_CLASS_EXTRA` macros to add implicit type conversions.
+This way you'll be able to use your own types everywhere, e.g. passing `MyVector2` or `glm::vec2` to ImGui functions instead of `ImVec2`.
 
 ---
 
 ### Q: How can I interact with standard C++ types (such as std::string and std::vector)?
 - Being highly portable (bindings for several languages, frameworks, programming style, obscure or older platforms/compilers), and aiming for compatibility & performance suitable for every modern real-time game engines, dear imgui does not use any of std C++ types. We use raw types (e.g. char* instead of std::string) because they adapt to more use cases.
 - To use ImGui::InputText() with a std::string or any resizable string class, see [misc/cpp/imgui_stdlib.h](https://github.com/ocornut/imgui/blob/master/misc/cpp/imgui_stdlib.h).
-- To use combo boxes and list boxes with std::vector or any other data structure: the BeginCombo()/EndCombo() API
-lets you iterate and submit items yourself, so does the ListBoxHeader()/ListBoxFooter() API.
-Prefer using them over the old and awkward Combo()/ListBox() api.
+- To use combo boxes and list boxes with `std::vector` or any other data structure: the `BeginCombo()/EndCombo()` API
+lets you iterate and submit items yourself, so does the `ListBoxHeader()/ListBoxFooter()` API.
+Prefer using them over the old and awkward `Combo()/ListBox()` api.
 - Generally for most high-level types you should be able to access the underlying data type.
 You may write your own one-liner wrappers to facilitate user code (tip: add new functions in ImGui:: namespace from your code).
 - Dear ImGui applications often need to make intensive use of strings. It is expected that many of the strings you will pass
 to the API are raw literals (free in C/C++) or allocated in a manner that won't incur a large cost on your application.
-Please bear in mind that using std::string on applications with large amount of UI may incur unsatisfactory performances.
-Modern implementations of std::string often include small-string optimization (which is often a local buffer) but those
+Please bear in mind that using `std::string` on applications with large amount of UI may incur unsatisfactory performances.
+Modern implementations of `std::string` often include small-string optimization (which is often a local buffer) but those
 are not configurable and not the same across implementations.
 - If you are finding your UI traversal cost to be too large, make sure your string usage is not leading to excessive amount
 of heap allocations. Consider using literals, statically sized buffers and your own helper functions. A common pattern
@@ -537,10 +537,10 @@ the default implementation of io.ImeSetInputScreenPosFn() to set your Microsoft 
 # Q&A: Community
 
 ### Q: How can I help?
+- Businesses: please reach out to `contact AT dearimgui.org` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding we can hire more people working on this project.
+- Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at the [GitHub Issues](https://github.com/ocornut/imgui/issues), look at the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
-- Businesses: convince your company to fund development via support contracts/sponsoring! This is among the most useful thing you can do for Dear ImGui. With increased funding we will be able to hire more people working on this project.
-- Individuals: you can also become a [Patron](http://www.patreon.com/imgui) or donate on PayPal! See README.
-- Disclose your usage of dear imgui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
+- Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.
 You may post screenshot or links in the [gallery threads](https://github.com/ocornut/imgui/issues/2847). Visuals are ideal as they inspire other programmers. Disclosing your use of dear imgui help the library grow credibility, and help other teams and programmers with taking decisions.
 - If you have issues or if you need to hack into the library, even if you don't expect any support it is useful that you share your issues or sometimes incomplete PR.
 
