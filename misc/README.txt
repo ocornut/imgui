@@ -16,3 +16,9 @@ misc/natvis/
   Natvis file to describe dear imgui types in the Visual Studio debugger.
   With this, types like ImVector<> will be displayed nicely in the debugger.
   You can include this file a Visual Studio project file, or install it in Visual Studio folder.
+
+misc/single_file/
+  Single-file header stub.
+  We use this to validate compiling all *.cpp files in a same compilation unit.
+  Users of that technique (also called "Unity builds") can generally provide this themselves,
+  so we don't really recommend you use this in your projects.
