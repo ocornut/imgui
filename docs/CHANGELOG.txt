@@ -93,6 +93,8 @@ Other Changes:
  VERSION 1.74 (Released 2019-11-25)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.74
+
 Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
   - Begin() [old 5 args version]     -> use Begin() [3 args], use SetNextWindowSize() SetNextWindowBgAlpha() if needed
@@ -166,6 +168,8 @@ Other Changes:
  VERSION 1.73 (Released 2019-09-24)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.73
+
 Other Changes:
 
 - Nav, Scrolling: Added support for Home/End key. (#787)
@@ -226,6 +230,8 @@ Other Changes:
  VERSION 1.72b (Released 2019-07-31)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72b
+
 Other Changes:
 
 - Nav, Scrolling: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
@@ -240,6 +246,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.72 (Released 2019-07-27)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72
 
 Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017):
@@ -322,6 +330,8 @@ Other Changes:
  VERSION 1.71 (Released 2019-06-12)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.71
+
 Breaking Changes:
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
@@ -401,6 +411,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.70 (Released 2019-05-06)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.70
 
 Breaking Changes:
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness
@@ -489,6 +501,8 @@ Other Changes:
  VERSION 1.69 (Released 2019-03-13)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.69
+
 Breaking Changes:
 
 - Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
@@ -565,6 +579,8 @@ Other Changes:
  VERSION 1.68 (Released 2019-02-19)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.68
+
 Breaking Changes:
 
 - Removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
@@ -633,6 +649,8 @@ Other Changes:
  VERSION 1.67 (Released 2019-01-14)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.67
+
 Breaking Changes:
 
 - Made it illegal to call Begin("") with an empty string. This somehow half-worked before but had various undesirable
@@ -696,6 +714,8 @@ Other Changes:
  VERSION 1.66b (Released 2018-12-01)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66b
+
 Other Changes:
 
 - Fixed a text rendering/clipping bug introduced in 1.66 (on 2018-10-12, commit ede3a3b9) that affect single ImDrawList::AddText()
@@ -712,6 +732,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66
 
 Breaking Changes:
 
@@ -772,6 +794,8 @@ Other Changes:
  VERSION 1.65 (Released 2018-09-06)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.65
+
 Breaking Changes:
 
 - Renamed stb_truetype.h to imstb_truetype.h, stb_textedit.h to imstb_textedit.h, and
@@ -796,6 +820,8 @@ Other Changes:
  VERSION 1.64 (Released 2018-08-31)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.64
+
 Changes:
 
 - Moved README, CHANGELOG and TODO files to the docs/ folder.
@@ -817,6 +843,8 @@ Changes:
 -----------------------------------------------------------------------
  VERSION 1.63 (Released 2018-08-29)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.63
 
 Breaking Changes:
 
@@ -910,6 +938,8 @@ Other Changes:
  VERSION 1.62 (Released 2018-06-22)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.62
+
 Breaking Changes:
 
 - TreeNodeEx(): The helper ImGuiTreeNodeFlags_CollapsingHeader flag now include ImGuiTreeNodeFlags_NoTreePushOnOpen.
@@ -988,6 +1018,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.61 (Released 2018-05-14)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.61
 
 Breaking Changes:
 

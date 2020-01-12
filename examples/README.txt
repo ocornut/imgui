@@ -35,6 +35,8 @@ You can find binaries of some of those example applications at:
  MISC COMMENTS AND SUGGESTIONS
 ---------------------------------------
 
+ - Read FAQ at http://dearimgui.org/faq
+
  - Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
    Please read the comments and instruction at the top of each file.
 
