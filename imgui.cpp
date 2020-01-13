@@ -5533,8 +5533,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->WindowPadding = style.WindowPadding;
         if ((flags & ImGuiWindowFlags_ChildWindow) && !(flags & (ImGuiWindowFlags_AlwaysUseWindowPadding | ImGuiWindowFlags_Popup)) && window->WindowBorderSize == 0.0f)
             window->WindowPadding = ImVec2(0.0f, (flags & ImGuiWindowFlags_MenuBar) ? style.WindowPadding.y : 0.0f);
-        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
-        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
 
         // Collapse window by double-clicking on title bar
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
@@ -5842,27 +5840,34 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.CursorMaxPos = window->DC.CursorStartPos;
         window->DC.CurrLineSize = window->DC.PrevLineSize = ImVec2(0.0f, 0.0f);
         window->DC.CurrLineTextBaseOffset = window->DC.PrevLineTextBaseOffset = 0.0f;
-        window->DC.NavHideHighlightOneFrame = false;
-        window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
+
+        window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
+        window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
+        window->DC.NavHideHighlightOneFrame = false;
+        window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
+
         window->DC.MenuBarAppending = false;
+        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
+        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
+        window->DC.MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
+        window->DC.TreeDepth = 0;
+        window->DC.TreeJumpToParentOnPopMask = 0x00;
         window->DC.ChildWindows.resize(0);
+        window->DC.StateStorage = &window->StateStorage;
+        window->DC.CurrentColumns = NULL;
         window->DC.LayoutType = ImGuiLayoutType_Vertical;
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
         window->DC.FocusCounterRegular = window->DC.FocusCounterTabStop = -1;
+
         window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
         window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.CurrentColumns = NULL;
-        window->DC.TreeDepth = 0;
-        window->DC.TreeJumpToParentOnPopMask = 0x00;
-        window->DC.StateStorage = &window->StateStorage;
         window->DC.GroupStack.resize(0);
-        window->MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
 
         if ((flags & ImGuiWindowFlags_ChildWindow) && (window->DC.ItemFlags != parent_window->DC.ItemFlags))
         {

@@ -1340,6 +1340,7 @@ struct IMGUI_API ImGuiWindowTempData
     // Miscellaneous
     bool                    MenuBarAppending;       // FIXME: Remove this
     ImVec2                  MenuBarOffset;          // MenuBarOffset.x is sort of equivalent of a per-layer CursorPos.x, saved/restored as we switch to the menu bar. The only situation when MenuBarOffset.y is > 0 if when (SafeAreaPadding.y > FramePadding.y), often used on TVs.
+    ImGuiMenuColumns        MenuColumns;            // Simplified columns storage for menu items measurement
     int                     TreeDepth;              // Current tree depth.
     ImU32                   TreeJumpToParentOnPopMask; // Store a copy of !g.NavIdIsAlive for TreeDepth 0..31.. Could be turned into a ImU64 if necessary.
     ImVector<ImGuiWindow*>  ChildWindows;
@@ -1460,7 +1461,6 @@ struct IMGUI_API ImGuiWindow
     int                     LastFrameActive;                    // Last frame number the window was Active.
     float                   LastTimeActive;                     // Last timestamp the window was Active (using float as we don't need high precision there)
     float                   ItemWidthDefault;
-    ImGuiMenuColumns        MenuColumns;                        // Simplified columns storage for menu items
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumns>  ColumnsStorage;
     float                   FontWindowScale;                    // User scale multiplier per-window, via SetWindowFontScale()
