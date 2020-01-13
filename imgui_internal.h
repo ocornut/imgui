@@ -1076,13 +1076,13 @@ struct ImGuiContext
     ImGuiNavMoveResult      NavMoveResultLocalVisibleSet;       // Best move request candidate within NavWindow that are mostly visible (when using ImGuiNavMoveFlags_AlsoScoreVisibleSet flag)
     ImGuiNavMoveResult      NavMoveResultOther;                 // Best move request candidate within NavWindow's flattened hierarchy (when using ImGuiWindowFlags_NavFlattened flag)
 
-    // Legacy Tabbing system (older than Nav, active even if Nav is disabled, misnamed. FIXME-NAV: This needs a redesign!)
+    // Legacy Focus/Tabbing system (older than Nav, active even if Nav is disabled, misnamed. FIXME-NAV: This needs a redesign!)
     ImGuiWindow*            FocusRequestCurrWindow;             //
     ImGuiWindow*            FocusRequestNextWindow;             //
-    int                     FocusRequestCurrCounterAll;         // Any item being requested for focus, stored as an index (we on layout to be stable between the frame pressing TAB and the next frame, semi-ouch)
-    int                     FocusRequestCurrCounterTab;         // Tab item being requested for focus, stored as an index
-    int                     FocusRequestNextCounterAll;         // Stored for next frame
-    int                     FocusRequestNextCounterTab;         // "
+    int                     FocusRequestCurrCounterRegular;     // Any item being requested for focus, stored as an index (we on layout to be stable between the frame pressing TAB and the next frame, semi-ouch)
+    int                     FocusRequestCurrCounterTabStop;     // Tab item being requested for focus, stored as an index
+    int                     FocusRequestNextCounterRegular;     // Stored for next frame
+    int                     FocusRequestNextCounterTabStop;     // "
     bool                    FocusTabPressed;                    //
 
     // Range-Select/Multi-Select
@@ -1243,8 +1243,8 @@ struct ImGuiContext
         NavMoveDir = NavMoveDirLast = NavMoveClipDir = ImGuiDir_None;
 
         FocusRequestCurrWindow = FocusRequestNextWindow = NULL;
-        FocusRequestCurrCounterAll = FocusRequestCurrCounterTab = INT_MAX;
-        FocusRequestNextCounterAll = FocusRequestNextCounterTab = INT_MAX;
+        FocusRequestCurrCounterRegular = FocusRequestCurrCounterTabStop = INT_MAX;
+        FocusRequestNextCounterRegular = FocusRequestNextCounterTabStop = INT_MAX;
         FocusTabPressed = false;
 
         MultiSelectScopeId = 0;
@@ -1347,8 +1347,8 @@ struct IMGUI_API ImGuiWindowTempData
     ImGuiColumns*           CurrentColumns;         // Current columns set
     ImGuiLayoutType         LayoutType;
     ImGuiLayoutType         ParentLayoutType;       // Layout type of parent window at the time of Begin()
-    int                     FocusCounterAll;        // Counter for focus/tabbing system. Start at -1 and increase as assigned via FocusableItemRegister() (FIXME-NAV: Needs redesign)
-    int                     FocusCounterTab;        // (same, but only count widgets which you can Tab through)
+    int                     FocusCounterRegular;    // (Legacy Focus/Tabbing system) Sequential counter, start at -1 and increase as assigned via FocusableItemRegister() (FIXME-NAV: Needs redesign)
+    int                     FocusCounterTabStop;    // (Legacy Focus/Tabbing system) Same, but only count widgets which you can Tab through.
 
     // Local parameters stacks
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
@@ -1387,7 +1387,7 @@ struct IMGUI_API ImGuiWindowTempData
         StateStorage = NULL;
         CurrentColumns = NULL;
         LayoutType = ParentLayoutType = ImGuiLayoutType_Vertical;
-        FocusCounterAll = FocusCounterTab = -1;
+        FocusCounterRegular = FocusCounterTabStop = -1;
 
         ItemFlags = ImGuiItemFlags_Default_;
         ItemWidth = 0.0f;
