@@ -1084,9 +1084,10 @@ struct ImGuiNextWindowData
 
 enum ImGuiNextItemDataFlags_
 {
-    ImGuiNextItemDataFlags_None     = 0,
-    ImGuiNextItemDataFlags_HasWidth = 1 << 0,
-    ImGuiNextItemDataFlags_HasOpen  = 1 << 1
+    ImGuiNextItemDataFlags_None                 = 0,
+    ImGuiNextItemDataFlags_HasWidth             = 1 << 0,
+    ImGuiNextItemDataFlags_HasOpen              = 1 << 1,
+    ImGuiNextItemDataFlags_HasSelectionData     = 1 << 2
 };
 
 struct ImGuiNextItemData
@@ -1096,7 +1097,6 @@ struct ImGuiNextItemData
     ImGuiID                     FocusScopeId;           // Set by SetNextItemMultiSelectData() (!= 0 signify value has been set, so it's an alternate version of HasSelectionData, we don't use Flags for this because they are cleared too early. This is mostly used for debugging)
     ImGuiCond                   OpenCond;
     bool                        OpenVal;                // Set by SetNextItemOpen()
-    ImGuiID                     MultiSelectScopeId;     // Set by SetNextItemMultiSelectData()
     void*                       SelectionData;          // Set by SetNextItemSelectionData() (note that NULL/0 is a valid value)
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
@@ -1340,9 +1340,10 @@ struct ImGuiNavItemData
     float               DistBox;        //      Move    // Best candidate box distance to current NavId
     float               DistCenter;     //      Move    // Best candidate center distance to current NavId
     float               DistAxial;      //      Move    // Best candidate axial distance to current NavId
+    bool                HasSelectionData; //    Move    // Copy of (NextItemData.Flags & ImGuiNextItemDataFlags_HasSelection)
 
     ImGuiNavItemData()  { Clear(); }
-    void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; DistBox = DistCenter = DistAxial = FLT_MAX; }
+    void Clear()        { Window = NULL; ID = FocusScopeId = 0; InFlags = 0; DistBox = DistCenter = DistAxial = FLT_MAX; HasSelectionData = false; }
 };
 
 //-----------------------------------------------------------------------------
@@ -1405,18 +1406,19 @@ struct ImGuiOldColumns
 // [SECTION] Multi-select support
 //-----------------------------------------------------------------------------
 
-//#define IMGUI_HAS_MULTI_SELECT 1
 #ifdef IMGUI_HAS_MULTI_SELECT
 
 struct IMGUI_API ImGuiMultiSelectState
 {
+    ImGuiID                 FocusScopeId;           // Same as CurrentWindow->DC.FocusScopeIdCurrent (unless another selection scope was pushed manually)
+    ImGuiID                 BackupFocusScopeId;
     ImGuiMultiSelectData    In;                     // The In requests are set and returned by BeginMultiSelect()
     ImGuiMultiSelectData    Out;                    // The Out requests are finalized and returned by EndMultiSelect()
     bool                    InRangeDstPassedBy;     // (Internal) set by the the item that match NavJustMovedToId when InRequestRangeSetNav is set.
     bool                    InRequestSetRangeNav;   // (Internal) set by BeginMultiSelect() when using Shift+Navigation. Because scrolling may be affected we can't afford a frame of lag with Shift+Navigation.
 
     ImGuiMultiSelectState() { Clear(); }
-    void Clear() { In.Clear(); Out.Clear(); InRangeDstPassedBy = InRequestSetRangeNav = false; }
+    void Clear()            { FocusScopeId = BackupFocusScopeId = 0; In.Clear(); Out.Clear(); InRangeDstPassedBy = InRequestSetRangeNav = false; }
 };
 
 #endif // #ifdef IMGUI_HAS_MULTI_SELECT
@@ -1674,6 +1676,7 @@ struct ImGuiContext
     ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest).
     ImGuiID                 NavJustMovedToFocusScopeId;         // Just navigated to this focus scope id (result of a successfully MoveRequest).
     ImGuiModFlags           NavJustMovedToKeyMods;
+    bool                    NavJustMovedToHasSelectionData;     // " (FIXME-NAV: We should maybe just store ImGuiNavMoveResult)
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame.
     ImGuiActivateFlags      NavNextActivateFlags;
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS WILL ONLY BE None or NavGamepad or NavKeyboard.
@@ -1717,10 +1720,9 @@ struct ImGuiContext
     bool                    NavWindowingToggleLayer;
 
     // Range-Select/Multi-Select
-    ImGuiID                 MultiSelectScopeId;
-    ImGuiWindow*            MultiSelectScopeWindow;
+    bool                    MultiSelectEnabled;
     ImGuiMultiSelectFlags   MultiSelectFlags;
-    ImGuiMultiSelectState   MultiSelectState;
+    ImGuiMultiSelectState   MultiSelectState;                   // We currently don't support recursing/stacking multi-select
 
     // Render
     float                   DimBgRatio;                         // 0.0..1.0 animation when fading in a dimming background (for modal window and CTRL+TAB list)
@@ -1892,6 +1894,7 @@ struct ImGuiContext
         NavJustMovedToId = NavJustMovedToFocusScopeId = NavNextActivateId = 0;
         NavActivateFlags = NavNextActivateFlags = ImGuiActivateFlags_None;
         NavJustMovedToKeyMods = ImGuiModFlags_None;
+        NavJustMovedToHasSelectionData = false;
         NavInputSource = ImGuiInputSource_None;
         NavLayer = ImGuiNavLayer_Main;
         NavIdIsAlive = false;
@@ -1917,9 +1920,8 @@ struct ImGuiContext
         NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
         NavWindowingToggleLayer = false;
 
-        MultiSelectScopeId = 0;
-        MultiSelectScopeWindow = NULL;
-        MultiSelectFlags = 0;
+        MultiSelectEnabled = false;
+        MultiSelectFlags = ImGuiMultiSelectFlags_None;
 
         DimBgRatio = 0.0f;
         MouseCursor = ImGuiMouseCursor_Arrow;
