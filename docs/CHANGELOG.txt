@@ -68,6 +68,8 @@ Other Changes:
 - ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
   when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
+- ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
+- ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count
