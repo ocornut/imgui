@@ -3822,7 +3822,6 @@ void ImGui::Shutdown()
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
     g.InputTextDeactivatedState.ClearFreeMemory();
-    g.MultiSelectScopeWindow = NULL;
 
     g.SettingsWindows.clear();
     g.SettingsHandlers.clear();
