@@ -667,6 +667,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     const ImVec2 opaque_uv = _Data->TexUvWhitePixel;
     const int count = closed ? points_count : points_count - 1; // The number of line segments we need to draw
+
     const bool thick_line = (thickness > 1.0f);
 
     if (Flags & ImDrawListFlags_AntiAliasedLines)
@@ -675,13 +676,24 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const float AA_SIZE = 1.0f;
         const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-        const int idx_count = thick_line ? count * 18 : count * 12;
-        const int vtx_count = thick_line ? points_count * 4 : points_count * 3;
+        const int integer_thickness = (int)thickness;
+
+        // Do we want to draw this line using a texture?
+        bool use_textures = (Flags & ImDrawListFlags_TexturedAALines) &&
+            (integer_thickness >= 1) &&
+            (integer_thickness <= _Data->Font->ContainerAtlas->AALineMaxWidth) &&
+            ImGui::GetIO().KeyShift; // FIXME-AALINES: Remove this debug code
+
+        // We should never hit this, because NewFrame() doesn't set ImDrawListFlags_TexturedAALines unless ImFontAtlasFlags_NoAALines is off
+        IM_ASSERT_PARANOID((!use_textures) || (!(_Data->Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoAALines)));
+
+        const int idx_count = use_textures ? (count * 6) : (thick_line ? count * 18 : count * 12);
+        const int vtx_count = use_textures ? (points_count * 2) : (thick_line ? points_count * 4 : points_count * 3);
         PrimReserve(idx_count, vtx_count);
 
         // Temporary buffer
         // The first <points_count> items are normals at each line point, then after that there are either 2 or 4 temp points for each line point
-        ImVec2* temp_normals = (ImVec2*)alloca(points_count * (thick_line ? 5 : 3) * sizeof(ImVec2)); //-V630
+        ImVec2* temp_normals = (ImVec2*)alloca(points_count * ((thick_line && !use_textures) ? 5 : 3) * sizeof(ImVec2)); //-V630
         ImVec2* temp_points = temp_normals + points_count;
 
         // Calculate normals (tangents) for each line segment
@@ -697,14 +709,19 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         if (!closed)
             temp_normals[points_count - 1] = temp_normals[points_count - 2];
 
-        if (!thick_line)
+        // If we are drawing a one-pixel-wide line without a texture, or a textured line of any width, we only need 2 or 3 vertices per point
+        if ((!thick_line) || (use_textures))
         {
+            // The width of the geometry we need to draw
+            const float half_draw_size = (!thick_line) ? AA_SIZE : (AA_SIZE + (thickness * 0.5f));
+
+            // If line is not closed, the first and last points need to be generated differently as there are no normals to blend
             if (!closed)
             {
-                temp_points[0] = points[0] + temp_normals[0] * AA_SIZE;
-                temp_points[1] = points[0] - temp_normals[0] * AA_SIZE;
-                temp_points[(points_count-1)*2+0] = points[points_count-1] + temp_normals[points_count-1] * AA_SIZE;
-                temp_points[(points_count-1)*2+1] = points[points_count-1] - temp_normals[points_count-1] * AA_SIZE;
+                temp_points[0] = points[0] + temp_normals[0] * half_draw_size;
+                temp_points[1] = points[0] - temp_normals[0] * half_draw_size;
+                temp_points[(points_count-1)*2+0] = points[points_count-1] + temp_normals[points_count-1] * half_draw_size;
+                temp_points[(points_count-1)*2+1] = points[points_count-1] - temp_normals[points_count-1] * half_draw_size;
             }
 
             // Generate the indices to form a number of triangles for each line segment, and the vertices for the line edges
@@ -713,15 +730,15 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             unsigned int idx1 = _VtxCurrentIdx; // Vertex index for start of line segment
             for (int i1 = 0; i1 < count; i1++) // i1 is the first point of the line segment
             {
-                const int i2 = (i1 + 1) == points_count ? 0 : i1 + 1;
-                const unsigned int idx2 = (i1 + 1) == points_count ? _VtxCurrentIdx : idx1 + 3;
+                const int i2 = (i1 + 1) == points_count ? 0 : i1 + 1; // i2 is the second point of the line segment
+                unsigned int idx2 = ((i1 + 1) == points_count) ? _VtxCurrentIdx : (idx1 + (use_textures ? 2 : 3)); // Vertex index for end of segment
 
                 // Average normals
                 float dm_x = (temp_normals[i1].x + temp_normals[i2].x) * 0.5f;
                 float dm_y = (temp_normals[i1].y + temp_normals[i2].y) * 0.5f;
                 IM_FIXNORMAL2F(dm_x, dm_y);
-                dm_x *= AA_SIZE;
-                dm_y *= AA_SIZE;
+                dm_x *= half_draw_size; // dm_x, dm_y are offset to the outer edge of the AA area
+                dm_y *= half_draw_size;
 
                 // Add temporary vertexes for the outer edges
                 ImVec2* out_vtx = &temp_points[i2 * 2];
@@ -730,28 +747,54 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 out_vtx[1].x = points[i2].x - dm_x;
                 out_vtx[1].y = points[i2].y - dm_y;
 
-                // Add indexes for four triangles
-                _IdxWritePtr[0] = (ImDrawIdx)(idx2+0); _IdxWritePtr[1] = (ImDrawIdx)(idx1+0); _IdxWritePtr[2] = (ImDrawIdx)(idx1+2);
-                _IdxWritePtr[3] = (ImDrawIdx)(idx1+2); _IdxWritePtr[4] = (ImDrawIdx)(idx2+2); _IdxWritePtr[5] = (ImDrawIdx)(idx2+0);
-                _IdxWritePtr[6] = (ImDrawIdx)(idx2+1); _IdxWritePtr[7] = (ImDrawIdx)(idx1+1); _IdxWritePtr[8] = (ImDrawIdx)(idx1+0);
-                _IdxWritePtr[9] = (ImDrawIdx)(idx1+0); _IdxWritePtr[10]= (ImDrawIdx)(idx2+0); _IdxWritePtr[11]= (ImDrawIdx)(idx2+1);
-                _IdxWritePtr += 12;
+                if (use_textures)
+                {
+                    // Add indices for two triangles
+                    _IdxWritePtr[0] = (ImDrawIdx)(idx2 + 0); _IdxWritePtr[1] = (ImDrawIdx)(idx1 + 0); _IdxWritePtr[2] = (ImDrawIdx)(idx1 + 1); // Right tri
+                    _IdxWritePtr[3] = (ImDrawIdx)(idx2 + 1); _IdxWritePtr[4] = (ImDrawIdx)(idx1 + 1); _IdxWritePtr[5] = (ImDrawIdx)(idx2 + 0); // Left tri
+                    _IdxWritePtr += 6;
+                }
+                else
+                {
+                    // Add indexes for four triangles
+                    _IdxWritePtr[0] = (ImDrawIdx)(idx2 + 0); _IdxWritePtr[1] = (ImDrawIdx)(idx1 + 0); _IdxWritePtr[2] = (ImDrawIdx)(idx1 + 2); // Right tri 1
+                    _IdxWritePtr[3] = (ImDrawIdx)(idx1 + 2); _IdxWritePtr[4] = (ImDrawIdx)(idx2 + 2); _IdxWritePtr[5] = (ImDrawIdx)(idx2 + 0); // Right tri 2
+                    _IdxWritePtr[6] = (ImDrawIdx)(idx2 + 1); _IdxWritePtr[7] = (ImDrawIdx)(idx1 + 1); _IdxWritePtr[8] = (ImDrawIdx)(idx1 + 0); // Left tri 1
+                    _IdxWritePtr[9] = (ImDrawIdx)(idx1 + 0); _IdxWritePtr[10] = (ImDrawIdx)(idx2 + 0); _IdxWritePtr[11] = (ImDrawIdx)(idx2 + 1); // Left tri 2
+                    _IdxWritePtr += 12;
+                }
 
                 idx1 = idx2;
             }
 
             // Add vertexes for each point on the line
-            for (int i = 0; i < points_count; i++)
+            if (use_textures)
             {
-                _VtxWritePtr[0].pos = points[i];          _VtxWritePtr[0].uv = opaque_uv; _VtxWritePtr[0].col = col;
-                _VtxWritePtr[1].pos = temp_points[i*2+0]; _VtxWritePtr[1].uv = opaque_uv; _VtxWritePtr[1].col = col_trans;
-                _VtxWritePtr[2].pos = temp_points[i*2+1]; _VtxWritePtr[2].uv = opaque_uv; _VtxWritePtr[2].col = col_trans;
-                _VtxWritePtr += 3;
+                // If we're using textures we only need to emit the left/right edge vertices
+                const ImVec4 tex_uvs = (*_Data->TexUvAALines)[integer_thickness - 1];
+
+                for (int i = 0; i < points_count; i++)
+                {
+                    _VtxWritePtr[0].pos = temp_points[i * 2 + 0]; _VtxWritePtr[0].uv = ImVec2(tex_uvs.x, tex_uvs.y); _VtxWritePtr[0].col = col; // Left-side outer edge
+                    _VtxWritePtr[1].pos = temp_points[i * 2 + 1]; _VtxWritePtr[1].uv = ImVec2(tex_uvs.z, tex_uvs.y); _VtxWritePtr[1].col = col; // Right-side outer edge
+                    _VtxWritePtr += 2;
+                }
+            }
+            else
+            {
+                // If we're not using a texture, we need the centre vertex as well
+                for (int i = 0; i < points_count; i++)
+                {
+                    _VtxWritePtr[0].pos = points[i];              _VtxWritePtr[0].uv = opaque_uv; _VtxWritePtr[0].col = col; // Centre of line
+                    _VtxWritePtr[1].pos = temp_points[i * 2 + 0]; _VtxWritePtr[1].uv = opaque_uv; _VtxWritePtr[1].col = col_trans; // Left-side outer edge
+                    _VtxWritePtr[2].pos = temp_points[i * 2 + 1]; _VtxWritePtr[2].uv = opaque_uv; _VtxWritePtr[2].col = col_trans; // Right-side outer edge
+                    _VtxWritePtr += 3;
+                }
             }
         }
         else
         {
-            // Non texture-based lines (thick): we need to draw the solid line core and thus require four vertices per point
+            // For untextured lines that are greater than a pixel in width, we need to draw the solid line core and thus require four vertices per point
             const float half_inner_thickness = (thickness - AA_SIZE) * 0.5f;
 
             // If line is not closed, the first and last points need to be generated differently as there are no normals to blend
@@ -1664,6 +1707,8 @@ ImFontAtlas::ImFontAtlas()
     TexUvScale = ImVec2(0.0f, 0.0f);
     TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     PackIdMouseCursors = -1;
+
+    AALineMaxWidth = 8;
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -2010,6 +2055,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
     ImFontAtlasBuildInit(atlas);
+    ImFontAtlasBuildRegisterAALineCustomRects(atlas);
 
     // Clear atlas
     atlas->TexID = (ImTextureID)NULL;
@@ -2331,7 +2377,6 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
     atlas->TexUvWhitePixel = ImVec2((r->X + 0.5f) * atlas->TexUvScale.x, (r->Y + 0.5f) * atlas->TexUvScale.y);
 }
 
-
 // Note: this is called / shared by both the stb_truetype and the FreeType builder
 void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 {
@@ -2346,11 +2391,72 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 }
 
 // This is called/shared by both the stb_truetype and the FreeType builder.
+const unsigned int FONT_ATLAS_AA_LINE_TEX_HEIGHT = 1; // Technically we only need 1 pixel in the ideal case but this can be increased if necessary to give a border to avoid sampling artifacts
+
+void ImFontAtlasBuildRegisterAALineCustomRects(ImFontAtlas* atlas)
+{
+    if (atlas->AALineRectIds.size() > 0)
+        return;
+
+    if ((atlas->Flags & ImFontAtlasFlags_NoAALines))
+        return;
+
+    const int max = atlas->AALineMaxWidth;
+
+    for (int n = 0; n < max; n++)
+    {
+        const int width = n + 1; // The line width this entry corresponds to
+        // The "width + 3" here is interesting - +2 is to give space for the end caps, but the remaining +1 is because (empirically) to match the behaviour of the untextured render path we need to draw lines one pixel wider
+        atlas->AALineRectIds.push_back(atlas->AddCustomRectRegular(width + 3, FONT_ATLAS_AA_LINE_TEX_HEIGHT));
+    }
+}
+
+void ImFontAtlasBuildAALinesTexData(ImFontAtlas* atlas)
+{
+    IM_ASSERT(atlas->TexPixelsAlpha8 != NULL);
+    IM_ASSERT(atlas->TexUvAALines.size() == 0);
+
+    if (atlas->Flags & ImFontAtlasFlags_NoAALines)
+        return;
+
+    const int w = atlas->TexWidth;
+    const unsigned int max = atlas->AALineMaxWidth;
+
+    for (unsigned int n = 0; n < max; n++)
+    {
+        IM_ASSERT(atlas->AALineRectIds.size() > (int)n);
+        ImFontAtlas::CustomRect& r = atlas->CustomRects[atlas->AALineRectIds[n]];
+        IM_ASSERT(r.IsPacked());
+
+        // We fill as many lines as we were given, to allow for >1 lines being used to work around sampling weirdness
+        for (unsigned int y = 0; y < r.Height; y++)
+        {
+            unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r.X + ((r.Y + y) * w)];
+
+            // Each line consists of two empty pixels at the ends, with a line of solid pixels in the middle
+            *(write_ptr++) = 0;
+            for (unsigned short x = 0; x < (r.Width - 2U); x++)
+            {
+                *(write_ptr++) = 0xFF;
+            }
+            *(write_ptr++) = 0;
+        }
+
+        ImVec2 uv0, uv1;
+        atlas->CalcCustomRectUV(&r, &uv0, &uv1);
+        float halfV = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the texture as we want a horizontal slice (with some padding either side to avoid sampling artifacts)
+        atlas->TexUvAALines.push_back(ImVec4(uv0.x, halfV, uv1.x, halfV));
+    }
+}
+
 void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 {
     // Render into our custom data blocks
     IM_ASSERT(atlas->TexPixelsAlpha8 != NULL);
     ImFontAtlasBuildRenderDefaultTexData(atlas);
+
+    // Render anti-aliased line textures
+    ImFontAtlasBuildAALinesTexData(atlas);
 
     // Register custom rectangle glyphs
     for (int i = 0; i < atlas->CustomRects.Size; i++)

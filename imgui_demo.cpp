@@ -297,6 +297,62 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ImGui::SetNextWindowPos(ImVec2(650, 20), ImGuiCond_FirstUseEver);
     ImGui::SetNextWindowSize(ImVec2(550, 680), ImGuiCond_FirstUseEver);
 
+    // Test lines
+
+    if (ImGui::Begin("Lines"))
+    {
+        ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+        const int num_cols = 16;
+        const int num_rows = 3;
+        const float line_len = 64.0f;
+        const float line_spacing = 128.0f;
+
+        static float base_rot = 0.0f;
+        ImGui::SliderFloat("Base rotation", &base_rot, 0.0f, 360.0f);
+        static float line_width = 1.0f;
+        ImGui::SliderFloat("Line width", &line_width, 1.0f, 10.0f);
+
+        ImVec2 window_pos = ImGui::GetWindowPos();
+        ImVec2 cursor_pos = ImGui::GetCursorPos();
+        ImVec2 base_pos(window_pos.x + cursor_pos.x + (line_spacing * 0.5f), window_pos.y + cursor_pos.y);
+
+        for (int i = 0; i < num_rows; i++)
+        {
+            const char* name = "";
+            switch (i)
+            {
+            case 0: name = "No AA";  draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; break;
+            case 1: name = "AA no texturing"; draw_list->Flags |= ImDrawListFlags_AntiAliasedLines; draw_list->Flags &= ~ImDrawListFlags_TexturedAALines; break;
+            case 2: name = "AA with texturing"; draw_list->Flags |= ImDrawListFlags_AntiAliasedLines; draw_list->Flags |= ImDrawListFlags_TexturedAALines; break;
+            }
+
+            int initial_vtx_count = draw_list->VtxBuffer.Size;
+            int initial_idx_count = draw_list->IdxBuffer.Size;
+
+            for (int j = 0; j < num_cols; j++)
+            {
+                const float pi = 3.14159265359f;
+                float r = (base_rot * pi / 180.0f) + ((j * pi * 0.5f) / (num_cols - 1));
+
+                ImVec2 center = ImVec2(base_pos.x + (line_spacing * (j * 0.5f)), base_pos.y + (line_spacing * (i + 0.5f)));
+                ImVec2 start = ImVec2(center.x + (sinf(r) * line_len * 0.5f), center.y + (cosf(r) * line_len * 0.5f));
+                ImVec2 end = ImVec2(center.x - (sinf(r) * line_len * 0.5f), center.y - (cosf(r) * line_len * 0.5f));
+
+                draw_list->AddLine(start, end, IM_COL32(255, 255, 255, 255), line_width);
+            }
+
+            ImGui::SetCursorPosY(cursor_pos.y + (i * line_spacing));
+            ImGui::Text("%s - %d vertices, %d indices", name, draw_list->VtxBuffer.Size - initial_vtx_count, draw_list->IdxBuffer.Size - initial_idx_count);
+        }
+
+        ImGui::SetCursorPosY(cursor_pos.y + (num_rows * line_spacing));
+
+        //ImGui::Spacing(); ImGui::Spacing(); ImGui::Spacing();
+        //ImGui::Image(ImGui::GetFont()->ContainerAtlas->TexID, ImVec2((float)ImGui::GetFont()->ContainerAtlas->TexWidth, (float)ImGui::GetFont()->ContainerAtlas->TexHeight));
+    }
+    ImGui::End();
+
     // Main body of the Demo window starts here.
     if (!ImGui::Begin("Dear ImGui Demo", p_open, window_flags))
     {
@@ -3831,6 +3887,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         {
             ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
             ImGui::SameLine(); HelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
+            ImGui::Checkbox("Use textures for anti-aliased lines", &style.TexturedAntiAliasedLines);
             ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
             ImGui::PushItemWidth(100);
             ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");
