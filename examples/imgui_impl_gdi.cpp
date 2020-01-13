@@ -22,6 +22,9 @@
 
 #include <vector>
 
+#include <emmintrin.h> // SSE2
+
+
 // ****************************************************************************
 
 // By Emil Ernerfeldt 2018
@@ -40,13 +43,8 @@
 
 #include <cstdint>
 
-namespace imgui_sw {
-
-    struct SwOptions
-    {
-        bool optimize_text = true;  // No reason to turn this off.
-        bool optimize_rectangles = true; // No reason to turn this off.
-    };
+namespace imgui_sw
+{
 
     /// Optional: tweak ImGui style to make it render faster.
     void make_style_fast();
@@ -61,13 +59,10 @@ namespace imgui_sw {
     /// Change with IMGUI_USE_BGRA_PACKED_COLOR.
     /// If width/height differs from ImGui::GetIO().DisplaySize then
     /// the function scales the UI to fit the given pixel buffer.
-    void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels, const SwOptions& options = {});
+    void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels);
 
     /// Free the resources allocated by bind_imgui_painting.
     void unbind_imgui_painting();
-
-    /// Show ImGui controls for rendering options if you want to.
-    bool show_options(SwOptions* io_options);
 
     /// Show rendering stats in an ImGui window if you want to.
     void show_stats();
@@ -282,116 +277,6 @@ namespace imgui_sw {
             return texture.pixels[ty * texture.width + tx];
         }
 
-        void paint_uniform_rectangle(
-            const PaintTarget& target,
-            const ImVec2& min_f,
-            const ImVec2& max_f,
-            const ColorInt& color,
-            Stats* stats)
-        {
-            // Integer bounding box [min, max):
-            int min_x_i = static_cast<int>(target.scale.x * min_f.x + 0.5f);
-            int min_y_i = static_cast<int>(target.scale.y * min_f.y + 0.5f);
-            int max_x_i = static_cast<int>(target.scale.x * max_f.x + 0.5f);
-            int max_y_i = static_cast<int>(target.scale.y * max_f.y + 0.5f);
-
-            // Clamp to render target:
-            min_x_i = std::max(min_x_i, 0);
-            min_y_i = std::max(min_y_i, 0);
-            max_x_i = std::min(max_x_i, target.width);
-            max_y_i = std::min(max_y_i, target.height);
-
-            stats->uniform_rectangle_pixels += (max_x_i - min_x_i) * (max_y_i - min_y_i);
-
-            // We often blend the same colors over and over again, so optimize for this (saves 25% total cpu):
-            uint32_t last_target_pixel = target.pixels[min_y_i * target.width + min_x_i];
-            uint32_t last_output = blend(ColorInt(last_target_pixel), color).toUint32();
-
-            for (int y = min_y_i; y < max_y_i; ++y) {
-                for (int x = min_x_i; x < max_x_i; ++x) {
-                    uint32_t& target_pixel = target.pixels[y * target.width + x];
-                    if (target_pixel == last_target_pixel) {
-                        target_pixel = last_output;
-                        continue;
-                    }
-                    last_target_pixel = target_pixel;
-                    target_pixel = blend(ColorInt(target_pixel), color).toUint32();
-                    last_output = target_pixel;
-                }
-            }
-        }
-
-        void paint_uniform_textured_rectangle(
-            const PaintTarget& target,
-            const Texture& texture,
-            const ImVec4& clip_rect,
-            const ImDrawVert& min_v,
-            const ImDrawVert& max_v,
-            Stats* stats)
-        {
-            const ImVec2 min_p = ImVec2(target.scale.x * min_v.pos.x, target.scale.y * min_v.pos.y);
-            const ImVec2 max_p = ImVec2(target.scale.x * max_v.pos.x, target.scale.y * max_v.pos.y);
-
-            // Find bounding box:
-            float min_x_f = min_p.x;
-            float min_y_f = min_p.y;
-            float max_x_f = max_p.x;
-            float max_y_f = max_p.y;
-
-            // Clip against clip_rect:
-            min_x_f = std::max(min_x_f, target.scale.x * clip_rect.x);
-            min_y_f = std::max(min_y_f, target.scale.y * clip_rect.y);
-            max_x_f = std::min(max_x_f, target.scale.x * clip_rect.z - 0.5f);
-            max_y_f = std::min(max_y_f, target.scale.y * clip_rect.w - 0.5f);
-
-            // Integer bounding box [min, max):
-            int min_x_i = static_cast<int>(min_x_f);
-            int min_y_i = static_cast<int>(min_y_f);
-            int max_x_i = static_cast<int>(max_x_f + 1.0f);
-            int max_y_i = static_cast<int>(max_y_f + 1.0f);
-
-            // Clip against render target:
-            min_x_i = std::max(min_x_i, 0);
-            min_y_i = std::max(min_y_i, 0);
-            max_x_i = std::min(max_x_i, target.width);
-            max_y_i = std::min(max_y_i, target.height);
-
-            stats->font_pixels += (max_x_i - min_x_i) * (max_y_i - min_y_i);
-
-            const auto topleft = ImVec2(min_x_i + 0.5f * target.scale.x,
-                min_y_i + 0.5f * target.scale.y);
-
-            const ImVec2 delta_uv_per_pixel = {
-                (max_v.uv.x - min_v.uv.x) / (max_p.x - min_p.x),
-                (max_v.uv.y - min_v.uv.y) / (max_p.y - min_p.y),
-            };
-            const ImVec2 uv_topleft = {
-                min_v.uv.x + (topleft.x - min_v.pos.x) * delta_uv_per_pixel.x,
-                min_v.uv.y + (topleft.y - min_v.pos.y) * delta_uv_per_pixel.y,
-            };
-            ImVec2 current_uv = uv_topleft;
-
-            for (int y = min_y_i; y < max_y_i; ++y, current_uv.y += delta_uv_per_pixel.y) {
-                current_uv.x = uv_topleft.x;
-                for (int x = min_x_i; x < max_x_i; ++x, current_uv.x += delta_uv_per_pixel.x) {
-                    uint32_t& target_pixel = target.pixels[y * target.width + x];
-                    const uint8_t texel = sample_texture(texture, current_uv);
-
-                    // The font texture is all black or all white, so optimize for this:
-                    if (texel == 0) { continue; }
-                    if (texel == 255) {
-                        target_pixel = min_v.col;
-                        continue;
-                    }
-
-                    // Other textured rectangles
-                    ColorInt source_color = ColorInt(min_v.col);
-                    source_color.a = source_color.a * texel / 255;
-                    target_pixel = blend(ColorInt(target_pixel), source_color).toUint32();
-                }
-            }
-        }
-
         // When two triangles share an edge, we want to draw the pixels on that edge exactly once.
         // The edge will be the same, but the direction will be the opposite
         // (assuming the two triangles have the same winding order).
@@ -579,7 +464,6 @@ namespace imgui_sw {
             const ImDrawVert* vertices,
             const ImDrawIdx* idx_buffer,
             const ImDrawCmd& pcmd,
-            const SwOptions& options,
             Stats* stats)
         {
             const auto texture = reinterpret_cast<const Texture*>(pcmd.TextureId);
@@ -593,124 +477,13 @@ namespace imgui_sw {
                 const ImDrawVert& v1 = vertices[idx_buffer[i + 1]];
                 const ImDrawVert& v2 = vertices[idx_buffer[i + 2]];
 
-                // Text is common, and is made of textured rectangles. So let's optimize for it.
-                // This assumes the ImGui way to layout text does not change.
-                if (options.optimize_text && i + 6 <= pcmd.ElemCount &&
-                    idx_buffer[i + 3] == idx_buffer[i + 0] && idx_buffer[i + 4] == idx_buffer[i + 2]) {
-                    const ImDrawVert& v3 = vertices[idx_buffer[i + 5]];
-
-                    if (v0.pos.x == v3.pos.x &&
-                        v1.pos.x == v2.pos.x &&
-                        v0.pos.y == v1.pos.y &&
-                        v2.pos.y == v3.pos.y &&
-                        v0.uv.x == v3.uv.x &&
-                        v1.uv.x == v2.uv.x &&
-                        v0.uv.y == v1.uv.y &&
-                        v2.uv.y == v3.uv.y)
-                    {
-                        const bool has_uniform_color =
-                            v0.col == v1.col &&
-                            v0.col == v2.col &&
-                            v0.col == v3.col;
-
-                        const bool has_texture =
-                            v0.uv != white_uv ||
-                            v1.uv != white_uv ||
-                            v2.uv != white_uv ||
-                            v3.uv != white_uv;
-
-                        if (has_uniform_color && has_texture)
-                        {
-                            paint_uniform_textured_rectangle(target, *texture, pcmd.ClipRect, v0, v2, stats);
-                            i += 6;
-                            continue;
-                        }
-                    }
-                }
-
-                // A lot of the big stuff are uniformly colored rectangles,
-                // so we can save a lot of CPU by detecting them:
-                if (options.optimize_rectangles && i + 6 <= pcmd.ElemCount) {
-                    const ImDrawVert& v3 = vertices[idx_buffer[i + 3]];
-                    const ImDrawVert& v4 = vertices[idx_buffer[i + 4]];
-                    const ImDrawVert& v5 = vertices[idx_buffer[i + 5]];
-
-                    ImVec2 min, max;
-                    min.x = min3(v0.pos.x, v1.pos.x, v2.pos.x);
-                    min.y = min3(v0.pos.y, v1.pos.y, v2.pos.y);
-                    max.x = max3(v0.pos.x, v1.pos.x, v2.pos.x);
-                    max.y = max3(v0.pos.y, v1.pos.y, v2.pos.y);
-
-                    // Not the prettiest way to do this, but it catches all cases
-                    // of a rectangle split into two triangles.
-                    // TODO: Stop it from also assuming duplicate triangles is one rectangle.
-                    if ((v0.pos.x == min.x || v0.pos.x == max.x) &&
-                        (v0.pos.y == min.y || v0.pos.y == max.y) &&
-                        (v1.pos.x == min.x || v1.pos.x == max.x) &&
-                        (v1.pos.y == min.y || v1.pos.y == max.y) &&
-                        (v2.pos.x == min.x || v2.pos.x == max.x) &&
-                        (v2.pos.y == min.y || v2.pos.y == max.y) &&
-                        (v3.pos.x == min.x || v3.pos.x == max.x) &&
-                        (v3.pos.y == min.y || v3.pos.y == max.y) &&
-                        (v4.pos.x == min.x || v4.pos.x == max.x) &&
-                        (v4.pos.y == min.y || v4.pos.y == max.y) &&
-                        (v5.pos.x == min.x || v5.pos.x == max.x) &&
-                        (v5.pos.y == min.y || v5.pos.y == max.y))
-                    {
-                        const bool has_uniform_color =
-                            v0.col == v1.col &&
-                            v0.col == v2.col &&
-                            v0.col == v3.col &&
-                            v0.col == v4.col &&
-                            v0.col == v5.col;
-
-                        const bool has_texture =
-                            v0.uv != white_uv ||
-                            v1.uv != white_uv ||
-                            v2.uv != white_uv ||
-                            v3.uv != white_uv ||
-                            v4.uv != white_uv ||
-                            v5.uv != white_uv;
-
-                        min.x = std::max(min.x, pcmd.ClipRect.x);
-                        min.y = std::max(min.y, pcmd.ClipRect.y);
-                        max.x = std::min(max.x, pcmd.ClipRect.z - 0.5f);
-                        max.y = std::min(max.y, pcmd.ClipRect.w - 0.5f);
-
-                        if (max.x < min.x || max.y < min.y) { i += 6; continue; } // Completely clipped
-
-                        const auto num_pixels = (max.x - min.x) * (max.y - min.y) * target.scale.x * target.scale.y;
-
-                        if (has_uniform_color) {
-                            if (has_texture) {
-                                stats->textured_rectangle_pixels += num_pixels;
-                            }
-                            else {
-                                paint_uniform_rectangle(target, min, max, ColorInt(v0.col), stats);
-                                i += 6;
-                                continue;
-                            }
-                        }
-                        else {
-                            if (has_texture) {
-                                // I have never encountered these.
-                                stats->gradient_textured_rectangle_pixels += num_pixels;
-                            }
-                            else {
-                                // Color picker. TODO: Optimize
-                                stats->gradient_rectangle_pixels += num_pixels;
-                            }
-                        }
-                    }
-                }
-
                 const bool has_texture = (v0.uv != white_uv || v1.uv != white_uv || v2.uv != white_uv);
                 paint_triangle(target, has_texture ? texture : nullptr, pcmd.ClipRect, v0, v1, v2, stats);
                 i += 3;
             }
         }
 
-        void paint_draw_list(const PaintTarget& target, const ImDrawList* cmd_list, const SwOptions& options, Stats* stats)
+        void paint_draw_list(const PaintTarget& target, const ImDrawList* cmd_list, Stats* stats)
         {
             const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer[0];
             const ImDrawVert* vertices = cmd_list->VtxBuffer.Data;
@@ -722,7 +495,7 @@ namespace imgui_sw {
                     pcmd.UserCallback(cmd_list, &pcmd);
                 }
                 else {
-                    paint_draw_cmd(target, vertices, idx_buffer, pcmd, options, stats);
+                    paint_draw_cmd(target, vertices, idx_buffer, pcmd, stats);
                 }
                 idx_buffer += pcmd.ElemCount;
             }
@@ -762,7 +535,7 @@ namespace imgui_sw {
 
     static Stats s_stats; // TODO: pass as an argument?
 
-    void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels, const SwOptions& options)
+    void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels)
     {
         const float width_points = ImGui::GetIO().DisplaySize.x;
         const float height_points = ImGui::GetIO().DisplaySize.y;
@@ -772,7 +545,7 @@ namespace imgui_sw {
 
         s_stats = Stats{};
         for (int i = 0; i < draw_data->CmdListsCount; ++i) {
-            paint_draw_list(target, draw_data->CmdLists[i], options, &s_stats);
+            paint_draw_list(target, draw_data->CmdLists[i], &s_stats);
         }
     }
 
@@ -781,15 +554,6 @@ namespace imgui_sw {
         ImGuiIO& io = ImGui::GetIO();
         delete reinterpret_cast<Texture*>(io.Fonts->TexID);
         io.Fonts = nullptr;
-    }
-
-    bool show_options(SwOptions* io_options)
-    {
-        assert(io_options);
-        bool changed = false;
-        changed |= ImGui::Checkbox("optimize_text", &io_options->optimize_text);
-        changed |= ImGui::Checkbox("optimize_rectangles", &io_options->optimize_rectangles);
-        return changed;
     }
 
     void show_stats()
@@ -928,8 +692,7 @@ void ImGui_ImplGDI_RenderDrawData(ImDrawData* draw_data)
         memset(g_PixelBuffer, 0, g_PixelBufferSize);
     }
 
-    imgui_sw::SwOptions options;
-    imgui_sw::paint_imgui(g_PixelBuffer, fb_width, fb_height, options);
+    imgui_sw::paint_imgui(g_PixelBuffer, fb_width, fb_height);
 
     BitBlt(
         g_hDC,
