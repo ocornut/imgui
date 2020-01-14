@@ -6383,7 +6383,7 @@ bool ImGui::Selectable(const char* label, bool* p_selected, ImGuiSelectableFlags
 //-------------------------------------------------------------------------
 // - BeginMultiSelect()
 // - EndMultiSelect()
-// - SetNextItemMultiSelectData()
+// - SetNextItemSelectionData()
 // - MultiSelectItemHeader() [Internal]
 // - MultiSelectItemFooter() [Internal]
 //-------------------------------------------------------------------------
@@ -6453,11 +6453,11 @@ ImGuiMultiSelectData* ImGui::EndMultiSelect()
     return &state->Out;
 }
 
-void ImGui::SetNextItemMultiSelectData(void* item_data)
+void ImGui::SetNextItemSelectionData(void* item_data)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.MultiSelectScopeId != 0);
-    g.NextItemData.MultiSelectData = item_data;
+    g.NextItemData.SelectionData = item_data;
     g.NextItemData.MultiSelectScopeId = g.MultiSelectScopeId;
 }
 
@@ -6466,8 +6466,8 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     ImGuiContext& g = *GImGui;
     ImGuiMultiSelectState* state = &g.MultiSelectState;
 
-    IM_ASSERT(g.NextItemData.MultiSelectScopeId == g.MultiSelectScopeId && "Forgot to call SetNextItemMultiSelectData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
-    void* item_data = g.NextItemData.MultiSelectData;
+    IM_ASSERT(g.NextItemData.MultiSelectScopeId == g.MultiSelectScopeId && "Forgot to call SetNextItemSelectionData() prior to item, required in BeginMultiSelect()/EndMultiSelect() scope");
+    void* item_data = g.NextItemData.SelectionData;
 
     // Apply Clear/SelectAll requests requested by BeginMultiSelect().
     // This is only useful if the user hasn't processed them already, and this only works if the user isn't using the clipper.
@@ -6506,7 +6506,7 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiMultiSelectState* state = &g.MultiSelectState;
 
-    void* item_data = g.NextItemData.MultiSelectData;
+    void* item_data = g.NextItemData.SelectionData;
     g.NextItemData.MultiSelectScopeId = 0;
 
     bool selected = *p_selected;

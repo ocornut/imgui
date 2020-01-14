@@ -1097,7 +1097,7 @@ struct ImGuiNextItemData
     ImGuiCond                   OpenCond;
     bool                        OpenVal;                // Set by SetNextItemOpen()
     ImGuiID                     MultiSelectScopeId;     // Set by SetNextItemMultiSelectData()
-    void*                       MultiSelectData;
+    void*                       SelectionData;          // Set by SetNextItemSelectionData() (note that NULL/0 is a valid value)
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
     inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; } // Also cleared manually by ItemAdd()!
