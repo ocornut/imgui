@@ -13,11 +13,22 @@
 #define WIN32_LEAN_AND_MEAN
 #endif
 #include <windows.h>
-#include <XInput.h>
 #include <tchar.h>
+
+// Using XInput library for gamepad (with recent Windows SDK this may leads to executables which won't run on Windows 7)
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+#include <XInput.h>
+#else
+#define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
+#endif
+#if defined(_MSC_VER) && !defined(IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT)
+#pragma comment(lib, "xinput")
+//#pragma comment(lib, "Xinput9_1_0")
+#endif
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-01-14: Inputs: Added support for #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD/IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT.
 //  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
 //  2019-05-11: Inputs: Don't filter value from WM_CHAR before calling AddInputCharacter().
 //  2019-01-17: Misc: Using GetForegroundWindow()+IsChild() instead of GetActiveWindow() to be compatible with windows created in a different thread or parent.
@@ -40,7 +51,7 @@
 //  2016-11-12: Inputs: Only call Win32 ::SetCursor(NULL) when io.MouseDrawCursor is set.
 
 // Win32 Data
-static HWND                 g_hWnd = 0;
+static HWND                 g_hWnd = NULL;
 static INT64                g_Time = 0;
 static INT64                g_TicksPerSecond = 0;
 static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
@@ -149,13 +160,10 @@ static void ImGui_ImplWin32_UpdateMousePos()
                 io.MousePos = ImVec2((float)pos.x, (float)pos.y);
 }
 
-#ifdef _MSC_VER
-#pragma comment(lib, "xinput")
-#endif
-
 // Gamepad navigation mapping
 static void ImGui_ImplWin32_UpdateGamepads()
 {
+#ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
     ImGuiIO& io = ImGui::GetIO();
     memset(io.NavInputs, 0, sizeof(io.NavInputs));
     if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) == 0)
@@ -198,6 +206,7 @@ static void ImGui_ImplWin32_UpdateGamepads()
         #undef MAP_BUTTON
         #undef MAP_ANALOG
     }
+#endif // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 }
 
 void    ImGui_ImplWin32_NewFrame()

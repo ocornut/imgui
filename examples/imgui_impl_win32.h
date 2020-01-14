@@ -13,9 +13,13 @@ IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
 IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 
+// Configuration: Disable gamepad support or linking with xinput.lib
+//#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+//#define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
+
 // Handler for Win32 messages, update mouse/keyboard data.
 // You may or not need this for your implementation, but it can serve as reference for handling inputs.
 // Intentionally commented out to avoid dragging dependencies on <windows.h> types. You can COPY this line into your .cpp code instead.
-/*
+#if 0
 IMGUI_IMPL_API LRESULT  ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-*/
+#endif
