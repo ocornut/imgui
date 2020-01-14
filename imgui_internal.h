@@ -877,16 +877,16 @@ struct ImDrawDataBuilder
 
 struct ImGuiNavMoveResult
 {
-    ImGuiID       ID;           // Best candidate
-    ImGuiID       SelectScopeId;// Best candidate window current selectable group ID
-    ImGuiWindow*  Window;       // Best candidate window
-    float         DistBox;      // Best candidate box distance to current NavId
-    float         DistCenter;   // Best candidate center distance to current NavId
-    float         DistAxial;
-    ImRect        RectRel;      // Best candidate bounding box in window relative space
+    ImGuiWindow*    Window;             // Best candidate window
+    ImGuiID         ID;                 // Best candidate ID
+    ImGuiID         FocusScopeId;       // Best candidate focus scope ID
+    float           DistBox;            // Best candidate box distance to current NavId
+    float           DistCenter;         // Best candidate center distance to current NavId
+    float           DistAxial;
+    ImRect          RectRel;            // Best candidate bounding box in window relative space
 
     ImGuiNavMoveResult() { Clear(); }
-    void Clear()         { ID = SelectScopeId = 0; Window = NULL; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
+    void Clear()         { Window = NULL; ID = FocusScopeId = 0; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
 };
 
 enum ImGuiNextWindowDataFlags_
@@ -920,7 +920,7 @@ struct ImGuiNextWindowData
     ImVec2                      MenuBarOffsetMinVal;    // *Always on* This is not exposed publicly, so we don't clear it.
 
     ImGuiNextWindowData()       { memset(this, 0, sizeof(*this)); }
-    inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; } // Also cleared by ItemAdd()
+    inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
 
 enum ImGuiNextItemDataFlags_
@@ -933,12 +933,13 @@ enum ImGuiNextItemDataFlags_
 struct ImGuiNextItemData
 {
     ImGuiNextItemDataFlags      Flags;
-    float                       Width;          // Set by SetNextItemWidth().
-    bool                        OpenVal;        // Set by SetNextItemOpen() function.
+    float                       Width;          // Set by SetNextItemWidth()
+    ImGuiID                     FocusScopeId;   // Set by SetNextItemMultiSelectData() (!= 0 signify value has been set, so it's an alternate version of HasSelectionData, we don't use Flags for this because they are cleared too early. This is mostly used for debugging)
     ImGuiCond                   OpenCond;
+    bool                        OpenVal;        // Set by SetNextItemOpen()
 
     ImGuiNextItemData()         { memset(this, 0, sizeof(*this)); }
-    inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; }
+    inline void ClearFlags()    { Flags = ImGuiNextItemDataFlags_None; } // Also cleared manually by ItemAdd()!
 };
 
 //-----------------------------------------------------------------------------
@@ -1038,13 +1039,15 @@ struct ImGuiContext
     // Gamepad/keyboard Navigation
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
     ImGuiID                 NavId;                              // Focused item for navigation
+    ImGuiID                 NavFocusScopeId;
     ImGuiID                 NavActivateId;                      // ~~ (g.ActiveId == 0) && IsNavInputPressed(ImGuiNavInput_Activate) ? NavId : 0, also set when calling ActivateItem()
     ImGuiID                 NavActivateDownId;                  // ~~ IsNavInputDown(ImGuiNavInput_Activate) ? NavId : 0
     ImGuiID                 NavActivatePressedId;               // ~~ IsNavInputPressed(ImGuiNavInput_Activate) ? NavId : 0
     ImGuiID                 NavInputId;                         // ~~ IsNavInputPressed(ImGuiNavInput_Input) ? NavId : 0
     ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
     ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest).
-    ImGuiID                 NavJustMovedToMultiSelectScopeId;   // Just navigated to this select scope id (result of a successfully MoveRequest).
+    ImGuiID                 NavJustMovedToFocusScopeId;         // Just navigated to this focus scope id (result of a successfully MoveRequest).
+
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame.
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS WILL ONLY BE None or NavGamepad or NavKeyboard.
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
@@ -1084,10 +1087,6 @@ struct ImGuiContext
     int                     FocusRequestNextCounterRegular;     // Stored for next frame
     int                     FocusRequestNextCounterTabStop;     // "
     bool                    FocusTabPressed;                    //
-
-    // Range-Select/Multi-Select
-    // [This is unused in this branch, but left here to facilitate merging/syncing multiple branches]
-    ImGuiID                 MultiSelectScopeId;
 
     // Render
     ImDrawData              DrawData;                           // Main ImDrawData instance to pass render information to the user
@@ -1218,8 +1217,8 @@ struct ImGuiContext
         LastActiveIdTimer = 0.0f;
 
         NavWindow = NULL;
-        NavId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
-        NavJustTabbedId = NavJustMovedToId = NavJustMovedToMultiSelectScopeId = NavNextActivateId = 0;
+        NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
+        NavJustTabbedId = NavJustMovedToId = NavJustMovedToFocusScopeId = NavNextActivateId = 0;
         NavInputSource = ImGuiInputSource_None;
         NavScoringRectScreen = ImRect();
         NavScoringCount = 0;
@@ -1246,8 +1245,6 @@ struct ImGuiContext
         FocusRequestCurrCounterRegular = FocusRequestCurrCounterTabStop = INT_MAX;
         FocusRequestNextCounterRegular = FocusRequestNextCounterTabStop = INT_MAX;
         FocusTabPressed = false;
-
-        MultiSelectScopeId = 0;
 
         DimBgRatio = 0.0f;
         BackgroundDrawList._OwnerName = "##Background"; // Give it a name for debugging
@@ -1334,6 +1331,7 @@ struct IMGUI_API ImGuiWindowTempData
     int                     NavLayerCurrentMask;    // = (1 << NavLayerCurrent) used by ItemAdd prior to clipping.
     int                     NavLayerActiveMask;     // Which layer have been written to (result from previous frame)
     int                     NavLayerActiveMaskNext; // Which layer have been written to (buffer for current frame)
+    ImGuiID                 NavFocusScopeIdCurrent; // Current focus scope ID while appending
     bool                    NavHideHighlightOneFrame;
     bool                    NavHasScroll;           // Set when scrolling can be used (ScrollMax > 0.0f)
 
@@ -1378,6 +1376,7 @@ struct IMGUI_API ImGuiWindowTempData
         NavLayerActiveMask = NavLayerActiveMaskNext = 0x00;
         NavLayerCurrent = ImGuiNavLayer_Main;
         NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
+        NavFocusScopeIdCurrent = 0;
         NavHideHighlightOneFrame = false;
         NavHasScroll = false;
 
@@ -1701,8 +1700,8 @@ namespace ImGui
     IMGUI_API ImVec2        GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f);
     IMGUI_API int           CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate);
     IMGUI_API void          ActivateItem(ImGuiID id);   // Remotely activate a button, checkbox, tree node etc. given its unique ID. activation is queued and processed on the next frame when the item is encountered again.
-    IMGUI_API void          SetNavID(ImGuiID id, int nav_layer);
-    IMGUI_API void          SetNavIDWithRectRel(ImGuiID id, int nav_layer, const ImRect& rect_rel);
+    IMGUI_API void          SetNavID(ImGuiID id, int nav_layer, int focus_scope_id);
+    IMGUI_API void          SetNavIDWithRectRel(ImGuiID id, int nav_layer, int focus_scope_id, const ImRect& rect_rel);
 
     // Inputs
     // FIXME: Eventually we should aim to move e.g. IsActiveIdUsingKey() into IsKeyXXX functions.

@@ -5312,9 +5312,9 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
 
     bool hovered, held;
     bool pressed = ButtonBehavior(interact_bb, id, &hovered, &held, button_flags);
+    bool toggled = false;
     if (!is_leaf)
     {
-        bool toggled = false;
         if (pressed)
         {
             if ((flags & (ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick)) == 0 || (g.NavActivateId == id))
@@ -5444,7 +5444,7 @@ void ImGui::TreePop()
     if (g.NavMoveDir == ImGuiDir_Left && g.NavWindow == window && NavMoveRequestButNoResultYet())
         if (g.NavIdIsAlive && (window->DC.TreeJumpToParentOnPopMask & tree_depth_mask))
         {
-            SetNavID(window->IDStack.back(), g.NavLayer);
+            SetNavID(window->IDStack.back(), g.NavLayer, 0);
             NavMoveRequestCancel();
         }
     window->DC.TreeJumpToParentOnPopMask &= tree_depth_mask - 1;
@@ -5600,7 +5600,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
         if (!g.NavDisableMouseHover && g.NavWindow == window && g.NavLayer == window->DC.NavLayerCurrent)
         {
             g.NavDisableHighlight = true;
-            SetNavID(id, window->DC.NavLayerCurrent);
+            SetNavID(id, window->DC.NavLayerCurrent, window->DC.NavFocusScopeIdCurrent);
         }
     }
     if (pressed)
@@ -6077,7 +6077,7 @@ void ImGui::EndMenuBar()
             const ImGuiNavLayer layer = ImGuiNavLayer_Menu;
             IM_ASSERT(window->DC.NavLayerActiveMaskNext & (1 << layer)); // Sanity check
             FocusWindow(window);
-            SetNavIDWithRectRel(window->NavLastIds[layer], layer, window->NavRectRel[layer]);
+            SetNavIDWithRectRel(window->NavLastIds[layer], layer, 0, window->NavRectRel[layer]);
             g.NavLayer = layer;
             g.NavDisableHighlight = true; // Hide highlight for the current frame so we don't see the intermediary selection.
             g.NavMoveRequestForward = ImGuiNavForward_ForwardQueued;

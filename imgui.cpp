@@ -2752,19 +2752,21 @@ void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
     window->MemoryDrawListIdxCapacity = window->MemoryDrawListVtxCapacity = 0;
 }
 
-void ImGui::SetNavID(ImGuiID id, int nav_layer)
+// FIXME-NAV: Refactor those functions into a single, more explicit one.
+void ImGui::SetNavID(ImGuiID id, int nav_layer, int focus_scope_id)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.NavWindow);
     IM_ASSERT(nav_layer == 0 || nav_layer == 1);
     g.NavId = id;
+    g.NavFocusScopeId = focus_scope_id;
     g.NavWindow->NavLastIds[nav_layer] = id;
 }
 
-void ImGui::SetNavIDWithRectRel(ImGuiID id, int nav_layer, const ImRect& rect_rel)
+void ImGui::SetNavIDWithRectRel(ImGuiID id, int nav_layer, int focus_scope_id, const ImRect& rect_rel)
 {
     ImGuiContext& g = *GImGui;
-    SetNavID(id, nav_layer);
+    SetNavID(id, nav_layer, focus_scope_id);
     g.NavWindow->NavRectRel[nav_layer] = rect_rel;
     g.NavMousePosDirty = true;
     g.NavDisableHighlight = false;
@@ -2809,13 +2811,15 @@ void ImGui::SetFocusID(ImGuiID id, ImGuiWindow* window)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(id != 0);
 
-    // Assume that SetFocusID() is called in the context where its NavLayer is the current layer, which is the case everywhere we call it.
+    // Assume that SetFocusID() is called in the context where its window->DC.NavLayerCurrent and window->DC.NavFocusScopeIdCurrent are valid.
+    // Note that window may be != g.CurrentWindow (e.g. SetFocusID call in InputTextEx for multi-line text)
     const ImGuiNavLayer nav_layer = window->DC.NavLayerCurrent;
     if (g.NavWindow != window)
         g.NavInitRequest = false;
-    g.NavId = id;
     g.NavWindow = window;
+    g.NavId = id;
     g.NavLayer = nav_layer;
+    g.NavFocusScopeId = window->DC.NavFocusScopeIdCurrent;
     window->NavLastIds[nav_layer] = id;
     if (window->DC.LastItemId == id)
         window->NavRectRel[nav_layer] = ImRect(window->DC.LastItemRect.Min - window->Pos, window->DC.LastItemRect.Max - window->Pos);
@@ -5845,6 +5849,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
+        window->DC.NavFocusScopeIdCurrent = 0;
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
 
@@ -6047,6 +6052,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
             g.NavMousePosDirty = true;
         g.NavInitRequest = false;
         g.NavId = window ? window->NavLastIds[0] : 0; // Restore NavId
+        g.NavFocusScopeId = 0;
         g.NavIdIsAlive = false;
         g.NavLayer = ImGuiNavLayer_Main;
         //IMGUI_DEBUG_LOG("FocusWindow(\"%s\")\n", window ? window->Name : NULL);
@@ -8039,21 +8045,22 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
 #endif
         if (new_best)
         {
-            result->ID = id;
-            result->SelectScopeId = g.MultiSelectScopeId;
             result->Window = window;
+            result->ID = id;
+            result->FocusScopeId = window->DC.NavFocusScopeIdCurrent;
             result->RectRel = nav_bb_rel;
         }
 
+        // Features like PageUp/PageDown need to maintain a separate score for the visible set of items.
         const float VISIBLE_RATIO = 0.70f;
         if ((g.NavMoveRequestFlags & ImGuiNavMoveFlags_AlsoScoreVisibleSet) && window->ClipRect.Overlaps(nav_bb))
             if (ImClamp(nav_bb.Max.y, window->ClipRect.Min.y, window->ClipRect.Max.y) - ImClamp(nav_bb.Min.y, window->ClipRect.Min.y, window->ClipRect.Max.y) >= (nav_bb.Max.y - nav_bb.Min.y) * VISIBLE_RATIO)
                 if (NavScoreItem(&g.NavMoveResultLocalVisibleSet, nav_bb))
                 {
                     result = &g.NavMoveResultLocalVisibleSet;
-                    result->ID = id;
-                    result->SelectScopeId = g.MultiSelectScopeId;
                     result->Window = window;
+                    result->ID = id;
+                    result->FocusScopeId = window->DC.NavFocusScopeIdCurrent;
                     result->RectRel = nav_bb_rel;
                 }
     }
@@ -8063,6 +8070,7 @@ static void ImGui::NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, con
     {
         g.NavWindow = window;                                           // Always refresh g.NavWindow, because some operations such as FocusItem() don't have a window.
         g.NavLayer = window->DC.NavLayerCurrent;
+        g.NavFocusScopeId = window->DC.NavFocusScopeIdCurrent;
         g.NavIdIsAlive = true;
         g.NavIdTabCounter = window->DC.FocusCounterTabStop;
         window->NavRectRel[window->DC.NavLayerCurrent] = nav_bb_rel;    // Store item bounding box (relative to window position)
@@ -8153,10 +8161,11 @@ static void NavRestoreLayer(ImGuiNavLayer layer)
     g.NavLayer = layer;
     if (layer == 0)
         g.NavWindow = ImGui::NavRestoreLastChildNavWindow(g.NavWindow);
-    if (layer == 0 && g.NavWindow->NavLastIds[0] != 0)
-        ImGui::SetNavIDWithRectRel(g.NavWindow->NavLastIds[0], layer, g.NavWindow->NavRectRel[0]);
+    ImGuiWindow* window = g.NavWindow;
+    if (layer == 0 && window->NavLastIds[0] != 0)
+        ImGui::SetNavIDWithRectRel(window->NavLastIds[0], layer, 0, window->NavRectRel[0]);
     else
-        ImGui::NavInitWindow(g.NavWindow, true);
+        ImGui::NavInitWindow(window, true);
 }
 
 static inline void ImGui::NavUpdateAnyRequestFlag()
@@ -8179,7 +8188,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     //IMGUI_DEBUG_LOG("[Nav] NavInitWindow() init_for_nav=%d, window=\"%s\", layer=%d\n", init_for_nav, window->Name, g.NavLayer);
     if (init_for_nav)
     {
-        SetNavID(0, g.NavLayer);
+        SetNavID(0, g.NavLayer, 0);
         g.NavInitRequest = true;
         g.NavInitRequestFromMove = false;
         g.NavInitResultId = 0;
@@ -8189,6 +8198,7 @@ void ImGui::NavInitWindow(ImGuiWindow* window, bool force_reinit)
     else
     {
         g.NavId = window->NavLastIds[0];
+        g.NavFocusScopeId = 0;
     }
 }
 
@@ -8295,9 +8305,9 @@ static void ImGui::NavUpdate()
         // Apply result from previous navigation init request (will typically select the first item, unless SetItemDefaultFocus() has been called)
         //IMGUI_DEBUG_LOG("[Nav] Apply NavInitRequest result: 0x%08X Layer %d in \"%s\"\n", g.NavInitResultId, g.NavLayer, g.NavWindow->Name);
         if (g.NavInitRequestFromMove)
-            SetNavIDWithRectRel(g.NavInitResultId, g.NavLayer, g.NavInitResultRectRel);
+            SetNavIDWithRectRel(g.NavInitResultId, g.NavLayer, 0, g.NavInitResultRectRel);
         else
-            SetNavID(g.NavInitResultId, g.NavLayer);
+            SetNavID(g.NavInitResultId, g.NavLayer, 0);
         g.NavWindow->NavRectRel[g.NavLayer] = g.NavInitResultRectRel;
     }
     g.NavInitRequest = false;
@@ -8364,7 +8374,7 @@ static void ImGui::NavUpdate()
             ImGuiWindow* parent_window = g.NavWindow->ParentWindow;
             IM_ASSERT(child_window->ChildId != 0);
             FocusWindow(parent_window);
-            SetNavID(child_window->ChildId, 0);
+            SetNavID(child_window->ChildId, 0, 0);
             // Reassigning with same value, we're being explicit here.
             g.NavIdIsAlive = false;     // -V1048
             if (g.NavDisableMouseHover)
@@ -8386,7 +8396,7 @@ static void ImGui::NavUpdate()
             // Clear NavLastId for popups but keep it for regular child window so we can leave one and come back where we were
             if (g.NavWindow && ((g.NavWindow->Flags & ImGuiWindowFlags_Popup) || !(g.NavWindow->Flags & ImGuiWindowFlags_ChildWindow)))
                 g.NavWindow->NavLastIds[0] = 0;
-            g.NavId = 0;
+            g.NavId = g.NavFocusScopeId = 0;
         }
     }
 
@@ -8506,7 +8516,7 @@ static void ImGui::NavUpdate()
             float pad = window->CalcFontSize() * 0.5f;
             window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intent of starting navigation from first fully visible item
             window->NavRectRel[g.NavLayer].ClipWith(window_rect_rel);
-            g.NavId = 0;
+            g.NavId = g.NavFocusScopeId = 0;
         }
         g.NavMoveFromClampedRefRect = false;
     }
@@ -8586,9 +8596,10 @@ static void ImGui::NavUpdateMoveResult()
     {
         // Don't set NavJustMovedToId if just landed on the same spot (which may happen with ImGuiNavMoveFlags_AllowCurrentNavId)
         g.NavJustMovedToId = result->ID;
-        g.NavJustMovedToMultiSelectScopeId = result->SelectScopeId;
+        g.NavJustMovedToFocusScopeId = result->FocusScopeId;
+
     }
-    SetNavIDWithRectRel(result->ID, g.NavLayer, result->RectRel);
+    SetNavIDWithRectRel(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
     g.NavMoveFromClampedRefRect = false;
 }
 
