@@ -2749,7 +2749,7 @@ enum ImGuiMultiSelectFlags_
 //   performance penalty, but requires a little more work on the code. If you only have a few hundreds elements in your possible selection set,
 //   you may as well not bother with clipping, as the cost should be negligible (as least on imgui side).
 //   If you are not sure, always start without clipping and you can work your way to the more optimized version afterwards.
-// - The void* Src/Dst value represent a selectable object. They are the values you pass to SetNextItemMultiSelectData().
+// - The void* Src/Dst value represent a selectable object. They are the values you pass to SetNextItemSelectionUserData().
 //   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points. But the code never assume that sortable integers are used.
 // - In the spirit of imgui design, your code own the selection data. So this is designed to handle all kind of selection data: instructive (store a bool inside each object),
 //   external array (store an array aside from your objects), set (store only selected items in a hash/map/set), using intervals (store indices in an interval tree), etc.
@@ -2760,7 +2760,7 @@ enum ImGuiMultiSelectFlags_
 //   3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item.  [Only required if you are using a clipper in step 4]
 //      This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
 //      If you are using integer indices everywhere, this is easy to compute:  if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
-//   4) Submit your items with SetNextItemMultiSelectData() + Selectable()/TreeNode() calls.
+//   4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
 //      Call IsItemSelectionToggled() to query with the selection state has been toggled, in which you need the info immediately (before EndMultiSelect()) for your display.
 //      When cannot reliably return a "IsItemSelected()" value because we need to consider clipped (unprocessed) item, this is why we return a toggle event instead.
 //   5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
