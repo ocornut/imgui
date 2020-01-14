@@ -137,15 +137,25 @@ Other Changes:
 - ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
   when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
-- Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
+- ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count
   selection, those new api can fill a gap. [@ShironekoBen]
+- Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp
+  files in a same compilation unit. Actual users of that technique (also called "Unity builds")
+  can generally provide this themselves, so we don't really recommend you use this. [@rokups]
 - Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
   on Wayland). (#2800, #2802) [@NeroBurner]
+- Backends: Win32: Added support for #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD to disable all
+  XInput using code, and IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT to disable linking with XInput,
+  the later may be problematic if compiling with recent Windows SDK and you want your app to run
+  on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
+- CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
   automatically use it). (#2919, #2798)
@@ -157,6 +167,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.74 (Released 2019-11-25)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.74
 
 Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
@@ -231,6 +243,8 @@ Other Changes:
  VERSION 1.73 (Released 2019-09-24)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.73
+
 Other Changes:
 
 - Nav, Scrolling: Added support for Home/End key. (#787)
@@ -291,6 +305,8 @@ Other Changes:
  VERSION 1.72b (Released 2019-07-31)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72b
+
 Other Changes:
 
 - Nav, Scrolling: Fixed programmatic scroll leading to a slightly incorrect scroll offset when
@@ -305,6 +321,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.72 (Released 2019-07-27)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72
 
 Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017):
@@ -387,6 +405,8 @@ Other Changes:
  VERSION 1.71 (Released 2019-06-12)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.71
+
 Breaking Changes:
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
@@ -466,6 +486,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.70 (Released 2019-05-06)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.70
 
 Breaking Changes:
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness
@@ -554,6 +576,8 @@ Other Changes:
  VERSION 1.69 (Released 2019-03-13)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.69
+
 Breaking Changes:
 
 - Renamed ColorEdit/ColorPicker's ImGuiColorEditFlags_RGB/_HSV/_HEX flags to respectively
@@ -630,6 +654,8 @@ Other Changes:
  VERSION 1.68 (Released 2019-02-19)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.68
+
 Breaking Changes:
 
 - Removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
@@ -698,6 +724,8 @@ Other Changes:
  VERSION 1.67 (Released 2019-01-14)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.67
+
 Breaking Changes:
 
 - Made it illegal to call Begin("") with an empty string. This somehow half-worked before but had various undesirable
@@ -762,6 +790,8 @@ Other Changes:
  VERSION 1.66b (Released 2018-12-01)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66b
+
 Other Changes:
 
 - Fixed a text rendering/clipping bug introduced in 1.66 (on 2018-10-12, commit ede3a3b9) that affect single ImDrawList::AddText()
@@ -778,6 +808,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.66 (Released 2018-11-22)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.66
 
 Breaking Changes:
 
@@ -838,6 +870,8 @@ Other Changes:
  VERSION 1.65 (Released 2018-09-06)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.65
+
 Breaking Changes:
 
 - Renamed stb_truetype.h to imstb_truetype.h, stb_textedit.h to imstb_textedit.h, and
@@ -862,6 +896,8 @@ Other Changes:
  VERSION 1.64 (Released 2018-08-31)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.64
+
 Changes:
 
 - Moved README, CHANGELOG and TODO files to the docs/ folder.
@@ -883,6 +919,8 @@ Changes:
 -----------------------------------------------------------------------
  VERSION 1.63 (Released 2018-08-29)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.63
 
 Breaking Changes:
 
@@ -976,6 +1014,8 @@ Other Changes:
  VERSION 1.62 (Released 2018-06-22)
 -----------------------------------------------------------------------
 
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.62
+
 Breaking Changes:
 
 - TreeNodeEx(): The helper ImGuiTreeNodeFlags_CollapsingHeader flag now include ImGuiTreeNodeFlags_NoTreePushOnOpen.
@@ -1054,6 +1094,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.61 (Released 2018-05-14)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.61
 
 Breaking Changes:
 

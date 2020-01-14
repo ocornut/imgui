@@ -44,8 +44,13 @@ jobs:
       - name: Build example_null (extra warnings)
         run: mingw32-make -C examples/example_null EXTRA_WARNINGS=1
 
-      - name: Build example_null (unity build)
-        run: mingw32-make -C examples/example_null UNITY_BUILD=1
+      - name: Build example_null (single file build)
+        shell: bash
+        run: |
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
 
       - name: Build Win32 example_glfw_opengl2
         shell: cmd
@@ -176,8 +181,12 @@ jobs:
         make -C examples/example_null clean
         CXXFLAGS="$CXXFLAGS -m64" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
 
-    - name: Build example_null (unity build)
-      run: make -C examples/example_null UNITY_BUILD=1
+    - name: Build example_null (single file build)
+      run: |
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_glfw_opengl2
       run: make -C examples/example_glfw_opengl2
@@ -208,8 +217,12 @@ jobs:
     - name: Build example_null (extra warnings)
       run: make -C examples/example_null EXTRA_WARNINGS=1
 
-    - name: Build example_null (unity build)
-      run: make -C examples/example_null UNITY_BUILD=1
+    - name: Build example_null (single file build)
+      run: |
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        clang++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_glfw_opengl2
       run: make -C examples/example_glfw_opengl2
@@ -265,3 +278,38 @@ jobs:
       run: |
         source emsdk-master/emsdk_env.sh
         make -C examples/example_emscripten
+
+  Static-Analysis:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install Dependencies
+        env:
+          PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+        run: |
+          if [[ "$PVS_STUDIO_LICENSE" != "" ]];
+          then
+            echo "$PVS_STUDIO_LICENSE" > pvs-studio.lic
+            wget -q https://files.viva64.com/etc/pubkey.txt
+            sudo apt-key add pubkey.txt
+            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.viva64.com/etc/viva64.list
+            sudo apt-get update
+            sudo apt-get install -y pvs-studio
+          fi
+
+      - name: PVS-Studio static analysis
+        run: |
+          if [[ ! -f pvs-studio.lic ]];
+          then
+            echo "PVS Studio license is missing. No analysis will be performed."
+            echo "If you have a PVS Studio license please create a project secret named PVS_STUDIO_LICENSE with your license."
+            echo "You may use a free license. More information at https://www.viva64.com/en/b/0457/"
+            exit 0
+          fi
+          cd examples/example_null
+          pvs-studio-analyzer trace -- make EXTRA_WARNINGS=1
+          pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
+          plog-converter -a 'GA:1,2;OP:1' -t errorfile -w pvs-studio.log

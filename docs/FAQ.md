@@ -12,21 +12,16 @@ or view this file with any Markdown viewer.
 | **Q&A: Basics** |
 :---------------------------------------------------------- |
 | [Where is the documentation?](#q-where-is-the-documentation) |
+| [What is this library called?](#q-what-is-this-library-called) |
 | [Which version should I get?](#q-which-version-should-i-get) |
-| [Why the names "Dear ImGui" vs "ImGui"?](#q-why-the-names-dear-imgui-vs-imgui) |
-| **Q&A: Concerns** |
-| [Who uses Dear ImGui?](#q-who-uses-dear-imgui) |
-| [Can you create elaborate/serious tools with Dear ImGui?](#q-can-you-create-elaborateserious-tools-with-dear-imgui)  |
-| [Can you reskin the look of Dear ImGui?](#q-can-you-reskin-the-look-of-dear-imgui) |
-| [Why using C++ (as opposed to C)?](#q-why-using-c-as-opposed-to-c) |
 | **Q&A: Integration** |
-| [How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application) |
+| **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application)** |
 | [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
 | [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
 | [I integrated Dear ImGui in my engine and the text or lines are blurry..](#q-i-integrated-dear-imgui-in-my-engine-and-the-text-or-lines-are-blurry) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | **Q&A: Usage** |
-| [Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label) |
+| **[Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
@@ -36,6 +31,11 @@ or view this file with any Markdown viewer.
 | [How can I easily use icons in my application?](#q-how-can-i-easily-use-icons-in-my-application) |
 | [How can I load multiple fonts?](#q-how-can-i-load-multiple-fonts) |
 | [How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?](#q-how-can-i-display-and-input-non-latin-characters-such-as-chinese-japanese-korean-cyrillic) |
+| **Q&A: Concerns** |
+| [Who uses Dear ImGui?](#q-who-uses-dear-imgui) |
+| [Can you create elaborate/serious tools with Dear ImGui?](#q-can-you-create-elaborateserious-tools-with-dear-imgui)  |
+| [Can you reskin the look of Dear ImGui?](#q-can-you-reskin-the-look-of-dear-imgui) |
+| [Why using C++ (as opposed to C)?](#q-why-using-c-as-opposed-to-c) |
 | **Q&A: Community** |
 | [How can I help?](#q-how-can-i-help) |
 
@@ -50,60 +50,30 @@ or view this file with any Markdown viewer.
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
 - The [Wiki](https://github.com/ocornut/imgui/wiki) has many resources and links.
 - The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
+- The [Issues](https://github.com/ocornut/imgui/issues) section can be searched for past questions and issues.
 - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
+- The `ImGui::ShowMetricsWindow()` function exposes lots of internal information and tools. Although it is primary designed as a debugging tool, having access to that information tends to help understands concepts.
+
+---
+
+### Q. What is this library called?
+
+**This library is called Dear ImGui**. Please refer to it as Dear ImGui (not ImGui, not IMGUI).
+
+(The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
 
 ---
 
 ### Q: Which version should I get?
 I occasionally tag [Releases](https://github.com/ocornut/imgui/releases) but it is generally safe and recommended to sync to master/latest. The library is fairly stable and regressions tend to be fixed fast when reported.
 
-You may also peak at the [docking](https://github.com/ocornut/imgui/tree/docking) branch which includes:
-- [Docking/Merging features](https://github.com/ocornut/imgui/issues/2109)
+You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch which includes:
+- [Docking features](https://github.com/ocornut/imgui/issues/2109)
 - [Multi-viewport features](https://github.com/ocornut/imgui/issues/1542)
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
 ---
-
-### Q: Why the names "Dear ImGui" vs "ImGui"?
-
-**TL;DR: Please refer to this library as "Dear ImGui".**
-
-The library started its life as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations (e.g. Unity uses it own implementation of the IMGUI paradigm). To reduce the ambiguity without affecting existing code bases, I have decided on an alternate, longer name "Dear ImGui" that people can use to refer to this specific library.
-
-##### [Return to Index](#index)
-
-
-# Q&A: Concerns
-
-### Q: Who uses Dear ImGui?
-
-You may take a look at:
-
-- [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
-- [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
-- [Gallery](https://github.com/ocornut/imgui/issues/2847)
-
-### Q: Can you create elaborate/serious tools with Dear ImGui?
-
-Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
-
-Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
-
-Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization that the more typical RMGUI paradigm.
-
-### Q: Can you reskin the look of Dear ImGui?
-
-Somehow. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create user interface for games, although with ingenious use of the low-level API you can do it.
-
-A reasonably skinned application may look like (screenshot from [#2529](https://github.com/ocornut/imgui/issues/2529#issuecomment-524281119))
-![minipars](https://user-images.githubusercontent.com/314805/63589441-d9794f00-c5b1-11e9-8d96-cfc1b93702f7.png)
-
-### Q: Why using C++ (as opposed to C)?
-
-Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
-
-There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. It is designed for creating binding to other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for various third-party bindings.
 
 ##### [Return to Index](#index)
 
@@ -365,7 +335,7 @@ void* my_void_ptr;
 my_void_ptr = (void*)my_dx11_srv;                       // cast a ID3D11ShaderResourceView* into an opaque void*
 my_dx11_srv = (ID3D11ShaderResourceView*)my_void_ptr;   // cast a void* into a ID3D11ShaderResourceView*
 ```
-Finally, you may call ImGui::ShowMetricsWindow() to explore/visualize/understand how the ImDrawList are generated.
+Finally, you may call `ImGui::ShowMetricsWindow()` to explore/visualize/understand how the ImDrawList are generated.
 
 ---
 
@@ -533,6 +503,41 @@ Windows: if your language is relying on an Input Method Editor (IME), you copy t
 the default implementation of io.ImeSetInputScreenPosFn() to set your Microsoft IME position correctly.
 
 ##### [Return to Index](#index)
+
+
+# Q&A: Concerns
+
+### Q: Who uses Dear ImGui?
+
+You may take a look at:
+
+- [Quotes](https://github.com/ocornut/imgui/wiki/Quotes)
+- [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
+- [Gallery](https://github.com/ocornut/imgui/issues/2847)
+
+### Q: Can you create elaborate/serious tools with Dear ImGui?
+
+Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
+
+Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might require you to readjust some habits before you can realize its full potential. Dear ImGui is about making things that are simple, efficient and powerful.
+
+Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization that the more typical RMGUI paradigm.
+
+### Q: Can you reskin the look of Dear ImGui?
+
+Somehow. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create user interface for games, although with ingenious use of the low-level API you can do it.
+
+A reasonably skinned application may look like (screenshot from [#2529](https://github.com/ocornut/imgui/issues/2529#issuecomment-524281119))
+![minipars](https://user-images.githubusercontent.com/314805/63589441-d9794f00-c5b1-11e9-8d96-cfc1b93702f7.png)
+
+### Q: Why using C++ (as opposed to C)?
+
+Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
+
+There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. It is designed for creating binding to other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for various third-party bindings.
+
+##### [Return to Index](#index)
+
 
 # Q&A: Community
 
