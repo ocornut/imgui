@@ -430,7 +430,7 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_Disabled               = 1 << 10,  // disable interactions
     ImGuiButtonFlags_AlignTextBaseLine      = 1 << 11,  // vertically align button to match text baseline - ButtonEx() only // FIXME: Should be removed and handled by SmallButton(), not possible currently because of DC.CursorPosPrevLine
     ImGuiButtonFlags_NoKeyModifiers         = 1 << 12,  // disable mouse interaction if a key modifier is held
-    ImGuiButtonFlags_NoHoldingActiveID      = 1 << 13,  // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
+    ImGuiButtonFlags_NoHoldingActiveId      = 1 << 13,  // don't set ActiveId while holding the mouse (ImGuiButtonFlags_PressedOnClick only)
     ImGuiButtonFlags_NoNavFocus             = 1 << 14,  // don't override navigation focus when activated
     ImGuiButtonFlags_NoHoveredOnNav         = 1 << 15,  // don't report as hovered when navigated on
     ImGuiButtonFlags_PressedOnMask_         = ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold
@@ -1160,7 +1160,7 @@ struct ImGuiContext
 
     // Debug Tools
     bool                    DebugItemPickerActive;
-    ImGuiID                 DebugItemPickerBreakID;             // Will call IM_DEBUG_BREAK() when encountering this id
+    ImGuiID                 DebugItemPickerBreakId;             // Will call IM_DEBUG_BREAK() when encountering this id
 
     // Misc
     float                   FramerateSecPerFrame[120];          // Calculate estimate of framerate for user over the last 2 seconds.
@@ -1289,7 +1289,7 @@ struct ImGuiContext
         LogDepthToExpand = LogDepthToExpandDefault = 2;
 
         DebugItemPickerActive = false;
-        DebugItemPickerBreakID = 0;
+        DebugItemPickerBreakId = 0;
 
         memset(FramerateSecPerFrame, 0, sizeof(FramerateSecPerFrame));
         FramerateSecPerFrameIdx = 0;
@@ -1700,8 +1700,8 @@ namespace ImGui
     IMGUI_API ImVec2        GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInputReadMode mode, float slow_factor = 0.0f, float fast_factor = 0.0f);
     IMGUI_API int           CalcTypematicRepeatAmount(float t0, float t1, float repeat_delay, float repeat_rate);
     IMGUI_API void          ActivateItem(ImGuiID id);   // Remotely activate a button, checkbox, tree node etc. given its unique ID. activation is queued and processed on the next frame when the item is encountered again.
-    IMGUI_API void          SetNavID(ImGuiID id, int nav_layer, int focus_scope_id);
-    IMGUI_API void          SetNavIDWithRectRel(ImGuiID id, int nav_layer, int focus_scope_id, const ImRect& rect_rel);
+    IMGUI_API void          SetNavID(ImGuiID id, int nav_layer, ImGuiID focus_scope_id);
+    IMGUI_API void          SetNavIDWithRectRel(ImGuiID id, int nav_layer, ImGuiID focus_scope_id, const ImRect& rect_rel);
 
     // Focus scope (WIP)
     IMGUI_API void          PushFocusScope(ImGuiID id);     // Note: this is storing in same stack as IDStack, so Push/Pop mismatch will be reported there.
