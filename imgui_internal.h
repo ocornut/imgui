@@ -529,6 +529,9 @@ struct IMGUI_API ImChunkStream
 #define IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER             1
 #endif
 
+// The maximum line width to build anti-aliased textures for
+#define IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX                      65
+
 // Data shared between all ImDrawList instances
 // You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
 struct IMGUI_API ImDrawListSharedData

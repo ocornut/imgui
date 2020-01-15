@@ -676,13 +676,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const float AA_SIZE = 1.0f;
         const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-        const int integer_thickness = (int)thickness;
+        // The -0.5f here is to better match the geometry-based code, and also shift the transition point from one width texture to another off the integer values (where it will be less noticeable)
+        const int integer_thickness = ImMax((int)(thickness - 0.5f), 1);
 
         // Do we want to draw this line using a texture?
-        bool use_textures = (Flags & ImDrawListFlags_TexturedAALines) &&
-            (integer_thickness >= 1) &&
-            (integer_thickness <= _Data->Font->ContainerAtlas->AALineMaxWidth) &&
-            ImGui::GetIO().KeyShift; // FIXME-AALINES: Remove this debug code
+        bool use_textures = (Flags & ImDrawListFlags_TexturedAALines) && (integer_thickness <= IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX);
 
         // We should never hit this, because NewFrame() doesn't set ImDrawListFlags_TexturedAALines unless ImFontAtlasFlags_NoAALines is off
         IM_ASSERT_PARANOID((!use_textures) || (!(_Data->Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoAALines)));
@@ -1707,8 +1705,6 @@ ImFontAtlas::ImFontAtlas()
     TexUvScale = ImVec2(0.0f, 0.0f);
     TexUvWhitePixel = ImVec2(0.0f, 0.0f);
     PackIdMouseCursors = -1;
-
-    AALineMaxWidth = 8;
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -2401,7 +2397,7 @@ void ImFontAtlasBuildRegisterAALineCustomRects(ImFontAtlas* atlas)
     if ((atlas->Flags & ImFontAtlasFlags_NoAALines))
         return;
 
-    const int max = atlas->AALineMaxWidth;
+    const int max = IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX;
 
     for (int n = 0; n < max; n++)
     {
@@ -2420,7 +2416,7 @@ void ImFontAtlasBuildAALinesTexData(ImFontAtlas* atlas)
         return;
 
     const int w = atlas->TexWidth;
-    const unsigned int max = atlas->AALineMaxWidth;
+    const unsigned int max = IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX;
 
     for (unsigned int n = 0; n < max; n++)
     {
