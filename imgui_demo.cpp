@@ -84,6 +84,7 @@ Index of this file:
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"    // warning : 'xx' is deprecated: The POSIX name for this item.. // for strdup used in demo code (so user can copy & paste the code)
 #pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"   // warning : cast to 'void *' from smaller integer type 'int'
 #pragma clang diagnostic ignored "-Wformat-security"            // warning : warning: format string is not a string literal
+#pragma clang diagnostic ignored "-Wsign-conversion"            // warning : implicit conversion changes signedness
 #pragma clang diagnostic ignored "-Wexit-time-destructors"      // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
 #pragma clang diagnostic ignored "-Wunused-macros"              // warning : warning: macro is not used                         // we define snprintf/vsnprintf on Windows so they are available, but not always used.
 #if __has_warning("-Wzero-as-null-pointer-constant")

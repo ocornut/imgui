@@ -4507,9 +4507,9 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
 
     // Read stored options
     if (!(flags & ImGuiColorEditFlags__PickerMask))
-        flags |= ((g.ColorEditOptions & ImGuiColorEditFlags__PickerMask) ? g.ColorEditOptions : ImGuiColorEditFlags__OptionsDefault) & ImGuiColorEditFlags__PickerMask;
+        flags |= ((g.ColorEditOptions & ImGuiColorEditFlags__PickerMask) ? g.ColorEditOptions : (ImGuiColorEditFlags)ImGuiColorEditFlags__OptionsDefault) & ImGuiColorEditFlags__PickerMask;
     if (!(flags & ImGuiColorEditFlags__InputMask))
-        flags |= ((g.ColorEditOptions & ImGuiColorEditFlags__InputMask) ? g.ColorEditOptions : ImGuiColorEditFlags__OptionsDefault) & ImGuiColorEditFlags__InputMask;
+        flags |= ((g.ColorEditOptions & ImGuiColorEditFlags__InputMask) ? g.ColorEditOptions : (ImGuiColorEditFlags)ImGuiColorEditFlags__OptionsDefault) & ImGuiColorEditFlags__InputMask;
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags__PickerMask)); // Check that only 1 is selected
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiColorEditFlags__InputMask));  // Check that only 1 is selected
     if (!(flags & ImGuiColorEditFlags_NoOptions))

@@ -99,19 +99,19 @@ struct ImGuiWindowSettings;         // Storage for a window .ini settings (we ke
 
 // Use your programming IDE "Go to definition" facility on the names of the center columns to find the actual flags/enum lists.
 typedef int ImGuiLayoutType;            // -> enum ImGuiLayoutType_         // Enum: Horizontal or vertical
-typedef int ImGuiButtonFlags;           // -> enum ImGuiButtonFlags_        // Flags: for ButtonEx(), ButtonBehavior()
-typedef int ImGuiColumnsFlags;          // -> enum ImGuiColumnsFlags_       // Flags: BeginColumns()
-typedef int ImGuiDragFlags;             // -> enum ImGuiDragFlags_          // Flags: for DragBehavior()
-typedef int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag()
-typedef int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for DC.LastItemStatusFlags
-typedef int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
-typedef int ImGuiNavDirSourceFlags;     // -> enum ImGuiNavDirSourceFlags_  // Flags: for GetNavInputAmount2d()
-typedef int ImGuiNavMoveFlags;          // -> enum ImGuiNavMoveFlags_       // Flags: for navigation requests
-typedef int ImGuiNextItemDataFlags;     // -> enum ImGuiNextItemDataFlags_  // Flags: for SetNextItemXXX() functions
-typedef int ImGuiNextWindowDataFlags;   // -> enum ImGuiNextWindowDataFlags_// Flags: for SetNextWindowXXX() functions
-typedef int ImGuiSeparatorFlags;        // -> enum ImGuiSeparatorFlags_     // Flags: for SeparatorEx()
-typedef int ImGuiSliderFlags;           // -> enum ImGuiSliderFlags_        // Flags: for SliderBehavior()
-typedef int ImGuiTextFlags;             // -> enum ImGuiTextFlags_          // Flags: for TextEx()
+typedef unsigned int ImGuiButtonFlags;           // -> enum ImGuiButtonFlags_        // Flags: for ButtonEx(), ButtonBehavior()
+typedef unsigned int ImGuiColumnsFlags;          // -> enum ImGuiColumnsFlags_       // Flags: BeginColumns()
+typedef unsigned int ImGuiDragFlags;             // -> enum ImGuiDragFlags_          // Flags: for DragBehavior()
+typedef unsigned int ImGuiItemFlags;             // -> enum ImGuiItemFlags_          // Flags: for PushItemFlag()
+typedef unsigned int ImGuiItemStatusFlags;       // -> enum ImGuiItemStatusFlags_    // Flags: for DC.LastItemStatusFlags
+typedef unsigned int ImGuiNavHighlightFlags;     // -> enum ImGuiNavHighlightFlags_  // Flags: for RenderNavHighlight()
+typedef unsigned int ImGuiNavDirSourceFlags;     // -> enum ImGuiNavDirSourceFlags_  // Flags: for GetNavInputAmount2d()
+typedef unsigned int ImGuiNavMoveFlags;          // -> enum ImGuiNavMoveFlags_       // Flags: for navigation requests
+typedef unsigned int ImGuiNextItemDataFlags;     // -> enum ImGuiNextItemDataFlags_  // Flags: for SetNextItemXXX() functions
+typedef unsigned int ImGuiNextWindowDataFlags;   // -> enum ImGuiNextWindowDataFlags_// Flags: for SetNextWindowXXX() functions
+typedef unsigned int ImGuiSeparatorFlags;        // -> enum ImGuiSeparatorFlags_     // Flags: for SeparatorEx()
+typedef unsigned int ImGuiSliderFlags;           // -> enum ImGuiSliderFlags_        // Flags: for SliderBehavior()
+typedef unsigned int ImGuiTextFlags;             // -> enum ImGuiTextFlags_          // Flags: for TextEx()
 
 //-------------------------------------------------------------------------
 // STB libraries includes

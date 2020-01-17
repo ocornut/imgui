@@ -5822,7 +5822,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.ParentLayoutType = parent_window ? parent_window->DC.LayoutType : ImGuiLayoutType_Vertical;
         window->DC.FocusCounterRegular = window->DC.FocusCounterTabStop = -1;
 
-        window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
+        window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : (ImGuiItemFlags)ImGuiItemFlags_Default_;
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
         window->DC.ItemFlagsStack.resize(0);

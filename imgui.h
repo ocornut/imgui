@@ -151,22 +151,22 @@ typedef int ImGuiNavInput;          // -> enum ImGuiNavInput_        // Enum: An
 typedef int ImGuiMouseButton;       // -> enum ImGuiMouseButton_     // Enum: A mouse button identifier (0=left, 1=right, 2=middle)
 typedef int ImGuiMouseCursor;       // -> enum ImGuiMouseCursor_     // Enum: A mouse cursor identifier
 typedef int ImGuiStyleVar;          // -> enum ImGuiStyleVar_        // Enum: A variable identifier for styling
-typedef int ImDrawCornerFlags;      // -> enum ImDrawCornerFlags_    // Flags: for ImDrawList::AddRect(), AddRectFilled() etc.
-typedef int ImDrawListFlags;        // -> enum ImDrawListFlags_      // Flags: for ImDrawList
-typedef int ImFontAtlasFlags;       // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas
-typedef int ImGuiBackendFlags;      // -> enum ImGuiBackendFlags_    // Flags: for io.BackendFlags
-typedef int ImGuiColorEditFlags;    // -> enum ImGuiColorEditFlags_  // Flags: for ColorEdit4(), ColorPicker4() etc.
-typedef int ImGuiConfigFlags;       // -> enum ImGuiConfigFlags_     // Flags: for io.ConfigFlags
-typedef int ImGuiComboFlags;        // -> enum ImGuiComboFlags_      // Flags: for BeginCombo()
-typedef int ImGuiDragDropFlags;     // -> enum ImGuiDragDropFlags_   // Flags: for BeginDragDropSource(), AcceptDragDropPayload()
-typedef int ImGuiFocusedFlags;      // -> enum ImGuiFocusedFlags_    // Flags: for IsWindowFocused()
-typedef int ImGuiHoveredFlags;      // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
-typedef int ImGuiInputTextFlags;    // -> enum ImGuiInputTextFlags_  // Flags: for InputText(), InputTextMultiline()
-typedef int ImGuiSelectableFlags;   // -> enum ImGuiSelectableFlags_ // Flags: for Selectable()
-typedef int ImGuiTabBarFlags;       // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
-typedef int ImGuiTabItemFlags;      // -> enum ImGuiTabItemFlags_    // Flags: for BeginTabItem()
-typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: for TreeNode(), TreeNodeEx(), CollapsingHeader()
-typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin(), BeginChild()
+typedef int ImDrawCornerFlags;      // -> enum ImDrawCornerFlags_    // Flags: for ImDrawList::AddRect(), AddRectFilled() etc. // Kept signed because ~0 is frequently used
+typedef unsigned int ImDrawListFlags;      // -> enum ImDrawListFlags_      // Flags: for ImDrawList
+typedef unsigned int ImFontAtlasFlags;     // -> enum ImFontAtlasFlags_     // Flags: for ImFontAtlas
+typedef unsigned int ImGuiBackendFlags;    // -> enum ImGuiBackendFlags_    // Flags: for io.BackendFlags
+typedef unsigned int ImGuiColorEditFlags;  // -> enum ImGuiColorEditFlags_  // Flags: for ColorEdit4(), ColorPicker4() etc.
+typedef unsigned int ImGuiConfigFlags;     // -> enum ImGuiConfigFlags_     // Flags: for io.ConfigFlags
+typedef unsigned int ImGuiComboFlags;      // -> enum ImGuiComboFlags_      // Flags: for BeginCombo()
+typedef unsigned int ImGuiDragDropFlags;   // -> enum ImGuiDragDropFlags_   // Flags: for BeginDragDropSource(), AcceptDragDropPayload()
+typedef unsigned int ImGuiFocusedFlags;    // -> enum ImGuiFocusedFlags_    // Flags: for IsWindowFocused()
+typedef unsigned int ImGuiHoveredFlags;    // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
+typedef unsigned int ImGuiInputTextFlags;  // -> enum ImGuiInputTextFlags_  // Flags: for InputText(), InputTextMultiline()
+typedef unsigned int ImGuiSelectableFlags; // -> enum ImGuiSelectableFlags_ // Flags: for Selectable()
+typedef unsigned int ImGuiTabBarFlags;     // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
+typedef unsigned int ImGuiTabItemFlags;    // -> enum ImGuiTabItemFlags_    // Flags: for BeginTabItem()
+typedef unsigned int ImGuiTreeNodeFlags;   // -> enum ImGuiTreeNodeFlags_   // Flags: for TreeNode(), TreeNodeEx(), CollapsingHeader()
+typedef unsigned int ImGuiWindowFlags;     // -> enum ImGuiWindowFlags_     // Flags: for Begin(), BeginChild()
 typedef int (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
 
