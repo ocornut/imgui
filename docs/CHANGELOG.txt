@@ -84,12 +84,14 @@ Other Changes:
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
   on Wayland). (#2800, #2802) [@NeroBurner]
+- Backends: GLFW, SDL: report Windows key (io.KeySuper) as always released. Neither GLFW nor SDL can
+  correctly report the key release in every cases (e.g. when using Win+V) causing problems with some
+  widgets. The next release of GLFW (3.4+) will have a fix for it. However since it is both difficult
+  and discouraged to make use of this key for Windows application anyway, we just hide it. (#2976)
 - Backends: Win32: Added support for #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD to disable all
   XInput using code, and IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT to disable linking with XInput,
   the later may be problematic if compiling with recent Windows SDK and you want your app to run
   on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
-- Backends: Win32: Added support for io.KeySuper (Windows key) for consistency with other backends,
-  even if realistically it is difficult to make good use of under Windows.
 - CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
