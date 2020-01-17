@@ -2,28 +2,36 @@
 # Cross Platform Makefile
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
-# You will need SDL2 (http://www.libsdl.org):
+# You will need SDL2 (http://www.libsdl.org) and optionally FreeType2 (https://www.freetype.org/) for the FreeType example:
 # Linux:
 #   apt-get install libsdl2-dev
+#   apt-get install libfreetype6-dev
 # Mac OS X:
 #   brew install sdl2
+#   brew install freetype
 # MSYS2:
 #   pacman -S mingw-w64-i686-SDL
+#   pacman -S mingw-w64-i686-freetype
 #
 
 #CXX = g++
 #CXX = clang++
 
 EXE = example_sdl_opengl3
-SOURCES = main.cpp
-SOURCES += ../imgui_impl_sdl.cpp ../imgui_impl_opengl3.cpp
+EXAMPLE_SOURCES = main.cpp
+EXAMPLE_SOURCES += ../imgui_impl_sdl.cpp ../imgui_impl_opengl3.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
-OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
+OBJS = $(addsuffix .o, $(basename $(notdir $(EXAMPLE_SOURCES) $(SOURCES))))
 UNAME_S := $(shell uname -s)
 
 CXXFLAGS = -I../ -I../../
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
+
+EXE_FREETYPE = example_sdl_opengl3_freetype
+SOURCES_FREETYPE = ../../misc/freetype/imgui_freetype.cpp
+OBJS_FREETYPE = $(addsuffix _freetype.o, $(basename $(notdir $(EXAMPLE_SOURCES)))) \
+	$(addsuffix .o, $(basename $(notdir $(SOURCES) $(SOURCES_FREETYPE))))
 
 ##---------------------------------------------------------------------
 ## OPENGL LOADER
@@ -71,6 +79,10 @@ ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
    CFLAGS = $(CXXFLAGS)
 endif
 
+LIBS_FREETYPE = $(LIBS) `pkg-config --libs freetype2`
+CXXFLAGS_FREETYPE = -DIMGUI_IMPL_FREETYPE $(CXXFLAGS) `pkg-config --cflags freetype2`
+CFLAGS_FREETYPE = $(CXXFLAGS_FREETYPE)
+
 ##---------------------------------------------------------------------
 ## BUILD RULES
 ##---------------------------------------------------------------------
@@ -94,7 +106,19 @@ all: $(EXE)
 	@echo Build complete for $(ECHO_MESSAGE)
 
 $(EXE): $(OBJS)
-	$(CXX) -o $@ $^ $(CXXFLAGS) $(LIBS)
+	$(CXX) -o $@ $^ $(LIBS)
+
+%_freetype.o:%.cpp
+	$(CXX) $(CXXFLAGS_FREETYPE) -c -o $@ $<
+
+%_freetype.o:../%.cpp
+	$(CXX) $(CXXFLAGS_FREETYPE) -c -o $@ $<
+
+%.o:../../misc/freetype/%.cpp
+	$(CXX) $(CXXFLAGS_FREETYPE) -c -o $@ $<
+
+$(EXE_FREETYPE): $(OBJS_FREETYPE)
+	$(CXX) -o $@ $^ $(LIBS_FREETYPE)
 
 clean:
-	rm -f $(EXE) $(OBJS)
+	rm -f $(EXE) $(EXE_FREETYPE) $(OBJS) $(OBJS_FREETYPE)

@@ -215,7 +215,13 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     // Setup render state: alpha-blending enabled, no face culling, no depth testing, scissor enabled, polygon fill
     glEnable(GL_BLEND);
     glBlendEquation(GL_FUNC_ADD);
+#if defined(IMGUI_IMPL_FREETYPE)
+    // FreeType requires blending in linear space. Blending operator is Porter/Duff Over (premultiplied alpha) with subpixel support.
+    glEnable(GL_FRAMEBUFFER_SRGB);
+    glBlendFunc(GL_ONE, GL_ONE_MINUS_SRC1_COLOR);
+#else
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+#endif
     glDisable(GL_CULL_FACE);
     glDisable(GL_DEPTH_TEST);
     glEnable(GL_SCISSOR_TEST);
@@ -486,7 +492,11 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
 #endif
 
     // Parse GLSL version string
+#if defined(IMGUI_IMPL_FREETYPE)
+    int glsl_version = 410;
+#else
     int glsl_version = 130;
+#endif
     sscanf(g_GlslVersionString, "#version %d", &glsl_version);
 
     const GLchar* vertex_shader_glsl_120 =
@@ -542,7 +552,14 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "void main()\n"
         "{\n"
         "    Frag_UV = UV;\n"
+#if defined(IMGUI_IMPL_FREETYPE)
+        //   Alpha premultiplication and sRGB to linear RGB color conversion. Vertex alpha is linearized in an attempt to better match original theme colors.
+        "    float Gamma = 2.2;\n"
+        "    float LinearAlpha = pow(Color.a, 1.0 / Gamma);\n"
+        "    Frag_Color = vec4(pow(Color.rgb * vec3(LinearAlpha), vec3(Gamma)), Color.a);\n"
+#else
         "    Frag_Color = Color;\n"
+#endif
         "    gl_Position = ProjMtx * vec4(Position.xy,0,1);\n"
         "}\n";
 
@@ -583,10 +600,21 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "in vec2 Frag_UV;\n"
         "in vec4 Frag_Color;\n"
         "uniform sampler2D Texture;\n"
+#if defined(IMGUI_IMPL_FREETYPE)
+        // OpenGL 3.3 dual source blending for efficient and correct subpixel blending over any destination color.
+        "layout (location = 0, index = 0) out vec4 Out_Color_0;\n"
+        "layout (location = 0, index = 1) out vec4 Out_Color_1;\n"
+        "void main()\n"
+        "{\n"
+        "    vec4 Tex_Color = texture(Texture, Frag_UV.st);\n"
+        "    Out_Color_0 = Frag_Color * Tex_Color;\n"
+        "    Out_Color_1 = Frag_Color.aaaa * Tex_Color;\n"
+#else
         "layout (location = 0) out vec4 Out_Color;\n"
         "void main()\n"
         "{\n"
         "    Out_Color = Frag_Color * texture(Texture, Frag_UV.st);\n"
+#endif
         "}\n";
 
     // Select shaders matching our GLSL versions

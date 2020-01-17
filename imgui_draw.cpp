@@ -1627,7 +1627,10 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
             const unsigned char* src = pixels;
             unsigned int* dst = TexPixelsRGBA32;
             for (int n = TexWidth * TexHeight; n > 0; n--)
-                *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
+            {
+                const unsigned int alpha8 = (unsigned int)(*src++);
+                *dst++ = IM_COL32(alpha8, alpha8, alpha8, alpha8);
+            }
         }
     }
 
@@ -2210,6 +2213,11 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
                 const int offset1 = offset0 + FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
                 atlas->TexPixelsAlpha8[offset0] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == '.' ? 0xFF : 0x00;
                 atlas->TexPixelsAlpha8[offset1] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == 'X' ? 0xFF : 0x00;
+                if (atlas->TexPixelsRGBA32)
+                {
+                    atlas->TexPixelsRGBA32[offset0] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == '.' ? 0xFFFFFFFF : 0x00000000;
+                    atlas->TexPixelsRGBA32[offset1] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == 'X' ? 0xFFFFFFFF : 0x00000000;
+                }
             }
     }
     else
@@ -2217,6 +2225,8 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
         IM_ASSERT(r.Width == 2 && r.Height == 2);
         const int offset = (int)(r.X) + (int)(r.Y) * w;
         atlas->TexPixelsAlpha8[offset] = atlas->TexPixelsAlpha8[offset + 1] = atlas->TexPixelsAlpha8[offset + w] = atlas->TexPixelsAlpha8[offset + w + 1] = 0xFF;
+        if (atlas->TexPixelsRGBA32)
+            atlas->TexPixelsRGBA32[offset] = atlas->TexPixelsRGBA32[offset + 1] = atlas->TexPixelsRGBA32[offset + w] = atlas->TexPixelsRGBA32[offset + w + 1] = 0xFFFFFFFF;
     }
     atlas->TexUvWhitePixel = ImVec2((r.X + 0.5f) * atlas->TexUvScale.x, (r.Y + 0.5f) * atlas->TexUvScale.y);
 }
