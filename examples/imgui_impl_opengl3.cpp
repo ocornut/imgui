@@ -608,7 +608,13 @@ bool    ImGui_ImplOpenGL3_CreateDeviceObjects()
         "{\n"
         "    vec4 Tex_Color = texture(Texture, Frag_UV.st);\n"
         "    Out_Color_0 = Frag_Color * Tex_Color;\n"
-        "    Out_Color_1 = Frag_Color.aaaa * Tex_Color;\n"
+        "\n"
+        //   Subpixel fragments have their UVs vertically flipped. Set Dest_Factor to Tex_Color for subpixel fragments or to Tex_Color.aaaa for
+        //   standard ones: Dest_Factor = Tex_Color * vec4(Is_Subpixel_Fragment) + Tex_Color.aaaa * vec4(1.0 - Is_Subpixel_Fragment)
+        "    float Is_Subpixel_Fragment = dFdy(Frag_UV.t) >= 0.0 ? 1.0 : 0.0;\n"
+        "    float Standard_Factor = Tex_Color.a * -Is_Subpixel_Fragment + Tex_Color.a;\n"
+        "    vec4 Dest_Factor = Tex_Color * vec4(Is_Subpixel_Fragment) + vec4(Standard_Factor);\n"
+        "    Out_Color_1 = Frag_Color.aaaa * Dest_Factor;\n"
 #else
         "layout (location = 0) out vec4 Out_Color;\n"
         "void main()\n"

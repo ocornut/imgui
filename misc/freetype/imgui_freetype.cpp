@@ -640,6 +640,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         const float font_off_x = cfg.GlyphOffset.x;
         const float font_off_y = cfg.GlyphOffset.y + IM_ROUND(dst_font->Ascent);
+        const bool lcd_mode = !!(src_tmp.Font.UserFlags & (ImGuiFreeType::LcdMode | ImGuiFreeType::LcdVMode));
 
         const int padding = atlas->TexGlyphPadding;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
@@ -656,20 +657,26 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
 
             // Blit from temporary buffer to final textures. 32-bit buffers are written to both the alpha8 (using the alpha value) and the rgba32
             // textures. 8-bit buffers are written to the alpha8 texture and to the rgba32 texture if at least one of the fonts has a LCD flag set.
+            // LCD texels are written with their UVs vertically flipped to distinguish between standard texels and subpixel texels at shading time.
             size_t blit_src_width = (size_t)info.Width;
             size_t blit_dst_width = (size_t)atlas->TexWidth;
             unsigned char* blit_src_alpha8 = src_glyph.BitmapData;
-            unsigned char* blit_dst_alpha8 = atlas->TexPixelsAlpha8 + (ty * blit_dst_width) + tx;
             unsigned int* blit_src_rgba32 = (unsigned int*)src_glyph.BitmapData;
-            unsigned int* blit_dst_rgba32 = atlas->TexPixelsRGBA32 + (ty * blit_dst_width) + tx;
-            if (src_tmp.Font.UserFlags & (ImGuiFreeType::LcdMode | ImGuiFreeType::LcdVMode))
-                for (int y = info.Height; y > 0; y--, blit_dst_alpha8 += blit_dst_width, blit_dst_rgba32 += blit_dst_width, blit_src_rgba32 += blit_src_width)
+            if (lcd_mode)
+            {
+                unsigned char* blit_dst_alpha8 = atlas->TexPixelsAlpha8 + ((ty + info.Height - 1) * blit_dst_width) + tx;
+                unsigned int* blit_dst_rgba32 = atlas->TexPixelsRGBA32 + ((ty + info.Height - 1) * blit_dst_width) + tx;
+                for (int y = info.Height; y > 0; y--, blit_dst_alpha8 -= blit_dst_width, blit_dst_rgba32 -= blit_dst_width, blit_src_rgba32 += blit_src_width)
                 {
                     for (int x = 0; x < (int)blit_src_width; x++)
                         blit_dst_alpha8[x] = (blit_src_rgba32[x] >> 24) & 0xff;
                     memcpy(blit_dst_rgba32, blit_src_rgba32, blit_src_width * 4);
                 }
+            }
             else
+            {
+                unsigned char* blit_dst_alpha8 = atlas->TexPixelsAlpha8 + (ty * blit_dst_width) + tx;
+                unsigned int* blit_dst_rgba32 = atlas->TexPixelsRGBA32 + (ty * blit_dst_width) + tx;
                 for (int y = info.Height; y > 0; y--, blit_dst_alpha8 += blit_dst_width, blit_dst_rgba32 += blit_dst_width, blit_src_alpha8 += blit_src_width)
                 {
                     memcpy(blit_dst_alpha8, blit_src_alpha8, blit_src_width);
@@ -677,6 +684,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
                         for (int x = 0; x < (int)blit_src_width; x++)
                             blit_dst_rgba32[x] = blit_src_alpha8[x] << 24 | blit_src_alpha8[x] << 16 | blit_src_alpha8[x] << 8 | blit_src_alpha8[x];
                 }
+            }
 
             float char_advance_x_org = info.AdvanceX;
             float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
@@ -690,9 +698,9 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             float x1 = x0 + info.Width;
             float y1 = y0 + info.Height;
             float u0 = (tx) / (float)atlas->TexWidth;
-            float v0 = (ty) / (float)atlas->TexHeight;
+            float v0 = (ty + (lcd_mode ? info.Height : 0)) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
-            float v1 = (ty + info.Height) / (float)atlas->TexHeight;
+            float v1 = (ty + (lcd_mode ? 0 : info.Height)) / (float)atlas->TexHeight;
             dst_font->AddGlyph((ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, char_advance_x_mod);
         }
 
