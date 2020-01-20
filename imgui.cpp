@@ -8726,7 +8726,7 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
 }
 
 // Note that this is used for popups, which can overlap the non work-area of individual viewports.
-ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window)
+ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window, float* dpi_scale)
 {
     ImGuiContext& g = *GImGui;
     ImRect r_screen;
@@ -8736,12 +8736,17 @@ ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window)
         const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[window->ViewportAllowPlatformMonitorExtend];
         r_screen.Min = monitor.WorkPos;
         r_screen.Max = monitor.WorkPos + monitor.WorkSize;
+        if (dpi_scale)
+            *dpi_scale = monitor.DpiScale;
     }
     else
     {
         // Use the full viewport area (not work area) for popups
-        r_screen.Min = window->Viewport->Pos;
-        r_screen.Max = window->Viewport->Pos + window->Viewport->Size;
+        const ImGuiPlatformMonitor& monitor = g.PlatformIO.Monitors[window->Viewport->PlatformMonitor];
+        r_screen.Min = window->Viewport->PlatformPos;
+        r_screen.Max = window->Viewport->PlatformPos + window->Viewport->PlatformSize;
+        if (dpi_scale)
+            *dpi_scale = monitor.DpiScale;
     }
     ImVec2 padding = g.Style.DisplaySafeAreaPadding;
     r_screen.Expand(ImVec2((r_screen.GetWidth() > padding.x * 2) ? -padding.x : 0.0f, (r_screen.GetHeight() > padding.y * 2) ? -padding.y : 0.0f));
@@ -8751,24 +8756,36 @@ ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window)
 ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
+    float dpi_scale = 1.0f;
     if (window->Flags & ImGuiWindowFlags_ChildMenu)
     {
         // Child menus typically request _any_ position within the parent menu item, and then we move the new menu outside the parent bounds.
         // This is how we end up with child menus appearing (most-commonly) on the right of the parent menu.
         ImGuiWindow* parent_window = window->ParentWindow;
         float horizontal_overlap = g.Style.ItemInnerSpacing.x; // We want some overlap to convey the relative depth of each menu (currently the amount of overlap is hard-coded to style.ItemSpacing.x).
-        ImRect r_outer = GetWindowAllowedExtentRect(window);
+        ImRect r_outer = GetWindowAllowedExtentRect(window, &dpi_scale);
         ImRect r_avoid;
         if (parent_window->DC.MenuBarAppending)
             r_avoid = ImRect(-FLT_MAX, parent_window->ClipRect.Min.y, FLT_MAX, parent_window->ClipRect.Max.y); // Avoid parent menu-bar. If we wanted multi-line menu-bar, we may instead want to have the calling window setup e.g. a NextWindowData.PosConstraintAvoidRect field
         else
             r_avoid = ImRect(parent_window->Pos.x + horizontal_overlap, -FLT_MAX, parent_window->Pos.x + parent_window->Size.x - horizontal_overlap - parent_window->ScrollbarSizes.x, FLT_MAX);
+
+        // // Upscale to pixelgrid coordinates.
+        // r_avoid *= parent_window->Viewport->DpiScale;
+        // // Clip by monitor rect.
+        // r_avoid.ClipWith(r_outer);
+        // // Downscale to virtual grid
+        // r_avoid /= parent_window->Viewport->DpiScale;
+        // Downscale monitor rect to virtual grid.
+        r_outer /= dpi_scale;
+
         return FindBestWindowPosForPopupEx(window->Pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid);
     }
     if (window->Flags & ImGuiWindowFlags_Popup)
     {
-        ImRect r_outer = GetWindowAllowedExtentRect(window);
+        ImRect r_outer = GetWindowAllowedExtentRect(window, &dpi_scale);
         ImRect r_avoid = ImRect(window->Pos.x - 1, window->Pos.y - 1, window->Pos.x + 1, window->Pos.y + 1);
+        r_outer /= dpi_scale;
         return FindBestWindowPosForPopupEx(window->Pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid);
     }
     if (window->Flags & ImGuiWindowFlags_Tooltip)
@@ -8776,7 +8793,8 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
         // Position tooltip (always follows mouse)
         float sc = g.Style.MouseCursorScale;
         ImVec2 ref_pos = NavCalcPreferredRefPos();
-        ImRect r_outer = GetWindowAllowedExtentRect(window);
+        ImRect r_outer = GetWindowAllowedExtentRect(window, &dpi_scale);
+        r_outer /= dpi_scale;
         ImRect r_avoid;
         if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos))
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
@@ -11309,7 +11327,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
             bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
             bool mouse_valid = IsMousePosValid(&mouse_ref);
             if ((window->Appearing || (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_ChildMenu))) && (!use_mouse_ref || mouse_valid))
-                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos());
+                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos(((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos()) * window->Viewport->DpiScale);
             else
                 window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
         }
