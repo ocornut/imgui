@@ -9184,7 +9184,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
 }
 
 // Starts into the first cell of a new row
-void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float min_row_height)
+void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -9196,12 +9196,13 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float min_row_height)
 
     table->LastRowFlags = table->RowFlags;
     table->RowFlags = row_flags;
+    table->RowMinHeight = row_min_height;
     TableBeginRow(table);
 
     // We honor min_row_height requested by user, but cannot guarantee per-row maximum height,
     // because that would essentially require a unique clipping rectangle per-cell.
     table->RowPosY2 += table->CellPaddingY * 2.0f;
-    table->RowPosY2 = ImMax(table->RowPosY2, table->RowPosY1 + min_row_height);
+    table->RowPosY2 = ImMax(table->RowPosY2, table->RowPosY1 + row_min_height);
 
     TableBeginCell(table, 0);
 }
@@ -9702,6 +9703,7 @@ void    ImGui::TableAutoHeaders()
 
 // Emit a column header (text + optional sort order)
 // We cpu-clip text here so that all columns headers can be merged into a same draw call.
+// Note that because of how we cpu-clip and display sorting indicators, you _cannot_ use SameLine() after a TableHeader()
 // FIXME-TABLE: Should hold a selection state.
 // FIXME-TABLE: Style confusion between CellPadding.y and FramePadding.y
 void    ImGui::TableHeader(const char* label)
@@ -9726,7 +9728,7 @@ void    ImGui::TableHeader(const char* label)
 
     // If we already got a row height, there's use that.
     ImRect cell_r = TableGetCellRect();
-    float label_height = ImMax(label_size.y, cell_r.GetHeight() - g.Style.CellPadding.y * 2.0f);
+    float label_height = ImMax(label_size.y, table->RowMinHeight - g.Style.CellPadding.y * 2.0f);
 
     //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
     ImRect work_r = cell_r;
