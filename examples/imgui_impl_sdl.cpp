@@ -432,6 +432,7 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
+// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataSDL2
 {
     SDL_Window*     Window;
@@ -685,6 +686,7 @@ static void ImGui_ImplSDL2_InitPlatformInterface(SDL_Window* window, void* sdl_g
     ImGui_ImplSDL2_UpdateMonitors();
 
     // Register main window handle (which is owned by the main application, not by us)
+    // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataSDL2* data = IM_NEW(ImGuiViewportDataSDL2)();
     data->Window = window;

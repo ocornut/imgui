@@ -66,6 +66,7 @@ struct FrameContext
     D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetCpuDescriptors;
 };
 
+// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataDx12
 {
     ID3D12CommandQueue*         CommandQueue;

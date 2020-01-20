@@ -511,6 +511,7 @@ static void ImGui_ImplWin32_SetImeInputPos(ImGuiViewport* viewport, ImVec2 pos)
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
+// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataWin32
 {
     HWND    Hwnd;
@@ -831,6 +832,7 @@ static void ImGui_ImplWin32_InitPlatformInterface()
 #endif
 
     // Register main window handle (which is owned by the main application, not by us)
+    // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataWin32* data = IM_NEW(ImGuiViewportDataWin32)();
     data->Hwnd = g_hWnd;

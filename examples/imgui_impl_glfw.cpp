@@ -428,6 +428,7 @@ void ImGui_ImplGlfw_NewFrame()
 // If you are new to dear imgui or creating a new binding for dear imgui, it is recommended that you completely ignore this section first..
 //--------------------------------------------------------------------------------------------------------
 
+// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataGlfw
 {
     GLFWwindow* Window;
@@ -496,7 +497,7 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
 #endif
     glfwSetWindowPos(data->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
 
-    // Install callbacks for secondary viewports
+    // Install GLFW callbacks for secondary viewports
     glfwSetMouseButtonCallback(data->Window, ImGui_ImplGlfw_MouseButtonCallback);
     glfwSetScrollCallback(data->Window, ImGui_ImplGlfw_ScrollCallback);
     glfwSetKeyCallback(data->Window, ImGui_ImplGlfw_KeyCallback);
@@ -529,7 +530,8 @@ static void ImGui_ImplGlfw_DestroyWindow(ImGuiViewport* viewport)
     viewport->PlatformUserData = viewport->PlatformHandle = NULL;
 }
 
-// FIXME-VIEWPORT: Implement same work-around for Linux/OSX in the meanwhile.
+// We have submitted https://github.com/glfw/glfw/pull/1568 to allow GLFW to support "transparent inputs".
+// In the meanwhile we implement custom per-platform workarounds here (FIXME-VIEWPORT: Implement same work-around for Linux/OSX!)
 #if defined(_WIN32) && GLFW_HAS_GLFW_HOVERED
 static WNDPROC g_GlfwWndProc = NULL;
 static LRESULT CALLBACK WndProcNoInputs(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
@@ -733,7 +735,6 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // GLFW_HAS_VULKAN
 
-// FIXME-PLATFORM: GLFW doesn't export monitor work area (see https://github.com/glfw/glfw/pull/989)
 static void ImGui_ImplGlfw_UpdateMonitors()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -805,6 +806,7 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
     glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
 
     // Register main window handle (which is owned by the main application, not by us)
+    // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     ImGuiViewportDataGlfw* data = IM_NEW(ImGuiViewportDataGlfw)();
     data->Window = g_Window;
