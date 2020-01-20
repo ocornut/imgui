@@ -739,7 +739,7 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 
 // Flags for ImGui::Begin()
-enum ImGuiWindowFlags_
+enum ImGuiWindowFlags_ : unsigned int
 {
     ImGuiWindowFlags_None                   = 0,
     ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
@@ -780,7 +780,7 @@ enum ImGuiWindowFlags_
 };
 
 // Flags for ImGui::InputText()
-enum ImGuiInputTextFlags_
+enum ImGuiInputTextFlags_ : unsigned int
 {
     ImGuiInputTextFlags_None                = 0,
     ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
@@ -808,7 +808,7 @@ enum ImGuiInputTextFlags_
 };
 
 // Flags for ImGui::TreeNodeEx(), ImGui::CollapsingHeader*()
-enum ImGuiTreeNodeFlags_
+enum ImGuiTreeNodeFlags_ : unsigned int
 {
     ImGuiTreeNodeFlags_None                 = 0,
     ImGuiTreeNodeFlags_Selected             = 1 << 0,   // Draw as selected
@@ -830,7 +830,7 @@ enum ImGuiTreeNodeFlags_
 };
 
 // Flags for ImGui::Selectable()
-enum ImGuiSelectableFlags_
+enum ImGuiSelectableFlags_ : unsigned int
 {
     ImGuiSelectableFlags_None               = 0,
     ImGuiSelectableFlags_DontClosePopups    = 1 << 0,   // Clicking this don't close parent popup window
@@ -841,7 +841,7 @@ enum ImGuiSelectableFlags_
 };
 
 // Flags for ImGui::BeginCombo()
-enum ImGuiComboFlags_
+enum ImGuiComboFlags_ : unsigned int
 {
     ImGuiComboFlags_None                    = 0,
     ImGuiComboFlags_PopupAlignLeft          = 1 << 0,   // Align the popup toward the left by default
@@ -855,7 +855,7 @@ enum ImGuiComboFlags_
 };
 
 // Flags for ImGui::BeginTabBar()
-enum ImGuiTabBarFlags_
+enum ImGuiTabBarFlags_ : unsigned int
 {
     ImGuiTabBarFlags_None                           = 0,
     ImGuiTabBarFlags_Reorderable                    = 1 << 0,   // Allow manually dragging tabs to re-order them + New tabs are appended at the end of list
@@ -871,7 +871,7 @@ enum ImGuiTabBarFlags_
 };
 
 // Flags for ImGui::BeginTabItem()
-enum ImGuiTabItemFlags_
+enum ImGuiTabItemFlags_ : unsigned int
 {
     ImGuiTabItemFlags_None                          = 0,
     ImGuiTabItemFlags_UnsavedDocument               = 1 << 0,   // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. Also: tab is selected on closure and closure is deferred by one frame to allow code to undo it without flicker.
@@ -881,7 +881,7 @@ enum ImGuiTabItemFlags_
 };
 
 // Flags for ImGui::IsWindowFocused()
-enum ImGuiFocusedFlags_
+enum ImGuiFocusedFlags_ : unsigned int
 {
     ImGuiFocusedFlags_None                          = 0,
     ImGuiFocusedFlags_ChildWindows                  = 1 << 0,   // IsWindowFocused(): Return true if any children of the window is focused
@@ -893,7 +893,7 @@ enum ImGuiFocusedFlags_
 // Flags for ImGui::IsItemHovered(), ImGui::IsWindowHovered()
 // Note: if you are trying to check whether your mouse should be dispatched to imgui or to your app, you should use the 'io.WantCaptureMouse' boolean for that. Please read the FAQ!
 // Note: windows with the ImGuiWindowFlags_NoInputs flag are ignored by IsWindowHovered() calls.
-enum ImGuiHoveredFlags_
+enum ImGuiHoveredFlags_ : unsigned int
 {
     ImGuiHoveredFlags_None                          = 0,        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
     ImGuiHoveredFlags_ChildWindows                  = 1 << 0,   // IsWindowHovered() only: Return true if any children of the window is hovered
@@ -909,7 +909,7 @@ enum ImGuiHoveredFlags_
 };
 
 // Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
-enum ImGuiDragDropFlags_
+enum ImGuiDragDropFlags_ : unsigned int
 {
     ImGuiDragDropFlags_None                         = 0,
     // BeginDragDropSource() flags
@@ -1021,7 +1021,7 @@ enum ImGuiNavInput_
 };
 
 // Configuration flags stored in io.ConfigFlags. Set by user/application.
-enum ImGuiConfigFlags_
+enum ImGuiConfigFlags_ : unsigned int
 {
     ImGuiConfigFlags_None                   = 0,
     ImGuiConfigFlags_NavEnableKeyboard      = 1 << 0,   // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeysDown[].
@@ -1037,7 +1037,7 @@ enum ImGuiConfigFlags_
 };
 
 // Back-end capabilities flags stored in io.BackendFlags. Set by imgui_impl_xxx or custom back-end.
-enum ImGuiBackendFlags_
+enum ImGuiBackendFlags_ : unsigned int
 {
     ImGuiBackendFlags_None                  = 0,
     ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Back-end Platform supports gamepad and currently has one connected.
@@ -1144,7 +1144,7 @@ enum ImGuiStyleVar_
 };
 
 // Flags for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
-enum ImGuiColorEditFlags_
+enum ImGuiColorEditFlags_ : unsigned int
 {
     ImGuiColorEditFlags_None            = 0,
     ImGuiColorEditFlags_NoAlpha         = 1 << 1,   //              // ColorEdit, ColorPicker, ColorButton: ignore Alpha component (will only read 3 components from the input pointer).
@@ -1877,7 +1877,7 @@ struct ImDrawListSplitter
     IMGUI_API void              SetCurrentChannel(ImDrawList* draw_list, int channel_idx);
 };
 
-enum ImDrawCornerFlags_
+enum ImDrawCornerFlags_ : unsigned int
 {
     ImDrawCornerFlags_None      = 0,
     ImDrawCornerFlags_TopLeft   = 1 << 0, // 0x1
@@ -1891,7 +1891,7 @@ enum ImDrawCornerFlags_
     ImDrawCornerFlags_All       = 0xF     // In your function calls you may use ~0 (= all bits sets) instead of ImDrawCornerFlags_All, as a convenience
 };
 
-enum ImDrawListFlags_
+enum ImDrawListFlags_ : unsigned int
 {
     ImDrawListFlags_None             = 0,
     ImDrawListFlags_AntiAliasedLines = 1 << 0,  // Lines are anti-aliased (*2 the number of triangles for 1.0f wide line, otherwise *3 the number of triangles)
@@ -2095,7 +2095,7 @@ struct ImFontAtlasCustomRect
     bool IsPacked() const           { return X != 0xFFFF; }
 };
 
-enum ImFontAtlasFlags_
+enum ImFontAtlasFlags_ : unsigned int
 {
     ImFontAtlasFlags_None               = 0,
     ImFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0,   // Don't round the height to next power of two

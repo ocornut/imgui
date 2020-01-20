@@ -413,7 +413,7 @@ struct IMGUI_API ImChunkStream
 // Misc data structures
 //-----------------------------------------------------------------------------
 
-enum ImGuiButtonFlags_
+enum ImGuiButtonFlags_ : unsigned int
 {
     ImGuiButtonFlags_None                   = 0,
     ImGuiButtonFlags_Repeat                 = 1 << 0,   // hold to repeat
@@ -435,19 +435,19 @@ enum ImGuiButtonFlags_
     ImGuiButtonFlags_PressedOnMask_         = ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere | ImGuiButtonFlags_PressedOnRelease | ImGuiButtonFlags_PressedOnDoubleClick | ImGuiButtonFlags_PressedOnDragDropHold
 };
 
-enum ImGuiSliderFlags_
+enum ImGuiSliderFlags_ : unsigned int
 {
     ImGuiSliderFlags_None                   = 0,
     ImGuiSliderFlags_Vertical               = 1 << 0
 };
 
-enum ImGuiDragFlags_
+enum ImGuiDragFlags_ : unsigned int
 {
     ImGuiDragFlags_None                     = 0,
     ImGuiDragFlags_Vertical                 = 1 << 0
 };
 
-enum ImGuiColumnsFlags_
+enum ImGuiColumnsFlags_ : unsigned int
 {
     // Default: 0
     ImGuiColumnsFlags_None                  = 0,
@@ -459,7 +459,7 @@ enum ImGuiColumnsFlags_
 };
 
 // Extend ImGuiSelectableFlags_
-enum ImGuiSelectableFlagsPrivate_
+enum ImGuiSelectableFlagsPrivate_ : unsigned int
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
     ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 20,
@@ -471,12 +471,12 @@ enum ImGuiSelectableFlagsPrivate_
 };
 
 // Extend ImGuiTreeNodeFlags_
-enum ImGuiTreeNodeFlagsPrivate_
+enum ImGuiTreeNodeFlagsPrivate_ : unsigned int
 {
     ImGuiTreeNodeFlags_ClipLabelForTrailingButton = 1 << 20
 };
 
-enum ImGuiSeparatorFlags_
+enum ImGuiSeparatorFlags_ : unsigned int
 {
     ImGuiSeparatorFlags_None                = 0,
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
@@ -486,7 +486,7 @@ enum ImGuiSeparatorFlags_
 
 // Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
 // This is going to be exposed in imgui.h when stabilized enough.
-enum ImGuiItemFlags_
+enum ImGuiItemFlags_ : unsigned int
 {
     ImGuiItemFlags_None                     = 0,
     ImGuiItemFlags_NoTabStop                = 1 << 0,  // false
@@ -500,7 +500,7 @@ enum ImGuiItemFlags_
 };
 
 // Storage for LastItem data
-enum ImGuiItemStatusFlags_
+enum ImGuiItemStatusFlags_ : unsigned int
 {
     ImGuiItemStatusFlags_None               = 0,
     ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
@@ -520,7 +520,7 @@ enum ImGuiItemStatusFlags_
 #endif
 };
 
-enum ImGuiTextFlags_
+enum ImGuiTextFlags_ : unsigned int
 {
     ImGuiTextFlags_None = 0,
     ImGuiTextFlags_NoWidthForLargeClippedText = 1 << 0
@@ -578,7 +578,7 @@ enum ImGuiInputReadMode
     ImGuiInputReadMode_RepeatFast
 };
 
-enum ImGuiNavHighlightFlags_
+enum ImGuiNavHighlightFlags_ : unsigned int
 {
     ImGuiNavHighlightFlags_None         = 0,
     ImGuiNavHighlightFlags_TypeDefault  = 1 << 0,
@@ -587,7 +587,7 @@ enum ImGuiNavHighlightFlags_
     ImGuiNavHighlightFlags_NoRounding   = 1 << 3
 };
 
-enum ImGuiNavDirSourceFlags_
+enum ImGuiNavDirSourceFlags_ : unsigned int
 {
     ImGuiNavDirSourceFlags_None         = 0,
     ImGuiNavDirSourceFlags_Keyboard     = 1 << 0,
@@ -595,7 +595,7 @@ enum ImGuiNavDirSourceFlags_
     ImGuiNavDirSourceFlags_PadLStick    = 1 << 2
 };
 
-enum ImGuiNavMoveFlags_
+enum ImGuiNavMoveFlags_ : unsigned int
 {
     ImGuiNavMoveFlags_None                  = 0,
     ImGuiNavMoveFlags_LoopX                 = 1 << 0,   // On failed request, restart from opposite side
@@ -888,7 +888,7 @@ struct ImGuiNavMoveResult
     void Clear()         { Window = NULL; ID = FocusScopeId = 0; DistBox = DistCenter = DistAxial = FLT_MAX; RectRel = ImRect(); }
 };
 
-enum ImGuiNextWindowDataFlags_
+enum ImGuiNextWindowDataFlags_ : unsigned int
 {
     ImGuiNextWindowDataFlags_None               = 0,
     ImGuiNextWindowDataFlags_HasPos             = 1 << 0,
@@ -922,7 +922,7 @@ struct ImGuiNextWindowData
     inline void ClearFlags()    { Flags = ImGuiNextWindowDataFlags_None; }
 };
 
-enum ImGuiNextItemDataFlags_
+enum ImGuiNextItemDataFlags_ : unsigned int
 {
     ImGuiNextItemDataFlags_None     = 0,
     ImGuiNextItemDataFlags_HasWidth = 1 << 0,

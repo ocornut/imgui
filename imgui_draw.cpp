@@ -364,7 +364,7 @@ void ImDrawList::Clear()
     CmdBuffer.resize(0);
     IdxBuffer.resize(0);
     VtxBuffer.resize(0);
-    Flags = _Data ? _Data->InitialFlags : (ImDrawListFlags)ImDrawListFlags_None;
+    Flags = _Data ? _Data->InitialFlags : ImDrawListFlags_None;
     _VtxCurrentOffset = 0;
     _VtxCurrentIdx = 0;
     _VtxWritePtr = NULL;
