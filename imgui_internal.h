@@ -1046,17 +1046,10 @@ struct ImGuiContext
     ImGuiID                 NavJustTabbedId;                    // Just tabbed to this id.
     ImGuiID                 NavJustMovedToId;                   // Just navigated to this id (result of a successfully MoveRequest).
     ImGuiID                 NavJustMovedToFocusScopeId;         // Just navigated to this focus scope id (result of a successfully MoveRequest).
-
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame.
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS WILL ONLY BE None or NavGamepad or NavKeyboard.
     ImRect                  NavScoringRectScreen;               // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
     int                     NavScoringCount;                    // Metrics for debugging
-    ImGuiWindow*            NavWindowingTarget;                 // When selecting a window (holding Menu+FocusPrev/Next, or equivalent of CTRL-TAB) this window is temporarily displayed top-most.
-    ImGuiWindow*            NavWindowingTargetAnim;             // Record of last valid NavWindowingTarget until DimBgRatio and NavWindowingHighlightAlpha becomes 0.0f
-    ImGuiWindow*            NavWindowingList;
-    float                   NavWindowingTimer;
-    float                   NavWindowingHighlightAlpha;
-    bool                    NavWindowingToggleLayer;
     ImGuiNavLayer           NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
     bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
@@ -1077,6 +1070,14 @@ struct ImGuiContext
     ImGuiNavMoveResult      NavMoveResultLocal;                 // Best move request candidate within NavWindow
     ImGuiNavMoveResult      NavMoveResultLocalVisibleSet;       // Best move request candidate within NavWindow that are mostly visible (when using ImGuiNavMoveFlags_AlsoScoreVisibleSet flag)
     ImGuiNavMoveResult      NavMoveResultOther;                 // Best move request candidate within NavWindow's flattened hierarchy (when using ImGuiWindowFlags_NavFlattened flag)
+
+    // Navigation: Windowing (CTRL+TAB, holding Menu button + directional pads to move/resize)
+    ImGuiWindow*            NavWindowingTarget;                 // When selecting a window (holding Menu+FocusPrev/Next, or equivalent of CTRL-TAB) this window is temporarily displayed top-most.
+    ImGuiWindow*            NavWindowingTargetAnim;             // Record of last valid NavWindowingTarget until DimBgRatio and NavWindowingHighlightAlpha becomes 0.0f
+    ImGuiWindow*            NavWindowingList;
+    float                   NavWindowingTimer;
+    float                   NavWindowingHighlightAlpha;
+    bool                    NavWindowingToggleLayer;
 
     // Legacy Focus/Tabbing system (older than Nav, active even if Nav is disabled, misnamed. FIXME-NAV: This needs a redesign!)
     ImGuiWindow*            FocusRequestCurrWindow;             //
@@ -1221,9 +1222,6 @@ struct ImGuiContext
         NavInputSource = ImGuiInputSource_None;
         NavScoringRectScreen = ImRect();
         NavScoringCount = 0;
-        NavWindowingTarget = NavWindowingTargetAnim = NavWindowingList = NULL;
-        NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
-        NavWindowingToggleLayer = false;
         NavLayer = ImGuiNavLayer_Main;
         NavIdTabCounter = INT_MAX;
         NavIdIsAlive = false;
@@ -1239,6 +1237,10 @@ struct ImGuiContext
         NavMoveRequestFlags = 0;
         NavMoveRequestForward = ImGuiNavForward_None;
         NavMoveDir = NavMoveDirLast = NavMoveClipDir = ImGuiDir_None;
+
+        NavWindowingTarget = NavWindowingTargetAnim = NavWindowingList = NULL;
+        NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;
+        NavWindowingToggleLayer = false;
 
         FocusRequestCurrWindow = FocusRequestNextWindow = NULL;
         FocusRequestCurrCounterRegular = FocusRequestCurrCounterTabStop = INT_MAX;
