@@ -1858,6 +1858,7 @@ struct ImGuiTable
     ImS16                       InstanceInteracted;         // Mark which instance (generally 0) of the same ID is being interacted with
     float                       RowPosY1;
     float                       RowPosY2;
+    float                       RowMinHeight;               // Height submitted to TableNextRow()
     float                       RowTextBaseline;
     ImGuiTableRowFlags          RowFlags : 16;              // Current row flags, see ImGuiTableRowFlags_
     ImGuiTableRowFlags          LastRowFlags : 16;
