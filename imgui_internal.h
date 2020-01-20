@@ -296,6 +296,8 @@ static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)            
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x-rhs.x, lhs.y-rhs.y); }
 static inline ImVec2 operator*(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x*rhs.x, lhs.y*rhs.y); }
 static inline ImVec2 operator/(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x/rhs.x, lhs.y/rhs.y); }
+static inline bool operator==(const ImVec2& lhs, const ImVec2& rhs)             { return rhs.x == lhs.x && rhs.y == lhs.y; }
+static inline bool operator!=(const ImVec2& lhs, const ImVec2& rhs)             { return rhs.x != lhs.x || rhs.y != lhs.y; }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)                  { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
 static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)                  { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
 static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
@@ -753,6 +755,9 @@ struct IMGUI_API ImRect
 };
 #ifdef IMGUI_DEFINE_MATH_OPERATORS
 static inline ImRect operator*(const ImRect& lhs, const float rhs)              { return ImRect(lhs.Min*rhs, lhs.Max*rhs); }
+static inline ImRect operator/(const ImRect& lhs, const float rhs)              { return ImRect(lhs.Min/rhs, lhs.Max/rhs); }
+static inline ImRect& operator*=(ImRect& lhs, const float rhs)                  { lhs.Min *= rhs; lhs.Max*=rhs; return lhs; }
+static inline ImRect& operator/=(ImRect& lhs, const float rhs)                  { lhs.Min /= rhs; lhs.Max/=rhs; return lhs; }
 #endif
 
 // Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
