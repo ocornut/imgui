@@ -297,22 +297,21 @@ IMGUI_API void*             ImFileLoadToMemory(const char* filename, const char*
 // Helpers: Maths
 // - Wrapper for standard libs functions. (Note that imgui_demo.cpp does _not_ use them to keep the code easy to copy)
 #ifndef IMGUI_DISABLE_DEFAULT_MATH_FUNCTIONS
-static inline float  ImFabs(float x)                                            { return fabsf(x); }
-static inline float  ImSqrt(float x)                                            { return sqrtf(x); }
-static inline float  ImPow(float x, float y)                                    { return powf(x, y); }
-static inline double ImPow(double x, double y)                                  { return pow(x, y); }
-static inline float  ImFmod(float x, float y)                                   { return fmodf(x, y); }
-static inline double ImFmod(double x, double y)                                 { return fmod(x, y); }
-static inline float  ImCos(float x)                                             { return cosf(x); }
-static inline float  ImSin(float x)                                             { return sinf(x); }
-static inline float  ImAcos(float x)                                            { return acosf(x); }
-static inline float  ImAtan2(float y, float x)                                  { return atan2f(y, x); }
-static inline double ImAtof(const char* s)                                      { return atof(s); }
-static inline float  ImFloorStd(float x)                                        { return floorf(x); }   // we already uses our own ImFloor() { return (float)(int)v } internally so the standard one wrapper is named differently (it's used by stb_truetype)
-static inline float  ImCeil(float x)                                            { return ceilf(x); }
+#define ImFabs(X)           fabsf(X)
+#define ImSqrt(X)           sqrtf(X)
+#define ImFmod(X, Y)        fmodf((X), (Y))
+#define ImCos(X)            cosf(X)
+#define ImSin(X)            sinf(X)
+#define ImAcos(X)           acosf(X)
+#define ImAtan2(Y, X)       atan2f((Y), (X))
+#define ImAtof(STR)         atof(STR)
+#define ImFloorStd(X)       floorf(X)           // We already uses our own ImFloor() { return (float)(int)v } internally so the standard one wrapper is named differently (it's used by e.g. stb_truetype)
+#define ImCeil(X)           ceilf(X)
+static inline float  ImPow(float x, float y)    { return powf(x, y); }          // DragBehaviorT/SliderBehaviorT uses ImPow with either float/double and need the precision
+static inline double ImPow(double x, double y)  { return pow(x, y); }
 #endif
-// - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support for variety of types: signed/unsigned int/long long float/double
-// (Exceptionally using templates here but we could also redefine them for variety of types)
+// - ImMin/ImMax/ImClamp/ImLerp/ImSwap are used by widgets which support variety of types: signed/unsigned int/long long float/double
+// (Exceptionally using templates here but we could also redefine them for those types)
 template<typename T> static inline T ImMin(T lhs, T rhs)                        { return lhs < rhs ? lhs : rhs; }
 template<typename T> static inline T ImMax(T lhs, T rhs)                        { return lhs >= rhs ? lhs : rhs; }
 template<typename T> static inline T ImClamp(T v, T mn, T mx)                   { return (v < mn) ? mn : (v > mx) ? mx : v; }
