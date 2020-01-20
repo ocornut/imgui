@@ -2778,6 +2778,7 @@ ImFont::ImFont()
     memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
     FontID = 0;
     DpiScale = 1.0f;
+    FontScaleRatioInv = 1.0f;
 }
 
 ImFont::~ImFont()
@@ -2797,6 +2798,7 @@ void    ImFont::ClearOutputData()
     DirtyLookupTables = true;
     Ascent = Descent = 0.0f;
     MetricsTotalSurface = 0;
+    FontScaleRatioInv = 1.0f;
 }
 
 void ImFont::BuildLookupTable()
