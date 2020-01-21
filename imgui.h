@@ -739,192 +739,172 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 
 // Flags for ImGui::Begin()
-enum ImGuiWindowFlags_ : unsigned int
-{
-    ImGuiWindowFlags_None                   = 0,
-    ImGuiWindowFlags_NoTitleBar             = 1 << 0,   // Disable title-bar
-    ImGuiWindowFlags_NoResize               = 1 << 1,   // Disable user resizing with the lower-right grip
-    ImGuiWindowFlags_NoMove                 = 1 << 2,   // Disable user moving the window
-    ImGuiWindowFlags_NoScrollbar            = 1 << 3,   // Disable scrollbars (window can still scroll with mouse or programmatically)
-    ImGuiWindowFlags_NoScrollWithMouse      = 1 << 4,   // Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
-    ImGuiWindowFlags_NoCollapse             = 1 << 5,   // Disable user collapsing window by double-clicking on it
-    ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6,   // Resize every window to its content every frame
-    ImGuiWindowFlags_NoBackground           = 1 << 7,   // Disable drawing background color (WindowBg, etc.) and outside border. Similar as using SetNextWindowBgAlpha(0.0f).
-    ImGuiWindowFlags_NoSavedSettings        = 1 << 8,   // Never load/save settings in .ini file
-    ImGuiWindowFlags_NoMouseInputs          = 1 << 9,   // Disable catching mouse, hovering test with pass through.
-    ImGuiWindowFlags_MenuBar                = 1 << 10,  // Has a menu-bar
-    ImGuiWindowFlags_HorizontalScrollbar    = 1 << 11,  // Allow horizontal scrollbar to appear (off by default). You may use SetNextWindowContentSize(ImVec2(width,0.0f)); prior to calling Begin() to specify width. Read code in imgui_demo in the "Horizontal Scrolling" section.
-    ImGuiWindowFlags_NoFocusOnAppearing     = 1 << 12,  // Disable taking focus when transitioning from hidden to visible state
-    ImGuiWindowFlags_NoBringToFrontOnFocus  = 1 << 13,  // Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
-    ImGuiWindowFlags_AlwaysVerticalScrollbar= 1 << 14,  // Always show vertical scrollbar (even if ContentSize.y < Size.y)
-    ImGuiWindowFlags_AlwaysHorizontalScrollbar=1<< 15,  // Always show horizontal scrollbar (even if ContentSize.x < Size.x)
-    ImGuiWindowFlags_AlwaysUseWindowPadding = 1 << 16,  // Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
-    ImGuiWindowFlags_NoNavInputs            = 1 << 18,  // No gamepad/keyboard navigation within the window
-    ImGuiWindowFlags_NoNavFocus             = 1 << 19,  // No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
-    ImGuiWindowFlags_UnsavedDocument        = 1 << 20,  // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. When used in a tab/docking context, tab is selected on closure and closure is deferred by one frame to allow code to cancel the closure (with a confirmation popup, etc.) without flicker.
-    ImGuiWindowFlags_NoNav                  = ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
-    ImGuiWindowFlags_NoDecoration           = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse,
-    ImGuiWindowFlags_NoInputs               = ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus,
+typedef ImGuiWindowFlags ImGuiWindowFlags_;
+constexpr unsigned int ImGuiWindowFlags_None                   = 0;
+constexpr unsigned int ImGuiWindowFlags_NoTitleBar             = 1 << 0;   // Disable title-bar
+constexpr unsigned int ImGuiWindowFlags_NoResize               = 1 << 1;   // Disable user resizing with the lower-right grip
+constexpr unsigned int ImGuiWindowFlags_NoMove                 = 1 << 2;   // Disable user moving the window
+constexpr unsigned int ImGuiWindowFlags_NoScrollbar            = 1 << 3;   // Disable scrollbars (window can still scroll with mouse or programmatically)
+constexpr unsigned int ImGuiWindowFlags_NoScrollWithMouse      = 1 << 4;   // Disable user vertically scrolling with mouse wheel. On child window, mouse wheel will be forwarded to the parent unless NoScrollbar is also set.
+constexpr unsigned int ImGuiWindowFlags_NoCollapse             = 1 << 5;   // Disable user collapsing window by double-clicking on it
+constexpr unsigned int ImGuiWindowFlags_AlwaysAutoResize       = 1 << 6;   // Resize every window to its content every frame
+constexpr unsigned int ImGuiWindowFlags_NoBackground           = 1 << 7;   // Disable drawing background color (WindowBg, etc.) and outside border. Similar as using SetNextWindowBgAlpha(0.0f).
+constexpr unsigned int ImGuiWindowFlags_NoSavedSettings        = 1 << 8;   // Never load/save settings in .ini file
+constexpr unsigned int ImGuiWindowFlags_NoMouseInputs          = 1 << 9;   // Disable catching mouse, hovering test with pass through.
+constexpr unsigned int ImGuiWindowFlags_MenuBar                = 1 << 10;  // Has a menu-bar
+constexpr unsigned int ImGuiWindowFlags_HorizontalScrollbar    = 1 << 11;  // Allow horizontal scrollbar to appear (off by default). You may use SetNextWindowContentSize(ImVec2(width,0.0f)); prior to calling Begin() to specify width. Read code in imgui_demo in the "Horizontal Scrolling" section.
+constexpr unsigned int ImGuiWindowFlags_NoFocusOnAppearing     = 1 << 12;  // Disable taking focus when transitioning from hidden to visible state
+constexpr unsigned int ImGuiWindowFlags_NoBringToFrontOnFocus  = 1 << 13;  // Disable bringing window to front when taking focus (e.g. clicking on it or programmatically giving it focus)
+constexpr unsigned int ImGuiWindowFlags_AlwaysVerticalScrollbar= 1 << 14;  // Always show vertical scrollbar (even if ContentSize.y < Size.y)
+constexpr unsigned int ImGuiWindowFlags_AlwaysHorizontalScrollbar=1<< 15;  // Always show horizontal scrollbar (even if ContentSize.x < Size.x)
+constexpr unsigned int ImGuiWindowFlags_AlwaysUseWindowPadding = 1 << 16;  // Ensure child windows without border uses style.WindowPadding (ignored by default for non-bordered child windows, because more convenient)
+constexpr unsigned int ImGuiWindowFlags_NoNavInputs            = 1 << 18;  // No gamepad/keyboard navigation within the window
+constexpr unsigned int ImGuiWindowFlags_NoNavFocus             = 1 << 19;  // No focusing toward this window with gamepad/keyboard navigation (e.g. skipped by CTRL+TAB)
+constexpr unsigned int ImGuiWindowFlags_UnsavedDocument        = 1 << 20;  // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. When used in a tab/docking context, tab is selected on closure and closure is deferred by one frame to allow code to cancel the closure (with a confirmation popup, etc.) without flicker.
+constexpr unsigned int ImGuiWindowFlags_NoNav                  = ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus;
+constexpr unsigned int ImGuiWindowFlags_NoDecoration           = ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoCollapse;
+constexpr unsigned int ImGuiWindowFlags_NoInputs               = ImGuiWindowFlags_NoMouseInputs | ImGuiWindowFlags_NoNavInputs | ImGuiWindowFlags_NoNavFocus;
 
-    // [Internal]
-    ImGuiWindowFlags_NavFlattened           = 1 << 23,  // [BETA] Allow gamepad/keyboard navigation to cross over parent border to this child (only use on child that have no scrolling!)
-    ImGuiWindowFlags_ChildWindow            = 1 << 24,  // Don't use! For internal use by BeginChild()
-    ImGuiWindowFlags_Tooltip                = 1 << 25,  // Don't use! For internal use by BeginTooltip()
-    ImGuiWindowFlags_Popup                  = 1 << 26,  // Don't use! For internal use by BeginPopup()
-    ImGuiWindowFlags_Modal                  = 1 << 27,  // Don't use! For internal use by BeginPopupModal()
-    ImGuiWindowFlags_ChildMenu              = 1 << 28   // Don't use! For internal use by BeginMenu()
+// [Internal]
+constexpr unsigned int ImGuiWindowFlags_NavFlattened           = 1 << 23;  // [BETA] Allow gamepad/keyboard navigation to cross over parent border to this child (only use on child that have no scrolling!)
+constexpr unsigned int ImGuiWindowFlags_ChildWindow            = 1 << 24;  // Don't use! For internal use by BeginChild()
+constexpr unsigned int ImGuiWindowFlags_Tooltip                = 1 << 25;  // Don't use! For internal use by BeginTooltip()
+constexpr unsigned int ImGuiWindowFlags_Popup                  = 1 << 26;  // Don't use! For internal use by BeginPopup()
+constexpr unsigned int ImGuiWindowFlags_Modal                  = 1 << 27;  // Don't use! For internal use by BeginPopupModal()
+constexpr unsigned int ImGuiWindowFlags_ChildMenu              = 1 << 28;  // Don't use! For internal use by BeginMenu()
 
     // [Obsolete]
-    //ImGuiWindowFlags_ShowBorders          = 1 << 7,   // --> Set style.FrameBorderSize=1.0f or style.WindowBorderSize=1.0f to enable borders around items or windows.
-    //ImGuiWindowFlags_ResizeFromAnySide    = 1 << 17,  // --> Set io.ConfigWindowsResizeFromEdges=true and make sure mouse cursors are supported by back-end (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors)
-};
+    //ImGuiWindowFlags_ShowBorders          = 1 << 7;   // --> Set style.FrameBorderSize=1.0f or style.WindowBorderSize=1.0f to enable borders around items or windows.
+    //ImGuiWindowFlags_ResizeFromAnySide    = 1 << 17;  // --> Set io.ConfigWindowsResizeFromEdges=true and make sure mouse cursors are supported by back-end (io.BackendFlags & ImGuiBackendFlags_HasMouseCursors)
 
 // Flags for ImGui::InputText()
-enum ImGuiInputTextFlags_ : unsigned int
-{
-    ImGuiInputTextFlags_None                = 0,
-    ImGuiInputTextFlags_CharsDecimal        = 1 << 0,   // Allow 0123456789.+-*/
-    ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1,   // Allow 0123456789ABCDEFabcdef
-    ImGuiInputTextFlags_CharsUppercase      = 1 << 2,   // Turn a..z into A..Z
-    ImGuiInputTextFlags_CharsNoBlank        = 1 << 3,   // Filter out spaces, tabs
-    ImGuiInputTextFlags_AutoSelectAll       = 1 << 4,   // Select entire text when first taking mouse focus
-    ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 5,   // Return 'true' when Enter is pressed (as opposed to every time the value was modified). Consider looking at the IsItemDeactivatedAfterEdit() function.
-    ImGuiInputTextFlags_CallbackCompletion  = 1 << 6,   // Callback on pressing TAB (for completion handling)
-    ImGuiInputTextFlags_CallbackHistory     = 1 << 7,   // Callback on pressing Up/Down arrows (for history handling)
-    ImGuiInputTextFlags_CallbackAlways      = 1 << 8,   // Callback on each iteration. User code may query cursor position, modify text buffer.
-    ImGuiInputTextFlags_CallbackCharFilter  = 1 << 9,   // Callback on character inputs to replace or discard them. Modify 'EventChar' to replace or discard, or return 1 in callback to discard.
-    ImGuiInputTextFlags_AllowTabInput       = 1 << 10,  // Pressing TAB input a '\t' character into the text field
-    ImGuiInputTextFlags_CtrlEnterForNewLine = 1 << 11,  // In multi-line mode, unfocus with Enter, add new line with Ctrl+Enter (default is opposite: unfocus with Ctrl+Enter, add line with Enter).
-    ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 12,  // Disable following the cursor horizontally
-    ImGuiInputTextFlags_AlwaysInsertMode    = 1 << 13,  // Insert mode
-    ImGuiInputTextFlags_ReadOnly            = 1 << 14,  // Read-only mode
-    ImGuiInputTextFlags_Password            = 1 << 15,  // Password mode, display all characters as '*'
-    ImGuiInputTextFlags_NoUndoRedo          = 1 << 16,  // Disable undo/redo. Note that input text owns the text data while active, if you want to provide your own undo/redo stack you need e.g. to call ClearActiveID().
-    ImGuiInputTextFlags_CharsScientific     = 1 << 17,  // Allow 0123456789.+-*/eE (Scientific notation input)
-    ImGuiInputTextFlags_CallbackResize      = 1 << 18,  // Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow. Notify when the string wants to be resized (for string types which hold a cache of their Size). You will be provided a new BufSize in the callback and NEED to honor it. (see misc/cpp/imgui_stdlib.h for an example of using this)
+typedef ImGuiInputTextFlags ImGuiInputTextFlags_;
+constexpr unsigned int ImGuiInputTextFlags_None                = 0;
+constexpr unsigned int ImGuiInputTextFlags_CharsDecimal        = 1 << 0;   // Allow 0123456789.+-*/
+constexpr unsigned int ImGuiInputTextFlags_CharsHexadecimal    = 1 << 1;   // Allow 0123456789ABCDEFabcdef
+constexpr unsigned int ImGuiInputTextFlags_CharsUppercase      = 1 << 2;   // Turn a..z into A..Z
+constexpr unsigned int ImGuiInputTextFlags_CharsNoBlank        = 1 << 3;   // Filter out spaces, tabs
+constexpr unsigned int ImGuiInputTextFlags_AutoSelectAll       = 1 << 4;   // Select entire text when first taking mouse focus
+constexpr unsigned int ImGuiInputTextFlags_EnterReturnsTrue    = 1 << 5;   // Return 'true' when Enter is pressed (as opposed to every time the value was modified). Consider looking at the IsItemDeactivatedAfterEdit() function.
+constexpr unsigned int ImGuiInputTextFlags_CallbackCompletion  = 1 << 6;   // Callback on pressing TAB (for completion handling)
+constexpr unsigned int ImGuiInputTextFlags_CallbackHistory     = 1 << 7;   // Callback on pressing Up/Down arrows (for history handling)
+constexpr unsigned int ImGuiInputTextFlags_CallbackAlways      = 1 << 8;   // Callback on each iteration. User code may query cursor position, modify text buffer.
+constexpr unsigned int ImGuiInputTextFlags_CallbackCharFilter  = 1 << 9;   // Callback on character inputs to replace or discard them. Modify 'EventChar' to replace or discard, or return 1 in callback to discard.
+constexpr unsigned int ImGuiInputTextFlags_AllowTabInput       = 1 << 10;  // Pressing TAB input a '\t' character into the text field
+constexpr unsigned int ImGuiInputTextFlags_CtrlEnterForNewLine = 1 << 11;  // In multi-line mode, unfocus with Enter, add new line with Ctrl+Enter (default is opposite: unfocus with Ctrl+Enter, add line with Enter).
+constexpr unsigned int ImGuiInputTextFlags_NoHorizontalScroll  = 1 << 12;  // Disable following the cursor horizontally
+constexpr unsigned int ImGuiInputTextFlags_AlwaysInsertMode    = 1 << 13;  // Insert mode
+constexpr unsigned int ImGuiInputTextFlags_ReadOnly            = 1 << 14;  // Read-only mode
+constexpr unsigned int ImGuiInputTextFlags_Password            = 1 << 15;  // Password mode, display all characters as '*'
+constexpr unsigned int ImGuiInputTextFlags_NoUndoRedo          = 1 << 16;  // Disable undo/redo. Note that input text owns the text data while active, if you want to provide your own undo/redo stack you need e.g. to call ClearActiveID().
+constexpr unsigned int ImGuiInputTextFlags_CharsScientific     = 1 << 17;  // Allow 0123456789.+-*/eE (Scientific notation input)
+constexpr unsigned int ImGuiInputTextFlags_CallbackResize      = 1 << 18;  // Callback on buffer capacity changes request (beyond 'buf_size' parameter value), allowing the string to grow. Notify when the string wants to be resized (for string types which hold a cache of their Size). You will be provided a new BufSize in the callback and NEED to honor it. (see misc/cpp/imgui_stdlib.h for an example of using this)
     // [Internal]
-    ImGuiInputTextFlags_Multiline           = 1 << 20,  // For internal use by InputTextMultiline()
-    ImGuiInputTextFlags_NoMarkEdited        = 1 << 21   // For internal use by functions using InputText() before reformatting data
-};
+constexpr unsigned int ImGuiInputTextFlags_Multiline           = 1 << 20;  // For internal use by InputTextMultiline()
+constexpr unsigned int ImGuiInputTextFlags_NoMarkEdited        = 1 << 21;   // For internal use by functions using InputText() before reformatting data
 
 // Flags for ImGui::TreeNodeEx(), ImGui::CollapsingHeader*()
-enum ImGuiTreeNodeFlags_ : unsigned int
-{
-    ImGuiTreeNodeFlags_None                 = 0,
-    ImGuiTreeNodeFlags_Selected             = 1 << 0,   // Draw as selected
-    ImGuiTreeNodeFlags_Framed               = 1 << 1,   // Full colored frame (e.g. for CollapsingHeader)
-    ImGuiTreeNodeFlags_AllowItemOverlap     = 1 << 2,   // Hit testing to allow subsequent widgets to overlap this one
-    ImGuiTreeNodeFlags_NoTreePushOnOpen     = 1 << 3,   // Don't do a TreePush() when open (e.g. for CollapsingHeader) = no extra indent nor pushing on ID stack
-    ImGuiTreeNodeFlags_NoAutoOpenOnLog      = 1 << 4,   // Don't automatically and temporarily open node when Logging is active (by default logging will automatically open tree nodes)
-    ImGuiTreeNodeFlags_DefaultOpen          = 1 << 5,   // Default node to be open
-    ImGuiTreeNodeFlags_OpenOnDoubleClick    = 1 << 6,   // Need double-click to open node
-    ImGuiTreeNodeFlags_OpenOnArrow          = 1 << 7,   // Only open when clicking on the arrow part. If ImGuiTreeNodeFlags_OpenOnDoubleClick is also set, single-click arrow or double-click all box to open.
-    ImGuiTreeNodeFlags_Leaf                 = 1 << 8,   // No collapsing, no arrow (use as a convenience for leaf nodes).
-    ImGuiTreeNodeFlags_Bullet               = 1 << 9,   // Display a bullet instead of arrow
-    ImGuiTreeNodeFlags_FramePadding         = 1 << 10,  // Use FramePadding (even for an unframed text node) to vertically align text baseline to regular widget height. Equivalent to calling AlignTextToFramePadding().
-    ImGuiTreeNodeFlags_SpanAvailWidth       = 1 << 11,  // Extend hit box to the right-most edge, even if not framed. This is not the default in order to allow adding other items on the same line. In the future we may refactor the hit system to be front-to-back, allowing natural overlaps and then this can become the default.
-    ImGuiTreeNodeFlags_SpanFullWidth        = 1 << 12,  // Extend hit box to the left-most and right-most edges (bypass the indented area).
-    ImGuiTreeNodeFlags_NavLeftJumpsBackHere = 1 << 13,  // (WIP) Nav: left direction may move to this TreeNode() from any of its child (items submitted between TreeNode and TreePop)
-    //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 14,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
-    ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog
-};
+typedef ImGuiTreeNodeFlags ImGuiTreeNodeFlags_;
+constexpr unsigned int ImGuiTreeNodeFlags_None                 = 0;
+constexpr unsigned int ImGuiTreeNodeFlags_Selected             = 1 << 0;   // Draw as selected
+constexpr unsigned int ImGuiTreeNodeFlags_Framed               = 1 << 1;   // Full colored frame (e.g. for CollapsingHeader)
+constexpr unsigned int ImGuiTreeNodeFlags_AllowItemOverlap     = 1 << 2;   // Hit testing to allow subsequent widgets to overlap this one
+constexpr unsigned int ImGuiTreeNodeFlags_NoTreePushOnOpen     = 1 << 3;   // Don't do a TreePush() when open (e.g. for CollapsingHeader) = no extra indent nor pushing on ID stack
+constexpr unsigned int ImGuiTreeNodeFlags_NoAutoOpenOnLog      = 1 << 4;   // Don't automatically and temporarily open node when Logging is active (by default logging will automatically open tree nodes)
+constexpr unsigned int ImGuiTreeNodeFlags_DefaultOpen          = 1 << 5;   // Default node to be open
+constexpr unsigned int ImGuiTreeNodeFlags_OpenOnDoubleClick    = 1 << 6;   // Need double-click to open node
+constexpr unsigned int ImGuiTreeNodeFlags_OpenOnArrow          = 1 << 7;   // Only open when clicking on the arrow part. If ImGuiTreeNodeFlags_OpenOnDoubleClick is also set, single-click arrow or double-click all box to open.
+constexpr unsigned int ImGuiTreeNodeFlags_Leaf                 = 1 << 8;   // No collapsing, no arrow (use as a convenience for leaf nodes).
+constexpr unsigned int ImGuiTreeNodeFlags_Bullet               = 1 << 9;   // Display a bullet instead of arrow
+constexpr unsigned int ImGuiTreeNodeFlags_FramePadding         = 1 << 10;  // Use FramePadding (even for an unframed text node) to vertically align text baseline to regular widget height. Equivalent to calling AlignTextToFramePadding().
+constexpr unsigned int ImGuiTreeNodeFlags_SpanAvailWidth       = 1 << 11;  // Extend hit box to the right-most edge, even if not framed. This is not the default in order to allow adding other items on the same line. In the future we may refactor the hit system to be front-to-back, allowing natural overlaps and then this can become the default.
+constexpr unsigned int ImGuiTreeNodeFlags_SpanFullWidth        = 1 << 12;  // Extend hit box to the left-most and right-most edges (bypass the indented area).
+constexpr unsigned int ImGuiTreeNodeFlags_NavLeftJumpsBackHere = 1 << 13;  // (WIP) Nav: left direction may move to this TreeNode() from any of its child (items submitted between TreeNode and TreePop)
+    //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 14;  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
+constexpr unsigned int ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog;
 
 // Flags for ImGui::Selectable()
-enum ImGuiSelectableFlags_ : unsigned int
-{
-    ImGuiSelectableFlags_None               = 0,
-    ImGuiSelectableFlags_DontClosePopups    = 1 << 0,   // Clicking this don't close parent popup window
-    ImGuiSelectableFlags_SpanAllColumns     = 1 << 1,   // Selectable frame can span all columns (text will still fit in current column)
-    ImGuiSelectableFlags_AllowDoubleClick   = 1 << 2,   // Generate press events on double clicks too
-    ImGuiSelectableFlags_Disabled           = 1 << 3,   // Cannot be selected, display grayed out text
-    ImGuiSelectableFlags_AllowItemOverlap   = 1 << 4    // (WIP) Hit testing to allow subsequent widgets to overlap this one
-};
+typedef ImGuiSelectableFlags ImGuiSelectableFlags_;
+constexpr unsigned int ImGuiSelectableFlags_None               = 0;
+constexpr unsigned int ImGuiSelectableFlags_DontClosePopups    = 1 << 0;   // Clicking this don't close parent popup window
+constexpr unsigned int ImGuiSelectableFlags_SpanAllColumns     = 1 << 1;   // Selectable frame can span all columns (text will still fit in current column)
+constexpr unsigned int ImGuiSelectableFlags_AllowDoubleClick   = 1 << 2;   // Generate press events on double clicks too
+constexpr unsigned int ImGuiSelectableFlags_Disabled           = 1 << 3;   // Cannot be selected, display grayed out text
+constexpr unsigned int ImGuiSelectableFlags_AllowItemOverlap   = 1 << 4;    // (WIP) Hit testing to allow subsequent widgets to overlap this one
 
 // Flags for ImGui::BeginCombo()
-enum ImGuiComboFlags_ : unsigned int
-{
-    ImGuiComboFlags_None                    = 0,
-    ImGuiComboFlags_PopupAlignLeft          = 1 << 0,   // Align the popup toward the left by default
-    ImGuiComboFlags_HeightSmall             = 1 << 1,   // Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
-    ImGuiComboFlags_HeightRegular           = 1 << 2,   // Max ~8 items visible (default)
-    ImGuiComboFlags_HeightLarge             = 1 << 3,   // Max ~20 items visible
-    ImGuiComboFlags_HeightLargest           = 1 << 4,   // As many fitting items as possible
-    ImGuiComboFlags_NoArrowButton           = 1 << 5,   // Display on the preview box without the square arrow button
-    ImGuiComboFlags_NoPreview               = 1 << 6,   // Display only a square arrow button
-    ImGuiComboFlags_HeightMask_             = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest
-};
+typedef ImGuiComboFlags ImGuiComboFlags_;
+constexpr unsigned int ImGuiComboFlags_None                    = 0;
+constexpr unsigned int ImGuiComboFlags_PopupAlignLeft          = 1 << 0;   // Align the popup toward the left by default
+constexpr unsigned int ImGuiComboFlags_HeightSmall             = 1 << 1;   // Max ~4 items visible. Tip: If you want your combo popup to be a specific size you can use SetNextWindowSizeConstraints() prior to calling BeginCombo()
+constexpr unsigned int ImGuiComboFlags_HeightRegular           = 1 << 2;   // Max ~8 items visible (default)
+constexpr unsigned int ImGuiComboFlags_HeightLarge             = 1 << 3;   // Max ~20 items visible
+constexpr unsigned int ImGuiComboFlags_HeightLargest           = 1 << 4;   // As many fitting items as possible
+constexpr unsigned int ImGuiComboFlags_NoArrowButton           = 1 << 5;   // Display on the preview box without the square arrow button
+constexpr unsigned int ImGuiComboFlags_NoPreview               = 1 << 6;   // Display only a square arrow button
+constexpr unsigned int ImGuiComboFlags_HeightMask_             = ImGuiComboFlags_HeightSmall | ImGuiComboFlags_HeightRegular | ImGuiComboFlags_HeightLarge | ImGuiComboFlags_HeightLargest;
 
 // Flags for ImGui::BeginTabBar()
-enum ImGuiTabBarFlags_ : unsigned int
-{
-    ImGuiTabBarFlags_None                           = 0,
-    ImGuiTabBarFlags_Reorderable                    = 1 << 0,   // Allow manually dragging tabs to re-order them + New tabs are appended at the end of list
-    ImGuiTabBarFlags_AutoSelectNewTabs              = 1 << 1,   // Automatically select new tabs when they appear
-    ImGuiTabBarFlags_TabListPopupButton             = 1 << 2,   // Disable buttons to open the tab list popup
-    ImGuiTabBarFlags_NoCloseWithMiddleMouseButton   = 1 << 3,   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
-    ImGuiTabBarFlags_NoTabListScrollingButtons      = 1 << 4,   // Disable scrolling buttons (apply when fitting policy is ImGuiTabBarFlags_FittingPolicyScroll)
-    ImGuiTabBarFlags_NoTooltip                      = 1 << 5,   // Disable tooltips when hovering a tab
-    ImGuiTabBarFlags_FittingPolicyResizeDown        = 1 << 6,   // Resize tabs when they don't fit
-    ImGuiTabBarFlags_FittingPolicyScroll            = 1 << 7,   // Add scroll buttons when tabs don't fit
-    ImGuiTabBarFlags_FittingPolicyMask_             = ImGuiTabBarFlags_FittingPolicyResizeDown | ImGuiTabBarFlags_FittingPolicyScroll,
-    ImGuiTabBarFlags_FittingPolicyDefault_          = ImGuiTabBarFlags_FittingPolicyResizeDown
-};
+typedef ImGuiTabBarFlags ImGuiTabBarFlags_;
+constexpr unsigned int ImGuiTabBarFlags_None                           = 0;
+constexpr unsigned int ImGuiTabBarFlags_Reorderable                    = 1 << 0;   // Allow manually dragging tabs to re-order them + New tabs are appended at the end of list
+constexpr unsigned int ImGuiTabBarFlags_AutoSelectNewTabs              = 1 << 1;   // Automatically select new tabs when they appear
+constexpr unsigned int ImGuiTabBarFlags_TabListPopupButton             = 1 << 2;   // Disable buttons to open the tab list popup
+constexpr unsigned int ImGuiTabBarFlags_NoCloseWithMiddleMouseButton   = 1 << 3;   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
+constexpr unsigned int ImGuiTabBarFlags_NoTabListScrollingButtons      = 1 << 4;   // Disable scrolling buttons (apply when fitting policy is ImGuiTabBarFlags_FittingPolicyScroll)
+constexpr unsigned int ImGuiTabBarFlags_NoTooltip                      = 1 << 5;   // Disable tooltips when hovering a tab
+constexpr unsigned int ImGuiTabBarFlags_FittingPolicyResizeDown        = 1 << 6;   // Resize tabs when they don't fit
+constexpr unsigned int ImGuiTabBarFlags_FittingPolicyScroll            = 1 << 7;   // Add scroll buttons when tabs don't fit
+constexpr unsigned int ImGuiTabBarFlags_FittingPolicyMask_             = ImGuiTabBarFlags_FittingPolicyResizeDown | ImGuiTabBarFlags_FittingPolicyScroll;
+constexpr unsigned int ImGuiTabBarFlags_FittingPolicyDefault_          = ImGuiTabBarFlags_FittingPolicyResizeDown;
 
 // Flags for ImGui::BeginTabItem()
-enum ImGuiTabItemFlags_ : unsigned int
-{
-    ImGuiTabItemFlags_None                          = 0,
-    ImGuiTabItemFlags_UnsavedDocument               = 1 << 0,   // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. Also: tab is selected on closure and closure is deferred by one frame to allow code to undo it without flicker.
-    ImGuiTabItemFlags_SetSelected                   = 1 << 1,   // Trigger flag to programmatically make the tab selected when calling BeginTabItem()
-    ImGuiTabItemFlags_NoCloseWithMiddleMouseButton  = 1 << 2,   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
-    ImGuiTabItemFlags_NoPushId                      = 1 << 3    // Don't call PushID(tab->ID)/PopID() on BeginTabItem()/EndTabItem()
-};
+typedef ImGuiTabItemFlags ImGuiTabItemFlags_;
+constexpr unsigned int ImGuiTabItemFlags_None                          = 0;
+constexpr unsigned int ImGuiTabItemFlags_UnsavedDocument               = 1 << 0;   // Append '*' to title without affecting the ID, as a convenience to avoid using the ### operator. Also: tab is selected on closure and closure is deferred by one frame to allow code to undo it without flicker.
+constexpr unsigned int ImGuiTabItemFlags_SetSelected                   = 1 << 1;   // Trigger flag to programmatically make the tab selected when calling BeginTabItem()
+constexpr unsigned int ImGuiTabItemFlags_NoCloseWithMiddleMouseButton  = 1 << 2;   // Disable behavior of closing tabs (that are submitted with p_open != NULL) with middle mouse button. You can still repro this behavior on user's side with if (IsItemHovered() && IsMouseClicked(2)) *p_open = false.
+constexpr unsigned int ImGuiTabItemFlags_NoPushId                      = 1 << 3;    // Don't call PushID(tab->ID)/PopID() on BeginTabItem()/EndTabItem()
 
 // Flags for ImGui::IsWindowFocused()
-enum ImGuiFocusedFlags_ : unsigned int
-{
-    ImGuiFocusedFlags_None                          = 0,
-    ImGuiFocusedFlags_ChildWindows                  = 1 << 0,   // IsWindowFocused(): Return true if any children of the window is focused
-    ImGuiFocusedFlags_RootWindow                    = 1 << 1,   // IsWindowFocused(): Test from root window (top most parent of the current hierarchy)
-    ImGuiFocusedFlags_AnyWindow                     = 1 << 2,   // IsWindowFocused(): Return true if any window is focused. Important: If you are trying to tell how to dispatch your low-level inputs, do NOT use this. Use ImGui::GetIO().WantCaptureMouse instead.
-    ImGuiFocusedFlags_RootAndChildWindows           = ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows
-};
+typedef ImGuiFocusedFlags ImGuiFocusedFlags_;
+constexpr unsigned int ImGuiFocusedFlags_None                          = 0;
+constexpr unsigned int ImGuiFocusedFlags_ChildWindows                  = 1 << 0;   // IsWindowFocused(): Return true if any children of the window is focused
+constexpr unsigned int ImGuiFocusedFlags_RootWindow                    = 1 << 1;   // IsWindowFocused(): Test from root window (top most parent of the current hierarchy)
+constexpr unsigned int ImGuiFocusedFlags_AnyWindow                     = 1 << 2;   // IsWindowFocused(): Return true if any window is focused. Important: If you are trying to tell how to dispatch your low-level inputs, do NOT use this. Use ImGui::GetIO().WantCaptureMouse instead.
+constexpr unsigned int ImGuiFocusedFlags_RootAndChildWindows           = ImGuiFocusedFlags_RootWindow | ImGuiFocusedFlags_ChildWindows;
 
 // Flags for ImGui::IsItemHovered(), ImGui::IsWindowHovered()
 // Note: if you are trying to check whether your mouse should be dispatched to imgui or to your app, you should use the 'io.WantCaptureMouse' boolean for that. Please read the FAQ!
 // Note: windows with the ImGuiWindowFlags_NoInputs flag are ignored by IsWindowHovered() calls.
-enum ImGuiHoveredFlags_ : unsigned int
-{
-    ImGuiHoveredFlags_None                          = 0,        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
-    ImGuiHoveredFlags_ChildWindows                  = 1 << 0,   // IsWindowHovered() only: Return true if any children of the window is hovered
-    ImGuiHoveredFlags_RootWindow                    = 1 << 1,   // IsWindowHovered() only: Test from root window (top most parent of the current hierarchy)
-    ImGuiHoveredFlags_AnyWindow                     = 1 << 2,   // IsWindowHovered() only: Return true if any window is hovered
-    ImGuiHoveredFlags_AllowWhenBlockedByPopup       = 1 << 3,   // Return true even if a popup window is normally blocking access to this item/window
-    //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 4,   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
-    ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 5,   // Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
-    ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 6,   // Return true even if the position is obstructed or overlapped by another window
-    ImGuiHoveredFlags_AllowWhenDisabled             = 1 << 7,   // Return true even if the item is disabled
-    ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped,
-    ImGuiHoveredFlags_RootAndChildWindows           = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows
-};
+typedef ImGuiHoveredFlags ImGuiHoveredFlags_;
+constexpr unsigned int ImGuiHoveredFlags_None                          = 0;        // Return true if directly over the item/window, not obstructed by another window, not obstructed by an active popup or modal blocking inputs under them.
+constexpr unsigned int ImGuiHoveredFlags_ChildWindows                  = 1 << 0;   // IsWindowHovered() only: Return true if any children of the window is hovered
+constexpr unsigned int ImGuiHoveredFlags_RootWindow                    = 1 << 1;   // IsWindowHovered() only: Test from root window (top most parent of the current hierarchy)
+constexpr unsigned int ImGuiHoveredFlags_AnyWindow                     = 1 << 2;   // IsWindowHovered() only: Return true if any window is hovered
+constexpr unsigned int ImGuiHoveredFlags_AllowWhenBlockedByPopup       = 1 << 3;   // Return true even if a popup window is normally blocking access to this item/window
+    //ImGuiHoveredFlags_AllowWhenBlockedByModal     = 1 << 4;   // Return true even if a modal popup window is normally blocking access to this item/window. FIXME-TODO: Unavailable yet.
+constexpr unsigned int ImGuiHoveredFlags_AllowWhenBlockedByActiveItem  = 1 << 5;   // Return true even if an active item is blocking access to this item/window. Useful for Drag and Drop patterns.
+constexpr unsigned int ImGuiHoveredFlags_AllowWhenOverlapped           = 1 << 6;   // Return true even if the position is obstructed or overlapped by another window
+constexpr unsigned int ImGuiHoveredFlags_AllowWhenDisabled             = 1 << 7;   // Return true even if the item is disabled
+constexpr unsigned int ImGuiHoveredFlags_RectOnly                      = ImGuiHoveredFlags_AllowWhenBlockedByPopup | ImGuiHoveredFlags_AllowWhenBlockedByActiveItem | ImGuiHoveredFlags_AllowWhenOverlapped;
+constexpr unsigned int ImGuiHoveredFlags_RootAndChildWindows           = ImGuiHoveredFlags_RootWindow | ImGuiHoveredFlags_ChildWindows;
 
 // Flags for ImGui::BeginDragDropSource(), ImGui::AcceptDragDropPayload()
-enum ImGuiDragDropFlags_ : unsigned int
-{
-    ImGuiDragDropFlags_None                         = 0,
+typedef ImGuiDragDropFlags ImGuiDragDropFlags_;
+constexpr unsigned int ImGuiDragDropFlags_None                         = 0;
     // BeginDragDropSource() flags
-    ImGuiDragDropFlags_SourceNoPreviewTooltip       = 1 << 0,   // By default, a successful call to BeginDragDropSource opens a tooltip so you can display a preview or description of the source contents. This flag disable this behavior.
-    ImGuiDragDropFlags_SourceNoDisableHover         = 1 << 1,   // By default, when dragging we clear data so that IsItemHovered() will return false, to avoid subsequent user code submitting tooltips. This flag disable this behavior so you can still call IsItemHovered() on the source item.
-    ImGuiDragDropFlags_SourceNoHoldToOpenOthers     = 1 << 2,   // Disable the behavior that allows to open tree nodes and collapsing header by holding over them while dragging a source item.
-    ImGuiDragDropFlags_SourceAllowNullID            = 1 << 3,   // Allow items such as Text(), Image() that have no unique identifier to be used as drag source, by manufacturing a temporary identifier based on their window-relative position. This is extremely unusual within the dear imgui ecosystem and so we made it explicit.
-    ImGuiDragDropFlags_SourceExtern                 = 1 << 4,   // External source (from outside of dear imgui), won't attempt to read current item/window info. Will always return true. Only one Extern source can be active simultaneously.
-    ImGuiDragDropFlags_SourceAutoExpirePayload      = 1 << 5,   // Automatically expire the payload if the source cease to be submitted (otherwise payloads are persisting while being dragged)
+constexpr unsigned int ImGuiDragDropFlags_SourceNoPreviewTooltip       = 1 << 0;   // By default, a successful call to BeginDragDropSource opens a tooltip so you can display a preview or description of the source contents. This flag disable this behavior.
+constexpr unsigned int ImGuiDragDropFlags_SourceNoDisableHover         = 1 << 1;   // By default, when dragging we clear data so that IsItemHovered() will return false, to avoid subsequent user code submitting tooltips. This flag disable this behavior so you can still call IsItemHovered() on the source item.
+constexpr unsigned int ImGuiDragDropFlags_SourceNoHoldToOpenOthers     = 1 << 2;   // Disable the behavior that allows to open tree nodes and collapsing header by holding over them while dragging a source item.
+constexpr unsigned int ImGuiDragDropFlags_SourceAllowNullID            = 1 << 3;   // Allow items such as Text(), Image() that have no unique identifier to be used as drag source, by manufacturing a temporary identifier based on their window-relative position. This is extremely unusual within the dear imgui ecosystem and so we made it explicit.
+constexpr unsigned int ImGuiDragDropFlags_SourceExtern                 = 1 << 4;   // External source (from outside of dear imgui), won't attempt to read current item/window info. Will always return true. Only one Extern source can be active simultaneously.
+constexpr unsigned int ImGuiDragDropFlags_SourceAutoExpirePayload      = 1 << 5;   // Automatically expire the payload if the source cease to be submitted (otherwise payloads are persisting while being dragged)
     // AcceptDragDropPayload() flags
-    ImGuiDragDropFlags_AcceptBeforeDelivery         = 1 << 10,  // AcceptDragDropPayload() will returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
-    ImGuiDragDropFlags_AcceptNoDrawDefaultRect      = 1 << 11,  // Do not draw the default highlight rectangle when hovering over target.
-    ImGuiDragDropFlags_AcceptNoPreviewTooltip       = 1 << 12,  // Request hiding the BeginDragDropSource tooltip from the BeginDragDropTarget site.
-    ImGuiDragDropFlags_AcceptPeekOnly               = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect  // For peeking ahead and inspecting the payload before delivery.
-};
+constexpr unsigned int ImGuiDragDropFlags_AcceptBeforeDelivery         = 1 << 10;  // AcceptDragDropPayload() will returns true even before the mouse button is released. You can then call IsDelivery() to test if the payload needs to be delivered.
+constexpr unsigned int ImGuiDragDropFlags_AcceptNoDrawDefaultRect      = 1 << 11;  // Do not draw the default highlight rectangle when hovering over target.
+constexpr unsigned int ImGuiDragDropFlags_AcceptNoPreviewTooltip       = 1 << 12;  // Request hiding the BeginDragDropSource tooltip from the BeginDragDropTarget site.
+constexpr unsigned int ImGuiDragDropFlags_AcceptPeekOnly               = ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect;  // For peeking ahead and inspecting the payload before delivery.
 
 // Standard Drag and Drop payload types. You can define you own payload types using short strings. Types starting with '_' are defined by Dear ImGui.
 #define IMGUI_PAYLOAD_TYPE_COLOR_3F     "_COL3F"    // float[3]: Standard type for colors, without alpha. User code may use this type.
@@ -1021,30 +1001,25 @@ enum ImGuiNavInput_
 };
 
 // Configuration flags stored in io.ConfigFlags. Set by user/application.
-enum ImGuiConfigFlags_ : unsigned int
-{
-    ImGuiConfigFlags_None                   = 0,
-    ImGuiConfigFlags_NavEnableKeyboard      = 1 << 0,   // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeysDown[].
-    ImGuiConfigFlags_NavEnableGamepad       = 1 << 1,   // Master gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[]. Back-end also needs to set ImGuiBackendFlags_HasGamepad.
-    ImGuiConfigFlags_NavEnableSetMousePos   = 1 << 2,   // Instruct navigation to move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantSetMousePos=true. If enabled you MUST honor io.WantSetMousePos requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
-    ImGuiConfigFlags_NavNoCaptureKeyboard   = 1 << 3,   // Instruct navigation to not set the io.WantCaptureKeyboard flag when io.NavActive is set.
-    ImGuiConfigFlags_NoMouse                = 1 << 4,   // Instruct imgui to clear mouse position/buttons in NewFrame(). This allows ignoring the mouse information set by the back-end.
-    ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5,   // Instruct back-end to not alter mouse cursor shape and visibility. Use if the back-end cursor changes are interfering with yours and you don't want to use SetMouseCursor() to change mouse cursor. You may want to honor requests from imgui by reading GetMouseCursor() yourself instead.
+typedef ImGuiConfigFlags ImGuiConfigFlags_;
+constexpr unsigned int ImGuiConfigFlags_None                   = 0;
+constexpr unsigned int ImGuiConfigFlags_NavEnableKeyboard      = 1 << 0;   // Master keyboard navigation enable flag. NewFrame() will automatically fill io.NavInputs[] based on io.KeysDown[].
+constexpr unsigned int ImGuiConfigFlags_NavEnableGamepad       = 1 << 1;   // Master gamepad navigation enable flag. This is mostly to instruct your imgui back-end to fill io.NavInputs[]. Back-end also needs to set ImGuiBackendFlags_HasGamepad.
+constexpr unsigned int ImGuiConfigFlags_NavEnableSetMousePos   = 1 << 2;   // Instruct navigation to move the mouse cursor. May be useful on TV/console systems where moving a virtual mouse is awkward. Will update io.MousePos and set io.WantSetMousePos=true. If enabled you MUST honor io.WantSetMousePos requests in your binding, otherwise ImGui will react as if the mouse is jumping around back and forth.
+constexpr unsigned int ImGuiConfigFlags_NavNoCaptureKeyboard   = 1 << 3;   // Instruct navigation to not set the io.WantCaptureKeyboard flag when io.NavActive is set.
+constexpr unsigned int ImGuiConfigFlags_NoMouse                = 1 << 4;   // Instruct imgui to clear mouse position/buttons in NewFrame(). This allows ignoring the mouse information set by the back-end.
+constexpr unsigned int ImGuiConfigFlags_NoMouseCursorChange    = 1 << 5;   // Instruct back-end to not alter mouse cursor shape and visibility. Use if the back-end cursor changes are interfering with yours and you don't want to use SetMouseCursor() to change mouse cursor. You may want to honor requests from imgui by reading GetMouseCursor() yourself instead.
 
     // User storage (to allow your back-end/engine to communicate to code that may be shared between multiple projects. Those flags are not used by core Dear ImGui)
-    ImGuiConfigFlags_IsSRGB                 = 1 << 20,  // Application is SRGB-aware.
-    ImGuiConfigFlags_IsTouchScreen          = 1 << 21   // Application is using a touch screen instead of a mouse.
-};
+constexpr unsigned int ImGuiConfigFlags_IsSRGB                 = 1 << 20;  // Application is SRGB-aware.
+constexpr unsigned int ImGuiConfigFlags_IsTouchScreen          = 1 << 21;   // Application is using a touch screen instead of a mouse.
 
 // Back-end capabilities flags stored in io.BackendFlags. Set by imgui_impl_xxx or custom back-end.
-enum ImGuiBackendFlags_ : unsigned int
-{
-    ImGuiBackendFlags_None                  = 0,
-    ImGuiBackendFlags_HasGamepad            = 1 << 0,   // Back-end Platform supports gamepad and currently has one connected.
-    ImGuiBackendFlags_HasMouseCursors       = 1 << 1,   // Back-end Platform supports honoring GetMouseCursor() value to change the OS cursor shape.
-    ImGuiBackendFlags_HasSetMousePos        = 1 << 2,   // Back-end Platform supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
-    ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3    // Back-end Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bit indices.
-};
+constexpr unsigned int ImGuiBackendFlags_None                  = 0;
+constexpr unsigned int ImGuiBackendFlags_HasGamepad            = 1 << 0;   // Back-end Platform supports gamepad and currently has one connected.
+constexpr unsigned int ImGuiBackendFlags_HasMouseCursors       = 1 << 1;   // Back-end Platform supports honoring GetMouseCursor() value to change the OS cursor shape.
+constexpr unsigned int ImGuiBackendFlags_HasSetMousePos        = 1 << 2;   // Back-end Platform supports io.WantSetMousePos requests to reposition the OS mouse position (only used if ImGuiConfigFlags_NavEnableSetMousePos is set).
+constexpr unsigned int ImGuiBackendFlags_RendererHasVtxOffset  = 1 << 3;    // Back-end Renderer supports ImDrawCmd::VtxOffset. This enables output of large meshes (64K+ vertices) while still using 16-bit indices.
 
 // Enumeration for PushStyleColor() / PopStyleColor()
 enum ImGuiCol_
@@ -1144,49 +1119,49 @@ enum ImGuiStyleVar_
 };
 
 // Flags for ColorEdit3() / ColorEdit4() / ColorPicker3() / ColorPicker4() / ColorButton()
-enum ImGuiColorEditFlags_ : unsigned int
-{
-    ImGuiColorEditFlags_None            = 0,
-    ImGuiColorEditFlags_NoAlpha         = 1 << 1,   //              // ColorEdit, ColorPicker, ColorButton: ignore Alpha component (will only read 3 components from the input pointer).
-    ImGuiColorEditFlags_NoPicker        = 1 << 2,   //              // ColorEdit: disable picker when clicking on colored square.
-    ImGuiColorEditFlags_NoOptions       = 1 << 3,   //              // ColorEdit: disable toggling options menu when right-clicking on inputs/small preview.
-    ImGuiColorEditFlags_NoSmallPreview  = 1 << 4,   //              // ColorEdit, ColorPicker: disable colored square preview next to the inputs. (e.g. to show only the inputs)
-    ImGuiColorEditFlags_NoInputs        = 1 << 5,   //              // ColorEdit, ColorPicker: disable inputs sliders/text widgets (e.g. to show only the small preview colored square).
-    ImGuiColorEditFlags_NoTooltip       = 1 << 6,   //              // ColorEdit, ColorPicker, ColorButton: disable tooltip when hovering the preview.
-    ImGuiColorEditFlags_NoLabel         = 1 << 7,   //              // ColorEdit, ColorPicker: disable display of inline text label (the label is still forwarded to the tooltip and picker).
-    ImGuiColorEditFlags_NoSidePreview   = 1 << 8,   //              // ColorPicker: disable bigger color preview on right side of the picker, use small colored square preview instead.
-    ImGuiColorEditFlags_NoDragDrop      = 1 << 9,   //              // ColorEdit: disable drag and drop target. ColorButton: disable drag and drop source.
+typedef ImGuiColorEditFlags ImGuiColorEditFlags_;
+constexpr unsigned int ImGuiColorEditFlags_None            = 0;
+constexpr unsigned int ImGuiColorEditFlags_NoAlpha         = 1 << 1;   //              // ColorEdit, ColorPicker, ColorButton: ignore Alpha component (will only read 3 components from the input pointer).
+constexpr unsigned int ImGuiColorEditFlags_NoPicker        = 1 << 2;   //              // ColorEdit: disable picker when clicking on colored square.
+constexpr unsigned int ImGuiColorEditFlags_NoOptions       = 1 << 3;   //              // ColorEdit: disable toggling options menu when right-clicking on inputs/small preview.
+constexpr unsigned int ImGuiColorEditFlags_NoSmallPreview  = 1 << 4;   //              // ColorEdit, ColorPicker: disable colored square preview next to the inputs. (e.g. to show only the inputs)
+constexpr unsigned int ImGuiColorEditFlags_NoInputs        = 1 << 5;   //              // ColorEdit, ColorPicker: disable inputs sliders/text widgets (e.g. to show only the small preview colored square).
+constexpr unsigned int ImGuiColorEditFlags_NoTooltip       = 1 << 6;   //              // ColorEdit, ColorPicker, ColorButton: disable tooltip when hovering the preview.
+constexpr unsigned int ImGuiColorEditFlags_NoLabel         = 1 << 7;   //              // ColorEdit, ColorPicker: disable display of inline text label (the label is still forwarded to the tooltip and picker).
+constexpr unsigned int ImGuiColorEditFlags_NoSidePreview   = 1 << 8;   //              // ColorPicker: disable bigger color preview on right side of the picker, use small colored square preview instead.
+constexpr unsigned int ImGuiColorEditFlags_NoDragDrop      = 1 << 9;   //              // ColorEdit: disable drag and drop target. ColorButton: disable drag and drop source.
 
     // User Options (right-click on widget to change some of them).
-    ImGuiColorEditFlags_AlphaBar        = 1 << 16,  //              // ColorEdit, ColorPicker: show vertical alpha bar/gradient in picker.
-    ImGuiColorEditFlags_AlphaPreview    = 1 << 17,  //              // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
-    ImGuiColorEditFlags_AlphaPreviewHalf= 1 << 18,  //              // ColorEdit, ColorPicker, ColorButton: display half opaque / half checkerboard, instead of opaque.
-    ImGuiColorEditFlags_HDR             = 1 << 19,  //              // (WIP) ColorEdit: Currently only disable 0.0f..1.0f limits in RGBA edition (note: you probably want to use ImGuiColorEditFlags_Float flag as well).
-    ImGuiColorEditFlags_DisplayRGB      = 1 << 20,  // [Display]    // ColorEdit: override _display_ type among RGB/HSV/Hex. ColorPicker: select any combination using one or more of RGB/HSV/Hex.
-    ImGuiColorEditFlags_DisplayHSV      = 1 << 21,  // [Display]    // "
-    ImGuiColorEditFlags_DisplayHex      = 1 << 22,  // [Display]    // "
-    ImGuiColorEditFlags_Uint8           = 1 << 23,  // [DataType]   // ColorEdit, ColorPicker, ColorButton: _display_ values formatted as 0..255.
-    ImGuiColorEditFlags_Float           = 1 << 24,  // [DataType]   // ColorEdit, ColorPicker, ColorButton: _display_ values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
-    ImGuiColorEditFlags_PickerHueBar    = 1 << 25,  // [Picker]     // ColorPicker: bar for Hue, rectangle for Sat/Value.
-    ImGuiColorEditFlags_PickerHueWheel  = 1 << 26,  // [Picker]     // ColorPicker: wheel for Hue, triangle for Sat/Value.
-    ImGuiColorEditFlags_InputRGB        = 1 << 27,  // [Input]      // ColorEdit, ColorPicker: input and output data in RGB format.
-    ImGuiColorEditFlags_InputHSV        = 1 << 28,  // [Input]      // ColorEdit, ColorPicker: input and output data in HSV format.
+constexpr unsigned int ImGuiColorEditFlags_AlphaBar        = 1 << 16;  //              // ColorEdit, ColorPicker: show vertical alpha bar/gradient in picker.
+constexpr unsigned int ImGuiColorEditFlags_AlphaPreview    = 1 << 17;  //              // ColorEdit, ColorPicker, ColorButton: display preview as a transparent color over a checkerboard, instead of opaque.
+constexpr unsigned int ImGuiColorEditFlags_AlphaPreviewHalf= 1 << 18;  //              // ColorEdit, ColorPicker, ColorButton: display half opaque / half checkerboard, instead of opaque.
+constexpr unsigned int ImGuiColorEditFlags_HDR             = 1 << 19;  //              // (WIP) ColorEdit: Currently only disable 0.0f..1.0f limits in RGBA edition (note: you probably want to use ImGuiColorEditFlags_Float flag as well).
+constexpr unsigned int ImGuiColorEditFlags_DisplayRGB      = 1 << 20;  // [Display]    // ColorEdit: override _display_ type among RGB/HSV/Hex. ColorPicker: select any combination using one or more of RGB/HSV/Hex.
+constexpr unsigned int ImGuiColorEditFlags_DisplayHSV      = 1 << 21;  // [Display]    // "
+constexpr unsigned int ImGuiColorEditFlags_DisplayHex      = 1 << 22;  // [Display]    // "
+constexpr unsigned int ImGuiColorEditFlags_Uint8           = 1 << 23;  // [DataType]   // ColorEdit, ColorPicker, ColorButton: _display_ values formatted as 0..255.
+constexpr unsigned int ImGuiColorEditFlags_Float           = 1 << 24;  // [DataType]   // ColorEdit, ColorPicker, ColorButton: _display_ values formatted as 0.0f..1.0f floats instead of 0..255 integers. No round-trip of value via integers.
+constexpr unsigned int ImGuiColorEditFlags_PickerHueBar    = 1 << 25;  // [Picker]     // ColorPicker: bar for Hue, rectangle for Sat/Value.
+constexpr unsigned int ImGuiColorEditFlags_PickerHueWheel  = 1 << 26;  // [Picker]     // ColorPicker: wheel for Hue, triangle for Sat/Value.
+constexpr unsigned int ImGuiColorEditFlags_InputRGB        = 1 << 27;  // [Input]      // ColorEdit, ColorPicker: input and output data in RGB format.
+constexpr unsigned int ImGuiColorEditFlags_InputHSV        = 1 << 28;  // [Input]      // ColorEdit, ColorPicker: input and output data in HSV format.
 
     // Defaults Options. You can set application defaults using SetColorEditOptions(). The intent is that you probably don't want to
     // override them in most of your calls. Let the user choose via the option menu and/or call SetColorEditOptions() once during startup.
-    ImGuiColorEditFlags__OptionsDefault = ImGuiColorEditFlags_Uint8|ImGuiColorEditFlags_DisplayRGB|ImGuiColorEditFlags_InputRGB|ImGuiColorEditFlags_PickerHueBar,
+constexpr unsigned int ImGuiColorEditFlags__OptionsDefault = ImGuiColorEditFlags_Uint8|ImGuiColorEditFlags_DisplayRGB|ImGuiColorEditFlags_InputRGB|ImGuiColorEditFlags_PickerHueBar;
 
     // [Internal] Masks
-    ImGuiColorEditFlags__DisplayMask    = ImGuiColorEditFlags_DisplayRGB|ImGuiColorEditFlags_DisplayHSV|ImGuiColorEditFlags_DisplayHex,
-    ImGuiColorEditFlags__DataTypeMask   = ImGuiColorEditFlags_Uint8|ImGuiColorEditFlags_Float,
-    ImGuiColorEditFlags__PickerMask     = ImGuiColorEditFlags_PickerHueWheel|ImGuiColorEditFlags_PickerHueBar,
-    ImGuiColorEditFlags__InputMask      = ImGuiColorEditFlags_InputRGB|ImGuiColorEditFlags_InputHSV
+constexpr unsigned int ImGuiColorEditFlags__DisplayMask    = ImGuiColorEditFlags_DisplayRGB|ImGuiColorEditFlags_DisplayHSV|ImGuiColorEditFlags_DisplayHex;
+constexpr unsigned int ImGuiColorEditFlags__DataTypeMask   = ImGuiColorEditFlags_Uint8|ImGuiColorEditFlags_Float;
+constexpr unsigned int ImGuiColorEditFlags__PickerMask     = ImGuiColorEditFlags_PickerHueWheel|ImGuiColorEditFlags_PickerHueBar;
+constexpr unsigned int ImGuiColorEditFlags__InputMask      = ImGuiColorEditFlags_InputRGB|ImGuiColorEditFlags_InputHSV;
 
     // Obsolete names (will be removed)
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-    , ImGuiColorEditFlags_RGB = ImGuiColorEditFlags_DisplayRGB, ImGuiColorEditFlags_HSV = ImGuiColorEditFlags_DisplayHSV, ImGuiColorEditFlags_HEX = ImGuiColorEditFlags_DisplayHex  // [renamed in 1.69]
+constexpr unsigned int ImGuiColorEditFlags_RGB = ImGuiColorEditFlags_DisplayRGB;
+constexpr unsigned int ImGuiColorEditFlags_HSV = ImGuiColorEditFlags_DisplayHSV;
+constexpr unsigned int ImGuiColorEditFlags_HEX = ImGuiColorEditFlags_DisplayHex;  // [renamed in 1.69]
 #endif
-};
 
 // Identify a mouse button.
 // Those values are guaranteed to be stable and we frequently use 0/1 directly. Named enums provided for convenience.
@@ -1877,27 +1852,24 @@ struct ImDrawListSplitter
     IMGUI_API void              SetCurrentChannel(ImDrawList* draw_list, int channel_idx);
 };
 
-enum ImDrawCornerFlags_ : unsigned int
-{
-    ImDrawCornerFlags_None      = 0,
-    ImDrawCornerFlags_TopLeft   = 1 << 0, // 0x1
-    ImDrawCornerFlags_TopRight  = 1 << 1, // 0x2
-    ImDrawCornerFlags_BotLeft   = 1 << 2, // 0x4
-    ImDrawCornerFlags_BotRight  = 1 << 3, // 0x8
-    ImDrawCornerFlags_Top       = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight,   // 0x3
-    ImDrawCornerFlags_Bot       = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight,   // 0xC
-    ImDrawCornerFlags_Left      = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft,    // 0x5
-    ImDrawCornerFlags_Right     = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight,  // 0xA
-    ImDrawCornerFlags_All       = 0xF     // In your function calls you may use ~0 (= all bits sets) instead of ImDrawCornerFlags_All, as a convenience
-};
+typedef ImDrawCornerFlags ImDrawCornerFlags_;
 
-enum ImDrawListFlags_ : unsigned int
-{
-    ImDrawListFlags_None             = 0,
-    ImDrawListFlags_AntiAliasedLines = 1 << 0,  // Lines are anti-aliased (*2 the number of triangles for 1.0f wide line, otherwise *3 the number of triangles)
-    ImDrawListFlags_AntiAliasedFill  = 1 << 1,  // Filled shapes have anti-aliased edges (*2 the number of vertices)
-    ImDrawListFlags_AllowVtxOffset   = 1 << 2   // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
-};
+constexpr unsigned int ImDrawCornerFlags_None      = 0;
+constexpr unsigned int ImDrawCornerFlags_TopLeft   = 1 << 0; // 0x1
+constexpr unsigned int ImDrawCornerFlags_TopRight  = 1 << 1; // 0x2
+constexpr unsigned int ImDrawCornerFlags_BotLeft   = 1 << 2; // 0x4
+constexpr unsigned int ImDrawCornerFlags_BotRight  = 1 << 3; // 0x8
+constexpr unsigned int ImDrawCornerFlags_Top       = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_TopRight;   // 0x3
+constexpr unsigned int ImDrawCornerFlags_Bot       = ImDrawCornerFlags_BotLeft | ImDrawCornerFlags_BotRight;   // 0xC
+constexpr unsigned int ImDrawCornerFlags_Left      = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotLeft;    // 0x5
+constexpr unsigned int ImDrawCornerFlags_Right     = ImDrawCornerFlags_TopRight | ImDrawCornerFlags_BotRight;  // 0xA
+constexpr unsigned int ImDrawCornerFlags_All       = 0xF;     // In your function calls you may use ~0 (= all bits sets) instead of ImDrawCornerFlags_All, as a convenience
+
+typedef ImDrawListFlags ImDrawListFlags_;
+constexpr unsigned int ImDrawListFlags_None             = 0;
+constexpr unsigned int ImDrawListFlags_AntiAliasedLines = 1 << 0;  // Lines are anti-aliased (*2 the number of triangles for 1.0f wide line, otherwise *3 the number of triangles)
+constexpr unsigned int ImDrawListFlags_AntiAliasedFill  = 1 << 1;  // Filled shapes have anti-aliased edges (*2 the number of vertices)
+constexpr unsigned int ImDrawListFlags_AllowVtxOffset   = 1 << 2;   // Can emit 'VtxOffset > 0' to allow large meshes. Set when 'ImGuiBackendFlags_RendererHasVtxOffset' is enabled.
 
 // Draw command list
 // This is the low-level list of polygons that ImGui:: functions are filling. At the end of the frame,
@@ -2095,12 +2067,10 @@ struct ImFontAtlasCustomRect
     bool IsPacked() const           { return X != 0xFFFF; }
 };
 
-enum ImFontAtlasFlags_ : unsigned int
-{
-    ImFontAtlasFlags_None               = 0,
-    ImFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0,   // Don't round the height to next power of two
-    ImFontAtlasFlags_NoMouseCursors     = 1 << 1    // Don't build software mouse cursors into the atlas
-};
+typedef ImFontAtlasFlags ImFontAtlasFlags_;
+constexpr unsigned int ImFontAtlasFlags_None               = 0;
+constexpr unsigned int ImFontAtlasFlags_NoPowerOfTwoHeight = 1 << 0;   // Don't round the height to next power of two
+constexpr unsigned int ImFontAtlasFlags_NoMouseCursors     = 1 << 1;   // Don't build software mouse cursors into the atlas
 
 // Load and rasterize multiple TTF/OTF fonts into a same texture. The font atlas will build a single texture holding:
 //  - One or more fonts.
