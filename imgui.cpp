@@ -15733,6 +15733,38 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             }
             ImGui::TreePop();
         }
+        if (g.PlatformIO.Monitors.Size > 0 && ImGui::TreeNode("Monitors grids", "Monitor grid layout (%d)", g.PlatformIO.Monitors.Size))
+        {
+            static bool is_virtual_grid = false;
+            ImGui::Checkbox("Show virtual grid", &is_virtual_grid);
+
+            ImRect grid;
+            ImVec2 pos = ImGui::GetCursorScreenPos();
+            for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
+            {
+                const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
+                ImRect rect(mon.MainPos, mon.MainPos + mon.MainSize);
+                if (is_virtual_grid)
+                    rect /= mon.DpiScale;
+                grid.Add(rect);
+            }
+            float ratio = (g.CurrentWindow->ContentRegionRect.GetWidth() - g.CurrentWindow->DC.Indent.x) / grid.GetWidth() * 0.9f;
+            ImDrawList* draw_list = g.CurrentWindow->DrawList;
+            for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
+            {
+                const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
+                char name[32];
+                ImFormatString(name, IM_ARRAYSIZE(name), "Monitor %d, DPI=%g", i, mon.DpiScale);
+                ImVec2 name_size = ImGui::CalcTextSize(name);
+                ImRect rect = ImRect(mon.MainPos, mon.MainPos + mon.MainSize) * ratio;
+                if (is_virtual_grid)
+                    rect /= mon.DpiScale;
+                draw_list->AddRect(pos + rect.Min, pos + rect.Max, IM_COL32_WHITE);
+                draw_list->AddText(pos + rect.GetCenter() - name_size * 0.5f, IM_COL32_WHITE, name);
+            }
+            ImGui::ItemSize(grid * ratio);
+            ImGui::TreePop();
+        }
         for (int i = 0; i < g.Viewports.Size; i++)
             Funcs::NodeViewport(g.Viewports[i]);
         ImGui::TreePop();
