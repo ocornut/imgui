@@ -2834,7 +2834,7 @@ static inline bool IsWindowContentHoverable(ImGuiWindow* window, ImGuiHoveredFla
     // FIXME-OPT: This could be cached/stored within the window.
     ImGuiContext& g = *GImGui;
     if (!g.NavWindow)
-        return false;
+        return true;
     if (ImGuiWindow* focused_root_window = g.NavWindow->RootWindow)
         if (focused_root_window->WasActive && focused_root_window != window->RootWindow)
         {
