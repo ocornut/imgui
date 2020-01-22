@@ -9744,7 +9744,7 @@ void    ImGui::TableHeader(const char* label)
 
     // Keep header highlighted when context menu is open. (FIXME-TABLE: however we cannot assume the ID of said popup if it has been created by the user...)
     const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceNo);
-    const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld, ImVec2(0.0f, label_height));
+    const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld | ImGuiSelectableFlags_DontClosePopups, ImVec2(0.0f, label_height));
     const bool held = IsItemActive();
     if (held)
         table->HeldHeaderColumn = (ImS8)column_n;
