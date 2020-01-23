@@ -18,6 +18,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-01-23: OpenGL: Explicitly backup, setup and restore GL_TEXTURE_ENV to increase compatibility with legacy OpenGL applications.
 //  2019-04-30: OpenGL: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-02-11: OpenGL: Projecting clipping rectangles correctly using draw_data->FramebufferScale to allow multi-viewports for retina display.
 //  2018-11-30: Misc: Setting up io.BackendRendererName so it can be displayed in the About Window.
@@ -89,6 +90,7 @@ static void ImGui_ImplOpenGL2_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glEnableClientState(GL_COLOR_ARRAY);
     glEnable(GL_TEXTURE_2D);
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_MODULATE);
 
     // If you are using this code with non-legacy OpenGL header/contexts (which you should not, prefer using imgui_impl_opengl3.cpp!!),
     // you may need to backup/reset/restore current shader using the lines below. DO NOT MODIFY THIS FILE! Add the code in your calling function:
@@ -126,6 +128,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     GLint last_polygon_mode[2]; glGetIntegerv(GL_POLYGON_MODE, last_polygon_mode);
     GLint last_viewport[4]; glGetIntegerv(GL_VIEWPORT, last_viewport);
     GLint last_scissor_box[4]; glGetIntegerv(GL_SCISSOR_BOX, last_scissor_box);
+    GLint last_tex_env_mode; glGetTexEnviv(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, &last_tex_env_mode);
     glPushAttrib(GL_ENABLE_BIT | GL_COLOR_BUFFER_BIT | GL_TRANSFORM_BIT);
 
     // Setup desired GL state
@@ -193,6 +196,7 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
     glPolygonMode(GL_FRONT, (GLenum)last_polygon_mode[0]); glPolygonMode(GL_BACK, (GLenum)last_polygon_mode[1]);
     glViewport(last_viewport[0], last_viewport[1], (GLsizei)last_viewport[2], (GLsizei)last_viewport[3]);
     glScissor(last_scissor_box[0], last_scissor_box[1], (GLsizei)last_scissor_box[2], (GLsizei)last_scissor_box[3]);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, last_tex_env_mode);
 }
 
 bool ImGui_ImplOpenGL2_CreateFontsTexture()

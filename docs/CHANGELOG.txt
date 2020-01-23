@@ -171,6 +171,8 @@ Other Changes:
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
 - Examples: Emscripten: Removed BINARYEN_TRAP_MODE=clamp from Makefile which was removed in Emscripten 1.39.0
   but required prior to 1.39.0, making life easier for absolutely no-one. (#2877, #2878) [@podsvirov]
+- Backends: OpenGL2: Explicitly backup, setup and restore GL_TEXTURE_ENV to increase compatibility with
+  legacy OpenGL applications. (#3000)
 - Backends: OpenGL3: Fix building with pre-3.2 GL loaders which do not expose glDrawElementsBaseVertex(),
   using runtime GL version to decide if we set ImGuiBackendFlags_RendererHasVtxOffset. (#2866, #2852) [@dpilawa]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
