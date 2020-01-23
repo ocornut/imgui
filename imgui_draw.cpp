@@ -854,13 +854,13 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
                     if (bevel)
                     {
-                        _IdxWritePtr[0] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 1 : 2);
-                        _IdxWritePtr[1] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 3 : 0);
-                        _IdxWritePtr[2] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 5 : 4);
+                        _IdxWritePtr[0] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 1 : 2));
+                        _IdxWritePtr[1] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 3 : 0));
+                        _IdxWritePtr[2] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 5 : 4));
 
-                        _IdxWritePtr[3] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 1 : 2);
-                        _IdxWritePtr[4] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 5 : 4);
-                        _IdxWritePtr[5] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 4 : 5);
+                        _IdxWritePtr[3] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 1 : 2));
+                        _IdxWritePtr[4] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 5 : 4));
+                        _IdxWritePtr[5] = (ImDrawIdx)(_VtxCurrentIdx + (bevel_r ? 4 : 5));
                         _IdxWritePtr += 6;
                     }
                     else
