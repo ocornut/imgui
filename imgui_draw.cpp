@@ -608,10 +608,8 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
 // Those macros expects l-values.
 #define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = 1.0f / ImSqrt(d2); VX *= inv_len; VY *= inv_len; } }
 #define IM_FIXNORMAL2F(VX,VY)               { float d2 = VX*VX + VY*VY; if (d2 < 0.5f) d2 = 0.5f; float inv_lensq = 1.0f / d2; VX *= inv_lensq; VY *= inv_lensq; }
-#define IM_NORMALIZE2F_OVER_EPSILON_CLAMP(VX,VY,EPS,INVLENMAX)  { float d2 = VX*VX + VY*VY; if (d2 > EPS)  { float inv_len = 1.0f / ImSqrt(d2); if (inv_len > INVLENMAX) inv_len = INVLENMAX; VX *= inv_len; VY *= inv_len; } }
 
-
-// TODO: Thickness anti-aliased lines cap are missing their AA fringe.
+// FIXME: Thickness anti-aliased lines cap are missing their AA fringe.
 // We avoid using the ImVec2 math operators here to reduce cost to a minimum for debug/non-inlined builds.
 void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32 col, bool closed, float thickness)
 {
@@ -622,19 +620,19 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
     int count = points_count; // segment count
     if (!closed)
-        count = points_count-1;
+        count = points_count -1 ;
 
     const bool antialias = Flags & ImDrawListFlags_AntiAliasedLines;
     const float AA_SIZE = 1.0f;
     const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-    if (antialias && thickness <= 1.0)
+    if (antialias && thickness <= 1.0f)
     {
         // Anti-aliased stroke approximation
         const int idx_count = count*12;
         const int vtx_count = count*6;      // FIXME-OPT: Not sharing edges
         PrimReserve(idx_count, vtx_count);
-        const ImU32 col_faded = (col & ~IM_COL32_A_MASK) | (int(((col >> IM_COL32_A_SHIFT) & 0xFF) * thickness) << IM_COL32_A_SHIFT);
+        const ImU32 col_faded = (col & ~IM_COL32_A_MASK) | ((int)(((col >> IM_COL32_A_SHIFT) & 0xFF) * thickness) << IM_COL32_A_SHIFT);
 
         for (int i1 = 0; i1 < count; i1++)
         {
@@ -680,7 +678,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         unsigned int unused_vertices = 0;
         unsigned int unused_indices = 0;
 
-        float sqlen1, sqlen2;
+        float sqlen1 = 0.0f;
         float dx1, dy1;
         if (closed)
         {
@@ -693,11 +691,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         for (int i1 = 0; i1 < points_count; i1++)
         {
             const ImVec2& p1 = points[i1];
-            const int i2 = i1+1 == points_count ? 0 : i1+1;
+            const int i2 = (i1 + 1 == points_count) ? 0 : i1 + 1;
             const ImVec2& p2 = points[i2];
             float dx2 = p1.x - p2.x;
             float dy2 = p1.y - p2.y;
-            sqlen2 = dx2 * dx2 + dy2 * dy2;
+            float sqlen2 = dx2 * dx2 + dy2 * dy2;
             IM_NORMALIZE2F_OVER_ZERO(dx2, dy2);
 
             if (!closed && i1 == 0)
@@ -706,7 +704,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 dy1 = -dy2;
                 sqlen1 = sqlen2;
             }
-            if (!closed && i1 == points_count-1)
+            else if (!closed && i1 == points_count-1)
             {
                 dx2 = -dx1;
                 dy2 = -dy1;
@@ -715,21 +713,19 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
             float miter_l_recip = dx1 * dy2 - dy1 * dx2;
             float mlx, mly, mrx, mry;     // Left and right miters
-            float mlax, mlay, mrax, mray; // Left and right miters incl. antialiasing
-            bool bevel = dx1 * dx2 + dy1 * dy2 > 1e-5;
-            if (fabsf(miter_l_recip) > 1e-5)
+            float mlax, mlay, mrax, mray; // Left and right miters including anti-aliasing
+            const bool bevel = (dx1 * dx2 + dy1 * dy2) > 1e-5f;
+            if (ImFabs(miter_l_recip) > 1e-5f)
             {
                 float miter_l = half_thickness / miter_l_recip;
                 // Limit (inner) miter so it doesn't shoot away when miter is longer than adjacent line segments on acute angles
                 if (bevel)
                 {
-                    // This is too aggressive (not exacply precise)
+                    // This is too aggressive (not exactly precise)
                     float min_sqlen = sqlen1 > sqlen2 ? sqlen2 : sqlen1;
                     float miter_sqlen = ((dx1 + dx2) * (dx1 + dx2) + (dy1 + dy2) * (dy1 + dy2)) * miter_l * miter_l;
                     if (miter_sqlen > min_sqlen)
-                    {
-                        miter_l *= sqrtf(min_sqlen / miter_sqlen);
-                    }
+                        miter_l *= ImSqrt(min_sqlen / miter_sqlen);
                 }
                 mlx = p1.x - (dx1 + dx2) * miter_l;
                 mly = p1.y - (dy1 + dy2) * miter_l;
@@ -763,10 +759,10 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             // miter_sign == 1, iff the outer (maybe bevelled) edge is on the right, -1 iff it is on the left
             int miter_sign = (miter_l_recip >= 0) - (miter_l_recip < 0);
             float b1x, b1y, b2x, b2y;     // First and second bevel point
-            float b1ax, b1ay, b2ax, b2ay; // First and second bevel point incl. antialiasing
+            float b1ax, b1ay, b2ax, b2ay; // First and second bevel point including anti-aliasing
             if (bevel)
             {
-                // TODO: benchmark if doing these computations only once in AA case saves cycles
+                // FIXME-OPT: benchmark if doing these computations only once in AA case saves cycles
                 b1x = p1.x + (dx1 - dy1 * miter_sign) * half_thickness;
                 b1y = p1.y + (dy1 + dx1 * miter_sign) * half_thickness;
                 b2x = p1.x + (dx2 + dy2 * miter_sign) * half_thickness;
@@ -788,18 +784,18 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             // Now that we have all the point coordinates, put them into buffers
 
             // Vertices for each point are ordered in vertex buffer like this (looking in the direction of the polyline):
-            // left vertex*
-            // right vertex*
-            // left vertex AA fringe*  (if antialias)
-            // right vertex AA fringe* (if antialias)
-            // the remaining vertex (if bevel)
-            // the remaining vertex AA fringe (if bevel and antialias)
-            // *) if there is bevel, these vertices are the ones on the incoming edge.
+            // - left vertex*
+            // - right vertex*
+            // - left vertex AA fringe*  (if antialias)
+            // - right vertex AA fringe* (if antialias)
+            // - the remaining vertex (if bevel)
+            // - the remaining vertex AA fringe (if bevel and antialias)
+            // (*) if there is bevel, these vertices are the ones on the incoming edge.
             // Having all the vertices of the incoming edge in predictable positions is important - we reference them
             // even if we don't know relevant line properties yet
 
-            int vertex_count = antialias ? (bevel ? 6 : 4) : (bevel ? 3 : 2); // TODO: shorten the expression
-            unsigned int bi = antialias ? 4 : 2; // outgoing edge bevel vertex index
+            int vertex_count = antialias ? (bevel ? 6 : 4) : (bevel ? 3 : 2); // FIXME: shorten the expression
+            unsigned int bi = antialias ? 4 : 2; // Outgoing edge bevel vertex index
             const bool bevel_l = bevel && miter_sign < 0;
             const bool bevel_r = bevel && miter_sign > 0;
 
@@ -825,19 +821,19 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
             if (i1 < count)
             {
                 const int vtx_next_id = i1 < points_count-1 ? _VtxCurrentIdx+vertex_count : first_vtx_ptr;
-                ImDrawIdx l1i = _VtxCurrentIdx + (bevel_l ? bi : 0);
-                ImDrawIdx r1i = _VtxCurrentIdx + (bevel_r ? bi : 1);
-                ImDrawIdx l2i = vtx_next_id;
-                ImDrawIdx r2i = vtx_next_id + 1;
-                ImDrawIdx ebi = _VtxCurrentIdx + (bevel_l ? 0 : 1); // incoming edge bevel vertex index
+                unsigned int l1i = _VtxCurrentIdx + (bevel_l ? bi : 0);
+                unsigned int r1i = _VtxCurrentIdx + (bevel_r ? bi : 1);
+                unsigned int l2i = vtx_next_id;
+                unsigned int r2i = vtx_next_id + 1;
+                unsigned int ebi = _VtxCurrentIdx + (bevel_l ? 0 : 1); // incoming edge bevel vertex index
 
-                _IdxWritePtr[0] = l1i; _IdxWritePtr[1] = r1i; _IdxWritePtr[2] = r2i;
-                _IdxWritePtr[3] = l1i; _IdxWritePtr[4] = r2i; _IdxWritePtr[5] = l2i;
+                _IdxWritePtr[0] = (ImDrawIdx)l1i; _IdxWritePtr[1] = (ImDrawIdx)r1i; _IdxWritePtr[2] = (ImDrawIdx)r2i;
+                _IdxWritePtr[3] = (ImDrawIdx)l1i; _IdxWritePtr[4] = (ImDrawIdx)r2i; _IdxWritePtr[5] = (ImDrawIdx)l2i;
                 _IdxWritePtr += 6;
 
                 if (bevel)
                 {
-                    _IdxWritePtr[0] = l1i; _IdxWritePtr[1] = r1i; _IdxWritePtr[2] = ebi;
+                    _IdxWritePtr[0] = (ImDrawIdx)l1i; _IdxWritePtr[1] = (ImDrawIdx)r1i; _IdxWritePtr[2] = (ImDrawIdx)ebi;
                     _IdxWritePtr += 3;
                 }
                 else
@@ -845,35 +841,37 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
 
                 if (antialias)
                 {
-                    ImDrawIdx l1ai = _VtxCurrentIdx + (bevel_l ? 5 : 2);
-                    ImDrawIdx r1ai = _VtxCurrentIdx + (bevel_r ? 5 : 3);
-                    ImDrawIdx l2ai = vtx_next_id + 2;
-                    ImDrawIdx r2ai = vtx_next_id + 3;
+                    unsigned int l1ai = _VtxCurrentIdx + (bevel_l ? 5 : 2);
+                    unsigned int r1ai = _VtxCurrentIdx + (bevel_r ? 5 : 3);
+                    unsigned int l2ai = vtx_next_id + 2;
+                    unsigned int r2ai = vtx_next_id + 3;
 
-                    _IdxWritePtr[0] = l1ai; _IdxWritePtr[1] = l1i; _IdxWritePtr[2] = l2i;
-                    _IdxWritePtr[3] = l1ai; _IdxWritePtr[4] = l2i; _IdxWritePtr[5] = l2ai;
-                    _IdxWritePtr[6] = r1ai; _IdxWritePtr[7] = r1i; _IdxWritePtr[8] = r2i;
-                    _IdxWritePtr[9] = r1ai; _IdxWritePtr[10] = r2i; _IdxWritePtr[11] = r2ai;
+                    _IdxWritePtr[0] = (ImDrawIdx)l1ai; _IdxWritePtr[1]  = (ImDrawIdx)l1i; _IdxWritePtr[2]  = (ImDrawIdx)l2i;
+                    _IdxWritePtr[3] = (ImDrawIdx)l1ai; _IdxWritePtr[4]  = (ImDrawIdx)l2i; _IdxWritePtr[5]  = (ImDrawIdx)l2ai;
+                    _IdxWritePtr[6] = (ImDrawIdx)r1ai; _IdxWritePtr[7]  = (ImDrawIdx)r1i; _IdxWritePtr[8]  = (ImDrawIdx)r2i;
+                    _IdxWritePtr[9] = (ImDrawIdx)r1ai; _IdxWritePtr[10] = (ImDrawIdx)r2i; _IdxWritePtr[11] = (ImDrawIdx)r2ai;
                     _IdxWritePtr += 12;
 
                     if (bevel)
                     {
-                        _IdxWritePtr[0] = (_VtxCurrentIdx+(bevel_r ? 1 : 2));
-                        _IdxWritePtr[1] = (_VtxCurrentIdx+(bevel_r ? 3 : 0));
-                        _IdxWritePtr[2] = (_VtxCurrentIdx+(bevel_r ? 5 : 4));
+                        _IdxWritePtr[0] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 1 : 2);
+                        _IdxWritePtr[1] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 3 : 0);
+                        _IdxWritePtr[2] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 5 : 4);
 
-                        _IdxWritePtr[3] = (_VtxCurrentIdx+(bevel_r ? 1 : 2));
-                        _IdxWritePtr[4] = (_VtxCurrentIdx+(bevel_r ? 5 : 4));
-                        _IdxWritePtr[5] = (_VtxCurrentIdx+(bevel_r ? 4 : 5));
+                        _IdxWritePtr[3] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 1 : 2);
+                        _IdxWritePtr[4] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 5 : 4);
+                        _IdxWritePtr[5] = (ImDrawIdx)((_VtxCurrentIdx + bevel_r) ? 4 : 5);
                         _IdxWritePtr += 6;
                     }
                     else
+                    {
                         unused_indices += 6;
+                    }
                 }
             }
             _VtxCurrentIdx += vertex_count;
         }
-        PrimUnreserve(unused_indices, unused_vertices);
+        PrimUnreserve((int)unused_indices, (int)unused_vertices);
     }
 }
 
