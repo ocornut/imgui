@@ -3831,7 +3831,8 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
         {
             ImGui::Checkbox("Anti-aliased lines", &style.AntiAliasedLines);
             ImGui::SameLine(); HelpMarker("When disabling anti-aliasing lines, you'll probably want to disable borders in your style as well.");
-            ImGui::Checkbox("Use textures for anti-aliased lines", &style.TexturedAntiAliasedLines);
+            ImGui::Checkbox("Anti-aliased lines use texture data", &style.AntiAliasedLinesUseTexData);
+            ImGui::SameLine(); HelpMarker("Faster lines using texture data. Requires texture to use bilinear sampling (not nearest).");
             ImGui::Checkbox("Anti-aliased fill", &style.AntiAliasedFill);
             ImGui::PushItemWidth(100);
             ImGui::DragFloat("Curve Tessellation Tolerance", &style.CurveTessellationTol, 0.02f, 0.10f, 10.0f, "%.2f");

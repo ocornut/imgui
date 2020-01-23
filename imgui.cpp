@@ -935,7 +935,7 @@ ImGuiStyle::ImGuiStyle()
     DisplaySafeAreaPadding  = ImVec2(3,3);      // If you cannot see the edge of your screen (e.g. on a TV) increase the safe area padding. Covers popups/tooltips as well regular windows.
     MouseCursorScale        = 1.0f;             // Scale software rendered mouse cursor (when io.MouseDrawCursor is enabled). May be removed later.
     AntiAliasedLines        = true;             // Enable anti-aliased lines/borders. Disable if you are really tight on CPU/GPU.
-    TexturedAntiAliasedLines= true;             // Draw anti-aliased lines using textures where possible.
+    AntiAliasedLinesUseTexData = true;          // Draw anti-aliased lines using textures where possible.
     AntiAliasedFill         = true;             // Enable anti-aliased filled shapes (rounded rectangles, circles, etc.).
     CurveTessellationTol    = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleSegmentMaxError   = 1.60f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
@@ -3689,14 +3689,12 @@ void ImGui::NewFrame()
     g.DrawListSharedData.InitialFlags = ImDrawListFlags_None;
     if (g.Style.AntiAliasedLines)
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLines;
-    if (g.Style.TexturedAntiAliasedLines)
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_TexturedAALines;
+    if (g.Style.AntiAliasedLinesUseTexData && !(g.Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoAALines))
+        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedLinesUseTexData;
     if (g.Style.AntiAliasedFill)
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AntiAliasedFill;
     if (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset)
         g.DrawListSharedData.InitialFlags |= ImDrawListFlags_AllowVtxOffset;
-    if ((g.Style.TexturedAntiAliasedLines) && (!(g.Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoAALines)))
-        g.DrawListSharedData.InitialFlags |= ImDrawListFlags_TexturedAALines;
 
     g.BackgroundDrawList._ResetForNewFrame();
     g.BackgroundDrawList.PushTextureID(g.IO.Fonts->TexID);
