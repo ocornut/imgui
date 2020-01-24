@@ -95,6 +95,7 @@ Other Changes:
   XInput using code, and IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT to disable linking with XInput,
   the later may be problematic if compiling with recent Windows SDK and you want your app to run
   on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
+- Backends: Glut: Improved FreeGLUT support for MinGW. (#3004) [@podsvirov]
 - CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might

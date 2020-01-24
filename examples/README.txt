@@ -131,22 +131,18 @@ Third-party framework, graphics API and languages bindings are listed at:
 
     https://github.com/ocornut/imgui/wiki/Bindings
 
-    Languages:
-     C, C#, ChaiScript, CovScript, D, Go, Haxe/hxcpp, Java, JavaScript, Julia, Lua, Nim,
-     Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
+Including backends for:
 
-    Frameworks:
-     Amethyst, bsf, Cinder, Cocoa2d-x, Diligent Engine, Flexium, GML/GameMaker Studio,
-     GTK3 + OpenGL, Irrlicht, Ogre, OpenSceneGraph/OSG, openFrameworks, Orx, LÖVE+LUA,
-     Magnum, NanoRT, Nim Game Lib, px_render, Qt, Qt3d, SFML, Sokol, Unreal Engine 4, vtk...
-
-    Miscellaneous: Software Renderer, RemoteImgui, imgui-ws, etc.
+    AGS/Adventure Game Studio, Amethyst, bsf, Cinder, Cocos2d-x, Diligent Engine, Flexium,
+    GML/Game Maker Studio2, GTK3+OpenGL3, Irrlicht Engine, LÖVE+LUA, Magnum, NanoRT, Nim Game Lib,
+    Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, px_render, Qt/QtDirect3D, SFML, Sokol,
+    Unreal Engine 4, vtk, Win32 GDI, etc.
 
 Not sure which to use?
 Recommended platform/frameworks:
 
     GLFW    https://github.com/glfw/glfw        Use imgui_impl_glfw.cpp
-    SDL2    https://www.libsdl.org              Use imgui_impl_sdl.cp
+    SDL2    https://www.libsdl.org              Use imgui_impl_sdl.cpp
     Sokol   https://github.com/floooh/sokol     Use util/sokol_imgui.h in Sokol repository.
 
 Those will allow you to create portable applications and will solve and abstract away many issues.
