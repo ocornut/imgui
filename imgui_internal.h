@@ -269,9 +269,6 @@ static inline ImVec4 operator*(const ImVec4& lhs, const ImVec4& rhs)            
 #endif
 
 // Helpers: File System
-#if defined(__EMSCRIPTEN__) && !defined(IMGUI_DISABLE_FILE_FUNCTIONS)
-#define IMGUI_DISABLE_FILE_FUNCTIONS
-#endif
 #ifdef IMGUI_DISABLE_FILE_FUNCTIONS
 #define IMGUI_DISABLE_DEFAULT_FILE_FUNCTIONS
 typedef void* ImFileHandle;
