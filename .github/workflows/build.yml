@@ -10,6 +10,7 @@ jobs:
   Windows:
     runs-on: windows-2019
     env:
+      VS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\
       MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
       # Until gh-actions allow us to use env variables inside other env variables (because we need %GITHUB_WORKSPACE%) we have to use relative path to imgui/examples/example_name directory.
       SDL2_DIR: ..\..\SDL2-devel-2.0.10-VC\SDL2-2.0.10\
@@ -41,8 +42,14 @@ jobs:
           }
 
       # Not using matrix here because it would inflate job count too much. Check out and setup is done for every job and that makes build times way too long.
-      - name: Build example_null (extra warnings)
+      - name: Build example_null (extra warnings, mingw 64-bit)
         run: mingw32-make -C examples/example_null EXTRA_WARNINGS=1
+
+      - name: Build example_null (extra warnings, msvc 64-bit)
+        shell: cmd
+        run: |
+          cd examples\example_null
+          "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64 && .\build_win32.bat /W4
 
       - name: Build example_null (single file build)
         shell: bash
@@ -214,7 +221,7 @@ jobs:
         brew install glfw3
         brew install sdl2
 
-    - name: Build example_null (extra warnings)
+    - name: Build example_null (extra warnings, clang 64-bit)
       run: make -C examples/example_null EXTRA_WARNINGS=1
 
     - name: Build example_null (single file build)

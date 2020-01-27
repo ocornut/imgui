@@ -54,6 +54,8 @@ or view this file with any Markdown viewer.
 - Your programming IDE is your friend, find the type or function declaration to find comments associated to it.
 - The `ImGui::ShowMetricsWindow()` function exposes lots of internal information and tools. Although it is primary designed as a debugging tool, having access to that information tends to help understands concepts.
 
+##### [Return to Index](#index)
+
 ---
 
 ### Q. What is this library called?
@@ -61,6 +63,8 @@ or view this file with any Markdown viewer.
 **This library is called Dear ImGui**. Please refer to it as Dear ImGui (not ImGui, not IMGUI).
 
 (The library misleadingly started its life in 2014 as "ImGui" due to the fact that I didn't give it a proper name when when I released 1.0, and had no particular expectation that it would take off. However, the term IMGUI (immediate-mode graphical user interface) was coined before and is being used in variety of other situations e.g. Unity uses it own implementation of the IMGUI paradigm. To reduce the ambiguity without affecting existing code bases, I have decided in December 2015 a fully qualified name "Dear ImGui" for this library.
+
+##### [Return to Index](#index)
 
 ---
 
@@ -73,10 +77,9 @@ You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch 
 
 Many projects are using this branch and it is kept in sync with master regularly.
 
----
-
 ##### [Return to Index](#index)
 
+----
 
 # Q&A: Integration
 
@@ -97,6 +100,8 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 
 **Note:** Text input widget releases focus on "Return KeyDown", so the subsequent "Return KeyUp" event that your application receive will typically have `io.WantCaptureKeyboard == false`. Depending on your application logic it may or not be inconvenient. You might want to track which key-downs were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
 
+##### [Return to Index](#index)
+
 ---
 
 ### Q: How can I enable keyboard or gamepad controls?
@@ -105,6 +110,8 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 - Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting back-end).
 - See [Control Sheets for Gamepads](http://www.dearimgui.org/controls_sheets) (reference PNG/PSD for for PS4, XB1, Switch gamepads).
 - See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
+
+##### [Return to Index](#index)
 
 ---
 
@@ -117,15 +124,17 @@ to your host computer, based on the Synergy 1.x protocol. Make sure you download
 Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-like protocols.
 - Game console users: consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
 - You may also use a third party solution such as [Remote ImGui](https://github.com/JordiRos/remoteimgui) or [imgui-ws](https://github.com/ggerganov/imgui-ws) which sends the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine. See [Wiki](https://github.com/ocornut/imgui/wiki) index for most details.
-- For touch inputs, you can increase the hit box of widgets (via the `style.TouchPadding` setting) to accommodate
-for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing
-for screen real-estate and precision.
+- For touch inputs, you can increase the hit box of widgets (via the `style.TouchPadding` setting) to accommodate for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing for screen real-estate and precision.
+
+##### [Return to Index](#index)
 
 ---
 
 ### Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
 In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
 Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+
+##### [Return to Index](#index)
 
 ---
 
@@ -138,6 +147,7 @@ and **NOT** as
 
 ##### [Return to Index](#index)
 
+---
 
 # Q&A: Usage
 
@@ -257,6 +267,8 @@ will preserve your node open/closed state when the targeted object change.
 e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
 node open/closed state differently. See what makes more sense in your situation!
 
+##### [Return to Index](#index)
+
 ---
 
 ### Q: How can I display an image? What is ImTextureID, how does it work?
@@ -337,12 +349,16 @@ my_dx11_srv = (ID3D11ShaderResourceView*)my_void_ptr;   // cast a void* into a I
 ```
 Finally, you may call `ImGui::ShowMetricsWindow()` to explore/visualize/understand how the ImDrawList are generated.
 
+##### [Return to Index](#index)
+
 ---
 
 ### Q: How can I use my own math types instead of ImVec2/ImVec4?
 
 You can edit [imconfig.h](https://github.com/ocornut/imgui/blob/master/imconfig.h) and setup the `IM_VEC2_CLASS_EXTRA`/`IM_VEC4_CLASS_EXTRA` macros to add implicit type conversions.
 This way you'll be able to use your own types everywhere, e.g. passing `MyVector2` or `glm::vec2` to ImGui functions instead of `ImVec2`.
+
+##### [Return to Index](#index)
 
 ---
 
@@ -365,6 +381,8 @@ is that you will need to build lots of strings on the fly, and their maximum len
 One possible implementation of a helper to facilitate printf-style building of strings: https://github.com/ocornut/Str
 This is a small helper where you can instance strings with configurable local buffers length. Many game engines will
 provide similar or better string helpers.
+
+##### [Return to Index](#index)
 
 ---
 
@@ -402,6 +420,7 @@ ImGui::End();
 
 ##### [Return to Index](#index)
 
+---
 
 # Q&A: Fonts, Text
 
@@ -429,6 +448,8 @@ io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
 
+##### [Return to Index](#index)
+
 ---
 
 ### Q: How can I easily use icons in my application?
@@ -438,6 +459,8 @@ You may want to see `ImFontConfig::GlyphMinAdvanceX` to make your icon look mono
 (Read the [docs/FONTS.txt](https://github.com/ocornut/imgui/blob/master/docs/FONTS.txt) file for more details about icons font loading.)
 With some extra effort, you may use colorful icon by registering custom rectangle space inside the font atlas,
 and copying your own graphics data into it. See docs/FONTS.txt about using the AddCustomRectFontGlyph API.
+
+##### [Return to Index](#index)
 
 ---
 
@@ -470,6 +493,8 @@ io.Fonts->AddFontDefault();
 io.Fonts->AddFontFromFileTTF("fontawesome-webfont.ttf", 16.0f, &config, ranges); // Merge icon font
 io.Fonts->AddFontFromFileTTF("myfontfile.ttf", size_pixels, NULL, &config, io.Fonts->GetGlyphRangesJapanese()); // Merge japanese glyphs
 ```
+
+##### [Return to Index](#index)
 
 ---
 
@@ -504,6 +529,7 @@ the default implementation of io.ImeSetInputScreenPosFn() to set your Microsoft 
 
 ##### [Return to Index](#index)
 
+---
 
 # Q&A: Concerns
 
@@ -515,6 +541,10 @@ You may take a look at:
 - [Software using Dear ImGui](https://github.com/ocornut/imgui/wiki/Software-using-dear-imgui)
 - [Gallery](https://github.com/ocornut/imgui/issues/2847)
 
+##### [Return to Index](#index)
+
+---
+
 ### Q: Can you create elaborate/serious tools with Dear ImGui?
 
 Yes. People have written game editors, data browsers, debuggers, profilers and all sort of non-trivial tools with the library. In my experience the simplicity of the API is very empowering. Your UI runs close to your live data. Make the tools always-on and everybody in the team will be inclined to create new tools (as opposed to more "offline" UI toolkits where only a fraction of your team effectively creates tools). The list of sponsors below is also an indicator that serious game teams have been using the library.
@@ -523,12 +553,20 @@ Dear ImGui is very programmer centric and the immediate-mode GUI paradigm might 
 
 Dear ImGui is built to be efficient and scalable toward the needs for AAA-quality applications running all day. The IMGUI paradigm offers different opportunities for optimization that the more typical RMGUI paradigm.
 
+##### [Return to Index](#index)
+
+---
+
 ### Q: Can you reskin the look of Dear ImGui?
 
 Somehow. You can alter the look of the interface to some degree: changing colors, sizes, padding, rounding, fonts. However, as Dear ImGui is designed and optimized to create debug tools, the amount of skinning you can apply is limited. There is only so much you can stray away from the default look and feel of the interface. Dear ImGui is NOT designed to create user interface for games, although with ingenious use of the low-level API you can do it.
 
 A reasonably skinned application may look like (screenshot from [#2529](https://github.com/ocornut/imgui/issues/2529#issuecomment-524281119))
 ![minipars](https://user-images.githubusercontent.com/314805/63589441-d9794f00-c5b1-11e9-8d96-cfc1b93702f7.png)
+
+##### [Return to Index](#index)
+
+---
 
 ### Q: Why using C++ (as opposed to C)?
 
@@ -538,6 +576,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 
 ##### [Return to Index](#index)
 
+---
 
 # Q&A: Community
 

@@ -113,7 +113,7 @@ List of Platforms Bindings in this repository:
     imgui_impl_osx.mm         ; macOS native API (not as feature complete as glfw/sdl back-ends)
     imgui_impl_sdl.cpp        ; SDL2 (Windows, macOS, Linux, iOS, Android) https://www.libsdl.org
     imgui_impl_win32.cpp      ; Win32 native API (Windows)
-    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (absolutely not recommended in 2019)
+    imgui_impl_glut.cpp       ; GLUT/FreeGLUT (absolutely not recommended in 2020!)
 
 List of Renderer Bindings in this repository:
 
@@ -138,22 +138,18 @@ Third-party framework, graphics API and languages bindings are listed at:
 
     https://github.com/ocornut/imgui/wiki/Bindings
 
-    Languages:
-     C, C#, ChaiScript, CovScript, D, Go, Haxe/hxcpp, Java, JavaScript, Julia, Lua, Nim,
-     Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
+Including backends for:
 
-    Frameworks:
-     Amethyst, bsf, Cinder, Cocoa2d-x, Diligent Engine, Flexium, GML/GameMaker Studio,
-     GTK3 + OpenGL, Irrlicht, Ogre, OpenSceneGraph/OSG, openFrameworks, Orx, LÖVE+LUA,
-     Magnum, NanoRT, Nim Game Lib, px_render, Qt, Qt3d, SFML, Sokol, Unreal Engine 4, vtk...
-
-    Miscellaneous: Software Renderer, RemoteImgui, imgui-ws, etc.
+    AGS/Adventure Game Studio, Amethyst, bsf, Cinder, Cocos2d-x, Diligent Engine, Flexium,
+    GML/Game Maker Studio2, GTK3+OpenGL3, Irrlicht Engine, LÖVE+LUA, Magnum, NanoRT, Nim Game Lib,
+    Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, px_render, Qt/QtDirect3D, SFML, Sokol,
+    Unreal Engine 4, vtk, Win32 GDI, etc.
 
 Not sure which to use?
 Recommended platform/frameworks:
 
     GLFW    https://github.com/glfw/glfw        Use imgui_impl_glfw.cpp
-    SDL2    https://www.libsdl.org              Use imgui_impl_sdl.cp
+    SDL2    https://www.libsdl.org              Use imgui_impl_sdl.cpp
     Sokol   https://github.com/floooh/sokol     Use util/sokol_imgui.h in Sokol repository.
 
 Those will allow you to create portable applications and will solve and abstract away many issues.

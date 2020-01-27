@@ -124,6 +124,7 @@ Breaking Changes:
   documented (can only unreserve from the last reserve call). If you suspect you ever
   used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
   calls. [@ShironekoBen]
+- ImDrawList::AddCircle()/AddCircleFilled() functions don't accept negative radius.
 - Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
   technically supports it, future code may not so we're putting the restriction ahead.
 - imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
@@ -139,11 +140,15 @@ Other Changes:
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
 - ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
+- ImDrawList: AddCircle(), AddCircleFilled() API can now auto-tessellate when provided a segment
+  count of zero. Alter tessellation quality with 'style.CircleSegmentMaxError'. [@ShironekoBen]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count
   selection, those new api can fill a gap. [@ShironekoBen]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- Misc: Disable format checks when using stb_printf, to allow using extra formats.
+  Made IMGUI_USE_STB_SPRINTF a properly documented imconfig.h flag. (#2954) [@loicmolinari]
 - Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp
   files in a same compilation unit. Actual users of that technique (also called "Unity builds")
   can generally provide this themselves, so we don't really recommend you use this. [@rokups]
@@ -151,10 +156,15 @@ Other Changes:
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
   on Wayland). (#2800, #2802) [@NeroBurner]
+- Backends: GLFW, SDL: report Windows key (io.KeySuper) as always released. Neither GLFW nor SDL can
+  correctly report the key release in every cases (e.g. when using Win+V) causing problems with some
+  widgets. The next release of GLFW (3.4+) will have a fix for it. However since it is both difficult
+  and discouraged to make use of this key for Windows application anyway, we just hide it. (#2976)
 - Backends: Win32: Added support for #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD to disable all
   XInput using code, and IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT to disable linking with XInput,
   the later may be problematic if compiling with recent Windows SDK and you want your app to run
   on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
+- Backends: Glut: Improved FreeGLUT support for MinGW. (#3004) [@podsvirov]
 - CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
 - Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
@@ -231,6 +241,8 @@ Other Changes:
 - Examples: DX12: Using IDXGIDebug1::ReportLiveObjects() when DX12_ENABLE_DEBUG_LAYER is enabled.
 - Examples: Emscripten: Removed BINARYEN_TRAP_MODE=clamp from Makefile which was removed in Emscripten 1.39.0
   but required prior to 1.39.0, making life easier for absolutely no-one. (#2877, #2878) [@podsvirov]
+- Backends: OpenGL2: Explicitly backup, setup and restore GL_TEXTURE_ENV to increase compatibility with
+  legacy OpenGL applications. (#3000)
 - Backends: OpenGL3: Fix building with pre-3.2 GL loaders which do not expose glDrawElementsBaseVertex(),
   using runtime GL version to decide if we set ImGuiBackendFlags_RendererHasVtxOffset. (#2866, #2852) [@dpilawa]
 - Backends: OSX: Fix using Backspace key. (#2578, #2817, #2818) [@DiligentGraphics]
