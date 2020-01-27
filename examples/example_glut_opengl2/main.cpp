@@ -6,8 +6,8 @@
 // !!! Nowadays, prefer using GLFW or SDL instead!
 
 #include "imgui.h"
-#include "../imgui_impl_glut.h"
-#include "../imgui_impl_opengl2.h"
+#include "imgui_impl_glut.h"
+#include "imgui_impl_opengl2.h"
 #ifdef __APPLE__
     #include <GLUT/glut.h>
 #else

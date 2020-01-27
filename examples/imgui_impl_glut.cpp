@@ -39,7 +39,12 @@ static int g_Time = 0;          // Current time, in milliseconds
 bool ImGui_ImplGLUT_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
+
+#ifdef FREEGLUT
+    io.BackendPlatformName ="imgui_impl_glut (freeglut)";
+#else
     io.BackendPlatformName ="imgui_impl_glut";
+#endif
 
     g_Time = 0;
 
