@@ -950,9 +950,12 @@ static inline void      NavUpdateAnyRequestFlag();
 static bool             NavScoreItem(ImGuiNavMoveResult* result, ImRect cand);
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
+static ImVec2           NavCalcPreferredRefPosPixelgrid();
 static void             NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window);
 static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static int              FindWindowFocusIndex(ImGuiWindow* window);
+static ImVec2           VirtualToPixelPos(ImVec2 pos);
+static ImVec2           PixelToVirtualPos(ImVec2 pos);
 
 // Error Checking
 static void             ErrorCheckNewFrameSanityChecks();
@@ -8792,18 +8795,20 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
     {
         // Position tooltip (always follows mouse)
         float sc = g.Style.MouseCursorScale;
-        ImVec2 ref_pos = NavCalcPreferredRefPos();
+        ImVec2 ref_pos = NavCalcPreferredRefPosPixelgrid();
         ImRect r_outer = GetWindowAllowedExtentRect(window, &dpi_scale);
-        r_outer /= dpi_scale;
+        // r_outer /= dpi_scale;
         ImRect r_avoid;
         if (!g.NavDisableHighlight && g.NavDisableMouseHover && !(g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos))
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 16, ref_pos.y + 8);
         else
             r_avoid = ImRect(ref_pos.x - 16, ref_pos.y - 8, ref_pos.x + 24 * sc, ref_pos.y + 24 * sc); // FIXME: Hard-coded based on mouse cursor shape expectation. Exact dimension not very important.
-        ImVec2 pos = FindBestWindowPosForPopupEx(ref_pos, window->Size, &window->AutoPosLastDirection, r_outer, r_avoid);
+        // r_avoid *= dpi;  // TODO: useful but not strictly necessary.
+
+        ImVec2 pos = FindBestWindowPosForPopupEx(ref_pos, window->Size * window->Viewport->DpiScale, &window->AutoPosLastDirection, r_outer, r_avoid);
         if (window->AutoPosLastDirection == ImGuiDir_None)
             pos = ref_pos + ImVec2(2, 2); // If there's not enough room, for tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
-        return pos;
+        return PixelToVirtualPos(pos);
     }
     IM_ASSERT(0);
     return window->Pos;
@@ -9242,6 +9247,42 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
         ImRect visible_rect = g.NavWindow->Viewport->GetMainRect();
         return ImFloorToPixel(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloorToPixel() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
     }
+}
+
+static ImVec2 ImGui::NavCalcPreferredRefPosPixelgrid()
+{
+    ImGuiContext& g = *GImGui;
+    ImVec2 pos = NavCalcPreferredRefPos();
+    if (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow)
+        pos *= g.MouseViewport->DpiScale;
+    else
+        pos *= g.NavWindow->Viewport->DpiScale;
+    return pos;
+}
+
+static ImVec2 ImGui::VirtualToPixelPos(ImVec2 pos)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
+    {
+        const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
+        ImVec2 platform_pos = pos * mon.DpiScale;
+        if (ImRect(mon.MainPos, mon.MainPos + mon.MainSize).Contains(platform_pos))
+            return platform_pos;
+    }
+    return ImVec2(-1, -1);
+}
+
+static ImVec2 ImGui::PixelToVirtualPos(ImVec2 pos)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = 0; i < g.PlatformIO.Monitors.Size; i++)
+    {
+        const ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[i];
+        if (ImRect(mon.MainPos, mon.MainPos + mon.MainSize).Contains(pos))
+            return pos / mon.DpiScale;
+    }
+    return ImVec2(-1, -1);
 }
 
 float ImGui::GetNavInputAmount(ImGuiNavInput n, ImGuiInputReadMode mode)
@@ -11327,7 +11368,7 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
             bool use_mouse_ref = (g.NavDisableHighlight || !g.NavDisableMouseHover || !g.NavWindow);
             bool mouse_valid = IsMousePosValid(&mouse_ref);
             if ((window->Appearing || (flags & (ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_ChildMenu))) && (!use_mouse_ref || mouse_valid))
-                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos(((use_mouse_ref && mouse_valid) ? mouse_ref : NavCalcPreferredRefPos()) * window->Viewport->DpiScale);
+                window->ViewportAllowPlatformMonitorExtend = FindPlatformMonitorForPos((use_mouse_ref && mouse_valid) ? VirtualToPixelPos(mouse_ref) : NavCalcPreferredRefPosPixelgrid());
             else
                 window->ViewportAllowPlatformMonitorExtend = window->Viewport->PlatformMonitor;
         }
