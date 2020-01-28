@@ -4867,7 +4867,7 @@ void ShowExampleAppDocuments(bool* p_open)
         Target_DockSpaceAndWindow   // Create documents as regular windows, and create an embedded dockspace
     };
     static Target opt_target = Target_Tab;
-    static bool   opt_reorderable = true;
+    static bool opt_reorderable = true;
     static ImGuiTabBarFlags opt_fitting_flags = ImGuiTabBarFlags_FittingPolicyDefault_;
 
     // When (opt_target == Target_DockSpaceAndWindow) there is the possibily that one of our child Document window (e.g. "Eggplant")

@@ -6366,8 +6366,6 @@ bool ImGui::MenuItem(const char* label, const char* shortcut, bool* p_selected, 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: BeginTabBar, EndTabBar, etc.
 //-------------------------------------------------------------------------
-// [BETA API] API may evolve!
-//-------------------------------------------------------------------------
 // - BeginTabBar()
 // - BeginTabBarEx() [Internal]
 // - EndTabBar()
@@ -6925,8 +6923,6 @@ static ImGuiTabItem* ImGui::TabBarTabListPopupButton(ImGuiTabBar* tab_bar)
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: BeginTabItem, EndTabItem, etc.
-//-------------------------------------------------------------------------
-// [BETA API] API may evolve!
 //-------------------------------------------------------------------------
 // - BeginTabItem()
 // - EndTabItem()
