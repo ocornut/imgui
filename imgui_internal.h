@@ -843,6 +843,7 @@ struct ImGuiColumns
     ImRect              HostClipRect;           // Backup of ClipRect at the time of BeginColumns()
     ImRect              HostWorkRect;           // Backup of WorkRect at the time of BeginColumns()
     ImVector<ImGuiColumnData> Columns;
+    ImDrawListSplitter  Splitter;
 
     ImGuiColumns()      { Clear(); }
     void Clear()

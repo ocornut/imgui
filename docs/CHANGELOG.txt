@@ -79,6 +79,8 @@ Other Changes:
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count
   selection, those new api can fill a gap. [@ShironekoBen]
+- Columns: ImDrawList::Channels* functions now work inside columns. Added extra comments to
+  suggest using user-owned ImDrawListSplitter instead of ImDrawList functions. [@rokups]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - Misc: Disable format checks when using stb_printf, to allow using extra formats.
   Made IMGUI_USE_STB_SPRINTF a properly documented imconfig.h flag. (#2954) [@loicmolinari]
