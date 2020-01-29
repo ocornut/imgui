@@ -464,9 +464,13 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         return false;
     }
 
-    // Default behavior requires click+release on same spot
+    // Default only reacts to left mouse button
+    if ((flags & ImGuiButtonFlags_MouseButtonMask_) == 0)
+        flags |= ImGuiButtonFlags_MouseButtonDefault_;
+
+    // Default behavior requires click + release inside bounding box
     if ((flags & ImGuiButtonFlags_PressedOnMask_) == 0)
-        flags |= ImGuiButtonFlags_PressedOnClickRelease;
+        flags |= ImGuiButtonFlags_PressedOnDefault_;
 
     ImGuiWindow* backup_hovered_window = g.HoveredWindow;
     const bool flatten_hovered_children = (flags & ImGuiButtonFlags_FlattenChildren) && g.HoveredRootWindow == window;
@@ -505,38 +509,55 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (hovered && (flags & ImGuiButtonFlags_AllowItemOverlap) && (g.HoveredIdPreviousFrame != id && g.HoveredIdPreviousFrame != 0))
         hovered = false;
 
-    // Mouse
+    // Mouse handling
     if (hovered)
     {
         if (!(flags & ImGuiButtonFlags_NoKeyModifiers) || (!g.IO.KeyCtrl && !g.IO.KeyShift && !g.IO.KeyAlt))
         {
-            if ((flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere)) && g.IO.MouseClicked[0])
+            // Poll buttons
+            int mouse_button_clicked = -1;
+            int mouse_button_released = -1;
+            if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseClicked[0])         { mouse_button_clicked = 0; }
+            else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseClicked[1])   { mouse_button_clicked = 1; }
+            else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseClicked[2])  { mouse_button_clicked = 2; }
+            if ((flags & ImGuiButtonFlags_MouseButtonLeft) && g.IO.MouseReleased[0])        { mouse_button_released = 0; }
+            else if ((flags & ImGuiButtonFlags_MouseButtonRight) && g.IO.MouseReleased[1])  { mouse_button_released = 1; }
+            else if ((flags & ImGuiButtonFlags_MouseButtonMiddle) && g.IO.MouseReleased[2]) { mouse_button_released = 2; }
+
+            if (mouse_button_clicked != -1 && g.ActiveId != id)
             {
-                SetActiveID(id, window);
-                if (!(flags & ImGuiButtonFlags_NoNavFocus))
-                    SetFocusID(id, window);
-                FocusWindow(window);
+                if (flags & (ImGuiButtonFlags_PressedOnClickRelease | ImGuiButtonFlags_PressedOnClickReleaseAnywhere))
+                {
+                    SetActiveID(id, window);
+                    g.ActiveIdMouseButton = mouse_button_clicked;
+                    if (!(flags & ImGuiButtonFlags_NoNavFocus))
+                        SetFocusID(id, window);
+                    FocusWindow(window);
+                }
+                if ((flags & ImGuiButtonFlags_PressedOnClick) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDoubleClicked[mouse_button_clicked]))
+                {
+                    pressed = true;
+                    if (flags & ImGuiButtonFlags_NoHoldingActiveId)
+                        ClearActiveID();
+                    else
+                        SetActiveID(id, window); // Hold on ID
+                    g.ActiveIdMouseButton = mouse_button_clicked;
+                    FocusWindow(window);
+                }
             }
-            if (((flags & ImGuiButtonFlags_PressedOnClick) && g.IO.MouseClicked[0]) || ((flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDoubleClicked[0]))
+            if ((flags & ImGuiButtonFlags_PressedOnRelease) && mouse_button_released != -1)
             {
-                pressed = true;
-                if (flags & ImGuiButtonFlags_NoHoldingActiveId)
-                    ClearActiveID();
-                else
-                    SetActiveID(id, window); // Hold on ID
-                FocusWindow(window);
-            }
-            if ((flags & ImGuiButtonFlags_PressedOnRelease) && g.IO.MouseReleased[0])
-            {
-                if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay))  // Repeat mode trumps <on release>
+                // Repeat mode trumps on release behavior
+                if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay))
                     pressed = true;
                 ClearActiveID();
             }
 
             // 'Repeat' mode acts when held regardless of _PressedOn flags (see table above).
             // Relies on repeat logic of IsMouseClicked() but we may as well do it ourselves if we end up exposing finer RepeatDelay/RepeatRate settings.
-            if ((flags & ImGuiButtonFlags_Repeat) && g.ActiveId == id && g.IO.MouseDownDuration[0] > 0.0f && IsMouseClicked(0, true))
-                pressed = true;
+            if (g.ActiveId == id && (flags & ImGuiButtonFlags_Repeat))
+                if (g.IO.MouseDownDuration[g.ActiveIdMouseButton] > 0.0f && IsMouseClicked(g.ActiveIdMouseButton, true))
+                    pressed = true;
         }
 
         if (pressed)
@@ -548,7 +569,6 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     if (g.NavId == id && !g.NavDisableHighlight && g.NavDisableMouseHover && (g.ActiveId == 0 || g.ActiveId == id || g.ActiveId == window->MoveId))
         if (!(flags & ImGuiButtonFlags_NoHoveredOnNav))
             hovered = true;
-
     if (g.NavActivateDownId == id)
     {
         bool nav_activated_by_code = (g.NavActivateId == id);
@@ -568,24 +588,25 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
     bool held = false;
     if (g.ActiveId == id)
     {
-        if (pressed)
-            g.ActiveIdHasBeenPressedBefore = true;
         if (g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
             if (g.ActiveIdIsJustActivated)
                 g.ActiveIdClickOffset = g.IO.MousePos - bb.Min;
-            if (g.IO.MouseDown[0])
+
+            const int mouse_button = g.ActiveIdMouseButton;
+            IM_ASSERT(mouse_button >= 0 && mouse_button < ImGuiMouseButton_COUNT);
+            if (g.IO.MouseDown[mouse_button])
             {
                 held = true;
             }
             else
             {
-                const bool release_in = hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease) != 0;
-                const bool release_anywhere = (flags & ImGuiButtonFlags_PressedOnClickReleaseAnywhere) != 0;
+                bool release_in = hovered && (flags & ImGuiButtonFlags_PressedOnClickRelease) != 0;
+                bool release_anywhere = (flags & ImGuiButtonFlags_PressedOnClickReleaseAnywhere) != 0;
                 if ((release_in || release_anywhere) && !g.DragDropActive)
                 {
-                    bool is_double_click_release = (flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDownWasDoubleClick[0];
-                    bool is_repeating_already = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[0] >= g.IO.KeyRepeatDelay; // Repeat mode trumps <on release>
+                    bool is_double_click_release = (flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDownWasDoubleClick[mouse_button];
+                    bool is_repeating_already = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button] >= g.IO.KeyRepeatDelay; // Repeat mode trumps <on release>
                     if (!is_double_click_release && !is_repeating_already)
                         pressed = true;
                 }
@@ -599,6 +620,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if (g.NavActivateDownId != id)
                 ClearActiveID();
         }
+        if (pressed)
+            g.ActiveIdHasBeenPressedBefore = true;
     }
 
     if (out_hovered) *out_hovered = hovered;
