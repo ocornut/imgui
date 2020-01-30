@@ -100,12 +100,13 @@ Other Changes:
   on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
 - Backends: Glut: Improved FreeGLUT support for MinGW. (#3004) [@podsvirov]
 - Backends: Emscripten: Avoid forcefully setting IMGUI_DISABLE_FILE_FUNCTIONS. (#3005) [@podsvirov]
-- Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
+- Examples: OpenGL: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
   automatically use it). (#2919, #2798)
+- Examples: OpenGL: Added support for glbindings OpenGL loader. (#2870) [@rokups]
+- Examples: Emscripten: Demonstrating embedding fonts in Makefile and code. (#2953) [@Oipo]
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
   even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
-- Examples: Added support for glbindings OpenGL loader. (#2870) [@rokups]
 
 
 -----------------------------------------------------------------------
