@@ -140,6 +140,8 @@ Other Changes:
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
 - ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
+- MenuBar: Fix minor clipping issue where occasionally a menu text can overlap the right-most border.
+- Window: Fix SetNextWindowBgAlpha(1.0f) failing to override alpha component. (#3007) [@Albog]
 - ImDrawList: AddCircle(), AddCircleFilled() API can now auto-tessellate when provided a segment
   count of zero. Alter tessellation quality with 'style.CircleSegmentMaxError'. [@ShironekoBen]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
