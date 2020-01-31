@@ -5626,7 +5626,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
 
         // Docking: Unhide tab bar (small triangle in the corner), drag from small triangle to quickly undock
         ImGuiDockNode* node = window->DockNode;
-        if (node && window->DockIsActive && node->IsHiddenTabBar() && !node->IsNoTabBar())
+        if (window->DockIsActive && node->IsHiddenTabBar() && !node->IsNoTabBar())
         {
             float unhide_sz_draw = ImFloor(g.FontSize * 0.70f);
             float unhide_sz_hit = ImFloor(g.FontSize * 0.55f);
@@ -5850,6 +5850,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         {
             BeginDocked(window, p_open);
             flags = window->Flags;
+            if (window->DockIsActive)
+                IM_ASSERT(window->DockNode != NULL);
 
             // Docking currently override constraints
             g.NextWindowData.Flags &= ~ImGuiNextWindowDataFlags_HasSizeConstraint;
@@ -13135,7 +13137,7 @@ bool ImGui::DockNodeCalcDropRectsAndTestMousePos(const ImRect& parent, ImGuiDir 
         //off = ImVec2(ImFloor(parent.GetWidth() * 0.5f - GetFrameHeightWithSpacing() * 1.4f - hs_h), ImFloor(parent.GetHeight() * 0.5f - GetFrameHeightWithSpacing() * 1.4f - hs_h));
         hs_w = ImFloor(hs_for_central_nodes * 1.50f);
         hs_h = ImFloor(hs_for_central_nodes * 0.80f);
-        off = ImVec2(ImFloor(parent.GetWidth() * 0.5f - GetFrameHeightWithSpacing() * 0.0f - hs_h), ImFloor(parent.GetHeight() * 0.5f - GetFrameHeightWithSpacing() * 0.0f - hs_h));
+        off = ImVec2(ImFloor(parent.GetWidth() * 0.5f - hs_h), ImFloor(parent.GetHeight() * 0.5f - hs_h));
     }
     else
     {

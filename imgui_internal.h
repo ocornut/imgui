@@ -1691,14 +1691,14 @@ struct IMGUI_API ImGuiWindow
     int                     MemoryDrawListVtxCapacity;
 
     // Docking
-    ImGuiDockNode*          DockNode;                           // Which node are we docked into
+    ImGuiDockNode*          DockNode;                           // Which node are we docked into. Important: Prefer testing DockIsActive in many cases as this will still be set when the dock node is hidden.
     ImGuiDockNode*          DockNodeAsHost;                     // Which node are we owning (for parent windows)
-    ImGuiID                 DockId;                             // Backup of last valid DockNode->Id, so single value remember their dock node id
+    ImGuiID                 DockId;                             // Backup of last valid DockNode->ID, so single window remember their dock node id even when they are not bound any more
     ImGuiItemStatusFlags    DockTabItemStatusFlags;
     ImRect                  DockTabItemRect;
     short                   DockOrder;                          // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
-    bool                    DockIsActive        :1;             // =~ (DockNode != NULL) && (DockNode->Windows.Size > 1)
-    bool                    DockTabIsVisible    :1;             // Is the window visible this frame? =~ is the corresponding tab selected?
+    bool                    DockIsActive        :1;             // When docking artifacts are actually visible. When this is set, DockNode is guaranteed to be != NULL. ~~ (DockNode != NULL) && (DockNode->Windows.Size > 1). 
+    bool                    DockTabIsVisible    :1;             // Is our window visible this frame? ~~ is the corresponding tab selected?
     bool                    DockTabWantClose    :1;
 
 public:
