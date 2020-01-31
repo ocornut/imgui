@@ -8,6 +8,7 @@ Changes to the examples/bindings are included within the individual .cpp files i
 RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
 REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
 COMMITS HISTORY:                https://github.com/ocornut/imgui/commits/master
+FAQ                             https://www.dearimgui.org/faq/
 
 WHEN TO UPDATE?
 
@@ -34,6 +35,7 @@ HOW TO UPDATE?
 -----------------------------------------------------------------------
 
 Breaking Changes:
+
 - Removed redirecting functions/enums names that were marked obsolete in 1.53 (December 2017):
   - ShowTestWindow()                    -> use ShowDemoWindow()
   - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
@@ -63,6 +65,7 @@ Breaking Changes:
   adding multiple points into it, you may need to fix your initial value.
 
 Other Changes:
+
 - Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
   We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
 - ColorEdit: Fix label alignment when using ImGuiColorEditFlags_NoInputs. (#2955) [@rokups]
@@ -118,6 +121,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.74
 
 Breaking Changes:
+
 - Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
   - Begin() [old 5 args version]     -> use Begin() [3 args], use SetNextWindowSize() SetNextWindowBgAlpha() if needed
   - IsRootWindowOrAnyChildHovered()  -> use IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)
@@ -142,6 +146,7 @@ Breaking Changes:
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
+
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
 - InputText: Filter out ASCII 127 (DEL) emitted by low-level OSX layer, as we are using the Key value. (#2578)
 - Layout: Fixed a couple of subtle bounding box vertical positioning issues relating to the handling of text
@@ -274,6 +279,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72
 
 Breaking Changes:
+
 - Removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017):
   - ImGuiCol_Column*, ImGuiSetCond_* enums.
   - IsItemHoveredRect(), IsPosHoveringAnyWindow(), IsMouseHoveringAnyWindow(), IsMouseHoveringWindow() functions.
@@ -285,6 +291,7 @@ Breaking Changes:
   Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
+
 - Scrolling: Made mouse-wheel scrolling lock the underlying window until the mouse is moved again or
   until a short delay expires (~2 seconds). This allow uninterrupted scroll even if child windows are
   passing under the mouse cursor. (#2604)
@@ -357,6 +364,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.71
 
 Breaking Changes:
+
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
 - Window: rendering of child windows outer decorations (e.g. bg color, border, scrollbars) is now
@@ -367,6 +375,7 @@ Breaking Changes:
   to the creation of overlapping child windows. Please reach out if you are affected by this change!
 
 Other Changes:
+
 - Window: clarified behavior of SetNextWindowContentSize(). Content size is defined as the size available
   after removal of WindowPadding on each sides. So SetNextWindowContentSize(ImVec2(100,100)) + auto-resize
   will always allow submitting a 100x100 item without creating a scrollbar, regarding of WindowPadding.
@@ -439,6 +448,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.70
 
 Breaking Changes:
+
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness
   up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines,
   they will appear a little thicker now. (#2518) [@rmitton]
@@ -451,6 +461,7 @@ Breaking Changes:
   on them but it is possible you have!).
 
 Other Changes:
+
 - ImDrawList: Added ImDrawCallback_ResetRenderState, a special ImDrawList::AddCallback() value
   to request the renderer back-end to reset its render state. (#2037, #1639, #2452)
   Examples: Added support for ImDrawCallback_ResetRenderState in all renderer back-ends. Each
