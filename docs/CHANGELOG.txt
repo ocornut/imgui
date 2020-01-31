@@ -68,6 +68,8 @@ Other Changes:
 
 - Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
   We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
+- Nav: Fixed a bug where the initial CTRL-Tab press while in a child window sometimes selected
+  the current root window instead of always selecting the previous root window. (#787)
 - ColorEdit: Fix label alignment when using ImGuiColorEditFlags_NoInputs. (#2955) [@rokups]
 - ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
   when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
