@@ -6050,7 +6050,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 
     // Bring to front
     BringWindowToFocusFront(focus_front_window);
-    if ((display_front_window->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
+    if (((window->Flags | display_front_window->Flags) & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
         BringWindowToDisplayFront(display_front_window);
 }
 

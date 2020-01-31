@@ -78,6 +78,8 @@ Other Changes:
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
 - MenuBar: Fix minor clipping issue where occasionally a menu text can overlap the right-most border.
 - Window: Fix SetNextWindowBgAlpha(1.0f) failing to override alpha component. (#3007) [@Albog]
+- Window: When testing for the presence of the ImGuiWindowFlags_NoBringToFrontOnFocus flag we
+  test both the focused/clicked window (which could be a child window) and the root window.
 - ImDrawList: AddCircle(), AddCircleFilled() API can now auto-tessellate when provided a segment
   count of zero. Alter tessellation quality with 'style.CircleSegmentMaxError'. [@ShironekoBen]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
