@@ -8928,11 +8928,11 @@ void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags mov
 // This way we could find the last focused window among our children. It would be much less confusing this way?
 static void ImGui::NavSaveLastChildNavWindowIntoParent(ImGuiWindow* nav_window)
 {
-    ImGuiWindow* parent_window = nav_window;
-    while (parent_window && (parent_window->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (parent_window->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
-        parent_window = parent_window->ParentWindow;
-    if (parent_window && parent_window != nav_window)
-        parent_window->NavLastChildNavWindow = nav_window;
+    ImGuiWindow* parent = nav_window;
+    while (parent && parent->RootWindowDockStop != parent && (parent->Flags & ImGuiWindowFlags_ChildWindow) != 0 && (parent->Flags & (ImGuiWindowFlags_Popup | ImGuiWindowFlags_ChildMenu)) == 0)
+        parent = parent->ParentWindow;
+    if (parent && parent != nav_window)
+        parent->NavLastChildNavWindow = nav_window;
 }
 
 // Restore the last focused child.
