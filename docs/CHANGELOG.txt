@@ -8,6 +8,7 @@ Changes to the examples/bindings are included within the individual .cpp files i
 RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
 REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
 COMMITS HISTORY:                https://github.com/ocornut/imgui/commits/master
+FAQ                             https://www.dearimgui.org/faq/
 
 WHEN TO UPDATE?
 
@@ -103,6 +104,7 @@ Other changes:
 -----------------------------------------------------------------------
 
 Breaking Changes:
+
 - Removed redirecting functions/enums names that were marked obsolete in 1.53 (December 2017):
   - ShowTestWindow()                    -> use ShowDemoWindow()
   - IsRootWindowFocused()               -> use IsWindowFocused(ImGuiFocusedFlags_RootWindow)
@@ -132,8 +134,11 @@ Breaking Changes:
   adding multiple points into it, you may need to fix your initial value.
 
 Other Changes:
+
 - Inputs: Added ImGuiMouseButton enum for convenience (e.g. ImGuiMouseButton_Right=1).
   We forever guarantee that the existing value will not changes so existing code is free to use 0/1/2.
+- Nav: Fixed a bug where the initial CTRL-Tab press while in a child window sometimes selected
+  the current root window instead of always selecting the previous root window. (#787)
 - ColorEdit: Fix label alignment when using ImGuiColorEditFlags_NoInputs. (#2955) [@rokups]
 - ColorEdit: In HSV display of a RGB stored value, attempt to locally preserve Saturation
   when Value==0.0 (similar to changes done in 1.73 for Hue). Removed Hue editing lock since
@@ -142,18 +147,23 @@ Other Changes:
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
 - MenuBar: Fix minor clipping issue where occasionally a menu text can overlap the right-most border.
 - Window: Fix SetNextWindowBgAlpha(1.0f) failing to override alpha component. (#3007) [@Albog]
+- Window: When testing for the presence of the ImGuiWindowFlags_NoBringToFrontOnFocus flag we
+  test both the focused/clicked window (which could be a child window) and the root window.
 - ImDrawList: AddCircle(), AddCircleFilled() API can now auto-tessellate when provided a segment
   count of zero. Alter tessellation quality with 'style.CircleSegmentMaxError'. [@ShironekoBen]
 - ImDrawList: Add AddNgon(), AddNgonFilled() API with a guarantee on the explicit segment count.
   In the current branch they are essentially the same as AddCircle(), AddCircleFilled() but as
   we will rework the circle rendering functions to use textures and automatic segment count
   selection, those new api can fill a gap. [@ShironekoBen]
+- Columns: ImDrawList::Channels* functions now work inside columns. Added extra comments to
+  suggest using user-owned ImDrawListSplitter instead of ImDrawList functions. [@rokups]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
 - Misc: Disable format checks when using stb_printf, to allow using extra formats.
   Made IMGUI_USE_STB_SPRINTF a properly documented imconfig.h flag. (#2954) [@loicmolinari]
 - Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp
   files in a same compilation unit. Actual users of that technique (also called "Unity builds")
   can generally provide this themselves, so we don't really recommend you use this. [@rokups]
+- CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
 - Backends: GLFW, SDL, Win32, OSX, Allegro: Added support for ImGuiMouseCursor_NotAllowed. [@rokups]
 - Backends: GLFW: Added support for the missing mouse cursors newly added in GLFW 3.4+. [@rokups]
 - Backends: SDL: Wayland: use SDL_GetMouseState (because there is no global mouse state available
@@ -167,13 +177,14 @@ Other Changes:
   the later may be problematic if compiling with recent Windows SDK and you want your app to run
   on Windows 7. You can instead try linking with Xinput9_1_0.lib instead. (#2716)
 - Backends: Glut: Improved FreeGLUT support for MinGW. (#3004) [@podsvirov]
-- CI: Added PVS-Studio static analysis on the continuous-integration server. [@rokups]
-- Examples: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
+- Backends: Emscripten: Avoid forcefully setting IMGUI_DISABLE_FILE_FUNCTIONS. (#3005) [@podsvirov]
+- Examples: OpenGL: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
   automatically use it). (#2919, #2798)
+- Examples: OpenGL: Added support for glbindings OpenGL loader. (#2870) [@rokups]
+- Examples: Emscripten: Demonstrating embedding fonts in Makefile and code. (#2953) [@Oipo]
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
   even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
-- Examples: Added support for glbindings OpenGL loader. (#2870) [@rokups]
 
 
 -----------------------------------------------------------------------
@@ -183,6 +194,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.74
 
 Breaking Changes:
+
 - Removed redirecting functions/enums names that were marked obsolete in 1.52 (October 2017):
   - Begin() [old 5 args version]     -> use Begin() [3 args], use SetNextWindowSize() SetNextWindowBgAlpha() if needed
   - IsRootWindowOrAnyChildHovered()  -> use IsWindowHovered(ImGuiHoveredFlags_RootAndChildWindows)
@@ -207,6 +219,7 @@ Breaking Changes:
   The value is unused in master branch but will be used by the multi-viewport feature. (#2851) [@obfuscate]
 
 Other Changes:
+
 - InputText, Nav: Fixed Home/End key broken when activating Keyboard Navigation. (#787)
 - InputText: Filter out ASCII 127 (DEL) emitted by low-level OSX layer, as we are using the Key value. (#2578)
 - Layout: Fixed a couple of subtle bounding box vertical positioning issues relating to the handling of text
@@ -339,6 +352,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.72
 
 Breaking Changes:
+
 - Removed redirecting functions/enums names that were marked obsolete in 1.51 (June 2017):
   - ImGuiCol_Column*, ImGuiSetCond_* enums.
   - IsItemHoveredRect(), IsPosHoveringAnyWindow(), IsMouseHoveringAnyWindow(), IsMouseHoveringWindow() functions.
@@ -350,6 +364,7 @@ Breaking Changes:
   Kept redirection function (will obsolete). (#581, #324)
 
 Other Changes:
+
 - Scrolling: Made mouse-wheel scrolling lock the underlying window until the mouse is moved again or
   until a short delay expires (~2 seconds). This allow uninterrupted scroll even if child windows are
   passing under the mouse cursor. (#2604)
@@ -422,6 +437,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.71
 
 Breaking Changes:
+
 - IO: changed AddInputCharacter(unsigned short c) signature to AddInputCharacter(unsigned int c).
 - Renamed SetNextTreeNodeOpen() to SetNextItemOpen(). Kept inline redirection function (will obsolete).
 - Window: rendering of child windows outer decorations (e.g. bg color, border, scrollbars) is now
@@ -432,6 +448,7 @@ Breaking Changes:
   to the creation of overlapping child windows. Please reach out if you are affected by this change!
 
 Other Changes:
+
 - Window: clarified behavior of SetNextWindowContentSize(). Content size is defined as the size available
   after removal of WindowPadding on each sides. So SetNextWindowContentSize(ImVec2(100,100)) + auto-resize
   will always allow submitting a 100x100 item without creating a scrollbar, regarding of WindowPadding.
@@ -504,6 +521,7 @@ Other Changes:
 Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.70
 
 Breaking Changes:
+
 - ImDrawList: Improved algorithm for mitre joints on thick lines, preserving correct thickness
   up to 90 degrees angles (e.g. rectangles). If you have custom rendering using thick lines,
   they will appear a little thicker now. (#2518) [@rmitton]
@@ -516,6 +534,7 @@ Breaking Changes:
   on them but it is possible you have!).
 
 Other Changes:
+
 - ImDrawList: Added ImDrawCallback_ResetRenderState, a special ImDrawList::AddCallback() value
   to request the renderer back-end to reset its render state. (#2037, #1639, #2452)
   Examples: Added support for ImDrawCallback_ResetRenderState in all renderer back-ends. Each

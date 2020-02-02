@@ -3465,14 +3465,23 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             EndGroup();
             return false;
         }
-        if (!BeginChildFrame(id, frame_bb.GetSize()))
+
+        // We reproduce the contents of BeginChildFrame() in order to provide 'label' so our window internal data are easier to read/debug.
+        PushStyleColor(ImGuiCol_ChildBg, style.Colors[ImGuiCol_FrameBg]);
+        PushStyleVar(ImGuiStyleVar_ChildRounding, style.FrameRounding);
+        PushStyleVar(ImGuiStyleVar_ChildBorderSize, style.FrameBorderSize);
+        PushStyleVar(ImGuiStyleVar_WindowPadding, style.FramePadding);
+        bool child_visible = BeginChildEx(label, id, frame_bb.GetSize(), true, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_AlwaysUseWindowPadding);
+        PopStyleVar(3);
+        PopStyleColor();
+        if (!child_visible)
         {
-            EndChildFrame();
+            EndChild();
             EndGroup();
             return false;
         }
         draw_window = g.CurrentWindow; // Child window
-        draw_window->DC.NavLayerActiveMaskNext |= draw_window->DC.NavLayerCurrentMask; // This is to ensure that EndChild() will display a navigation highlight
+        draw_window->DC.NavLayerActiveMaskNext |= draw_window->DC.NavLayerCurrentMask; // This is to ensure that EndChild() will display a navigation highlight so we can "enter" into it.
         inner_size.x -= draw_window->ScrollbarSizes.x;
     }
     else
@@ -4161,7 +4170,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (is_multiline)
     {
         Dummy(text_size + ImVec2(0.0f, g.FontSize)); // Always add room to scroll an extra line
-        EndChildFrame();
+        EndChild();
         EndGroup();
     }
 
@@ -7519,7 +7528,7 @@ void ImGui::PushColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
-    window->DrawList->ChannelsSetCurrent(0);
+    columns->Splitter.SetCurrentChannel(window->DrawList, 0);
     int cmd_size = window->DrawList->CmdBuffer.Size;
     PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false);
     IM_UNUSED(cmd_size);
@@ -7532,7 +7541,7 @@ void ImGui::PopColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
-    window->DrawList->ChannelsSetCurrent(columns->Current + 1);
+    columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
     PopClipRect();
 }
 
@@ -7623,8 +7632,8 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
 
     if (columns->Count > 1)
     {
-        window->DrawList->ChannelsSplit(1 + columns->Count);
-        window->DrawList->ChannelsSetCurrent(1);
+        columns->Splitter.Split(window->DrawList, 1 + columns->Count);
+        columns->Splitter.SetCurrentChannel(window->DrawList, 1);
         PushColumnClipRect(0);
     }
 
@@ -7663,14 +7672,14 @@ void ImGui::NextColumn()
         // Columns 1+ ignore IndentX (by canceling it out)
         // FIXME-COLUMNS: Unnecessary, could be locked?
         window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + column_padding;
-        window->DrawList->ChannelsSetCurrent(columns->Current + 1);
+        columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
     }
     else
     {
         // New row/line
         // Column 0 honor IndentX
         window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
-        window->DrawList->ChannelsSetCurrent(1);
+        columns->Splitter.SetCurrentChannel(window->DrawList, 1);
         columns->Current = 0;
         columns->LineMinY = columns->LineMaxY;
     }
@@ -7700,7 +7709,7 @@ void ImGui::EndColumns()
     if (columns->Count > 1)
     {
         PopClipRect();
-        window->DrawList->ChannelsMerge();
+        columns->Splitter.Merge(window->DrawList);
     }
 
     const ImGuiColumnsFlags flags = columns->Flags;
