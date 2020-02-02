@@ -6717,7 +6717,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 
     // Move the root window to the top of the pile
     IM_ASSERT(window->RootWindow != NULL);
-    ImGuiWindow* focus_front_window = window->RootWindow; // NB: In docking branch this is window->RootWindowDockStop
+    ImGuiWindow* focus_front_window = window->RootWindowDockStop;
     ImGuiWindow* display_front_window = window->RootWindow;
 
     // Steal focus on active widgets
@@ -6727,7 +6727,7 @@ void ImGui::FocusWindow(ImGuiWindow* window)
 
     // Bring to front
     BringWindowToFocusFront(focus_front_window);
-    if (((window->Flags | display_front_window->Flags) & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
+    if (((window->Flags | focus_front_window->Flags | display_front_window->Flags) & ImGuiWindowFlags_NoBringToFrontOnFocus) == 0)
         BringWindowToDisplayFront(display_front_window);
 }
 
@@ -9532,7 +9532,7 @@ static void ImGui::NavUpdateWindowing()
     if (start_windowing_with_gamepad || start_windowing_with_keyboard)
         if (ImGuiWindow* window = g.NavWindow ? g.NavWindow : FindWindowNavFocusable(g.WindowsFocusOrder.Size - 1, -INT_MAX, -1))
         {
-            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindow; // FIXME-DOCK: Will need to use RootWindowDockStop
+            g.NavWindowingTarget = g.NavWindowingTargetAnim = window->RootWindowDockStop;
             g.NavWindowingTimer = g.NavWindowingHighlightAlpha = 0.0f;
             g.NavWindowingToggleLayer = start_windowing_with_keyboard ? false : true;
             g.NavInputSource = start_windowing_with_keyboard ? ImGuiInputSource_NavKeyboard : ImGuiInputSource_NavGamepad;
