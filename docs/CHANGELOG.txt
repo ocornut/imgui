@@ -76,7 +76,8 @@ Other Changes:
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
 - ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
-- InputText: Fix crash when executing undo action after clearing input with ESC (#3008). [@rokups]
+- InputText: Fix corruption or crash when executing undo after clearing input with ESC, as a
+  byproduct we are allowing to later undo the revert with a CTRL+Z. (#3008).
 - MenuBar: Fix minor clipping issue where occasionally a menu text can overlap the right-most border.
 - Window: Fix SetNextWindowBgAlpha(1.0f) failing to override alpha component. (#3007) [@Albog]
 - Window: When testing for the presence of the ImGuiWindowFlags_NoBringToFrontOnFocus flag we

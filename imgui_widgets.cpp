@@ -3271,7 +3271,24 @@ static bool STB_TEXTEDIT_INSERTCHARS(STB_TEXTEDIT_STRING* obj, int pos, const Im
 #define STB_TEXTEDIT_IMPLEMENTATION
 #include "imstb_textedit.h"
 
+// stb_textedit internally allows for a single undo record to do addition and deletion, but somehow, calling 
+// the stb_textedit_paste() function creates two separate records, so we perform it manually. (FIXME: Report to nothings/stb?) 
+static void stb_textedit_replace(STB_TEXTEDIT_STRING* str, STB_TexteditState* state, const STB_TEXTEDIT_CHARTYPE* text, int text_len)
+{
+    stb_text_makeundo_replace(str, state, 0, str->CurLenW, text_len);
+    ImStb::STB_TEXTEDIT_DELETECHARS(str, 0, str->CurLenW);
+    if (text_len <= 0)
+        return;
+    if (ImStb::STB_TEXTEDIT_INSERTCHARS(str, 0, text, text_len))
+    {
+        state->cursor = text_len;
+        state->has_preferred_x = 0;
+        return;
+    }
+    IM_ASSERT(0); // Failed to insert character, normally shouldn't happen because of how we currently use stb_textedit_replace()
 }
+
+} // namespace ImStb
 
 void ImGuiInputTextState::OnKeyPressed(int key)
 {
@@ -3826,27 +3843,16 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             // Restore initial value. Only return true if restoring to the initial value changes the current buffer contents.
             if (!is_readonly && strcmp(buf, state->InitialTextA.Data) != 0)
             {
+                // Push records into the undo stack so we can CTRL+Z the revert operation itself
                 apply_new_text = state->InitialTextA.Data;
                 apply_new_text_length = state->InitialTextA.Size - 1;
-
-                // Select all text
-                state->OnKeyPressed(STB_TEXTEDIT_K_TEXTSTART);
-                state->OnKeyPressed(STB_TEXTEDIT_K_TEXTEND | STB_TEXTEDIT_K_SHIFT);
-
-                // Paste converted text or empty buffer
-                if (state->InitialTextA.size() > 1)
+                ImVector<ImWchar> w_text;
+                if (apply_new_text_length > 0)
                 {
-                    ImVector<ImWchar> w_text;
-                    const char* apply_new_text_end = apply_new_text + apply_new_text_length + 1;
-                    w_text.resize(ImTextCountCharsFromUtf8(apply_new_text, apply_new_text_end));
-                    ImTextStrFromUtf8(w_text.Data, w_text.Size, apply_new_text, apply_new_text_end);
-                    ImStb::stb_textedit_paste(state, &state->Stb, w_text.Data, w_text.Size);
+                    w_text.resize(ImTextCountCharsFromUtf8(apply_new_text, apply_new_text + apply_new_text_length) + 1);
+                    ImTextStrFromUtf8(w_text.Data, w_text.Size, apply_new_text, apply_new_text + apply_new_text_length);
                 }
-                else
-                {
-                    ImWchar empty = 0;
-                    ImStb::stb_textedit_paste(state, &state->Stb, &empty, 0);
-                }
+                stb_textedit_replace(state, &state->Stb, w_text.Data, (apply_new_text_length > 0) ? (w_text.Size - 1) : 0);
             }
         }
 
