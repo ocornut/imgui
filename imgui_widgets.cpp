@@ -3828,6 +3828,25 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
             {
                 apply_new_text = state->InitialTextA.Data;
                 apply_new_text_length = state->InitialTextA.Size - 1;
+
+                // Select all text
+                state->OnKeyPressed(STB_TEXTEDIT_K_TEXTSTART);
+                state->OnKeyPressed(STB_TEXTEDIT_K_TEXTEND | STB_TEXTEDIT_K_SHIFT);
+
+                // Paste converted text or empty buffer
+                if (state->InitialTextA.size() > 1)
+                {
+                    ImVector<ImWchar> w_text;
+                    const char* apply_new_text_end = apply_new_text + apply_new_text_length + 1;
+                    w_text.resize(ImTextCountCharsFromUtf8(apply_new_text, apply_new_text_end));
+                    ImTextStrFromUtf8(w_text.Data, w_text.Size, apply_new_text, apply_new_text_end);
+                    ImStb::stb_textedit_paste(state, &state->Stb, w_text.Data, w_text.Size);
+                }
+                else
+                {
+                    ImWchar empty = 0;
+                    ImStb::stb_textedit_paste(state, &state->Stb, &empty, 0);
+                }
             }
         }
 
