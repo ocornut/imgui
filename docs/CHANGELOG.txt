@@ -78,6 +78,10 @@ Other Changes:
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
 - InputText: Fix corruption or crash when executing undo after clearing input with ESC, as a
   byproduct we are allowing to later undo the revert with a CTRL+Z. (#3008).
+- InputText: Fix using a combination of _CallbackResize (e.g. for std::string binding), along with the
+  _EnterReturnsTrue flag along with the rarely used property of using an InputText without persisting
+  user-side storage. Previously if you had e.g. a local unsaved std::string and reading result back
+  from the widget, the user string object wouldn't be resized when Enter key was pressed. (#3009)
 - MenuBar: Fix minor clipping issue where occasionally a menu text can overlap the right-most border.
 - Window: Fix SetNextWindowBgAlpha(1.0f) failing to override alpha component. (#3007) [@Albog]
 - Window: When testing for the presence of the ImGuiWindowFlags_NoBringToFrontOnFocus flag we
