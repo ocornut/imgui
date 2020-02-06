@@ -951,6 +951,11 @@ CODE
 #include <stdint.h>     // intptr_t
 #endif
 
+#ifdef __NN_AARCH64__
+#include <iostream>
+#define HOST_MOUNT_NAME "c"
+#endif
+
 // Debug options
 #define IMGUI_DEBUG_NAV_SCORING     0   // Display navigation scoring preview when hovering items. Display last moving direction matches when holding CTRL
 #define IMGUI_DEBUG_NAV_RECTS       0   // Display the reference navigation rectangle for each window
@@ -1527,6 +1532,12 @@ FILE* ImFileOpen(const char* filename, const char* mode)
     ImTextStrFromUtf8(&buf[0], filename_wsize, filename, NULL);
     ImTextStrFromUtf8(&buf[filename_wsize], mode_wsize, mode, NULL);
     return _wfopen((wchar_t*)&buf[0], (wchar_t*)&buf[filename_wsize]);
+#elif defined(__NN_AARCH64__)
+	std::string mount(HOST_MOUNT_NAME ":/"); // keep and load files from the developer host
+	std::string path(filename);
+	std::string fullpath = mount + path;
+
+	return fopen(fullpath.c_str(), mode);
 #else
     return fopen(filename, mode);
 #endif
