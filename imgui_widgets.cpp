@@ -8252,6 +8252,7 @@ static ImGuiTableColumnFlags TableFixColumnFlags(ImGuiTable* table, ImGuiTableCo
     // Sizing Policy
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
     {
+        // FIXME-TABLE: Inconsistent to promote columns to WidthAlwaysAutoResize
         if (table->Flags & ImGuiTableFlags_SizingPolicyFixedX)
             flags |= ((table->Flags & ImGuiTableFlags_Resizable) && !(flags & ImGuiTableColumnFlags_NoResize)) ? ImGuiTableColumnFlags_WidthFixed : ImGuiTableColumnFlags_WidthAlwaysAutoResize;
         else
@@ -8301,7 +8302,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // Compute offset, clip rect for the frame
     const ImRect work_rect = table->WorkRect;
-    const float padding_auto_x = table->CellPaddingX1; // Can't make auto padding larger than what WorkRect knows about so right-alignment matches.
+    const float padding_auto_x = table->CellPaddingX2; // Can't make auto padding larger than what WorkRect knows about so right-alignment matches.
     const float min_column_width = TableGetMinColumnWidth();
 
     int count_fixed = 0;
@@ -8360,12 +8361,13 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     }
 
     // Layout
+    // Remove -1.0f to cancel out the +1.0f we are doing in EndTable() to make last column line visible
     const float width_spacings = table->CellSpacingX * (table->ColumnsActiveCount - 1);
     float width_avail;
     if ((table->Flags & ImGuiTableFlags_ScrollX) && (table->InnerWidth == 0.0f))
         width_avail = table->InnerClipRect.GetWidth() - width_spacings - 1.0f;
     else
-        width_avail = work_rect.GetWidth() - width_spacings - 1.0f; // Remove -1.0f to cancel out the +1.0f we are doing in EndTable() to make last column line visible
+        width_avail = work_rect.GetWidth() - width_spacings - 1.0f;
     const float width_avail_for_stretched_columns = width_avail - width_fixed;
     float width_remaining_for_stretched_columns = width_avail_for_stretched_columns;
 
@@ -9171,7 +9173,10 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
         if (flags & ImGuiTableColumnFlags_DefaultHide)
             column->IsActive = column->NextIsActive = false;
         if (flags & ImGuiTableColumnFlags_DefaultSort)
+        {
             column->SortOrder = 0; // Multiple columns using _DefaultSort will be reordered when building the sort specs.
+            column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
+        }
     }
 
     // Store name (append with zero-terminator in contiguous buffer)
@@ -9855,7 +9860,7 @@ void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* click
     table->IsSortSpecsDirty = true;
 }
 
-// Return NULL if no sort specs.
+// Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set) 
 // You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since last call, or the first time.
 // Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
 const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()

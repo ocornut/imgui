@@ -3534,7 +3534,7 @@ static void ShowDemoWindowTables()
                     case CT_LongText:       ImGui::Text("Some longer text %d,%d\nOver two lines..", row, column); break;
                     case CT_Button:         ImGui::Button(label); break;
                     case CT_StretchButton:  ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f)); break;
-                    case CT_InputText:      ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText(label, text_buf, IM_ARRAYSIZE(text_buf)); break;
+                    case CT_InputText:      ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText("##", text_buf, IM_ARRAYSIZE(text_buf)); break;
                     }
                 }
             }
