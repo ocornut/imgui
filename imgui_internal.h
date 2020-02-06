@@ -529,7 +529,7 @@ struct IMGUI_API ImChunkStream
 #define IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER             1
 #endif
 
-// The maximum line width to build anti-aliased textures for
+// The maximum line width to build anti-aliased textures for (note that this needs to be one greater than the maximum line width you want to be able to draw using the textured path)
 #define IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX                      65
 
 // Data shared between all ImDrawList instances

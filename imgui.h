@@ -2323,7 +2323,7 @@ struct ImFontAtlas
 
     // [Internal] Packing data
     int                         PackIdMouseCursors; // Custom texture rectangle ID for white pixel and mouse cursors
-    ImVector<int>               AALineRectIds;      // Custom texture rectangle IDs for anti-aliased lines
+    int                         AALineRectId;       // Custom texture rectangle ID for anti-aliased lines
     ImVector<ImVec4>            TexUvAALines;       // UVs for anti-aliased line textures
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
