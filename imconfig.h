@@ -14,6 +14,7 @@
 #pragma once
 
 //---- Define assertion handler. Defaults to calling assert().
+// If your macro uses multiple statements, make sure is enclosed in a 'do { .. } while (0)' block so it can be used as a single statement.
 //#define IM_ASSERT(_EXPR)  MyAssert(_EXPR)
 //#define IM_ASSERT(_EXPR)  ((void)(_EXPR))     // Disable asserts
 
@@ -25,10 +26,11 @@
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after updating to avoid using soon-to-be obsolete function/names.
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
-//---- Don't implement demo windows functionality (ShowDemoWindow()/ShowStyleEditor()/ShowUserGuide() methods will be empty)
-// It is very strongly recommended to NOT disable the demo windows during development. Please read the comments in imgui_demo.cpp.
-//#define IMGUI_DISABLE_DEMO_WINDOWS
-//#define IMGUI_DISABLE_METRICS_WINDOW
+//---- Disable all of Dear ImGui or don't implement standard windows. 
+// It is very strongly recommended to NOT disable the demo windows during development. Please read comments in imgui_demo.cpp.
+//#define IMGUI_DISABLE                                     // Disable everything: all headers and source files will be empty. 
+//#define IMGUI_DISABLE_DEMO_WINDOWS                        // Disable demo windows: ShowDemoWindow()/ShowStyleEditor() will be empty. Not recommended. 
+//#define IMGUI_DISABLE_METRICS_WINDOW                      // Disable debug/metrics window: ShowMetricsWindow() will be empty.
 
 //---- Don't implement some functions to reduce linkage requirements.
 //#define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS   // [Win32] Don't implement default clipboard handler. Won't use and link with OpenClipboard/GetClipboardData/CloseClipboard etc.

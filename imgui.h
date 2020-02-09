@@ -45,6 +45,8 @@ Index of this file:
 #include "imconfig.h"
 #endif
 
+#ifndef IMGUI_DISABLE
+
 //-----------------------------------------------------------------------------
 // Header mess
 //-----------------------------------------------------------------------------
@@ -2275,3 +2277,5 @@ struct ImFont
 #ifdef IMGUI_INCLUDE_IMGUI_USER_H
 #include "imgui_user.h"
 #endif
+
+#endif // #ifndef IMGUI_DISABLE

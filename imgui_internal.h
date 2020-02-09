@@ -22,6 +22,7 @@ Index of this file:
 */
 
 #pragma once
+#ifndef IMGUI_DISABLE
 
 //-----------------------------------------------------------------------------
 // Header mess
@@ -1912,3 +1913,5 @@ extern void                 ImGuiTestEngineHook_Log(ImGuiContext* ctx, const cha
 #ifdef _MSC_VER
 #pragma warning (pop)
 #endif
+
+#endif // #ifndef IMGUI_DISABLE
