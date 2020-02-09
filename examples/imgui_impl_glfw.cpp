@@ -83,11 +83,12 @@ static GLFWmousebuttonfun   g_PrevUserCallbackMousebutton = NULL;
 static GLFWscrollfun        g_PrevUserCallbackScroll = NULL;
 static GLFWkeyfun           g_PrevUserCallbackKey = NULL;
 static GLFWcharfun          g_PrevUserCallbackChar = NULL;
+static GLFWmonitorfun       g_PrevUserCallbackMonitor = NULL;
 
 // Forward Declarations
+static void ImGui_ImplGlfw_UpdateMonitors();
 static void ImGui_ImplGlfw_InitPlatformInterface();
 static void ImGui_ImplGlfw_ShutdownPlatformInterface();
-static void ImGui_ImplGlfw_UpdateMonitors();
 
 static const char* ImGui_ImplGlfw_GetClipboardText(void* user_data)
 {
@@ -147,6 +148,11 @@ void ImGui_ImplGlfw_CharCallback(GLFWwindow* window, unsigned int c)
 
     ImGuiIO& io = ImGui::GetIO();
     io.AddInputCharacter(c);
+}
+
+void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
+{
+    g_WantUpdateMonitors = true;
 }
 
 static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, GlfwClientApi client_api)
@@ -220,6 +226,7 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
     g_PrevUserCallbackScroll = NULL;
     g_PrevUserCallbackKey = NULL;
     g_PrevUserCallbackChar = NULL;
+    g_PrevUserCallbackMonitor = NULL;
     if (install_callbacks)
     {
         g_InstalledCallbacks = true;
@@ -227,7 +234,12 @@ static bool ImGui_ImplGlfw_Init(GLFWwindow* window, bool install_callbacks, Glfw
         g_PrevUserCallbackScroll = glfwSetScrollCallback(window, ImGui_ImplGlfw_ScrollCallback);
         g_PrevUserCallbackKey = glfwSetKeyCallback(window, ImGui_ImplGlfw_KeyCallback);
         g_PrevUserCallbackChar = glfwSetCharCallback(window, ImGui_ImplGlfw_CharCallback);
+        g_PrevUserCallbackMonitor = glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
     }
+
+    // Update monitors the first time (note: monitor callback are broken in GLFW 3.2 and earlier, see github.com/glfw/glfw/issues/784)
+    ImGui_ImplGlfw_UpdateMonitors();
+    glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
 
     // Our mouse update function expect PlatformHandle to be filled for the main viewport
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
@@ -403,6 +415,40 @@ static void ImGui_ImplGlfw_UpdateGamepads()
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
     else
         io.BackendFlags &= ~ImGuiBackendFlags_HasGamepad;
+}
+
+static void ImGui_ImplGlfw_UpdateMonitors()
+{
+    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
+    int monitors_count = 0;
+    GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
+    platform_io.Monitors.resize(0);
+    for (int n = 0; n < monitors_count; n++)
+    {
+        ImGuiPlatformMonitor monitor;
+        int x, y;
+        glfwGetMonitorPos(glfw_monitors[n], &x, &y);
+        const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
+#if GLFW_HAS_MONITOR_WORK_AREA
+        monitor.MainPos = ImVec2((float)x, (float)y);
+        monitor.MainSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+        int w, h;
+        glfwGetMonitorWorkarea(glfw_monitors[n], &x, &y, &w, &h);
+        monitor.WorkPos = ImVec2((float)x, (float)y);;
+        monitor.WorkSize = ImVec2((float)w, (float)h);
+#else
+        monitor.MainPos = monitor.WorkPos = ImVec2((float)x, (float)y);
+        monitor.MainSize = monitor.WorkSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
+#endif
+#if GLFW_HAS_PER_MONITOR_DPI
+        // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
+        float x_scale, y_scale;
+        glfwGetMonitorContentScale(glfw_monitors[n], &x_scale, &y_scale);
+        monitor.DpiScale = x_scale;
+#endif
+        platform_io.Monitors.push_back(monitor);
+    }
+    g_WantUpdateMonitors = false;
 }
 
 void ImGui_ImplGlfw_NewFrame()
@@ -746,45 +792,6 @@ static int ImGui_ImplGlfw_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_inst
 }
 #endif // GLFW_HAS_VULKAN
 
-static void ImGui_ImplGlfw_UpdateMonitors()
-{
-    ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
-    int monitors_count = 0;
-    GLFWmonitor** glfw_monitors = glfwGetMonitors(&monitors_count);
-    platform_io.Monitors.resize(0);
-    for (int n = 0; n < monitors_count; n++)
-    {
-        ImGuiPlatformMonitor monitor;
-        int x, y;
-        glfwGetMonitorPos(glfw_monitors[n], &x, &y);
-        const GLFWvidmode* vid_mode = glfwGetVideoMode(glfw_monitors[n]);
-#if GLFW_HAS_MONITOR_WORK_AREA
-        monitor.MainPos = ImVec2((float)x, (float)y);
-        monitor.MainSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
-        int w, h;
-        glfwGetMonitorWorkarea(glfw_monitors[n], &x, &y, &w, &h);
-        monitor.WorkPos = ImVec2((float)x, (float)y);;
-        monitor.WorkSize = ImVec2((float)w, (float)h);
-#else
-        monitor.MainPos = monitor.WorkPos = ImVec2((float)x, (float)y);
-        monitor.MainSize = monitor.WorkSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
-#endif
-#if GLFW_HAS_PER_MONITOR_DPI
-        // Warning: the validity of monitor DPI information on Windows depends on the application DPI awareness settings, which generally needs to be set in the manifest or at runtime.
-        float x_scale, y_scale;
-        glfwGetMonitorContentScale(glfw_monitors[n], &x_scale, &y_scale);
-        monitor.DpiScale = x_scale;
-#endif
-        platform_io.Monitors.push_back(monitor);
-    }
-    g_WantUpdateMonitors = false;
-}
-
-static void ImGui_ImplGlfw_MonitorCallback(GLFWmonitor*, int)
-{
-    g_WantUpdateMonitors = true;
-}
-
 static void ImGui_ImplGlfw_InitPlatformInterface()
 {
     // Register platform interface (will be coupled with a renderer interface)
@@ -811,10 +818,6 @@ static void ImGui_ImplGlfw_InitPlatformInterface()
 #if HAS_WIN32_IME
     platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
-
-    // Note: monitor callback are broken GLFW 3.2 and earlier (see github.com/glfw/glfw/issues/784)
-    ImGui_ImplGlfw_UpdateMonitors();
-    glfwSetMonitorCallback(ImGui_ImplGlfw_MonitorCallback);
 
     // Register main window handle (which is owned by the main application, not by us)
     // This is mostly for simplicity and consistency, so that our code (e.g. mouse handling etc.) can use same logic for main and secondary viewports.

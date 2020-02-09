@@ -263,6 +263,33 @@ static void ImGui_ImplWin32_UpdateGamepads()
 #endif // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 }
 
+static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, HDC, LPRECT, LPARAM)
+{
+    MONITORINFO info = { 0 };
+    info.cbSize = sizeof(MONITORINFO);
+    if (!::GetMonitorInfo(monitor, &info))
+        return TRUE;
+    ImGuiPlatformMonitor imgui_monitor;
+    imgui_monitor.MainPos = ImVec2((float)info.rcMonitor.left, (float)info.rcMonitor.top);
+    imgui_monitor.MainSize = ImVec2((float)(info.rcMonitor.right - info.rcMonitor.left), (float)(info.rcMonitor.bottom - info.rcMonitor.top));
+    imgui_monitor.WorkPos = ImVec2((float)info.rcWork.left, (float)info.rcWork.top);
+    imgui_monitor.WorkSize = ImVec2((float)(info.rcWork.right - info.rcWork.left), (float)(info.rcWork.bottom - info.rcWork.top));
+    imgui_monitor.DpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
+    ImGuiPlatformIO& io = ImGui::GetPlatformIO();
+    if (info.dwFlags & MONITORINFOF_PRIMARY)
+        io.Monitors.push_front(imgui_monitor);
+    else
+        io.Monitors.push_back(imgui_monitor);
+    return TRUE;
+}
+
+static void ImGui_ImplWin32_UpdateMonitors()
+{
+    ImGui::GetPlatformIO().Monitors.resize(0);
+    ::EnumDisplayMonitors(NULL, NULL, ImGui_ImplWin32_UpdateMonitors_EnumFunc, NULL);
+    g_WantUpdateMonitors = false;
+}
+
 void    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -762,33 +789,6 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     }
 
     return DefWindowProc(hWnd, msg, wParam, lParam);
-}
-
-static BOOL CALLBACK ImGui_ImplWin32_UpdateMonitors_EnumFunc(HMONITOR monitor, HDC, LPRECT, LPARAM)
-{
-    MONITORINFO info = { 0 };
-    info.cbSize = sizeof(MONITORINFO);
-    if (!::GetMonitorInfo(monitor, &info))
-        return TRUE;
-    ImGuiPlatformMonitor imgui_monitor;
-    imgui_monitor.MainPos = ImVec2((float)info.rcMonitor.left, (float)info.rcMonitor.top);
-    imgui_monitor.MainSize = ImVec2((float)(info.rcMonitor.right - info.rcMonitor.left), (float)(info.rcMonitor.bottom - info.rcMonitor.top));
-    imgui_monitor.WorkPos = ImVec2((float)info.rcWork.left, (float)info.rcWork.top);
-    imgui_monitor.WorkSize = ImVec2((float)(info.rcWork.right - info.rcWork.left), (float)(info.rcWork.bottom - info.rcWork.top));
-    imgui_monitor.DpiScale = ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
-    ImGuiPlatformIO& io = ImGui::GetPlatformIO();
-    if (info.dwFlags & MONITORINFOF_PRIMARY)
-        io.Monitors.push_front(imgui_monitor);
-    else
-        io.Monitors.push_back(imgui_monitor);
-    return TRUE;
-}
-
-static void ImGui_ImplWin32_UpdateMonitors()
-{
-    ImGui::GetPlatformIO().Monitors.resize(0);
-    ::EnumDisplayMonitors(NULL, NULL, ImGui_ImplWin32_UpdateMonitors_EnumFunc, NULL);
-    g_WantUpdateMonitors = false;
 }
 
 static void ImGui_ImplWin32_InitPlatformInterface()
