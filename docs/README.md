@@ -193,6 +193,7 @@ Ongoing Dear ImGui development is financially supported by users and private spo
 - Blizzard Entertainment
 - Google
 - Ubisoft
+- Nvidia
 
 *Double-chocolate sponsors*
 - Media Molecule, Mobigame, Aras Pranckevičius, Greggman, DotEmu, Nadeo, Supercell, Aiden Koss, Kylotonn.

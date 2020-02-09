@@ -1,4 +1,4 @@
-// dear imgui, v1.75 WIP
+// dear imgui, v1.75
 // (demo code)
 
 // Help:

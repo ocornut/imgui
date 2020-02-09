@@ -31,8 +31,10 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
- VERSION 1.75 WIP (In Progress)
+ VERSION 1.75 (Released 2020-02-10)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.75
 
 Breaking Changes:
 
@@ -55,14 +57,14 @@ Breaking Changes:
   documented and rarely if ever used). Instead we added an explicit PrimUnreserve() API
   which can be implemented faster. Also clarified pre-existing constraints which weren't
   documented (can only unreserve from the last reserve call). If you suspect you ever
-  used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
-  calls. [@ShironekoBen]
+  used that feature before (very unlikely, but grep for call to PrimReserve in your code),
+  you can #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing calls. [@ShironekoBen]
 - ImDrawList::AddCircle()/AddCircleFilled() functions don't accept negative radius.
 - Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
   technically supports it, future code may not so we're putting the restriction ahead.
 - imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
   of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
-  adding multiple points into it, you may need to fix your initial value.
+  adding points into it without explicit initialization, you may need to fix your initial value.
 
 Other Changes:
 

@@ -1,4 +1,4 @@
-// dear imgui, v1.75 WIP
+// dear imgui, v1.75
 // (drawing and font code)
 
 /*
@@ -360,7 +360,7 @@ ImDrawListSharedData::ImDrawListSharedData()
         const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(CircleVtx12);
         CircleVtx12[i] = ImVec2(ImCos(a), ImSin(a));
     }
-    memset(CircleSegmentCounts, 0, sizeof(CircleSegmentCounts)); // This will be set by 
+    memset(CircleSegmentCounts, 0, sizeof(CircleSegmentCounts)); // This will be set by SetCircleSegmentMaxError()
 }
 
 void ImDrawListSharedData::SetCircleSegmentMaxError(float max_error)
