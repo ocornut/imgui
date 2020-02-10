@@ -317,7 +317,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
-    ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
+    ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
     atlas->TexID = (ImTextureID)NULL;

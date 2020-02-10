@@ -1942,7 +1942,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 {
     IM_ASSERT(atlas->ConfigData.Size > 0);
 
-    ImFontAtlasBuildRegisterDefaultCustomRects(atlas);
+    ImFontAtlasBuildInit(atlas);
 
     // Clear atlas
     atlas->TexID = (ImTextureID)NULL;
@@ -2194,7 +2194,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     return true;
 }
 
-void ImFontAtlasBuildRegisterDefaultCustomRects(ImFontAtlas* atlas)
+// Register default custom rectangles (this is called/shared by both the stb_truetype and the FreeType builder)
+void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 {
     if (atlas->CustomRectIds[0] >= 0)
         return;
