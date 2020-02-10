@@ -4956,8 +4956,12 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
     float grid_step = ImMin(size.x, size.y) / 2.99f;
     float rounding = ImMin(g.Style.FrameRounding, grid_step * 0.5f);
     ImRect bb_inner = bb;
-    float off = -0.75f; // The border (using Col_FrameBg) tends to look off when color is near-opaque and rounding is enabled. This offset seemed like a good middle ground to reduce those artifacts.
-    bb_inner.Expand(off);
+    float off = 0.0f;
+    if ((flags & ImGuiColorEditFlags_NoBorder) == 0)
+    {
+        off = -0.75f; // The border (using Col_FrameBg) tends to look off when color is near-opaque and rounding is enabled. This offset seemed like a good middle ground to reduce those artifacts.
+        bb_inner.Expand(off);
+    }
     if ((flags & ImGuiColorEditFlags_AlphaPreviewHalf) && col_rgb.w < 1.0f)
     {
         float mid_x = IM_ROUND((bb_inner.Min.x + bb_inner.Max.x) * 0.5f);
@@ -4974,10 +4978,13 @@ bool ImGui::ColorButton(const char* desc_id, const ImVec4& col, ImGuiColorEditFl
             window->DrawList->AddRectFilled(bb_inner.Min, bb_inner.Max, GetColorU32(col_source), rounding, ImDrawCornerFlags_All);
     }
     RenderNavHighlight(bb, id);
-    if (g.Style.FrameBorderSize > 0.0f)
-        RenderFrameBorder(bb.Min, bb.Max, rounding);
-    else
-        window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
+    if ((flags & ImGuiColorEditFlags_NoBorder) == 0)
+    {
+        if (g.Style.FrameBorderSize > 0.0f)
+            RenderFrameBorder(bb.Min, bb.Max, rounding);
+        else
+            window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(ImGuiCol_FrameBg), rounding); // Color button are often in need of some sort of border
+    }
 
     // Drag and Drop Source
     // NB: The ActiveId test is merely an optional micro-optimization, BeginDragDropSource() does the same test.

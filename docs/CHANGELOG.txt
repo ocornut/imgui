@@ -36,6 +36,8 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
+  by default for standalone ColorButton.
 - Backends: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
 
 

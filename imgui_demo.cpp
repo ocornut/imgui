@@ -1264,7 +1264,9 @@ static void ShowDemoWindowWidgets()
         }
 
         ImGui::Text("Color button only:");
-        ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, misc_flags, ImVec2(80,80));
+        static bool no_border = false;
+        ImGui::Checkbox("ImGuiColorEditFlags_NoBorder", &no_border);
+        ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, misc_flags | (no_border ? ImGuiColorEditFlags_NoBorder : 0), ImVec2(80,80));
 
         ImGui::Text("Color picker:");
         static bool alpha = true;
