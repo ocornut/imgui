@@ -1040,21 +1040,22 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_SizingPolicyStretchX            = 1 << 14,  // Default if ScrollX is off. Columns will default to use WidthStretch policy. Read description above for more details.
     ImGuiTableFlags_NoHeadersWidth                  = 1 << 15,  // Disable header width contribution to automatic width calculation.
     ImGuiTableFlags_NoHostExtendY                   = 1 << 16,  // (FIXME-TABLE: Reword as SizingPolicy?) Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
+    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 17,  // (FIXME-TABLE) Disable code that keeps column always minimally visible when table width gets too small.
     // Scrolling
-    ImGuiTableFlags_ScrollX                         = 1 << 17,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
-    ImGuiTableFlags_ScrollY                         = 1 << 18,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
+    ImGuiTableFlags_ScrollX                         = 1 << 18,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
+    ImGuiTableFlags_ScrollY                         = 1 << 19,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
     ImGuiTableFlags_Scroll                          = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY,
-    ImGuiTableFlags_ScrollFreezeTopRow              = 1 << 19,  // We can lock 1 to 3 rows (starting from the top). Use with ScrollY enabled.
-    ImGuiTableFlags_ScrollFreeze2Rows               = 2 << 19,
-    ImGuiTableFlags_ScrollFreeze3Rows               = 3 << 19,
-    ImGuiTableFlags_ScrollFreezeLeftColumn          = 1 << 21,  // We can lock 1 to 3 columns (starting from the left). Use with ScrollX enabled.
-    ImGuiTableFlags_ScrollFreeze2Columns            = 2 << 21,
-    ImGuiTableFlags_ScrollFreeze3Columns            = 3 << 21,
+    ImGuiTableFlags_ScrollFreezeTopRow              = 1 << 20,  // We can lock 1 to 3 rows (starting from the top). Use with ScrollY enabled.
+    ImGuiTableFlags_ScrollFreeze2Rows               = 2 << 20,
+    ImGuiTableFlags_ScrollFreeze3Rows               = 3 << 20,
+    ImGuiTableFlags_ScrollFreezeLeftColumn          = 1 << 22,  // We can lock 1 to 3 columns (starting from the left). Use with ScrollX enabled.
+    ImGuiTableFlags_ScrollFreeze2Columns            = 2 << 22,
+    ImGuiTableFlags_ScrollFreeze3Columns            = 3 << 22,
 
     // [Internal] Combinations and masks
     ImGuiTableFlags_SizingPolicyMaskX_              = ImGuiTableFlags_SizingPolicyStretchX | ImGuiTableFlags_SizingPolicyFixedX,
-    ImGuiTableFlags_ScrollFreezeRowsShift_          = 19,
-    ImGuiTableFlags_ScrollFreezeColumnsShift_       = 21,
+    ImGuiTableFlags_ScrollFreezeRowsShift_          = 20,
+    ImGuiTableFlags_ScrollFreezeColumnsShift_       = 22,
     ImGuiTableFlags_ScrollFreezeRowsMask_           = 0x03 << ImGuiTableFlags_ScrollFreezeRowsShift_,
     ImGuiTableFlags_ScrollFreezeColumnsMask_        = 0x03 << ImGuiTableFlags_ScrollFreezeColumnsShift_
 };
