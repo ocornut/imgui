@@ -4471,7 +4471,6 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             if (ImGui::SliderInt("Circle segments", &circle_segments_override_v, 3, 40))
                 circle_segments_override = true;
             ImGui::ColorEdit4("Color", &colf.x);
-            ImGui::PopItemWidth();
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const ImU32 col = ImColor(colf);
             const float spacing = 10.0f;
@@ -4510,6 +4509,27 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + 1, y + 1), col);                          x += sz;            // Pixel (faster than AddLine)
             draw_list->AddRectFilledMultiColor(ImVec2(x, y), ImVec2(x + sz, y + sz), IM_COL32(0, 0, 0, 255), IM_COL32(255, 0, 0, 255), IM_COL32(255, 255, 0, 255), IM_COL32(0, 255, 0, 255));
             ImGui::Dummy(ImVec2((sz + spacing) * 9.8f, (sz + spacing) * 3));
+
+            // Draw black and white gradients
+            static int gradient_steps = 16;
+            ImGui::Separator();
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Gradient steps");
+            ImGui::SameLine(); if (ImGui::RadioButton("16", gradient_steps == 16)) { gradient_steps = 16; }
+            ImGui::SameLine(); if (ImGui::RadioButton("32", gradient_steps == 32)) { gradient_steps = 32; }
+            ImGui::SameLine(); if (ImGui::RadioButton("256", gradient_steps == 256)) { gradient_steps = 256; }
+            ImVec2 gradient_size = ImVec2(ImGui::CalcItemWidth(), 64.0f);
+            x = ImGui::GetCursorScreenPos().x;
+            y = ImGui::GetCursorScreenPos().y;
+            for (int n = 0; n < gradient_steps; n++)
+            {
+                float f = n / (float)gradient_steps;
+                ImU32 col32 = ImGui::GetColorU32(ImVec4(f, f, f, 1.0f));
+                draw_list->AddRectFilled(ImVec2(x + gradient_size.x * (n / (float)gradient_steps), y), ImVec2(x + gradient_size.x * ((n+1) / (float)gradient_steps), y + gradient_size.y), col32);
+            }
+            ImGui::InvisibleButton("##gradient", gradient_size);
+
+            ImGui::PopItemWidth();
             ImGui::EndTabItem();
         }
 

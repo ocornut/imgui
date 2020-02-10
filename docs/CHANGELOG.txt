@@ -38,7 +38,10 @@ Other Changes:
 
 - ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
   by default for standalone ColorButton.
-- Backends: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
+- Demo: Added a black and white gradient to Demo>Examples>Custom Rendering.
+- Backends: SDL: Added ImGui_ImplSDL2_InitForMetal() for API consistency (even though the function
+  currently does nothing).
+- Examples: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
 
 
 -----------------------------------------------------------------------
