@@ -100,8 +100,10 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.75 WIP (In Progress)
+ VERSION 1.75 (Released 2020-02-10)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.75
 
 Breaking Changes:
 
@@ -124,14 +126,14 @@ Breaking Changes:
   documented and rarely if ever used). Instead we added an explicit PrimUnreserve() API
   which can be implemented faster. Also clarified pre-existing constraints which weren't
   documented (can only unreserve from the last reserve call). If you suspect you ever
-  used that feature before, #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing
-  calls. [@ShironekoBen]
+  used that feature before (very unlikely, but grep for call to PrimReserve in your code),
+  you can #define IMGUI_DEBUG_PARANOID in imconfig.h to catch existing calls. [@ShironekoBen]
 - ImDrawList::AddCircle()/AddCircleFilled() functions don't accept negative radius.
 - Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
   technically supports it, future code may not so we're putting the restriction ahead.
 - imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
   of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
-  adding multiple points into it, you may need to fix your initial value.
+  adding points into it without explicit initialization, you may need to fix your initial value.
 
 Other Changes:
 
@@ -145,6 +147,12 @@ Other Changes:
   those improvements in 1.73 makes them unnecessary. (#2722, #2770). [@rokups]
 - ColorEdit: "Copy As" context-menu tool shows hex values with a '#' prefix instead of '0x'.
 - ColorEdit: "Copy As" content-menu tool shows hex values both with/without alpha when available.
+- InputText: Fix corruption or crash when executing undo after clearing input with ESC, as a
+  byproduct we are allowing to later undo the revert with a CTRL+Z. (#3008).
+- InputText: Fix using a combination of _CallbackResize (e.g. for std::string binding), along with the
+  _EnterReturnsTrue flag along with the rarely used property of using an InputText without persisting
+  user-side storage. Previously if you had e.g. a local unsaved std::string and reading result back
+  from the widget, the user string object wouldn't be resized when Enter key was pressed. (#3009)
 - MenuBar: Fix minor clipping issue where occasionally a menu text can overlap the right-most border.
 - Window: Fix SetNextWindowBgAlpha(1.0f) failing to override alpha component. (#3007) [@Albog]
 - Window: When testing for the presence of the ImGuiWindowFlags_NoBringToFrontOnFocus flag we
@@ -158,6 +166,7 @@ Other Changes:
 - Columns: ImDrawList::Channels* functions now work inside columns. Added extra comments to
   suggest using user-owned ImDrawListSplitter instead of ImDrawList functions. [@rokups]
 - Misc: Added ImGuiMouseCursor_NotAllowed enum so it can be used by more shared widgets. [@rokups]
+- Misc: Added IMGUI_DISABLE compile-time definition to make all headers and sources empty.
 - Misc: Disable format checks when using stb_printf, to allow using extra formats.
   Made IMGUI_USE_STB_SPRINTF a properly documented imconfig.h flag. (#2954) [@loicmolinari]
 - Misc: Added misc/single_file/imgui_single_file.h, We use this to validate compiling all *.cpp

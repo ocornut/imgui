@@ -1,4 +1,4 @@
-// dear imgui, v1.75 WIP
+// dear imgui, v1.75
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!
@@ -22,6 +22,7 @@ Index of this file:
 */
 
 #pragma once
+#ifndef IMGUI_DISABLE
 
 //-----------------------------------------------------------------------------
 // Header mess
@@ -2166,3 +2167,5 @@ extern void                 ImGuiTestEngineHook_Log(ImGuiContext* ctx, const cha
 #ifdef _MSC_VER
 #pragma warning (pop)
 #endif
+
+#endif // #ifndef IMGUI_DISABLE
