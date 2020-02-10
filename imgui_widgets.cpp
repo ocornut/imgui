@@ -8489,7 +8489,8 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         {
             // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make sure they are all visible.
             // Because of this we also know that all of the columns will always fit in table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
-            max_x = table->WorkRect.Max.x - (table->ColumnsActiveCount - (column->IndexWithinActiveSet + 1)) * min_column_width;
+            if (!(table->Flags & ImGuiTableFlags_NoKeepColumnsVisible))
+                max_x = table->WorkRect.Max.x - (table->ColumnsActiveCount - (column->IndexWithinActiveSet + 1)) * min_column_width;
         }
         if (offset_x + column->WidthGiven > max_x)
             column->WidthGiven = ImMax(max_x - offset_x, min_column_width);
