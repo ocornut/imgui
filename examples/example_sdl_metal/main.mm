@@ -1,16 +1,15 @@
-// ImGui - standalone example application for GLFW + Metal, using programmable pipeline
-// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// Dear ImGui: standalone example application for SDL2 + Metal
+// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
+// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_metal.h"
-
-#include "SDL.h"
+#include <stdio.h>
+#include <SDL.h>
 
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
-
-#include <stdio.h>
 
 int main(int, char**)
 {
@@ -49,27 +48,17 @@ int main(int, char**)
         return -1;
     }
 
-    SDL_Window* window = SDL_CreateWindow(
-        "Dear ImGui SDL+Metal example",
-        SDL_WINDOWPOS_CENTERED,
-        SDL_WINDOWPOS_CENTERED,
-        1280,
-        720,
-        SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI
-    );
+    // Inform SDL that we will be using metal for rendering. Without this hint initialization of metal renderer may fail.
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
 
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == NULL)
     {
         printf("Error creating window: %s\n", SDL_GetError());
         return -2;
     }
 
-    SDL_Renderer* renderer = SDL_CreateRenderer(
-        window,
-        -1,
-        SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC
-    );
-
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
     if (renderer == NULL)
     {
         printf("Error creating renderer: %s\n", SDL_GetError());
@@ -125,7 +114,7 @@ int main(int, char**)
 
             // Start the Dear ImGui frame
             ImGui_ImplMetal_NewFrame(renderPassDescriptor);
-            ImGui_ImplSDL2_NewFrame_Metal(window);
+            ImGui_ImplSDL2_NewFrame(window);
             ImGui::NewFrame();
 
             // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).

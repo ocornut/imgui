@@ -190,7 +190,7 @@ example_empscripten:
 
 example_glfw_metal/
     GLFW (Mac) + Metal example.
-    = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm.
+    = main.mm + imgui_impl_glfw.cpp + imgui_impl_metal.mm
 
 example_glfw_opengl2/
     GLFW + OpenGL2 example (legacy, fixed pipeline).
@@ -236,6 +236,10 @@ example_sdl_directx11/
     SDL2 + DirectX11 example, Windows only.
     = main.cpp + imgui_impl_sdl.cpp + imgui_impl_dx11.cpp
     This to demonstrate usage of DirectX with SDL.
+
+example_sdl_metal/
+    SDL2 (Mac) + Metal example.
+    = main.mm + imgui_impl_sdl.cpp + imgui_impl_metal.mm
 
 example_sdl_opengl2/
     SDL2 (Win32, Mac, Linux etc.) + OpenGL example (legacy, fixed pipeline).

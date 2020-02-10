@@ -241,6 +241,9 @@ jobs:
     - name: Build example_glfw_metal
       run: make -C examples/example_glfw_metal
 
+    - name: Build example_sdl_metal
+      run: make -C examples/example_sdl_metal
+
     - name: Build example_sdl_opengl2
       run: make -C examples/example_sdl_opengl2
       if: github.event_name == 'schedule'

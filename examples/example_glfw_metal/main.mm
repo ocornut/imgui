@@ -1,9 +1,11 @@
-// ImGui - standalone example application for GLFW + Metal, using programmable pipeline
-// If you are new to ImGui, see examples/README.txt and documentation at the top of imgui.cpp.
+// dear imgui: standalone example application for GLFW + Metal, using programmable pipeline
+// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
+// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
 #include "imgui.h"
 #include "imgui_impl_glfw.h"
 #include "imgui_impl_metal.h"
+#include <stdio.h>
 
 #define GLFW_INCLUDE_NONE
 #define GLFW_EXPOSE_NATIVE_COCOA
@@ -12,8 +14,6 @@
 
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
-
-#include <stdio.h>
 
 static void glfw_error_callback(int error, const char* description)
 {
