@@ -677,9 +677,11 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const float AA_SIZE = 1.0f;
         const ImU32 col_trans = col & ~IM_COL32_A_MASK;
 
-        // The thick_line test is an attempt to compensate for the way half_draw_size gets calculated later, which special-cases 1.0f width lines
-        const int integer_thickness = thick_line ? ImMax((int)(thickness), 1) : 2;
-        const float fractional_thickness = thick_line ? (thickness) - integer_thickness : 0.0f;
+        // Thicknesses <1.0 should behave like thickness 1.0
+        thickness = ImMax(thickness, 1.0f);
+
+        const int integer_thickness = (int)thickness ;
+        const float fractional_thickness = (thickness) - integer_thickness;
 
         // Do we want to draw this line using a texture?
         const bool use_texture = (Flags & ImDrawListFlags_AntiAliasedLinesUseTexData) && (integer_thickness < IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX);
@@ -714,7 +716,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         {
             // The width of the geometry we need to draw - this is essentially <thickness> pixels for the line itself, plus one pixel for AA
             // We don't use AA_SIZE here because the +1 is tied to the generated texture and so alternate values won't work without changes to that code
-            const float half_draw_size = (thickness * 0.5f) + 1;
+            const float half_draw_size = use_texture ? ((thickness * 0.5f) + 1) : 1.0f;
 
             // If line is not closed, the first and last points need to be generated differently as there are no normals to blend
             if (!closed)
