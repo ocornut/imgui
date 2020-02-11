@@ -38,6 +38,9 @@ Other Changes:
 
 - ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
   by default for standalone ColorButton.
+- InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
+  glyph. (#2149, #515)
+- Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
 - Demo: Added a black and white gradient to Demo>Examples>Custom Rendering.
 - Backends: SDL: Added ImGui_ImplSDL2_InitForMetal() for API consistency (even though the function
   currently does nothing).
