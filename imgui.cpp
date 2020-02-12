@@ -1481,10 +1481,174 @@ int ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args)
 }
 #endif // #ifdef IMGUI_DISABLE_DEFAULT_FORMAT_FUNCTIONS
 
-// CRC32 needs a 1KB lookup table (not cache friendly)
+// helper macros to define arch on various compiles
+#ifdef _MSC_VER
+//microsoft compiler
+#ifdef _M_X64
+#define IMGUI_ARCH_INTEL64
+#define IMGUI_ARCH_INTEL
+#endif
+#ifdef _M_IX86
+#define IMGUI_ARCH_INTEL32
+#define IMGUI_ARCH_INTEL
+#endif
+#else 
+// gcc and clang 
+#ifdef __x86_64__
+#define IMGUI_ARCH_INTEL64
+#define IMGUI_ARCH_INTEL
+#endif
+#ifdef __i386__
+#define IMGUI_ARCH_INTEL32
+#define IMGUI_ARCH_INTEL
+#endif
+#endif
+
+// define has_sse_4_2 on intel platform for msvc compiler if auto code dispatching is not disabled 
+#if defined(IMGUI_ARCH_INTEL) && defined(_MSC_VER) && !defined(IMGUI_NO_DYNAMIC_CODE_DISPATCHING)
+
+#ifdef _MSC_VER
+#include <intrin.h> // for __cpuid with microsoft compiler
+#else
+#include <cpuid.h> // for __get_cpuid with gcc
+#endif
+
+namespace
+{
+
+   bool has_sse_4_2() {
+#if defined(__SSE4_2__) || defined(__AVX__) // msvc doesn't define __SSE4_2__ (gcc does with -msse42) but does define __AVX__ which implies sse42
+      return true;// sse detected based on compilation flags
+#else
+      static int has_sse_4_2 = 0;
+
+      if (has_sse_4_2)
+         return has_sse_4_2 > 0;
+
+#ifdef _MSC_VER
+      int regs[4]; //eax,ebx,ecx,edx
+      __cpuid(regs, 0);
+      if (regs[0] >= 1) // does it work on amd as well or I have to test for geniune intel ?
+      {
+         __cpuid(regs, 1);
+
+         static const int SSE4_2_FLAG = 1 << 20;
+         has_sse_4_2 = (regs[2] & SSE4_2_FLAG) != 0 ? 1 : -1;
+         return (regs[2] & SSE4_2_FLAG) != 0;
+      }
+#elif __GNUC__
+      unsigned int regs[4]; //eax,ebx,ecx,edx
+      if (__get_cpuid(1u, &regs[0], &regs[1], &regs[2], &regs[3]))
+      {
+         has_sse_4_2 = (regs[2] & bit_SSE4_2) ? 1 : -1;
+         return (regs[2] & bit_SSE4_2);
+      }
+#endif
+
+      has_sse_4_2 = -1;
+      return false;
+#endif
+   }
+
+#if defined(__SSE4_2__) || defined(__AVX__) // msvc doesn't define __SSE4_2__ (gcc does with -msse42) but does define __AVX__ which implies sse42
+#define has_sse_4_2() (true)// sse detected based on compilation flags
+#endif
+
+}
+
+#endif //IMGUI_ARCH_INTEL
+
+
+
+
+
+#if defined(IMGUI_HASH_IMPLEMENTATION) && IMGUI_HASH_IMPLEMENTATION == 1
+//
+// !! crc32c (with hw codepath when available)
+//
+
+
+
+#if defined(IMGUI_ARCH_INTEL) && ((defined(__SSE4_2__) || defined(__AVX__)) || !defined(IMGUI_NO_DYNAMIC_CODE_DISPATCHING))
+
+   // on intel arch, if compilation flags are ok, just use this and disable default code path further down
+   // if flags are not ok and dynamic dispatching enabled use automatic dispatching 'target attribute' on gcc,clang 
+   // and on msvc prefix function name for manual dispatching
+
+
+#if (defined(__SSE4_2__) || defined(__AVX__)) // msvc doesn't define __SSE4_2__ (gcc does with -msse42) but does define __AVX__ which implies sse42   
+uint32_t ImHashData
+#else
+    // when compilation flags do not cover sse4 flags, do dynamic dispatching
+#ifndef _MSC_VER
+__attribute__((target("sse4.2")))  uint32_t ImHashData
+#else
+static uint32_t sse42_ImHashData
+#endif
+#endif
+
+(const void* data_p, size_t data_size, uint32_t seed)
+{
+   unsigned char* data = (unsigned char*)data_p, * data_end = (unsigned char*)data_p + data_size;
+
+   uint32_t crc = ~seed;
+   {
+#ifdef IMGUI_ARCH_INTEL64 // 32bit mode doesn't have 64bit crc32
+      uint64_t crc64 = crc;
+      for (; data + 8 <= data_end; data += 8)
+         crc64 = _mm_crc32_u64(crc64, *(uint64_t*)data);
+      crc = (uint32_t)crc64;
+#else   
+      for (; data + 4 <= data_end; data += 4)
+         crc = _mm_crc32_u32(crc, *(uint32_t*)data);
+#endif
+      for (; data != data_end; ++data)
+         crc = _mm_crc32_u8(crc, *data);
+
+   }
+   return ~crc;
+}
+#endif 
+
+#if !(defined(__SSE4_2__) || defined(__AVX__))
+
+#if defined(IMGUI_ARCH_INTEL) && !defined(_MSC_VER ) && !defined(IMGUI_NO_DYNAMIC_CODE_DISPATCHING) // on gcc and clang it'll auto-dispatch
+__attribute__((target("default")))
+#endif
+uint32_t ImHashData(const void* data_p, size_t data_size, uint32_t seed)
+{
+#if defined(IMGUI_ARCH_INTEL) && defined(_MSC_VER ) && !defined(IMGUI_NO_DYNAMIC_CODE_DISPATCHING) // on microsoft manually dispatch
+   if (has_sse_4_2())
+      return sse42_ImHashData(data_p, data_size, seed);
+#endif
+   
+   uint32_t crc = ~seed;
+
+   //see this post for reference https://stackoverflow.com/questions/29174349/mm-crc32-u8-gives-different-result-than-reference-code?noredirect=1&lq=1   
+   // Compute CRC of buf[0..len-1] with initial CRC crc.  This permits the computation of a CRC by feeding this routine a chunk of the input data at a time.  The value of crc for the first chunk should be zero.
+   for (unsigned char* data = (unsigned char*)data_p, *data_end = (unsigned char*)data_p + data_size; data != data_end; ++data)
+   {
+      //#define POLY 0xedb88320 //CRC-32 (Ethernet, ZIP, etc.) polynomial in reversed bit order. */
+#define POLY 0x82f63b78 // CRC-32C (iSCSI) polynomial in reversed bit order.
+      crc ^= *data;
+      for (int k = 0; k < 8; k++)
+         crc = crc & 1 ? (crc >> 1) ^ POLY : crc >> 1;
+   }
+
+   return ~crc;
+}
+
+#endif
+
+#elif !defined(IMGUI_HASH_IMPLEMENTATION) || IMGUI_HASH_IMPLEMENTATION == 0
+//
+// !! original crc32 code
+//
+
+// CRC32 needs a 1KB lookup table (not cache fridata_endly)
 // Although the code to generate the table is simple and shorter than the table itself, using a const table allows us to easily:
 // - avoid an unnecessary branch/memory tap, - keep the ImHashXXX functions usable by static constructors, - make it thread-safe.
-static const ImU32 GCrc32LookupTable[256] =
+static const uint32_t GCrc32LookupTable[256] =
 {
     0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,0x0EDB8832,0x79DCB8A4,0xE0D5E91E,0x97D2D988,0x09B64C2B,0x7EB17CBD,0xE7B82D07,0x90BF1D91,
     0x1DB71064,0x6AB020F2,0xF3B97148,0x84BE41DE,0x1ADAD47D,0x6DDDE4EB,0xF4D4B551,0x83D385C7,0x136C9856,0x646BA8C0,0xFD62F97A,0x8A65C9EC,0x14015C4F,0x63066CD9,0xFA0F3D63,0x8D080DF5,
@@ -1507,49 +1671,47 @@ static const ImU32 GCrc32LookupTable[256] =
 // Known size hash
 // It is ok to call ImHashData on a string with known length but the ### operator won't be supported.
 // FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImU32 ImHashData(const void* data_p, size_t data_size, ImU32 seed)
+inline uint32_t ImHashData(const void* data_p, size_t data_size, uint32_t seed)
 {
-    ImU32 crc = ~seed;
-    const unsigned char* data = (const unsigned char*)data_p;
-    const ImU32* crc32_lut = GCrc32LookupTable;
-    while (data_size-- != 0)
-        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
-    return ~crc;
+   uint32_t crc = ~seed;
+   const unsigned char* data = (const unsigned char*)data_p;
+   const uint32_t* crc32_lut = GCrc32LookupTable;
+   while (data_size-- != 0)
+      crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
+   return ~crc;
 }
+#else
+#pragma error "incorrect value for macro IMGUI_HASH_IMPLEMENTATION"
+#endif
 
 // Zero-terminated string hash, with support for ### to reset back to seed value
 // We support a syntax of "label###id" where only "###id" is included in the hash, and only "label" gets displayed.
 // Because this syntax is rarely used we are optimizing for the common case.
 // - If we reach ### in the string we discard the hash so far and reset to the seed.
 // - We don't do 'current += 2; continue;' after handling ### to keep the code smaller/faster (measured ~10% diff in Debug build)
-// FIXME-OPT: Replace with e.g. FNV1a hash? CRC32 pretty much randomly access 1KB. Need to do proper measurements.
-ImU32 ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
+uint32_t ImHashStr(const char* str, size_t size, uint32_t seed)
 {
-    seed = ~seed;
-    ImU32 crc = seed;
-    const unsigned char* data = (const unsigned char*)data_p;
-    const ImU32* crc32_lut = GCrc32LookupTable;
-    if (data_size != 0)
-    {
-        while (data_size-- != 0)
-        {
-            unsigned char c = *data++;
-            if (c == '#' && data_size >= 2 && data[0] == '#' && data[1] == '#')
-                crc = seed;
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
-        }
-    }
-    else
-    {
-        while (unsigned char c = *data++)
-        {
-            if (c == '#' && data[0] == '#' && data[1] == '#')
-                crc = seed;
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
-        }
-    }
-    return ~crc;
+   if (!size) size = strlen(str);
+
+   // skip anything prior '###' which effectively resets the hash
+   for (const char* c = (const char*)memchr(str, '#', size - 2); c; c = (const char*)memchr(c, '#', size - 2))
+   {
+      bool skip1 = (c[1] == '#'); // skip one extra char if it's '##' only
+      if (!skip1 | (c[2] != '#'))
+      {
+         c += 1 + skip1;
+         continue;
+      }
+
+      size = str + size - (c + 3);
+      str = c + 3;
+      break;
+   }
+
+
+   return ImHashData(str, size, seed);
 }
+
 
 //-----------------------------------------------------------------------------
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
