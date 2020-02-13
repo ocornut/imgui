@@ -2746,10 +2746,10 @@ struct MyItem
             int delta = 0;
             switch (sort_spec->ColumnUserID)
             {
-            case MyItemColumnID_ID:             delta = (a->ID - b->ID);                break;
-            case MyItemColumnID_Name:           delta = (strcmp(a->Name, b->Name));     break;
-            case MyItemColumnID_Quantity:       delta = (a->Quantity - b->Quantity);    break;
-            case MyItemColumnID_Description:    delta = (strcmp(a->Name, b->Name));     break;
+            case MyItemColumnID_ID:             delta = (b->ID - a->ID);                break;
+            case MyItemColumnID_Name:           delta = (strcmp(b->Name, a->Name));     break;
+            case MyItemColumnID_Quantity:       delta = (b->Quantity - a->Quantity);    break;
+            case MyItemColumnID_Description:    delta = (strcmp(b->Name, a->Name));     break;
             default: IM_ASSERT(0); break;
             }
             if (delta < 0)
@@ -2760,7 +2760,7 @@ struct MyItem
 
         // qsort() is instable so always return a way to differenciate items.
         // Your own compare function may want to avoid fallback on implicit sort specs e.g. a Name compare if it wasn't already part of the sort specs.
-        return (a->ID - b->ID);
+        return (b->ID - a->ID);
     }
 };
 const ImGuiTableSortSpecs* MyItem::s_current_sort_specs = NULL;
