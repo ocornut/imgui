@@ -1993,6 +1993,8 @@ enum ImDrawCornerFlags_
     ImDrawCornerFlags_All       = 0xF     // In your function calls you may use ~0 (= all bits sets) instead of ImDrawCornerFlags_All, as a convenience
 };
 
+#define IMGUI_HAS_TEXLINES      1
+
 enum ImDrawListFlags_
 {
     ImDrawListFlags_None                    = 0,

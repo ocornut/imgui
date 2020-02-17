@@ -2393,8 +2393,8 @@ static void ImFontAtlasBuildRegisterAALineCustomRects(ImFontAtlas* atlas)
     if ((atlas->Flags & ImFontAtlasFlags_NoAALines))
         return;
 
-    const int max_width = IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX; // The maximum line width we want to generate
     // The "max_width + 2" here is to give space for the end caps, whilst height (IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX+1) is to accommodate the fact we have a zero-width row
+    const int max_width = IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX; // The maximum line width we want to generate
     atlas->AALineRectId = atlas->AddCustomRectRegular(max_width + 2, IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX + 1);
 }
 
