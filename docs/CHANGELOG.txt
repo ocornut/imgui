@@ -36,6 +36,8 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- Drag and Drop, Nav: Disabling navigation arrow keys when drag and drop is active. In the docking
+  branch pressing arrow keys while dragging a window from a tab could trigger an assert. (#3025)
 - ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
   by default for standalone ColorButton.
 - InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
