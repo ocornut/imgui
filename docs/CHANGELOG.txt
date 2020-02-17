@@ -42,6 +42,10 @@ Other Changes:
   glyph. (#2149, #515)
 - Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
 - Demo: Added a black and white gradient to Demo>Examples>Custom Rendering.
+- Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
+  ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
+  Those functions makes it easier for example apps to support hi-dpi features without setting up
+  a manifest.
 - Backends: SDL: Added ImGui_ImplSDL2_InitForMetal() for API consistency (even though the function
   currently does nothing).
 - Examples: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
