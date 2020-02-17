@@ -629,7 +629,7 @@ static void ShowDemoWindowWidgets()
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
-                    if (ImGui::SmallButton("button")) {};
+                    if (ImGui::SmallButton("button")) {}
                     ImGui::TreePop();
                 }
             }

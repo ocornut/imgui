@@ -2538,11 +2538,11 @@ static stbtt_int32  stbtt__GetGlyphGPOSInfoAdvance(const stbtt_fontinfo *info, i
                             // There are no other cases.
                             STBTT_assert(0);
                             break;
-                        };
+                        } // [DEAR IMGUI] removed ;
                     }
                 }
                 break;
-            };
+            } // [DEAR IMGUI] removed ;
 
             default:
                 // TODO: Implement other stuff.
