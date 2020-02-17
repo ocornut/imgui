@@ -4524,9 +4524,10 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             y = ImGui::GetCursorScreenPos().y;
             for (int n = 0; n < gradient_steps; n++)
             {
-                float f = n / (float)gradient_steps;
-                ImU32 col32 = ImGui::GetColorU32(ImVec4(f, f, f, 1.0f));
-                draw_list->AddRectFilled(ImVec2(x + gradient_size.x * (n / (float)gradient_steps), y), ImVec2(x + gradient_size.x * ((n+1) / (float)gradient_steps), y + gradient_size.y), col32);
+                float f0 = n / (float)gradient_steps;
+                float f1 = (n + 1) / (float)gradient_steps;
+                ImU32 col32 = ImGui::GetColorU32(ImVec4(f0, f0, f0, 1.0f));
+                draw_list->AddRectFilled(ImVec2(x + gradient_size.x * f0, y), ImVec2(x + gradient_size.x * f1, y + gradient_size.y), col32);
             }
             ImGui::InvisibleButton("##gradient", gradient_size);
 
