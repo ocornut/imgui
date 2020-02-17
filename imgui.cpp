@@ -10451,7 +10451,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             char buf[256];
             char* p = buf;
             const char* buf_end = buf + IM_ARRAYSIZE(buf);
-            ImFormatString(p, buf_end - p, "Table 0x%08X (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
+            ImFormatString(p, buf_end - p, "Table 0x%08X (%d columns, in '%s')%s", table->ID, table->ColumnsCount, table->OuterWindow->Name, (table->LastFrameActive < ImGui::GetFrameCount() - 2) ? " *Inactive*" : "");
             bool open = ImGui::TreeNode(table, "%s", buf);
             if (ImGui::IsItemHovered())
                 ImGui::GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
@@ -10465,11 +10465,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         "Active: %d, Clipped: %d, DrawChannels: %d,%d\n"
                         "WidthGiven/Requested: %.1f/%.1f, Weight: %.2f\n"
                         "ContentWidth: RowsFrozen %d, RowsUnfrozen %d, HeadersUsed/Desired %d/%d\n"
+                        "SortOrder: %d, SortDir: %s\n"
                         "UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
                         n, column->IndexDisplayOrder, name ? name : "NULL", column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
                         column->IsActive, column->IsClipped, column->DrawChannelRowsBeforeFreeze, column->DrawChannelRowsAfterFreeze,
                         column->WidthGiven, column->WidthRequested, column->ResizeWeight,
                         column->ContentWidthRowsFrozen, column->ContentWidthRowsUnfrozen, column->ContentWidthHeadersUsed, column->ContentWidthHeadersDesired,
+                        column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? "Ascending" : (column->SortDirection == ImGuiSortDirection_Descending) ? "Descending" : "None",
                         column->UserID, column->Flags,
                         (column->Flags & ImGuiTableColumnFlags_WidthFixed) ? "WidthFixed " : "",
                         (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? "WidthStretch " : "",
@@ -10484,8 +10486,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     for (int n = 0; n < settings->ColumnsCount; n++)
                     {
                         ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-                        ImGui::BulletText("Column %d Order %d SortOrder %d Visible %d UserID 0x%08X WidthOrWeight %.3f",
-                            n, column_settings->DisplayOrder, column_settings->SortOrder, column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
+                        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? column_settings->SortDirection : ImGuiSortDirection_None;
+                        ImGui::BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
+                            n, column_settings->DisplayOrder, column_settings->SortOrder,
+                            (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
+                            column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
                     }
                     ImGui::TreePop();
                 }

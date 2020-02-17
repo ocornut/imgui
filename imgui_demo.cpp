@@ -3010,10 +3010,10 @@ struct MyItem
             case MyItemColumnID_Description:    delta = (strcmp(a->Name, b->Name));     break;
             default: IM_ASSERT(0); break;
             }
-            if (delta < 0)
-                return -1 * sort_spec->SortSign;
             if (delta > 0)
-                return +1 * sort_spec->SortSign;
+                return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? +1 : -1;
+            if (delta < 0)
+                return (sort_spec->SortDirection == ImGuiSortDirection_Ascending) ? -1 : +1;
         }
 
         // qsort() is instable so always return a way to differenciate items.

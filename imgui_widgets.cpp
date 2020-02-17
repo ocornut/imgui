@@ -9776,7 +9776,7 @@ void    ImGui::TableHeader(const char* label)
     float w_sort_text = 0.0f;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
-        const float ARROW_SCALE = 0.75f;
+        const float ARROW_SCALE = 0.65f;
         w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);// table->CellPadding.x);
         if (column->SortOrder != -1)
         {
@@ -9801,7 +9801,7 @@ void    ImGui::TableHeader(const char* label)
                 PopStyleColor();
                 x += w_sort_text;
             }
-            RenderArrow(window->DrawList, ImVec2(x, y), col, column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Down : ImGuiDir_Up, ARROW_SCALE);
+            RenderArrow(window->DrawList, ImVec2(x, y), col, column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Up : ImGuiDir_Down, ARROW_SCALE);
         }
 
         // Handle clicking on column header to adjust Sort Order
@@ -9891,7 +9891,6 @@ const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
             sort_spec->ColumnUserID = column->UserID;
             sort_spec->ColumnIndex = (ImU8)column_n;
             sort_spec->SortOrder = (ImU8)column->SortOrder;
-            sort_spec->SortSign = (column->SortDirection == ImGuiSortDirection_Ascending) ? +1 : -1;
             sort_spec->SortDirection = column->SortDirection;
             table->SortSpecs.ColumnsMask |= (ImU64)1 << column_n;
         }
@@ -10063,7 +10062,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         // We skip saving some data in the .ini file when they are unnecessary to restore our state
         // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet.
         if (column->IndexDisplayOrder != n)
-            settings->SaveFlags |= ImGuiTableFlags_Reorderable;;
+            settings->SaveFlags |= ImGuiTableFlags_Reorderable;
         if (column_settings->SortOrder != -1)
             settings->SaveFlags |= ImGuiTableFlags_Sortable;
         if (column_settings->Visible != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
