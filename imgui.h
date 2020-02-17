@@ -1846,23 +1846,22 @@ struct ImGuiPayload
 // Sorting specification for one column of a table (sizeof == 8 bytes)
 struct ImGuiTableSortSpecsColumn
 {
-    ImGuiID         ColumnUserID;       // User id of the column (if specified by a TableSetupColumn() call)
-    ImU8            ColumnIndex;        // Index of the column
-    ImU8            SortOrder;          // Index within parent ImGuiTableSortSpecs (always stored in order starting from 0, tables sorted on a single criteria will always have a 0 here)
-    ImS8            SortSign;           // +1 or -1 (you can use this or SortDirection, whichever is more convenient for your sort function)
-    ImS8            SortDirection;      // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending (you can use this or SortSign, whichever is more convenient for your sort function)
+    ImGuiID                     ColumnUserID;       // User id of the column (if specified by a TableSetupColumn() call)
+    ImU8                        ColumnIndex;        // Index of the column
+    ImU8                        SortOrder;          // Index within parent ImGuiTableSortSpecs (always stored in order starting from 0, tables sorted on a single criteria will always have a 0 here)
+    ImGuiSortDirection          SortDirection : 8;  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending (you can use this or SortSign, whichever is more convenient for your sort function)
 
-    ImGuiTableSortSpecsColumn() { ColumnUserID = 0; ColumnIndex = 0; SortOrder = 0; SortSign = +1; SortDirection = ImGuiSortDirection_Ascending; }
+    ImGuiTableSortSpecsColumn() { ColumnUserID = 0; ColumnIndex = 0; SortOrder = 0; SortDirection = ImGuiSortDirection_Ascending; }
 };
 
 // Sorting specifications for a table (often handling sort specs for a single column, occasionally more)
 // Obtained by calling TableGetSortSpecs()
 struct ImGuiTableSortSpecs
 {
-    const ImGuiTableSortSpecsColumn* Specs;     // Pointer to sort spec array.
-    int                         SpecsCount;     // Sort spec count. Most often 1 unless e.g. ImGuiTableFlags_MultiSortable is enabled.
-    bool                        SpecsChanged;   // Set to true by TableGetSortSpecs() call if the specs have changed since the previous call. Use this to sort again!
-    ImU64                       ColumnsMask;    // Set to the mask of column indexes included in the Specs array. e.g. (1 << N) when column N is sorted.
+    const ImGuiTableSortSpecsColumn* Specs;         // Pointer to sort spec array.
+    int                         SpecsCount;         // Sort spec count. Most often 1 unless e.g. ImGuiTableFlags_MultiSortable is enabled.
+    bool                        SpecsChanged;       // Set to true by TableGetSortSpecs() call if the specs have changed since the previous call. Use this to sort again!
+    ImU64                       ColumnsMask;        // Set to the mask of column indexes included in the Specs array. e.g. (1 << N) when column N is sorted.
 
     ImGuiTableSortSpecs()       { Specs = NULL; SpecsCount = 0; SpecsChanged = false; ColumnsMask = 0x00; }
 };

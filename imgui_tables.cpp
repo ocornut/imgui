@@ -2011,7 +2011,7 @@ void    ImGui::TableHeader(const char* label)
     float w_sort_text = 0.0f;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
-        const float ARROW_SCALE = 0.75f;
+        const float ARROW_SCALE = 0.65f;
         w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);// table->CellPadding.x);
         if (column->SortOrder != -1)
         {
@@ -2036,7 +2036,7 @@ void    ImGui::TableHeader(const char* label)
                 PopStyleColor();
                 x += w_sort_text;
             }
-            RenderArrow(window->DrawList, ImVec2(x, y), col, column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Down : ImGuiDir_Up, ARROW_SCALE);
+            RenderArrow(window->DrawList, ImVec2(x, y), col, column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Up : ImGuiDir_Down, ARROW_SCALE);
         }
 
         // Handle clicking on column header to adjust Sort Order
@@ -2126,7 +2126,6 @@ const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
             sort_spec->ColumnUserID = column->UserID;
             sort_spec->ColumnIndex = (ImU8)column_n;
             sort_spec->SortOrder = (ImU8)column->SortOrder;
-            sort_spec->SortSign = (column->SortDirection == ImGuiSortDirection_Ascending) ? +1 : -1;
             sort_spec->SortDirection = column->SortDirection;
             table->SortSpecs.ColumnsMask |= (ImU64)1 << column_n;
         }
@@ -2298,7 +2297,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         // We skip saving some data in the .ini file when they are unnecessary to restore our state
         // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet.
         if (column->IndexDisplayOrder != n)
-            settings->SaveFlags |= ImGuiTableFlags_Reorderable;;
+            settings->SaveFlags |= ImGuiTableFlags_Reorderable;
         if (column_settings->SortOrder != -1)
             settings->SaveFlags |= ImGuiTableFlags_Sortable;
         if (column_settings->Visible != ((column->Flags & ImGuiTableColumnFlags_DefaultHide) == 0))
@@ -2446,11 +2445,13 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
                 "Active: %d, Clipped: %d, DrawChannels: %d,%d\n"
                 "WidthGiven/Requested: %.1f/%.1f, Weight: %.2f\n"
                 "ContentWidth: RowsFrozen %d, RowsUnfrozen %d, HeadersUsed/Desired %d/%d\n"
+                "SortOrder: %d, SortDir: %s\n"
                 "UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
                 n, column->IndexDisplayOrder, name ? name : "NULL", column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
                 column->IsActive, column->IsClipped, column->DrawChannelRowsBeforeFreeze, column->DrawChannelRowsAfterFreeze,
                 column->WidthGiven, column->WidthRequested, column->ResizeWeight,
                 column->ContentWidthRowsFrozen, column->ContentWidthRowsUnfrozen, column->ContentWidthHeadersUsed, column->ContentWidthHeadersDesired,
+                column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? "Ascending" : (column->SortDirection == ImGuiSortDirection_Descending) ? "Descending" : "None",
                 column->UserID, column->Flags,
                 (column->Flags & ImGuiTableColumnFlags_WidthFixed) ? "WidthFixed " : "",
                 (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? "WidthStretch " : "",
@@ -2465,8 +2466,11 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             for (int n = 0; n < settings->ColumnsCount; n++)
             {
                 ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-                BulletText("Column %d Order %d SortOrder %d Visible %d UserID 0x%08X WidthOrWeight %.3f",
-                    n, column_settings->DisplayOrder, column_settings->SortOrder, column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
+                ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? column_settings->SortDirection : ImGuiSortDirection_None;
+                BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
+                    n, column_settings->DisplayOrder, column_settings->SortOrder,
+                    (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
+                    column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
             }
             TreePop();
         }
