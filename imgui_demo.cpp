@@ -1,4 +1,4 @@
-// dear imgui, v1.75
+// dear imgui, v1.76 WIP
 // (demo code)
 
 // Help:
@@ -684,7 +684,7 @@ static void ShowDemoWindowWidgets()
                 {
                     ImGui::Text("blah blah");
                     ImGui::SameLine();
-                    if (ImGui::SmallButton("button")) {};
+                    if (ImGui::SmallButton("button")) {}
                     ImGui::TreePop();
                 }
             }
@@ -1095,11 +1095,11 @@ static void ShowDemoWindowWidgets()
             static char buf6[64] = ""; ImGui::InputText("\"imgui\" letters", buf6, 64, ImGuiInputTextFlags_CallbackCharFilter, TextFilters::FilterImGuiLetters);
 
             ImGui::Text("Password input");
-            static char bufpass[64] = "password123";
-            ImGui::InputText("password", bufpass, 64, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
+            static char password[64] = "password123";
+            ImGui::InputText("password", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
             ImGui::SameLine(); HelpMarker("Display all characters as '*'.\nDisable clipboard cut and copy.\nDisable logging.\n");
-            ImGui::InputTextWithHint("password (w/ hint)", "<password>", bufpass, 64, ImGuiInputTextFlags_Password | ImGuiInputTextFlags_CharsNoBlank);
-            ImGui::InputText("password (clear)", bufpass, 64, ImGuiInputTextFlags_CharsNoBlank);
+            ImGui::InputTextWithHint("password (w/ hint)", "<password>", password, IM_ARRAYSIZE(password), ImGuiInputTextFlags_Password);
+            ImGui::InputText("password (clear)", password, IM_ARRAYSIZE(password));
             ImGui::TreePop();
         }
 
@@ -1319,7 +1319,9 @@ static void ShowDemoWindowWidgets()
         }
 
         ImGui::Text("Color button only:");
-        ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, misc_flags, ImVec2(80,80));
+        static bool no_border = false;
+        ImGui::Checkbox("ImGuiColorEditFlags_NoBorder", &no_border);
+        ImGui::ColorButton("MyColor##3c", *(ImVec4*)&color, misc_flags | (no_border ? ImGuiColorEditFlags_NoBorder : 0), ImVec2(80,80));
 
         ImGui::Text("Color picker:");
         static bool alpha = true;
@@ -3542,6 +3544,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                                         ImGui::BeginTooltip();
                                         ImGui::Text("Codepoint: U+%04X", base + n);
                                         ImGui::Separator();
+                                        ImGui::Text("Visible: %d", glyph->Visible);
                                         ImGui::Text("AdvanceX: %.1f", glyph->AdvanceX);
                                         ImGui::Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
                                         ImGui::Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
@@ -4553,7 +4556,6 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             if (ImGui::SliderInt("Circle segments", &circle_segments_override_v, 3, 40))
                 circle_segments_override = true;
             ImGui::ColorEdit4("Color", &colf.x);
-            ImGui::PopItemWidth();
             const ImVec2 p = ImGui::GetCursorScreenPos();
             const ImU32 col = ImColor(colf);
             const float spacing = 10.0f;
@@ -4592,6 +4594,28 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             draw_list->AddRectFilled(ImVec2(x, y), ImVec2(x + 1, y + 1), col);                          x += sz;            // Pixel (faster than AddLine)
             draw_list->AddRectFilledMultiColor(ImVec2(x, y), ImVec2(x + sz, y + sz), IM_COL32(0, 0, 0, 255), IM_COL32(255, 0, 0, 255), IM_COL32(255, 255, 0, 255), IM_COL32(0, 255, 0, 255));
             ImGui::Dummy(ImVec2((sz + spacing) * 9.8f, (sz + spacing) * 3));
+
+            // Draw black and white gradients
+            static int gradient_steps = 16;
+            ImGui::Separator();
+            ImGui::AlignTextToFramePadding();
+            ImGui::Text("Gradient steps");
+            ImGui::SameLine(); if (ImGui::RadioButton("16", gradient_steps == 16)) { gradient_steps = 16; }
+            ImGui::SameLine(); if (ImGui::RadioButton("32", gradient_steps == 32)) { gradient_steps = 32; }
+            ImGui::SameLine(); if (ImGui::RadioButton("256", gradient_steps == 256)) { gradient_steps = 256; }
+            ImVec2 gradient_size = ImVec2(ImGui::CalcItemWidth(), 64.0f);
+            x = ImGui::GetCursorScreenPos().x;
+            y = ImGui::GetCursorScreenPos().y;
+            for (int n = 0; n < gradient_steps; n++)
+            {
+                float f0 = n / (float)gradient_steps;
+                float f1 = (n + 1) / (float)gradient_steps;
+                ImU32 col32 = ImGui::GetColorU32(ImVec4(f0, f0, f0, 1.0f));
+                draw_list->AddRectFilled(ImVec2(x + gradient_size.x * f0, y), ImVec2(x + gradient_size.x * f1, y + gradient_size.y), col32);
+            }
+            ImGui::InvisibleButton("##gradient", gradient_size);
+
+            ImGui::PopItemWidth();
             ImGui::EndTabItem();
         }
 

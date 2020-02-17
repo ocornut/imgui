@@ -1,24 +1,15 @@
-// dear imgui: standalone example application for GLFW + Metal, using programmable pipeline
+// Dear ImGui: standalone example application for SDL2 + Metal
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
-// (GLFW is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
+// (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
 
 #include "imgui.h"
-#include "imgui_impl_glfw.h"
+#include "imgui_impl_sdl.h"
 #include "imgui_impl_metal.h"
 #include <stdio.h>
-
-#define GLFW_INCLUDE_NONE
-#define GLFW_EXPOSE_NATIVE_COCOA
-#include <GLFW/glfw3.h>
-#include <GLFW/glfw3native.h>
+#include <SDL.h>
 
 #import <Metal/Metal.h>
 #import <QuartzCore/QuartzCore.h>
-
-static void glfw_error_callback(int error, const char* description)
-{
-    fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
 
 int main(int, char**)
 {
@@ -48,31 +39,39 @@ int main(int, char**)
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
 
-    // Setup window
-    glfwSetErrorCallback(glfw_error_callback);
-    if (!glfwInit())
-        return 1;
+    // Setup SDL
+    // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
+    // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
+    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
+    {
+        printf("Error: %s\n", SDL_GetError());
+        return -1;
+    }
 
-    // Create window with graphics context
-    glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+Metal example", NULL, NULL);
+    // Inform SDL that we will be using metal for rendering. Without this hint initialization of metal renderer may fail.
+    SDL_SetHint(SDL_HINT_RENDER_DRIVER, "metal");
+
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL+Metal example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
     if (window == NULL)
-        return 1;
+    {
+        printf("Error creating window: %s\n", SDL_GetError());
+        return -2;
+    }
 
-    id <MTLDevice> device = MTLCreateSystemDefaultDevice();;
-    id <MTLCommandQueue> commandQueue = [device newCommandQueue];
+    SDL_Renderer* renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
+    if (renderer == NULL)
+    {
+        printf("Error creating renderer: %s\n", SDL_GetError());
+        return -3;
+    }
 
-    ImGui_ImplGlfw_InitForOpenGL(window, true);
-    ImGui_ImplMetal_Init(device);
-
-    NSWindow *nswin = glfwGetCocoaWindow(window);
-    CAMetalLayer *layer = [CAMetalLayer layer];
-    layer.device = device;
+    CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_RenderGetMetalLayer(renderer);
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
-    nswin.contentView.layer = layer;
-    nswin.contentView.wantsLayer = YES;
+    ImGui_ImplMetal_Init(layer.device);
+    ImGui_ImplSDL2_InitForMetal(window);
 
-    MTLRenderPassDescriptor *renderPassDescriptor = [MTLRenderPassDescriptor new];
+    id<MTLCommandQueue> commandQueue = [layer.device newCommandQueue];
+    MTLRenderPassDescriptor* renderPassDescriptor = [MTLRenderPassDescriptor new];
 
     // Our state
     bool show_demo_window = true;
@@ -80,7 +79,8 @@ int main(int, char**)
     float clear_color[4] = {0.45f, 0.55f, 0.60f, 1.00f};
 
     // Main loop
-    while (!glfwWindowShouldClose(window))
+    bool done = false;
+    while (!done)
     {
         @autoreleasepool
         {
@@ -89,10 +89,18 @@ int main(int, char**)
             // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
             // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
             // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-            glfwPollEvents();
+            SDL_Event event;
+            while (SDL_PollEvent(&event))
+            {
+                ImGui_ImplSDL2_ProcessEvent(&event);
+                if (event.type == SDL_QUIT)
+                    done = true;
+                if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
+                    done = true;
+            }
 
             int width, height;
-            glfwGetFramebufferSize(window, &width, &height);
+            SDL_GetRendererOutputSize(renderer, &width, &height);
             layer.drawableSize = CGSizeMake(width, height);
             id<CAMetalDrawable> drawable = [layer nextDrawable];
 
@@ -106,7 +114,7 @@ int main(int, char**)
 
             // Start the Dear ImGui frame
             ImGui_ImplMetal_NewFrame(renderPassDescriptor);
-            ImGui_ImplGlfw_NewFrame();
+            ImGui_ImplSDL2_NewFrame(window);
             ImGui::NewFrame();
 
             // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -160,11 +168,12 @@ int main(int, char**)
 
     // Cleanup
     ImGui_ImplMetal_Shutdown();
-    ImGui_ImplGlfw_Shutdown();
+    ImGui_ImplSDL2_Shutdown();
     ImGui::DestroyContext();
 
-    glfwDestroyWindow(window);
-    glfwTerminate();
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
     return 0;
 }

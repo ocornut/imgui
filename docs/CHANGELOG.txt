@@ -100,6 +100,29 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.76 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Drag and Drop, Nav: Disabling navigation arrow keys when drag and drop is active. In the docking
+  branch pressing arrow keys while dragging a window from a tab could trigger an assert. (#3025)
+- ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
+  by default for standalone ColorButton.
+- InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
+  glyph. (#2149, #515)
+- Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
+- Demo: Added a black and white gradient to Demo>Examples>Custom Rendering.
+- Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
+  ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
+  Those functions makes it easier for example apps to support hi-dpi features without setting up
+  a manifest.
+- Backends: SDL: Added ImGui_ImplSDL2_InitForMetal() for API consistency (even though the function
+  currently does nothing).
+- Examples: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
+
+
+-----------------------------------------------------------------------
  VERSION 1.75 (Released 2020-02-10)
 -----------------------------------------------------------------------
 

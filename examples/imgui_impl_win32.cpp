@@ -2,7 +2,7 @@
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 
 // Implemented features:
-//  [X] Platform: Clipboard support (for Win32 this is actually part of core imgui)
+//  [X] Platform: Clipboard support (for Win32 this is actually part of core dear imgui)
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: Keyboard arrays indexed using VK_* Virtual Key Codes, e.g. ImGui::IsKeyPressed(VK_SPACE).
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
@@ -30,6 +30,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2020-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2020-02-17: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(), ImGui_ImplWin32_GetDpiScaleForMonitor() helper functions.
 //  2020-01-14: Inputs: Added support for #define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD/IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT.
 //  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
 //  2019-05-11: Inputs: Don't filter value from WM_CHAR before calling AddInputCharacter().
@@ -338,13 +339,18 @@ void    ImGui_ImplWin32_NewFrame()
 #define DBT_DEVNODES_CHANGED 0x0007
 #endif
 
-// Process Win32 mouse/keyboard inputs.
-// You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
+// Win32 message handler (process Win32 mouse/keyboard inputs, etc.)
+// Call from your application's message handler.
+// When implementing your own back-end, you can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if Dear ImGui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
-// Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
+// Generally you may always pass all inputs to Dear ImGui, and hide them from your application based on those two flags.
 // PS: In this Win32 handler, we use the capture API (GetCapture/SetCapture/ReleaseCapture) to be able to read mouse coordinates when dragging mouse outside of our window bounds.
 // PS: We treat DBLCLK messages as regular mouse down messages, so this code will work on windows classes that have the CS_DBLCLKS flag set. Our own example app code doesn't set this flag.
+#if 0
+// Copy this line into your .cpp file to forward declare the function.
+extern IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
+#endif
 IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARAM wParam, LPARAM lParam)
 {
     if (ImGui::GetCurrentContext() == NULL)
@@ -418,27 +424,34 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     return 0;
 }
 
+
 //--------------------------------------------------------------------------------------------------------
-// DPI handling
-// Those in theory should be simple calls but Windows has multiple ways to handle DPI, and most of them
-// require recent Windows versions at runtime or recent Windows SDK at compile-time. Neither we want to depend on.
-// So we dynamically select and load those functions to avoid dependencies. This is the scheme successfully
-// used by GLFW (from which we borrowed some of the code here) and other applications aiming to be portable.
+// DPI-related helpers (optional)
+//--------------------------------------------------------------------------------------------------------
+// - Use to enable DPI awareness without having to create an application manifest.
+// - Your own app may already do this via a manifest or explicit calls. This is mostly useful for our examples/ apps.
+// - In theory we could call simple functions from Windows SDK such as SetProcessDPIAware(), SetProcessDpiAwareness(), etc.
+//   but most of the functions provided by Microsoft require Windows 8.1/10+ SDK at compile time and Windows 8/10+ at runtime,
+//   neither we want to require the user to have. So we dynamically select and load those functions to avoid dependencies.
 //---------------------------------------------------------------------------------------------------------
-// At this point ImGui_ImplWin32_EnableDpiAwareness() is just a helper called by main.cpp, we don't call it automatically.
+// This is the scheme successfully used by GLFW (from which we borrowed some of the code) and other apps aiming to be highly portable.
+// ImGui_ImplWin32_EnableDpiAwareness() is just a helper called by main.cpp, we don't call it automatically.
+// If you are trying to implement your own back-end for your own engine, you may ignore that noise.
 //---------------------------------------------------------------------------------------------------------
 
+// Implement some of the functions and types normally declared in recent Windows SDK.
+#if !defined(_versionhelpers_H_INCLUDED_) && !defined(_INC_VERSIONHELPERS)
 static BOOL IsWindowsVersionOrGreater(WORD major, WORD minor, WORD sp)
 {
-    OSVERSIONINFOEXW osvi = { sizeof(osvi), major, minor, 0, 0,{ 0 }, sp };
+    OSVERSIONINFOEXW osvi = { sizeof(osvi), major, minor, 0, 0, { 0 }, sp };
     DWORD mask = VER_MAJORVERSION | VER_MINORVERSION | VER_SERVICEPACKMAJOR;
-    ULONGLONG cond = VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL);
-    cond = VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
-    cond = VerSetConditionMask(cond, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
-    return VerifyVersionInfoW(&osvi, mask, cond);
+    ULONGLONG cond = ::VerSetConditionMask(0, VER_MAJORVERSION, VER_GREATER_EQUAL);
+    cond = ::VerSetConditionMask(cond, VER_MINORVERSION, VER_GREATER_EQUAL);
+    cond = ::VerSetConditionMask(cond, VER_SERVICEPACKMAJOR, VER_GREATER_EQUAL);
+    return ::VerifyVersionInfoW(&osvi, mask, cond);
 }
 #define IsWindows8Point1OrGreater()  IsWindowsVersionOrGreater(HIBYTE(0x0602), LOBYTE(0x0602), 0) // _WIN32_WINNT_WINBLUE
-#define IsWindows10OrGreater()       IsWindowsVersionOrGreater(HIBYTE(0x0A00), LOBYTE(0x0A00), 0) // _WIN32_WINNT_WIN10
+#endif
 
 #ifndef DPI_ENUMS_DECLARED
 typedef enum { PROCESS_DPI_UNAWARE = 0, PROCESS_SYSTEM_DPI_AWARE = 1, PROCESS_PER_MONITOR_DPI_AWARE = 2 } PROCESS_DPI_AWARENESS;
@@ -451,13 +464,14 @@ DECLARE_HANDLE(DPI_AWARENESS_CONTEXT);
 #ifndef DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2
 #define DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2 (DPI_AWARENESS_CONTEXT)-4
 #endif
-typedef HRESULT(WINAPI * PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib+dll, Windows 8.1
-typedef HRESULT(WINAPI * PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);        // Shcore.lib+dll, Windows 8.1
-typedef DPI_AWARENESS_CONTEXT(WINAPI * PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT); // User32.lib+dll, Windows 10 v1607 (Creators Update)
+typedef HRESULT(WINAPI* PFN_SetProcessDpiAwareness)(PROCESS_DPI_AWARENESS);                     // Shcore.lib + dll, Windows 8.1+
+typedef HRESULT(WINAPI* PFN_GetDpiForMonitor)(HMONITOR, MONITOR_DPI_TYPE, UINT*, UINT*);        // Shcore.lib + dll, Windows 8.1+
+typedef DPI_AWARENESS_CONTEXT(WINAPI* PFN_SetThreadDpiAwarenessContext)(DPI_AWARENESS_CONTEXT); // User32.lib + dll, Windows 10 v1607+ (Creators Update)
 
+// Helper function to enable DPI awareness without setting up a manifest
 void ImGui_ImplWin32_EnableDpiAwareness()
 {
-    // if (IsWindows10OrGreater()) // FIXME-DPI: This needs a manifest to succeed. Instead we try to grab the function pointer.
+    // if (IsWindows10OrGreater()) // This needs a manifest to succeed. Instead we try to grab the function pointer!
     {
         static HINSTANCE user32_dll = ::LoadLibraryA("user32.dll"); // Reference counted per-process
         if (PFN_SetThreadDpiAwarenessContext SetThreadDpiAwarenessContextFn = (PFN_SetThreadDpiAwarenessContext)::GetProcAddress(user32_dll, "SetThreadDpiAwarenessContext"))
@@ -470,22 +484,22 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     {
         static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
         if (PFN_SetProcessDpiAwareness SetProcessDpiAwarenessFn = (PFN_SetProcessDpiAwareness)::GetProcAddress(shcore_dll, "SetProcessDpiAwareness"))
+        {
             SetProcessDpiAwarenessFn(PROCESS_PER_MONITOR_DPI_AWARE);
+            return;
+        }
     }
-    else
-    {
-        SetProcessDPIAware();
-    }
+    SetProcessDPIAware();
 }
 
 #ifdef _MSC_VER
-#pragma comment(lib, "gdi32")   // GetDeviceCaps()
+#pragma comment(lib, "gdi32")   // Link with gdi32.lib for GetDeviceCaps()
 #endif
 
 float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
 {
     UINT xdpi = 96, ydpi = 96;
-    if (::IsWindows8Point1OrGreater())
+    if (IsWindows8Point1OrGreater())
     {
         static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
         if (PFN_GetDpiForMonitor GetDpiForMonitorFn = (PFN_GetDpiForMonitor)::GetProcAddress(shcore_dll, "GetDpiForMonitor"))
@@ -507,6 +521,7 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
     HMONITOR monitor = ::MonitorFromWindow((HWND)hwnd, MONITOR_DEFAULTTONEAREST);
     return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
 }
+
 
 //--------------------------------------------------------------------------------------------------------
 // IME (Input Method Editor) basic support for e.g. Asian language users
@@ -845,3 +860,5 @@ static void ImGui_ImplWin32_ShutdownPlatformInterface()
 {
     ::UnregisterClass(_T("ImGui Platform"), ::GetModuleHandle(NULL));
 }
+
+//---------------------------------------------------------------------------------------------------------
