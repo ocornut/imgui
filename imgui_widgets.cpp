@@ -6345,6 +6345,10 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
             flags |= ImGuiWindowFlags_ChildWindow;
         menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
+    else
+    {
+        g.NextWindowData.ClearFlags(); // We behave like Begin() and need to consume those values
+    }
 
     return menu_is_open;
 }
