@@ -44,6 +44,8 @@ Other Changes:
   when the menu is not open. (#3030)
 - InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
   glyph. (#2149, #515)
+- Window: Fixed a bug with child window inheriting ItemFlags from their parent when the child
+  window also manipulate the ItemFlags stack. (#3024) [@Stanbroek]
 - Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
 - Demo: Added a black and white gradient to Demo>Examples>Custom Rendering.
 - Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
