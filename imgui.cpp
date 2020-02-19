@@ -6313,9 +6313,47 @@ void ImGui::ForceStyleColorSpaceConversion(ImGuiStyle* style, bool to_linear)
     {
         ImVec4& col = style->Colors[i];
         if (to_linear)
-            col = SRGBToLinear(col);
+        {
+            ImVec4 naive_linear = SRGBToLinear(col);
+            ImVec4 real_linear = SRGBToLinear(ImVec4(col.x*col.w, col.y*col.w, col.z*col.w, col.w)); // This calculation is incorrect, but emulates ImGui's old behaviour
+
+            // In ImGui current, the final resulting colour is calculated as sRGB * alpha + (destination_sRGB * (1 - alpha))
+            // A naive conversion to linear does srgbtolinear(sRGB) * alpha + (destination_linear * (1 - alpha)), resulting in different style colours
+            // This calculates firstly the colour srgbtolinear(sRGB), and then works out the new alpha value such that it represents
+            // The same colour as sRGB * alpha
+            // This conversion can never be 100% accurate, because of the differences in blending in sRGB vs linear
+
+            float new_approximate_alpha = 0;
+
+            if(naive_linear.x > 0.0001f && naive_linear.y > 0.0001f && naive_linear.z > 0.0001f)
+            {
+                new_approximate_alpha = ((real_linear.x / naive_linear.x) + (real_linear.y / naive_linear.y) + (real_linear.z / naive_linear.z)) / 3.f;
+            }
+
+            col = naive_linear;
+            col.w = new_approximate_alpha;
+
+            // What the above transform represents
+            //col = SRGBToLinear(col);
+        }
         else
-            col = LinearToSRGB(col);
+        {
+            ImVec4 naive_sRGB = LinearToSRGB(col);
+            ImVec4 real_sRGB = LinearToSRGB(ImVec4(col.x * col.w, col.y * col.w, col.z * col.w, col.w));
+
+            float new_approximate_alpha = 0;
+
+            if(naive_sRGB.x > 0.0001f && naive_sRGB.y > 0.0001f && naive_sRGB.z > 0.0001f)
+            {
+                new_approximate_alpha = ((real_sRGB.x / naive_sRGB.x) + (real_sRGB.y / naive_sRGB.y) + (real_sRGB.z / naive_sRGB.z)) / 3.f;
+            }
+
+            col = naive_sRGB;
+            col.w = new_approximate_alpha;
+
+            // What the above transform represents
+            //col = LinearToSRGB(col);
+        }
     }
 }
 
