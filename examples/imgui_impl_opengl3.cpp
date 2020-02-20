@@ -86,14 +86,16 @@
 #undef IMGUI_IMPL_OPENGL_LOADER_GL3W
 #undef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #undef IMGUI_IMPL_OPENGL_LOADER_GLAD
-#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING
+#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING2
+#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING3
 #undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #elif defined(__EMSCRIPTEN__)
 #define IMGUI_IMPL_OPENGL_ES2           // Emscripten    -> GL ES 2, "#version 100"
 #undef IMGUI_IMPL_OPENGL_LOADER_GL3W
 #undef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #undef IMGUI_IMPL_OPENGL_LOADER_GLAD
-#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING
+#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING2
+#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING3
 #undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
 #endif
@@ -118,9 +120,13 @@
 #include <GL/glew.h>    // Needs to be initialized with glewInit() in user's code
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>  // Needs to be initialized with gladLoadGL() in user's code
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2) || defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
 #include <glbinding/gl/gl.h>  // Initialize with glbinding::initialize()
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+#include <glbinding/Binding.h>
+#else
 #include <glbinding/glbinding.h>
+#endif
 using namespace gl;
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
@@ -193,8 +199,10 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     gl_loader = "GLEW";
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
     gl_loader = "GLAD";
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
-    gl_loader = "glbinding";
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+    gl_loader = "glbinding2";
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
+    gl_loader = "glbinding3";
 #else // IMGUI_IMPL_OPENGL_LOADER_CUSTOM
     gl_loader = "Custom";
 #endif

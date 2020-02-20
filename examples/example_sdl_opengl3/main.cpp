@@ -19,8 +19,12 @@
 #include <GL/glew.h>    // Initialize with glewInit()
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>  // Initialize with gladLoadGL()
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2) || defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
+#if defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+#include <glbinding/Binding.h>    // Initialize with glbinding::Binding::initialize()
+#else
 #include <glbinding/glbinding.h>  // Initialize with glbinding::initialize()
+#endif
 #include <glbinding/gl/gl.h>
 using namespace gl;
 #else
@@ -73,7 +77,10 @@ int main(int, char**)
     bool err = glewInit() != GLEW_OK;
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
     bool err = gladLoadGL() == 0;
-#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+    bool err = false;
+    glbinding::Binding::initialize();
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
     bool err = false;
     glbinding::initialize([](const char* name) { return (glbinding::ProcAddress)SDL_GL_GetProcAddress(name); });
 #else
