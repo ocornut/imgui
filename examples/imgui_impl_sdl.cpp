@@ -259,7 +259,7 @@ bool ImGui_ImplSDL2_InitForD3D(SDL_Window* window)
 
 bool ImGui_ImplSDL2_InitForMetal(SDL_Window* window)
 {
-    return ImGui_ImplSDL2_Init(window);
+    return ImGui_ImplSDL2_Init(window, NULL);
 }
 
 void ImGui_ImplSDL2_Shutdown()
