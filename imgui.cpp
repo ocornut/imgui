@@ -1347,7 +1347,9 @@ char* ImStrdup(ImStr str)
     size_t len = IM_IMSTR_LENGTH(str);
     void* buf = IM_ALLOC(len + 1);
     *((char*)buf + len) = 0;                // str may not contain \0, it must be inserted manually.
-    return (char*)memcpy(buf, (const void*)str.Begin, len);
+    if (len > 0)
+        return (char*)memcpy(buf, (const void*)str.Begin, len);
+    return (char*)buf;
 }
 
 char* ImStrdupcpy(char* dst, size_t* p_dst_size, ImStr src)
@@ -1362,7 +1364,9 @@ char* ImStrdupcpy(char* dst, size_t* p_dst_size, ImStr src)
             *p_dst_size = src_size;
     }
     dst[src_size - 1] = 0;              // str may not contain \0, it must be inserted manually.
-    return (char*)memcpy(dst, (const void*)src.Begin, src_size - 1);
+    if (src_size > 1)
+        return (char*)memcpy(dst, (const void*)src.Begin, src_size - 1);
+    return dst;
 }
 
 char* ImStrdupcpy(char* dst, size_t* p_dst_size, const char* src)
@@ -2213,7 +2217,8 @@ void ImGuiTextBuffer::append(ImStr str)
     }
 
     Buf.resize(needed_sz);
-    memcpy(&Buf[write_off - 1], str.Begin, (size_t)len);
+    if (len > 0)
+        memcpy(&Buf[write_off - 1], str.Begin, (size_t)len);
     Buf[write_off - 1 + len] = 0;
 }
 
@@ -3289,7 +3294,8 @@ void ImGui::SetClipboardText(ImStr text)
     {
         int len = (int)IM_IMSTR_LENGTH(text);
         char* text_p = (char*)IM_ALLOC(len + 1);
-        memcpy(text_p, text.Begin, len);
+        if (len > 0)
+            memcpy(text_p, text.Begin, len);
         text_p[len] = 0;        // text may not contain \0, it must be inserted manually.
         g.IO.SetClipboardTextFn(g.IO.ClipboardUserData, text_p);
         IM_FREE(text_p);
@@ -9630,6 +9636,12 @@ void ImGui::MarkIniSettingsDirty(ImGuiWindow* window)
 ImGuiWindowSettings* ImGui::CreateNewWindowSettings(ImStr name)
 {
     ImGuiContext& g = *GImGui;
+    const size_t name_len = IM_IMSTR_LENGTH(name);
+    if (!name_len)
+    {
+        IM_ASSERT(false && "Name must not be empty.");
+        return NULL;
+    }
 
 #if !IMGUI_DEBUG_INI_SETTINGS
     // Skip to the "###" marker if any. We don't skip past to match the behavior of GetID()
@@ -9637,7 +9649,6 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(ImStr name)
     if (const char* p = ImStrstr(name, "###"))
         name.Begin = p;
 #endif
-    const size_t name_len = IM_IMSTR_LENGTH(name);
 
     // Allocate chunk
     const size_t chunk_size = sizeof(ImGuiWindowSettings) + name_len + 1;
@@ -9645,7 +9656,7 @@ ImGuiWindowSettings* ImGui::CreateNewWindowSettings(ImStr name)
     IM_PLACEMENT_NEW(settings) ImGuiWindowSettings();
     settings->ID = ImHashStr(name);
     memcpy(settings->GetName(), name.Begin, name_len);
-    settings->GetName()[name_len] = 0;        // name may not contain \0, it must be inserted manually.
+    settings->GetName()[name_len] = 0;          // name may not contain \0, it must be inserted manually.
 
     return settings;
 }
