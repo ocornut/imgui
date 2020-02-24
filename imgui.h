@@ -231,7 +231,7 @@ struct ImVec4
 #endif
 };
 
-#define IM_IMSTR_LENGTH(s)          (size_t)(s.Begin ? (s.End ? s.End - s.Begin : strlen(s.Begin)) : 0)
+#define IM_IMSTR_LENGTH(s)          (s.Begin ? (s.End ? (size_t)(s.End - s.Begin) : strlen(s.Begin)) : 0)
 #define IM_IMSTR_ENSURE_HAS_END(s)  if (s.End == NULL) s.End = s.Begin + strlen(s.Begin)
 
 // String view class.

@@ -3712,7 +3712,8 @@ void ImGuiInputTextCallbackData::InsertChars(int pos, ImStr new_text)
 
     if (BufTextLen != pos)
         memmove(Buf + pos + new_text_len, Buf + pos, (size_t)(BufTextLen - pos));
-    memcpy(Buf + pos, new_text.Begin, (size_t)new_text_len * sizeof(char));
+    if (new_text_len > 0)
+        memcpy(Buf + pos, new_text.Begin, (size_t)new_text_len * sizeof(char));
     Buf[BufTextLen + new_text_len] = '\0';
 
     if (CursorPos >= pos)
