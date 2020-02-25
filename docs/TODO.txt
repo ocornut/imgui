@@ -163,6 +163,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
  - tabs: TabItem could honor SetNextItemWidth()?
+ - tabs: explicit api (even if internal) to cleanly manipulate tab order.
+ - tabs: Mouse wheel over tab bar could scroll? (#2702)
+
 
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
