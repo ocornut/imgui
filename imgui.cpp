@@ -4507,14 +4507,9 @@ void ImGui::Render()
         if (windows_to_render_top_most[n] && IsWindowActiveAndVisible(windows_to_render_top_most[n])) // NavWindowingTarget is always temporarily displayed as the top-most window
             AddRootWindowToDrawData(windows_to_render_top_most[n]);
 
-    // Draw software mouse cursor if requested
-    ImRect mouse_cursor_rect;
+    ImVec2 mouse_cursor_offset, mouse_cursor_size, mouse_cursor_uv[4];
     if (g.IO.MouseDrawCursor && g.MouseCursor != ImGuiMouseCursor_None)
-    {
-        ImVec2 offset, size, uv[4];
-        if (g.IO.Fonts->GetMouseCursorTexData(g.MouseCursor, &offset, &size, &uv[0], &uv[2]))
-            mouse_cursor_rect = ImRect(g.IO.MousePos, g.IO.MousePos + ImVec2(size.x + 2, size.y + 2) * g.Style.MouseCursorScale);
-    }
+        g.IO.Fonts->GetMouseCursorTexData(g.MouseCursor, &mouse_cursor_offset, &mouse_cursor_size, &mouse_cursor_uv[0], &mouse_cursor_uv[2]);
 
     // Setup ImDrawData structures for end-user
     g.IO.MetricsRenderVertices = g.IO.MetricsRenderIndices = 0;
@@ -4523,8 +4518,14 @@ void ImGui::Render()
         ImGuiViewportP* viewport = g.Viewports[n];
         viewport->DrawDataBuilder.FlattenIntoSingleLayer();
 
-        if (viewport->GetRect().Overlaps(mouse_cursor_rect))
-            RenderMouseCursor(GetForegroundDrawList(viewport), g.IO.MousePos, g.Style.MouseCursorScale, g.MouseCursor, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32(0, 0, 0, 48));
+        // Draw software mouse cursor if requested by io.MouseDrawCursor flag
+        // (note we scale cursor by current viewport/monitor, however Windows 10 for its own hardware cursor seems to be using a different scale factor)
+        if (mouse_cursor_size.x > 0.0f && mouse_cursor_size.y > 0.0f)
+        {
+            float scale = g.Style.MouseCursorScale * viewport->DpiScale;
+            if (viewport->GetRect().Overlaps(ImRect(g.IO.MousePos, g.IO.MousePos + ImVec2(mouse_cursor_size.x + 2, mouse_cursor_size.y + 2) * scale)))
+                RenderMouseCursor(GetForegroundDrawList(viewport), g.IO.MousePos, scale, g.MouseCursor, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32(0, 0, 0, 48));
+        }
 
         // Add foreground ImDrawList (for each active viewport)
         if (viewport->DrawLists[1] != NULL)
