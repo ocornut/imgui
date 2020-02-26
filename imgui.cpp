@@ -5273,6 +5273,7 @@ static ImVec2 CalcWindowAutoFitSize(ImGuiWindow* window, const ImVec2& size_cont
         if (is_popup || is_menu) // Popups and menus bypass style.WindowMinSize by default, but we give then a non-zero minimum size to facilitate understanding problematic cases (e.g. empty popups)
             size_min = ImMin(size_min, ImVec2(4.0f, 4.0f));
 
+        // FIXME-VIEWPORT-WORKAREA: May want to use GetWorkSize() instead of Size depending on the type of windows?
         ImVec2 avail_size = window->Viewport->Size;
         if (window->ViewportOwned)
             avail_size = ImVec2(FLT_MAX, FLT_MAX);
@@ -6002,6 +6003,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         else
             window->WindowPadding = style.WindowPadding;
 
+        // Lock menu offset so size calculation can use it as menu-bar windows need a minimum size.
+        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
+        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
+
         // Collapse window by double-clicking on title bar
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse) && !window->DockIsActive)
@@ -6182,13 +6187,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Clamp position/size so window stays visible within its viewport or monitor
         // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
+        // FIXME: Similar to code in GetWindowAllowedExtentRect()
         ImRect viewport_rect = window->Viewport->GetMainRect();
         if (!window_pos_set_by_api && !(flags & ImGuiWindowFlags_ChildWindow) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
         {
             ImVec2 clamp_padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
             if (!window->ViewportOwned && viewport_rect.GetWidth() > 0 && viewport_rect.GetHeight() > 0.0f)
             {
-                ClampWindowRect(window, viewport_rect, clamp_padding);
+                ClampWindowRect(window, window->Viewport->GetWorkRect(), clamp_padding);
             }
             else if (window->ViewportOwned && g.PlatformIO.Monitors.Size > 0)
             {
@@ -6437,8 +6443,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
 
         window->DC.MenuBarAppending = false;
-        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
-        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
         window->DC.MenuColumns.Update(3, style.ItemSpacing.x, window_just_activated_by_user);
         window->DC.TreeDepth = 0;
         window->DC.TreeJumpToParentOnPopMask = 0x00;
@@ -8514,6 +8518,7 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
     return pos;
 }
 
+// Note that this is used for popups, which can overlap the non work-area of individual viewports.
 ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window)
 {
     ImGuiContext& g = *GImGui;
@@ -8527,6 +8532,7 @@ ImRect ImGui::GetWindowAllowedExtentRect(ImGuiWindow* window)
     }
     else
     {
+        // Use the full viewport area (not work area) for popups
         r_screen.Min = window->Viewport->Pos;
         r_screen.Max = window->Viewport->Pos + window->Viewport->Size;
     }
@@ -10730,6 +10736,11 @@ static void ImGui::UpdateViewportsNewFrame()
 
         // Update/copy monitor info
         UpdateViewportPlatformMonitor(viewport);
+
+        // Lock down space taken by menu bars and status bars, reset the offset for fucntions like BeginMainMenuBar() to alter them again.
+        viewport->WorkOffsetMin = viewport->CurrWorkOffsetMin;
+        viewport->WorkOffsetMax = viewport->CurrWorkOffsetMax;
+        viewport->CurrWorkOffsetMin = viewport->CurrWorkOffsetMax = ImVec2(0.0f, 0.0f);
 
         // Reset alpha every frame. Users of transparency (docking) needs to request a lower alpha back.
         viewport->Alpha = 1.0f;
@@ -13852,14 +13863,14 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
 // Tips: Use with ImGuiDockNodeFlags_PassthruCentralNode!
 // The limitation with this call is that your window won't have a menu bar.
 // Even though we could pass window flags, it would also require the user to be able to call BeginMenuBar() somehow meaning we can't Begin/End in a single function.
-// So if you want a menu bar you need to repeat this code manually ourselves. As with advanced other Docking API, we may change this function signature.
+// But you can also use BeginMainMenuBar(). If you really want a menu bar inside the same window as the one hosting the dockspace, you will need to copy this code somewhere and tweak it.
 ImGuiID ImGui::DockSpaceOverViewport(ImGuiViewport* viewport, ImGuiDockNodeFlags dockspace_flags, const ImGuiWindowClass* window_class)
 {
     if (viewport == NULL)
         viewport = GetMainViewport();
 
-    SetNextWindowPos(viewport->Pos);
-    SetNextWindowSize(viewport->Size);
+    SetNextWindowPos(viewport->GetWorkPos());
+    SetNextWindowSize(viewport->GetWorkSize());
     SetNextWindowViewport(viewport->ID);
 
     ImGuiWindowFlags host_window_flags = 0;
@@ -15230,7 +15241,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (ImGui::TreeNode((void*)(intptr_t)viewport->ID, "Viewport #%d, ID: 0x%08X, Parent: 0x%08X, Window: \"%s\"", viewport->Idx, viewport->ID, viewport->ParentViewportId, viewport->Window ? viewport->Window->Name : "N/A"))
             {
                 ImGuiWindowFlags flags = viewport->Flags;
-                ImGui::BulletText("Pos: (%.0f,%.0f), Size: (%.0f,%.0f), Monitor: %d, DpiScale: %.0f%%", viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y, viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
+                ImGui::BulletText("Main Pos: (%.0f,%.0f), Size: (%.0f,%.0f)\nWorkArea Offset Left: %.0f Top: %.0f, Right: %.0f, Bottom: %.0f\nMonitor: %d, DpiScale: %.0f%%",
+                    viewport->Pos.x, viewport->Pos.y, viewport->Size.x, viewport->Size.y,
+                    viewport->WorkOffsetMin.x, viewport->WorkOffsetMin.y, viewport->WorkOffsetMax.x, viewport->WorkOffsetMax.y,
+                    viewport->PlatformMonitor, viewport->DpiScale * 100.0f);
                 if (viewport->Idx > 0) { ImGui::SameLine(); if (ImGui::SmallButton("Reset Pos")) { viewport->Pos = ImVec2(200,200); if (viewport->Window) viewport->Window->Pos = ImVec2(200,200); } }
                 ImGui::BulletText("Flags: 0x%04X =%s%s%s%s%s%s%s", viewport->Flags,
                     (flags & ImGuiViewportFlags_CanHostOtherWindows) ? " CanHostOtherWindows" : "", (flags & ImGuiViewportFlags_NoDecoration) ? " NoDecoration" : "",

@@ -2468,14 +2468,18 @@ enum ImGuiViewportFlags_
     ImGuiViewportFlags_CanHostOtherWindows      = 1 << 9    // Main viewport: can host multiple imgui windows (secondary viewports are associated to a single window).
 };
 
-// The viewports created and managed by imgui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.
+// The viewports created and managed by Dear ImGui. The role of the platform back-end is to create the platform/OS windows corresponding to each viewport.
+// - Main Area = entire viewport.
+// - Work Area = entire viewport minus sections optionally used by menu bars, status bars. Some positioning code will prefer to use this. Window are also trying to stay within this area.
 struct ImGuiViewport
 {
     ImGuiID             ID;                     // Unique identifier for the viewport
     ImGuiViewportFlags  Flags;                  // See ImGuiViewportFlags_
-    ImVec2              Pos;                    // Position of viewport both in imgui space and in OS desktop/native space
-    ImVec2              Size;                   // Size of viewport in pixel
-    float               DpiScale;               // 1.0f = 96 DPI = No extra scale
+    ImVec2              Pos;                    // Main Area: Position of the viewport (the imgui coordinates are the same as OS desktop/native coordinates)
+    ImVec2              Size;                   // Main Area: Size of the viewport.
+    ImVec2              WorkOffsetMin;          // Work Area: Offset from Pos to top-left corner of Work Area. Generally (0,0) or (0,+main_menu_bar_height). Work Area is Full Area but without menu-bars/status-bars (so WorkArea always fit inside Pos/Size!)
+    ImVec2              WorkOffsetMax;          // Work Area: Offset from Pos+Size to bottom-right corner of Work Area. Generally (0,0) or (0,-status_bar_height).
+    float               DpiScale;               // 1.0f = 96 DPI = No extra scale.
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
     ImGuiID             ParentViewportId;       // (Advanced) 0: no parent. Instruct the platform back-end to setup a parent/child relationship between platform windows.
 
@@ -2491,6 +2495,10 @@ struct ImGuiViewport
 
     ImGuiViewport()     { ID = 0; Flags = 0; DpiScale = 0.0f; DrawData = NULL; ParentViewportId = 0; RendererUserData = PlatformUserData = PlatformHandle = PlatformHandleRaw = NULL; PlatformRequestMove = PlatformRequestResize = PlatformRequestClose = false; }
     ~ImGuiViewport()    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
+
+    // Access work-area rectangle
+    ImVec2              GetWorkPos()            { return ImVec2(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y); }
+    ImVec2              GetWorkSize()           { return ImVec2(Size.x - WorkOffsetMin.x + WorkOffsetMax.x, Size.y - WorkOffsetMin.y + WorkOffsetMax.y); } // This not clamped
 };
 
 #if defined(__clang__)
