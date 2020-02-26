@@ -3851,7 +3851,7 @@ void ImGui::NewFrame()
     IM_ASSERT(g.Font->IsLoaded());
     ImRect virtual_space(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
     for (int n = 0; n < g.Viewports.Size; n++)
-        virtual_space.Add(g.Viewports[n]->GetRect());
+        virtual_space.Add(g.Viewports[n]->GetMainRect());
     g.DrawListSharedData.ClipRectFullscreen = ImVec4(virtual_space.Min.x, virtual_space.Min.y, virtual_space.Max.x, virtual_space.Max.y);
     g.DrawListSharedData.CurveTessellationTol = g.Style.CurveTessellationTol;
     g.DrawListSharedData.SetCircleSegmentMaxError(g.Style.CircleSegmentMaxError);
@@ -4376,7 +4376,7 @@ static void ImGui::EndFrameDrawDimmedBackgrounds()
         float rounding = ImMax(window->WindowRounding, g.Style.WindowRounding);
         ImRect bb = window->Rect();
         bb.Expand(g.FontSize);
-        if (bb.Contains(window->Viewport->GetRect())) // If a window fits the entire viewport, adjust its highlight inward
+        if (bb.Contains(window->Viewport->GetMainRect())) // If a window fits the entire viewport, adjust its highlight inward
         {
             bb.Expand(-g.FontSize - 1.0f);
             rounding = window->WindowRounding;
@@ -4523,7 +4523,7 @@ void ImGui::Render()
         if (mouse_cursor_size.x > 0.0f && mouse_cursor_size.y > 0.0f)
         {
             float scale = g.Style.MouseCursorScale * viewport->DpiScale;
-            if (viewport->GetRect().Overlaps(ImRect(g.IO.MousePos, g.IO.MousePos + ImVec2(mouse_cursor_size.x + 2, mouse_cursor_size.y + 2) * scale)))
+            if (viewport->GetMainRect().Overlaps(ImRect(g.IO.MousePos, g.IO.MousePos + ImVec2(mouse_cursor_size.x + 2, mouse_cursor_size.y + 2) * scale)))
                 RenderMouseCursor(GetForegroundDrawList(viewport), g.IO.MousePos, scale, g.MouseCursor, IM_COL32_WHITE, IM_COL32_BLACK, IM_COL32(0, 0, 0, 48));
         }
 
@@ -4648,7 +4648,7 @@ bool ImGui::IsMouseHoveringRect(const ImVec2& r_min, const ImVec2& r_max, bool c
     const ImRect rect_for_touch(rect_clipped.Min - g.Style.TouchExtraPadding, rect_clipped.Max + g.Style.TouchExtraPadding);
     if (!rect_for_touch.Contains(g.IO.MousePos))
         return false;
-    if (!g.MouseViewport->GetRect().Overlaps(rect_clipped))
+    if (!g.MouseViewport->GetMainRect().Overlaps(rect_clipped))
         return false;
     return true;
 }
@@ -6100,7 +6100,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Late create viewport if we don't fit within our current host viewport.
         if (window->ViewportAllowPlatformMonitorExtend >= 0 && !window->ViewportOwned && !(window->Viewport->Flags & ImGuiViewportFlags_Minimized))
-            if (!window->Viewport->GetRect().Contains(window->Rect()))
+            if (!window->Viewport->GetMainRect().Contains(window->Rect()))
             {
                 // This is based on the assumption that the DPI will be known ahead (same as the DPI of the selection done in UpdateSelectWindowViewport)
                 //ImGuiViewport* old_viewport = window->Viewport;
@@ -6182,7 +6182,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         // Clamp position/size so window stays visible within its viewport or monitor
         // Ignore zero-sized display explicitly to avoid losing positions if a window manager reports zero-sized window when initializing or minimizing.
-        ImRect viewport_rect = window->Viewport->GetRect();
+        ImRect viewport_rect = window->Viewport->GetMainRect();
         if (!window_pos_set_by_api && !(flags & ImGuiWindowFlags_ChildWindow) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
         {
             ImVec2 clamp_padding = ImMax(style.DisplayWindowPadding, style.DisplaySafeAreaPadding);
@@ -6242,7 +6242,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 window->Viewport->Pos = window->Pos;
             if (!window->Viewport->PlatformRequestResize)
                 window->Viewport->Size = window->Size;
-            viewport_rect = window->Viewport->GetRect();
+            viewport_rect = window->Viewport->GetMainRect();
         }
 
         // Save last known viewport position within the window itself (so it can be saved in .ini file and restored)
@@ -8374,7 +8374,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     if ((g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasPos) == 0)
     {
         ImGuiViewportP* viewport = window->WasActive ? window->Viewport : (ImGuiViewportP*)GetMainViewport(); // FIXME-VIEWPORT: What may be our reference viewport?
-        SetNextWindowPos(viewport->GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
+        SetNextWindowPos(viewport->GetMainRect().GetCenter(), ImGuiCond_Appearing, ImVec2(0.5f, 0.5f));
     }
 
     flags |= ImGuiWindowFlags_Popup | ImGuiWindowFlags_Modal | ImGuiWindowFlags_NoCollapse | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoDocking;
@@ -9009,7 +9009,7 @@ static ImVec2 ImGui::NavCalcPreferredRefPos()
         // When navigation is active and mouse is disabled, decide on an arbitrary position around the bottom left of the currently navigated item.
         const ImRect& rect_rel = g.NavWindow->NavRectRel[g.NavLayer];
         ImVec2 pos = g.NavWindow->Pos + ImVec2(rect_rel.Min.x + ImMin(g.Style.FramePadding.x * 4, rect_rel.GetWidth()), rect_rel.Max.y - ImMin(g.Style.FramePadding.y, rect_rel.GetHeight()));
-        ImRect visible_rect = g.NavWindow->Viewport->GetRect();
+        ImRect visible_rect = g.NavWindow->Viewport->GetMainRect();
         return ImFloor(ImClamp(pos, visible_rect.Min, visible_rect.Max));   // ImFloor() is important because non-integer mouse position application in back-end might be lossy and result in undesirable non-zero delta.
     }
 }
@@ -10557,7 +10557,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
     ImGuiContext& g = *GImGui;
     if (!(viewport->Flags & (ImGuiViewportFlags_CanHostOtherWindows | ImGuiViewportFlags_Minimized)) || window->Viewport == viewport)
         return false;
-    if (!viewport->GetRect().Contains(window->Rect()))
+    if (!viewport->GetMainRect().Contains(window->Rect()))
         return false;
     if (GetWindowAlwaysWantOwnViewport(window))
         return false;
@@ -10568,7 +10568,7 @@ static bool ImGui::UpdateTryMergeWindowIntoHostViewport(ImGuiWindow* window, ImG
         if (window_behind == window)
             break;
         if (window_behind->WasActive && window_behind->ViewportOwned && !(window_behind->Flags & ImGuiWindowFlags_ChildWindow))
-            if (window_behind->Viewport->GetRect().Overlaps(window->Rect()))
+            if (window_behind->Viewport->GetMainRect().Overlaps(window->Rect()))
                 return false;
     }
 
@@ -10636,7 +10636,7 @@ static ImGuiViewportP* FindHoveredViewportFromPlatformWindowStack(const ImVec2 m
     for (int n = 0; n < g.Viewports.Size; n++)
     {
         ImGuiViewportP* viewport = g.Viewports[n];
-        if (!(viewport->Flags & (ImGuiViewportFlags_NoInputs | ImGuiViewportFlags_Minimized)) && viewport->GetRect().Contains(mouse_platform_pos))
+        if (!(viewport->Flags & (ImGuiViewportFlags_NoInputs | ImGuiViewportFlags_Minimized)) && viewport->GetMainRect().Contains(mouse_platform_pos))
             if (best_candidate == NULL || best_candidate->LastFrontMostStampCount < viewport->LastFrontMostStampCount)
                 best_candidate = viewport;
     }
@@ -11231,7 +11231,7 @@ static int ImGui::FindPlatformMonitorForRect(const ImRect& rect)
 // Update monitor from viewport rectangle (we'll use this info to clamp windows and save windows lost in a removed monitor)
 static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
 {
-    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetRect());
+    viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect());
 }
 
 void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
@@ -14957,7 +14957,7 @@ void ImGui::ShowViewportThumbnails()
     //for (int n = 0; n < g.PlatformIO.Monitors.Size; n++)
     //    bb_full.Add(GetPlatformMonitorMainRect(g.PlatformIO.Monitors[n]));
     for (int n = 0; n < g.Viewports.Size; n++)
-        bb_full.Add(g.Viewports[n]->GetRect());
+        bb_full.Add(g.Viewports[n]->GetMainRect());
     ImVec2 p = window->DC.CursorPos;
     ImVec2 off = p - bb_full.Min * SCALE;
     //for (int n = 0; n < g.PlatformIO.Monitors.Size; n++)
