@@ -156,10 +156,11 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #ifndef IMGUI_DEBUG_LOG
 #define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
 #endif
-#define IMGUI_DEBUG_LOG_VIEWPORT(...)   ((void)0)       // Disable log
-#define IMGUI_DEBUG_LOG_DOCKING(...)    ((void)0)       // Disable log
-//#define IMGUI_DEBUG_LOG_VIEWPORT      IMGUI_DEBUG_LOG // Enable log
-//#define IMGUI_DEBUG_LOG_DOCKING       IMGUI_DEBUG_LOG // Enable log
+
+// Debug Logging for selected systems. Remove the '((void)0) //' to enable.
+#define IMGUI_DEBUG_LOG_POPUP(...)      ((void)0) // IMGUI_DEBUG_LOG(__VA_ARGS__)
+#define IMGUI_DEBUG_LOG_VIEWPORT(...)   ((void)0) // IMGUI_DEBUG_LOG(__VA_ARGS__)
+#define IMGUI_DEBUG_LOG_DOCKING(...)    ((void)0) // IMGUI_DEBUG_LOG(__VA_ARGS__)
 
 // Static Asserts
 #if (__cplusplus >= 201100)
