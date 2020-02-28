@@ -288,6 +288,27 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // Menu Bar
     if (ImGui::BeginMenuBar())
     {
+        if (ImGui::BeginMenu("Foo"))
+        {
+            if (ImGui::BeginMenu("AAA"))
+            {
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("BBB"))
+            {
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("AAA"))
+            {
+                ImGui::EndMenu();
+            }
+            if (ImGui::BeginMenu("BBB"))
+            {
+                ImGui::EndMenu();
+            }
+            ImGui::EndMenu();
+        }
+
         if (ImGui::BeginMenu("Menu"))
         {
             ShowExampleMenuFile();
@@ -3580,6 +3601,7 @@ static void ShowExampleMenuFile()
     }
     if (ImGui::MenuItem("Save", "Ctrl+S")) {}
     if (ImGui::MenuItem("Save As..")) {}
+
     ImGui::Separator();
     if (ImGui::BeginMenu("Options"))
     {
@@ -3591,13 +3613,12 @@ static void ShowExampleMenuFile()
         ImGui::EndChild();
         static float f = 0.5f;
         static int n = 0;
-        static bool b = true;
         ImGui::SliderFloat("Value", &f, 0.0f, 1.0f);
         ImGui::InputFloat("Input", &f, 0.1f);
         ImGui::Combo("Combo", &n, "Yes\0No\0Maybe\0\0");
-        ImGui::Checkbox("Check", &b);
         ImGui::EndMenu();
     }
+
     if (ImGui::BeginMenu("Colors"))
     {
         float sz = ImGui::GetTextLineHeight();
@@ -3612,6 +3633,17 @@ static void ShowExampleMenuFile()
         }
         ImGui::EndMenu();
     }
+
+    // Here we demonstrate appending again to the "Options" menu (which we already created above)
+    // Of course in this demo it is a little bit silly that this function calls BeginMenu("Options") twice.
+    // In a real code-base using it would make senses to use this feature from very different code locations.
+    if (ImGui::BeginMenu("Options")) // <-- Append!
+    {
+        static bool b = true;
+        ImGui::Checkbox("SomeOption", &b);
+        ImGui::EndMenu();
+    }
+
     if (ImGui::BeginMenu("Disabled", false)) // Disabled
     {
         IM_ASSERT(0);

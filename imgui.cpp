@@ -3623,7 +3623,7 @@ void ImGui::NewFrame()
     g.FrameCount += 1;
     g.TooltipOverrideCount = 0;
     g.WindowsActiveCount = 0;
-    g.RenderedMenusId.resize(0);
+    g.MenusIdSubmittedThisFrame.resize(0);
 
     // Setup current font and draw list shared data
     g.IO.Fonts->Locked = true;
@@ -3915,6 +3915,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.ShrinkWidthBuffer.clear();
 
     g.PrivateClipboard.clear();
+    g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
 
     g.SettingsWindows.clear();
