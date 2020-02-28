@@ -214,7 +214,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485)
  - tooltip: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers.
 
- - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - menus: menu bars inside modal windows are acting weird.
  - status-bar: add a per-window status bar helper similar to what menu-bar does.
  - shortcuts: local-style shortcut api, e.g. parse "&Save"

@@ -6222,11 +6222,29 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
+    bool menu_is_open = IsPopupOpen(id);
+    ImGuiWindowFlags flags = ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
+
+    // Sub-menus are ChildWindow so that mouse can be hovering across them (otherwise top-most popup menu would steal focus and not allow hovering on parent menu)
+    if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
+        flags |= ImGuiWindowFlags_ChildWindow;
+
+    if (g.RenderedMenusId.contains(id))
+    {
+        // Menu with same ID was already created - append to it.
+        if (menu_is_open)
+            menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
+        if (!menu_is_open)
+            g.NextWindowData.ClearFlags();          // We behave like Begin() and need to consume those values
+        return menu_is_open;
+    }
+    else
+    {
+        g.RenderedMenusId.push_back(id);            // Tag menu as used. Next time BeginMenu() with same ID is called it will append to existing menu.
+    }
 
     ImVec2 label_size = CalcTextSize(label, NULL, true);
-
     bool pressed;
-    bool menu_is_open = IsPopupOpen(id);
     bool menuset_is_open = !(window->Flags & ImGuiWindowFlags_Popup) && (g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].OpenParentId == window->IDStack.back());
     ImGuiWindow* backed_nav_window = g.NavWindow;
     if (menuset_is_open)
@@ -6345,11 +6363,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     if (menu_is_open)
     {
-        // Sub-menus are ChildWindow so that mouse can be hovering across them (otherwise top-most popup menu would steal focus and not allow hovering on parent menu)
         SetNextWindowPos(popup_pos, ImGuiCond_Always);
-        ImGuiWindowFlags flags = ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
-        if (window->Flags & (ImGuiWindowFlags_Popup|ImGuiWindowFlags_ChildMenu))
-            flags |= ImGuiWindowFlags_ChildWindow;
         menu_is_open = BeginPopupEx(id, flags); // menu_is_open can be 'false' when the popup is completely clipped (e.g. zero size display)
     }
     else
