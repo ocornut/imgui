@@ -8586,7 +8586,7 @@ void ImGui::PushColumnsBackground()
     ImGuiWindow* window = GetCurrentWindowRead();
     ImGuiColumns* columns = window->DC.CurrentColumns;
     window->DrawList->ChannelsSetCurrent(0);
-    int cmd_size = window->DrawList->CmdBuffer.Size;
+    int cmd_size = window->DrawList->CmdBuffer.Size; cmd_size;
     PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false); 
     IM_ASSERT(cmd_size == window->DrawList->CmdBuffer.Size); // Being in channel 0 this should not have created an ImDrawCmd
 }
