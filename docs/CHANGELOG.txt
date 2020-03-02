@@ -40,7 +40,7 @@ Other Changes:
   branch pressing arrow keys while dragging a window from a tab could trigger an assert. (#3025)
 - ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
   by default for standalone ColorButton.
-- BeginMenu: Using same ID multiple times appends content to a menu. (#1207)
+- BeginMenu: Using same ID multiple times appends content to a menu. (#1207) [@rokups]
 - BeginMenu: Fixed a bug where SetNextWindowXXX data before a BeginMenu() would not be cleared
   when the menu is not open. (#3030)
 - InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
