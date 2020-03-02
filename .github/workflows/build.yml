@@ -458,10 +458,20 @@ jobs:
         popd
         make -C examples/example_emscripten_wgpu
 
+  Android:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Build example_android_opengl3
+      run: |
+        cd examples/example_android_opengl3/android
+        gradle assembleDebug
+
   Discord-CI:
     runs-on: ubuntu-18.04
     if: always()
-    needs: [Windows, Linux, MacOS, iOS, Emscripten]
+    needs: [Windows, Linux, MacOS, iOS, Emscripten, Android]
     steps:
     - uses: dearimgui/github_discord_notifier@latest
       with:

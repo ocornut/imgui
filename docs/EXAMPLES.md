@@ -79,6 +79,10 @@ Changelog, so if you want to update them later it will be easier to catch up wit
 Allegro 5 example. <BR>
 = main.cpp + imgui_impl_allegro5.cpp
 
+[example_android_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_android_opengl3/) <BR>
+Android + OpenGL3 (ES) example. <BR>
+= main.cpp + imgui_impl_android.cpp + imgui_impl_opengl3.cpp
+
 [example_apple_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_metal/) <BR>
 OSX & iOS + Metal example. <BR>
 = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
