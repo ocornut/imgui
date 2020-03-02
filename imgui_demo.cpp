@@ -288,27 +288,6 @@ void ImGui::ShowDemoWindow(bool* p_open)
     // Menu Bar
     if (ImGui::BeginMenuBar())
     {
-        if (ImGui::BeginMenu("Foo"))
-        {
-            if (ImGui::BeginMenu("AAA"))
-            {
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("BBB"))
-            {
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("AAA"))
-            {
-                ImGui::EndMenu();
-            }
-            if (ImGui::BeginMenu("BBB"))
-            {
-                ImGui::EndMenu();
-            }
-            ImGui::EndMenu();
-        }
-
         if (ImGui::BeginMenu("Menu"))
         {
             ShowExampleMenuFile();
