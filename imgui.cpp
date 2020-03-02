@@ -2286,6 +2286,24 @@ const ImVec4& ImGui::GetStyleColorVec4(ImGuiCol idx)
     return style.Colors[idx];
 }
 
+ImVec4 ImGui::GetStyleLinearColor(ImGuiCol idx)
+{
+    ImGuiStyle& style = GImGui->Style;
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        return style.Colors[idx];
+    else
+        return ImGui::SRGBToLinear(style.Colors[idx]);
+}
+
+ImVec4 ImGui::GetStyleSRGBColor(ImGuiCol idx)
+{
+    ImGuiStyle& style = GImGui->Style;
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        return ImGui::LinearToSRGB(style.Colors[idx]);
+    else
+        return style.Colors[idx];
+}
+
 ImU32 ImGui::GetColorU32(ImU32 col)
 {
     ImGuiStyle& style = GImGui->Style;
@@ -6250,6 +6268,110 @@ void ImGui::PopTextWrapPos()
     window->DC.TextWrapPos = window->DC.TextWrapPosStack.empty() ? -1.0f : window->DC.TextWrapPosStack.back();
 }
 
+// These functions are quite slow because they are 'correct', but currently they are only used for conversions within ImGui itself in a one-off manner
+float ImGui::SRGBToLinear(float in)
+{
+    if (in <= 0.04045f)
+        return in / 12.92f;
+    else
+        return ImPow((in + 0.055f) / 1.055f, 2.4f);
+}
+
+float ImGui::LinearToSRGB(float in)
+{
+    if (in <= 0.0031308f)
+        return in * 12.92f;
+    else
+        return 1.055f * ImPow(in, 1.0f / 2.4f) - 0.055f;
+}
+
+ImVec4 ImGui::SRGBToLinear(ImVec4 col)
+{
+    col.x = SRGBToLinear(col.x);
+    col.y = SRGBToLinear(col.y);
+    col.z = SRGBToLinear(col.z);
+    // Alpha component is already linear
+
+    return col;
+}
+
+ImVec4 ImGui::LinearToSRGB(ImVec4 col)
+{
+    col.x = LinearToSRGB(col.x);
+    col.y = LinearToSRGB(col.y);
+    col.z = LinearToSRGB(col.z);
+    // Alpha component is already linear
+
+    return col;
+}
+
+void ImGui::ForceStyleColorSpaceConversion(ImGuiStyle* style, bool to_linear)
+{
+    // This is a bit of a hack
+    // Converts all ImGui's current styling to the correct color space
+    // Given that you generally don't need to toggle sRGB <-> linear color in a performant way this is probably acceptable
+    // But done a lot of times small precision issues will crop up eventually
+    for (int i = 0; i < ImGuiCol_COUNT; i++)
+    {
+        ImVec4& col = style->Colors[i];
+        if (to_linear)
+        {
+            ImVec4 naive_linear = SRGBToLinear(col);
+            ImVec4 real_linear = SRGBToLinear(ImVec4(col.x*col.w, col.y*col.w, col.z*col.w, col.w)); // This calculation is incorrect, but emulates ImGui's old behaviour
+
+            // In ImGui current, the final resulting colour is calculated as sRGB * alpha + (destination_sRGB * (1 - alpha))
+            // A naive conversion to linear does srgbtolinear(sRGB) * alpha + (destination_linear * (1 - alpha)), resulting in different style colours
+            // This calculates firstly the colour srgbtolinear(sRGB), and then works out the new alpha value such that it represents
+            // The same colour as sRGB * alpha
+            // This conversion can never be 100% accurate, because of the differences in blending in sRGB vs linear
+
+            float new_approximate_alpha = 0;
+
+            if(naive_linear.x > 0.0001f && naive_linear.y > 0.0001f && naive_linear.z > 0.0001f)
+            {
+                new_approximate_alpha = ((real_linear.x / naive_linear.x) + (real_linear.y / naive_linear.y) + (real_linear.z / naive_linear.z)) / 3.f;
+            }
+
+            col = naive_linear;
+            col.w = new_approximate_alpha;
+
+            // What the above transform represents
+            //col = SRGBToLinear(col);
+        }
+        else
+        {
+            ImVec4 naive_sRGB = LinearToSRGB(col);
+            ImVec4 real_sRGB = LinearToSRGB(ImVec4(col.x * col.w, col.y * col.w, col.z * col.w, col.w));
+
+            float new_approximate_alpha = 0;
+
+            if(naive_sRGB.x > 0.0001f && naive_sRGB.y > 0.0001f && naive_sRGB.z > 0.0001f)
+            {
+                new_approximate_alpha = ((real_sRGB.x / naive_sRGB.x) + (real_sRGB.y / naive_sRGB.y) + (real_sRGB.z / naive_sRGB.z)) / 3.f;
+            }
+
+            col = naive_sRGB;
+            col.w = new_approximate_alpha;
+
+            // What the above transform represents
+            //col = LinearToSRGB(col);
+        }
+    }
+}
+
+void ImGui::SetStyleLinearColor(bool is_linear)
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (is_linear == ((io.ConfigFlags & ImGuiConfigFlags_IsSRGB) != 0))
+        return;
+
+    ImGui::ForceStyleColorSpaceConversion(&ImGui::GetStyle(), is_linear);
+    if (is_linear)
+        io.ConfigFlags |= ImGuiConfigFlags_IsSRGB;
+    else
+        io.ConfigFlags &= (~ImGuiConfigFlags_IsSRGB);
+}
+
 // FIXME: This may incur a round-trip (if the end user got their data from a float4) but eventually we aim to store the in-flight colors as ImU32
 void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
 {
@@ -6269,6 +6391,38 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
     backup.BackupValue = g.Style.Colors[idx];
     g.ColorModifiers.push_back(backup);
     g.Style.Colors[idx] = col;
+}
+
+void ImGui::PushStyleSRGBColor(ImGuiCol idx, ImU32 col)
+{
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        PushStyleColor(idx, SRGBToLinear(ColorConvertU32ToFloat4(col)));
+    else
+        PushStyleColor(idx, col);
+}
+
+void ImGui::PushStyleSRGBColor(ImGuiCol idx, const ImVec4& col)
+{
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        PushStyleColor(idx, SRGBToLinear(col));
+    else
+        PushStyleColor(idx, col);
+}
+
+void ImGui::PushStyleLinearColor(ImGuiCol idx, ImU32 col)
+{
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        PushStyleColor(idx, ColorConvertU32ToFloat4(col));
+    else
+        PushStyleColor(idx, LinearToSRGB(ColorConvertU32ToFloat4(col)));
+}
+
+void ImGui::PushStyleLinearColor(ImGuiCol idx, const ImVec4& col)
+{
+    if (ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        PushStyleColor(idx, col);
+    else
+        PushStyleColor(idx, LinearToSRGB(col));
 }
 
 void ImGui::PopStyleColor(int count)

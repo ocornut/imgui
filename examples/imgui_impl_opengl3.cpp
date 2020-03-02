@@ -134,6 +134,13 @@ using namespace gl;
 #define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   1
 #endif
 
+// sRGB works differently in OpenGL ES, this is a desktop-only implementation
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
+#define SRGB_FRAMEBUFFERS_ARE_POSSIBLE 1
+#else
+#define SRGB_FRAMEBUFFERS_ARE_POSSIBLE 0
+#endif
+
 // OpenGL Data
 static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
@@ -231,6 +238,10 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
 #ifdef GL_POLYGON_MODE
     glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 #endif
+#if SRGB_FRAMEBUFFERS_ARE_POSSIBLE
+    if(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_IsSRGB)
+        glEnable(GL_FRAMEBUFFER_SRGB);
+#endif // SRGB_FRAMEBUFFERS_ARE_POSSIBLE
 
     // Setup viewport, orthographic projection matrix
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right). DisplayPos is (0,0) for single viewport apps.
@@ -307,6 +318,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     GLboolean last_enable_cull_face = glIsEnabled(GL_CULL_FACE);
     GLboolean last_enable_depth_test = glIsEnabled(GL_DEPTH_TEST);
     GLboolean last_enable_scissor_test = glIsEnabled(GL_SCISSOR_TEST);
+#if SRGB_FRAMEBUFFERS_ARE_POSSIBLE
+    GLboolean last_enable_framebuffer_srgb = glIsEnabled(GL_FRAMEBUFFER_SRGB);
+#endif
+
     bool clip_origin_lower_left = true;
 #if defined(GL_CLIP_ORIGIN) && !defined(__APPLE__)
     GLenum last_clip_origin = 0; glGetIntegerv(GL_CLIP_ORIGIN, (GLint*)&last_clip_origin); // Support for GL 4.5's glClipControl(GL_UPPER_LEFT)
@@ -400,6 +415,9 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     if (last_enable_cull_face) glEnable(GL_CULL_FACE); else glDisable(GL_CULL_FACE);
     if (last_enable_depth_test) glEnable(GL_DEPTH_TEST); else glDisable(GL_DEPTH_TEST);
     if (last_enable_scissor_test) glEnable(GL_SCISSOR_TEST); else glDisable(GL_SCISSOR_TEST);
+#if SRGB_FRAMEBUFFERS_ARE_POSSIBLE
+    if (last_enable_framebuffer_srgb) glEnable(GL_FRAMEBUFFER_SRGB); else glDisable(GL_FRAMEBUFFER_SRGB);
+#endif // SRGB_FRAMEBUFFERS_ARE_POSSIBLE
 #ifdef GL_POLYGON_MODE
     glPolygonMode(GL_FRONT_AND_BACK, (GLenum)last_polygon_mode[0]);
 #endif

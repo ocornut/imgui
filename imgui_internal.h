@@ -1851,6 +1851,9 @@ namespace ImGui
     IMGUI_API void          ColorEditOptionsPopup(const float* col, ImGuiColorEditFlags flags);
     IMGUI_API void          ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags flags);
 
+    // True to force conversion to linear, false to force conversion to sRGB
+    IMGUI_API void          ForceStyleColorSpaceConversion(ImGuiStyle* style, bool to_linear);
+
     // Plot
     IMGUI_API void          PlotEx(ImGuiPlotType plot_type, const char* label, float (*values_getter)(void* data, int idx), void* data, int values_count, int values_offset, const char* overlay_text, float scale_min, float scale_max, ImVec2 frame_size);
 
