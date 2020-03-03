@@ -863,10 +863,15 @@ struct ImGuiColumns
     }
 };
 
-// Helper function to calculate a circle's segment count given its radius and a "maximum error" value.
+// ImDrawList: Helper function to calculate a circle's segment count given its radius and a "maximum error" value.
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN                     12
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX                     512
 #define IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_CALC(_RAD,_MAXERROR)    ImClamp((int)((IM_PI * 2.0f) / ImAcos(((_RAD) - (_MAXERROR)) / (_RAD))), IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MIN, IM_DRAWLIST_CIRCLE_AUTO_SEGMENT_MAX)
+
+// ImDrawList: You may set this to higher values (e.g. 2 or 3) to increase tessellation of fast rounded corners path.
+#ifndef IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER
+#define IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER             1
+#endif
 
 // Data shared between all ImDrawList instances
 // You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
@@ -881,7 +886,7 @@ struct IMGUI_API ImDrawListSharedData
     ImDrawListFlags InitialFlags;               // Initial flags at the beginning of the frame (it is possible to alter flags on a per-drawlist basis afterwards)
 
     // [Internal] Lookup tables
-    ImVec2          CircleVtx12[12];            // FIXME: Bake rounded corners fill/borders in atlas
+    ImVec2          ArcFastVtx[12 * IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER];  // FIXME: Bake rounded corners fill/borders in atlas
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius (array index + 1) before we calculate it dynamically (to avoid calculation overhead)
 
     ImDrawListSharedData();

@@ -355,10 +355,10 @@ ImDrawListSharedData::ImDrawListSharedData()
     InitialFlags = ImDrawListFlags_None;
 
     // Lookup tables
-    for (int i = 0; i < IM_ARRAYSIZE(CircleVtx12); i++)
+    for (int i = 0; i < IM_ARRAYSIZE(ArcFastVtx); i++)
     {
-        const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(CircleVtx12);
-        CircleVtx12[i] = ImVec2(ImCos(a), ImSin(a));
+        const float a = ((float)i * 2 * IM_PI) / (float)IM_ARRAYSIZE(ArcFastVtx);
+        ArcFastVtx[i] = ImVec2(ImCos(a), ImSin(a));
     }
     memset(CircleSegmentCounts, 0, sizeof(CircleSegmentCounts)); // This will be set by SetCircleSegmentMaxError()
 }
@@ -898,10 +898,18 @@ void ImDrawList::PathArcToFast(const ImVec2& center, float radius, int a_min_of_
         _Path.push_back(center);
         return;
     }
+
+    // For legacy reason the PathArcToFast() always takes angles where 2*PI is represented by 12,
+    // but it is possible to set IM_DRAWLIST_ARCFAST_TESSELATION_MULTIPLIER to a higher value. This should compile to a no-op otherwise.
+#if IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER != 1
+    a_min_of_12 *= IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER;
+    a_max_of_12 *= IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER;
+#endif
+
     _Path.reserve(_Path.Size + (a_max_of_12 - a_min_of_12 + 1));
     for (int a = a_min_of_12; a <= a_max_of_12; a++)
     {
-        const ImVec2& c = _Data->CircleVtx12[a % IM_ARRAYSIZE(_Data->CircleVtx12)];
+        const ImVec2& c = _Data->ArcFastVtx[a % IM_ARRAYSIZE(_Data->ArcFastVtx)];
         _Path.push_back(ImVec2(center.x + c.x * radius, center.y + c.y * radius));
     }
 }
