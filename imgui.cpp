@@ -6523,77 +6523,6 @@ void ImGui::SetNextWindowBgAlpha(float alpha)
     g.NextWindowData.BgAlphaVal = alpha;
 }
 
-// FIXME: This is in window space (not screen space!). We should try to obsolete all those functions.
-ImVec2 ImGui::GetContentRegionMax()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImVec2 mx = window->ContentRegionRect.Max - window->Pos;
-    if (window->DC.CurrentColumns)
-        mx.x = window->WorkRect.Max.x - window->Pos.x;
-    return mx;
-}
-
-// [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
-ImVec2 ImGui::GetContentRegionMaxAbs()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    ImVec2 mx = window->ContentRegionRect.Max;
-    if (window->DC.CurrentColumns)
-        mx.x = window->WorkRect.Max.x;
-    return mx;
-}
-
-ImVec2 ImGui::GetContentRegionAvail()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return GetContentRegionMaxAbs() - window->DC.CursorPos;
-}
-
-// In window space (not screen space!)
-ImVec2 ImGui::GetWindowContentRegionMin()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ContentRegionRect.Min - window->Pos;
-}
-
-ImVec2 ImGui::GetWindowContentRegionMax()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ContentRegionRect.Max - window->Pos;
-}
-
-float ImGui::GetWindowContentRegionWidth()
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    return window->ContentRegionRect.GetWidth();
-}
-
-float ImGui::GetTextLineHeight()
-{
-    ImGuiContext& g = *GImGui;
-    return g.FontSize;
-}
-
-float ImGui::GetTextLineHeightWithSpacing()
-{
-    ImGuiContext& g = *GImGui;
-    return g.FontSize + g.Style.ItemSpacing.y;
-}
-
-float ImGui::GetFrameHeight()
-{
-    ImGuiContext& g = *GImGui;
-    return g.FontSize + g.Style.FramePadding.y * 2.0f;
-}
-
-float ImGui::GetFrameHeightWithSpacing()
-{
-    ImGuiContext& g = *GImGui;
-    return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
-}
-
 ImDrawList* ImGui::GetWindowDrawList()
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -6792,7 +6721,6 @@ static void ImGui::ErrorCheckEndFrame()
             IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you call End/EndChild too much?");
         }
     }
-
 }
 
 // Save and compare stack sizes on Begin()/End() to detect usage errors
@@ -6837,6 +6765,15 @@ static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool
 // - PopItemWidth()
 // - CalcItemWidth()
 // - CalcItemSize()
+// - GetTextLineHeight()
+// - GetTextLineHeightWithSpacing()
+// - GetFrameHeight()
+// - GetFrameHeightWithSpacing()
+// - GetContentRegionMax()
+// - GetContentRegionMaxAbs() [Internal]
+// - GetContentRegionAvail(),
+// - GetWindowContentRegionMin(), GetWindowContentRegionMax()
+// - GetWindowContentRegionWidth()
 // - BeginGroup()
 // - EndGroup()
 // Also see in imgui_widgets: tab bars, columns.
@@ -7123,6 +7060,79 @@ ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
         size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y + size.y);
 
     return size;
+}
+
+float ImGui::GetTextLineHeight()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize;
+}
+
+float ImGui::GetTextLineHeightWithSpacing()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize + g.Style.ItemSpacing.y;
+}
+
+float ImGui::GetFrameHeight()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize + g.Style.FramePadding.y * 2.0f;
+}
+
+float ImGui::GetFrameHeightWithSpacing()
+{
+    ImGuiContext& g = *GImGui;
+    return g.FontSize + g.Style.FramePadding.y * 2.0f + g.Style.ItemSpacing.y;
+}
+
+// FIXME: All the Contents Region function are messy or misleading. WE WILL AIM TO OBSOLETE ALL OF THEM WITH A NEW "WORK RECT" API. Thanks for your patience!
+
+// FIXME: This is in window space (not screen space!).
+ImVec2 ImGui::GetContentRegionMax()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImVec2 mx = window->ContentRegionRect.Max - window->Pos;
+    if (window->DC.CurrentColumns)
+        mx.x = window->WorkRect.Max.x - window->Pos.x;
+    return mx;
+}
+
+// [Internal] Absolute coordinate. Saner. This is not exposed until we finishing refactoring work rect features.
+ImVec2 ImGui::GetContentRegionMaxAbs()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImVec2 mx = window->ContentRegionRect.Max;
+    if (window->DC.CurrentColumns)
+        mx.x = window->WorkRect.Max.x;
+    return mx;
+}
+
+ImVec2 ImGui::GetContentRegionAvail()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return GetContentRegionMaxAbs() - window->DC.CursorPos;
+}
+
+// In window space (not screen space!)
+ImVec2 ImGui::GetWindowContentRegionMin()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ContentRegionRect.Min - window->Pos;
+}
+
+ImVec2 ImGui::GetWindowContentRegionMax()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ContentRegionRect.Max - window->Pos;
+}
+
+float ImGui::GetWindowContentRegionWidth()
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ContentRegionRect.GetWidth();
 }
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
