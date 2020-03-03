@@ -6145,88 +6145,6 @@ void ImGui::FocusTopMostWindowUnderOne(ImGuiWindow* under_this_window, ImGuiWind
     FocusWindow(NULL);
 }
 
-void ImGui::SetNextItemWidth(float item_width)
-{
-    ImGuiContext& g = *GImGui;
-    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasWidth;
-    g.NextItemData.Width = item_width;
-}
-
-void ImGui::PushItemWidth(float item_width)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    window->DC.ItemWidth = (item_width == 0.0f ? window->ItemWidthDefault : item_width);
-    window->DC.ItemWidthStack.push_back(window->DC.ItemWidth);
-    g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
-}
-
-void ImGui::PushMultiItemsWidths(int components, float w_full)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    const ImGuiStyle& style = g.Style;
-    const float w_item_one  = ImMax(1.0f, IM_FLOOR((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
-    const float w_item_last = ImMax(1.0f, IM_FLOOR(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
-    window->DC.ItemWidthStack.push_back(w_item_last);
-    for (int i = 0; i < components-1; i++)
-        window->DC.ItemWidthStack.push_back(w_item_one);
-    window->DC.ItemWidth = window->DC.ItemWidthStack.back();
-    g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
-}
-
-void ImGui::PopItemWidth()
-{
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ItemWidthStack.pop_back();
-    window->DC.ItemWidth = window->DC.ItemWidthStack.empty() ? window->ItemWidthDefault : window->DC.ItemWidthStack.back();
-}
-
-// Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth().
-// The SetNextItemWidth() data is generally cleared/consumed by ItemAdd() or NextItemData.ClearFlags()
-float ImGui::CalcItemWidth()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    float w;
-    if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth)
-        w = g.NextItemData.Width;
-    else
-        w = window->DC.ItemWidth;
-    if (w < 0.0f)
-    {
-        float region_max_x = GetContentRegionMaxAbs().x;
-        w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
-    }
-    w = IM_FLOOR(w);
-    return w;
-}
-
-// [Internal] Calculate full item size given user provided 'size' parameter and default width/height. Default width is often == CalcItemWidth().
-// Those two functions CalcItemWidth vs CalcItemSize are awkwardly named because they are not fully symmetrical.
-// Note that only CalcItemWidth() is publicly exposed.
-// The 4.0f here may be changed to match CalcItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
-ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
-{
-    ImGuiWindow* window = GImGui->CurrentWindow;
-
-    ImVec2 region_max;
-    if (size.x < 0.0f || size.y < 0.0f)
-        region_max = GetContentRegionMaxAbs();
-
-    if (size.x == 0.0f)
-        size.x = default_w;
-    else if (size.x < 0.0f)
-        size.x = ImMax(4.0f, region_max.x - window->DC.CursorPos.x + size.x);
-
-    if (size.y == 0.0f)
-        size.y = default_h;
-    else if (size.y < 0.0f)
-        size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y + size.y);
-
-    return size;
-}
-
 void ImGui::SetCurrentFont(ImFont* font)
 {
     ImGuiContext& g = *GImGui;
@@ -6913,6 +6831,12 @@ static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool
 // - GetCursorStartPos()
 // - Indent()
 // - Unindent()
+// - SetNextItemWidth()
+// - PushItemWidth()
+// - PushMultiItemsWidths()
+// - PopItemWidth()
+// - CalcItemWidth()
+// - CalcItemSize()
 // - BeginGroup()
 // - EndGroup()
 // Also see in imgui_widgets: tab bars, columns.
@@ -7116,6 +7040,89 @@ void ImGui::Unindent(float indent_w)
     ImGuiWindow* window = GetCurrentWindow();
     window->DC.Indent.x -= (indent_w != 0.0f) ? indent_w : g.Style.IndentSpacing;
     window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
+}
+
+// Affect large frame+labels widgets only.
+void ImGui::SetNextItemWidth(float item_width)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextItemData.Flags |= ImGuiNextItemDataFlags_HasWidth;
+    g.NextItemData.Width = item_width;
+}
+
+void ImGui::PushItemWidth(float item_width)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    window->DC.ItemWidth = (item_width == 0.0f ? window->ItemWidthDefault : item_width);
+    window->DC.ItemWidthStack.push_back(window->DC.ItemWidth);
+    g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
+}
+
+void ImGui::PushMultiItemsWidths(int components, float w_full)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    const ImGuiStyle& style = g.Style;
+    const float w_item_one  = ImMax(1.0f, IM_FLOOR((w_full - (style.ItemInnerSpacing.x) * (components-1)) / (float)components));
+    const float w_item_last = ImMax(1.0f, IM_FLOOR(w_full - (w_item_one + style.ItemInnerSpacing.x) * (components-1)));
+    window->DC.ItemWidthStack.push_back(w_item_last);
+    for (int i = 0; i < components-1; i++)
+        window->DC.ItemWidthStack.push_back(w_item_one);
+    window->DC.ItemWidth = window->DC.ItemWidthStack.back();
+    g.NextItemData.Flags &= ~ImGuiNextItemDataFlags_HasWidth;
+}
+
+void ImGui::PopItemWidth()
+{
+    ImGuiWindow* window = GetCurrentWindow();
+    window->DC.ItemWidthStack.pop_back();
+    window->DC.ItemWidth = window->DC.ItemWidthStack.empty() ? window->ItemWidthDefault : window->DC.ItemWidthStack.back();
+}
+
+// Calculate default item width given value passed to PushItemWidth() or SetNextItemWidth().
+// The SetNextItemWidth() data is generally cleared/consumed by ItemAdd() or NextItemData.ClearFlags()
+float ImGui::CalcItemWidth()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    float w;
+    if (g.NextItemData.Flags & ImGuiNextItemDataFlags_HasWidth)
+        w = g.NextItemData.Width;
+    else
+        w = window->DC.ItemWidth;
+    if (w < 0.0f)
+    {
+        float region_max_x = GetContentRegionMaxAbs().x;
+        w = ImMax(1.0f, region_max_x - window->DC.CursorPos.x + w);
+    }
+    w = IM_FLOOR(w);
+    return w;
+}
+
+// [Internal] Calculate full item size given user provided 'size' parameter and default width/height. Default width is often == CalcItemWidth().
+// Those two functions CalcItemWidth vs CalcItemSize are awkwardly named because they are not fully symmetrical.
+// Note that only CalcItemWidth() is publicly exposed.
+// The 4.0f here may be changed to match CalcItemWidth() and/or BeginChild() (right now we have a mismatch which is harmless but undesirable)
+ImVec2 ImGui::CalcItemSize(ImVec2 size, float default_w, float default_h)
+{
+    ImGuiWindow* window = GImGui->CurrentWindow;
+
+    ImVec2 region_max;
+    if (size.x < 0.0f || size.y < 0.0f)
+        region_max = GetContentRegionMaxAbs();
+
+    if (size.x == 0.0f)
+        size.x = default_w;
+    else if (size.x < 0.0f)
+        size.x = ImMax(4.0f, region_max.x - window->DC.CursorPos.x + size.x);
+
+    if (size.y == 0.0f)
+        size.y = default_h;
+    else if (size.y < 0.0f)
+        size.y = ImMax(4.0f, region_max.y - window->DC.CursorPos.y + size.y);
+
+    return size;
 }
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
