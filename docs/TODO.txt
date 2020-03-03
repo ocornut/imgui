@@ -87,6 +87,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input text: option to Tab after an Enter validation.
  - input text: add ImGuiInputTextFlags_EnterToApply? (off #218)
  - input text: easier ways to update buffer (from source char*) while owned. preserve some sort of cursor position for multi-line text.
+ - input text: add flag (e.g. ImGuiInputTextFlags_EscapeClearsBuffer) to clear instead of revert. what to do with focus? (also see #2890)
  - input text: add discard flag (e.g. ImGuiInputTextFlags_DiscardActiveBuffer) or make it easier to clear active focus for text replacement during edition (#725)
  - input text: display bug when clicking a drag/slider after an input text in a different window has all-selected text (order dependent). actually a very old bug but no one appears to have noticed it.
  - input text: allow centering/positioning text so that ctrl+clicking Drag or Slider keeps the textual value at the same pixel position.
@@ -191,6 +192,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
  - tabs: TabItem could honor SetNextItemWidth()?
+ - tabs: explicit api (even if internal) to cleanly manipulate tab order.
+ - tabs: Mouse wheel over tab bar could scroll? (#2702)
+
 
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
@@ -239,7 +243,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485)
  - tooltip: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers.
 
- - menus: calling BeginMenu() twice with a same name doesn't append as Begin() does for regular windows (#1207)
  - menus: menu bars inside modal windows are acting weird.
  - status-bar: add a per-window status bar helper similar to what menu-bar does.
  - shortcuts: local-style shortcut api, e.g. parse "&Save"

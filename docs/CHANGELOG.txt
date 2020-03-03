@@ -109,16 +109,22 @@ Other Changes:
   branch pressing arrow keys while dragging a window from a tab could trigger an assert. (#3025)
 - ColorButton: Added ImGuiColorEditFlags_NoBorder flag to remove the border normally enforced
   by default for standalone ColorButton.
+- BeginMenu: Using same ID multiple times appends content to a menu. (#1207)
+- BeginMenu: Fixed a bug where SetNextWindowXXX data before a BeginMenu() would not be cleared
+  when the menu is not open. (#3030)
 - InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
   glyph. (#2149, #515)
+- Window: Fixed a bug with child window inheriting ItemFlags from their parent when the child
+  window also manipulate the ItemFlags stack. (#3024) [@Stanbroek]
 - Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
-- Demo: Added a black and white gradient to Demo>Examples>Custom Rendering.
+- Demo: Added black and white and color gradients to Demo>Examples>Custom Rendering.
 - Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
   ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
   Those functions makes it easier for example apps to support hi-dpi features without setting up
   a manifest.
 - Backends: SDL: Added ImGui_ImplSDL2_InitForMetal() for API consistency (even though the function
   currently does nothing).
+- Backends: SDL: Fixed mapping for ImGuiKey_KeyPadEnter. (#3031) [@Davido71]
 - Examples: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
 
 
