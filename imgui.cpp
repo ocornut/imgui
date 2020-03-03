@@ -51,7 +51,7 @@ CODE
 
 // [SECTION] FORWARD DECLARATIONS
 // [SECTION] CONTEXT AND MEMORY ALLOCATORS
-// [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 // [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
 // [SECTION] MISC HELPERS/UTILITIES (File functions)
@@ -61,6 +61,7 @@ CODE
 // [SECTION] ImGuiTextFilter
 // [SECTION] ImGuiTextBuffer
 // [SECTION] ImGuiListClipper
+// [SECTION] STYLING
 // [SECTION] RENDER HELPERS
 // [SECTION] MAIN CODE (most of the code! lots of stuff, needs tidying up!)
 // [SECTION] ERROR CHECKING
@@ -954,7 +955,7 @@ static void   (*GImAllocatorFreeFunc)(void* ptr, void* user_data) = FreeWrapper;
 static void*    GImAllocatorUserData = NULL;
 
 //-----------------------------------------------------------------------------
-// [SECTION] MAIN USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
+// [SECTION] USER FACING STRUCTURES (ImGuiStyle, ImGuiIO)
 //-----------------------------------------------------------------------------
 
 ImGuiStyle::ImGuiStyle()
@@ -2261,10 +2262,14 @@ bool ImGuiListClipper::Step()
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] RENDER HELPERS
-// Some of those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
-// Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
+// [SECTION] STYLING
 //-----------------------------------------------------------------------------
+
+ImGuiStyle& ImGui::GetStyle()
+{
+    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
+    return GImGui->Style;
+}
 
 ImU32 ImGui::GetColorU32(ImGuiCol idx, float alpha_mul)
 {
@@ -2297,6 +2302,189 @@ ImU32 ImGui::GetColorU32(ImU32 col)
     a = (ImU32)(a * style.Alpha); // We don't need to clamp 0..255 because Style.Alpha is in 0..1 range.
     return (col & ~IM_COL32_A_MASK) | (a << IM_COL32_A_SHIFT);
 }
+
+// FIXME: This may incur a round-trip (if the end user got their data from a float4) but eventually we aim to store the in-flight colors as ImU32
+void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiColorMod backup;
+    backup.Col = idx;
+    backup.BackupValue = g.Style.Colors[idx];
+    g.ColorModifiers.push_back(backup);
+    g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
+}
+
+void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiColorMod backup;
+    backup.Col = idx;
+    backup.BackupValue = g.Style.Colors[idx];
+    g.ColorModifiers.push_back(backup);
+    g.Style.Colors[idx] = col;
+}
+
+void ImGui::PopStyleColor(int count)
+{
+    ImGuiContext& g = *GImGui;
+    while (count > 0)
+    {
+        ImGuiColorMod& backup = g.ColorModifiers.back();
+        g.Style.Colors[backup.Col] = backup.BackupValue;
+        g.ColorModifiers.pop_back();
+        count--;
+    }
+}
+
+struct ImGuiStyleVarInfo
+{
+    ImGuiDataType   Type;
+    ImU32           Count;
+    ImU32           Offset;
+    void*           GetVarPtr(ImGuiStyle* style) const { return (void*)((unsigned char*)style + Offset); }
+};
+
+static const ImGuiStyleVarInfo GStyleVarInfo[] =
+{
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, Alpha) },               // ImGuiStyleVar_Alpha
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowPadding) },       // ImGuiStyleVar_WindowPadding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowRounding) },      // ImGuiStyleVar_WindowRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowBorderSize) },    // ImGuiStyleVar_WindowBorderSize
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowMinSize) },       // ImGuiStyleVar_WindowMinSize
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowTitleAlign) },    // ImGuiStyleVar_WindowTitleAlign
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ChildRounding) },       // ImGuiStyleVar_ChildRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ChildBorderSize) },     // ImGuiStyleVar_ChildBorderSize
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, PopupRounding) },       // ImGuiStyleVar_PopupRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, PopupBorderSize) },     // ImGuiStyleVar_PopupBorderSize
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, FramePadding) },        // ImGuiStyleVar_FramePadding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, FrameRounding) },       // ImGuiStyleVar_FrameRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, FrameBorderSize) },     // ImGuiStyleVar_FrameBorderSize
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemSpacing) },         // ImGuiStyleVar_ItemSpacing
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemInnerSpacing) },    // ImGuiStyleVar_ItemInnerSpacing
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, IndentSpacing) },       // ImGuiStyleVar_IndentSpacing
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ScrollbarSize) },       // ImGuiStyleVar_ScrollbarSize
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ScrollbarRounding) },   // ImGuiStyleVar_ScrollbarRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, GrabMinSize) },         // ImGuiStyleVar_GrabMinSize
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, GrabRounding) },        // ImGuiStyleVar_GrabRounding
+    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, TabRounding) },         // ImGuiStyleVar_TabRounding
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ButtonTextAlign) },     // ImGuiStyleVar_ButtonTextAlign
+    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, SelectableTextAlign) }, // ImGuiStyleVar_SelectableTextAlign
+};
+
+static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
+{
+    IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_COUNT);
+    IM_ASSERT(IM_ARRAYSIZE(GStyleVarInfo) == ImGuiStyleVar_COUNT);
+    return &GStyleVarInfo[idx];
+}
+
+void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
+{
+    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
+    {
+        ImGuiContext& g = *GImGui;
+        float* pvar = (float*)var_info->GetVarPtr(&g.Style);
+        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = val;
+        return;
+    }
+    IM_ASSERT(0 && "Called PushStyleVar() float variant but variable is not a float!");
+}
+
+void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
+{
+    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
+    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
+    {
+        ImGuiContext& g = *GImGui;
+        ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
+        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        *pvar = val;
+        return;
+    }
+    IM_ASSERT(0 && "Called PushStyleVar() ImVec2 variant but variable is not a ImVec2!");
+}
+
+void ImGui::PopStyleVar(int count)
+{
+    ImGuiContext& g = *GImGui;
+    while (count > 0)
+    {
+        // We avoid a generic memcpy(data, &backup.Backup.., GDataTypeSize[info->Type] * info->Count), the overhead in Debug is not worth it.
+        ImGuiStyleMod& backup = g.StyleModifiers.back();
+        const ImGuiStyleVarInfo* info = GetStyleVarInfo(backup.VarIdx);
+        void* data = info->GetVarPtr(&g.Style);
+        if (info->Type == ImGuiDataType_Float && info->Count == 1)      { ((float*)data)[0] = backup.BackupFloat[0]; }
+        else if (info->Type == ImGuiDataType_Float && info->Count == 2) { ((float*)data)[0] = backup.BackupFloat[0]; ((float*)data)[1] = backup.BackupFloat[1]; }
+        g.StyleModifiers.pop_back();
+        count--;
+    }
+}
+
+const char* ImGui::GetStyleColorName(ImGuiCol idx)
+{
+    // Create switch-case from enum with regexp: ImGuiCol_{.*}, --> case ImGuiCol_\1: return "\1";
+    switch (idx)
+    {
+    case ImGuiCol_Text: return "Text";
+    case ImGuiCol_TextDisabled: return "TextDisabled";
+    case ImGuiCol_WindowBg: return "WindowBg";
+    case ImGuiCol_ChildBg: return "ChildBg";
+    case ImGuiCol_PopupBg: return "PopupBg";
+    case ImGuiCol_Border: return "Border";
+    case ImGuiCol_BorderShadow: return "BorderShadow";
+    case ImGuiCol_FrameBg: return "FrameBg";
+    case ImGuiCol_FrameBgHovered: return "FrameBgHovered";
+    case ImGuiCol_FrameBgActive: return "FrameBgActive";
+    case ImGuiCol_TitleBg: return "TitleBg";
+    case ImGuiCol_TitleBgActive: return "TitleBgActive";
+    case ImGuiCol_TitleBgCollapsed: return "TitleBgCollapsed";
+    case ImGuiCol_MenuBarBg: return "MenuBarBg";
+    case ImGuiCol_ScrollbarBg: return "ScrollbarBg";
+    case ImGuiCol_ScrollbarGrab: return "ScrollbarGrab";
+    case ImGuiCol_ScrollbarGrabHovered: return "ScrollbarGrabHovered";
+    case ImGuiCol_ScrollbarGrabActive: return "ScrollbarGrabActive";
+    case ImGuiCol_CheckMark: return "CheckMark";
+    case ImGuiCol_SliderGrab: return "SliderGrab";
+    case ImGuiCol_SliderGrabActive: return "SliderGrabActive";
+    case ImGuiCol_Button: return "Button";
+    case ImGuiCol_ButtonHovered: return "ButtonHovered";
+    case ImGuiCol_ButtonActive: return "ButtonActive";
+    case ImGuiCol_Header: return "Header";
+    case ImGuiCol_HeaderHovered: return "HeaderHovered";
+    case ImGuiCol_HeaderActive: return "HeaderActive";
+    case ImGuiCol_Separator: return "Separator";
+    case ImGuiCol_SeparatorHovered: return "SeparatorHovered";
+    case ImGuiCol_SeparatorActive: return "SeparatorActive";
+    case ImGuiCol_ResizeGrip: return "ResizeGrip";
+    case ImGuiCol_ResizeGripHovered: return "ResizeGripHovered";
+    case ImGuiCol_ResizeGripActive: return "ResizeGripActive";
+    case ImGuiCol_Tab: return "Tab";
+    case ImGuiCol_TabHovered: return "TabHovered";
+    case ImGuiCol_TabActive: return "TabActive";
+    case ImGuiCol_TabUnfocused: return "TabUnfocused";
+    case ImGuiCol_TabUnfocusedActive: return "TabUnfocusedActive";
+    case ImGuiCol_PlotLines: return "PlotLines";
+    case ImGuiCol_PlotLinesHovered: return "PlotLinesHovered";
+    case ImGuiCol_PlotHistogram: return "PlotHistogram";
+    case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
+    case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
+    case ImGuiCol_DragDropTarget: return "DragDropTarget";
+    case ImGuiCol_NavHighlight: return "NavHighlight";
+    case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
+    case ImGuiCol_NavWindowingDimBg: return "NavWindowingDimBg";
+    case ImGuiCol_ModalWindowDimBg: return "ModalWindowDimBg";
+    }
+    IM_ASSERT(0);
+    return "Unknown";
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] RENDER HELPERS
+// Some of those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
+// Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
+//-----------------------------------------------------------------------------
 
 const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
 {
@@ -3148,24 +3336,6 @@ void ImGui::SetCurrentContext(ImGuiContext* ctx)
 #endif
 }
 
-// Helper function to verify ABI compatibility between caller code and compiled version of Dear ImGui.
-// Verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
-// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. your user code
-// may see different structures than what imgui.cpp sees, which is problematic.
-// We usually require settings to be in imconfig.h to make sure that they are accessible to all compilation units involved with Dear ImGui.
-bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx)
-{
-    bool error = false;
-    if (strcmp(version, IMGUI_VERSION)!=0) { error = true; IM_ASSERT(strcmp(version,IMGUI_VERSION)==0 && "Mismatched version string!");  }
-    if (sz_io    != sizeof(ImGuiIO))       { error = true; IM_ASSERT(sz_io    == sizeof(ImGuiIO)      && "Mismatched struct layout!"); }
-    if (sz_style != sizeof(ImGuiStyle))    { error = true; IM_ASSERT(sz_style == sizeof(ImGuiStyle)   && "Mismatched struct layout!"); }
-    if (sz_vec2  != sizeof(ImVec2))        { error = true; IM_ASSERT(sz_vec2  == sizeof(ImVec2)       && "Mismatched struct layout!"); }
-    if (sz_vec4  != sizeof(ImVec4))        { error = true; IM_ASSERT(sz_vec4  == sizeof(ImVec4)       && "Mismatched struct layout!"); }
-    if (sz_vert  != sizeof(ImDrawVert))    { error = true; IM_ASSERT(sz_vert  == sizeof(ImDrawVert)   && "Mismatched struct layout!"); }
-    if (sz_idx   != sizeof(ImDrawIdx))     { error = true; IM_ASSERT(sz_idx   == sizeof(ImDrawIdx)    && "Mismatched struct layout!"); }
-    return !error;
-}
-
 void ImGui::SetAllocatorFunctions(void* (*alloc_func)(size_t sz, void* user_data), void (*free_func)(void* ptr, void* user_data), void* user_data)
 {
     GImAllocatorAllocFunc = alloc_func;
@@ -3196,12 +3366,6 @@ ImGuiIO& ImGui::GetIO()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
     return GImGui->IO;
-}
-
-ImGuiStyle& ImGui::GetStyle()
-{
-    IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
-    return GImGui->Style;
 }
 
 // Same value as passed to the old io.RenderDrawListsFn function. Valid after Render() and until the next call to NewFrame()
@@ -6243,183 +6407,6 @@ void ImGui::PopTextWrapPos()
     window->DC.TextWrapPos = window->DC.TextWrapPosStack.empty() ? -1.0f : window->DC.TextWrapPosStack.back();
 }
 
-// FIXME: This may incur a round-trip (if the end user got their data from a float4) but eventually we aim to store the in-flight colors as ImU32
-void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiColorMod backup;
-    backup.Col = idx;
-    backup.BackupValue = g.Style.Colors[idx];
-    g.ColorModifiers.push_back(backup);
-    g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
-}
-
-void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiColorMod backup;
-    backup.Col = idx;
-    backup.BackupValue = g.Style.Colors[idx];
-    g.ColorModifiers.push_back(backup);
-    g.Style.Colors[idx] = col;
-}
-
-void ImGui::PopStyleColor(int count)
-{
-    ImGuiContext& g = *GImGui;
-    while (count > 0)
-    {
-        ImGuiColorMod& backup = g.ColorModifiers.back();
-        g.Style.Colors[backup.Col] = backup.BackupValue;
-        g.ColorModifiers.pop_back();
-        count--;
-    }
-}
-
-struct ImGuiStyleVarInfo
-{
-    ImGuiDataType   Type;
-    ImU32           Count;
-    ImU32           Offset;
-    void*           GetVarPtr(ImGuiStyle* style) const { return (void*)((unsigned char*)style + Offset); }
-};
-
-static const ImGuiStyleVarInfo GStyleVarInfo[] =
-{
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, Alpha) },               // ImGuiStyleVar_Alpha
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowPadding) },       // ImGuiStyleVar_WindowPadding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowRounding) },      // ImGuiStyleVar_WindowRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowBorderSize) },    // ImGuiStyleVar_WindowBorderSize
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowMinSize) },       // ImGuiStyleVar_WindowMinSize
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, WindowTitleAlign) },    // ImGuiStyleVar_WindowTitleAlign
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ChildRounding) },       // ImGuiStyleVar_ChildRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ChildBorderSize) },     // ImGuiStyleVar_ChildBorderSize
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, PopupRounding) },       // ImGuiStyleVar_PopupRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, PopupBorderSize) },     // ImGuiStyleVar_PopupBorderSize
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, FramePadding) },        // ImGuiStyleVar_FramePadding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, FrameRounding) },       // ImGuiStyleVar_FrameRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, FrameBorderSize) },     // ImGuiStyleVar_FrameBorderSize
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemSpacing) },         // ImGuiStyleVar_ItemSpacing
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ItemInnerSpacing) },    // ImGuiStyleVar_ItemInnerSpacing
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, IndentSpacing) },       // ImGuiStyleVar_IndentSpacing
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ScrollbarSize) },       // ImGuiStyleVar_ScrollbarSize
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, ScrollbarRounding) },   // ImGuiStyleVar_ScrollbarRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, GrabMinSize) },         // ImGuiStyleVar_GrabMinSize
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, GrabRounding) },        // ImGuiStyleVar_GrabRounding
-    { ImGuiDataType_Float, 1, (ImU32)IM_OFFSETOF(ImGuiStyle, TabRounding) },         // ImGuiStyleVar_TabRounding
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, ButtonTextAlign) },     // ImGuiStyleVar_ButtonTextAlign
-    { ImGuiDataType_Float, 2, (ImU32)IM_OFFSETOF(ImGuiStyle, SelectableTextAlign) }, // ImGuiStyleVar_SelectableTextAlign
-};
-
-static const ImGuiStyleVarInfo* GetStyleVarInfo(ImGuiStyleVar idx)
-{
-    IM_ASSERT(idx >= 0 && idx < ImGuiStyleVar_COUNT);
-    IM_ASSERT(IM_ARRAYSIZE(GStyleVarInfo) == ImGuiStyleVar_COUNT);
-    return &GStyleVarInfo[idx];
-}
-
-void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
-{
-    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 1)
-    {
-        ImGuiContext& g = *GImGui;
-        float* pvar = (float*)var_info->GetVarPtr(&g.Style);
-        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
-        return;
-    }
-    IM_ASSERT(0 && "Called PushStyleVar() float variant but variable is not a float!");
-}
-
-void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
-{
-    const ImGuiStyleVarInfo* var_info = GetStyleVarInfo(idx);
-    if (var_info->Type == ImGuiDataType_Float && var_info->Count == 2)
-    {
-        ImGuiContext& g = *GImGui;
-        ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
-        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
-        *pvar = val;
-        return;
-    }
-    IM_ASSERT(0 && "Called PushStyleVar() ImVec2 variant but variable is not a ImVec2!");
-}
-
-void ImGui::PopStyleVar(int count)
-{
-    ImGuiContext& g = *GImGui;
-    while (count > 0)
-    {
-        // We avoid a generic memcpy(data, &backup.Backup.., GDataTypeSize[info->Type] * info->Count), the overhead in Debug is not worth it.
-        ImGuiStyleMod& backup = g.StyleModifiers.back();
-        const ImGuiStyleVarInfo* info = GetStyleVarInfo(backup.VarIdx);
-        void* data = info->GetVarPtr(&g.Style);
-        if (info->Type == ImGuiDataType_Float && info->Count == 1)      { ((float*)data)[0] = backup.BackupFloat[0]; }
-        else if (info->Type == ImGuiDataType_Float && info->Count == 2) { ((float*)data)[0] = backup.BackupFloat[0]; ((float*)data)[1] = backup.BackupFloat[1]; }
-        g.StyleModifiers.pop_back();
-        count--;
-    }
-}
-
-const char* ImGui::GetStyleColorName(ImGuiCol idx)
-{
-    // Create switch-case from enum with regexp: ImGuiCol_{.*}, --> case ImGuiCol_\1: return "\1";
-    switch (idx)
-    {
-    case ImGuiCol_Text: return "Text";
-    case ImGuiCol_TextDisabled: return "TextDisabled";
-    case ImGuiCol_WindowBg: return "WindowBg";
-    case ImGuiCol_ChildBg: return "ChildBg";
-    case ImGuiCol_PopupBg: return "PopupBg";
-    case ImGuiCol_Border: return "Border";
-    case ImGuiCol_BorderShadow: return "BorderShadow";
-    case ImGuiCol_FrameBg: return "FrameBg";
-    case ImGuiCol_FrameBgHovered: return "FrameBgHovered";
-    case ImGuiCol_FrameBgActive: return "FrameBgActive";
-    case ImGuiCol_TitleBg: return "TitleBg";
-    case ImGuiCol_TitleBgActive: return "TitleBgActive";
-    case ImGuiCol_TitleBgCollapsed: return "TitleBgCollapsed";
-    case ImGuiCol_MenuBarBg: return "MenuBarBg";
-    case ImGuiCol_ScrollbarBg: return "ScrollbarBg";
-    case ImGuiCol_ScrollbarGrab: return "ScrollbarGrab";
-    case ImGuiCol_ScrollbarGrabHovered: return "ScrollbarGrabHovered";
-    case ImGuiCol_ScrollbarGrabActive: return "ScrollbarGrabActive";
-    case ImGuiCol_CheckMark: return "CheckMark";
-    case ImGuiCol_SliderGrab: return "SliderGrab";
-    case ImGuiCol_SliderGrabActive: return "SliderGrabActive";
-    case ImGuiCol_Button: return "Button";
-    case ImGuiCol_ButtonHovered: return "ButtonHovered";
-    case ImGuiCol_ButtonActive: return "ButtonActive";
-    case ImGuiCol_Header: return "Header";
-    case ImGuiCol_HeaderHovered: return "HeaderHovered";
-    case ImGuiCol_HeaderActive: return "HeaderActive";
-    case ImGuiCol_Separator: return "Separator";
-    case ImGuiCol_SeparatorHovered: return "SeparatorHovered";
-    case ImGuiCol_SeparatorActive: return "SeparatorActive";
-    case ImGuiCol_ResizeGrip: return "ResizeGrip";
-    case ImGuiCol_ResizeGripHovered: return "ResizeGripHovered";
-    case ImGuiCol_ResizeGripActive: return "ResizeGripActive";
-    case ImGuiCol_Tab: return "Tab";
-    case ImGuiCol_TabHovered: return "TabHovered";
-    case ImGuiCol_TabActive: return "TabActive";
-    case ImGuiCol_TabUnfocused: return "TabUnfocused";
-    case ImGuiCol_TabUnfocusedActive: return "TabUnfocusedActive";
-    case ImGuiCol_PlotLines: return "PlotLines";
-    case ImGuiCol_PlotLinesHovered: return "PlotLinesHovered";
-    case ImGuiCol_PlotHistogram: return "PlotHistogram";
-    case ImGuiCol_PlotHistogramHovered: return "PlotHistogramHovered";
-    case ImGuiCol_TextSelectedBg: return "TextSelectedBg";
-    case ImGuiCol_DragDropTarget: return "DragDropTarget";
-    case ImGuiCol_NavHighlight: return "NavHighlight";
-    case ImGuiCol_NavWindowingHighlight: return "NavWindowingHighlight";
-    case ImGuiCol_NavWindowingDimBg: return "NavWindowingDimBg";
-    case ImGuiCol_ModalWindowDimBg: return "ModalWindowDimBg";
-    }
-    IM_ASSERT(0);
-    return "Unknown";
-}
-
 bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
 {
     if (window->RootWindow == potential_parent)
@@ -7125,10 +7112,27 @@ void ImGui::Unindent(float indent_w)
     window->DC.CursorPos.x = window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x;
 }
 
-
 //-----------------------------------------------------------------------------
 // [SECTION] ERROR CHECKING
 //-----------------------------------------------------------------------------
+
+// Helper function to verify ABI compatibility between caller code and compiled version of Dear ImGui.
+// Verify that the type sizes are matching between the calling file's compilation unit and imgui.cpp's compilation unit
+// If the user has inconsistent compilation settings, imgui configuration #define, packing pragma, etc. your user code
+// may see different structures than what imgui.cpp sees, which is problematic.
+// We usually require settings to be in imconfig.h to make sure that they are accessible to all compilation units involved with Dear ImGui.
+bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx)
+{
+    bool error = false;
+    if (strcmp(version, IMGUI_VERSION)!=0) { error = true; IM_ASSERT(strcmp(version,IMGUI_VERSION)==0 && "Mismatched version string!");  }
+    if (sz_io    != sizeof(ImGuiIO))       { error = true; IM_ASSERT(sz_io    == sizeof(ImGuiIO)      && "Mismatched struct layout!"); }
+    if (sz_style != sizeof(ImGuiStyle))    { error = true; IM_ASSERT(sz_style == sizeof(ImGuiStyle)   && "Mismatched struct layout!"); }
+    if (sz_vec2  != sizeof(ImVec2))        { error = true; IM_ASSERT(sz_vec2  == sizeof(ImVec2)       && "Mismatched struct layout!"); }
+    if (sz_vec4  != sizeof(ImVec4))        { error = true; IM_ASSERT(sz_vec4  == sizeof(ImVec4)       && "Mismatched struct layout!"); }
+    if (sz_vert  != sizeof(ImDrawVert))    { error = true; IM_ASSERT(sz_vert  == sizeof(ImDrawVert)   && "Mismatched struct layout!"); }
+    if (sz_idx   != sizeof(ImDrawIdx))     { error = true; IM_ASSERT(sz_idx   == sizeof(ImDrawIdx)    && "Mismatched struct layout!"); }
+    return !error;
+}
 
 static void ImGui::ErrorCheckEndFrame()
 {
@@ -7172,7 +7176,6 @@ static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool
     { int n = g.FontStack.Size;           if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushFont/PopFont Mismatch!");                   p++; }    // Too few or too many PopFont()
     IM_ASSERT(p == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
-
 
 //-----------------------------------------------------------------------------
 // [SECTION] SCROLLING
@@ -7816,7 +7819,6 @@ ImVec2 ImGui::FindBestWindowPosForPopup(ImGuiWindow* window)
     IM_ASSERT(0);
     return window->Pos;
 }
-
 
 //-----------------------------------------------------------------------------
 // [SECTION] KEYBOARD/GAMEPAD NAVIGATION
@@ -8919,7 +8921,6 @@ void ImGui::NavUpdateWindowingOverlay()
     PopStyleVar();
 }
 
-
 //-----------------------------------------------------------------------------
 // [SECTION] DRAG AND DROP
 //-----------------------------------------------------------------------------
@@ -9217,7 +9218,6 @@ void ImGui::EndDragDropTarget()
     IM_ASSERT(g.DragDropWithinSourceOrTarget);
     g.DragDropWithinSourceOrTarget = false;
 }
-
 
 //-----------------------------------------------------------------------------
 // [SECTION] LOGGING/CAPTURING
