@@ -2185,6 +2185,7 @@ namespace ImGui
     IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
     IMGUI_API void          TableUpdateBorders(ImGuiTable* table);
+    IMGUI_API void          TableSetColumnWidth(int column_n, float width);
     IMGUI_API void          TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column, float width);
     IMGUI_API void          TableDrawBorders(ImGuiTable* table);
     IMGUI_API void          TableDrawMergeChannels(ImGuiTable* table);
