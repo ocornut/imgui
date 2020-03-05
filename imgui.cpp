@@ -11849,7 +11849,7 @@ static void ImGui::DockContextBuildNodesFromSettings(ImGuiContext* ctx, ImGuiDoc
         else if (node->ParentNode && node->ParentNode->ChildNodes[1] == NULL)
             node->ParentNode->ChildNodes[1] = node;
         node->SelectedTabId = settings->SelectedWindowId;
-        node->SplitAxis = settings->SplitAxis;
+        node->SplitAxis = (ImGuiAxis)settings->SplitAxis;
         node->LocalFlags |= (settings->Flags & ImGuiDockNodeFlags_SavedFlagsMask_);
 
         // Bind host window immediately if it already exist (in case of a rebuild)
@@ -14778,7 +14778,7 @@ static void DockSettingsHandler_DockNodeToSettings(ImGuiDockContext* dc, ImGuiDo
     node_settings.ParentNodeId = node->ParentNode ? node->ParentNode->ID : 0;
     node_settings.ParentWindowId = (node->IsDockSpace() && node->HostWindow && node->HostWindow->ParentWindow) ? node->HostWindow->ParentWindow->ID : 0;
     node_settings.SelectedWindowId = node->SelectedTabId;
-    node_settings.SplitAxis = node->IsSplitNode() ? (char)node->SplitAxis : ImGuiAxis_None;
+    node_settings.SplitAxis = (signed char)(node->IsSplitNode() ? node->SplitAxis : ImGuiAxis_None);
     node_settings.Depth = (char)depth;
     node_settings.Flags = (node->LocalFlags & ImGuiDockNodeFlags_SavedFlagsMask_);
     node_settings.Pos = ImVec2ih(node->Pos);
