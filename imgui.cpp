@@ -3476,7 +3476,7 @@ void ImGui::StartMouseMovingWindowOrNode(ImGuiWindow* window, ImGuiDockNode* nod
         // - part of a floating node hierarchy with more than one visible node (if only one is visible, we'll just move the whole hierarchy)
         // - part of a dockspace node hierarchy (trivia: undocking from a fixed/central node will create a new node and copy windows)
         ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-        if (root_node->OnlyNodeWithWindows != node || root_node->CentralNode != NULL)
+        if (root_node->OnlyNodeWithWindows != node || root_node->CentralNode != NULL)   // -V1051 PVS-Studio thinks node should be root_node and is wrong about that.
             if (undock_floating_node || root_node->IsDockSpace())
                 can_undock_node = true;
     }
