@@ -8651,7 +8651,7 @@ void    ImGui::EndTable()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && "Only call EndTable() is BeginTable() returns true!");
+    IM_ASSERT(table != NULL && "Only call EndTable() if BeginTable() returns true!");
 
     // This assert would be very useful to catch a common error... unfortunately it would probably trigger in some cases,
     // and for consistency user may sometimes output empty tables (and still benefit from e.g. outer border)
@@ -8899,6 +8899,18 @@ static void TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
     }
 }
 
+// Public wrapper
+void ImGui::TableSetColumnWidth(int column_n, float width)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL);
+    IM_ASSERT(table->IsLayoutLocked == false);
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    TableSetColumnWidth(table, &table->Columns[column_n], width);
+}
+
+// [Internal]
 void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, float column_0_width)
 {
     // Constraints
