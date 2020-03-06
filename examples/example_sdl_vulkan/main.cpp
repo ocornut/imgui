@@ -522,8 +522,8 @@ int main(int, char**)
         // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
+            ImGui::PlatformWindowsUpdate();
+            ImGui::PlatformWindowsRender();
         }
 
         FramePresent(wd);

@@ -947,5 +947,5 @@ void ImGui_ImplDX12_InitPlatformInterface()
 
 void ImGui_ImplDX12_ShutdownPlatformInterface()
 {
-    ImGui::DestroyPlatformWindows();
+    ImGui::PlatformWindowsDestroy();
 }

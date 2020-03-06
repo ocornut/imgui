@@ -210,8 +210,8 @@ int main(int, char**)
         // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault(NULL, (void*)g_pd3dCommandList);
+            ImGui::PlatformWindowsUpdate();
+            ImGui::PlatformWindowsRender(NULL, (void*)g_pd3dCommandList);
         }
 
         g_pSwapChain->Present(1, 0); // Present with vsync

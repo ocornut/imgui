@@ -160,8 +160,8 @@ int main(int, char**)
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
             GLFWwindow* backup_current_context = glfwGetCurrentContext();
-            ImGui::UpdatePlatformWindows();
-            ImGui::RenderPlatformWindowsDefault();
+            ImGui::PlatformWindowsUpdate();
+            ImGui::PlatformWindowsRender();
             glfwMakeContextCurrent(backup_current_context);
         }
 

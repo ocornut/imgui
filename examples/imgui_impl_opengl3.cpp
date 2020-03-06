@@ -712,5 +712,5 @@ static void ImGui_ImplOpenGL3_InitPlatformInterface()
 
 static void ImGui_ImplOpenGL3_ShutdownPlatformInterface()
 {
-    ImGui::DestroyPlatformWindows();
+    ImGui::PlatformWindowsDestroy();
 }
