@@ -423,7 +423,7 @@ static void ImGui_ImplDX9_InitPlatformInterface()
 
 static void ImGui_ImplDX9_ShutdownPlatformInterface()
 {
-    ImGui::PlatformWindowsDestroy();
+    ImGui::DestroyPlatformWindows();
 }
 
 static void ImGui_ImplDX9_CreateDeviceObjectsForPlatformWindows()

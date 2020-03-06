@@ -655,6 +655,6 @@ void ImGui_ImplDX10_InitPlatformInterface()
 
 void ImGui_ImplDX10_ShutdownPlatformInterface()
 {
-    ImGui::PlatformWindowsDestroy();
+    ImGui::DestroyPlatformWindows();
 }
 

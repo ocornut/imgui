@@ -82,7 +82,7 @@ Other changes:
 - Added GetWindowDpiScale().
 - Added GetOverlayDrawList(ImGuiViewport* viewport).
   The no-parameter version of GetOverlayDrawList() return the overlay for the current window's viewport.
-- Added PlatformWindowsUpdate(), PlatformWindowsRender(), PlatformWindowsDestroy() for usage for application core.
+- Added UpdatePlatformWindows(), RenderPlatformWindows(), DestroyPlatformWindows() for usage for application core.
 - Added FindViewportByID(), FindViewportByPlatformHandle() for usage by back-ends.
 - Added ImGuiConfigFlags_ViewportsEnable configuration flag and other viewport options.
 - Added io.ConfigViewportsNoAutoMerge, io.ConfigViewportsNoTaskBarIcon, io.ConfigViewportsNoDecoration, io.ConfigViewportsNoDefaultParent options.

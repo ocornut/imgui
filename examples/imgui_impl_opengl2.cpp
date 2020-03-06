@@ -283,5 +283,5 @@ static void ImGui_ImplOpenGL2_InitPlatformInterface()
 
 static void ImGui_ImplOpenGL2_ShutdownPlatformInterface()
 {
-    ImGui::PlatformWindowsDestroy();
+    ImGui::DestroyPlatformWindows();
 }

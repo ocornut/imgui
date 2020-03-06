@@ -1445,5 +1445,5 @@ void ImGui_ImplVulkan_InitPlatformInterface()
 
 void ImGui_ImplVulkan_ShutdownPlatformInterface()
 {
-    ImGui::PlatformWindowsDestroy();
+    ImGui::DestroyPlatformWindows();
 }

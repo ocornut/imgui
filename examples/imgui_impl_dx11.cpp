@@ -671,5 +671,5 @@ static void ImGui_ImplDX11_InitPlatformInterface()
 
 static void ImGui_ImplDX11_ShutdownPlatformInterface()
 {
-    ImGui::PlatformWindowsDestroy();
+    ImGui::DestroyPlatformWindows();
 }

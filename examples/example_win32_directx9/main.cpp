@@ -165,8 +165,8 @@ int main(int, char**)
         // Update and Render additional Platform Windows
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            ImGui::PlatformWindowsUpdate();
-            ImGui::PlatformWindowsRender();
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
         }
 
         HRESULT result = g_pd3dDevice->Present(NULL, NULL, NULL, NULL);

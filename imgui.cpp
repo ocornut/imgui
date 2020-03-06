@@ -3912,7 +3912,7 @@ static void NewFrameSanityChecks()
     {
         if ((g.IO.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasViewports))
         {
-            IM_ASSERT((g.FrameCount == 0 || g.FrameCount == g.FrameCountPlatformEnded) && "Forgot to call PlatformWindowsUpdate() in main loop after EndFrame()? Check examples/ applications for reference.");
+            IM_ASSERT((g.FrameCount == 0 || g.FrameCount == g.FrameCountPlatformEnded) && "Forgot to call UpdatePlatformWindows() in main loop after EndFrame()? Check examples/ applications for reference.");
             IM_ASSERT(g.PlatformIO.Platform_CreateWindow  != NULL && "Platform init didn't install handlers?");
             IM_ASSERT(g.PlatformIO.Platform_DestroyWindow != NULL && "Platform init didn't install handlers?");
             IM_ASSERT(g.PlatformIO.Platform_GetWindowPos  != NULL && "Platform init didn't install handlers?");
@@ -4233,7 +4233,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     // Destroy platform windows
     ImGuiContext* backup_context = ImGui::GetCurrentContext();
     SetCurrentContext(context);
-    PlatformWindowsDestroy();
+    DestroyPlatformWindows();
     SetCurrentContext(backup_context);
 
     // Shutdown extensions
@@ -10582,13 +10582,13 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 // - UpdateViewportsEndFrame() [Internal]
 // - AddUpdateViewport() [Internal]
 // - UpdateSelectWindowViewport() [Internal]
-// - PlatformWindowsUpdate()
-// - PlatformWindowsRender()
+// - UpdatePlatformWindows()
+// - RenderPlatformWindowsDefault()
 // - FindPlatformMonitorForPos() [Internal]
 // - FindPlatformMonitorForRect() [Internal]
 // - UpdateViewportPlatformMonitor() [Internal]
-// - PlatformWindowsDestroyOne() [Internal]
-// - PlatformWindowsDestroy()
+// - DestroyPlatformWindow() [Internal]
+// - DestroyPlatformWindows()
 //-----------------------------------------------------------------------------
 
 ImGuiViewport* ImGui::GetMainViewport()
@@ -10809,7 +10809,7 @@ static void ImGui::UpdateViewportsNewFrame()
 
             // Destroy
             IMGUI_DEBUG_LOG_VIEWPORT("Delete Viewport %08X (%s)\n", viewport->ID, viewport->Window ? viewport->Window->Name : "n/a");
-            PlatformWindowsDestroyOne(viewport); // In most circumstances the platform window will already be destroyed here.
+            DestroyPlatformWindow(viewport); // In most circumstances the platform window will already be destroyed here.
             IM_ASSERT(g.PlatformIO.Viewports.contains(viewport) == false);
             IM_DELETE(viewport);
             n--;
@@ -10820,7 +10820,7 @@ static void ImGui::UpdateViewportsNewFrame()
         if (viewports_enabled)
         {
             // Update Position and Size (from Platform Window to ImGui) if requested.
-            // We do it early in the frame instead of waiting for PlatformWindowsUpdate() to avoid a frame of lag when moving/resizing using OS facilities.
+            // We do it early in the frame instead of waiting for UpdatePlatformWindows() to avoid a frame of lag when moving/resizing using OS facilities.
             if (!(viewport->Flags & ImGuiViewportFlags_Minimized) && platform_funcs_available)
             {
                 if (viewport->PlatformRequestMove)
@@ -10943,7 +10943,7 @@ static void ImGui::UpdateViewportsEndFrame()
             IM_ASSERT(viewport->Window != NULL);
         g.PlatformIO.Viewports.push_back(viewport);
     }
-    g.Viewports[0]->ClearRequestFlags(); // Clear main viewport flags because PlatformWindowsUpdate() won't do it and may not even be called
+    g.Viewports[0]->ClearRequestFlags(); // Clear main viewport flags because UpdatePlatformWindows() won't do it and may not even be called
 }
 
 // FIXME: We should ideally refactor the system to call this every frame (we currently don't)
@@ -11135,11 +11135,11 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
 }
 
 // Called by user at the end of the main loop, after EndFrame()
-// This will handle the creation/update of all OS windows via function defined in the ImGuiPlatformIO API.
-void ImGui::PlatformWindowsUpdate()
+// This will handle the creation/update of all OS windows via function defined in the ImGuiPlatformIO api.
+void ImGui::UpdatePlatformWindows()
 {
     ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.FrameCountEnded == g.FrameCount && "Forgot to call Render() or EndFrame() before PlatformWindowsUpdate()?");
+    IM_ASSERT(g.FrameCountEnded == g.FrameCount && "Forgot to call Render() or EndFrame() before UpdatePlatformWindows()?");
     IM_ASSERT(g.FrameCountPlatformEnded < g.FrameCount);
     g.FrameCountPlatformEnded = g.FrameCount;
     if (!(g.ConfigFlagsCurrFrame & ImGuiConfigFlags_ViewportsEnable))
@@ -11152,13 +11152,13 @@ void ImGui::PlatformWindowsUpdate()
         ImGuiViewportP* viewport = g.Viewports[i];
 
         // Destroy platform window if the viewport hasn't been submitted or if it is hosting a hidden window
-        // (the implicit/fallback Debug##Default window will be registering its viewport then be disabled, causing a dummy PlatformWindowsDestroyOne to be made each frame)
+        // (the implicit/fallback Debug##Default window will be registering its viewport then be disabled, causing a dummy DestroyPlatformWindow to be made each frame)
         bool destroy_platform_window = false;
         destroy_platform_window |= (viewport->LastFrameActive < g.FrameCount - 1);
         destroy_platform_window |= (viewport->Window && !IsWindowActiveAndVisible(viewport->Window));
         if (destroy_platform_window)
         {
-            PlatformWindowsDestroyOne(viewport);
+            DestroyPlatformWindow(viewport);
             continue;
         }
 
@@ -11267,7 +11267,7 @@ void ImGui::PlatformWindowsUpdate()
 //        if ((platform_io.Viewports[i]->Flags & ImGuiViewportFlags_Minimized) == 0)
 //            MySwapBufferFunction(platform_io.Viewports[i], my_args);
 //
-void ImGui::PlatformWindowsRender(void* platform_render_arg, void* renderer_render_arg)
+void ImGui::RenderPlatformWindowsDefault(void* platform_render_arg, void* renderer_render_arg)
 {
     // Skip the main viewport (index 0), which is always fully handled by the application!
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -11341,7 +11341,7 @@ static void ImGui::UpdateViewportPlatformMonitor(ImGuiViewportP* viewport)
     viewport->PlatformMonitor = (short)FindPlatformMonitorForRect(viewport->GetMainRect());
 }
 
-void ImGui::PlatformWindowsDestroyOne(ImGuiViewportP* viewport)
+void ImGui::DestroyPlatformWindow(ImGuiViewportP* viewport)
 {
     ImGuiContext& g = *GImGui;
     if (viewport->PlatformWindowCreated)
@@ -11365,7 +11365,7 @@ void ImGui::PlatformWindowsDestroyOne(ImGuiViewportP* viewport)
     viewport->ClearRequestFlags();
 }
 
-void ImGui::PlatformWindowsDestroy()
+void ImGui::DestroyPlatformWindows()
 {
     // We call the destroy window on every viewport (including the main viewport, index 0) to give a chance to the back-end
     // to clear any data they may have stored in e.g. PlatformUserData, RendererUserData.
@@ -11375,7 +11375,7 @@ void ImGui::PlatformWindowsDestroy()
     // crashing if it doesn't have data stored.
     ImGuiContext& g = *GImGui;
     for (int i = 0; i < g.Viewports.Size; i++)
-        PlatformWindowsDestroyOne(g.Viewports[i]);
+        DestroyPlatformWindow(g.Viewports[i]);
 }
 
 
