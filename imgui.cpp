@@ -1514,6 +1514,7 @@ ImU32 ImHashStr(const char* data_p, size_t data_size, ImU32 seed)
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#define NOMINMAX
 #ifndef __MINGW32__
 #include <Windows.h>
 #else
@@ -9779,6 +9780,7 @@ static void WindowSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandl
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#define NOMINMAX
 #ifndef __MINGW32__
 #include <Windows.h>
 #else
