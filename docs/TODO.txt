@@ -41,7 +41,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
  - scrolling: forward mouse wheel scrolling to parent window when at the edge of scrolling limits? (useful for listbox,tables?)
  - scrolling/clipping: separator on the initial position of a window is not visible (cursorpos.y <= clippos.y). (2017-08-20: can't repro)
- - scrolling/style: shadows on scrollable areas to denote that there is more contents
+ - scrolling/style: shadows on scrollable areas to denote that there is more contents (see e.g. DaVinci Resolve ui)
 
  - drawdata: make it easy to clone (or swap?) a full ImDrawData so user can easily save that data if they use threaded rendering. (e.g. #2646)
  ! drawlist: add calctextsize func to facilitate consistent code from user pov (currently need to use ImGui or ImFont alternatives!)
@@ -294,6 +294,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font: a CalcTextHeight() helper could run faster than CalcTextSize().y
  - font: enforce monospace through ImFontConfig (for icons?) + create dual ImFont output from same input, reusing rasterized data but with different glyphs/AdvanceX
  - font: finish CustomRectRegister() to allow mapping Unicode codepoint to custom texture data
+ - font: remove ID from CustomRect registration, it seems unnecessary!
  - font: make it easier to submit own bitmap font (same texture, another texture?). (#2127, #2575)
  - font: PushFontSize API (#1018)
  - font: MemoryTTF taking ownership confusing/not obvious, maybe default should be opposite?
@@ -377,6 +378,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
 
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
+ - examples: dx11/dx12: try to use new swapchain blit models (#2970)
  - backends: apple: example_apple should be using modern GL3.
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
