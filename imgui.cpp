@@ -10486,7 +10486,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     for (int n = 0; n < settings->ColumnsCount; n++)
                     {
                         ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-                        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? column_settings->SortDirection : ImGuiSortDirection_None;
+                        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
                         ImGui::BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
                             n, column_settings->DisplayOrder, column_settings->SortOrder,
                             (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",

@@ -9107,7 +9107,7 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
                         continue;
                     ImDrawChannel* channel = &splitter->_Channels[n];
                     IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
-                    channel->_CmdBuffer[0].ClipRect = *(ImVec4*)&merge_clip_rect;
+                    channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
                     memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
                     merge_channels_mask &= ~n_mask;
                 }
