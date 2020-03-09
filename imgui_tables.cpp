@@ -1342,7 +1342,7 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
                         continue;
                     ImDrawChannel* channel = &splitter->_Channels[n];
                     IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
-                    channel->_CmdBuffer[0].ClipRect = *(ImVec4*)&merge_clip_rect;
+                    channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
                     memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
                     merge_channels_mask &= ~n_mask;
                 }
@@ -2478,7 +2478,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             for (int n = 0; n < settings->ColumnsCount; n++)
             {
                 ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-                ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? column_settings->SortDirection : ImGuiSortDirection_None;
+                ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
                 BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
                     n, column_settings->DisplayOrder, column_settings->SortOrder,
                     (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
