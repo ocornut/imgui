@@ -171,22 +171,22 @@ jobs:
     - name: Build example_null (extra warnings, gcc 32-bit)
       run: |
         make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m32" make -C examples/example_null EXTRA_WARNINGS=1
+        CXXFLAGS="$CXXFLAGS -m32 -Werror" make -C examples/example_null EXTRA_WARNINGS=1
 
     - name: Build example_null (extra warnings, gcc 64-bit)
       run: |
         make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m64" make -C examples/example_null EXTRA_WARNINGS=1
+        CXXFLAGS="$CXXFLAGS -m64 -Werror" make -C examples/example_null EXTRA_WARNINGS=1
 
     - name: Build example_null (extra warnings, clang 32-bit)
       run: |
         make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m32" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
+        CXXFLAGS="$CXXFLAGS -m32 -Werror" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
 
     - name: Build example_null (extra warnings, clang 64-bit)
       run: |
         make -C examples/example_null clean
-        CXXFLAGS="$CXXFLAGS -m64" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
+        CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
 
     - name: Build example_null (single file build)
       run: |
