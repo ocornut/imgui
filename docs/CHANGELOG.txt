@@ -67,7 +67,8 @@ Other Changes:
 - Backends: SDL: Added ImGui_ImplSDL2_InitForMetal() for API consistency (even though the function
   currently does nothing).
 - Backends: SDL: Fixed mapping for ImGuiKey_KeyPadEnter. (#3031) [@Davido71]
-- Examples: Added SDL2+Metal example application. (#3017) [@coding-jackalope]
+- Examples: SDL+DX11: Fixed resizing main window. (#3057) [@joeslay]
+- Examples: Added SDL+Metal example application. (#3017) [@coding-jackalope]
 
 
 -----------------------------------------------------------------------

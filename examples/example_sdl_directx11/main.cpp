@@ -101,12 +101,10 @@ int main(int, char**)
                 done = true;
             if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_CLOSE && event.window.windowID == SDL_GetWindowID(window))
                 done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED)
+            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window))
             {                
-                g_pd3dDeviceContext->OMSetRenderTargets(0, 0, 0);
-                // Release all outstanding references to the swap chain's buffers.
-                g_mainRenderTargetView->Release();
-
+                // Release all outstanding references to the swap chain's buffers before resizing.
+                CleanupRenderTarget();
                 g_pSwapChain->ResizeBuffers(0, 0, 0, DXGI_FORMAT_UNKNOWN, 0);
                 CreateRenderTarget();
             }
