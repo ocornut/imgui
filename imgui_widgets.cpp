@@ -5925,8 +5925,6 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const float arrow_hit_x1 = (text_pos.x - text_offset_x) - style.TouchExtraPadding.x;
     const float arrow_hit_x2 = (text_pos.x - text_offset_x) + (g.FontSize + padding.x * 2.0f) + style.TouchExtraPadding.x;
     const bool is_mouse_x_over_arrow = (g.IO.MousePos.x >= arrow_hit_x1 && g.IO.MousePos.x < arrow_hit_x2);
-    if (window != g.HoveredWindow || !is_mouse_x_over_arrow)
-        button_flags |= ImGuiButtonFlags_NoKeyModifiers;
 
     // Open behaviors can be altered with the _OpenOnArrow and _OnOnDoubleClick flags.
     // Some alteration have subtle effects (e.g. toggle on MouseUp vs MouseDown events) due to requirements for multi-selection and drag and drop support.
@@ -5951,12 +5949,15 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     const bool is_multi_select = g.MultiSelectEnabled;
     if (is_multi_select)
     {
-        flags |= ImGuiTreeNodeFlags_OpenOnArrow;
         MultiSelectItemHeader(id, &selected);
         button_flags |= ImGuiButtonFlags_NoHoveredOnFocus;
 
+        // We absolutely need to distinguish open vs select so this is the default when multi-select is enabled.
+        flags |= ImGuiTreeNodeFlags_OpenOnArrow;
+
         // To handle drag and drop of multiple items we need to avoid clearing selection on click.
         // Enabling this test makes actions using CTRL+SHIFT delay their effect on the mouse release which is annoying, but it allows drag and drop of multiple items.
+        // FIXME-MULTISELECT: Consider opt-in for drag and drop behavior in ImGuiMultiSelectFlags?
         if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
             button_flags |= ImGuiButtonFlags_PressedOnClick;
         else
@@ -5964,7 +5965,8 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* l
     }
     else
     {
-        button_flags |= ImGuiButtonFlags_NoKeyModifiers;
+        if (window != g.HoveredWindow || !is_mouse_x_over_arrow)
+            button_flags |= ImGuiButtonFlags_NoKeyModifiers;
     }
 
     bool hovered, held;

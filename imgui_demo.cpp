@@ -1259,18 +1259,29 @@ static void ShowDemoWindowWidgets()
                 "Cauliflower", "Celery", "Celery Root", "Celcuce", "Chayote", "Celtuce", "Chayote", "Chinese Broccoli", "Corn", "Cucumber"
             };
 
-            int COUNT = 1000;
-            HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range. Keyboard is also supported.");
-            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int *)&ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+            // Test both Selectable() and TreeNode() widgets
+            enum WidgetType { WidgetType_Selectable, WidgetType_TreeNode };
+            static WidgetType widget_type = WidgetType_TreeNode;
+            if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
+            ImGui::SameLine();
+            if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int*)&ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+            ImGui::SameLine(); HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range. Keyboard is also supported.");
 
+            // Open a scrolling region
+            const int ITEMS_COUNT = 1000;
             if (ImGui::BeginListBox("##Basket", ImVec2(-FLT_MIN, ImGui::GetFontSize() * 20)))
             {
-                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection_ref, selection.GetSelected((int)selection_ref));
-                if (multi_select_data->RequestClear) { selection.Clear(); }
-                if (multi_select_data->RequestSelectAll) { selection.SelectAll(COUNT); }
                 ImVec2 color_button_sz(ImGui::GetFontSize(), ImGui::GetFontSize());
+                if (widget_type == WidgetType_TreeNode)
+                    ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
+
+                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection_ref, selection.GetSelected(selection_ref));
+                if (multi_select_data->RequestClear)     { selection.Clear(); }
+                if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
+
                 ImGuiListClipper clipper;
-                clipper.Begin(COUNT);
+                clipper.Begin(ITEMS_COUNT);
                 while (clipper.Step())
                 {
                     if (clipper.DisplayStart > (int)selection_ref)
@@ -1283,23 +1294,42 @@ static void ShowDemoWindowWidgets()
                         bool item_is_selected = selection.GetSelected(n);
 
                         // Emit a color button, to test that Shift+LeftArrow landing on an item that is not part 
-                        // of the selection scope doesn't erroneously alter our selection.
-                        ImVec4 dummy_col = ImColor((ImU32)ImGui::GetID(label));
-                        ImGui::ColorButton("##", dummy_col, ImGuiColorEditFlags_NoTooltip, color_button_sz);
+                        // of the selection scope doesn't erroneously alter our selection (FIXME-TESTS: Add a test for that!).
+                        ImU32 dummy_col = (ImU32)ImGui::GetID(label);
+                        ImGui::ColorButton("##", ImColor(dummy_col), ImGuiColorEditFlags_NoTooltip, color_button_sz);
                         ImGui::SameLine();
 
                         ImGui::SetNextItemSelectionData((void*)(intptr_t)n);
-                        if (ImGui::Selectable(label, item_is_selected))
-                            selection.SetSelected(n, !item_is_selected);
+                        if (widget_type == WidgetType_Selectable)
+                        {
+                            if (ImGui::Selectable(label, item_is_selected))
+                                selection.SetSelected(n, !item_is_selected);
+                        }
+                        else if (widget_type == WidgetType_TreeNode)
+                        {
+                            ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                            if (item_is_selected)
+                                tree_node_flags |= ImGuiTreeNodeFlags_Selected;
+                            ImGui::TreeNodeEx(label, tree_node_flags);
+                            if (ImGui::IsItemToggledSelection())
+                                selection.SetSelected(n, !item_is_selected);
+                        }
+
                         ImGui::PopID();
                     }
                 }
+
+                // Apply multi-select requests
                 multi_select_data = ImGui::EndMultiSelect();
                 selection_ref = (int)(intptr_t)multi_select_data->RangeSrc;
-                ImGui::EndListBox();
                 if (multi_select_data->RequestClear)     { selection.Clear(); }
-                if (multi_select_data->RequestSelectAll) { selection.SelectAll(COUNT); }
+                if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
                 if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }
+
+                if (widget_type == WidgetType_TreeNode)
+                    ImGui::PopStyleVar();
+
+                ImGui::EndListBox();
             }
             ImGui::TreePop();
         }
