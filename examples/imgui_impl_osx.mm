@@ -1,10 +1,12 @@
 // dear imgui: Platform Binding for OSX / Cocoa
 // This needs to be used along with a Renderer (e.g. OpenGL2, OpenGL3, Vulkan, Metal..)
-// [BETA] Beta bindings, not well tested. If you want a portable application, prefer using the Glfw or SDL platform bindings on Mac.
+// [ALPHA] Early bindings, not well tested. If you want a portable application, prefer using the GLFW or SDL platform bindings on Mac.
 
+// Implemented features:
+//  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
+//  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this back-end).
 // Issues:
-// [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-// [ ] Platform: Mouse cursor shapes and visibility are not supported (see end of https://github.com/glfw/glfw/issues/427)
+//  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 
 #include "imgui.h"
 #include "imgui_impl_osx.h"
@@ -12,11 +14,27 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
+//  2019-10-11: Inputs:  Fix using Backspace key.
+//  2019-07-21: Re-added clipboard handlers as they are not enabled by default in core imgui.cpp (reverted 2019-05-18 change).
+//  2019-05-28: Inputs: Added mouse cursor shape and visibility support.
+//  2019-05-18: Misc: Removed clipboard handlers as they are now supported by core imgui.cpp.
+//  2019-05-11: Inputs: Don't filter character values before calling AddInputCharacter() apart from 0xF700..0xFFFF range.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
 //  2018-07-07: Initial version.
 
 // Data
 static CFAbsoluteTime g_Time = 0.0;
+static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
+static bool           g_MouseCursorHidden = false;
+
+// Undocumented methods for creating cursors.
+@interface NSCursor()
++ (id)_windowResizeNorthWestSouthEastCursor;
++ (id)_windowResizeNorthEastSouthWestCursor;
++ (id)_windowResizeNorthSouthCursor;
++ (id)_windowResizeEastWestCursor;
+@end
 
 // Functions
 bool ImGui_ImplOSX_Init()
@@ -24,36 +42,52 @@ bool ImGui_ImplOSX_Init()
     ImGuiIO& io = ImGui::GetIO();
 
     // Setup back-end capabilities flags
-    //io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
     //io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
 
-    // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
+    // Keyboard mapping. Dear ImGui will use those indices to peek into the io.KeyDown[] array.
     const int offset_for_function_keys = 256 - 0xF700;
-    io.KeyMap[ImGuiKey_Tab]         = '\t';
-    io.KeyMap[ImGuiKey_LeftArrow]   = NSLeftArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_RightArrow]  = NSRightArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_UpArrow]     = NSUpArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_DownArrow]   = NSDownArrowFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageUp]      = NSPageUpFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_PageDown]    = NSPageDownFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Home]        = NSHomeFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_End]         = NSEndFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Insert]      = NSInsertFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Delete]      = NSDeleteFunctionKey + offset_for_function_keys;
-    io.KeyMap[ImGuiKey_Backspace]   = 127;
-    io.KeyMap[ImGuiKey_Space]       = 32;
-    io.KeyMap[ImGuiKey_Enter]       = 13;
-    io.KeyMap[ImGuiKey_Escape]      = 27;
-    io.KeyMap[ImGuiKey_A]           = 'A';
-    io.KeyMap[ImGuiKey_C]           = 'C';
-    io.KeyMap[ImGuiKey_V]           = 'V';
-    io.KeyMap[ImGuiKey_X]           = 'X';
-    io.KeyMap[ImGuiKey_Y]           = 'Y';
-    io.KeyMap[ImGuiKey_Z]           = 'Z';
+    io.KeyMap[ImGuiKey_Tab]             = '\t';
+    io.KeyMap[ImGuiKey_LeftArrow]       = NSLeftArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_RightArrow]      = NSRightArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_UpArrow]         = NSUpArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_DownArrow]       = NSDownArrowFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageUp]          = NSPageUpFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_PageDown]        = NSPageDownFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Home]            = NSHomeFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_End]             = NSEndFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Insert]          = NSInsertFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Delete]          = NSDeleteFunctionKey + offset_for_function_keys;
+    io.KeyMap[ImGuiKey_Backspace]       = 127;
+    io.KeyMap[ImGuiKey_Space]           = 32;
+    io.KeyMap[ImGuiKey_Enter]           = 13;
+    io.KeyMap[ImGuiKey_Escape]          = 27;
+    io.KeyMap[ImGuiKey_KeyPadEnter]     = 13;
+    io.KeyMap[ImGuiKey_A]               = 'A';
+    io.KeyMap[ImGuiKey_C]               = 'C';
+    io.KeyMap[ImGuiKey_V]               = 'V';
+    io.KeyMap[ImGuiKey_X]               = 'X';
+    io.KeyMap[ImGuiKey_Y]               = 'Y';
+    io.KeyMap[ImGuiKey_Z]               = 'Z';
 
+    // Load cursors. Some of them are undocumented.
+    g_MouseCursorHidden = false;
+    g_MouseCursors[ImGuiMouseCursor_Arrow] = [NSCursor arrowCursor];
+    g_MouseCursors[ImGuiMouseCursor_TextInput] = [NSCursor IBeamCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeAll] = [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_Hand] = [NSCursor pointingHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_NotAllowed] = [NSCursor operationNotAllowedCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNS] = [NSCursor respondsToSelector:@selector(_windowResizeNorthSouthCursor)] ? [NSCursor _windowResizeNorthSouthCursor] : [NSCursor resizeUpDownCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeEW] = [NSCursor respondsToSelector:@selector(_windowResizeEastWestCursor)] ? [NSCursor _windowResizeEastWestCursor] : [NSCursor resizeLeftRightCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNESW] = [NSCursor respondsToSelector:@selector(_windowResizeNorthEastSouthWestCursor)] ? [NSCursor _windowResizeNorthEastSouthWestCursor] : [NSCursor closedHandCursor];
+    g_MouseCursors[ImGuiMouseCursor_ResizeNWSE] = [NSCursor respondsToSelector:@selector(_windowResizeNorthWestSouthEastCursor)] ? [NSCursor _windowResizeNorthWestSouthEastCursor] : [NSCursor closedHandCursor];
+
+    // Note that imgui.cpp also include default OSX clipboard handlers which can be enabled
+    // by adding '#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS' in imconfig.h and adding '-framework ApplicationServices' to your linker command-line.
+    // Since we are already in ObjC land here, it is easy for us to add a clipboard handler using the NSPasteboard api.
     io.SetClipboardTextFn = [](void*, const char* str) -> void
     {
         NSPasteboard* pasteboard = [NSPasteboard generalPasteboard];
@@ -87,13 +121,44 @@ void ImGui_ImplOSX_Shutdown()
 {
 }
 
+static void ImGui_ImplOSX_UpdateMouseCursor()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (io.ConfigFlags & ImGuiConfigFlags_NoMouseCursorChange)
+        return;
+
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if (io.MouseDrawCursor || imgui_cursor == ImGuiMouseCursor_None)
+    {
+        // Hide OS mouse cursor if imgui is drawing it or if it wants no cursor
+        if (!g_MouseCursorHidden)
+        {
+            g_MouseCursorHidden = true;
+            [NSCursor hide];
+        }
+    }
+    else
+    {
+        // Show OS mouse cursor
+        [g_MouseCursors[g_MouseCursors[imgui_cursor] ? imgui_cursor : ImGuiMouseCursor_Arrow] set];
+        if (g_MouseCursorHidden)
+        {
+            g_MouseCursorHidden = false;
+            [NSCursor unhide];
+        }
+    }
+}
+
 void ImGui_ImplOSX_NewFrame(NSView* view)
 {
     // Setup display size
     ImGuiIO& io = ImGui::GetIO();
-    const float dpi = [view.window backingScaleFactor];
-    io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
-    io.DisplayFramebufferScale = ImVec2(dpi, dpi);
+    if (view)
+    {
+        const float dpi = [view.window backingScaleFactor];
+        io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
+        io.DisplayFramebufferScale = ImVec2(dpi, dpi);
+    }
 
     // Setup time step
     if (g_Time == 0.0)
@@ -101,6 +166,8 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
     io.DeltaTime = current_time - g_Time;
     g_Time = current_time;
+
+    ImGui_ImplOSX_UpdateMouseCursor();
 }
 
 static int mapCharacterToKey(int c)
@@ -168,7 +235,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
             }
         }
         else
-        #endif /*MAC_OS_X_VERSION_MAX_ALLOWED*/
+        #endif // MAC_OS_X_VERSION_MAX_ALLOWED
         {
             wheel_dx = [event deltaX];
             wheel_dy = [event deltaY];
@@ -189,8 +256,8 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         for (int i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
-            if (c < 0xF700 && !io.KeyCtrl)
-                io.AddInputCharacter((unsigned short)c);
+            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
+                io.AddInputCharacter((unsigned int)c);
 
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);

@@ -1,8 +1,14 @@
-// dear imgui: Platform Binding for FreeGLUT
+// dear imgui: Platform Binding for GLUT/FreeGLUT
 // This needs to be used along with a Renderer (e.g. OpenGL2)
+
+// !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
+// !!! If someone or something is teaching you GLUT in 2020, you are being abused. Please show some resistance. !!!
+// !!! Nowadays, prefer using GLFW or SDL instead!
 
 // Issues:
 //  [ ] Platform: GLUT is unable to distinguish e.g. Backspace from CTRL+H or TAB from CTRL+I
+//  [ ] Platform: Missing mouse cursor shape/visibility support.
+//  [ ] Platform: Missing clipboard support (not supported by Glut).
 //  [ ] Platform: Missing gamepad support.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
@@ -11,12 +17,18 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-04-03: Misc: Renamed imgui_impl_freeglut.cpp/.h to imgui_impl_glut.cpp/.h.
+//  2019-03-25: Misc: Made io.DeltaTime always above zero.
 //  2018-11-30: Misc: Setting up io.BackendPlatformName so it can be displayed in the About Window.
-//  2018-03-22: Added FreeGLUT Platform binding.
+//  2018-03-22: Added GLUT Platform binding.
 
 #include "imgui.h"
-#include "imgui_impl_freeglut.h"
-#include <GL/freeglut.h>
+#include "imgui_impl_glut.h"
+#ifdef __APPLE__
+    #include <GLUT/glut.h>
+#else
+    #include <GL/freeglut.h>
+#endif
 
 #ifdef _MSC_VER
 #pragma warning (disable: 4505) // unreferenced local function has been removed (stb stuff)
@@ -24,10 +36,15 @@
 
 static int g_Time = 0;          // Current time, in milliseconds
 
-bool ImGui_ImplFreeGLUT_Init()
+bool ImGui_ImplGLUT_Init()
 {
     ImGuiIO& io = ImGui::GetIO();
-    io.BackendPlatformName ="imgui_impl_freeglut";
+
+#ifdef FREEGLUT
+    io.BackendPlatformName ="imgui_impl_glut (freeglut)";
+#else
+    io.BackendPlatformName ="imgui_impl_glut";
+#endif
 
     g_Time = 0;
 
@@ -47,6 +64,7 @@ bool ImGui_ImplFreeGLUT_Init()
     io.KeyMap[ImGuiKey_Space]       = ' ';
     io.KeyMap[ImGuiKey_Enter]       = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_Escape]      = 27;
+    io.KeyMap[ImGuiKey_KeyPadEnter] = 13; // == CTRL+M
     io.KeyMap[ImGuiKey_A]           = 'A';
     io.KeyMap[ImGuiKey_C]           = 'C';
     io.KeyMap[ImGuiKey_V]           = 'V';
@@ -57,36 +75,41 @@ bool ImGui_ImplFreeGLUT_Init()
     return true;
 }
 
-void ImGui_ImplFreeGLUT_InstallFuncs()
+void ImGui_ImplGLUT_InstallFuncs()
 {
-    glutReshapeFunc(ImGui_ImplFreeGLUT_ReshapeFunc);
-    glutMotionFunc(ImGui_ImplFreeGLUT_MotionFunc);
-    glutPassiveMotionFunc(ImGui_ImplFreeGLUT_MotionFunc);
-    glutMouseFunc(ImGui_ImplFreeGLUT_MouseFunc);
-    glutMouseWheelFunc(ImGui_ImplFreeGLUT_MouseWheelFunc);
-    glutKeyboardFunc(ImGui_ImplFreeGLUT_KeyboardFunc);
-    glutKeyboardUpFunc(ImGui_ImplFreeGLUT_KeyboardUpFunc);
-    glutSpecialFunc(ImGui_ImplFreeGLUT_SpecialFunc);
-    glutSpecialUpFunc(ImGui_ImplFreeGLUT_SpecialUpFunc);
+    glutReshapeFunc(ImGui_ImplGLUT_ReshapeFunc);
+    glutMotionFunc(ImGui_ImplGLUT_MotionFunc);
+    glutPassiveMotionFunc(ImGui_ImplGLUT_MotionFunc);
+    glutMouseFunc(ImGui_ImplGLUT_MouseFunc);
+#ifdef __FREEGLUT_EXT_H__
+    glutMouseWheelFunc(ImGui_ImplGLUT_MouseWheelFunc);
+#endif
+    glutKeyboardFunc(ImGui_ImplGLUT_KeyboardFunc);
+    glutKeyboardUpFunc(ImGui_ImplGLUT_KeyboardUpFunc);
+    glutSpecialFunc(ImGui_ImplGLUT_SpecialFunc);
+    glutSpecialUpFunc(ImGui_ImplGLUT_SpecialUpFunc);
 }
 
-void ImGui_ImplFreeGLUT_Shutdown()
+void ImGui_ImplGLUT_Shutdown()
 {
 }
 
-void ImGui_ImplFreeGLUT_NewFrame()
+void ImGui_ImplGLUT_NewFrame()
 {
     // Setup time step
     ImGuiIO& io = ImGui::GetIO();
     int current_time = glutGet(GLUT_ELAPSED_TIME);
-    io.DeltaTime = (current_time - g_Time) / 1000.0f;
+    int delta_time_ms = (current_time - g_Time);
+    if (delta_time_ms <= 0)
+        delta_time_ms = 1;
+    io.DeltaTime = delta_time_ms / 1000.0f;
     g_Time = current_time;
 
     // Start the frame
     ImGui::NewFrame();
 }
 
-static void ImGui_ImplFreeGLUT_UpdateKeyboardMods()
+static void ImGui_ImplGLUT_UpdateKeyboardMods()
 {
     ImGuiIO& io = ImGui::GetIO();
     int mods = glutGetModifiers();
@@ -95,13 +118,13 @@ static void ImGui_ImplFreeGLUT_UpdateKeyboardMods()
     io.KeyAlt = (mods & GLUT_ACTIVE_ALT) != 0;
 }
 
-void ImGui_ImplFreeGLUT_KeyboardFunc(unsigned char c, int x, int y)
+void ImGui_ImplGLUT_KeyboardFunc(unsigned char c, int x, int y)
 {
     // Send character to imgui
     //printf("char_down_func %d '%c'\n", c, c);
     ImGuiIO& io = ImGui::GetIO();
     if (c >= 32)
-        io.AddInputCharacter((unsigned short)c);
+        io.AddInputCharacter((unsigned int)c);
 
     // Store letters in KeysDown[] array as both uppercase and lowercase + Handle GLUT translating CTRL+A..CTRL+Z as 1..26.
     // This is a hacky mess but GLUT is unable to distinguish e.g. a TAB key from CTRL+I so this is probably the best we can do here.
@@ -113,11 +136,11 @@ void ImGui_ImplFreeGLUT_KeyboardFunc(unsigned char c, int x, int y)
         io.KeysDown[c] = io.KeysDown[c - 'A' + 'a'] = true;
     else
         io.KeysDown[c] = true;
-    ImGui_ImplFreeGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyboardMods();
     (void)x; (void)y; // Unused
 }
 
-void ImGui_ImplFreeGLUT_KeyboardUpFunc(unsigned char c, int x, int y)
+void ImGui_ImplGLUT_KeyboardUpFunc(unsigned char c, int x, int y)
 {
     //printf("char_up_func %d '%c'\n", c, c);
     ImGuiIO& io = ImGui::GetIO();
@@ -129,31 +152,31 @@ void ImGui_ImplFreeGLUT_KeyboardUpFunc(unsigned char c, int x, int y)
         io.KeysDown[c] = io.KeysDown[c - 'A' + 'a'] = false;
     else
         io.KeysDown[c] = false;
-    ImGui_ImplFreeGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyboardMods();
     (void)x; (void)y; // Unused
 }
 
-void ImGui_ImplFreeGLUT_SpecialFunc(int key, int x, int y)
+void ImGui_ImplGLUT_SpecialFunc(int key, int x, int y)
 {
     //printf("key_down_func %d\n", key);
     ImGuiIO& io = ImGui::GetIO();
     if (key + 256 < IM_ARRAYSIZE(io.KeysDown))
         io.KeysDown[key + 256] = true;
-    ImGui_ImplFreeGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyboardMods();
     (void)x; (void)y; // Unused
 }
 
-void ImGui_ImplFreeGLUT_SpecialUpFunc(int key, int x, int y)
+void ImGui_ImplGLUT_SpecialUpFunc(int key, int x, int y)
 {
     //printf("key_up_func %d\n", key);
     ImGuiIO& io = ImGui::GetIO();
     if (key + 256 < IM_ARRAYSIZE(io.KeysDown))
         io.KeysDown[key + 256] = false;
-    ImGui_ImplFreeGLUT_UpdateKeyboardMods();
+    ImGui_ImplGLUT_UpdateKeyboardMods();
     (void)x; (void)y; // Unused
 }
 
-void ImGui_ImplFreeGLUT_MouseFunc(int glut_button, int state, int x, int y)
+void ImGui_ImplGLUT_MouseFunc(int glut_button, int state, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos = ImVec2((float)x, (float)y);
@@ -167,7 +190,8 @@ void ImGui_ImplFreeGLUT_MouseFunc(int glut_button, int state, int x, int y)
         io.MouseDown[button] = false;
 }
 
-void ImGui_ImplFreeGLUT_MouseWheelFunc(int button, int dir, int x, int y)
+#ifdef __FREEGLUT_EXT_H__
+void ImGui_ImplGLUT_MouseWheelFunc(int button, int dir, int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos = ImVec2((float)x, (float)y);
@@ -177,14 +201,15 @@ void ImGui_ImplFreeGLUT_MouseWheelFunc(int button, int dir, int x, int y)
         io.MouseWheel -= 1.0;
     (void)button; // Unused
 }
+#endif
 
-void ImGui_ImplFreeGLUT_ReshapeFunc(int w, int h)
+void ImGui_ImplGLUT_ReshapeFunc(int w, int h)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize = ImVec2((float)w, (float)h);
 }
 
-void ImGui_ImplFreeGLUT_MotionFunc(int x, int y)
+void ImGui_ImplGLUT_MotionFunc(int x, int y)
 {
     ImGuiIO& io = ImGui::GetIO();
     io.MousePos = ImVec2((float)x, (float)y);

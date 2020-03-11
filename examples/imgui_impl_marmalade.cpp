@@ -2,7 +2,9 @@
 // Marmalade code: Copyright (C) 2015 by Giovanni Zito (this file is part of Dear ImGui)
 
 // Implemented features:
-//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID in imgui.cpp.
+//  [X] Renderer: User texture binding. Use 'CIwTexture*' as ImTextureID. Read the FAQ about ImTextureID!
+// Missing features:
+//  [ ] Renderer: Clipping rectangles are not honored.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -10,6 +12,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2019-07-21: Inputs: Added mapping for ImGuiKey_KeyPadEnter.
+//  2019-05-11: Inputs: Don't filter value from character callback before calling AddInputCharacter().
 //  2018-11-30: Misc: Setting up io.BackendPlatformName/io.BackendRendererName so they can be displayed in the About Window.
 //  2018-02-16: Misc: Obsoleted the io.RenderDrawListsFn callback and exposed ImGui_Marmalade_RenderDrawData() in the .h file so you can call it yourself.
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
@@ -38,9 +42,9 @@ static ImVec2       g_RenderScale = ImVec2(1.0f,1.0f);
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 {
-    // Handle cases of screen coordinates != from framebuffer coordinates (e.g. retina displays)
-    ImGuiIO& io = ImGui::GetIO();
-    draw_data->ScaleClipRects(io.DisplayFramebufferScale);
+    // Avoid rendering when minimized
+    if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
+        return;
 
     // Render command lists
     for (int n = 0; n < draw_data->CmdListsCount; n++)
@@ -54,7 +58,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 
         for (int i = 0; i < nVert; i++)
         {
-            // TODO: optimize multiplication on gpu using vertex shader/projection matrix.
+            // FIXME-OPT: optimize multiplication on GPU using vertex shader/projection matrix.
             pVertStream[i].x = cmd_list->VtxBuffer[i].pos.x * g_RenderScale.x;
             pVertStream[i].y = cmd_list->VtxBuffer[i].pos.y * g_RenderScale.y;
             pUVStream[i].x = cmd_list->VtxBuffer[i].uv.x;
@@ -76,6 +80,7 @@ void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
+                // FIXME: Not honoring ClipRect fields.
                 CIwMaterial* pCurrentMaterial = IW_GX_ALLOC_MATERIAL();
                 pCurrentMaterial->SetShadeMode(CIwMaterial::SHADE_FLAT);
                 pCurrentMaterial->SetCullMode(CIwMaterial::CULL_NONE);
@@ -163,8 +168,7 @@ int32 ImGui_Marmalade_CharCallback(void* system_data, void* user_data)
 {
     ImGuiIO& io = ImGui::GetIO();
     s3eKeyboardCharEvent* e = (s3eKeyboardCharEvent*)system_data;
-    if ((e->m_Char > 0 && e->m_Char < 0x10000))
-        io.AddInputCharacter((unsigned short)e->m_Char);
+    io.AddInputCharacter((unsigned int)e->m_Char);
 
     return 0;
 }
@@ -232,6 +236,7 @@ bool    ImGui_Marmalade_Init(bool install_callbacks)
     io.KeyMap[ImGuiKey_Space] = s3eKeySpace;
     io.KeyMap[ImGuiKey_Enter] = s3eKeyEnter;
     io.KeyMap[ImGuiKey_Escape] = s3eKeyEsc;
+    io.KeyMap[ImGuiKey_KeyPadEnter] = s3eKeyNumPadEnter;
     io.KeyMap[ImGuiKey_A] = s3eKeyA;
     io.KeyMap[ImGuiKey_C] = s3eKeyC;
     io.KeyMap[ImGuiKey_V] = s3eKeyV;
