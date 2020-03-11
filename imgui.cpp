@@ -830,7 +830,6 @@ CODE
 #else
 #include <windows.h>
 #endif
-#include <stringapiset.h>   // MultiByteToWideChar, WideCharToMultiByte
 #if defined(WINAPI_FAMILY) && (WINAPI_FAMILY == WINAPI_FAMILY_APP) // UWP doesn't have all Win32 functions
 #define IMGUI_DISABLE_WIN32_DEFAULT_CLIPBOARD_FUNCTIONS
 #define IMGUI_DISABLE_WIN32_DEFAULT_IME_FUNCTIONS

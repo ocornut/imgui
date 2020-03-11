@@ -253,6 +253,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - log: let user copy any window content to clipboard easily (CTRL+C on windows? while moving it? context menu?). code is commented because it fails with multiple Begin/End pairs.
  - log: obsolete LogButtons() all together.
  - log: LogButtons() options for specifying depth and/or hiding depth slider
+ - log: enabling log ends up pushing and growing vertices buffersbecause we don't distinguish layout vs render clipping
 
  - filters: set a current filter that tree node can automatically query to hide themselves
  - filters: handle wild-cards (with implicit leading/trailing *), reg-exprs
