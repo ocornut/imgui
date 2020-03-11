@@ -203,6 +203,7 @@ From November 2014 to December 2019, ongoing development has also been financial
 Dear ImGui is using software and services provided free of charge for open source projects:
 - [PVS-Studio](https://www.viva64.com/en/b/0570/) for static analysis.
 - [GitHub actions](https://github.com/features/actions) for continuous integration systems.
+- [OpenCppCoverage](https://github.com/OpenCppCoverage/OpenCppCoverage) for code coverage analysis.
 
 Credits
 -------

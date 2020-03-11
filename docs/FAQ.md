@@ -161,22 +161,35 @@ Interactive widgets (such as calls to Button buttons) need a unique ID.
 Unique ID are used internally to track active widgets and occasionally associate state to widgets.
 Unique ID are implicitly built from the hash of multiple elements that identify the "path" to the UI element.
 
-- Unique ID are often derived from a string label:
-```c
-Button("OK");          // Label = "OK",     ID = hash of (..., "OK")
-Button("Cancel");      // Label = "Cancel", ID = hash of (..., "Cancel")
-```
-- ID are uniquely scoped within windows, tree nodes, etc. which all pushes to the ID stack. Having
-two buttons labeled "OK" in different windows or different tree locations is fine.
-We used "..." above to signify whatever was already pushed to the ID stack previously:
+- Unique ID are often derived from a string label and at minimum scoped within their host window:
 ```c
 Begin("MyWindow");
-Button("OK");          // Label = "OK",     ID = hash of ("MyWindow", "OK")
+Button("OK");          // Label = "OK",     ID = hash of ("MyWindow" "OK")
+Button("Cancel");      // Label = "Cancel", ID = hash of ("MyWindow", "Cancel")
+End();
+```
+- Other elements such as tree nodes, etc. also pushes to the ID stack:
+```c
+Begin("MyWindow");
+if (TreeNode("MyTreeNode"))
+{
+    Button("OK");      // Label = "OK",     ID = hash of ("MyWindow", "MyTreeNode", "OK")
+    TreePop();
+}
+End();
+```
+- Two items labeled "OK" in different windows or different tree locations won't collide:
+```
+Begin("MyFirstWindow");
+Button("OK");          // Label = "OK",     ID = hash of ("MyFirstWindow", "OK")
 End();
 Begin("MyOtherWindow");
 Button("OK");          // Label = "OK",     ID = hash of ("MyOtherWindow", "OK")
 End();
 ```
+
+We used "..." above to signify whatever was already pushed to the ID stack previously:
+
 - If you have a same ID twice in the same location, you'll have a conflict:
 ```c
 Button("OK");
