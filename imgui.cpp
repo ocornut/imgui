@@ -3846,7 +3846,8 @@ void ImGui::NewFrame()
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
-    g.DragDropWithinSourceOrTarget = false;
+    g.DragDropWithinSource = false;
+    g.DragDropWithinTarget = false;
 
     // Update keyboard input state
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
@@ -4237,9 +4238,9 @@ void ImGui::EndFrame()
     // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
     if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
     {
-        g.DragDropWithinSourceOrTarget = true;
+        g.DragDropWithinSource = true;
         SetTooltip("...");
-        g.DragDropWithinSourceOrTarget = false;
+        g.DragDropWithinSource = false;
     }
 
     // End frame
@@ -7459,7 +7460,7 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags toolt
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.DragDropWithinSourceOrTarget)
+    if (g.DragDropWithinSource || g.DragDropWithinTarget)
     {
         // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
         // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
@@ -9119,7 +9120,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             g.DragDropMouseButton = mouse_button;
         }
         g.DragDropSourceFrameCount = g.FrameCount;
-        g.DragDropWithinSourceOrTarget = true;
+        g.DragDropWithinSource = true;
 
         if (!(flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
         {
@@ -9146,7 +9147,7 @@ void ImGui::EndDragDropSource()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
-    IM_ASSERT(g.DragDropWithinSourceOrTarget && "Not after a BeginDragDropSource()?");
+    IM_ASSERT(g.DragDropWithinSource && "Not after a BeginDragDropSource()?");
 
     if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
         EndTooltip();
@@ -9154,7 +9155,7 @@ void ImGui::EndDragDropSource()
     // Discard the drag if have not called SetDragDropPayload()
     if (g.DragDropPayload.DataFrameCount == -1)
         ClearDragDrop();
-    g.DragDropWithinSourceOrTarget = false;
+    g.DragDropWithinSource = false;
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
@@ -9216,10 +9217,10 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
     if (window->SkipItems)
         return false;
 
-    IM_ASSERT(g.DragDropWithinSourceOrTarget == false);
+    IM_ASSERT(g.DragDropWithinTarget == false);
     g.DragDropTargetRect = bb;
     g.DragDropTargetId = id;
-    g.DragDropWithinSourceOrTarget = true;
+    g.DragDropWithinTarget = true;
     return true;
 }
 
@@ -9246,10 +9247,10 @@ bool ImGui::BeginDragDropTarget()
     if (g.DragDropPayload.SourceId == id)
         return false;
 
-    IM_ASSERT(g.DragDropWithinSourceOrTarget == false);
+    IM_ASSERT(g.DragDropWithinTarget == false);
     g.DragDropTargetRect = display_rect;
     g.DragDropTargetId = id;
-    g.DragDropWithinSourceOrTarget = true;
+    g.DragDropWithinTarget = true;
     return true;
 }
 
@@ -9313,8 +9314,8 @@ void ImGui::EndDragDropTarget()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
-    IM_ASSERT(g.DragDropWithinSourceOrTarget);
-    g.DragDropWithinSourceOrTarget = false;
+    IM_ASSERT(g.DragDropWithinTarget);
+    g.DragDropWithinTarget = false;
 }
 
 //-----------------------------------------------------------------------------
