@@ -300,7 +300,7 @@ struct ImFontBuildSrcDataFT
     int                 DstIndex;           // Index into atlas->Fonts[] and dst_tmp_array[]
     int                 GlyphsHighest;      // Highest requested codepoint
     int                 GlyphsCount;        // Glyph count (excluding missing glyphs and glyphs already set by an earlier source font)
-    ImBoolVector        GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
+    ImBitVector         GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
     ImVector<ImFontBuildSrcGlyphFT>   GlyphsList;
 };
 
@@ -310,7 +310,7 @@ struct ImFontBuildDstDataFT
     int                 SrcCount;           // Number of source fonts targeting this destination font.
     int                 GlyphsHighest;
     int                 GlyphsCount;
-    ImBoolVector        GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
+    ImBitVector         GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
 };
 
 bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, unsigned int extra_flags)
@@ -370,14 +370,14 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     {
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
         ImFontBuildDstDataFT& dst_tmp = dst_tmp_array[src_tmp.DstIndex];
-        src_tmp.GlyphsSet.Resize(src_tmp.GlyphsHighest + 1);
+        src_tmp.GlyphsSet.Create(src_tmp.GlyphsHighest + 1);
         if (dst_tmp.GlyphsSet.Storage.empty())
-            dst_tmp.GlyphsSet.Resize(dst_tmp.GlyphsHighest + 1);
+            dst_tmp.GlyphsSet.Create(dst_tmp.GlyphsHighest + 1);
 
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
             for (int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
             {
-                if (dst_tmp.GlyphsSet.GetBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option (e.g. MergeOverwrite)
+                if (dst_tmp.GlyphsSet.TestBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option (e.g. MergeOverwrite)
                     continue;
                 uint32_t glyph_index = FT_Get_Char_Index(src_tmp.Font.Face, codepoint); // It is actually in the font? (FIXME-OPT: We are not storing the glyph_index..)
                 if (glyph_index == 0)
@@ -386,8 +386,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
                 // Add to avail set/counters
                 src_tmp.GlyphsCount++;
                 dst_tmp.GlyphsCount++;
-                src_tmp.GlyphsSet.SetBit(codepoint, true);
-                dst_tmp.GlyphsSet.SetBit(codepoint, true);
+                src_tmp.GlyphsSet.SetBit(codepoint);
+                dst_tmp.GlyphsSet.SetBit(codepoint);
                 total_glyphs_count++;
             }
     }
@@ -398,13 +398,13 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
         src_tmp.GlyphsList.reserve(src_tmp.GlyphsCount);
 
-        IM_ASSERT(sizeof(src_tmp.GlyphsSet.Storage.Data[0]) == sizeof(int));
-        const int* it_begin = src_tmp.GlyphsSet.Storage.begin();
-        const int* it_end = src_tmp.GlyphsSet.Storage.end();
-        for (const int* it = it_begin; it < it_end; it++)
-            if (int entries_32 = *it)
-                for (int bit_n = 0; bit_n < 32; bit_n++)
-                    if (entries_32 & (1 << bit_n))
+        IM_ASSERT(sizeof(src_tmp.GlyphsSet.Storage.Data[0]) == sizeof(ImU32));
+        const ImU32* it_begin = src_tmp.GlyphsSet.Storage.begin();
+        const ImU32* it_end = src_tmp.GlyphsSet.Storage.end();
+        for (const ImU32* it = it_begin; it < it_end; it++)
+            if (ImU32 entries_32 = *it)
+                for (ImU32 bit_n = 0; bit_n < 32; bit_n++)
+                    if (entries_32 & ((ImU32)1 << bit_n))
                     {
                         ImFontBuildSrcGlyphFT src_glyph;
                         memset(&src_glyph, 0, sizeof(src_glyph));

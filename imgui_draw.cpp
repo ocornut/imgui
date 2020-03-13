@@ -1921,7 +1921,7 @@ struct ImFontBuildSrcData
     int                 DstIndex;           // Index into atlas->Fonts[] and dst_tmp_array[]
     int                 GlyphsHighest;      // Highest requested codepoint
     int                 GlyphsCount;        // Glyph count (excluding missing glyphs and glyphs already set by an earlier source font)
-    ImBoolVector        GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
+    ImBitVector         GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
     ImVector<int>       GlyphsList;         // Glyph codepoints list (flattened version of GlyphsMap)
 };
 
@@ -1931,19 +1931,19 @@ struct ImFontBuildDstData
     int                 SrcCount;           // Number of source fonts targeting this destination font.
     int                 GlyphsHighest;
     int                 GlyphsCount;
-    ImBoolVector        GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
+    ImBitVector         GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
 };
 
-static void UnpackBoolVectorToFlatIndexList(const ImBoolVector* in, ImVector<int>* out)
+static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>* out)
 {
     IM_ASSERT(sizeof(in->Storage.Data[0]) == sizeof(int));
-    const int* it_begin = in->Storage.begin();
-    const int* it_end = in->Storage.end();
-    for (const int* it = it_begin; it < it_end; it++)
-        if (int entries_32 = *it)
-            for (int bit_n = 0; bit_n < 32; bit_n++)
-                if (entries_32 & (1u << bit_n))
-                    out->push_back((int)((it - it_begin) << 5) + bit_n);
+    const ImU32* it_begin = in->Storage.begin();
+    const ImU32* it_end = in->Storage.end();
+    for (const ImU32* it = it_begin; it < it_end; it++)
+        if (ImU32 entries_32 = *it)
+            for (ImU32 bit_n = 0; bit_n < 32; bit_n++)
+                if (entries_32 & ((ImU32)1 << bit_n))
+                    out->push_back((int)(((it - it_begin) << 5) + bit_n));
 }
 
 bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
@@ -2004,14 +2004,14 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     {
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
         ImFontBuildDstData& dst_tmp = dst_tmp_array[src_tmp.DstIndex];
-        src_tmp.GlyphsSet.Resize(src_tmp.GlyphsHighest + 1);
+        src_tmp.GlyphsSet.Create(src_tmp.GlyphsHighest + 1);
         if (dst_tmp.GlyphsSet.Storage.empty())
-            dst_tmp.GlyphsSet.Resize(dst_tmp.GlyphsHighest + 1);
+            dst_tmp.GlyphsSet.Create(dst_tmp.GlyphsHighest + 1);
 
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
             for (unsigned int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
             {
-                if (dst_tmp.GlyphsSet.GetBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option for MergeMode (e.g. MergeOverwrite==true)
+                if (dst_tmp.GlyphsSet.TestBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option for MergeMode (e.g. MergeOverwrite==true)
                     continue;
                 if (!stbtt_FindGlyphIndex(&src_tmp.FontInfo, codepoint))    // It is actually in the font?
                     continue;
@@ -2019,8 +2019,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
                 // Add to avail set/counters
                 src_tmp.GlyphsCount++;
                 dst_tmp.GlyphsCount++;
-                src_tmp.GlyphsSet.SetBit(codepoint, true);
-                dst_tmp.GlyphsSet.SetBit(codepoint, true);
+                src_tmp.GlyphsSet.SetBit(codepoint);
+                dst_tmp.GlyphsSet.SetBit(codepoint);
                 total_glyphs_count++;
             }
     }
@@ -2030,7 +2030,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     {
         ImFontBuildSrcData& src_tmp = src_tmp_array[src_i];
         src_tmp.GlyphsList.reserve(src_tmp.GlyphsCount);
-        UnpackBoolVectorToFlatIndexList(&src_tmp.GlyphsSet, &src_tmp.GlyphsList);
+        UnpackBitVectorToFlatIndexList(&src_tmp.GlyphsSet, &src_tmp.GlyphsList);
         src_tmp.GlyphsSet.Clear();
         IM_ASSERT(src_tmp.GlyphsList.Size == src_tmp.GlyphsCount);
     }
