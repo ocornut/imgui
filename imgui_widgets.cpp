@@ -7928,7 +7928,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         return false;
 
     // Sanity checks
-    IM_ASSERT(columns_count > 0 && columns_count < IMGUI_TABLE_MAX_COLUMNS && "Only 0..63 columns allowed!");
+    IM_ASSERT(columns_count > 0 && columns_count <= IMGUI_TABLE_MAX_COLUMNS && "Only 1..64 columns allowed!");
     if (flags & ImGuiTableFlags_ScrollX)
         IM_ASSERT(inner_width >= 0.0f);
 
@@ -9017,8 +9017,8 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
     struct MergeGroup
     {
         ImRect  ClipRect;
-        ImU64   ChannelsMask;
         int     ChannelsCount;
+        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> ChannelsMask;
     };
     int merge_group_mask = 0x00;
     MergeGroup merge_groups[4];
@@ -9057,11 +9057,11 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
                 continue;
 
             const int merge_group_dst_n = (is_frozen_h && column_n < table->FreezeColumnsCount ? 0 : 2) + (is_frozen_v ? merge_group_sub_n : 1);
-            IM_ASSERT(channel_no < 64);
+            IM_ASSERT(channel_no < IMGUI_TABLE_MAX_DRAW_CHANNELS);
             MergeGroup* merge_group = &merge_groups[merge_group_dst_n];
             if (merge_group->ChannelsCount == 0)
                 merge_group->ClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
-            merge_group->ChannelsMask |= (ImU64)1 << channel_no;
+            merge_group->ChannelsMask.SetBit(channel_no);
             merge_group->ChannelsCount++;
             merge_group->ClipRect.Add(src_channel->_CmdBuffer[0].ClipRect);
             merge_group_mask |= (1 << merge_group_dst_n);
@@ -9090,12 +9090,15 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
         // Use shared temporary storage so the allocation gets amortized
         g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - 1);
         ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
-        ImU64 remaining_mask = (splitter->_Count < 64) ? ((ImU64)1 << splitter->_Count) - 1 : ~(ImU64)0;
-        remaining_mask &= (ImU64)~1; // Background channel 0 not part of the merge (see channel allocation in TableUpdateDrawChannels)
+        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> remaining_mask;
+        remaining_mask.ClearBits();
+        remaining_mask.SetBitRange(1, splitter->_Count - 1); // Background channel 0 not part of the merge (see channel allocation in TableUpdateDrawChannels)
+        int remaining_count = splitter->_Count - 1;
         const bool may_extend_clip_rect_to_host_rect = ImIsPowerOfTwo(merge_group_mask);
         for (int merge_group_n = 0; merge_group_n < 4; merge_group_n++)
-            if (ImU64 merge_channels_mask = merge_groups[merge_group_n].ChannelsMask)
+            if (int merge_channels_count = merge_groups[merge_group_n].ChannelsCount)
             {
+                MergeGroup* merge_group = &merge_groups[merge_group_n];
                 ImRect merge_clip_rect = merge_groups[merge_group_n].ClipRect;
                 if (may_extend_clip_rect_to_host_rect)
                 {
@@ -9105,30 +9108,32 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
                     merge_clip_rect.Add(merge_groups_all_fit_within_inner_rect ? table->HostClipRect : table->InnerClipRect);
                     //GetOverlayDrawList()->AddRect(merge_clip_rect.Min, merge_clip_rect.Max, IM_COL32(0, 255, 0, 200));
                 }
-                remaining_mask &= ~merge_channels_mask;
-                for (int n = 0; n < splitter->_Count && merge_channels_mask != 0; n++)
+                remaining_count -= merge_group->ChannelsCount;
+                for (int n = 0; n < IM_ARRAYSIZE(remaining_mask.Storage); n++)
+                    remaining_mask.Storage[n] &= ~merge_group->ChannelsMask.Storage[n];
+                for (int n = 0; n < splitter->_Count && merge_channels_count != 0; n++)
                 {
                     // Copy + overwrite new clip rect
-                    const ImU64 n_mask = (ImU64)1 << n;
-                    if ((merge_channels_mask & n_mask) == 0)
+                    if (!merge_group->ChannelsMask.TestBit(n))
                         continue;
+                    merge_group->ChannelsMask.ClearBit(n);
+                    merge_channels_count--;
+
                     ImDrawChannel* channel = &splitter->_Channels[n];
                     IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
                     channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
                     memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
-                    merge_channels_mask &= ~n_mask;
                 }
             }
 
         // Append unmergeable channels that we didn't reorder at the end of the list
-        for (int n = 0; n < splitter->_Count && remaining_mask != 0; n++)
+        for (int n = 0; n < splitter->_Count && remaining_count != 0; n++)
         {
-            const ImU64 n_mask = (ImU64)1 << n;
-            if ((remaining_mask & n_mask) == 0)
+            if (!remaining_mask.TestBit(n))
                 continue;
             ImDrawChannel* channel = &splitter->_Channels[n];
             memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
-            remaining_mask &= ~n_mask;
+            remaining_count--;
         }
         IM_ASSERT(dst_tmp == g.DrawChannelsTempMergeBuffer.Data + g.DrawChannelsTempMergeBuffer.Size);
         memcpy(splitter->_Channels.Data + 1, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - 1) * sizeof(ImDrawChannel));
