@@ -9013,13 +9013,16 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
     const bool is_frozen_v = (table->FreezeRowsCount > 0);
     const bool is_frozen_h = (table->FreezeColumnsCount > 0);
 
-    // Track which groups (1-4) we are going to attempt to merge, and which channels goes into each group.
+    // Track which groups we are going to attempt to merge, and which channels goes into each group.
+    struct MergeGroup
+    {
+        ImRect  ClipRect;
+        ImU64   ChannelsMask;
+        int     ChannelsCount;
+    };
     int merge_group_mask = 0x00;
-    int merge_group_channels_count[4] = { 0 };
-    ImU64 merge_group_channels_mask[4] = { 0 };
-    ImRect merge_group_clip_rect[4];
-    for (int n = 0; n < IM_ARRAYSIZE(merge_group_clip_rect); n++)
-        merge_group_clip_rect[n] = ImVec4(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
+    MergeGroup merge_groups[4];
+    memset(merge_groups, 0, sizeof(merge_groups));
     bool merge_groups_all_fit_within_inner_rect = (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0;
 
     // 1. Scan channels and take note of those which can be merged
@@ -9053,12 +9056,15 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
             if (width_contents > column->WidthGiven && !(column->Flags & ImGuiTableColumnFlags_NoClipX))
                 continue;
 
-            const int dst_merge_group_idx = (is_frozen_h && column_n < table->FreezeColumnsCount ? 0 : 2) + (is_frozen_v ? merge_group_sub_n : 1);
+            const int merge_group_dst_n = (is_frozen_h && column_n < table->FreezeColumnsCount ? 0 : 2) + (is_frozen_v ? merge_group_sub_n : 1);
             IM_ASSERT(channel_no < 64);
-            merge_group_mask |= (1 << dst_merge_group_idx);
-            merge_group_channels_mask[dst_merge_group_idx] |= (ImU64)1 << channel_no;
-            merge_group_channels_count[dst_merge_group_idx]++;
-            merge_group_clip_rect[dst_merge_group_idx].Add(src_channel->_CmdBuffer[0].ClipRect);
+            MergeGroup* merge_group = &merge_groups[merge_group_dst_n];
+            if (merge_group->ChannelsCount == 0)
+                merge_group->ClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
+            merge_group->ChannelsMask |= (ImU64)1 << channel_no;
+            merge_group->ChannelsCount++;
+            merge_group->ClipRect.Add(src_channel->_CmdBuffer[0].ClipRect);
+            merge_group_mask |= (1 << merge_group_dst_n);
 
             // If we end with a single group and hosted by the outer window, we'll attempt to merge our draw command with
             // the existing outer window command. But we can only do so if our columns all fit within the expected clip rect,
@@ -9078,7 +9084,6 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
         column->DrawChannelCurrent = -1;
     }
 
-
     // 2. Rewrite channel list in our preferred order
     if (merge_group_mask != 0)
     {
@@ -9089,9 +9094,9 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
         remaining_mask &= (ImU64)~1; // Background channel 0 not part of the merge (see channel allocation in TableUpdateDrawChannels)
         const bool may_extend_clip_rect_to_host_rect = ImIsPowerOfTwo(merge_group_mask);
         for (int merge_group_n = 0; merge_group_n < 4; merge_group_n++)
-            if (ImU64 merge_channels_mask = merge_group_channels_mask[merge_group_n])
+            if (ImU64 merge_channels_mask = merge_groups[merge_group_n].ChannelsMask)
             {
-                ImRect merge_clip_rect = merge_group_clip_rect[merge_group_n];
+                ImRect merge_clip_rect = merge_groups[merge_group_n].ClipRect;
                 if (may_extend_clip_rect_to_host_rect)
                 {
                     //GetOverlayDrawList()->AddRect(table->HostClipRect.Min, table->HostClipRect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 3.0f);
