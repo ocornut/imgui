@@ -278,11 +278,17 @@ namespace
     }
 }
 
-#ifndef STB_RECT_PACK_IMPLEMENTATION        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
-#define STBRP_ASSERT(x)    IM_ASSERT(x)
+#ifndef STB_RECT_PACK_IMPLEMENTATION                        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
+#ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
+#define STBRP_ASSERT(x)     IM_ASSERT(x)
 #define STBRP_STATIC
 #define STB_RECT_PACK_IMPLEMENTATION
+#endif
+#ifdef IMGUI_STB_RECT_PACK_FILENAME
+#include IMGUI_STB_RECT_PACK_FILENAME
+#else
 #include "imstb_rectpack.h"
+#endif
 #endif
 
 struct ImFontBuildSrcGlyphFT
