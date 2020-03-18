@@ -1914,7 +1914,7 @@ struct ImGuiTableColumn
     bool                    NextIsActive;
     bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle. We don't use the opposite "!Visible" name because Clipped can be altered by events.
     bool                    SkipItems;
-    ImS8                    IndexDisplayOrder;              // Index within DisplayOrder[] (column may be reordered by users)
+    ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinActiveSet;           // Index within active set (<= IndexOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
     ImS8                    DrawChannelRowsBeforeFreeze;
@@ -1932,7 +1932,7 @@ struct ImGuiTableColumn
         ResizeWeight = WidthRequested = WidthGiven = -1.0f;
         NameOffset = -1;
         IsActive = NextIsActive = true;
-        IndexDisplayOrder = IndexWithinActiveSet = -1;
+        DisplayOrder = IndexWithinActiveSet = -1;
         DrawChannelCurrent = DrawChannelRowsBeforeFreeze = DrawChannelRowsAfterFreeze = -1;
         PrevActiveColumn = NextActiveColumn = -1;
         AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
@@ -1948,7 +1948,7 @@ struct ImGuiTable
     ImGuiTableFlags             Flags;
     ImVector<char>              RawData;
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
-    ImSpan<ImS8>                DisplayOrder;               // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
+    ImSpan<ImS8>                DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImU64                       ActiveMaskByIndex;          // Column Index -> IsActive map (Active == not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImU64                       ActiveMaskByDisplayOrder;   // Column DisplayOrder -> IsActive map
     ImU64                       VisibleMaskByIndex;         // Visible (== Active and not Clipped)
