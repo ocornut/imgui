@@ -166,7 +166,7 @@ jobs:
     - name: Install Dependencies
       run: |
         sudo apt-get update
-        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib
+        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev
 
     - name: Build example_null (extra warnings, gcc 32-bit)
       run: |
@@ -187,6 +187,11 @@ jobs:
       run: |
         make -C examples/example_null clean
         CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null EXTRA_WARNINGS=1
+
+    - name: Build example_null (freetype)
+      run: |
+        make -C examples/example_null clean
+        make -C examples/example_null WITH_FREETYPE=1
 
     - name: Build example_null (single file build)
       run: |

@@ -5,6 +5,7 @@
 
 EXE = example_null
 EXTRA_WARNINGS ?= 0
+WITH_FREETYPE ?= 0
 SOURCES = main.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
@@ -17,6 +18,13 @@ LIBS =
 # We use the EXTRA_WARNINGS flag on our CI setup to eagerly catch zealous warnings
 ifeq ($(EXTRA_WARNINGS), 1)
 	CXXFLAGS += -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros
+endif
+
+# We use the WITH_FREETYPE flag on our CI setup to test misc/freetype/imgui_freetype.cpp font rasterizer
+ifeq ($(WITH_FREETYPE), 1)
+	SOURCES += ../../misc/freetype/imgui_freetype.cpp
+	CXXFLAGS += $(shell pkg-config --cflags freetype2)
+	LIBS += $(shell pkg-config --libs freetype2)
 endif
 
 ##---------------------------------------------------------------------
@@ -58,6 +66,9 @@ endif
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 %.o:../../%.cpp
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+
+%.o:../../misc/freetype/%.cpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 
 all: $(EXE)
