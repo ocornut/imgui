@@ -13,6 +13,16 @@
     </ArrayItems>
   </Expand>
 </Type>
+  
+<Type Name="ImSpan&lt;*&gt;">
+  <DisplayString>{{Size={DataEnd-Data} }}</DisplayString>
+  <Expand>
+    <ArrayItems>
+      <Size>DataEnd-Data</Size>
+      <ValuePointer>Data</ValuePointer>
+    </ArrayItems>
+  </Expand>
+</Type>
 
 <Type Name="ImVec2">
   <DisplayString>{{x={x,g} y={y,g}}}</DisplayString>
