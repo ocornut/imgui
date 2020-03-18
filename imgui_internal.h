@@ -1946,8 +1946,9 @@ struct ImGuiTable
 {
     ImGuiID                     ID;
     ImGuiTableFlags             Flags;
-    ImVector<ImGuiTableColumn>  Columns;
-    ImVector<ImU8>              DisplayOrder;               // Store display order of columns (when not reordered, the values are 0...Count-1)
+    ImVector<char>              RawData;
+    ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
+    ImSpan<ImS8>                DisplayOrder;               // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImU64                       ActiveMaskByIndex;          // Column Index -> IsActive map (Active == not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImU64                       ActiveMaskByDisplayOrder;   // Column DisplayOrder -> IsActive map
     ImU64                       VisibleMaskByIndex;         // Visible (== Active and not Clipped)
@@ -1992,7 +1993,7 @@ struct ImGuiTable
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
     ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names
-    ImDrawListSplitter          DrawSplitter;               // We carry our own ImDrawList splitter to allow recursion (could be stored outside?)
+    ImDrawListSplitter          DrawSplitter;               // We carry our own ImDrawList splitter to allow recursion (FIXME: could be stored outside, worst case we need 1 splitter per recursing table)
     ImVector<ImGuiTableSortSpecsColumn> SortSpecsData;      // FIXME-OPT: Fixed-size array / small-vector pattern, optimize for single sort spec
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImS8                        SortSpecsCount;
