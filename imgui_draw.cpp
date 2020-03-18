@@ -16,7 +16,7 @@ Index of this file:
 // [SECTION] ImFontAtlas glyph ranges helpers
 // [SECTION] ImFontGlyphRangesBuilder
 // [SECTION] ImFont
-// [SECTION] Internal Render Helpers
+// [SECTION] ImGui Internal Render Helpers
 // [SECTION] Decompression code
 // [SECTION] Default font data (ProggyClean.ttf)
 
@@ -3161,13 +3161,70 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] Internal Render Helpers
-// (progressively moved from imgui.cpp to here when they are redesigned to stop accessing ImGui global state)
+// [SECTION] ImGui Internal Render Helpers
 //-----------------------------------------------------------------------------
+// Vaguely redesigned to stop accessing ImGui global state:
+// - RenderArrow()
+// - RenderBullet()
+// - RenderCheckMark()
 // - RenderMouseCursor()
 // - RenderArrowPointingAt()
 // - RenderRectFilledRangeH()
 //-----------------------------------------------------------------------------
+// Function in need of a redesign (legacy mess)
+//-----------------------------------------------------------------------------
+
+// Render an arrow aimed to be aligned with text (p_min is a position in the same space text would be positioned). To e.g. denote expanded/collapsed state
+void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir dir, float scale)
+{
+    const float h = draw_list->_Data->FontSize * 1.00f;
+    float r = h * 0.40f * scale;
+    ImVec2 center = pos + ImVec2(h * 0.50f, h * 0.50f * scale);
+
+    ImVec2 a, b, c;
+    switch (dir)
+    {
+    case ImGuiDir_Up:
+    case ImGuiDir_Down:
+        if (dir == ImGuiDir_Up) r = -r;
+        a = ImVec2(+0.000f, +0.750f) * r;
+        b = ImVec2(-0.866f, -0.750f) * r;
+        c = ImVec2(+0.866f, -0.750f) * r;
+        break;
+    case ImGuiDir_Left:
+    case ImGuiDir_Right:
+        if (dir == ImGuiDir_Left) r = -r;
+        a = ImVec2(+0.750f, +0.000f) * r;
+        b = ImVec2(-0.750f, +0.866f) * r;
+        c = ImVec2(-0.750f, -0.866f) * r;
+        break;
+    case ImGuiDir_None:
+    case ImGuiDir_COUNT:
+        IM_ASSERT(0);
+        break;
+    }
+    draw_list->AddTriangleFilled(center + a, center + b, center + c, col);
+}
+
+void ImGui::RenderBullet(ImDrawList* draw_list, ImVec2 pos, ImU32 col)
+{
+    draw_list->AddCircleFilled(pos, draw_list->_Data->FontSize * 0.20f, col, 8);
+}
+
+void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float sz)
+{
+    float thickness = ImMax(sz / 5.0f, 1.0f);
+    sz -= thickness * 0.5f;
+    pos += ImVec2(thickness * 0.25f, thickness * 0.25f);
+
+    float third = sz / 3.0f;
+    float bx = pos.x + third;
+    float by = pos.y + sz - third * 0.5f;
+    draw_list->PathLineTo(ImVec2(bx - third, by - third));
+    draw_list->PathLineTo(ImVec2(bx, by));
+    draw_list->PathLineTo(ImVec2(bx + third * 2.0f, by - third * 2.0f));
+    draw_list->PathStroke(col, false, thickness);
+}
 
 void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
 {
