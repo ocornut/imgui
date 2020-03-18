@@ -8053,26 +8053,27 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if ((table_last_flags & ImGuiTableFlags_Reorderable) && !(flags & ImGuiTableFlags_Reorderable))
         table->IsResetDisplayOrderRequest = true;
 
-    // Clear data if columns count changed
-    if (table->Columns.Size != 0 && table->Columns.Size != columns_count)
+    // Setup default columns state. Clear data if columns count changed
+    const int stored_size = table->Columns.size();
+    if (stored_size != 0 && stored_size != columns_count)
+        table->RawData.resize(0);
+    if (table->RawData.Size == 0)
     {
-        table->Columns.resize(0);
-        table->DisplayOrder.resize(0);
-    }
+        // Allocate single buffer for our arrays
+        ImSpanAllocator<2> span_allocator;
+        span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
+        span_allocator.ReserveBytes(1, columns_count * sizeof(ImS8));
+        table->RawData.resize(span_allocator.GetArenaSizeInBytes());
+        span_allocator.SetArenaBasePtr(table->RawData.Data);
+        span_allocator.GetSpan(0, &table->Columns);
+        span_allocator.GetSpan(1, &table->DisplayOrder);
 
-    // Setup default columns state
-    if (table->Columns.Size == 0)
-    {
-        table->IsInitializing = table->IsSettingsRequestLoad = table->IsSortSpecsDirty = true;
-        table->Columns.reserve(columns_count);
-        table->DisplayOrder.reserve(columns_count);
         for (int n = 0; n < columns_count; n++)
         {
-            ImGuiTableColumn column;
-            column.IndexDisplayOrder = (ImS8)n;
-            table->Columns.push_back(column);
-            table->DisplayOrder.push_back(column.IndexDisplayOrder);
+            table->Columns[n] = ImGuiTableColumn();
+            table->Columns[n].IndexDisplayOrder = table->DisplayOrder[n] = (ImS8)n;
         }
+        table->IsInitializing = table->IsSettingsRequestLoad = table->IsSortSpecsDirty = true;
     }
 
     // Load settings
@@ -8143,7 +8144,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     if (table->IsResetDisplayOrderRequest)
     {
         for (int n = 0; n < table->ColumnsCount; n++)
-            table->DisplayOrder[n] = table->Columns[n].IndexDisplayOrder = (ImU8)n;
+            table->DisplayOrder[n] = table->Columns[n].IndexDisplayOrder = (ImS8)n;
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
     }
@@ -10141,7 +10142,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     // FIXME-TABLE: Need to validate .ini data
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        table->DisplayOrder[table->Columns[column_n].IndexDisplayOrder] = (ImU8)column_n;
+        table->DisplayOrder[table->Columns[column_n].IndexDisplayOrder] = (ImS8)column_n;
 }
 
 void*   ImGui::TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
