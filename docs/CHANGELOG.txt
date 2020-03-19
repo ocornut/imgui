@@ -61,8 +61,8 @@ Other Changes:
   in imgui_freetype.cpp (matching support in the regular code path). (#3062) [@DonKult]
 - Demo: Added black and white and color gradients to Demo>Examples>Custom Rendering.
 - CI: Added more tests on the continuous-integration server: extra warnings for Clang/GCC, building
-  SDL+Metal example, and more compile-time imconfig.h settings: disabling obsolete functions,
-  enabling 32-bit draw indices, enabling 32-bit ImWchar, disabling demo/metrics, etc. [@rokups]
+  SDL+Metal example, building imgui_freetype.cpp, more compile-time imconfig.h settings: disabling
+  obsolete functions, enabling 32-bit ImDrawIdx, enabling 32-bit ImWchar, disabling demo. [@rokups]
 - Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
   ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
   Those functions makes it easier for example apps to support hi-dpi features without setting up

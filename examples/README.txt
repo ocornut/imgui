@@ -153,7 +153,7 @@ Those will allow you to create portable applications and will solve and abstract
 ---------------------------------------
 
 Building:
-  Unfortunately in 2018 it is still tedious to create and maintain portable build files using external
+  Unfortunately in 2020 it is still tedious to create and maintain portable build files using external
   libraries (the kind we're using here to create a window and render 3D triangles) without relying on
   third party software. For most examples here I choose to provide:
    - Makefiles for Linux/OSX
@@ -163,6 +163,9 @@ Building:
   Please let me know if they don't work with your setup!
   You can probably just import the imgui_impl_xxx.cpp/.h files into your own codebase or compile those
   directly with a command-line compiler.
+
+  If you are interested in using Cmake to build and links examples, see:
+    https://github.com/ocornut/imgui/pull/1713 and https://github.com/ocornut/imgui/pull/3027
 
 
 example_allegro5/

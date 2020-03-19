@@ -2,10 +2,15 @@
 # Cross Platform Makefile
 # Compatible with MSYS2/MINGW, Ubuntu 14.04.1 and Mac OS X
 #
+# Important: This is a "null back-end" application, with no visible output or interaction!
+# This is used for testing purpose and continuous integration, and has little use for end-user.
+#
+
+# Options
+WITH_EXTRA_WARNINGS ?= 0
+WITH_FREETYPE ?= 0
 
 EXE = example_null
-EXTRA_WARNINGS ?= 0
-WITH_FREETYPE ?= 0
 SOURCES = main.cpp
 SOURCES += ../../imgui.cpp ../../imgui_demo.cpp ../../imgui_draw.cpp ../../imgui_widgets.cpp
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
@@ -15,12 +20,13 @@ CXXFLAGS += -I../ -I../../
 CXXFLAGS += -g -Wall -Wformat
 LIBS =
 
-# We use the EXTRA_WARNINGS flag on our CI setup to eagerly catch zealous warnings
-ifeq ($(EXTRA_WARNINGS), 1)
+# We use the WITH_EXTRA_WARNINGS flag on our CI setup to eagerly catch zealous warnings
+ifeq ($(WITH_EXTRA_WARNINGS), 1)
 	CXXFLAGS += -Wno-zero-as-null-pointer-constant -Wno-double-promotion -Wno-variadic-macros
 endif
 
-# We use the WITH_FREETYPE flag on our CI setup to test misc/freetype/imgui_freetype.cpp font rasterizer
+# We use the WITH_FREETYPE flag on our CI setup to test compiling misc/freetype/imgui_freetype.cpp
+# (only supported on Linux, and note that the imgui_freetype code currently won't be executed)
 ifeq ($(WITH_FREETYPE), 1)
 	SOURCES += ../../misc/freetype/imgui_freetype.cpp
 	CXXFLAGS += $(shell pkg-config --cflags freetype2)
@@ -33,7 +39,7 @@ endif
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	ifneq ($(EXTRA_WARNINGS), 0)
+	ifneq ($(WITH_EXTRA_WARNINGS), 0)
 		CXXFLAGS += -Wextra -pedantic
 	endif
 	CFLAGS = $(CXXFLAGS)
@@ -41,7 +47,7 @@ endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	ifneq ($(EXTRA_WARNINGS), 0)
+	ifneq ($(WITH_EXTRA_WARNINGS), 0)
 		CXXFLAGS += -Weverything -Wno-reserved-id-macro -Wno-c++98-compat-pedantic -Wno-padded -Wno-c++11-long-long
 	endif
 	CFLAGS = $(CXXFLAGS)
@@ -49,7 +55,7 @@ endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	ECHO_MESSAGE = "MinGW"
-	ifneq ($(EXTRA_WARNINGS), 0)
+	ifneq ($(WITH_EXTRA_WARNINGS), 0)
 		CXXFLAGS += -Wextra -pedantic
 	endif
 	CFLAGS = $(CXXFLAGS)
