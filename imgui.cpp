@@ -3704,6 +3704,17 @@ static void NewFrameSanityChecks()
         g.IO.ConfigWindowsResizeFromEdges = false;
 }
 
+static ImGuiKeyModFlags GetMergedKeyModFlags()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiKeyModFlags key_mod_flags = ImGuiKeyModFlags_None;
+    if (g.IO.KeyCtrl)   { key_mod_flags |= ImGuiKeyModFlags_Ctrl; }
+    if (g.IO.KeyShift)  { key_mod_flags |= ImGuiKeyModFlags_Shift; }
+    if (g.IO.KeyAlt)    { key_mod_flags |= ImGuiKeyModFlags_Alt; }
+    if (g.IO.KeySuper)  { key_mod_flags |= ImGuiKeyModFlags_Super; }
+    return key_mod_flags;
+}
+
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
@@ -3805,6 +3816,8 @@ void ImGui::NewFrame()
     g.DragDropWithinTarget = false;
 
     // Update keyboard input state
+    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
+    g.IO.KeyMods = GetMergedKeyModFlags();
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
         g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
@@ -6720,9 +6733,15 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
 
 static void ImGui::ErrorCheckEndFrame()
 {
+    ImGuiContext& g = *GImGui;
+
+    // Verify that io.KeyXXX fields haven't been tampered with. Key mods shoudl not be modified between NewFrame() and EndFrame()
+    const ImGuiKeyModFlags expected_key_mod_flags = GetMergedKeyModFlags();
+    IM_ASSERT(g.IO.KeyMods == expected_key_mod_flags && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
+    IM_UNUSED(expected_key_mod_flags);
+
     // Report when there is a mismatch of Begin/BeginChild vs End/EndChild calls. Important: Remember that the Begin/BeginChild API requires you
     // to always call End/EndChild even if Begin/BeginChild returns false! (this is unfortunately inconsistent with most other Begin* API).
-    ImGuiContext& g = *GImGui;
     if (g.CurrentWindowStack.Size != 1)
     {
         if (g.CurrentWindowStack.Size > 1)

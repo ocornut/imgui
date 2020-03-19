@@ -57,6 +57,8 @@ Other Changes:
 - Window: Fixed a bug with child window inheriting ItemFlags from their parent when the child
   window also manipulate the ItemFlags stack. (#3024) [@Stanbroek]
 - Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
+- Misc: Added additional checks in EndFrame() to verify that io.KeyXXX values have not been
+  tampered with between NewFrame() and EndFrame().
 - Misc, Freetype: Fixed support for IMGUI_STB_RECT_PACK_FILENAME compile time directive
   in imgui_freetype.cpp (matching support in the regular code path). (#3062) [@DonKult]
 - Demo: Added black and white and color gradients to Demo>Examples>Custom Rendering.
