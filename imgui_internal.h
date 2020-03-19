@@ -1876,7 +1876,6 @@ struct ImGuiTableColumn
     }
 };
 
-// FIXME-OPT: Since CountColumns is invariant, we could use a single alloc for ImGuiTable + the three vectors it is carrying.
 struct ImGuiTable
 {
     ImGuiID                     ID;
@@ -1900,6 +1899,7 @@ struct ImGuiTable
     float                       RowPosY2;
     float                       RowMinHeight;               // Height submitted to TableNextRow()
     float                       RowTextBaseline;
+    float                       RowIndentOffsetX;
     ImGuiTableRowFlags          RowFlags : 16;              // Current row flags, see ImGuiTableRowFlags_
     ImGuiTableRowFlags          LastRowFlags : 16;
     int                         RowBgColorCounter;          // Counter for alternating background colors (can be fast-forwarded by e.g clipper)
@@ -2183,11 +2183,11 @@ namespace ImGui
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
     IMGUI_API void          TableBeginRow(ImGuiTable* table);
     IMGUI_API void          TableEndRow(ImGuiTable* table);
-    IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_no);
+    IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_n);
     IMGUI_API void          TableEndCell(ImGuiTable* table);
     IMGUI_API ImRect        TableGetCellRect();
-    IMGUI_API const char*   TableGetColumnName(ImGuiTable* table, int column_no);
-    IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_no);
+    IMGUI_API const char*   TableGetColumnName(ImGuiTable* table, int column_n);
+    IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
     IMGUI_API void          TableLoadSettings(ImGuiTable* table);

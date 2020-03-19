@@ -9257,6 +9257,7 @@ void    ImGui::TableBeginRow(ImGuiTable* table)
 
     table->RowPosY1 = table->RowPosY2 = next_y1;
     table->RowTextBaseline = 0.0f;
+    table->RowIndentOffsetX = window->DC.Indent.x - table->HostIndentX; // Lock indent
     window->DC.PrevLineTextBaseOffset = 0.0f;
     window->DC.CursorMaxPos.y = next_y1;
 
@@ -9376,25 +9377,26 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     table->IsInsideRow = false;
 }
 
-// [Internal] Called by TableNextRow()TableNextCell()!
-// This is called a lot, so we need to be mindful of unnecessary overhead.
+// [Internal] Called by TableNextCell()!
+// This is called very frequently, so we need to be mindful of unnecessary overhead.
 // FIXME-TABLE FIXME-OPT: Could probably shortcut some things for non-active or clipped columns.
-void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
+void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
 {
-    table->CurrentColumn = column_no;
-    ImGuiTableColumn* column = &table->Columns[column_no];
+    table->CurrentColumn = column_n;
+    ImGuiTableColumn* column = &table->Columns[column_n];
     ImGuiWindow* window = table->InnerWindow;
 
+    // Start position is roughly ~~ CellRect.Min + CellPadding + Indent
     float start_x = (table->RowFlags & ImGuiTableRowFlags_Headers) ? column->StartXHeaders : column->StartXRows;
     if (column->Flags & ImGuiTableColumnFlags_IndentEnable)
-        start_x += window->DC.Indent.x - table->HostIndentX;
+        start_x += table->RowIndentOffsetX; // ~~ += window.DC.Indent.x - table->HostIndentX, except we locked it for the row.
 
-    window->DC.LastItemId = 0;
     window->DC.CursorPos.x = start_x;
     window->DC.CursorPos.y = table->RowPosY1 + table->CellPaddingY;
     window->DC.CursorMaxPos.x = window->DC.CursorPos.x;
     window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
+    window->DC.LastItemId = 0;
 
     window->WorkRect.Min.y = window->DC.CursorPos.y;
     window->WorkRect.Min.x = column->MinX + table->CellPaddingX1;
@@ -9418,7 +9420,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_no)
         //window->DrawList->UpdateClipRect();
         window->DrawList->PopClipRect();
         window->DrawList->PushClipRect(column->ClipRect.Min, column->ClipRect.Max, false);
-        //IMGUI_DEBUG_LOG("%d (%.0f,%.0f)(%.0f,%.0f)\n", column_no, column->ClipRect.Min.x, column->ClipRect.Min.y, column->ClipRect.Max.x, column->ClipRect.Max.y);
+        //IMGUI_DEBUG_LOG("%d (%.0f,%.0f)(%.0f,%.0f)\n", column_n, column->ClipRect.Min.x, column->ClipRect.Min.y, column->ClipRect.Max.x, column->ClipRect.Max.y);
         window->ClipRect = window->DrawList->_ClipRectStack.back();
     }
 }
@@ -9524,19 +9526,19 @@ ImRect  ImGui::TableGetCellRect()
     return ImRect(column->MinX, table->RowPosY1, column->MaxX, table->RowPosY2);
 }
 
-const char* ImGui::TableGetColumnName(ImGuiTable* table, int column_no)
+const char* ImGui::TableGetColumnName(ImGuiTable* table, int column_n)
 {
-    ImGuiTableColumn* column = &table->Columns[column_no];
+    ImGuiTableColumn* column = &table->Columns[column_n];
     if (column->NameOffset == -1)
         return NULL;
     return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
-void    ImGui::TableSetColumnAutofit(ImGuiTable* table, int column_no)
+void    ImGui::TableSetColumnAutofit(ImGuiTable* table, int column_n)
 {
     // Disable clipping then auto-fit, will take 2 frames
     // (we don't take a shortcut for unclipped columns to reduce inconsistencies when e.g. resizing multiple columns)
-    ImGuiTableColumn* column = &table->Columns[column_no];
+    ImGuiTableColumn* column = &table->Columns[column_n];
     column->CannotSkipItemsQueue = (1 << 0);
     column->AutoFitQueue = (1 << 1);
 }
