@@ -947,7 +947,8 @@ static ImGuiWindow*     NavRestoreLastChildNavWindow(ImGuiWindow* window);
 static int              FindWindowFocusIndex(ImGuiWindow* window);
 
 // Error Checking
-static void             ErrorCheckEndFrame();
+static void             ErrorCheckNewFrameSanityChecks();
+static void             ErrorCheckEndFrameSanityChecks();
 static void             ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool write);
 
 // Misc
@@ -1828,9 +1829,18 @@ int ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_e
 }
 
 //-----------------------------------------------------------------------------
-// [SECTION] MISC HELPERS/UTILTIES (Color functions)
+// [SECTION] MISC HELPERS/UTILITIES (Color functions)
 // Note: The Convert functions are early design which are not consistent with other API.
 //-----------------------------------------------------------------------------
+
+IMGUI_API ImU32 ImAlphaBlendColors(ImU32 col_a, ImU32 col_b)
+{
+    float t = ((col_b >> IM_COL32_A_SHIFT) & 0xFF) / 255.f;
+    int r = ImLerp((int)(col_a >> IM_COL32_R_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_R_SHIFT) & 0xFF, t);
+    int g = ImLerp((int)(col_a >> IM_COL32_G_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_G_SHIFT) & 0xFF, t);
+    int b = ImLerp((int)(col_a >> IM_COL32_B_SHIFT) & 0xFF, (int)(col_b >> IM_COL32_B_SHIFT) & 0xFF, t);
+    return IM_COL32(r, g, b, 0xFF);
+}
 
 ImVec4 ImGui::ColorConvertU32ToFloat4(ImU32 in)
 {
@@ -2582,8 +2592,9 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
 
 //-----------------------------------------------------------------------------
 // [SECTION] RENDER HELPERS
-// Some of those (internal) functions are currently quite a legacy mess - their signature and behavior will change.
-// Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: state.
+// Some of those (internal) functions are currently quite a legacy mess - their signature and behavior will change,
+// we need a nicer separation between low-level functions and high-level functions relying on the ImGui context.
+// Also see imgui_draw.cpp for some more which have been reworked to not rely on ImGui:: context.
 //-----------------------------------------------------------------------------
 
 const char* ImGui::FindRenderedTextEnd(const char* text, const char* text_end)
@@ -2791,61 +2802,6 @@ void ImGui::RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding)
         window->DrawList->AddRect(p_min+ImVec2(1,1), p_max+ImVec2(1,1), GetColorU32(ImGuiCol_BorderShadow), rounding, ImDrawCornerFlags_All, border_size);
         window->DrawList->AddRect(p_min, p_max, GetColorU32(ImGuiCol_Border), rounding, ImDrawCornerFlags_All, border_size);
     }
-}
-
-// Render an arrow aimed to be aligned with text (p_min is a position in the same space text would be positioned). To e.g. denote expanded/collapsed state
-void ImGui::RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir dir, float scale)
-{
-    const float h = draw_list->_Data->FontSize * 1.00f;
-    float r = h * 0.40f * scale;
-    ImVec2 center = pos + ImVec2(h * 0.50f, h * 0.50f * scale);
-
-    ImVec2 a, b, c;
-    switch (dir)
-    {
-    case ImGuiDir_Up:
-    case ImGuiDir_Down:
-        if (dir == ImGuiDir_Up) r = -r;
-        a = ImVec2(+0.000f,+0.750f) * r;
-        b = ImVec2(-0.866f,-0.750f) * r;
-        c = ImVec2(+0.866f,-0.750f) * r;
-        break;
-    case ImGuiDir_Left:
-    case ImGuiDir_Right:
-        if (dir == ImGuiDir_Left) r = -r;
-        a = ImVec2(+0.750f,+0.000f) * r;
-        b = ImVec2(-0.750f,+0.866f) * r;
-        c = ImVec2(-0.750f,-0.866f) * r;
-        break;
-    case ImGuiDir_None:
-    case ImGuiDir_COUNT:
-        IM_ASSERT(0);
-        break;
-    }
-    draw_list->AddTriangleFilled(center + a, center + b, center + c, col);
-}
-
-void ImGui::RenderBullet(ImDrawList* draw_list, ImVec2 pos, ImU32 col)
-{
-    draw_list->AddCircleFilled(pos, draw_list->_Data->FontSize * 0.20f, col, 8);
-}
-
-void ImGui::RenderCheckMark(ImVec2 pos, ImU32 col, float sz)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    float thickness = ImMax(sz / 5.0f, 1.0f);
-    sz -= thickness*0.5f;
-    pos += ImVec2(thickness*0.25f, thickness*0.25f);
-
-    float third = sz / 3.0f;
-    float bx = pos.x + third;
-    float by = pos.y + sz - third*0.5f;
-    window->DrawList->PathLineTo(ImVec2(bx - third, by - third));
-    window->DrawList->PathLineTo(ImVec2(bx, by));
-    window->DrawList->PathLineTo(ImVec2(bx + third*2, by - third*2));
-    window->DrawList->PathStroke(col, false, thickness);
 }
 
 void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags)
@@ -3896,76 +3852,15 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     g.IO.WantTextInput = (g.WantTextInputNextFrame != -1) ? (g.WantTextInputNextFrame != 0) : false;
 }
 
-static void NewFrameSanityChecks()
+static ImGuiKeyModFlags GetMergedKeyModFlags()
 {
     ImGuiContext& g = *GImGui;
-
-    // Check user data
-    // (We pass an error message in the assert expression to make it visible to programmers who are not using a debugger, as most assert handlers display their argument)
-    IM_ASSERT(g.Initialized);
-    IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
-    IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
-    IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
-    IM_ASSERT(g.IO.Fonts->Fonts.Size > 0                                && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
-    IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded()                          && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
-    IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
-    IM_ASSERT(g.Style.CircleSegmentMaxError > 0.0f                      && "Invalid style setting!");
-    IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)!");
-    IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
-    IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
-    for (int n = 0; n < ImGuiKey_COUNT; n++)
-        IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
-
-    // Perform simple check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only recently added in 1.60 WIP)
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
-        IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
-
-    // Perform simple check: the beta io.ConfigWindowsResizeFromEdges option requires back-end to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
-    if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
-        g.IO.ConfigWindowsResizeFromEdges = false;
-
-    // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.
-    if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable) && (g.ConfigFlagsLastFrame & ImGuiConfigFlags_DockingEnable) == 0)
-        IM_ASSERT(0 && "Please set DockingEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
-    if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (g.ConfigFlagsLastFrame & ImGuiConfigFlags_ViewportsEnable) == 0)
-        IM_ASSERT(0 && "Please set ViewportsEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
-
-    // Perform simple checks: multi-viewport and platform windows support
-    if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        if ((g.IO.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasViewports))
-        {
-            IM_ASSERT((g.FrameCount == 0 || g.FrameCount == g.FrameCountPlatformEnded) && "Forgot to call UpdatePlatformWindows() in main loop after EndFrame()? Check examples/ applications for reference.");
-            IM_ASSERT(g.PlatformIO.Platform_CreateWindow  != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_DestroyWindow != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_GetWindowPos  != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_SetWindowPos  != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_GetWindowSize != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Platform_SetWindowSize != NULL && "Platform init didn't install handlers?");
-            IM_ASSERT(g.PlatformIO.Monitors.Size > 0 && "Platform init didn't setup Monitors list?");
-            IM_ASSERT((g.Viewports[0]->PlatformUserData != NULL || g.Viewports[0]->PlatformHandle != NULL) && "Platform init didn't setup main viewport.");
-            if (g.IO.ConfigDockingTransparentPayload && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
-                IM_ASSERT(g.PlatformIO.Platform_SetWindowAlpha != NULL && "Platform_SetWindowAlpha handler is required to use io.ConfigDockingTransparent!");
-#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
-            IM_ASSERT(g.IO.RenderDrawListsFn == NULL);  // Call ImGui::Render() then pass ImGui::GetDrawData() yourself to your render function!
-#endif
-        }
-        else
-        {
-            // Disable feature, our back-ends do not support it
-            g.IO.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
-        }
-
-        // Perform simple checks on platform monitor data + compute a total bounding box for quick early outs
-        for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
-        {
-            ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[monitor_n];
-            IM_UNUSED(mon);
-            IM_ASSERT(mon.MainSize.x > 0.0f && mon.MainSize.y > 0.0f && "Monitor bounds not setup properly.");
-            IM_ASSERT(mon.WorkSize.x > 0.0f && mon.WorkSize.y > 0.0f && "Monitor bounds not setup properly. If you don't have work area information, just copy Min/Max into them.");
-            IM_ASSERT(mon.DpiScale != 0.0f);
-        }
-    }
+    ImGuiKeyModFlags key_mod_flags = ImGuiKeyModFlags_None;
+    if (g.IO.KeyCtrl)   { key_mod_flags |= ImGuiKeyModFlags_Ctrl; }
+    if (g.IO.KeyShift)  { key_mod_flags |= ImGuiKeyModFlags_Shift; }
+    if (g.IO.KeyAlt)    { key_mod_flags |= ImGuiKeyModFlags_Alt; }
+    if (g.IO.KeySuper)  { key_mod_flags |= ImGuiKeyModFlags_Super; }
+    return key_mod_flags;
 }
 
 void ImGui::NewFrame()
@@ -3979,7 +3874,7 @@ void ImGui::NewFrame()
 
     // Check and assert for various common IO and Configuration mistakes
     g.ConfigFlagsLastFrame = g.ConfigFlagsCurrFrame;
-    NewFrameSanityChecks();
+    ErrorCheckNewFrameSanityChecks();
     g.ConfigFlagsCurrFrame = g.IO.ConfigFlags;
 
     // Load settings on first frame, save settings when modified (after a delay)
@@ -4070,9 +3965,12 @@ void ImGui::NewFrame()
     g.DragDropAcceptIdPrev = g.DragDropAcceptIdCurr;
     g.DragDropAcceptIdCurr = 0;
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
-    g.DragDropWithinSourceOrTarget = false;
+    g.DragDropWithinSource = false;
+    g.DragDropWithinTarget = false;
 
     // Update keyboard input state
+    // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
+    g.IO.KeyMods = GetMergedKeyModFlags();
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
         g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
@@ -4517,9 +4415,13 @@ void ImGui::EndFrame()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
-    if (g.FrameCountEnded == g.FrameCount)          // Don't process EndFrame() multiple times.
+    
+    // Don't process EndFrame() multiple times.
+    if (g.FrameCountEnded == g.FrameCount)
         return;
     IM_ASSERT(g.WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
+
+    ErrorCheckEndFrameSanityChecks();
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
     if (g.PlatformIO.Platform_SetImeInputPos && (g.PlatformImeLastPos.x == FLT_MAX || ImLengthSqr(g.PlatformImePos - g.PlatformImeLastPos) > 0.0001f))
@@ -4529,8 +4431,6 @@ void ImGui::EndFrame()
             g.PlatformImeLastPos = g.PlatformImePos;
             g.PlatformImePosViewport = NULL;
         }
-
-    ErrorCheckEndFrame();
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
     g.WithinFrameScopeWithImplicitWindow = false;
@@ -4559,9 +4459,9 @@ void ImGui::EndFrame()
     // Drag and Drop: Fallback for source tooltip. This is not ideal but better than nothing.
     if (g.DragDropActive && g.DragDropSourceFrameCount < g.FrameCount)
     {
-        g.DragDropWithinSourceOrTarget = true;
+        g.DragDropWithinSource = true;
         SetTooltip("...");
-        g.DragDropWithinSourceOrTarget = false;
+        g.DragDropWithinSource = false;
     }
 
     // End frame
@@ -7501,11 +7401,89 @@ bool ImGui::DebugCheckVersionAndDataLayout(const char* version, size_t sz_io, si
     return !error;
 }
 
-static void ImGui::ErrorCheckEndFrame()
+static void ImGui::ErrorCheckNewFrameSanityChecks()
 {
+    ImGuiContext& g = *GImGui;
+
+    // Check user data
+    // (We pass an error message in the assert expression to make it visible to programmers who are not using a debugger, as most assert handlers display their argument)
+    IM_ASSERT(g.Initialized);
+    IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
+    IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
+    IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
+    IM_ASSERT(g.IO.Fonts->Fonts.Size > 0                                && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
+    IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded()                          && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
+    IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
+    IM_ASSERT(g.Style.CircleSegmentMaxError > 0.0f                      && "Invalid style setting!");
+    IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)!");
+    IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
+    IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
+    for (int n = 0; n < ImGuiKey_COUNT; n++)
+        IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
+
+    // Perform simple check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only recently added in 1.60 WIP)
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
+        IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
+
+    // Perform simple check: the beta io.ConfigWindowsResizeFromEdges option requires back-end to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
+    if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
+        g.IO.ConfigWindowsResizeFromEdges = false;
+
+    // Perform simple check: error if Docking or Viewport are enabled _exactly_ on frame 1 (instead of frame 0 or later), which is a common error leading to loss of .ini data.
+    if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable) && (g.ConfigFlagsLastFrame & ImGuiConfigFlags_DockingEnable) == 0)
+        IM_ASSERT(0 && "Please set DockingEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
+    if (g.FrameCount == 1 && (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable) && (g.ConfigFlagsLastFrame & ImGuiConfigFlags_ViewportsEnable) == 0)
+        IM_ASSERT(0 && "Please set ViewportsEnable before the first call to NewFrame()! Otherwise you will lose your .ini settings!");
+
+    // Perform simple checks: multi-viewport and platform windows support
+    if (g.IO.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
+    {
+        if ((g.IO.BackendFlags & ImGuiBackendFlags_PlatformHasViewports) && (g.IO.BackendFlags & ImGuiBackendFlags_RendererHasViewports))
+        {
+            IM_ASSERT((g.FrameCount == 0 || g.FrameCount == g.FrameCountPlatformEnded) && "Forgot to call UpdatePlatformWindows() in main loop after EndFrame()? Check examples/ applications for reference.");
+            IM_ASSERT(g.PlatformIO.Platform_CreateWindow  != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_DestroyWindow != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_GetWindowPos  != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_SetWindowPos  != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_GetWindowSize != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Platform_SetWindowSize != NULL && "Platform init didn't install handlers?");
+            IM_ASSERT(g.PlatformIO.Monitors.Size > 0 && "Platform init didn't setup Monitors list?");
+            IM_ASSERT((g.Viewports[0]->PlatformUserData != NULL || g.Viewports[0]->PlatformHandle != NULL) && "Platform init didn't setup main viewport.");
+            if (g.IO.ConfigDockingTransparentPayload && (g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
+                IM_ASSERT(g.PlatformIO.Platform_SetWindowAlpha != NULL && "Platform_SetWindowAlpha handler is required to use io.ConfigDockingTransparent!");
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+            IM_ASSERT(g.IO.RenderDrawListsFn == NULL);  // Call ImGui::Render() then pass ImGui::GetDrawData() yourself to your render function!
+#endif
+        }
+        else
+        {
+            // Disable feature, our back-ends do not support it
+            g.IO.ConfigFlags &= ~ImGuiConfigFlags_ViewportsEnable;
+        }
+
+        // Perform simple checks on platform monitor data + compute a total bounding box for quick early outs
+        for (int monitor_n = 0; monitor_n < g.PlatformIO.Monitors.Size; monitor_n++)
+        {
+            ImGuiPlatformMonitor& mon = g.PlatformIO.Monitors[monitor_n];
+            IM_UNUSED(mon);
+            IM_ASSERT(mon.MainSize.x > 0.0f && mon.MainSize.y > 0.0f && "Monitor bounds not setup properly.");
+            IM_ASSERT(mon.WorkSize.x > 0.0f && mon.WorkSize.y > 0.0f && "Monitor bounds not setup properly. If you don't have work area information, just copy Min/Max into them.");
+            IM_ASSERT(mon.DpiScale != 0.0f);
+        }
+    }
+}
+
+static void ImGui::ErrorCheckEndFrameSanityChecks()
+{
+    ImGuiContext& g = *GImGui;
+
+    // Verify that io.KeyXXX fields haven't been tampered with. Key mods shoudl not be modified between NewFrame() and EndFrame()
+    const ImGuiKeyModFlags expected_key_mod_flags = GetMergedKeyModFlags();
+    IM_ASSERT(g.IO.KeyMods == expected_key_mod_flags && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
+    IM_UNUSED(expected_key_mod_flags);
+
     // Report when there is a mismatch of Begin/BeginChild vs End/EndChild calls. Important: Remember that the Begin/BeginChild API requires you
     // to always call End/EndChild even if Begin/BeginChild returns false! (this is unfortunately inconsistent with most other Begin* API).
-    ImGuiContext& g = *GImGui;
     if (g.CurrentWindowStack.Size != 1)
     {
         if (g.CurrentWindowStack.Size > 1)
@@ -8198,7 +8176,7 @@ void ImGui::BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags toolt
 {
     ImGuiContext& g = *GImGui;
 
-    if (g.DragDropWithinSourceOrTarget)
+    if (g.DragDropWithinSource || g.DragDropWithinTarget)
     {
         // The default tooltip position is a little offset to give space to see the context menu (it's also clamped within the current viewport/monitor)
         // In the context of a dragging tooltip we try to reduce that offset and we enforce following the cursor.
@@ -9895,7 +9873,7 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             g.DragDropMouseButton = mouse_button;
         }
         g.DragDropSourceFrameCount = g.FrameCount;
-        g.DragDropWithinSourceOrTarget = true;
+        g.DragDropWithinSource = true;
 
         if (!(flags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
         {
@@ -9922,7 +9900,7 @@ void ImGui::EndDragDropSource()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
-    IM_ASSERT(g.DragDropWithinSourceOrTarget && "Not after a BeginDragDropSource()?");
+    IM_ASSERT(g.DragDropWithinSource && "Not after a BeginDragDropSource()?");
 
     if (!(g.DragDropSourceFlags & ImGuiDragDropFlags_SourceNoPreviewTooltip))
         EndTooltip();
@@ -9930,7 +9908,7 @@ void ImGui::EndDragDropSource()
     // Discard the drag if have not called SetDragDropPayload()
     if (g.DragDropPayload.DataFrameCount == -1)
         ClearDragDrop();
-    g.DragDropWithinSourceOrTarget = false;
+    g.DragDropWithinSource = false;
 }
 
 // Use 'cond' to choose to submit payload on drag start or every frame
@@ -9992,10 +9970,10 @@ bool ImGui::BeginDragDropTargetCustom(const ImRect& bb, ImGuiID id)
     if (window->SkipItems)
         return false;
 
-    IM_ASSERT(g.DragDropWithinSourceOrTarget == false);
+    IM_ASSERT(g.DragDropWithinTarget == false);
     g.DragDropTargetRect = bb;
     g.DragDropTargetId = id;
-    g.DragDropWithinSourceOrTarget = true;
+    g.DragDropWithinTarget = true;
     return true;
 }
 
@@ -10022,10 +10000,10 @@ bool ImGui::BeginDragDropTarget()
     if (g.DragDropPayload.SourceId == id)
         return false;
 
-    IM_ASSERT(g.DragDropWithinSourceOrTarget == false);
+    IM_ASSERT(g.DragDropWithinTarget == false);
     g.DragDropTargetRect = display_rect;
     g.DragDropTargetId = id;
-    g.DragDropWithinSourceOrTarget = true;
+    g.DragDropWithinTarget = true;
     return true;
 }
 
@@ -10089,8 +10067,8 @@ void ImGui::EndDragDropTarget()
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.DragDropActive);
-    IM_ASSERT(g.DragDropWithinSourceOrTarget);
-    g.DragDropWithinSourceOrTarget = false;
+    IM_ASSERT(g.DragDropWithinTarget);
+    g.DragDropWithinTarget = false;
 }
 
 //-----------------------------------------------------------------------------

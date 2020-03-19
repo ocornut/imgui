@@ -14,8 +14,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: calling SetNextWindowSize() every frame with <= 0 doesn't do anything, may be useful to allow (particularly when used for a single axis). (#690)
  - window: add a way for very transient windows (non-saved, temporary overlay over hundreds of objects) to "clean" up from the global window list. perhaps a lightweight explicit cleanup pass.
  - window: auto-fit feedback loop when user relies on any dynamic layout (window width multiplier, column) appears weird to end-user. clarify.
- - window: allow resizing of child windows (possibly given min/max for each axis?.)
- - window: background options for child windows, border option (disable rounding).
  - window: begin with *p_open == false could return false.
  - window: get size/pos helpers given names (see discussion in #249)
  - window: a collapsed window can be stuck behind the main menu bar?
@@ -31,6 +29,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: the size_on_first_use path of Begin() can probably be removed
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
+ - window/child: background options for child windows, border option (disable rounding).
+ - window/child: allow resizing of child windows (possibly given min/max for each axis?.)
  - window/child: the first draw command of a child window could be moved into the current draw command of the parent window (unless child+tooltip?).
  - window/child: border could be emitted in parent as well.
  - window/child: allow SetNextWindowContentSize() to work on child windows.
