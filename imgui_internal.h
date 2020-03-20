@@ -1888,6 +1888,7 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (2 + 64 * 2)        // See TableUpdateDrawChannels()
 
 // [Internal] sizeof() ~ 100
+// We use the terminology "Active" to refer to a column that is not Hidden by user or programmatically. We don't use the term "Visible" because it is ambiguous since an Active column can be non-visible because of scrolling.
 struct ImGuiTableColumn
 {
     ImRect                  ClipRect;                       // Clipping rectangle for the column
@@ -1911,11 +1912,11 @@ struct ImGuiTableColumn
     ImS16                   ContentWidthHeadersDesired;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
     bool                    IsActive;                       // Is the column not marked Hidden by the user (regardless of clipping). We're not calling this "Visible" here because visibility also depends on clipping.
-    bool                    NextIsActive;
+    bool                    IsActiveNextFrame;
     bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle. We don't use the opposite "!Visible" name because Clipped can be altered by events.
     bool                    SkipItems;
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
-    ImS8                    IndexWithinActiveSet;           // Index within active set (<= IndexOrder)
+    ImS8                    IndexWithinActiveSet;           // Index within active/visible set (<= IndexToDisplayOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
     ImS8                    DrawChannelRowsBeforeFreeze;
     ImS8                    DrawChannelRowsAfterFreeze;
@@ -1931,7 +1932,7 @@ struct ImGuiTableColumn
         memset(this, 0, sizeof(*this));
         ResizeWeight = WidthRequested = WidthGiven = -1.0f;
         NameOffset = -1;
-        IsActive = NextIsActive = true;
+        IsActive = IsActiveNextFrame = true;
         DisplayOrder = IndexWithinActiveSet = -1;
         DrawChannelCurrent = DrawChannelRowsBeforeFreeze = DrawChannelRowsAfterFreeze = -1;
         PrevActiveColumn = NextActiveColumn = -1;
