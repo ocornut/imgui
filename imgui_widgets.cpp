@@ -7153,9 +7153,11 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
     }
 
     // Select All helper shortcut
+    // Note: we are comparing FocusScope so we don't need to be testing for IsWindowFocused()
     if (!(flags & ImGuiMultiSelectFlags_NoMultiSelect) && !(flags & ImGuiMultiSelectFlags_NoSelectAll))
-        if (IsWindowFocused() && g.IO.KeyCtrl && IsKeyPressed(GetKeyIndex(ImGuiKey_A)))
-            ms->In.RequestSelectAll = true;
+        if (ms->FocusScopeId == g.NavFocusScopeId && g.ActiveId == 0)
+            if (g.IO.KeyCtrl && IsKeyPressed(GetKeyIndex(ImGuiKey_A)))
+                ms->In.RequestSelectAll = true;
 
 #ifdef IMGUI_DEBUG_MULTISELECT
     if (ms->In.RequestClear)     printf("[%05d] BeginMultiSelect: RequestClear\n", g.FrameCount);
