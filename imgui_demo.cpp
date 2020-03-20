@@ -3411,6 +3411,7 @@ static void ShowDemoWindowTables()
                 ImGui::CheckboxFlags("_NoResize", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoResize);
                 ImGui::CheckboxFlags("_NoClipX", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoClipX);
                 ImGui::CheckboxFlags("_NoHide", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoHide);
+                ImGui::CheckboxFlags("_NoReorder", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoReorder);
                 ImGui::CheckboxFlags("_DefaultSort", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_DefaultSort);
                 ImGui::CheckboxFlags("_DefaultHide", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_DefaultHide);
                 ImGui::CheckboxFlags("_NoSort", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoSort);
@@ -3952,7 +3953,7 @@ static void ShowDemoWindowTables()
         const ImDrawList* table_draw_list = NULL;  // "
 
         const float inner_width_to_use = (flags & ImGuiTableFlags_ScrollX) ? inner_width_with_scroll : inner_width_without_scroll;
-        if (ImGui::BeginTable("##table", 5, flags, outer_size_enabled ? outer_size_value : ImVec2(0, 0), inner_width_to_use))
+        if (ImGui::BeginTable("##table", 6, flags, outer_size_enabled ? outer_size_value : ImVec2(0, 0), inner_width_to_use))
         {
             // Declare columns
             // We use the "user_id" parameter of TableSetupColumn() to specify a user id that will be stored in the sort specifications.
@@ -3962,6 +3963,7 @@ static void ShowDemoWindowTables()
             ImGui::TableSetupColumn("Action",      ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Action);
             ImGui::TableSetupColumn("Quantity Long Label", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthStretch, 1.0f, MyItemColumnID_Quantity);// , ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthAlwaysAutoResize);
             ImGui::TableSetupColumn("Description", ImGuiTableColumnFlags_WidthStretch, 1.0f, MyItemColumnID_Description);// , ImGuiTableColumnFlags_WidthAlwaysAutoResize);
+            ImGui::TableSetupColumn("Hidden",      ImGuiTableColumnFlags_DefaultHide | ImGuiTableColumnFlags_NoSort);
 
             // Sort our data if sort specs have been changed!
             const ImGuiTableSortSpecs* sorts_specs = ImGui::TableGetSortSpecs();
@@ -4057,6 +4059,9 @@ static void ShowDemoWindowTables()
                         ImGui::TextWrapped("Lorem ipsum dolor sit amet");
                     else
                         ImGui::Text("Lorem ipsum dolor sit amet");
+
+                    ImGui::TableNextCell();
+                    ImGui::Text("1234");
 
                     ImGui::PopID();
                 }

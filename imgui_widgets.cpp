@@ -8162,10 +8162,10 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
         column->NameOffset = -1;
         if (!(table->Flags & ImGuiTableFlags_Hideable) || (column->Flags & ImGuiTableColumnFlags_NoHide))
-            column->NextIsActive = true;
-        if (column->IsActive != column->NextIsActive)
+            column->IsActiveNextFrame = true;
+        if (column->IsActive != column->IsActiveNextFrame)
         {
-            column->IsActive = column->NextIsActive;
+            column->IsActive = column->IsActiveNextFrame;
             table->IsSettingsDirty = true;
             if (!column->IsActive && column->SortOrder != -1)
                 table->IsSortSpecsDirty = true;
@@ -9197,7 +9197,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     {
         // Init default visibility/sort state
         if (flags & ImGuiTableColumnFlags_DefaultHide)
-            column->IsActive = column->NextIsActive = false;
+            column->IsActive = column->IsActiveNextFrame = false;
         if (flags & ImGuiTableColumnFlags_DefaultSort)
         {
             column->SortOrder = 0; // Multiple columns using _DefaultSort will be reordered when building the sort specs.
@@ -9624,7 +9624,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
             if (column->IsActive && table->ColumnsActiveCount <= 1)
                 menu_item_active = false;
             if (MenuItem(name, NULL, column->IsActive, menu_item_active))
-                column->NextIsActive = !column->IsActive;
+                column->IsActiveNextFrame = !column->IsActive;
         }
         PopItemFlag();
     }
@@ -9783,19 +9783,25 @@ void    ImGui::TableHeader(const char* label)
         table->HeldHeaderColumn = (ImS8)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
 
-    // Drag and drop: re-order columns. Frozen columns are not reorderable.
+    // Drag and drop to re-order columns.
     // FIXME-TABLE: Scroll request while reordering a column and it lands out of the scrolling zone.
     if (held && (table->Flags & ImGuiTableFlags_Reorderable) && IsMouseDragging(0) && !g.DragDropActive)
     {
         // While moving a column it will jump on the other side of the mouse, so we also test for MouseDelta.x
         table->ReorderColumn = (ImS8)column_n;
         table->InstanceInteracted = table->InstanceNo;
+
+        // We don't reorder: through the frozen<>unfrozen line, or through a column that is marked with ImGuiTableColumnFlags_NoReorder.
         if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < cell_r.Min.x)
-            if (column->PrevActiveColumn != -1 && (column->IndexWithinActiveSet < table->FreezeColumnsRequest) == (table->Columns[column->PrevActiveColumn].IndexWithinActiveSet < table->FreezeColumnsRequest))
-                table->ReorderColumnDir = -1;
+            if (ImGuiTableColumn* prev_column = (column->PrevActiveColumn != -1) ? &table->Columns[column->PrevActiveColumn] : NULL)
+                if (!((column->Flags | prev_column->Flags) & ImGuiTableColumnFlags_NoReorder))
+                    if ((column->IndexWithinActiveSet < table->FreezeColumnsRequest) == (prev_column->IndexWithinActiveSet < table->FreezeColumnsRequest))
+                        table->ReorderColumnDir = -1;
         if (g.IO.MouseDelta.x > 0.0f && g.IO.MousePos.x > cell_r.Max.x)
-            if (column->NextActiveColumn != -1 && (column->IndexWithinActiveSet < table->FreezeColumnsRequest) == (table->Columns[column->NextActiveColumn].IndexWithinActiveSet < table->FreezeColumnsRequest))
-                table->ReorderColumnDir = +1;
+            if (ImGuiTableColumn* next_column = (column->NextActiveColumn != -1) ? &table->Columns[column->NextActiveColumn] : NULL)
+                if (!((column->Flags | next_column->Flags) & ImGuiTableColumnFlags_NoReorder))
+                    if ((column->IndexWithinActiveSet < table->FreezeColumnsRequest) == (next_column->IndexWithinActiveSet < table->FreezeColumnsRequest))
+                        table->ReorderColumnDir = +1;
     }
 
     // Sort order arrow
@@ -10139,7 +10145,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
             column->SortOrder = column_settings->SortOrder;
             column->SortDirection = column_settings->SortDirection;
         }
-        column->IsActive = column->NextIsActive = column_settings->Visible;
+        column->IsActive = column->IsActiveNextFrame = column_settings->Visible;
     }
 
     // FIXME-TABLE: Need to validate .ini data
