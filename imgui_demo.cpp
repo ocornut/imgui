@@ -564,26 +564,28 @@ void ImGui::ShowDemoWindow(bool* p_open)
 //   This is what may of the simpler demos in this file are using (so they are not using this class).
 // - Otherwise, any externally stored unordered_set/set/hash/map/interval trees (storing indices, objects id, etc.)
 //   are generally appropriate. Even a large array of bool might work for you...
+// - If you need to handle extremely large selections, it might be advantageous to support a "negative" mode in
+//   your storage, so "Select All" becomes "Negative=1, Clear" and then sparse unselect can add to the storage.
 struct ExampleSelectionData
 {
     ImGuiStorage                        Storage;
-    int                                 SelectedCount;  // Number of selected items (storage will keep this updated)
+    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage)
 
     ExampleSelectionData()              { Clear(); }
-    void Clear()                        { Storage.Clear(); SelectedCount = 0; }
-    bool GetSelected(int id) const      { return Storage.GetInt((ImGuiID)id) != 0; }
-    void SetSelected(int id, bool v)    { int* p_int = Storage.GetIntRef((ImGuiID)id); if (*p_int == (int)v) return; SelectedCount = v ? (SelectedCount + 1) : (SelectedCount - 1); *p_int = (bool)v; }
-    int  GetSelectedCount() const       { return SelectedCount; }
+    void Clear()                        { Storage.Clear(); SelectionSize = 0; }
+    bool GetSelected(int n) const       { return Storage.GetInt((ImGuiID)n, 0) != 0; }
+    void SetSelected(int n, bool v)     { int* p_int = Storage.GetIntRef((ImGuiID)n, 0); if (*p_int == (int)v) return; if (v) SelectionSize++; else SelectionSize--; *p_int = (bool)v; }
+    int  GetSelectionSize() const       { return SelectionSize; }
 
     // When using SelectAll() / SetRange() we assume that our objects ID are indices.
     // In this demo we always store selection using indices and never in another manner (e.g. object ID or pointers).
     // If your selection system is storing selection using object ID and you want to support Shift+Click range-selection,
     // you will need a way to iterate from one object to another given the ID you use.
-    // You are likely to need some kind of data structure to convert 'view index' from/to 'ID'.
+    // You are likely to need some kind of data structure to convert 'view index' <> 'object ID'.
     // FIXME-MULTISELECT: Would be worth providing a demo of doing this.
     // FIXME-MULTISELECT: SetRange() is currently very inefficient since it doesn't take advantage of the fact that ImGuiStorage stores sorted key.
-    void SetRange(int a, int b, bool v) { if (b < a) { int tmp = b; b = a; a = tmp; } for (int n = a; n <= b; n++) SetSelected(n, v); }
-    void SelectAll(int count)           { Storage.Data.resize(count); for (int n = 0; n < count; n++) Storage.Data[n] = ImGuiStorage::ImGuiStoragePair((ImGuiID)n, 1); SelectedCount = count; } // This could be using SetRange() but this is faster.
+    void SetRange(int n1, int n2, bool v)   { if (n2 < n1) { int tmp = n2; n2 = n1; n1 = tmp; } for (int n = n1; n <= n2; n++) SetSelected(n, v); }
+    void SelectAll(int count)               { Storage.Data.resize(count); for (int idx = 0; idx < count; idx++) Storage.Data[idx] = ImGuiStorage::ImGuiStoragePair((ImGuiID)idx, 1); SelectionSize = count; } // This could be using SetRange(), but it this way is faster.
 };
 
 static void ShowDemoWindowWidgets()
@@ -1261,10 +1263,13 @@ static void ShowDemoWindowWidgets()
 
             // Test both Selectable() and TreeNode() widgets
             enum WidgetType { WidgetType_Selectable, WidgetType_TreeNode };
+            static bool use_columns = false;
             static WidgetType widget_type = WidgetType_TreeNode;
             if (ImGui::RadioButton("Selectables", widget_type == WidgetType_Selectable)) { widget_type = WidgetType_Selectable; }
             ImGui::SameLine();
             if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
+            ImGui::SameLine();
+            ImGui::Checkbox("Use 2 columns", &use_columns);
             ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int*)&ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
             ImGui::SameLine(); HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range. Keyboard is also supported.");
 
@@ -1280,6 +1285,12 @@ static void ShowDemoWindowWidgets()
                 if (multi_select_data->RequestClear)     { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
 
+                if (use_columns)
+                {
+                    ImGui::Columns(2);
+                    //ImGui::PushStyleVar(ImGuiStyleVar_FrtemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
+                }
+
                 ImGuiListClipper clipper;
                 clipper.Begin(ITEMS_COUNT);
                 while (clipper.Step())
@@ -1289,8 +1300,9 @@ static void ShowDemoWindowWidgets()
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
                         ImGui::PushID(n);
+                        const char* category = random_names[n % IM_ARRAYSIZE(random_names)];
                         char label[64];
-                        sprintf(label, "Object %05d (category: %s)", n, random_names[n % IM_ARRAYSIZE(random_names)]);
+                        sprintf(label, "Object %05d (category: %s)", n, category);
                         bool item_is_selected = selection.GetSelected(n);
 
                         // Emit a color button, to test that Shift+LeftArrow landing on an item that is not part 
@@ -1315,9 +1327,22 @@ static void ShowDemoWindowWidgets()
                                 selection.SetSelected(n, !item_is_selected);
                         }
 
+                        if (use_columns)
+                        {
+                            ImGui::NextColumn();
+                            ImGui::SetNextItemWidth(-FLT_MIN);
+                            ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
+                            ImGui::InputText("###NoLabel", (char*)category, strlen(category), ImGuiInputTextFlags_ReadOnly);
+                            ImGui::PopStyleVar();
+                            ImGui::NextColumn();
+                        }
+
                         ImGui::PopID();
                     }
                 }
+
+                if (use_columns)
+                    ImGui::Columns(1);
 
                 // Apply multi-select requests
                 multi_select_data = ImGui::EndMultiSelect();
