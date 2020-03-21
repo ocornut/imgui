@@ -5,7 +5,7 @@
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Multi-viewport support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 //      FIXME: The transition from removing a viewport and moving the window in an existing hosted viewport tends to flicker.
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 // Missing features, issues:
 //  [ ] 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*)). See github.com/ocornut/imgui/pull/301
 
@@ -15,6 +15,8 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2019-10-18: DirectX12: *BREAKING CHANGE* Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
 //  2019-05-29: DirectX12: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
 //  2019-04-30: DirectX12: Added support for special ImDrawCallback_ResetRenderState callback to reset render state.
 //  2019-03-29: Misc: Various minor tidying up.
@@ -64,6 +66,7 @@ struct FrameContext
     D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetCpuDescriptors;
 };
 
+// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataDx12
 {
     ID3D12CommandQueue*         CommandQueue;

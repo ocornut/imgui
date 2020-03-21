@@ -3,7 +3,7 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID!
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 //  [X] Renderer: Multi-viewport / platform windows.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.

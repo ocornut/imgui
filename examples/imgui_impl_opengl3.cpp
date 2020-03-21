@@ -6,7 +6,7 @@
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
 //  [X] Renderer: Multi-viewport support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
-//  [x] Renderer: Desktop GL only: Support for large meshes (64k+ vertices) with 16-bits indices.
+//  [x] Renderer: Desktop GL only: Support for large meshes (64k+ vertices) with 16-bit indices.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
@@ -14,7 +14,9 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
-//  2019-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2020-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2020-01-07: OpenGL: Added support for glbindings OpenGL loader.
+//  2019-10-25: OpenGL: Using a combination of GL define and runtime GL version to decide whether to use glDrawElementsBaseVertex(). Fix building with pre-3.2 GL loaders.
 //  2019-09-22: OpenGL: Detect default GL loader using __has_include compiler facility.
 //  2019-09-16: OpenGL: Tweak initialization code to allow application calling ImGui_ImplOpenGL3_CreateFontsTexture() before the first NewFrame() call.
 //  2019-05-29: OpenGL: Desktop GL only: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
@@ -79,19 +81,21 @@
 #include "TargetConditionals.h"
 #endif
 
-// Auto-detect GL version
+// Auto-enable GLES on matching platforms
 #if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
 #define IMGUI_IMPL_OPENGL_ES3           // iOS, Android  -> GL ES 3, "#version 300 es"
 #undef IMGUI_IMPL_OPENGL_LOADER_GL3W
 #undef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #undef IMGUI_IMPL_OPENGL_LOADER_GLAD
+#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING
 #undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #elif defined(__EMSCRIPTEN__)
 #define IMGUI_IMPL_OPENGL_ES2           // Emscripten    -> GL ES 2, "#version 100"
 #undef IMGUI_IMPL_OPENGL_LOADER_GL3W
 #undef IMGUI_IMPL_OPENGL_LOADER_GLEW
 #undef IMGUI_IMPL_OPENGL_LOADER_GLAD
+#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING
 #undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
 #endif
@@ -101,9 +105,9 @@
 #include <GLES2/gl2.h>
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
 #if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV))
-#include <OpenGLES/ES3/gl.h>  // Use GL ES 3
+#include <OpenGLES/ES3/gl.h>    // Use GL ES 3
 #else
-#include <GLES3/gl3.h>  // Use GL ES 3
+#include <GLES3/gl3.h>          // Use GL ES 3
 #endif
 #else
 // About Desktop OpenGL function loaders:
@@ -116,20 +120,25 @@
 #include <GL/glew.h>    // Needs to be initialized with glewInit() in user's code
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>  // Needs to be initialized with gladLoadGL() in user's code
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+#include <glbinding/gl/gl.h>  // Initialize with glbinding::initialize()
+#include <glbinding/glbinding.h>
+using namespace gl;
 #else
 #include IMGUI_IMPL_OPENGL_LOADER_CUSTOM
 #endif
 #endif
 
-// Desktop GL has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
-#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3)
-#define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     0
+// Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
+#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(GL_VERSION_3_2)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   0
 #else
-#define IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX     1
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   1
 #endif
 
 // OpenGL Data
-static char         g_GlslVersionString[32] = "";
+static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
+static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static int          g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
@@ -143,15 +152,27 @@ static void ImGui_ImplOpenGL3_ShutdownPlatformInterface();
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
+    // Query for GL version
+#if !defined(IMGUI_IMPL_OPENGL_ES2)
+    GLint major, minor;
+    glGetIntegerv(GL_MAJOR_VERSION, &major);
+    glGetIntegerv(GL_MINOR_VERSION, &minor);
+    g_GlVersion = major * 1000 + minor;
+#else
+    g_GlVersion = 2000; // GLES 2
+#endif
+
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
-#if IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX
-    io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
+#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+    if (g_GlVersion >= 3200)
+        io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
 
-    // Store GLSL version string so we can refer to it later in case we recreate shaders. Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
+    // Store GLSL version string so we can refer to it later in case we recreate shaders.
+    // Note: GLSL version is NOT the same as GL version. Leave this to NULL if unsure.
 #if defined(IMGUI_IMPL_OPENGL_ES2)
     if (glsl_version == NULL)
         glsl_version = "#version 100";
@@ -179,6 +200,8 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     gl_loader = "GLEW";
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
     gl_loader = "GLAD";
+#elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING)
+    gl_loader = "glbinding";
 #else // IMGUI_IMPL_OPENGL_LOADER_CUSTOM
     gl_loader = "Custom";
 #endif
@@ -355,11 +378,12 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-#if IMGUI_IMPL_OPENGL_HAS_DRAW_WITH_BASE_VERTEX
-                    glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
-#else
-                    glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
+#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+                    if (g_GlVersion >= 3200)
+                        glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
+                    else
 #endif
+                    glDrawElements(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)));
                 }
             }
         }
@@ -400,7 +424,7 @@ bool ImGui_ImplOpenGL3_CreateFontsTexture()
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
-    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bits (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
+    io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);   // Load as RGBA 32-bit (75% of the memory is wasted, but default font is so small) because it is more likely to be compatible with user's existing shaders. If your ImTextureId represent a higher-level concept than just a GL texture id, consider calling GetTexDataAsAlpha8() instead to save on GPU memory.
 
     // Upload texture to graphics system
     GLint last_texture;

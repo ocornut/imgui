@@ -2,7 +2,7 @@
 // This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
-//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bits indices.
+//  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
 //  [x] Platform: Multi-viewport / platform windows. With issues (flickering when creating a new viewport).
 // Missing features:
 //  [ ] Renderer: User texture binding. Changes of ImTextureID aren't supported by this binding! See https://github.com/ocornut/imgui/pull/914
@@ -70,7 +70,8 @@ struct ImGui_ImplVulkanH_WindowRenderBuffers
     ImGui_ImplVulkanH_FrameRenderBuffers*   FrameRenderBuffers;
 };
 
-// For multi-viewport support
+// For multi-viewport support:
+// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataVulkan
 {
     bool                                    WindowOwned;
