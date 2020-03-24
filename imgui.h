@@ -5,7 +5,7 @@
 // - Read FAQ at http://dearimgui.org/faq
 // - Newcomers, read 'Programmer guide' in imgui.cpp for notes on how to setup Dear ImGui in your codebase.
 // - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code. All applications in examples/ are doing that.
-// Read imgui.cpp for more details, documentation and comments.
+// Read imgui.cpp for details, links and comments.
 
 // Resources:
 // - FAQ                   http://dearimgui.org/faq
@@ -65,7 +65,7 @@ Index of this file:
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
 // IMGUI_API is used for core imgui functions, IMGUI_IMPL_API is used for the default bindings files (imgui_impl_xxx.h)
-// Using dear imgui via a shared library is not recommended, because of function call overhead and because we don't guarantee backward nor forward ABI compatibility.
+// Using dear imgui via a shared library is not recommended, because we don't guarantee backward nor forward ABI compatibility (also function call overhead, as dear imgui is a call-heavy API)
 #ifndef IMGUI_API
 #define IMGUI_API
 #endif
@@ -170,17 +170,22 @@ typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: f
 typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin(), BeginChild()
 
 // Other types
-#ifndef ImTextureID                 // ImTextureID [configurable type: override in imconfig.h]
+#ifndef ImTextureID                 // ImTextureID [configurable type: override in imconfig.h with '#define ImTextureID xxx']
 typedef void* ImTextureID;          // User data for rendering back-end to identify a texture. This is whatever to you want it to be! read the FAQ about ImTextureID for details.
 #endif
-#ifndef ImWchar                     // ImWchar [configurable type: override in imconfig.h]
-#define ImWchar ImWchar16           // Storage for a single decoded character/code point, default to 16-bit. Set to ImWchar32 to support larger Unicode planes. Note that we generally support UTF-8 encoded string, this is storage for a decoded character.
-#endif
 typedef unsigned int ImGuiID;       // A unique ID used by widgets, typically hashed from a stack of string.
-typedef unsigned short ImWchar16;   // A single decoded U16 character/code point for keyboard input/display. We encode them as multi bytes UTF-8 when used in strings.
-typedef unsigned int ImWchar32;     // A single decoded U32 character/code point for keyboard input/display. To enable, use '#define ImWchar ImWchar32' in imconfig.h.
 typedef int (*ImGuiInputTextCallback)(ImGuiInputTextCallbackData *data);
 typedef void (*ImGuiSizeCallback)(ImGuiSizeCallbackData* data);
+
+// Decoded character types
+// (we generally use UTF-8 encoded string in the API. This is storage specifically for a decoded character used for keyboard input and display)
+typedef unsigned short ImWchar16;   // A single decoded U16 character/code point. We encode them as multi bytes UTF-8 when used in strings.
+typedef unsigned int ImWchar32;     // A single decoded U32 character/code point. We encode them as multi bytes UTF-8 when used in strings.
+#ifdef IMGUI_USE_WCHAR32            // ImWchar [configurable type: override in imconfig.h with '#define IMGUI_USE_WCHAR32' to support Unicode planes 1-16]
+typedef ImWchar32 ImWchar;
+#else
+typedef ImWchar16 ImWchar;
+#endif
 
 // Basic scalar data types
 typedef signed char         ImS8;   // 8-bit signed integer
