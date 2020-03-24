@@ -68,6 +68,7 @@ Other Changes:
 - CI: Added more tests on the continuous-integration server: extra warnings for Clang/GCC, building
   SDL+Metal example, building imgui_freetype.cpp, more compile-time imconfig.h settings: disabling
   obsolete functions, enabling 32-bit ImDrawIdx, enabling 32-bit ImWchar, disabling demo. [@rokups]
+- Backends: OpenGL3: Added include support for older glbinding 2.x loader. (#3061) [@DonKult]
 - Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
   ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
   Those functions makes it easier for example apps to support hi-dpi features without setting up
@@ -172,7 +173,7 @@ Other Changes:
 - Examples: OpenGL: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
   automatically use it). (#2919, #2798)
-- Examples: OpenGL: Added support for glbindings OpenGL loader. (#2870) [@rokups]
+- Examples: OpenGL: Added support for glbinding OpenGL loader. (#2870) [@rokups]
 - Examples: Emscripten: Demonstrating embedding fonts in Makefile and code. (#2953) [@Oipo]
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
   even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
