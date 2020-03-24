@@ -7283,7 +7283,8 @@ static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool s
             target_y = window->ContentSize.y + window->WindowPadding.y * 2.0f;
         scroll.y = target_y - cr_y * (window->SizeFull.y - window->ScrollbarSizes.y - decoration_up_height);
     }
-    scroll = ImMax(scroll, ImVec2(0.0f, 0.0f));
+    scroll.x = IM_FLOOR(ImMax(scroll.x, 0.0f));
+    scroll.y = IM_FLOOR(ImMax(scroll.y, 0.0f));
     if (!window->Collapsed && !window->SkipItems)
     {
         scroll.x = ImMin(scroll.x, window->ScrollMax.x);
