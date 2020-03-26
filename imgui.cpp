@@ -6818,6 +6818,8 @@ static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool
 //-----------------------------------------------------------------------------
 
 // Advance cursor given item size for layout.
+// Register minimum needed size so it can extend the bounding box used for auto-fit calculation.
+// See comments in ItemAdd() about how/why the size provided to ItemSize() vs ItemAdd() may often different.
 void ImGui::ItemSize(const ImVec2& size, float text_baseline_y)
 {
     ImGuiContext& g = *GImGui;
@@ -6858,7 +6860,7 @@ void ImGui::ItemSize(const ImRect& bb, float text_baseline_y)
 
 // Declare item bounding box for clipping and interaction.
 // Note that the size can be different than the one provided to ItemSize(). Typically, widgets that spread over available surface
-// declare their minimum size requirement to ItemSize() and then use a larger region for drawing/interaction, which is passed to ItemAdd().
+// declare their minimum size requirement to ItemSize() and provide a larger region to ItemAdd() which is used drawing/interaction.
 bool ImGui::ItemAdd(const ImRect& bb, ImGuiID id, const ImRect* nav_bb_arg)
 {
     ImGuiContext& g = *GImGui;
