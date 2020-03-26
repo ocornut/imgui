@@ -259,18 +259,18 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glUseProgram(g_ShaderHandle);
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
+#ifndef IMGUI_IMPL_APPLE_LEGACY
 #ifdef GL_SAMPLER_BINDING
-    #if !defined(IMGUI_IMPL_APPLE_LEGACY)
-        glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
-    #endif
+    glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
+#endif
 #endif
     (void)vertex_array_object;
 #ifndef IMGUI_IMPL_OPENGL_ES2
-    #ifdef __APPLE__ && defined(IMGUI_IMPL_APPLE_LEGACY)
-        glBindVertexArrayAPPLE(vertex_array_object);
-    #else
-        glBindVertexArray(vertex_array_object);
-    #endif
+#ifdef IMGUI_IMPL_APPLE_LEGACY
+    glBindVertexArrayAPPLE(vertex_array_object);
+#else
+    glBindVertexArray(vertex_array_object);
+#endif
 #endif
 
     // Bind vertex/index buffers and setup attributes for ImDrawVert
@@ -300,10 +300,10 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glActiveTexture(GL_TEXTURE0);
     GLint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, &last_program);
     GLint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_texture);
+#ifndef IMGUI_IMPL_APPLE_LEGACY
 #ifdef GL_SAMPLER_BINDING
-    #if !defined(IMGUI_IMPL_APPLE_LEGACY)
-        GLint last_sampler; glGetIntegerv(GL_SAMPLER_BINDING, &last_sampler);
-    #endif
+    GLint last_sampler; glGetIntegerv(GL_SAMPLER_BINDING, &last_sampler);
+#endif
 #endif
     GLint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, &last_array_buffer);
 #ifndef IMGUI_IMPL_OPENGL_ES2
@@ -336,11 +336,11 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // The renderer would actually work without any VAO bound, but then our VertexAttrib calls would overwrite the default one currently bound.
     GLuint vertex_array_object = 0;
 #ifndef IMGUI_IMPL_OPENGL_ES2
-    #ifdef __APPLE__ && defined(IMGUI_IMPL_APPLE_LEGACY)
-        glGenVertexArraysAPPLE(1, &vertex_array_object);
-    #else
-        glGenVertexArrays(1, &vertex_array_object);
-    #endif
+#ifdef IMGUI_IMPL_APPLE_LEGACY
+    glGenVertexArraysAPPLE(1, &vertex_array_object);
+#else
+    glGenVertexArrays(1, &vertex_array_object);
+#endif
 #endif
     ImGui_ImplOpenGL3_SetupRenderState(draw_data, fb_width, fb_height, vertex_array_object);
 
@@ -401,28 +401,28 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
     // Destroy the temporary VAO
 #ifndef IMGUI_IMPL_OPENGL_ES2
-    #ifdef __APPLE__ && defined(IMGUI_IMPL_OPENGL_LEGACY)
-        glDeleteVertexArraysAPPLE(1, &vertex_array_object);
-    #else
-        glDeleteVertexArrays(1, &vertex_array_object);
-    #endif
+#ifdef IMGUI_IMPL_APPLE_LEGACY
+    glDeleteVertexArraysAPPLE(1, &vertex_array_object);
+#else
+    glDeleteVertexArrays(1, &vertex_array_object);
+#endif
 #endif
 
     // Restore modified GL state
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
+#ifndef IMGUI_IMPL_APPLE_LEGACY
 #ifdef GL_SAMPLER_BINDING
-    #if !defined(IMGUI_IMPL_APPLE_LEGACY)
-        glBindSampler(0, last_sampler);
-    #endif
+    glBindSampler(0, last_sampler);
+#endif
 #endif
     glActiveTexture(last_active_texture);
 #ifndef IMGUI_IMPL_OPENGL_ES2
-    #ifdef __APPLE__ && defined(IMGUI_IMPL_APPLE_LEGACY)
-        glBindVertexArrayAPPLE(last_vertex_array_object);
-    #else 
-        glBindVertexArray(last_vertex_array_object);
-    #endif
+#ifdef IMGUI_IMPL_APPLE_LEGACY
+    glBindVertexArrayAPPLE(last_vertex_array_object);
+#else 
+    glBindVertexArray(last_vertex_array_object);
+#endif
 #endif
     glBindBuffer(GL_ARRAY_BUFFER, last_array_buffer);
     glBlendEquationSeparate(last_blend_equation_rgb, last_blend_equation_alpha);
