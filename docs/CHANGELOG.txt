@@ -46,6 +46,7 @@ Other Changes:
 - InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
   glyph. (#2149, #515)
 - Selectable: Fixed honoring style.SelectableTextAlign with unspecified size. (#2347, #2601)
+- Selectable: Allow using ImGuiSelectableFlags_SpanAllColumns in other columns than first. (#125)
 - Scrolling: Fixed scrolling centering API leading to non-integer scrolling values and initial
   cursor position. This would often get fixed after the fix item submission, but using the
   ImGuiListClipper as the first thing after Begin() could largely break size calculations. (#3073)
