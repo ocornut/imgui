@@ -5583,31 +5583,33 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     float max_x = (flags & ImGuiSelectableFlags_SpanAllColumns) ? GetWindowContentRegionMax().x + window->Pos.x : GetContentRegionMaxAbs().x;
     float w_draw = ImMax(label_size.x, max_x - window_padding.x - pos.x);
     ImVec2 size_draw((size_arg.x != 0 && !(flags & ImGuiSelectableFlags_DrawFillAvailWidth)) ? size_arg.x : w_draw, size.y);
-    ImRect bb(pos, pos + size_draw);
+
+    ImRect bb_align(pos, pos + size_draw);
     if (size_arg.x == 0.0f || (flags & ImGuiSelectableFlags_DrawFillAvailWidth))
-        bb.Max.x += window_padding.x;
+        bb_align.Max.x += window_padding.x;
 
     // Selectables are meant to be tightly packed together with no click-gap, so we extend the box to cover spacing between selectable.
+    ImRect bb_enlarged = bb_align;
     const float spacing_x = style.ItemSpacing.x;
     const float spacing_y = style.ItemSpacing.y;
     const float spacing_L = IM_FLOOR(spacing_x * 0.50f);
     const float spacing_U = IM_FLOOR(spacing_y * 0.50f);
-    bb.Min.x -= spacing_L;
-    bb.Min.y -= spacing_U;
-    bb.Max.x += (spacing_x - spacing_L);
-    bb.Max.y += (spacing_y - spacing_U);
+    bb_enlarged.Min.x -= spacing_L;
+    bb_enlarged.Min.y -= spacing_U;
+    bb_enlarged.Max.x += (spacing_x - spacing_L);
+    bb_enlarged.Max.y += (spacing_y - spacing_U);
 
     bool item_add;
     if (flags & ImGuiSelectableFlags_Disabled)
     {
         ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
         window->DC.ItemFlags |= ImGuiItemFlags_Disabled | ImGuiItemFlags_NoNavDefaultFocus;
-        item_add = ItemAdd(bb, id);
+        item_add = ItemAdd(bb_enlarged, id);
         window->DC.ItemFlags = backup_item_flags;
     }
     else
     {
-        item_add = ItemAdd(bb, id);
+        item_add = ItemAdd(bb_enlarged, id);
     }
     if (!item_add)
     {
@@ -5630,7 +5632,7 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
 
     const bool was_selected = selected;
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, button_flags);
+    bool pressed = ButtonBehavior(bb_enlarged, id, &hovered, &held, button_flags);
 
     // Update NavId when clicking or when Hovering (this doesn't happen on most widgets), so navigation can be resumed with gamepad/keyboard
     if (pressed || (hovered && (flags & ImGuiSelectableFlags_SetNavIdOnHover)))
@@ -5657,21 +5659,22 @@ bool ImGui::Selectable(const char* label, bool selected, ImGuiSelectableFlags fl
     if (hovered || selected)
     {
         const ImU32 col = GetColorU32((held && hovered) ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
-        RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
-        RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
+        RenderFrame(bb_enlarged.Min, bb_enlarged.Max, col, false, 0.0f);
+        RenderNavHighlight(bb_enlarged, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
     }
 
     if ((flags & ImGuiSelectableFlags_SpanAllColumns) && window->DC.CurrentColumns)
         PopColumnsBackground();
 
     if (flags & ImGuiSelectableFlags_Disabled) PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]);
-    RenderTextClipped(bb_inner.Min, bb_inner.Max, label, NULL, &label_size, style.SelectableTextAlign, &bb);
+    RenderTextClipped(bb_align.Min, bb_align.Max, label, NULL, &label_size, style.SelectableTextAlign, &bb_enlarged);
     if (flags & ImGuiSelectableFlags_Disabled) PopStyleColor();
 
     // Automatically close popups
     if (pressed && (window->Flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiSelectableFlags_DontClosePopups) && !(window->DC.ItemFlags & ImGuiItemFlags_SelectableDontClosePopup))
         CloseCurrentPopup();
 
+    //if (g.IO.KeyCtrl) { window->DrawList->AddRect(bb_align.Min, bb_align.Max, IM_COL32(0, 255, 0, 255)); }
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags);
     return pressed;
 }

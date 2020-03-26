@@ -223,6 +223,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
  - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
+ - menus: would be nice if the Selectable() supported horizontal alignment (must be given the equivalent of WorkRect.Max.x matching the position of the shortcut column)
 
  - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
  - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
