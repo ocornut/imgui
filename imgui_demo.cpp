@@ -2901,7 +2901,8 @@ static void ShowDemoWindowMultiSelect()
                         ImGui::SetNextItemSelectionUserData(n);
                         if (widget_type == WidgetType_Selectable)
                         {
-                            if (ImGui::Selectable(label, item_is_selected))
+                            ImGui::Selectable(label, item_is_selected);
+                            if (ImGui::IsItemToggledSelection())
                                 selection.SetSelected(n, !item_is_selected);
                         }
                         else if (widget_type == WidgetType_TreeNode)
