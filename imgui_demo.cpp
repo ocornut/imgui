@@ -2771,12 +2771,15 @@ static void ShowDemoWindowWidgets()
 //   are generally appropriate. Even a large array of bool might work for you...
 // - If you need to handle extremely large selections, it might be advantageous to support a "negative" mode in
 //   your storage, so "Select All" becomes "Negative=1, Clear" and then sparse unselect can add to the storage.
-struct ExampleSelectionData
+// About RefItem:
+// - The MultiSelect API requires you to store information about the reference/pivot item (generally the last clicked item).
+struct ExampleSelection
 {
     ImGuiStorage                        Storage;
-    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage)
+    int                                 SelectionSize;  // Number of selected items (== number of 1 in the Storage, maintained by this class)
+    int                                 RangeRef;       // Reference/pivot item (generally last clicked item)
 
-    ExampleSelectionData()              { Clear(); }
+    ExampleSelection()                  { RangeRef = 0; Clear(); }
     void Clear()                        { Storage.Clear(); SelectionSize = 0; }
     bool GetSelected(int n) const       { return Storage.GetInt((ImGuiID)n, 0) != 0; }
     void SetSelected(int n, bool v)     { int* p_int = Storage.GetIntRef((ImGuiID)n, 0); if (*p_int == (int)v) return; if (v) SelectionSize++; else SelectionSize--; *p_int = (bool)v; }
@@ -2837,8 +2840,7 @@ static void ShowDemoWindowMultiSelect()
         if (ImGui::TreeNode("Multiple Selection (Full)"))
         {
             // Demonstrate holding/updating multi-selection data and using the BeginMultiSelect/EndMultiSelect API to support range-selection and clipping.
-            static int selection_ref = 0;   // Selection pivot (last clicked item, we need to preserve this to handle range-select)
-            static ExampleSelectionData selection;
+            static ExampleSelection selection;
             const char* random_names[] =
             {
                 "Artichoke", "Arugula", "Asparagus", "Avocado", "Bamboo Shoots", "Bean Sprouts", "Beans", "Beet", "Belgian Endive", "Bell Pepper",
@@ -2866,7 +2868,7 @@ static void ShowDemoWindowMultiSelect()
                 if (widget_type == WidgetType_TreeNode)
                     ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(ImGui::GetStyle().ItemSpacing.x, 0.0f));
 
-                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection_ref, selection.GetSelected(selection_ref));
+                ImGuiMultiSelectData* multi_select_data = ImGui::BeginMultiSelect(ImGuiMultiSelectFlags_None, (void*)(intptr_t)selection.RangeRef, selection.GetSelected(selection.RangeRef));
                 if (multi_select_data->RequestClear)     { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
 
@@ -2880,7 +2882,7 @@ static void ShowDemoWindowMultiSelect()
                 clipper.Begin(ITEMS_COUNT);
                 while (clipper.Step())
                 {
-                    if (clipper.DisplayStart > (int)selection_ref)
+                    if (clipper.DisplayStart > selection.RangeRef)
                         multi_select_data->RangeSrcPassedBy = true;
                     for (int n = clipper.DisplayStart; n < clipper.DisplayEnd; n++)
                     {
@@ -2904,12 +2906,15 @@ static void ShowDemoWindowMultiSelect()
                         }
                         else if (widget_type == WidgetType_TreeNode)
                         {
-                            ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanAvailWidth | ImGuiTreeNodeFlags_OpenOnDoubleClick;
+                            ImGuiTreeNodeFlags tree_node_flags = ImGuiTreeNodeFlags_SpanAvailWidth;
+                            tree_node_flags |= ImGuiTreeNodeFlags_OpenOnArrow | ImGuiTreeNodeFlags_OpenOnDoubleClick;
                             if (item_is_selected)
                                 tree_node_flags |= ImGuiTreeNodeFlags_Selected;
-                            ImGui::TreeNodeEx(label, tree_node_flags);
+                            bool open = ImGui::TreeNodeEx(label, tree_node_flags);
                             if (ImGui::IsItemToggledSelection())
                                 selection.SetSelected(n, !item_is_selected);
+                            if (open)
+                                ImGui::TreePop();
                         }
 
                         if (use_columns)
@@ -2917,7 +2922,7 @@ static void ShowDemoWindowMultiSelect()
                             ImGui::NextColumn();
                             ImGui::SetNextItemWidth(-FLT_MIN);
                             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-                            ImGui::InputText("###NoLabel", (char*)category, strlen(category), ImGuiInputTextFlags_ReadOnly);
+                            ImGui::InputText("###NoLabel", (char*)(void*)category, strlen(category), ImGuiInputTextFlags_ReadOnly);
                             ImGui::PopStyleVar();
                             ImGui::NextColumn();
                         }
@@ -2931,7 +2936,7 @@ static void ShowDemoWindowMultiSelect()
 
                 // Apply multi-select requests
                 multi_select_data = ImGui::EndMultiSelect();
-                selection_ref = (int)(intptr_t)multi_select_data->RangeSrc;
+                selection.RangeRef = (int)(intptr_t)multi_select_data->RangeSrc;
                 if (multi_select_data->RequestClear)     { selection.Clear(); }
                 if (multi_select_data->RequestSelectAll) { selection.SelectAll(ITEMS_COUNT); }
                 if (multi_select_data->RequestSetRange)  { selection.SetRange((int)(intptr_t)multi_select_data->RangeSrc, (int)(intptr_t)multi_select_data->RangeDst, multi_select_data->RangeValue ? 1 : 0); }

@@ -6474,7 +6474,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiID storage_id, ImGuiTreeNodeFlags 
         flags |= ImGuiTreeNodeFlags_OpenOnArrow;
 
         // To handle drag and drop of multiple items we need to avoid clearing selection on click.
-        // Enabling this test makes actions using CTRL+SHIFT delay their effect on the mouse release which is annoying, but it allows drag and drop of multiple items.
+        // Enabling this test makes actions using CTRL+SHIFT delay their effect on MouseUp which is annoying, but it allows drag and drop of multiple items.
         // FIXME-MULTISELECT: Consider opt-in for drag and drop behavior in ImGuiMultiSelectFlags?
         if (!selected || (g.ActiveId == id && g.ActiveIdHasBeenPressedBefore))
             button_flags |= ImGuiButtonFlags_PressedOnClick;

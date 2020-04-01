@@ -2738,31 +2738,36 @@ enum ImGuiMultiSelectFlags_
 };
 
 // Abstract:
-// - This system implements standard multi-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow items to be
-//   fully clipped (= not submitted at all) when not visible. Clipping is typically provided by ImGuiListClipper.
+// - This system helps you implements standard multi-selection idioms (CTRL+Click/Arrow, SHIFT+Click/Arrow, etc) in a way that allow
+//   selectable items to be fully clipped (= not submitted at all) when not visible. Clipping is typically provided by ImGuiListClipper.
 //   Handling all of this in a single pass imgui is a little tricky, and this is why we provide those functionalities.
-//   Note however that if you don't need SHIFT+Click/Arrow range-select, you can handle a simpler form of multi-selection yourself,
-//   by reacting to click/presses on Selectable() items and checking keyboard modifiers.
-//   The complexity of this system here is mostly caused by the handling of range-select while optionally allowing to clip elements.
+//   Note however that if you don't need SHIFT+Click/Arrow range-select + clipping, you can handle a simpler form of multi-selection
+//   yourself, by reacting to click/presses on Selectable() items and checking keyboard modifiers.
+//   The unusual complexity of this system is mostly caused by supporting SHIFT+Click/Arrow range-select with clipped elements.
+// - TreeNode() and Selectable() are supported.
 // - The work involved to deal with multi-selection differs whether you want to only submit visible items (and clip others) or submit all items
 //   regardless of their visibility. Clipping items is more efficient and will allow you to deal with large lists (1k~100k items) with near zero
 //   performance penalty, but requires a little more work on the code. If you only have a few hundreds elements in your possible selection set,
-//   you may as well not bother with clipping, as the cost should be negligible (as least on imgui side).
+//   you may as well not bother with clipping, as the cost should be negligible (as least on Dear ImGui side).
 //   If you are not sure, always start without clipping and you can work your way to the more optimized version afterwards.
-// - The void* Src/Dst value represent a selectable object. They are the values you pass to SetNextItemSelectionUserData().
-//   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points. But the code never assume that sortable integers are used.
-// - In the spirit of imgui design, your code own the selection data. So this is designed to handle all kind of selection data: instructive (store a bool inside each object),
-//   external array (store an array aside from your objects), set (store only selected items in a hash/map/set), using intervals (store indices in an interval tree), etc.
+// - The void* RangeSrc/RangeDst value represent a selectable object. They are the values you pass to SetNextItemSelectionUserData().
+//   Storing an integer index is the easiest thing to do, as SetRange requests will give you two end points and you will need to interpolate
+//   between them to honor range selection. But the code never assume that sortable integers are used (you may store pointers to your object,
+//   and then from the pointer have your own way of iterating from RangeSrc to RangeDst).
+// - In the spirit of Dear ImGui design, your code own the selection data. So this is designed to handle all kind of selection data:
+//   e.g. instructive selection (store a bool inside each object), external array (store an array aside from your objects),
+//   hash/map/set (store only selected items in a hash/map/set), or other structures (store indices in an interval tree), etc.
 // Usage flow:
-//   1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection status. As a default value for the initial frame or when,
-//      resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*.
-//   2) Honor Clear/SelectAll requests by updating your selection data.  [Only required if you are using a clipper in step 4]
-//   3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item.  [Only required if you are using a clipper in step 4]
+//   1) Call BeginMultiSelect() with the last saved value of ->RangeSrc and its selection state.
+//      It is because you need to pass its selection state (and you own selection) that we don't store this value in Dear ImGui.
+//      (For the initial frame or when resetting your selection state: you may use the value for your first item or a "null" value that matches the type stored in your void*).
+//   2) Honor Clear/SelectAll requests by updating your selection data. [Only required if you are using a clipper in step 4]
+//   3) Set RangeSrcPassedBy=true if the RangeSrc item is part of the items clipped before the first submitted/visible item. [Only required if you are using a clipper in step 4]
 //      This is because for range-selection we need to know if we are currently "inside" or "outside" the range.
-//      If you are using integer indices everywhere, this is easy to compute:  if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
+//      If you are using integer indices everywhere, this is easy to compute: if (clipper.DisplayStart > (int)data->RangeSrc) { data->RangeSrcPassedBy = true; }
 //   4) Submit your items with SetNextItemSelectionUserData() + Selectable()/TreeNode() calls.
-//      Call IsItemSelectionToggled() to query with the selection state has been toggled, in which you need the info immediately (before EndMultiSelect()) for your display.
-//      When cannot reliably return a "IsItemSelected()" value because we need to consider clipped (unprocessed) item, this is why we return a toggle event instead.
+//      Call IsItemToggledSelection() to query if the selection state has been toggled, if you need the info immediately for your display (before EndMultiSelect()).
+//      When cannot return a "IsItemSelected()" value because we need to consider clipped/unprocessed items, this is why we return a "Toggle" event instead.
 //   5) Call EndMultiSelect(). Save the value of ->RangeSrc for the next frame (you may convert the value in a format that is safe for persistance)
 //   6) Honor Clear/SelectAll/SetRange requests by updating your selection data. Always process them in this order (as you will receive Clear+SetRange request simultaneously)
 // If you submit all items (no clipper), Step 2 and 3 and will be handled by Selectable() on a per-item basis.
@@ -2771,7 +2776,7 @@ struct ImGuiMultiSelectData
     bool    RequestClear;           // Begin, End   // Request user to clear selection
     bool    RequestSelectAll;       // Begin, End   // Request user to select all
     bool    RequestSetRange;        // End          // Request user to set or clear selection in the [RangeSrc..RangeDst] range
-    bool    RangeSrcPassedBy;       // After Begin  // Need to be set by user is RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
+    bool    RangeSrcPassedBy;       // In loop      // (If clipping) Need to be set by user if RangeSrc was part of the clipped set before submitting the visible items. Ignore if not clipping.
     bool    RangeValue;             // End          // End: parameter from RequestSetRange request. True = Select Range, False = Unselect range.
     void*   RangeSrc;               // Begin, End   // End: parameter from RequestSetRange request + you need to save this value so you can pass it again next frame. / Begin: this is the value you passed to BeginMultiSelect()
     void*   RangeDst;               // End          // End: parameter from RequestSetRange request.
