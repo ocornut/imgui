@@ -202,7 +202,7 @@ jobs:
 
     - name: Build example_null (with ImWchar32)
       run: |
-        echo '#define ImWchar ImWchar32'                       >  example_single_file.cpp
+        echo '#define IMGUI_USE_WCHAR32'                       >  example_single_file.cpp
         echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
         echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
         echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp

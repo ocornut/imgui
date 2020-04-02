@@ -114,8 +114,15 @@ Other Changes:
   when the menu is not open. (#3030)
 - InputText: Fixed password fields displaying ASCII spaces as blanks instead of using the '*'
   glyph. (#2149, #515)
+- Selectable: Fixed honoring style.SelectableTextAlign with unspecified size. (#2347, #2601)
+- Selectable: Allow using ImGuiSelectableFlags_SpanAllColumns in other columns than first. (#125)
+- TreeNode: Made clicking on arrow with _OpenOnArrow toggle the open state on the Mouse Down
+  event rather than the Mouse Down+Up sequence (this is rather standard behavior).
+- Scrolling: Fixed scrolling centering API leading to non-integer scrolling values and initial
+  cursor position. This would often get fixed after the fix item submission, but using the
+  ImGuiListClipper as the first thing after Begin() could largely break size calculations. (#3073)
 - Added optional support for Unicode plane 1-16 (#2538, #2541, #2815) [@cloudwu, @samhocevar]
-  - Compile-time enable with '#define ImWchar ImWchar32' in imconfig.h.
+  - Compile-time enable with '#define IMGUI_USE_WCHAR32' in imconfig.h.
   - Generally more consistent support for unsupported codepoints (0xFFFD), in particular when
     using the default, non-fitting characters will be turned into 0xFFFD instead of being ignored.
   - Surrogate pairs are supported when submitting UTF-16 data via io.AddInputCharacterUTF16(),
@@ -134,6 +141,7 @@ Other Changes:
 - CI: Added more tests on the continuous-integration server: extra warnings for Clang/GCC, building
   SDL+Metal example, building imgui_freetype.cpp, more compile-time imconfig.h settings: disabling
   obsolete functions, enabling 32-bit ImDrawIdx, enabling 32-bit ImWchar, disabling demo. [@rokups]
+- Backends: OpenGL3: Added include support for older glbinding 2.x loader. (#3061) [@DonKult]
 - Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
   ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
   Those functions makes it easier for example apps to support hi-dpi features without setting up
@@ -238,7 +246,7 @@ Other Changes:
 - Examples: OpenGL: Explicitly adding -DIMGUI_IMPL_OPENGL_LOADER_GL3W to Makefile to match linking
   settings (otherwise if another loader such as Glew is accessible, the OpenGL3 backend might
   automatically use it). (#2919, #2798)
-- Examples: OpenGL: Added support for glbindings OpenGL loader. (#2870) [@rokups]
+- Examples: OpenGL: Added support for glbinding OpenGL loader. (#2870) [@rokups]
 - Examples: Emscripten: Demonstrating embedding fonts in Makefile and code. (#2953) [@Oipo]
 - Examples: Metal: Wrapped main loop in @autoreleasepool block to ensure allocations get freed
   even if underlying system event loop gets paused due to app nap. (#2910, #2917) [@bear24rw]
