@@ -64,6 +64,8 @@ Other Changes:
   - sizeof(ImWchar) goes from 2 to 4. IM_UNICODE_CODEPOINT_MAX goes from 0xFFFF to 0x10FFFF.
   - Various structures such as ImFont, ImFontGlyphRangesBuilder will use more memory, this
     is currently not particularly efficient.
+- Columns: undid the change in 1.75 were Columns()/BeginColumns() were preemptively limited
+  to 64 columns with an assert. (#3037, #125)
 - Window: Fixed a bug with child window inheriting ItemFlags from their parent when the child
   window also manipulate the ItemFlags stack. (#3024) [@Stanbroek]
 - Font: Fixed non-ASCII space occasionally creating unnecessary empty polygons.
@@ -121,6 +123,7 @@ Breaking Changes:
 - ImDrawList::AddCircle()/AddCircleFilled() functions don't accept negative radius.
 - Limiting Columns()/BeginColumns() api to 64 columns with an assert. While the current code
   technically supports it, future code may not so we're putting the restriction ahead.
+  [Undid that change in 1.76]
 - imgui_internal.h: changed ImRect() default constructor initializes all fields to 0.0f instead
   of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by
   adding points into it without explicit initialization, you may need to fix your initial value.

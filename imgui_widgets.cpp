@@ -7498,8 +7498,8 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
 
-    IM_ASSERT(columns_count >= 1 && columns_count <= 64);   // Maximum 64 columns
-    IM_ASSERT(window->DC.CurrentColumns == NULL);           // Nested columns are currently not supported
+    IM_ASSERT(columns_count >= 1);
+    IM_ASSERT(window->DC.CurrentColumns == NULL);   // Nested columns are currently not supported
 
     // Acquire storage for the columns set
     ImGuiID id = GetColumnsID(str_id, columns_count);
