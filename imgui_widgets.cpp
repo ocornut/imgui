@@ -7138,6 +7138,9 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
     g.MultiSelectEnabled = true;
     g.MultiSelectFlags = flags;
 
+    // Use copy of keyboard mods at the time of the request, otherwise we would requires mods to be held for an extra frame.
+    g.MultiSelectKeyMods = g.NavJustMovedToId ? g.NavJustMovedToKeyMods : g.IO.KeyMods;
+
     if ((flags & ImGuiMultiSelectFlags_NoMultiSelect) == 0)
     {
         ms->In.RangeSrc = ms->Out.RangeSrc = range_ref;
@@ -7148,9 +7151,9 @@ ImGuiMultiSelectData* ImGui::BeginMultiSelect(ImGuiMultiSelectFlags flags, void*
     // FIXME: Polling key mods after the fact (frame following the move request) is incorrect, but latching it would requires non-trivial change in MultiSelectItemFooter()
     if (g.NavJustMovedToId != 0 && g.NavJustMovedToFocusScopeId == ms->FocusScopeId && g.NavJustMovedToHasSelectionData)
     {
-        if (g.IO.KeyShift)
+        if (g.MultiSelectKeyMods & ImGuiMod_Shift)
             ms->InRequestSetRangeNav = true;
-        if (!g.IO.KeyCtrl && !g.IO.KeyShift)
+        if ((g.MultiSelectKeyMods & (ImGuiMod_Ctrl | ImGuiMod_Shift)) == 0)
             ms->In.RequestClear = true;
     }
 
@@ -7233,13 +7236,13 @@ void ImGui::MultiSelectItemHeader(ImGuiID id, bool* p_selected)
     if (ms->InRequestSetRangeNav)
     {
         IM_ASSERT(id != 0);
-        IM_ASSERT(g.IO.KeyShift);
+        IM_ASSERT((g.MultiSelectKeyMods & ImGuiMod_Shift) != 0);
         const bool is_range_dst = !ms->InRangeDstPassedBy && g.NavJustMovedToId == id;     // Assume that g.NavJustMovedToId is not clipped.
         if (is_range_dst)
             ms->InRangeDstPassedBy = true;
         if (is_range_src || is_range_dst || ms->In.RangeSrcPassedBy != ms->InRangeDstPassedBy)
             selected = ms->In.RangeValue;
-        else if (!g.IO.KeyCtrl)
+        else if ((g.MultiSelectKeyMods & ImGuiMod_Ctrl) == 0)
             selected = false;
     }
 
@@ -7256,9 +7259,9 @@ void ImGui::MultiSelectItemFooter(ImGuiID id, bool* p_selected, bool* p_pressed)
 
     bool selected = *p_selected;
     bool pressed = *p_pressed;
-    bool is_ctrl = g.IO.KeyCtrl;
-    bool is_shift = g.IO.KeyShift;
     const bool is_multiselect = (g.MultiSelectFlags & ImGuiMultiSelectFlags_NoMultiSelect) == 0;
+    bool is_ctrl = (g.MultiSelectKeyMods & ImGuiMod_Ctrl) != 0;
+    bool is_shift = (g.MultiSelectKeyMods & ImGuiMod_Shift) != 0;
 
     // Auto-select as you navigate a list
     if (g.NavJustMovedToId == id)
