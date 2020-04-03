@@ -44,3 +44,34 @@ imgui.ini
 ## JetBrains IDEs
 .idea
 cmake-build-*
+
+## Android, SDL2, Gradle files
+example_android_sdl_gles3/gradle.properties
+example_android_sdl_gles3/gradlew
+example_android_sdl_gles3/gradlew.bat
+example_android_sdl_gles3/settings.gradle
+example_android_sdl_gles3/gradle/*
+example_android_sdl_gles3/build.gradle
+example_android_sdl_gles3/.gradle
+example_android_sdl_gles3/.settings
+example_android_sdl_gles3/.project
+
+example_android_sdl_gles3/app/jni/Android.mk
+example_android_sdl_gles3/app/proguard-rules.pro
+example_android_sdl_gles3/app/libs/*
+example_android_sdl_gles3/app/obj/*
+example_android_sdl_gles3/app/build/*
+example_android_sdl_gles3/app/.externalNativeBuild
+example_android_sdl_gles3/app/.settings
+example_android_sdl_gles3/app/.project
+example_android_sdl_gles3/app/.classpath
+
+!example_android_sdl_gles3/app/src/main/res/values/strings.xml
+!example_android_sdl_gles3/app/src/main/java/org/libdearimgui/app/DearImguiActivity.java
+example_android_sdl_gles3/app/src/main/java/org/libsdl/*
+example_android_sdl_gles3/app/src/main/res/mipmap*
+example_android_sdl_gles3/app/src/main/res/values/colors.xml
+example_android_sdl_gles3/app/src/main/res/values/styles.xml
+
+example_android_sdl_gles3/SDL*
+example_android_sdl_gles3/app/jni/SDL
