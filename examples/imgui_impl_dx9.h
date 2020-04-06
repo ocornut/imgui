@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "imgui.h"
+
 struct IDirect3DDevice9;
 
 IMGUI_IMPL_API bool     ImGui_ImplDX9_Init(IDirect3DDevice9* device);

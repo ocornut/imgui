@@ -15,6 +15,8 @@
 
 #pragma once
 
+#include "imgui.h"
+
 struct ALLEGRO_DISPLAY;
 union ALLEGRO_EVENT;
 

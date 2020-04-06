@@ -16,6 +16,8 @@
 
 #pragma once
 
+#include "imgui.h"
+
 struct SDL_Window;
 typedef union SDL_Event SDL_Event;
 

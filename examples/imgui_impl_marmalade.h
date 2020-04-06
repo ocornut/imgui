@@ -10,6 +10,8 @@
 
 #pragma once
 
+#include "imgui.h"
+
 IMGUI_IMPL_API bool     ImGui_Marmalade_Init(bool install_callbacks);
 IMGUI_IMPL_API void     ImGui_Marmalade_Shutdown();
 IMGUI_IMPL_API void     ImGui_Marmalade_NewFrame();

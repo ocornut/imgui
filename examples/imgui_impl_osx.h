@@ -8,6 +8,8 @@
 // Issues:
 //  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
 
+#include "imgui.h"
+
 @class NSEvent;
 @class NSView;
 
