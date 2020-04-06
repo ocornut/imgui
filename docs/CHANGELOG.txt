@@ -75,6 +75,9 @@ Other Changes:
   tampered with between NewFrame() and EndFrame().
 - Misc, Freetype: Fixed support for IMGUI_STB_RECT_PACK_FILENAME compile time directive
   in imgui_freetype.cpp (matching support in the regular code path). (#3062) [@DonKult]
+- Metrics: Made Tools section more prominent. Showing wire-frame mesh directly hovering the ImDrawCmd
+  instead of requiring to open it. Added options to disable bounding box and mesh display.
+  Added notes on inactive/gc-ed windows.
 - Demo: Added black and white and color gradients to Demo>Examples>Custom Rendering.
 - CI: Added more tests on the continuous-integration server: extra warnings for Clang/GCC, building
   SDL+Metal example, building imgui_freetype.cpp, more compile-time imconfig.h settings: disabling
