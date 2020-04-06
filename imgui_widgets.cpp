@@ -7951,7 +7951,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
     const ImGuiTableFlags table_last_flags = table->Flags;
-    const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceNo + 1;
+    const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     const ImGuiID instance_id = id + instance_no;
     if (instance_no > 0)
         IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
@@ -7959,7 +7959,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Initialize
     table->ID = id;
     table->Flags = flags;
-    table->InstanceNo = (ImS16)instance_no;
+    table->InstanceCurrent = (ImS16)instance_no;
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
@@ -8097,7 +8097,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     // (We process this at the first TableBegin of the frame)
     // FIXME-TABLE: Preserve contents width _while resizing down_ until releasing.
     // FIXME-TABLE: Contains columns if our work area doesn't allow for scrolling.
-    if (table->InstanceNo == 0)
+    if (table->InstanceCurrent == 0)
     {
         if (table->ResizedColumn != -1 && table->ResizedColumnNextWidth != FLT_MAX)
             TableSetColumnWidth(table, &table->Columns[table->ResizedColumn], table->ResizedColumnNextWidth);
@@ -8108,7 +8108,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
 
     // Handle reordering request
     // Note: we don't clear ReorderColumn after handling the request.
-    if (table->InstanceNo == 0)
+    if (table->InstanceCurrent == 0)
     {
         if (table->HeldHeaderColumn == -1 && table->ReorderColumn != -1)
             table->ReorderColumn = -1;
@@ -8564,7 +8564,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     table->IsUsingHeaders = false;
 
     // Context menu
-    if (table->IsContextPopupOpen && table->InstanceNo == table->InstanceInteracted)
+    if (table->IsContextPopupOpen && table->InstanceCurrent == table->InstanceInteracted)
     {
         if (BeginPopup("##TableContextMenu"))
         {
@@ -8621,7 +8621,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         if (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_))
             continue;
 
-        ImGuiID column_id = table->ID + (table->InstanceNo * table->ColumnsCount) + column_n;
+        ImGuiID column_id = TableGetColumnResizeID(table, column_n, table->InstanceCurrent);
         ImRect hit_rect(column->MaxX - hit_half_width, hit_y1, column->MaxX + hit_half_width, hit_y2);
         //GetForegroundDrawList()->AddRect(hit_rect.Min, hit_rect.Max, IM_COL32(255, 0, 0, 100));
         KeepAliveID(column_id);
@@ -8638,7 +8638,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         if (held)
         {
             table->ResizedColumn = (ImS8)column_n;
-            table->InstanceInteracted = table->InstanceNo;
+            table->InstanceInteracted = table->InstanceCurrent;
         }
         if ((hovered && g.HoveredIdTimer > TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER) || held)
         {
@@ -8728,7 +8728,7 @@ void    ImGui::EndTable()
     {
         inner_window->Scroll.x = 0.0f;
     }
-    else if (table->LastResizedColumn != -1 && table->ResizedColumn == -1 && inner_window->ScrollbarX && table->InstanceInteracted == table->InstanceNo)
+    else if (table->LastResizedColumn != -1 && table->ResizedColumn == -1 && inner_window->ScrollbarX && table->InstanceInteracted == table->InstanceCurrent)
     {
         ImGuiTableColumn* column = &table->Columns[table->LastResizedColumn];
         if (column->MaxX < table->InnerClipRect.Min.x)
@@ -8817,7 +8817,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             const int column_n = table->DisplayOrderToIndex[order_n];
             ImGuiTableColumn* column = &table->Columns[column_n];
             const bool is_hovered = (table->HoveredColumnBorder == column_n);
-            const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceNo);
+            const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceCurrent);
             const bool is_resizable = (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_)) == 0;
             bool draw_right_border = (column->MaxX <= table->InnerClipRect.Max.x) || (is_resized || is_hovered);
             if (column->NextActiveColumn == -1 && !is_resizable)
@@ -9534,6 +9534,14 @@ const char* ImGui::TableGetColumnName(ImGuiTable* table, int column_n)
     return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
+// Return the resizing ID for the right-side of the given column.
+ImGuiID ImGui::TableGetColumnResizeID(ImGuiTable* table, int column_n, int instance_no)
+{
+    IM_ASSERT(column_n < table->ColumnsCount);
+    ImGuiID id = table->ID + (instance_no * table->ColumnsCount) + column_n;
+    return id;
+}
+
 void    ImGui::TableSetColumnAutofit(ImGuiTable* table, int column_n)
 {
     // Disable clipping then auto-fit, will take 2 frames
@@ -9682,7 +9690,7 @@ void    ImGui::TableAutoHeaders()
         //if (g.IO.KeyCtrl) { static char buf[32]; name = buf; ImGuiTableColumn* c = &table->Columns[column_n]; if (c->Flags & ImGuiTableColumnFlags_WidthStretch) ImFormatString(buf, 32, "%.3f>%.1f", c->ResizeWeight, c->WidthGiven); else ImFormatString(buf, 32, "%.1f", c->WidthGiven); }
 
         // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
-        PushID(table->InstanceNo * table->ColumnsCount + column_n);
+        PushID(table->InstanceCurrent * table->ColumnsCount + column_n);
         TableHeader(name);
         PopID();
 
@@ -9729,7 +9737,7 @@ void    ImGui::TableAutoHeaders()
         {
             table->IsContextPopupOpen = true;
             table->ContextPopupColumn = (ImS8)open_context_popup;
-            table->InstanceInteracted = table->InstanceNo;
+            table->InstanceInteracted = table->InstanceCurrent;
             OpenPopup("##TableContextMenu");
         }
 }
@@ -9776,7 +9784,7 @@ void    ImGui::TableHeader(const char* label)
     //window->DC.CursorPos.x = column->MinX + table->CellPadding.x;
 
     // Keep header highlighted when context menu is open. (FIXME-TABLE: however we cannot assume the ID of said popup if it has been created by the user...)
-    const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceNo);
+    const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceCurrent);
     const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld | ImGuiSelectableFlags_DontClosePopups, ImVec2(0.0f, label_height));
     const bool held = IsItemActive();
     if (held)
@@ -9789,7 +9797,7 @@ void    ImGui::TableHeader(const char* label)
     {
         // While moving a column it will jump on the other side of the mouse, so we also test for MouseDelta.x
         table->ReorderColumn = (ImS8)column_n;
-        table->InstanceInteracted = table->InstanceNo;
+        table->InstanceInteracted = table->InstanceCurrent;
 
         // We don't reorder: through the frozen<>unfrozen line, or through a column that is marked with ImGuiTableColumnFlags_NoReorder.
         if (g.IO.MouseDelta.x < 0.0f && g.IO.MousePos.x < cell_r.Min.x)
