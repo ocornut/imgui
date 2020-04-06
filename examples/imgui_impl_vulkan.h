@@ -22,6 +22,7 @@
 
 #pragma once
 
+#include "imgui.h"
 #include <vulkan/vulkan.h>
 
 // Initialization data, for ImGui_ImplVulkan_Init()

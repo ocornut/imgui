@@ -13,6 +13,8 @@
 
 #pragma once
 
+#include "imgui.h"
+
 enum DXGI_FORMAT;
 struct ID3D12Device;
 struct ID3D12DescriptorHeap;

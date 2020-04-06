@@ -11,6 +11,8 @@
 
 #pragma once
 
+#include "imgui.h"
+
 struct ID3D10Device;
 
 IMGUI_IMPL_API bool     ImGui_ImplDX10_Init(ID3D10Device* device);
