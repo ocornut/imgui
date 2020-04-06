@@ -96,9 +96,13 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 **Note:** You should always pass your mouse/keyboard inputs to Dear ImGui, even when the io.WantCaptureXXX flag are set false.
  This is because imgui needs to detect that you clicked in the void to unfocus its own windows.
 
-**Note:** The `io.WantCaptureMouse` is more accurate that any manual attempt to "check if the mouse is hovering a window" (don't do that!). It handle mouse dragging correctly (both dragging that started over your application or over an imgui window) and handle e.g. modal windows blocking inputs. Those flags are updated by `ImGui::NewFrame()`. Preferably read the flags after calling NewFrame() if you can afford it, but reading them before is also perfectly fine, as the bool toggle fairly rarely. If you have on a touch device, you might find use for an early call to `UpdateHoveredWindowAndCaptureFlags()`.
+**Note:** The `io.WantCaptureMouse` is more correct that any manual attempt to "check if the mouse is hovering a window" (don't do that!). It handle mouse dragging correctly (both dragging that started over your application or over a Dear ImGui window) and handle e.g. popup and modal windows blocking inputs. 
 
-**Note:** Text input widget releases focus on "Return KeyDown", so the subsequent "Return KeyUp" event that your application receive will typically have `io.WantCaptureKeyboard == false`. Depending on your application logic it may or not be inconvenient. You might want to track which key-downs were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
+**Note:** Those flags are updated by `ImGui::NewFrame()`. However it is generally more correct and easier that you poll flags from the previous frame, then submit your inputs, then call `NewFrame()`. If you attempt to do the opposite (which is generally harder) you are likely going to submit your inputs after `NewFrame()`, and therefore too late. 
+
+**Note:** If you are using a touch device, you may find use for an early call to `UpdateHoveredWindowAndCaptureFlags()` to correctly dispatch your initial touch. We will work on better out-of-the-box touch support in the future. 
+
+**Note:** Text input widget releases focus on the "KeyDown" event of the Return key, so the subsequent "KeyUp" event that your application receive will typically have `io.WantCaptureKeyboard == false`. Depending on your application logic it may or not be inconvenient to receive that KeyUp event. You might want to track which key-downs were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
 
 ##### [Return to Index](#index)
 
