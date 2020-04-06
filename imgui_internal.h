@@ -1959,7 +1959,7 @@ struct ImGuiTable
     int                         ColumnsActiveCount;         // Number of non-hidden columns (<= ColumnsCount)
     int                         CurrentColumn;
     int                         CurrentRow;
-    ImS16                       InstanceNo;                 // Count of BeginTable() calls with same ID in the same frame (generally 0)
+    ImS16                       InstanceCurrent;            // Count of BeginTable() calls with same ID in the same frame (generally 0). This is a little bit similar to BeginCount for a window, but multiple table with same ID look are multiple tables, they are just synched.
     ImS16                       InstanceInteracted;         // Mark which instance (generally 0) of the same ID is being interacted with
     float                       RowPosY1;
     float                       RowPosY2;
@@ -2001,7 +2001,7 @@ struct ImGuiTable
     ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
     ImS8                        HoveredColumnBody;          // [DEBUG] Unlike HoveredColumnBorder this doesn't fulfill all Hovering rules properly. Used for debugging/tools for now.
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
-    ImS8                        ResizedColumn;              // Index of column being resized. Reset by InstanceNo==0.
+    ImS8                        ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
     ImS8                        LastResizedColumn;          // Index of column being resized from previous frame.
     ImS8                        HeldHeaderColumn;           // Index of column header being held. 
     ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
@@ -2264,6 +2264,7 @@ namespace ImGui
     IMGUI_API void          TableEndCell(ImGuiTable* table);
     IMGUI_API ImRect        TableGetCellRect();
     IMGUI_API const char*   TableGetColumnName(ImGuiTable* table, int column_n);
+    IMGUI_API ImGuiID       TableGetColumnResizeID(ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
