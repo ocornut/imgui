@@ -8,14 +8,14 @@
 //  [X] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 
 #pragma once
-
-#include "imgui.h"
+#include "imgui.h"      // IMGUI_IMPL_API
 
 IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd);
 IMGUI_IMPL_API void     ImGui_ImplWin32_Shutdown();
 IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 
-// Configuration: Disable gamepad support or linking with xinput.lib
+// Configuration
+// - Disable gamepad support or linking with xinput.lib
 //#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 //#define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
 

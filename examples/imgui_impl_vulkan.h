@@ -21,8 +21,7 @@
 // Read comments in imgui_impl_vulkan.h.
 
 #pragma once
-
-#include "imgui.h"
+#include "imgui.h"      // IMGUI_IMPL_API
 #include <vulkan/vulkan.h>
 
 // Initialization data, for ImGui_ImplVulkan_Init()
