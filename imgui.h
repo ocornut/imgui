@@ -1466,7 +1466,7 @@ struct ImGuiIO
 
     // Optional: Notify OS Input Method Editor of the screen position of your cursor for text input position (e.g. when using Japanese/Chinese IME on Windows)
     // (default to use native imm32 api on Windows)
-    void        (*ImeSetInputScreenPosFn)(int x, int y);
+    void        (*ImeSetInputScreenPosFn)(float x, float y, float line_height);
     void*       ImeWindowHandle;                // = NULL           // (Windows) Set this to your HWND to get automatic IME cursor positioning.
 
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS

@@ -923,7 +923,7 @@ static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSetti
 // Platform Dependents default implementation for IO functions
 static const char*      GetClipboardTextFn_DefaultImpl(void* user_data);
 static void             SetClipboardTextFn_DefaultImpl(void* user_data, const char* text);
-static void             ImeSetInputScreenPosFn_DefaultImpl(int x, int y);
+static void             ImeSetInputScreenPosFn_DefaultImpl(float x, float y, float line_height);
 
 namespace ImGui
 {
@@ -4161,10 +4161,11 @@ void ImGui::EndFrame()
     ErrorCheckEndFrameSanityChecks();
 
     // Notify OS when our Input Method Editor cursor has moved (e.g. CJK inputs using Microsoft IME)
-    if (g.IO.ImeSetInputScreenPosFn && (g.PlatformImeLastPos.x == FLT_MAX || ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f))
+    if (g.IO.ImeSetInputScreenPosFn && (g.PlatformImeLastPos.x == FLT_MAX || ImLengthSqr(g.PlatformImeLastPos - g.PlatformImePos) > 0.0001f || ImFabs(g.PlatformImeLastLineHeight - g.PlatformImeLineHeight) > 0.0001f))
     {
-        g.IO.ImeSetInputScreenPosFn((int)g.PlatformImePos.x, (int)g.PlatformImePos.y);
+        g.IO.ImeSetInputScreenPosFn(g.PlatformImePos.x, g.PlatformImePos.y, g.PlatformImeLineHeight);
         g.PlatformImeLastPos = g.PlatformImePos;
+        g.PlatformImeLastLineHeight = g.PlatformImeLineHeight;
     }
 
     // Hide implicit/fallback "Debug" window if it hasn't been used
@@ -9929,7 +9930,7 @@ static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 #pragma comment(lib, "imm32")
 #endif
 
-static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
+static void ImeSetInputScreenPosFn_DefaultImpl(float x, float y, float line_height)
 {
     // Notify OS Input Method Editor of text input position
     ImGuiIO& io = ImGui::GetIO();
@@ -9937,8 +9938,8 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
         if (HIMC himc = ::ImmGetContext(hwnd))
         {
             COMPOSITIONFORM cf;
-            cf.ptCurrentPos.x = x;
-            cf.ptCurrentPos.y = y;
+            cf.ptCurrentPos.x = (int)x;
+            cf.ptCurrentPos.y = (int)y;
             cf.dwStyle = CFS_FORCE_POSITION;
             ::ImmSetCompositionWindow(himc, &cf);
             ::ImmReleaseContext(hwnd, himc);
@@ -9947,7 +9948,7 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int x, int y)
 
 #else
 
-static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
+static void ImeSetInputScreenPosFn_DefaultImpl(float, float, float) {}
 
 #endif
 

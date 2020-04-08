@@ -1194,7 +1194,9 @@ struct ImGuiContext
 
     // Platform support
     ImVec2                  PlatformImePos;                     // Cursor position request & last passed to the OS Input Method Editor
+    float                   PlatformImeLineHeight;              // Text input line height that can be passed to the OS Input Method Editor
     ImVec2                  PlatformImeLastPos;
+    float                   PlatformImeLastLineHeight;
 
     // Settings
     bool                    SettingsLoaded;

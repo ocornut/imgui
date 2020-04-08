@@ -4179,7 +4179,10 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
 
             // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
             if (!is_readonly)
+            {
                 g.PlatformImePos = ImVec2(cursor_screen_pos.x - 1.0f, cursor_screen_pos.y - g.FontSize);
+                g.PlatformImeLineHeight = g.FontSize;
+            }
         }
     }
     else
