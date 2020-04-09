@@ -73,6 +73,8 @@ Other Changes:
   to a solution rather than encourage people to add braces in the codebase.
 - Misc: Added additional checks in EndFrame() to verify that io.KeyXXX values have not been
   tampered with between NewFrame() and EndFrame().
+- Misc: Made default clipboard handlers for Win32 and OSX use a buffer inside the main context
+  instead of a static buffer, so it can be freed properly on Shutdown. (#3110)
 - Misc, Freetype: Fixed support for IMGUI_STB_RECT_PACK_FILENAME compile time directive
   in imgui_freetype.cpp (matching support in the regular code path). (#3062) [@DonKult]
 - Metrics: Made Tools section more prominent. Showing wire-frame mesh directly hovering the ImDrawCmd
