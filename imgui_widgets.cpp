@@ -391,8 +391,10 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - ArrowButton()
 // - CloseButton() [Internal]
 // - CollapseButton() [Internal]
-// - ScrollbarEx() [Internal]
+// - GetWindowScrollbarID() [Internal]
+// - GetWindowScrollbarRect() [Internal]
 // - Scrollbar() [Internal]
+// - ScrollbarEx() [Internal]
 // - Image()
 // - ImageButton()
 // - Checkbox()
@@ -812,6 +814,49 @@ ImGuiID ImGui::GetWindowScrollbarID(ImGuiWindow* window, ImGuiAxis axis)
     return window->GetIDNoKeepAlive(axis == ImGuiAxis_X ? "#SCROLLX" : "#SCROLLY");
 }
 
+// Return scrollbar rectangle, must only be called for corresponding axis if window->ScrollbarX/Y is set.
+ImRect ImGui::GetWindowScrollbarRect(ImGuiWindow* window, ImGuiAxis axis)
+{
+    const ImRect outer_rect = window->Rect();
+    const ImRect inner_rect = window->InnerRect;
+    const float border_size = window->WindowBorderSize;
+    const float scrollbar_size = window->ScrollbarSizes[axis ^ 1]; // (ScrollbarSizes.x = width of Y scrollbar; ScrollbarSizes.y = height of X scrollbar)
+    IM_ASSERT(scrollbar_size > 0.0f);
+    if (axis == ImGuiAxis_X)
+        return ImRect(inner_rect.Min.x, ImMax(outer_rect.Min.y, outer_rect.Max.y - border_size - scrollbar_size), inner_rect.Max.x, outer_rect.Max.y);
+    else
+        return ImRect(ImMax(outer_rect.Min.x, outer_rect.Max.x - border_size - scrollbar_size), inner_rect.Min.y, outer_rect.Max.x, inner_rect.Max.y);
+}
+
+void ImGui::Scrollbar(ImGuiAxis axis)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+
+    const ImGuiID id = GetWindowScrollbarID(window, axis);
+    KeepAliveID(id);
+
+    // Calculate scrollbar bounding box
+    ImRect bb = GetWindowScrollbarRect(window, axis);
+    ImDrawCornerFlags rounding_corners = 0;
+    if (axis == ImGuiAxis_X)
+    {
+        rounding_corners |= ImDrawCornerFlags_BotLeft;
+        if (!window->ScrollbarY)
+            rounding_corners |= ImDrawCornerFlags_BotRight;
+    }
+    else
+    {
+        if ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar))
+            rounding_corners |= ImDrawCornerFlags_TopRight;
+        if (!window->ScrollbarX)
+            rounding_corners |= ImDrawCornerFlags_BotRight;
+    }
+    float size_avail = window->InnerRect.Max[axis] - window->InnerRect.Min[axis];
+    float size_contents = window->ContentSize[axis] + window->WindowPadding[axis] * 2.0f;
+    ScrollbarEx(bb, id, axis, &window->Scroll[axis], size_avail, size_contents, rounding_corners);
+}
+
 // Vertical/Horizontal scrollbar
 // The entire piece of code below is rather confusing because:
 // - We handle absolute seeking (when first clicking outside the grab) and relative manipulation (afterward or when clicking inside the grab)
@@ -830,7 +875,7 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
     if (bb_frame_width <= 0.0f || bb_frame_height <= 0.0f)
         return false;
 
-    // When we are too small, start hiding and disabling the grab (this reduce visual noise on very small window and facilitate using the resize grab)
+    // When we are too small, start hiding and disabling the grab (this reduce visual noise on very small window and facilitate using the window resize grab)
     float alpha = 1.0f;
     if ((axis == ImGuiAxis_Y) && bb_frame_height < g.FontSize + g.Style.FramePadding.y * 2.0f)
         alpha = ImSaturate((bb_frame_height - g.FontSize) / (g.Style.FramePadding.y * 2.0f));
@@ -839,13 +884,12 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
 
     const ImGuiStyle& style = g.Style;
     const bool allow_interaction = (alpha >= 1.0f);
-    const bool horizontal = (axis == ImGuiAxis_X);
 
     ImRect bb = bb_frame;
     bb.Expand(ImVec2(-ImClamp(IM_FLOOR((bb_frame_width - 2.0f) * 0.5f), 0.0f, 3.0f), -ImClamp(IM_FLOOR((bb_frame_height - 2.0f) * 0.5f), 0.0f, 3.0f)));
 
     // V denote the main, longer axis of the scrollbar (= height for a vertical scrollbar)
-    const float scrollbar_size_v = horizontal ? bb.GetWidth() : bb.GetHeight();
+    const float scrollbar_size_v = (axis == ImGuiAxis_X) ? bb.GetWidth() : bb.GetHeight();
 
     // Calculate the height of our grabbable box. It generally represent the amount visible (vs the total scrollable amount)
     // But we maintain a minimum size in pixel to allow for the user to still aim inside.
@@ -861,11 +905,11 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
 
     float scroll_max = ImMax(1.0f, size_contents_v - size_avail_v);
     float scroll_ratio = ImSaturate(*p_scroll_v / scroll_max);
-    float grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v;
+    float grab_v_norm = scroll_ratio * (scrollbar_size_v - grab_h_pixels) / scrollbar_size_v; // Grab position in normalized space
     if (held && allow_interaction && grab_h_norm < 1.0f)
     {
-        float scrollbar_pos_v = horizontal ? bb.Min.x : bb.Min.y;
-        float mouse_pos_v = horizontal ? g.IO.MousePos.x : g.IO.MousePos.y;
+        float scrollbar_pos_v = bb.Min[axis];
+        float mouse_pos_v = g.IO.MousePos[axis];
 
         // Click position in scrollbar normalized space (0.0f->1.0f)
         const float clicked_v_norm = ImSaturate((mouse_pos_v - scrollbar_pos_v) / scrollbar_size_v);
@@ -882,7 +926,7 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
                 g.ScrollbarClickDeltaToGrabCenter = clicked_v_norm - grab_v_norm - grab_h_norm * 0.5f;
         }
 
-        // Apply scroll
+        // Apply scroll (p_scroll_v will generally point on one member of window->Scroll)
         // It is ok to modify Scroll here because we are being called in Begin() after the calculation of ContentSize and before setting up our starting position
         const float scroll_v_norm = ImSaturate((clicked_v_norm - g.ScrollbarClickDeltaToGrabCenter - grab_h_norm * 0.5f) / (1.0f - grab_h_norm));
         *p_scroll_v = IM_ROUND(scroll_v_norm * scroll_max);//(win_size_contents_v - win_size_v));
@@ -897,48 +941,17 @@ bool ImGui::ScrollbarEx(const ImRect& bb_frame, ImGuiID id, ImGuiAxis axis, floa
     }
 
     // Render
-    window->DrawList->AddRectFilled(bb_frame.Min, bb_frame.Max, GetColorU32(ImGuiCol_ScrollbarBg), window->WindowRounding, rounding_corners);
+    const ImU32 bg_col = GetColorU32(ImGuiCol_ScrollbarBg);
     const ImU32 grab_col = GetColorU32(held ? ImGuiCol_ScrollbarGrabActive : hovered ? ImGuiCol_ScrollbarGrabHovered : ImGuiCol_ScrollbarGrab, alpha);
+    window->DrawList->AddRectFilled(bb_frame.Min, bb_frame.Max, bg_col, window->WindowRounding, rounding_corners);
     ImRect grab_rect;
-    if (horizontal)
+    if (axis == ImGuiAxis_X)
         grab_rect = ImRect(ImLerp(bb.Min.x, bb.Max.x, grab_v_norm), bb.Min.y, ImLerp(bb.Min.x, bb.Max.x, grab_v_norm) + grab_h_pixels, bb.Max.y);
     else
         grab_rect = ImRect(bb.Min.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm), bb.Max.x, ImLerp(bb.Min.y, bb.Max.y, grab_v_norm) + grab_h_pixels);
     window->DrawList->AddRectFilled(grab_rect.Min, grab_rect.Max, grab_col, style.ScrollbarRounding);
 
     return held;
-}
-
-void ImGui::Scrollbar(ImGuiAxis axis)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-
-    const ImGuiID id = GetWindowScrollbarID(window, axis);
-    KeepAliveID(id);
-
-    // Calculate scrollbar bounding box
-    const ImRect outer_rect = window->Rect();
-    const ImRect inner_rect = window->InnerRect;
-    const float border_size = window->WindowBorderSize;
-    const float scrollbar_size = window->ScrollbarSizes[axis ^ 1];
-    IM_ASSERT(scrollbar_size > 0.0f);
-    const float other_scrollbar_size = window->ScrollbarSizes[axis];
-    ImDrawCornerFlags rounding_corners = (other_scrollbar_size <= 0.0f) ? ImDrawCornerFlags_BotRight : 0;
-    ImRect bb;
-    if (axis == ImGuiAxis_X)
-    {
-        bb.Min = ImVec2(inner_rect.Min.x, ImMax(outer_rect.Min.y, outer_rect.Max.y - border_size - scrollbar_size));
-        bb.Max = ImVec2(inner_rect.Max.x, outer_rect.Max.y);
-        rounding_corners |= ImDrawCornerFlags_BotLeft;
-    }
-    else
-    {
-        bb.Min = ImVec2(ImMax(outer_rect.Min.x, outer_rect.Max.x - border_size - scrollbar_size), inner_rect.Min.y);
-        bb.Max = ImVec2(outer_rect.Max.x, window->InnerRect.Max.y);
-        rounding_corners |= ((window->Flags & ImGuiWindowFlags_NoTitleBar) && !(window->Flags & ImGuiWindowFlags_MenuBar)) ? ImDrawCornerFlags_TopRight : 0;
-    }
-    ScrollbarEx(bb, id, axis, &window->Scroll[axis], inner_rect.Max[axis] - inner_rect.Min[axis], window->ContentSize[axis] + window->WindowPadding[axis] * 2.0f, rounding_corners);
 }
 
 void ImGui::Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& tint_col, const ImVec4& border_col)
