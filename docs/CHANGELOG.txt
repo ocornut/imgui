@@ -84,6 +84,8 @@ Other Changes:
 - CI: Added more tests on the continuous-integration server: extra warnings for Clang/GCC, building
   SDL+Metal example, building imgui_freetype.cpp, more compile-time imconfig.h settings: disabling
   obsolete functions, enabling 32-bit ImDrawIdx, enabling 32-bit ImWchar, disabling demo. [@rokups]
+- Backends: OpenGL3: Fixed version check mistakenly testing for GL 4.0+ instead of 3.2+ to enable
+  ImGuiBackendFlags_RendererHasVtxOffset, leaving 3.2 contexts without it. (#3119, #2866) [@wolfpld]
 - Backends: OpenGL3: Added include support for older glbinding 2.x loader. (#3061) [@DonKult]
 - Backends: Win32: Added ImGui_ImplWin32_EnableDpiAwareness(), ImGui_ImplWin32_GetDpiScaleForHwnd(),
   ImGui_ImplWin32_GetDpiScaleForMonitor() helpers functions (backported from the docking branch).
