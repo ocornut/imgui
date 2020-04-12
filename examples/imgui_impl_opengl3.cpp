@@ -15,6 +15,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2020-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2020-04-12: OpenGL: Fixed context version check mistakenly testing for 4.0+ instead of 3.2+ to enable ImGuiBackendFlags_RendererHasVtxOffset.
 //  2020-03-24: OpenGL: Added support for glbinding 2.x OpenGL loader.
 //  2020-01-07: OpenGL: Added support for glbinding 3.x OpenGL loader.
 //  2019-10-25: OpenGL: Using a combination of GL define and runtime GL version to decide whether to use glDrawElementsBaseVertex(). Fix building with pre-3.2 GL loaders.
@@ -143,7 +144,7 @@ using namespace gl;
 #endif
 
 // OpenGL Data
-static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries.
+static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries (e.g. 320 for GL 3.2)
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
 static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
@@ -158,21 +159,21 @@ static void ImGui_ImplOpenGL3_ShutdownPlatformInterface();
 // Functions
 bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
-    // Query for GL version
+    // Query for GL version (e.g. 320 for GL 3.2)
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
     GLint major, minor;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
-    g_GlVersion = major * 1000 + minor;
+    g_GlVersion = major * 100 + minor * 10;
 #else
-    g_GlVersion = 2000; // GLES 2
+    g_GlVersion = 200; // GLES 2
 #endif
 
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
 #if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-    if (g_GlVersion >= 3200)
+    if (g_GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
     io.BackendFlags |= ImGuiBackendFlags_RendererHasViewports;  // We can create multi-viewports on the Renderer side (optional)
@@ -389,7 +390,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
 #if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
-                    if (g_GlVersion >= 3200)
+                    if (g_GlVersion >= 320)
                         glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
                     else
 #endif

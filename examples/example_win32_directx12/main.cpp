@@ -9,7 +9,9 @@
 #include <dxgi1_4.h>
 #include <tchar.h>
 
-//#define DX12_ENABLE_DEBUG_LAYER
+#ifdef _DEBUG
+#define DX12_ENABLE_DEBUG_LAYER
+#endif
 
 #ifdef DX12_ENABLE_DEBUG_LAYER
 #include <dxgidebug.h>
@@ -460,6 +462,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
         {
+            WaitForLastSubmittedFrame();
             ImGui_ImplDX12_InvalidateDeviceObjects();
             CleanupRenderTarget();
             ResizeSwapChain(hWnd, (UINT)LOWORD(lParam), (UINT)HIWORD(lParam));

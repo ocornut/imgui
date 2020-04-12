@@ -1,4 +1,4 @@
-// dear imgui, v1.76 WIP
+// dear imgui, v1.76
 // (main code and documentation)
 
 // Help:
@@ -4198,7 +4198,7 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.CurrentTabBarStack.clear();
     g.ShrinkWidthBuffer.clear();
 
-    g.PrivateClipboard.clear();
+    g.ClipboardHandlerData.clear();
     g.MenusIdSubmittedThisFrame.clear();
     g.InputTextState.ClearFreeMemory();
 
@@ -6473,7 +6473,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavLayerCurrentMask = (1 << ImGuiNavLayer_Main);
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
-        window->DC.NavFocusScopeIdCurrent = parent_window ? parent_window->DC.NavFocusScopeIdCurrent : 0;
+        window->DC.NavFocusScopeIdCurrent = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->DC.NavFocusScopeIdCurrent : 0; // -V595
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
 
@@ -14908,10 +14908,11 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
 #endif
 
 // Win32 clipboard implementation
+// We use g.ClipboardHandlerData for temporary storage to ensure it is freed on Shutdown()
 static const char* GetClipboardTextFn_DefaultImpl(void*)
 {
-    static ImVector<char> buf_local;
-    buf_local.clear();
+    ImGuiContext& g = *GImGui;
+    g.ClipboardHandlerData.clear();
     if (!::OpenClipboard(NULL))
         return NULL;
     HANDLE wbuf_handle = ::GetClipboardData(CF_UNICODETEXT);
@@ -14923,12 +14924,12 @@ static const char* GetClipboardTextFn_DefaultImpl(void*)
     if (const WCHAR* wbuf_global = (const WCHAR*)::GlobalLock(wbuf_handle))
     {
         int buf_len = ::WideCharToMultiByte(CP_UTF8, 0, wbuf_global, -1, NULL, 0, NULL, NULL);
-        buf_local.resize(buf_len);
-        ::WideCharToMultiByte(CP_UTF8, 0, wbuf_global, -1, buf_local.Data, buf_len, NULL, NULL);
+        g.ClipboardHandlerData.resize(buf_len);
+        ::WideCharToMultiByte(CP_UTF8, 0, wbuf_global, -1, g.ClipboardHandlerData.Data, buf_len, NULL, NULL);
     }
     ::GlobalUnlock(wbuf_handle);
     ::CloseClipboard();
-    return buf_local.Data;
+    return g.ClipboardHandlerData.Data;
 }
 
 static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
@@ -14990,13 +14991,14 @@ static const char* GetClipboardTextFn_DefaultImpl(void*)
             CFDataRef cf_data;
             if (PasteboardCopyItemFlavorData(main_clipboard, item_id, CFSTR("public.utf8-plain-text"), &cf_data) == noErr)
             {
-                static ImVector<char> clipboard_text;
+                ImGuiContext& g = *GImGui;
+                g.ClipboardHandlerData.clear();
                 int length = (int)CFDataGetLength(cf_data);
-                clipboard_text.resize(length + 1);
-                CFDataGetBytes(cf_data, CFRangeMake(0, length), (UInt8*)clipboard_text.Data);
-                clipboard_text[length] = 0;
+                g.ClipboardHandlerData.resize(length + 1);
+                CFDataGetBytes(cf_data, CFRangeMake(0, length), (UInt8*)g.ClipboardHandlerData.Data);
+                g.ClipboardHandlerData[length] = 0;
                 CFRelease(cf_data);
-                return clipboard_text.Data;
+                return g.ClipboardHandlerData.Data;
             }
         }
     }
@@ -15009,17 +15011,17 @@ static const char* GetClipboardTextFn_DefaultImpl(void*)
 static const char* GetClipboardTextFn_DefaultImpl(void*)
 {
     ImGuiContext& g = *GImGui;
-    return g.PrivateClipboard.empty() ? NULL : g.PrivateClipboard.begin();
+    return g.ClipboardHandlerData.empty() ? NULL : g.ClipboardHandlerData.begin();
 }
 
 static void SetClipboardTextFn_DefaultImpl(void*, const char* text)
 {
     ImGuiContext& g = *GImGui;
-    g.PrivateClipboard.clear();
+    g.ClipboardHandlerData.clear();
     const char* text_end = text + strlen(text);
-    g.PrivateClipboard.resize((int)(text_end - text) + 1);
-    memcpy(&g.PrivateClipboard[0], text, (size_t)(text_end - text));
-    g.PrivateClipboard[(int)(text_end - text)] = 0;
+    g.ClipboardHandlerData.resize((int)(text_end - text) + 1);
+    memcpy(&g.ClipboardHandlerData[0], text, (size_t)(text_end - text));
+    g.ClipboardHandlerData[(int)(text_end - text)] = 0;
 }
 
 #endif
