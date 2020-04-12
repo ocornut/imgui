@@ -16,7 +16,7 @@ IMGUI_IMPL_API void     ImGui_ImplWin32_NewFrame();
 
 // Configuration
 // - Disable gamepad support or linking with xinput.lib
-//#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+#define IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 //#define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
 
 // Win32 message handler your application need to call.
