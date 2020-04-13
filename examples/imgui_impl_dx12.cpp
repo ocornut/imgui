@@ -815,7 +815,8 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
         desc.Flags = D3D12_DESCRIPTOR_HEAP_FLAG_NONE;
         desc.NodeMask = 1;
 
-        IM_ASSERT(g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&data->RtvDescHeap)) == S_OK);
+        HRESULT hr = g_pd3dDevice->CreateDescriptorHeap(&desc, IID_PPV_ARGS(&data->RtvDescHeap));
+        IM_ASSERT(hr == S_OK);
 
         SIZE_T rtv_descriptor_size = g_pd3dDevice->GetDescriptorHandleIncrementSize(D3D12_DESCRIPTOR_HEAP_TYPE_RTV);
         D3D12_CPU_DESCRIPTOR_HANDLE rtv_handle = data->RtvDescHeap->GetCPUDescriptorHandleForHeapStart();
