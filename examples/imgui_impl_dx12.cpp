@@ -848,6 +848,16 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
     // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
     if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData)
     {
+        //Wait for pending operations to complete to safely release objects below
+        HRESULT hr;
+        if (data->CommandQueue && data->Fence && data->FenceEvent)
+        {
+           hr = data->CommandQueue->Signal(data->Fence, ++data->FenceSignaledValue); IM_ASSERT(hr == S_OK);
+           WaitForSingleObject(data->FenceEvent, 0); // reset any forgotten waits           
+           hr = data->Fence->SetEventOnCompletion(data->FenceSignaledValue, data->FenceEvent); IM_ASSERT(hr == S_OK);
+           WaitForSingleObject(data->FenceEvent, INFINITE);
+        }
+
         SafeRelease(data->CommandQueue);
         SafeRelease(data->CommandList);
         SafeRelease(data->SwapChain);
