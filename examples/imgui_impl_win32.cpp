@@ -154,12 +154,15 @@ static void ImGui_ImplWin32_UpdateMousePos()
     }
 
     // Set mouse position
+    ImVec2 old_pos = io.MousePos;
     io.MousePos = ImVec2(-FLT_MAX, -FLT_MAX);
     POINT pos;
     if (HWND active_window = ::GetForegroundWindow())
         if (active_window == g_hWnd || ::IsChild(active_window, g_hWnd))
             if (::GetCursorPos(&pos) && ::ScreenToClient(g_hWnd, &pos))
                 io.MousePos = ImVec2((float)pos.x, (float)pos.y);
+    if (io.MousePos.x != old_pos.x || io.MousePos.y != old_pos.y)
+        io.NextRefresh = 0;
 }
 
 // Gamepad navigation mapping
@@ -185,6 +188,7 @@ static void ImGui_ImplWin32_UpdateGamepads()
     if (g_HasGamepad && XInputGetState(0, &xinput_state) == ERROR_SUCCESS)
     {
         const XINPUT_GAMEPAD& gamepad = xinput_state.Gamepad;
+        XINPUT_GAMEPAD gamepad_old = gamepad;
         io.BackendFlags |= ImGuiBackendFlags_HasGamepad;
 
         #define MAP_BUTTON(NAV_NO, BUTTON_ENUM)     { io.NavInputs[NAV_NO] = (gamepad.wButtons & BUTTON_ENUM) ? 1.0f : 0.0f; }
@@ -207,6 +211,8 @@ static void ImGui_ImplWin32_UpdateGamepads()
         MAP_ANALOG(ImGuiNavInput_LStickDown,    gamepad.sThumbLY,  -XINPUT_GAMEPAD_LEFT_THUMB_DEADZONE, -32767);
         #undef MAP_BUTTON
         #undef MAP_ANALOG
+        if (0 != memcmp(&gamepad_old, &gamepad, sizeof(gamepad)))
+            io.NextRefresh = 0;
     }
 #endif // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 }
@@ -216,14 +222,41 @@ void    ImGui_ImplWin32_NewFrame()
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer back-end. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
+    INT64 current_time;
+    ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
+
+#if 1
+    while (io.NextRefresh > 0.0f)
+    {
+        double cur_delta = double(current_time - g_Time) / g_TicksPerSecond;
+        if (cur_delta <= io.NextRefresh)
+        {
+            double ms_to_wait_double = (io.NextRefresh - cur_delta) * 1000.0f;
+            unsigned int ms_to_wait = ms_to_wait_double >= MAXDWORD ? INFINITE : unsigned int(ms_to_wait_double);
+            if (ms_to_wait)
+                MsgWaitForMultipleObjectsEx(0, nullptr, ms_to_wait, QS_ALLEVENTS, 0);
+
+            MSG msg;
+            while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
+            {
+                ::TranslateMessage(&msg);
+                ::DispatchMessage(&msg);
+                continue;
+            }
+
+            ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
+            continue;                 
+        }
+        break;
+    }    
+#endif
+
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect;
     ::GetClientRect(g_hWnd, &rect);
     io.DisplaySize = ImVec2((float)(rect.right - rect.left), (float)(rect.bottom - rect.top));
 
     // Setup time step
-    INT64 current_time;
-    ::QueryPerformanceCounter((LARGE_INTEGER *)&current_time);
     io.DeltaTime = (float)(current_time - g_Time) / g_TicksPerSecond;
     g_Time = current_time;
 
@@ -277,6 +310,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
     ImGuiIO& io = ImGui::GetIO();
     switch (msg)
     {
+    case WM_MOUSEMOVE: io.NextRefresh = 0; return 0;
     case WM_LBUTTONDOWN: case WM_LBUTTONDBLCLK:
     case WM_RBUTTONDOWN: case WM_RBUTTONDBLCLK:
     case WM_MBUTTONDOWN: case WM_MBUTTONDBLCLK:
@@ -290,6 +324,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (!ImGui::IsAnyMouseDown() && ::GetCapture() == NULL)
             ::SetCapture(hwnd);
         io.MouseDown[button] = true;
+        io.NextRefresh = 0;
         return 0;
     }
     case WM_LBUTTONUP:
@@ -303,30 +338,42 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (msg == WM_MBUTTONUP) { button = 2; }
         if (msg == WM_XBUTTONUP) { button = (GET_XBUTTON_WPARAM(wParam) == XBUTTON1) ? 3 : 4; }
         io.MouseDown[button] = false;
+        io.NextRefresh = 0;
         if (!ImGui::IsAnyMouseDown() && ::GetCapture() == hwnd)
             ::ReleaseCapture();
         return 0;
     }
     case WM_MOUSEWHEEL:
         io.MouseWheel += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+        io.NextRefresh = 0;
         return 0;
     case WM_MOUSEHWHEEL:
         io.MouseWheelH += (float)GET_WHEEL_DELTA_WPARAM(wParam) / (float)WHEEL_DELTA;
+        io.NextRefresh = 0;
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
         if (wParam < 256)
+        {
             io.KeysDown[wParam] = 1;
+            io.NextRefresh = 0;
+        }
         return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
         if (wParam < 256)
+        {
             io.KeysDown[wParam] = 0;
+            io.NextRefresh = 0;
+        }
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
         if (wParam > 0 && wParam < 0x10000)
+        {
             io.AddInputCharacterUTF16((unsigned short)wParam);
+            io.NextRefresh = 0;
+        }
         return 0;
     case WM_SETCURSOR:
         if (LOWORD(lParam) == HTCLIENT && ImGui_ImplWin32_UpdateMouseCursor())

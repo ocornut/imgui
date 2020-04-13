@@ -4244,11 +4244,30 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         if (render_cursor)
         {
             state->CursorAnim += io.DeltaTime;
-            bool cursor_is_visible = (!g.IO.ConfigInputTextCursorBlink) || (state->CursorAnim <= 0.0f) || ImFmod(state->CursorAnim, 1.20f) <= 0.80f;
+            
             ImVec2 cursor_screen_pos = draw_pos + cursor_offset - draw_scroll;
             ImRect cursor_screen_rect(cursor_screen_pos.x, cursor_screen_pos.y - g.FontSize + 0.5f, cursor_screen_pos.x + 1.0f, cursor_screen_pos.y - 1.5f);
-            if (cursor_is_visible && cursor_screen_rect.Overlaps(clip_rect))
-                draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+            
+            bool cursor_is_visible = cursor_screen_rect.Overlaps(clip_rect);
+            if (cursor_is_visible)
+            {
+                if (g.IO.ConfigInputTextCursorBlink)
+                {
+                    float next_refresh_time = -state->CursorAnim;
+                    if (state->CursorAnim > 0.0f)
+                    {
+                        float modded = ImFmod(state->CursorAnim, 1.20f);
+                        bool now_visible_blink_phase = modded <= 0.80f;
+                        state->CursorAnim = modded; //prevent fp error from accumulation
+                        next_refresh_time = now_visible_blink_phase ? 0.80f - modded : 1.20f - modded;
+                        cursor_is_visible = now_visible_blink_phase;
+                    }
+                    g.IO.NextRefresh = next_refresh_time < g.IO.NextRefresh ? next_refresh_time : g.IO.NextRefresh;
+                }
+
+                if (cursor_is_visible)
+                    draw_window->DrawList->AddLine(cursor_screen_rect.Min, cursor_screen_rect.GetBL(), GetColorU32(ImGuiCol_Text));
+            }
 
             // Notify OS of text input position for advanced IME (-1 x offset so that Windows IME can cover our cursor. Bit of an extra nicety.)
             if (!is_readonly)

@@ -3893,6 +3893,9 @@ void ImGui::NewFrame()
     g.BeginPopupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow, false);
 
+    // set 'no need for refresh later' initially until one of the widgets tells otherwise
+    g.IO.NextRefresh = std::numeric_limits<float>::infinity();
+
     // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
     UpdateDebugToolItemPicker();
 
