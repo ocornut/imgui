@@ -228,7 +228,43 @@ struct ImVec4
 #endif
 };
 
-typedef const char* ImStr;
+#define IM_IMSTR_LENGTH(s)          (size_t)(s.Begin ? (s.End ? s.End - s.Begin : strlen(s.Begin)) : 0)
+#define IM_IMSTR_ENSURE_HAS_END(s)  if (s.End == NULL) s.End = s.Begin + strlen(s.Begin)
+
+// String view class.
+struct ImStr
+{
+    const char* Begin;
+    const char* End;
+    ImStr() { Begin = End = NULL; }
+    ImStr(const char* b) { Begin = b; End = NULL; }
+    ImStr(const char* b, const char* e) { Begin = b; End = e; }
+    ImStr(const char* b, size_t size) { Begin = b; End = b + size; }
+    bool Empty() const { return Begin == NULL || Begin == End || Begin[0] == 0; }
+    // void EnsureHasEnd() { if (End == NULL) End = Begin + Length(); }
+    // size_t Length() const
+    // {
+    //     if (Begin == NULL)
+    //         return 0;
+    //     if (End == NULL)
+    //         return strlen(Begin);
+    //     return (size_t)(End - Begin);
+    // }
+    bool operator==(ImStr other) const
+    {
+        if (Begin == other.Begin && End == other.End)
+            return true;
+        size_t len = IM_IMSTR_LENGTH((*this));
+        if (len == IM_IMSTR_LENGTH(other))
+            return memcmp(Begin, other.Begin, len) == 0;
+        return false;
+    }
+    operator bool() const { return Begin != NULL; }
+    char operator[](int index) const { return Begin[index]; }
+#ifdef IM_IMSTR_CLASS_EXTRA
+    IM_IMSTR_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImStr.
+#endif
+};
 
 //-----------------------------------------------------------------------------
 // ImGui: Dear ImGui end-user API
@@ -408,17 +444,18 @@ namespace ImGui
     // - You can also use the "Label##foobar" syntax within widget label to distinguish them from each others.
     // - In this header file we use the "label"/"name" terminology to denote a string that will be displayed and used as an ID,
     //   whereas "str_id" denote a string that is only used as an ID and not normally displayed.
-    IMGUI_API void          PushID(const char* str_id);                                     // push string into the ID stack (will hash string).
-    IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end);       // push string into the ID stack (will hash string).
+    IMGUI_API void          PushID(ImStr str_id);                                           // push string into the ID stack (will hash string).
+    IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end = NULL);// push string into the ID stack (will hash string).
     IMGUI_API void          PushID(const void* ptr_id);                                     // push pointer into the ID stack (will hash pointer).
     IMGUI_API void          PushID(int int_id);                                             // push integer into the ID stack (will hash integer).
     IMGUI_API void          PopID();                                                        // pop from the ID stack.
-    IMGUI_API ImGuiID       GetID(const char* str_id);                                      // calculate unique ID (hash of whole ID stack + given parameter). e.g. if you want to query into ImGuiStorage yourself
-    IMGUI_API ImGuiID       GetID(const char* str_id_begin, const char* str_id_end);
+    IMGUI_API ImGuiID       GetID(ImStr str_id);                                            // calculate unique ID (hash of whole ID stack + given parameter). e.g. if you want to query into ImGuiStorage yourself
+    IMGUI_API ImGuiID       GetID(const char* str_id_begin, const char* str_id_end = NULL);
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets: Text
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL); // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
+    // FIXME-IMSTR: Functions taking format should use ImStr. It breaks IM_FMTARGS() macro however.
+    IMGUI_API void          TextUnformatted(ImStr text);                                    // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
     IMGUI_API void          Text(const char* fmt, ...)                                      IM_FMTARGS(1); // formatted text
     IMGUI_API void          TextV(const char* fmt, va_list args)                            IM_FMTLIST(1);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...)            IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
@@ -465,54 +502,57 @@ namespace ImGui
     // - Use v_min < v_max to clamp edits to given limits. Note that CTRL+Click manual input can override those limits.
     // - Use v_max = FLT_MAX / INT_MAX etc to avoid clamping to a maximum, same with v_min = -FLT_MAX / INT_MIN to avoid clamping to a minimum.
     // - Use v_min > v_max to lock edits.
-    IMGUI_API bool          DragFloat(ImStr label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);     // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragFloat2(ImStr label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          DragFloat3(ImStr label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          DragFloat4(ImStr label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          DragFloatRange2(ImStr label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", const char* format_max = NULL, float power = 1.0f);
-    IMGUI_API bool          DragInt(ImStr label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d");                                       // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragInt2(ImStr label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d");
-    IMGUI_API bool          DragInt3(ImStr label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d");
-    IMGUI_API bool          DragInt4(ImStr label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d");
-    IMGUI_API bool          DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", const char* format_max = NULL);
-    IMGUI_API bool          DragScalar(ImStr label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min = NULL, const void* p_max = NULL, const char* format = NULL, float power = 1.0f);
-    IMGUI_API bool          DragScalarN(ImStr label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min = NULL, const void* p_max = NULL, const char* format = NULL, float power = 1.0f);
+    // - Format parameter is limited to 63 bytes.
+    IMGUI_API bool          DragFloat(ImStr label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr format = "%.3f", float power = 1.0f);     // If v_min >= v_max we have no bound
+    IMGUI_API bool          DragFloat2(ImStr label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloat3(ImStr label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloat4(ImStr label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          DragFloatRange2(ImStr label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, ImStr format = "%.3f", ImStr format_max = NULL, float power = 1.0f);
+    IMGUI_API bool          DragInt(ImStr label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr format = "%d");                                       // If v_min >= v_max we have no bound
+    IMGUI_API bool          DragInt2(ImStr label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr format = "%d");
+    IMGUI_API bool          DragInt3(ImStr label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr format = "%d");
+    IMGUI_API bool          DragInt4(ImStr label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr format = "%d");
+    IMGUI_API bool          DragIntRange2(ImStr label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, ImStr format = "%d", ImStr format_max = NULL);
+    IMGUI_API bool          DragScalar(ImStr label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min = NULL, const void* p_max = NULL, ImStr format = NULL, float power = 1.0f);
+    IMGUI_API bool          DragScalarN(ImStr label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min = NULL, const void* p_max = NULL, ImStr format = NULL, float power = 1.0f);
 
     // Widgets: Sliders
     // - CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped and can go off-bounds.
     // - Adjust format string to decorate the value with a prefix, a suffix, or adapt the editing and display precision e.g. "%.3f" -> 1.234; "%5.2f secs" -> 01.23 secs; "Biscuit: %.0f" -> Biscuit: 1; etc.
-    IMGUI_API bool          SliderFloat(ImStr label, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);     // adjust format to decorate the value with a prefix or a suffix for in-slider labels or unit display. Use power!=1.0 for power curve sliders
-    IMGUI_API bool          SliderFloat2(ImStr label, float v[2], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderFloat3(ImStr label, float v[3], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderFloat4(ImStr label, float v[4], float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          SliderAngle(ImStr label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg");
-    IMGUI_API bool          SliderInt(ImStr label, int* v, int v_min, int v_max, const char* format = "%d");
-    IMGUI_API bool          SliderInt2(ImStr label, int v[2], int v_min, int v_max, const char* format = "%d");
-    IMGUI_API bool          SliderInt3(ImStr label, int v[3], int v_min, int v_max, const char* format = "%d");
-    IMGUI_API bool          SliderInt4(ImStr label, int v[4], int v_min, int v_max, const char* format = "%d");
-    IMGUI_API bool          SliderScalar(ImStr label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format = NULL, float power = 1.0f);
-    IMGUI_API bool          SliderScalarN(ImStr label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, const char* format = NULL, float power = 1.0f);
-    IMGUI_API bool          VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min, float v_max, const char* format = "%.3f", float power = 1.0f);
-    IMGUI_API bool          VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, const char* format = "%d");
-    IMGUI_API bool          VSliderScalar(ImStr label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format = NULL, float power = 1.0f);
+    // - Format parameter is limited to 63 bytes.
+    IMGUI_API bool          SliderFloat(ImStr label, float* v, float v_min, float v_max, ImStr format = "%.3f", float power = 1.0f);     // adjust format to decorate the value with a prefix or a suffix for in-slider labels or unit display. Use power!=1.0 for power curve sliders
+    IMGUI_API bool          SliderFloat2(ImStr label, float v[2], float v_min, float v_max, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat3(ImStr label, float v[3], float v_min, float v_max, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderFloat4(ImStr label, float v[4], float v_min, float v_max, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          SliderAngle(ImStr label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, ImStr format = "%.0f deg");
+    IMGUI_API bool          SliderInt(ImStr label, int* v, int v_min, int v_max, ImStr format = "%d");
+    IMGUI_API bool          SliderInt2(ImStr label, int v[2], int v_min, int v_max, ImStr format = "%d");
+    IMGUI_API bool          SliderInt3(ImStr label, int v[3], int v_min, int v_max, ImStr format = "%d");
+    IMGUI_API bool          SliderInt4(ImStr label, int v[4], int v_min, int v_max, ImStr format = "%d");
+    IMGUI_API bool          SliderScalar(ImStr label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStr format = NULL, float power = 1.0f);
+    IMGUI_API bool          SliderScalarN(ImStr label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, ImStr format = NULL, float power = 1.0f);
+    IMGUI_API bool          VSliderFloat(ImStr label, const ImVec2& size, float* v, float v_min, float v_max, ImStr format = "%.3f", float power = 1.0f);
+    IMGUI_API bool          VSliderInt(ImStr label, const ImVec2& size, int* v, int v_min, int v_max, ImStr format = "%d");
+    IMGUI_API bool          VSliderScalar(ImStr label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, ImStr format = NULL, float power = 1.0f);
 
     // Widgets: Input with Keyboard
     // - If you want to use InputText() with std::string or any custom dynamic string type, see misc/cpp/imgui_stdlib.h and comments in imgui_demo.cpp.
     // - Most of the ImGuiInputTextFlags flags are only useful for InputText() and not for InputFloatX, InputIntX, InputDouble etc.
+    // - Format parameter is limited to 63 bytes.
     IMGUI_API bool          InputText(ImStr label, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
-    IMGUI_API bool          InputTextMultiline(ImStr label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(0,0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
+    IMGUI_API bool          InputTextMultiline(ImStr label, char* buf, size_t buf_size, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          InputTextWithHint(ImStr label, ImStr hint, char* buf, size_t buf_size, ImGuiInputTextFlags flags = 0, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
-    IMGUI_API bool          InputFloat(ImStr label, float* v, float step = 0.0f, float step_fast = 0.0f, const char* format = "%.3f", ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputFloat2(ImStr label, float v[2], const char* format = "%.3f", ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputFloat3(ImStr label, float v[3], const char* format = "%.3f", ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputFloat4(ImStr label, float v[4], const char* format = "%.3f", ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputFloat(ImStr label, float* v, float step = 0.0f, float step_fast = 0.0f, ImStr format = "%.3f", ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputFloat2(ImStr label, float v[2], ImStr format = "%.3f", ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputFloat3(ImStr label, float v[3], ImStr format = "%.3f", ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputFloat4(ImStr label, float v[4], ImStr format = "%.3f", ImGuiInputTextFlags flags = 0);
     IMGUI_API bool          InputInt(ImStr label, int* v, int step = 1, int step_fast = 100, ImGuiInputTextFlags flags = 0);
     IMGUI_API bool          InputInt2(ImStr label, int v[2], ImGuiInputTextFlags flags = 0);
     IMGUI_API bool          InputInt3(ImStr label, int v[3], ImGuiInputTextFlags flags = 0);
     IMGUI_API bool          InputInt4(ImStr label, int v[4], ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputDouble(ImStr label, double* v, double step = 0.0, double step_fast = 0.0, const char* format = "%.6f", ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputScalar(ImStr label, ImGuiDataType data_type, void* p_data, const void* p_step = NULL, const void* p_step_fast = NULL, const char* format = NULL, ImGuiInputTextFlags flags = 0);
-    IMGUI_API bool          InputScalarN(ImStr label, ImGuiDataType data_type, void* p_data, int components, const void* p_step = NULL, const void* p_step_fast = NULL, const char* format = NULL, ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputDouble(ImStr label, double* v, double step = 0.0, double step_fast = 0.0, ImStr format = "%.6f", ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputScalar(ImStr label, ImGuiDataType data_type, void* p_data, const void* p_step = NULL, const void* p_step_fast = NULL, ImStr format = NULL, ImGuiInputTextFlags flags = 0);
+    IMGUI_API bool          InputScalarN(ImStr label, ImGuiDataType data_type, void* p_data, int components, const void* p_step = NULL, const void* p_step_fast = NULL, ImStr format = NULL, ImGuiInputTextFlags flags = 0);
 
     // Widgets: Color Editor/Picker (tip: the ColorEdit* functions have a little colored preview square that can be left-clicked to open a picker, and right-clicked to open an option menu.)
     // - Note that in C++ a 'float v[X]' function argument is the _same_ as 'float* v', the array syntax is just a way to document the number of elements that are expected to be accessible.
@@ -569,7 +609,7 @@ namespace ImGui
     IMGUI_API void          Value(ImStr prefix, bool b);
     IMGUI_API void          Value(ImStr prefix, int v);
     IMGUI_API void          Value(ImStr prefix, unsigned int v);
-    IMGUI_API void          Value(ImStr prefix, float v, const char* float_format = NULL);
+    IMGUI_API void          Value(ImStr prefix, float v, ImStr float_format = NULL);
 
     // Widgets: Menus
     // - Use BeginMenuBar() on a window ImGuiWindowFlags_MenuBar to append to its menu bar.
@@ -697,7 +737,7 @@ namespace ImGui
     IMGUI_API void          EndChildFrame();                                                    // always call EndChildFrame() regardless of BeginChildFrame() return values (which indicates a collapsed/clipped window)
 
     // Text Utilities
-    IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
+    IMGUI_API ImVec2        CalcTextSize(ImStr text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
 
     // Color Utilities
     IMGUI_API ImVec4        ColorConvertU32ToFloat4(ImU32 in);
@@ -1573,7 +1613,7 @@ struct ImGuiInputTextCallbackData
     ImWchar             EventChar;      // Character input                      // Read-write   // [CharFilter] Replace character with another one, or set to zero to drop. return 1 is equivalent to setting EventChar=0;
     ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only    // [Completion,History]
     char*               Buf;            // Text buffer                          // Read-write   // [Resize] Can replace pointer / [Completion,History,Always] Only write to pointed data, don't replace the actual pointer!
-    int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: string.length()
+    int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: IM_IMSTR_LENGTH(string)
     int                 BufSize;        // Buffer size (in bytes) = capacity+1  // Read-only    // [Resize,Completion,History,Always] Include zero-terminator storage. In C land == ARRAYSIZE(my_char_array), in C++ land: string.capacity()+1
     bool                BufDirty;       // Set if you modify Buf/BufTextLen!    // Write        // [Completion,History,Always]
     int                 CursorPos;      //                                      // Read-write   // [Completion,History,Always]
@@ -1584,8 +1624,12 @@ struct ImGuiInputTextCallbackData
     // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
     IMGUI_API ImGuiInputTextCallbackData();
     IMGUI_API void      DeleteChars(int pos, int bytes_count);
-    IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
+    IMGUI_API void      InsertChars(int pos, ImStr text);
     bool                HasSelection() const { return SelectionStart != SelectionEnd; }
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // [1.76: 2020/02/17: Switching to use ImStr instead of text + text_end pointers]
+    IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end) { InsertChars(pos, ImStr(text, text_end)); }
+#endif
 };
 
 // Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
@@ -1615,7 +1659,7 @@ struct ImGuiPayload
 
     ImGuiPayload()  { Clear(); }
     void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
-    bool IsDataType(ImStr type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    bool IsDataType(ImStr type) const       { return DataFrameCount != -1 && type == ImStr(DataType); }
     bool IsPreview() const                  { return Preview; }
     bool IsDelivery() const                 { return Delivery; }
 };
@@ -1628,6 +1672,9 @@ struct ImGuiPayload
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
+    // OBSOLETED in 1.76 (from February 2020)
+    static inline void   TextUnformatted(const char* text, const char* text_end)                                                                  { TextUnformatted(ImStr(text, text_end)); }
+    static inline ImVec2 CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash = false, float wrap_width = -1.0f) { return CalcTextSize(ImStr(text, text_end), hide_text_after_double_hash, wrap_width); }
     // OBSOLETED in 1.72 (from July 2019)
     static inline void  TreeAdvanceToLabelPos()               { SetCursorPosX(GetCursorPosX() + GetTreeNodeToLabelSpacing()); }
     // OBSOLETED in 1.71 (from June 2019)
@@ -1641,7 +1688,7 @@ namespace ImGui
     // OBSOLETED in 1.63 (between Aug 2018 and Sept 2018)
     static inline bool  IsItemDeactivatedAfterChange()        { return IsItemDeactivatedAfterEdit(); }
     // OBSOLETED in 1.61 (between Apr 2018 and Aug 2018)
-    IMGUI_API bool      InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags flags = 0); // Use the 'const char* format' version instead of 'decimal_precision'!
+    IMGUI_API bool      InputFloat(const char* label, float* v, float step, float step_fast, int decimal_precision, ImGuiInputTextFlags flags = 0); // Use the 'ImStr format' version instead of 'decimal_precision'!
     IMGUI_API bool      InputFloat2(const char* label, float v[2], int decimal_precision, ImGuiInputTextFlags flags = 0);
     IMGUI_API bool      InputFloat3(const char* label, float v[3], int decimal_precision, ImGuiInputTextFlags flags = 0);
     IMGUI_API bool      InputFloat4(const char* label, float v[4], int decimal_precision, ImGuiInputTextFlags flags = 0);
@@ -1680,7 +1727,7 @@ struct ImGuiTextFilter
 {
     IMGUI_API           ImGuiTextFilter(ImStr default_filter = "");
     IMGUI_API bool      Draw(ImStr label = "Filter (inc,-exc)", float width = 0.0f);  // Helper calling InputText+Build
-    IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
+    IMGUI_API bool      PassFilter(ImStr text) const;
     IMGUI_API void      Build();
     void                Clear()          { InputBuf[0] = 0; Build(); }
     bool                IsActive() const { return !Filters.empty(); }
@@ -1699,6 +1746,11 @@ struct ImGuiTextFilter
     char                    InputBuf[256];
     ImVector<ImGuiTextRange>Filters;
     int                     CountGrep;
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // [1.76: 2020/02/17: Switching to use ImStr instead of text + text_end pointers]
+    inline bool         PassFilter(const char* text, const char* text_end = NULL) const { return PassFilter(ImStr(text, text_end)); }
+#endif
 };
 
 // Helper: Growable text buffer for logging/accumulating text
@@ -1717,9 +1769,13 @@ struct ImGuiTextBuffer
     void                clear()                 { Buf.clear(); }
     void                reserve(int capacity)   { Buf.reserve(capacity); }
     const char*         c_str() const           { return Buf.Data ? Buf.Data : EmptyString; }
-    IMGUI_API void      append(const char* str, const char* str_end = NULL);
+    IMGUI_API void      append(ImStr str);
     IMGUI_API void      appendf(const char* fmt, ...) IM_FMTARGS(2);
     IMGUI_API void      appendfv(const char* fmt, va_list args) IM_FMTLIST(2);
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    inline void         append(const char* str, const char* str_end) { append(ImStr(str, str_end)); }
+#endif
 };
 
 // Helper: Key->Value storage
@@ -2010,8 +2066,8 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 12);
     IMGUI_API void  AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness = 1.0f);
     IMGUI_API void  AddNgonFilled(const ImVec2& center, float radius, ImU32 col, int num_segments);
-    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
-    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, ImStr text);
+    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStr text, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, bool closed, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col); // Note: Anti-aliased filling requires points to be in clockwise order.
     IMGUI_API void  AddBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0);
@@ -2064,6 +2120,12 @@ struct ImDrawList
     inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)     { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); }
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // [1.76: 2020/02/17: Switching to use ImStr instead of text + text_end pointers]
+    inline void AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL) { AddText(font, font_size, pos, col, ImStr(text_begin, text_end), wrap_width, cpu_fine_clip_rect); }
+    inline void AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)                     { AddText(NULL, 0.0f, pos, col, ImStr(text_begin, text_end)); }
+#endif
 };
 
 // All draw data to render a Dear ImGui frame
@@ -2141,7 +2203,7 @@ struct ImFontGlyphRangesBuilder
     inline bool     GetBit(size_t n) const  { int off = (int)(n >> 5); ImU32 mask = 1u << (n & 31); return (UsedChars[off] & mask) != 0; }  // Get bit n in the array
     inline void     SetBit(size_t n)        { int off = (int)(n >> 5); ImU32 mask = 1u << (n & 31); UsedChars[off] |= mask; }               // Set bit n in the array
     inline void     AddChar(ImWchar c)      { SetBit(c); }                      // Add character
-    IMGUI_API void  AddText(const char* text, const char* text_end = NULL);     // Add string (each character of the UTF-8 string are added)
+    IMGUI_API void  AddText(ImStr text);                                        // Add string (each character of the UTF-8 string are added)
     IMGUI_API void  AddRanges(const ImWchar* ranges);                           // Add ranges, e.g. builder.AddRanges(ImFontAtlas::GetGlyphRangesDefault()) to force add all of ASCII/Latin+Ext
     IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                 // Output new ranges
 };
@@ -2309,10 +2371,10 @@ struct ImFont
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
+    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, ImStr text, const char** remaining = NULL) const; // utf8
+    IMGUI_API const char*       CalcWordWrapPositionA(float scale, ImStr text, float wrap_width) const;
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, ImWchar c) const;
-    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
+    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStr text, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
 
     // [Internal] Don't use!
     IMGUI_API void              BuildLookupTable();
@@ -2323,6 +2385,13 @@ struct ImFont
     IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API void              SetFallbackChar(ImWchar c);
     IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+    // [1.76: 2020/02/17: Switching to use ImStr instead of text + text_end pointers]
+    inline ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const { return CalcTextSizeA(size, max_width, wrap_width, ImStr(text_begin, text_end), remaining); }
+    inline const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const { return CalcWordWrapPositionA(scale, ImStr(text, text_end), wrap_width); }
+    inline void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const { RenderText(draw_list, size, pos, col, clip_rect, ImStr(text_begin, text_end), wrap_width, cpu_fine_clip); }
+#endif
 };
 
 #if defined(__clang__)

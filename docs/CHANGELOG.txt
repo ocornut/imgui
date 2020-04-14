@@ -36,6 +36,26 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- Switched to use ImStr and ImWStr string span in the API. Following functions taking string start and end were obsoleted:
+  - TextUnformatted(text, text_end)
+  - CalcTextSize(text, text_end, hide_text_after_double_hash, wrap_width)
+  - ImGuiTextBuffer::append(str, str_end)
+  - ImFont::CalcTextSizeA(size, max_width, wrap_width, text_begin, text_end, remaining)
+  - ImFont::CalcWordWrapPositionA(scale, text, text_end, wrap_width)
+  - ImFont::RenderText(draw_list, size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip)
+  - RenderText(pos, text, text_end, hide_text_after_hash)
+  - RenderTextWrapped(pos, text, text_end, wrap_width)
+  - RenderTextClipped(pos_min, pos_max, text, text_end, text_size_if_known, align, clip_rect)
+  - RenderTextClippedEx(draw_list, pos_min, pos_max, text, text_end, text_size_if_known, align, clip_rect)
+  - RenderTextEllipsis(draw_list, pos_min, pos_max, clip_max_x, ellipsis_max_x, text, text_end, text_size_if_known)
+  - FindRenderedTextEnd(text, text_end)
+  - LogRenderedText(ref_pos, text, text_end)
+  - TextEx(text, text_end, flags)
+  - ImGuiWindow::GetID(str, str_end)
+  - ImGuiWindow::GetIDNoKeepAlive(str, str_end)
+  - ImDrawList::AddText(font, font_size, pos, col, text_begin, text_end, wrap_width, cpu_fine_clip_rect)
+  - ImDrawList::AddText(pos, col, text_begin, text_end)
+  - ImGuiTextFilter::PassFilter(text, text_end)
 - Drag and Drop, Nav: Disabling navigation arrow keys when drag and drop is active. In the docking
   branch pressing arrow keys while dragging a window from a tab could trigger an assert. (#3025)
 - BeginMenu: Using same ID multiple times appends content to a menu. (#1207) [@rokups]
