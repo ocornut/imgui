@@ -217,7 +217,7 @@ static void ImGui_ImplWin32_UpdateGamepads()
 #endif // #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 }
 
-void    ImGui_ImplWin32_NewFrame()
+bool    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer back-end. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
@@ -238,13 +238,17 @@ void    ImGui_ImplWin32_NewFrame()
 
             MSG msg;
             while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
-            {
-                ::TranslateMessage(&msg);
-                ::DispatchMessage(&msg);
-                continue;
+            {               
+               if (msg.message != WM_QUIT)
+               {
+                  ::TranslateMessage(&msg);
+                  ::DispatchMessage(&msg);
+                  continue;
+               }
+               return false;
             }
 
-            ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);
+            ::QueryPerformanceCounter((LARGE_INTEGER*)&current_time);            
             continue;                 
         }
         break;
@@ -280,6 +284,8 @@ void    ImGui_ImplWin32_NewFrame()
 
     // Update game controllers (if enabled and available)
     ImGui_ImplWin32_UpdateGamepads();
+
+    return true;
 }
 
 // Allow compilation with old Windows SDK. MinGW doesn't have default _WIN32_WINNT/WINVER versions.
@@ -383,6 +389,8 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if ((UINT)wParam == DBT_DEVNODES_CHANGED)
             g_WantUpdateHasGamepad = true;
         return 0;
+    case WM_CLOSE:
+       io.NextRefresh = 0.0f;
     }
     return 0;
 }

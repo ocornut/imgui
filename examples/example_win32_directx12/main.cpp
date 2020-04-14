@@ -132,7 +132,9 @@ int main(int, char**)
 
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
-        ImGui_ImplWin32_NewFrame();
+        if (!ImGui_ImplWin32_NewFrame())
+           break;
+
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
