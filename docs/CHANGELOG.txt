@@ -34,10 +34,20 @@ HOW TO UPDATE?
  VERSION 1.77 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+Other Changes:
+
+- TreeNode: Fixed bug where BeginDragDropSource() failed when the _OpenOnDoubleClick flag is
+  enabled (bug introduced in 1.76, but pre-1.76 it would also fail unless the _OpenOnArrow
+  flag was also set, and _OpenOnArrow is frequently set along with _OpenOnDoubleClick).
+
 
 -----------------------------------------------------------------------
  VERSION 1.76 (Released 2020-04-12)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.76
 
 Other Changes:
 
