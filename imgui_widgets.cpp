@@ -7892,6 +7892,12 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
     return flags;
 }
 
+ImGuiTable* ImGui::FindTableByID(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.Tables.GetByKey(id);
+}
+
 // About 'outer_size':
 //   The meaning of outer_size needs to differ slightly depending of if we are using ScrollX/ScrollY flags.
 //   With ScrollX/ScrollY: using a child window for scrolling:
@@ -9902,7 +9908,7 @@ void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* click
     table->IsSortSpecsDirty = true;
 }
 
-// Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set) 
+// Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set)
 // You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since last call, or the first time.
 // Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
 const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
