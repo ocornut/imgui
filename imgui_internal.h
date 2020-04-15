@@ -547,7 +547,7 @@ struct ImSpanAllocator
     inline void  SetArenaBasePtr(void* base_ptr)    { BasePtr = (char*)base_ptr; }
     inline void* GetSpanPtrBegin(int n)             { IM_ASSERT(n >= 0 && n < CHUNKS && CurrSpan == CHUNKS); return (void*)(BasePtr + Offsets[n]); }
     inline void* GetSpanPtrEnd(int n)               { IM_ASSERT(n >= 0 && n < CHUNKS && CurrSpan == CHUNKS); return (n + 1 < CHUNKS) ? BasePtr + Offsets[n + 1] : (void*)(BasePtr + TotalSize); }
-    template<typename T> 
+    template<typename T>
     inline void  GetSpan(int n, ImSpan<T>* span)    { span->set((T*)GetSpanPtrBegin(n), (T*)GetSpanPtrEnd(n)); }
 };
 
@@ -1901,7 +1901,7 @@ struct ImGuiTableColumn
     float                   WidthRequested;                 // Master width data when !(Flags & _WidthStretch)
     float                   WidthGiven;                     // == (MaxX - MinX). FIXME-TABLE: Store all persistent width in multiple of FontSize?
     float                   StartXRows;                     // Start position for the frame, currently ~(MinX + CellPaddingX)
-    float                   StartXHeaders;                  
+    float                   StartXHeaders;
     float                   ContentMaxPosRowsFrozen;        // Submitted contents absolute maximum position, from which we can infer width.
     float                   ContentMaxPosRowsUnfrozen;      // (kept as float because we need to manipulate those between each cell change)
     float                   ContentMaxPosHeadersUsed;
@@ -2003,7 +2003,7 @@ struct ImGuiTable
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
     ImS8                        ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
     ImS8                        LastResizedColumn;          // Index of column being resized from previous frame.
-    ImS8                        HeldHeaderColumn;           // Index of column header being held. 
+    ImS8                        HeldHeaderColumn;           // Index of column header being held.
     ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
     ImS8                        ReorderColumnDir;           // -1 or +1
     ImS8                        RightMostActiveColumn;      // Index of right-most non-hidden column.
@@ -2246,6 +2246,7 @@ namespace ImGui
     IMGUI_API float         GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offset);
 
     // Tables
+    IMGUI_API ImGuiTable*   FindTableByID(ImGuiID id);
     IMGUI_API bool          BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          TableBeginUpdateColumns(ImGuiTable* table);
     IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);

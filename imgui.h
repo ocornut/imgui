@@ -176,7 +176,7 @@ typedef int ImGuiSliderFlags;       // -> enum ImGuiSliderFlags_     // Flags: f
 typedef int ImGuiTabBarFlags;       // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
 typedef int ImGuiTabItemFlags;      // -> enum ImGuiTabItemFlags_    // Flags: for BeginTabItem()
 typedef int ImGuiTableFlags;        // -> enum ImGuiTableFlags_      // Flags: For BeginTable()
-typedef int ImGuiTableColumnFlags;  // -> enum ImGuiTableColumnFlags_// Flags: For TableSetupColumn() 
+typedef int ImGuiTableColumnFlags;  // -> enum ImGuiTableColumnFlags_// Flags: For TableSetupColumn()
 typedef int ImGuiTableRowFlags;     // -> enum ImGuiTableRowFlags_   // Flags: For TableNextRow()
 typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: for TreeNode(), TreeNodeEx(), CollapsingHeader()
 typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin(), BeginChild()
@@ -672,7 +672,7 @@ namespace ImGui
     // - If you are using tables as a sort of grid, populating every columns with the same type of contents,
     //   you may prefer using TableNextCell() instead of TableNextRow() + TableSetColumnIndex().
     // - See Demo->Tables for details.
-    // - See ImGuiTableFlags_ enums for a description of available flags. 
+    // - See ImGuiTableFlags_ enums for a description of available flags.
     #define IMGUI_HAS_TABLE 1
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
