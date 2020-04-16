@@ -2473,7 +2473,7 @@ static void ShowDemoWindowLayout()
         ImGui::InvisibleButton("##dummy", size);
         if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0)) { offset.x += ImGui::GetIO().MouseDelta.x; offset.y += ImGui::GetIO().MouseDelta.y; }
         ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(90, 90, 120, 255));
-        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize()*2.0f, ImVec2(pos.x + offset.x, pos.y + offset.y), IM_COL32(255, 255, 255, 255), "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
+        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize()*2.0f, ImVec2(pos.x + offset.x, pos.y + offset.y), IM_COL32(255, 255, 255, 255), "Line 1 hello\nLine 2 clip me!", 0.0f, &clip_rect);
         ImGui::TreePop();
     }
 }
@@ -3243,7 +3243,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
 
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
 // Here we use the simplified Combo() api that packs items into a single literal string. Useful for quick combo boxes where the choices are known locally.
-bool ImGui::ShowStyleSelector(const char* label)
+bool ImGui::ShowStyleSelector(ImStr label)
 {
     static int style_idx = -1;
     if (ImGui::Combo(label, &style_idx, "Classic\0Dark\0Light\0"))
@@ -3261,7 +3261,7 @@ bool ImGui::ShowStyleSelector(const char* label)
 
 // Demo helper function to select among loaded fonts.
 // Here we use the regular BeginCombo()/EndCombo() api which is more the more flexible one.
-void ImGui::ShowFontSelector(const char* label)
+void ImGui::ShowFontSelector(ImStr label)
 {
     ImGuiIO& io = ImGui::GetIO();
     ImFont* font_current = ImGui::GetFont();
@@ -3934,7 +3934,7 @@ struct ExampleAppConsole
                     if (match_len > 0)
                     {
                         data->DeleteChars((int)(word_start - data->Buf), (int)(word_end-word_start));
-                        data->InsertChars(data->CursorPos, candidates[0], candidates[0] + match_len);
+                        data->InsertChars(data->CursorPos, ImStr(candidates[0], (size_t)match_len));
                     }
 
                     // List matches
@@ -4068,8 +4068,8 @@ struct ExampleAppLog
             {
                 const char* line_start = buf + LineOffsets[line_no];
                 const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
-                if (Filter.PassFilter(line_start, line_end))
-                    ImGui::TextUnformatted(line_start, line_end);
+                if (Filter.PassFilter(ImStr(line_start, line_end)))
+                    ImGui::TextUnformatted(ImStr(line_start, line_end));
             }
         }
         else
@@ -4091,7 +4091,7 @@ struct ExampleAppLog
                 {
                     const char* line_start = buf + LineOffsets[line_no];
                     const char* line_end = (line_no + 1 < LineOffsets.Size) ? (buf + LineOffsets[line_no + 1] - 1) : buf_end;
-                    ImGui::TextUnformatted(line_start, line_end);
+                    ImGui::TextUnformatted(ImStr(line_start, line_end));
                 }
             }
             clipper.End();
@@ -4300,7 +4300,7 @@ static void ShowExampleAppLongText(bool* p_open)
     {
     case 0:
         // Single call to TextUnformatted() with a big buffer
-        ImGui::TextUnformatted(log.begin(), log.end());
+        ImGui::TextUnformatted(ImStr(log.begin(), log.end()));
         break;
     case 1:
         {
