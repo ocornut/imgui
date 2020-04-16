@@ -948,7 +948,8 @@ enum ImGuiNextWindowDataFlags_
     ImGuiNextWindowDataFlags_HasCollapsed       = 1 << 3,
     ImGuiNextWindowDataFlags_HasSizeConstraint  = 1 << 4,
     ImGuiNextWindowDataFlags_HasFocus           = 1 << 5,
-    ImGuiNextWindowDataFlags_HasBgAlpha         = 1 << 6
+    ImGuiNextWindowDataFlags_HasBgAlpha         = 1 << 6,
+    ImGuiNextWindowDataFlags_HasScroll          = 1 << 7
 };
 
 // Storage for SetNexWindow** functions
@@ -962,6 +963,7 @@ struct ImGuiNextWindowData
     ImVec2                      PosPivotVal;
     ImVec2                      SizeVal;
     ImVec2                      ContentSizeVal;
+    ImVec2                      ScrollVal;
     bool                        CollapsedVal;
     ImRect                      SizeConstraintRect;
     ImGuiSizeCallback           SizeCallback;
@@ -1703,6 +1705,7 @@ namespace ImGui
     IMGUI_API ImGuiSettingsHandler* FindSettingsHandler(const char* type_name);
 
     // Scrolling
+    IMGUI_API void          SetNextWindowScroll(const ImVec2& scroll); // Use -1.0f on one axis to leave as-is
     IMGUI_API void          SetScrollX(ImGuiWindow* window, float new_scroll_x);
     IMGUI_API void          SetScrollY(ImGuiWindow* window, float new_scroll_y);
     IMGUI_API void          SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x_ratio = 0.5f);
