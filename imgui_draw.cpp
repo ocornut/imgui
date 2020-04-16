@@ -1574,7 +1574,7 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImGuiTextColorCallback color_callback, void* color_user_data)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1600,7 +1600,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, color_callback, color_user_data);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -3539,7 +3539,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
-void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextColorCallback color_callback, void* color_user_data) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3595,6 +3595,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
     const ImU32 col_untinted = col | ~IM_COL32_A_MASK;
 
+    // Token idx is for user code to track the current token via the color_callback. Otherwise unused by ImGui.
+    int token_idx = 0;
+
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -3624,6 +3627,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         }
 
         // Decode and advance source
+        const char* s_prev = s;
         unsigned int c = (unsigned int)*s;
         if (c < 0x80)
         {
@@ -3702,6 +3706,20 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
                 // Support for untinted glyphs
                 ImU32 glyph_col = glyph->Colored ? col_untinted : col;
+                if (color_callback)
+                {
+                    ImGuiTextColorCallbackData color_callback_data;
+                    color_callback_data.Color = glyph_col;
+                    color_callback_data.TokenIdx = token_idx;
+                    color_callback_data.UserData = color_user_data;
+                    color_callback_data.TextBegin = text_begin;
+                    color_callback_data.TextEnd = text_end;
+                    color_callback_data.Char = s_prev;
+                    color_callback_data.CharValue = c;
+                    color_callback(&color_callback_data);
+                    glyph_col = color_callback_data.Color;
+                    token_idx = color_callback_data.TokenIdx;
+                }
 
                 // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                 {
