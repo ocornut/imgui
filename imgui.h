@@ -479,8 +479,8 @@ namespace ImGui
     IMGUI_API void          TextV(const char* fmt, va_list args)                            IM_FMTLIST(1);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...)            IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
     IMGUI_API void          TextColoredV(const ImVec4& col, const char* fmt, va_list args)  IM_FMTLIST(2);
-    IMGUI_API void          TextColored(ImGuiTextColorCallback callback, void* user_data, const char* fmt, ...)           IM_FMTARGS(2); // color characters in the text differently using the provided callback
-    IMGUI_API void          TextColoredV(ImGuiTextColorCallback callback, void* user_data, const char* fmt, va_list args) IM_FMTLIST(2); // color characters in the text differently using the provided callback
+    IMGUI_API void          TextColored(ImGuiTextColorCallback callback, void* user_data, const char* fmt, ...)           IM_FMTARGS(3); // color characters in the text differently using the provided callback
+    IMGUI_API void          TextColoredV(ImGuiTextColorCallback callback, void* user_data, const char* fmt, va_list args) IM_FMTLIST(3); // color characters in the text differently using the provided callback
     IMGUI_API void          TextDisabled(const char* fmt, ...)                              IM_FMTARGS(1); // shortcut for PushStyleColor(ImGuiCol_Text, style.Colors[ImGuiCol_TextDisabled]); Text(fmt, ...); PopStyleColor();
     IMGUI_API void          TextDisabledV(const char* fmt, va_list args)                    IM_FMTLIST(1);
     IMGUI_API void          TextWrapped(const char* fmt, ...)                               IM_FMTARGS(1); // shortcut for PushTextWrapPos(0.0f); Text(fmt, ...); PopTextWrapPos();. Note that this won't work on an auto-resizing window if there's no other widgets to extend the window width, yoy may need to set a size using SetNextWindowSize().
