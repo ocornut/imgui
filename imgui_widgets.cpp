@@ -5493,10 +5493,12 @@ void ImGui::TreePush(const void* ptr_id)
 
 void ImGui::TreePushOverrideID(ImGuiID id)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     Indent();
     window->DC.TreeDepth++;
     window->IDStack.push_back(id);
+    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_ID, NULL);
 }
 
 void ImGui::TreePop()
