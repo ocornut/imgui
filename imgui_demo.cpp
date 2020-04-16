@@ -1383,6 +1383,7 @@ static void ShowDemoWindowWidgets()
                         TokenizeStr(my_tokens, data->Buf);
                     return 0;
                 }
+                static int Strnicmp(const char* str1, const char* str2, int n) { int d = 0; while (n > 0 && (d = toupper(*str2) - toupper(*str1)) == 0 && *str1) { str1++; str2++; n--; } return d; }
                 static void MyTextColorCallback(ImGuiTextColorCallbackData* data)
                 {
                     ImVector<Token>* my_tokens = (ImVector<Token>*)data->UserData;
@@ -1393,7 +1394,7 @@ static void ShowDemoWindowWidgets()
                         ++data->TokenIdx;
                     if (data->TokenIdx >= my_tokens->size())
                         return;
-                    if (charIdx >= (*my_tokens)[data->TokenIdx].begin && strnicmp(&data->TextBegin[(*my_tokens)[data->TokenIdx].begin], colored_token_prefix, strlen(colored_token_prefix)) == 0)
+                    if (charIdx >= (*my_tokens)[data->TokenIdx].begin && Strnicmp(&data->TextBegin[(*my_tokens)[data->TokenIdx].begin], colored_token_prefix, strlen(colored_token_prefix)) == 0)
                         data->Color = IM_COL32(255, 0, 0, 255); // red
                 }
             };
