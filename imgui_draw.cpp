@@ -461,7 +461,7 @@ void ImDrawList::UpdateClipRect()
 
     // Try to merge with previous command if it matches, else use current command
     ImDrawCmd* prev_cmd = CmdBuffer.Size > 1 ? curr_cmd - 1 : NULL;
-    if (curr_cmd->ElemCount == 0 && prev_cmd && memcmp(&prev_cmd->ClipRect, &curr_clip_rect, sizeof(ImVec4)) == 0 && prev_cmd->TextureId == GetCurrentTextureId() && prev_cmd->UserCallback == NULL)
+    if (curr_cmd->ElemCount == 0 && prev_cmd && memcmp(&prev_cmd->ClipRect, &curr_clip_rect, sizeof(ImVec4)) == 0 && prev_cmd->VtxOffset == _VtxCurrentOffset && prev_cmd->TextureId == GetCurrentTextureId() && prev_cmd->UserCallback == NULL)
         CmdBuffer.pop_back();
     else
         curr_cmd->ClipRect = curr_clip_rect;
@@ -480,7 +480,7 @@ void ImDrawList::UpdateTextureID()
 
     // Try to merge with previous command if it matches, else use current command
     ImDrawCmd* prev_cmd = CmdBuffer.Size > 1 ? curr_cmd - 1 : NULL;
-    if (curr_cmd->ElemCount == 0 && prev_cmd && prev_cmd->TextureId == curr_texture_id && memcmp(&prev_cmd->ClipRect, &GetCurrentClipRect(), sizeof(ImVec4)) == 0 && prev_cmd->UserCallback == NULL)
+    if (curr_cmd->ElemCount == 0 && prev_cmd && prev_cmd->TextureId == curr_texture_id && memcmp(&prev_cmd->ClipRect, &GetCurrentClipRect(), sizeof(ImVec4)) == 0 && prev_cmd->VtxOffset == _VtxCurrentOffset && prev_cmd->UserCallback == NULL)
         CmdBuffer.pop_back();
     else
         curr_cmd->TextureId = curr_texture_id;
@@ -1403,6 +1403,8 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
         if (int sz = ch._IdxBuffer.Size) { memcpy(idx_write, ch._IdxBuffer.Data, sz * sizeof(ImDrawIdx)); idx_write += sz; }
     }
     draw_list->_IdxWritePtr = idx_write;
+    if ((draw_list->CmdBuffer.Size > 0) && (draw_list->CmdBuffer.Data[draw_list->CmdBuffer.Size - 1].VtxOffset != draw_list->_VtxCurrentOffset))
+        draw_list->AddDrawCmd(); // If the vertex offset has changed we need a new draw command
     draw_list->UpdateClipRect(); // We call this instead of AddDrawCmd(), so that empty channels won't produce an extra draw call.
     draw_list->UpdateTextureID();
     _Count = 1;
@@ -1413,6 +1415,7 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
     IM_ASSERT(idx >= 0 && idx < _Count);
     if (_Current == idx)
         return;
+    ImDrawCmd* old_curr_cmd = (draw_list->CmdBuffer.Size > 0) ? &draw_list->CmdBuffer.Data[draw_list->CmdBuffer.Size - 1] : NULL; // The "old" current command
     // Overwrite ImVector (12/16 bytes), four times. This is merely a silly optimization instead of doing .swap()
     memcpy(&_Channels.Data[_Current]._CmdBuffer, &draw_list->CmdBuffer, sizeof(draw_list->CmdBuffer));
     memcpy(&_Channels.Data[_Current]._IdxBuffer, &draw_list->IdxBuffer, sizeof(draw_list->IdxBuffer));
@@ -1420,6 +1423,13 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
     memcpy(&draw_list->CmdBuffer, &_Channels.Data[idx]._CmdBuffer, sizeof(draw_list->CmdBuffer));
     memcpy(&draw_list->IdxBuffer, &_Channels.Data[idx]._IdxBuffer, sizeof(draw_list->IdxBuffer));
     draw_list->_IdxWritePtr = draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size;
+    // If the vertex offset or clip rect changed then we need a new draw call (FIXME: What about user callbacks?)
+    if (draw_list->CmdBuffer.Size > 0)
+    {
+        ImDrawCmd* new_curr_cmd = &draw_list->CmdBuffer.Data[draw_list->CmdBuffer.Size - 1]; // The "new" current command
+        if ((new_curr_cmd->VtxOffset != draw_list->_VtxCurrentOffset) || (old_curr_cmd && (memcmp(&new_curr_cmd->ClipRect, &old_curr_cmd->ClipRect, sizeof(ImVec4)) != 0)))
+            draw_list->AddDrawCmd();
+    }
 }
 
 //-----------------------------------------------------------------------------
