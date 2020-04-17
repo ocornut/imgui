@@ -1907,18 +1907,22 @@ static const char* ImAtoi(const char* src, TYPE* output)
 template<typename TYPE, typename SIGNEDTYPE>
 TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, TYPE v)
 {
-    const char* fmt_start = ImParseFormatFindStart(format);
-    if (fmt_start[0] != '%' || fmt_start[1] == '%') // Don't apply if the value is not visible in the format string
+    char fmt_buf[32];
+    format = ImParseFormatTrimDecorations(format, fmt_buf, IM_ARRAYSIZE(fmt_buf));
+    if (format[0] != '%' || format[1] == '%') // Don't apply if the value is not visible in the format string
         return v;
     char v_str[64];
-    ImFormatString(v_str, IM_ARRAYSIZE(v_str), fmt_start, v);
-    const char* p = v_str;
-    while (*p == ' ')
-        p++;
-    if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
-        v = (TYPE)ImAtof(p);
-    else
-        ImAtoi(p, (SIGNEDTYPE*)&v);
+    ImFormatString(v_str, IM_ARRAYSIZE(v_str), format, v);
+    if (sscanf(v_str, format, (SIGNEDTYPE*)&v) == 0)
+    {
+        const char* p = v_str;
+        while (*p == ' ')
+            p++;
+        if (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double)
+            v = (TYPE)ImAtof(p);
+        else
+            ImAtoi(p, (SIGNEDTYPE*)&v);
+    }
     return v;
 }
 
