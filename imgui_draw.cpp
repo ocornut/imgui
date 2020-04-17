@@ -1423,11 +1423,11 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
     memcpy(&draw_list->CmdBuffer, &_Channels.Data[idx]._CmdBuffer, sizeof(draw_list->CmdBuffer));
     memcpy(&draw_list->IdxBuffer, &_Channels.Data[idx]._IdxBuffer, sizeof(draw_list->IdxBuffer));
     draw_list->_IdxWritePtr = draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size;
-    // If the vertex offset or clip rect changed then we need a new draw call (FIXME: What about user callbacks?)
+    // If the vertex offset, texture ID or clip rect changed then we need a new draw call (FIXME: What about user callbacks?)
     if (draw_list->CmdBuffer.Size > 0)
     {
         ImDrawCmd* new_curr_cmd = &draw_list->CmdBuffer.Data[draw_list->CmdBuffer.Size - 1]; // The "new" current command
-        if ((new_curr_cmd->VtxOffset != draw_list->_VtxCurrentOffset) || (old_curr_cmd && (memcmp(&new_curr_cmd->ClipRect, &old_curr_cmd->ClipRect, sizeof(ImVec4)) != 0)))
+        if ((new_curr_cmd->VtxOffset != draw_list->_VtxCurrentOffset) || (new_curr_cmd->TextureId != (draw_list->_TextureIdStack.Size ? draw_list->_TextureIdStack.Data[draw_list->_TextureIdStack.Size - 1] : (ImTextureID)NULL)) || (old_curr_cmd && (memcmp(&new_curr_cmd->ClipRect, &old_curr_cmd->ClipRect, sizeof(ImVec4)) != 0)))
             draw_list->AddDrawCmd();
     }
 }
