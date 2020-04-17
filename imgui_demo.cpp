@@ -1371,6 +1371,13 @@ static void ShowDemoWindowWidgets()
                         if (token_begin == -1)
                             token_begin = i;
                     }
+                    if (token_begin != -1)
+                    {
+                        Token token;
+                        token.begin = token_begin;
+                        token.end = text_length;
+                        my_tokens->push_back(token);
+                    }
                     return;
 
                 }
