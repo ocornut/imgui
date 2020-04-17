@@ -1387,15 +1387,27 @@ static void ShowDemoWindowWidgets()
                 static void MyTextColorCallback(ImGuiTextColorCallbackData* data)
                 {
                     ImVector<Token>* my_tokens = (ImVector<Token>*)data->UserData;
-                    if (data->TokenIdx >= my_tokens->size())
-                        return;
-                    const int charIdx = data->Char - data->TextBegin;
-                    while (data->TokenIdx < my_tokens->size() && charIdx >= (*my_tokens)[data->TokenIdx].end)
+                    const int char_idx = data->Char - data->TextBegin;
+                    while (data->TokenIdx < my_tokens->size() && char_idx >= (*my_tokens)[data->TokenIdx].end) // jump to the first token that does not end before the current char index (could binary search here)
                         ++data->TokenIdx;
-                    if (data->TokenIdx >= my_tokens->size())
+                    if (data->TokenIdx >= my_tokens->size()) // all tokens end before the current char index
+                    {
+                        data->CharsUntilCallback = 0; // stop calling back
                         return;
-                    if (charIdx >= (*my_tokens)[data->TokenIdx].begin && Strnicmp(&data->TextBegin[(*my_tokens)[data->TokenIdx].begin], colored_token_prefix, strlen(colored_token_prefix)) == 0)
-                        data->Color = IM_COL32(255, 0, 0, 255); // red
+                    }
+                    if (char_idx < (*my_tokens)[data->TokenIdx].begin)
+                    {
+                        data->CharsUntilCallback = (*my_tokens)[data->TokenIdx].begin - char_idx; // wait until we reach the first token
+                        return;
+                    }
+                    // If the current token matches the prefix, color it red
+                    if (Strnicmp(&data->TextBegin[(*my_tokens)[data->TokenIdx].begin], colored_token_prefix, strlen(colored_token_prefix)) == 0)
+                    {
+                        data->Color = IM_COL32(255, 0, 0, 255);
+                        data->CharsForColor = (*my_tokens)[data->TokenIdx].end - char_idx; // color from the current char to the token end
+                    }
+                    // If there is another token, callback once we hit the start of it. otherwise, stop calling back.
+                    data->CharsUntilCallback = (data->TokenIdx + 1 < my_tokens->size()) ? (*my_tokens)[data->TokenIdx + 1].begin - char_idx : 0;
                 }
             };
 

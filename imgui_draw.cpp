@@ -3597,6 +3597,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
     // Token idx is for user code to track the current token via the color_callback. Otherwise unused by ImGui.
     int token_idx = 0;
+    ImU32 col_selected = col;
+    int remaining_chars_for_color = color_callback ? 1 : 0;
+    int remaining_chars_until_callback = color_callback ? 1 : 0;
 
     while (s < text_end)
     {
@@ -3627,18 +3630,38 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
         }
 
         // Decode and advance source
-        const char* s_prev = s;
         unsigned int c = (unsigned int)*s;
-        if (c < 0x80)
+        int advance_bytes = 1;
+        if (c >= 0x80)
         {
-            s += 1;
-        }
-        else
-        {
-            s += ImTextCharFromUtf8(&c, s, text_end);
+            advance_bytes = ImTextCharFromUtf8(&c, s, text_end);
             if (c == 0) // Malformed UTF-8?
                 break;
         }
+
+        if (--remaining_chars_for_color == 0)
+            col_selected = col;
+
+        if (--remaining_chars_until_callback == 0)
+        {
+            ImGuiTextColorCallbackData color_callback_data;
+            color_callback_data.Color = col;
+            color_callback_data.TokenIdx = token_idx;
+            color_callback_data.CharsForColor = 1;
+            color_callback_data.CharsUntilCallback = 1;
+            color_callback_data.UserData = color_user_data;
+            color_callback_data.TextBegin = text_begin;
+            color_callback_data.TextEnd = text_end;
+            color_callback_data.Char = s;
+            color_callback_data.CharValue = c;
+            color_callback(&color_callback_data);
+            col_selected = color_callback_data.Color;
+            token_idx = color_callback_data.TokenIdx;
+            remaining_chars_for_color = ImMax(1, color_callback_data.CharsForColor);
+            remaining_chars_until_callback = ImMax(0, color_callback_data.CharsUntilCallback); // if set to 0, stops calling the callback.
+        }
+
+        s += advance_bytes;
 
         if (c < 32)
         {
@@ -3705,21 +3728,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, Im
                 }
 
                 // Support for untinted glyphs
-                ImU32 glyph_col = glyph->Colored ? col_untinted : col;
-                if (color_callback)
-                {
-                    ImGuiTextColorCallbackData color_callback_data;
-                    color_callback_data.Color = glyph_col;
-                    color_callback_data.TokenIdx = token_idx;
-                    color_callback_data.UserData = color_user_data;
-                    color_callback_data.TextBegin = text_begin;
-                    color_callback_data.TextEnd = text_end;
-                    color_callback_data.Char = s_prev;
-                    color_callback_data.CharValue = c;
-                    color_callback(&color_callback_data);
-                    glyph_col = color_callback_data.Color;
-                    token_idx = color_callback_data.TokenIdx;
-                }
+                ImU32 glyph_col = glyph->Colored ? col_untinted : col_selected;
 
                 // We are NOT calling PrimRectUV() here because non-inlined causes too much overhead in a debug builds. Inlined here:
                 {

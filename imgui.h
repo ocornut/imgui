@@ -2102,15 +2102,17 @@ struct ImGuiInputTextCallbackData
 // Callback data provided for custom text colorization
 struct ImGuiTextColorCallbackData
 {
-    ImU32        Color;     // Read-write. Set to the default text color, can be overwritten per character.
-    int          TokenIdx;  // Read-write. Useful for quick lookup when colors are provided per 'token' in the text. Initialized to 0, and otherwise not used by ImGui.
-    void*        UserData;  // Read-only. What user passed to TextColored() or InputText()
+    ImU32        Color;              // Read-write. Set to the default text color, can be overwritten per character.
+    int          TokenIdx;           // Read-write. Useful for quick lookup when colors are provided per 'token' in the text. Initialized to 0, and otherwise not used by ImGui.
+    int          CharsForColor;      // Write-only. Number of chars to apply this color to before returning to the default color (in most cases this is ImGuiCol_Text). Defaults to 1.
+    int          CharsUntilCallback; // Write-only. Number of chars to draw before calling the callback again. Defaults to 1. If set to 0, never calls the callback again.
+    void*        UserData;           // Read-only. What user passed to TextColored() or InputText()
 
     // Context for the character being drawn
-    const char*  TextBegin; // Read-only. Pointer to the first character of the string.
-    const char*  TextEnd;   // Read-only. Pointer to one past the last character of the string.
-    const char*  Char;      // Read-only. Pointer to the Char being colored. For non-UTF-8, can be used to easily calculate CharIdx = (CharBegin - TextBegin)
-    unsigned int CharValue; // Read-only. Provide a color for this character.
+    const char*  TextBegin;          // Read-only. Pointer to the first character of the string.
+    const char*  TextEnd;            // Read-only. Pointer to one past the last character of the string.
+    const char*  Char;               // Read-only. Pointer to the Char being colored. For non-UTF-8, can be used to easily calculate CharIdx = (CharBegin - TextBegin)
+    unsigned int CharValue;          // Read-only. Provide a color for this character.
 };
 
 // Resizing callback data to apply custom constraint. As enabled by SetNextWindowSizeConstraints(). Callback is called during the next Begin().
