@@ -14222,6 +14222,7 @@ void ImGui::DockBuilderRemoveNodeDockedWindows(ImGuiID root_id, bool clear_persi
         if (want_removal)
         {
             const ImGuiID backup_dock_id = window->DockId;
+            IM_UNUSED(backup_dock_id);
             DockContextProcessUndockWindow(ctx, window, clear_persistent_docking_references);
             if (!clear_persistent_docking_references)
                 IM_ASSERT(window->DockId == backup_dock_id);
