@@ -43,6 +43,7 @@ Other Changes:
   flag was also set, and _OpenOnArrow is frequently set along with _OpenOnDoubleClick).
 - TreeNode: Fixed bug where dragging a payload over a TreeNode() with either _OpenOnDoubleClick
   or _OpenOnArrow would open the node. (#143)
+- Backends: Win32: Support for #define NOGDI, won't try to call GetDeviceCaps(). (#3137, #2327)
 
 
 -----------------------------------------------------------------------
