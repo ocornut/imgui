@@ -5827,6 +5827,99 @@ static void ShowDemoWindowMisc()
             ImGui::TreePop();
         }
 
+        IMGUI_DEMO_MARKER("Inputs, Untranslated Key Input");
+        if (ImGui::TreeNode("Untranslated Key Input"))
+        {
+            static bool use_untranslated_keys = true;
+
+            ImGui::Text("HasUntranslatedKeys: %d", (io.BackendFlags & ImGuiBackednFlags_HasUntranslatedKeys) ? 1 : 0);
+
+            ImGui::Checkbox("Use untranslated keys", &use_untranslated_keys);
+
+            static const ImVec2 key_size = ImVec2(35.0f, 35.0f);
+            static const float  key_rounding = 3.0f;
+            static const ImVec2 key_face_size = ImVec2(25.0f, 25.0f);
+            static const ImVec2 key_face_pos = ImVec2(5.0f, 3.0f);
+            static const float  key_face_rounding = 2.0f;
+            static const ImVec2 key_label_pos = ImVec2(7.0f, 4.0f);
+            static const ImVec2 key_advance = ImVec2(key_size.x - 1.0f, key_size.y - 1.0f);
+            static const float  key_row_offset = 9.0f;
+
+            struct Funcs
+            {
+                static void DrawKey(const ImVec2& pos, const char* label, int key)
+                {
+                    ImDrawList* draw_list = ImGui::GetWindowDrawList();
+                    ImVec2 key_min = pos;
+                    ImVec2 key_max = ImVec2(key_min.x + key_size.x, key_min.y + key_size.y);
+                    draw_list->AddRectFilled(key_min, key_max, IM_COL32(204, 204, 204, 255), key_rounding);
+                    draw_list->AddRect(key_min, key_max, IM_COL32(24, 24, 24, 255), key_rounding);
+                    ImVec2 face_min = ImVec2(key_min.x + key_face_pos.x, key_min.y + key_face_pos.y);
+                    ImVec2 face_max = ImVec2(face_min.x + key_face_size.x, face_min.y + key_face_size.y);
+                    draw_list->AddRect(face_min, face_max, IM_COL32(193, 193, 193, 255), key_face_rounding, ImDrawFlags_RoundCornersAll, 2.0f);
+                    draw_list->AddRectFilled(face_min, face_max, IM_COL32(252, 252, 252, 255), key_face_rounding);
+                    ImVec2 label_min = ImVec2(key_min.x + key_label_pos.x, key_min.y + key_label_pos.y);
+                    draw_list->AddText(label_min, IM_COL32(64, 64, 64, 255), label);
+                    if (key >= 0)
+                    {
+                        int untranslated_key = use_untranslated_keys ? ImGui::GetUntranslatedKey(key) : key;
+                        if (ImGui::IsKeyDown(untranslated_key))
+                            draw_list->AddRectFilled(key_min, key_max, IM_COL32(255, 0, 0, 128), key_rounding);
+                    }
+                }
+            };
+
+            ImVec2 cursor_pos = ImGui::GetCursorScreenPos();
+            ImVec2 board_min = cursor_pos;
+            ImVec2 board_max = ImVec2(cursor_pos.x + 3 * key_advance.x + 2 * key_row_offset + 10.0f, cursor_pos.y + 3 * key_advance.y + 10.0f);
+            ImVec2 start_pos = ImVec2(board_min.x + 5.0f, board_min.y);
+
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            draw_list->PushClipRect(board_min, board_max, true);
+
+            ImVec2 key_pos = start_pos;
+            key_pos.x -= key_advance.x;
+            Funcs::DrawKey(key_pos, "", ImGuiKey_Tab);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "Q", ImGuiKey_Q);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "W", ImGuiKey_W);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "E", ImGuiKey_E);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "R", ImGuiKey_R);
+            key_pos.x = start_pos.x + key_row_offset;
+            key_pos.y += key_advance.y;
+            key_pos.x -= key_advance.x;
+            Funcs::DrawKey(key_pos, "",  ImGuiKey_CapsLock);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "A", ImGuiKey_A);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "S", ImGuiKey_S);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "D", ImGuiKey_D);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "F", ImGuiKey_F);
+            key_pos.x = start_pos.x + key_row_offset * 2;
+            key_pos.y += key_advance.y;
+            key_pos.x -= key_advance.x;
+            Funcs::DrawKey(key_pos, "",  ImGuiKey_LeftShift);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "Z", ImGuiKey_Z);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "X", ImGuiKey_X);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "C", ImGuiKey_C);
+            key_pos.x += key_advance.x;
+            Funcs::DrawKey(key_pos, "V", ImGuiKey_V);
+
+            draw_list->PopClipRect();
+
+            ImGui::Dummy(ImVec2(board_max.x - board_min.x, board_max.y - board_min.y));
+
+            ImGui::TreePop();
+        }
+
         IMGUI_DEMO_MARKER("Inputs, Navigation & Focus/Tabbing");
         if (ImGui::TreeNode("Tabbing"))
         {
