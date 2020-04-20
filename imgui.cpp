@@ -1,4 +1,4 @@
-// dear imgui, v1.76
+// dear imgui, v1.77 WIP
 // (main code and documentation)
 
 // Help:
@@ -2942,6 +2942,10 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
     ImGui::KeepAliveID(id);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
+#endif
     return id;
 }
 
@@ -2950,6 +2954,10 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
     ImGui::KeepAliveID(id);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_Pointer, ptr);
+#endif
     return id;
 }
 
@@ -2958,25 +2966,44 @@ ImGuiID ImGuiWindow::GetID(int n)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
     ImGui::KeepAliveID(id);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_S32, (intptr_t)n);
+#endif
     return id;
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
-    return ImHashStr(str, str_end ? (str_end - str) : 0, seed);
+    ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
+#endif
+    return id;
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
-    return ImHashData(&ptr, sizeof(void*), seed);
+    ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_Pointer, ptr);
+#endif
+    return id;
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n)
 {
     ImGuiID seed = IDStack.back();
-    return ImHashData(&n, sizeof(n), seed);
+    ImGuiID id = ImHashData(&n, sizeof(n), seed);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_S32, (intptr_t)n);
+#endif
+    return id;
 }
 
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
@@ -3976,6 +4003,7 @@ void ImGui::NewFrame()
     g.DragDropAcceptIdCurrRectSurface = FLT_MAX;
     g.DragDropWithinSource = false;
     g.DragDropWithinTarget = false;
+    g.DragDropHoldJustPressedId = 0;
 
     // Update keyboard input state
     // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
@@ -5924,6 +5952,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         UpdateWindowParentAndRootLinks(window, flags, parent_window);
 
     // Process SetNextWindow***() calls
+    // (FIXME: Consider splitting the HasXXX flags into X/Y components
     bool window_pos_set_by_api = false;
     bool window_size_x_set_by_api = false, window_size_y_set_by_api = false;
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasPos)
@@ -5947,6 +5976,19 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window_size_x_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.x > 0.0f);
         window_size_y_set_by_api = (window->SetWindowSizeAllowFlags & g.NextWindowData.SizeCond) != 0 && (g.NextWindowData.SizeVal.y > 0.0f);
         SetWindowSize(window, g.NextWindowData.SizeVal, g.NextWindowData.SizeCond);
+    }
+    if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasScroll)
+    {
+        if (g.NextWindowData.ScrollVal.x >= 0.0f)
+        {
+            window->ScrollTarget.x = g.NextWindowData.ScrollVal.x;
+            window->ScrollTargetCenterRatio.x = 0.0f;
+        }
+        if (g.NextWindowData.ScrollVal.y >= 0.0f)
+        {
+            window->ScrollTarget.y = g.NextWindowData.ScrollVal.y;
+            window->ScrollTargetCenterRatio.y = 0.0f;
+        }
     }
     if (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasContentSize)
         window->ContentSizeExplicit = g.NextWindowData.ContentSizeVal;
@@ -7172,6 +7214,13 @@ void ImGui::SetNextWindowContentSize(const ImVec2& size)
     g.NextWindowData.ContentSizeVal = size;
 }
 
+void ImGui::SetNextWindowScroll(const ImVec2& scroll)
+{
+    ImGuiContext& g = *GImGui;
+    g.NextWindowData.Flags |= ImGuiNextWindowDataFlags_HasScroll;
+    g.NextWindowData.ScrollVal = scroll;
+}
+
 void ImGui::SetNextWindowCollapsed(bool collapsed, ImGuiCond cond)
 {
     ImGuiContext& g = *GImGui;
@@ -7322,32 +7371,41 @@ ImGuiStorage* ImGui::GetStateStorage()
 
 void ImGui::PushID(const char* str_id)
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    window->IDStack.push_back(window->GetIDNoKeepAlive(str_id));
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiID id = window->GetIDNoKeepAlive(str_id);
+    window->IDStack.push_back(id);
 }
 
 void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    window->IDStack.push_back(window->GetIDNoKeepAlive(str_id_begin, str_id_end));
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiID id = window->GetIDNoKeepAlive(str_id_begin, str_id_end);
+    window->IDStack.push_back(id);
 }
 
 void ImGui::PushID(const void* ptr_id)
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    window->IDStack.push_back(window->GetIDNoKeepAlive(ptr_id));
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiID id = window->GetIDNoKeepAlive(ptr_id);
+    window->IDStack.push_back(id);
 }
 
 void ImGui::PushID(int int_id)
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
-    window->IDStack.push_back(window->GetIDNoKeepAlive(int_id));
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiID id = window->GetIDNoKeepAlive(int_id);
+    window->IDStack.push_back(id);
 }
 
 // Push a given id value ignoring the ID stack as a seed.
 void ImGui::PushOverrideID(ImGuiID id)
 {
-    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     window->IDStack.push_back(id);
 }
 

@@ -494,7 +494,7 @@ void ImGui_ImplWin32_EnableDpiAwareness()
     SetProcessDPIAware();
 }
 
-#ifdef _MSC_VER
+#if defined(_MSC_VER) && !defined(NOGDI)
 #pragma comment(lib, "gdi32")   // Link with gdi32.lib for GetDeviceCaps()
 #endif
 
@@ -507,6 +507,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
         if (PFN_GetDpiForMonitor GetDpiForMonitorFn = (PFN_GetDpiForMonitor)::GetProcAddress(shcore_dll, "GetDpiForMonitor"))
             GetDpiForMonitorFn((HMONITOR)monitor, MDT_EFFECTIVE_DPI, &xdpi, &ydpi);
     }
+#ifndef NOGDI
     else
     {
         const HDC dc = ::GetDC(NULL);
@@ -514,6 +515,7 @@ float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
         ydpi = ::GetDeviceCaps(dc, LOGPIXELSY);
         ::ReleaseDC(NULL, dc);
     }
+#endif
     IM_ASSERT(xdpi == ydpi); // Please contact me if you hit this assert!
     return xdpi / 96.0f;
 }

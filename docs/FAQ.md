@@ -168,7 +168,7 @@ Unique ID are implicitly built from the hash of multiple elements that identify 
 - Unique ID are often derived from a string label and at minimum scoped within their host window:
 ```c
 Begin("MyWindow");
-Button("OK");          // Label = "OK",     ID = hash of ("MyWindow" "OK")
+Button("OK");          // Label = "OK",     ID = hash of ("MyWindow", "OK")
 Button("Cancel");      // Label = "Cancel", ID = hash of ("MyWindow", "Cancel")
 End();
 ```
