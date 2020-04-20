@@ -5498,7 +5498,6 @@ void ImGui::TreePushOverrideID(ImGuiID id)
     Indent();
     window->DC.TreeDepth++;
     window->IDStack.push_back(id);
-    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_ID, NULL);
 }
 
 void ImGui::TreePop()

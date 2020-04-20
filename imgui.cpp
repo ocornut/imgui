@@ -2889,6 +2889,10 @@ ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
     ImGui::KeepAliveID(id);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
+#endif
     return id;
 }
 
@@ -2897,6 +2901,10 @@ ImGuiID ImGuiWindow::GetID(const void* ptr)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
     ImGui::KeepAliveID(id);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_Pointer, ptr);
+#endif
     return id;
 }
 
@@ -2905,25 +2913,44 @@ ImGuiID ImGuiWindow::GetID(int n)
     ImGuiID seed = IDStack.back();
     ImGuiID id = ImHashData(&n, sizeof(n), seed);
     ImGui::KeepAliveID(id);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_S32, (intptr_t)n);
+#endif
     return id;
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const char* str, const char* str_end)
 {
     ImGuiID seed = IDStack.back();
-    return ImHashStr(str, str_end ? (str_end - str) : 0, seed);
+    ImGuiID id = ImHashStr(str, str_end ? (str_end - str) : 0, seed);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
+#endif
+    return id;
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(const void* ptr)
 {
     ImGuiID seed = IDStack.back();
-    return ImHashData(&ptr, sizeof(void*), seed);
+    ImGuiID id = ImHashData(&ptr, sizeof(void*), seed);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_Pointer, ptr);
+#endif
+    return id;
 }
 
 ImGuiID ImGuiWindow::GetIDNoKeepAlive(int n)
 {
     ImGuiID seed = IDStack.back();
-    return ImHashData(&n, sizeof(n), seed);
+    ImGuiID id = ImHashData(&n, sizeof(n), seed);
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiContext& g = *GImGui;
+    IMGUI_TEST_ENGINE_ID_INFO(id, ImGuiDataType_S32, (intptr_t)n);
+#endif
+    return id;
 }
 
 // This is only used in rare/specific situations to manufacture an ID out of nowhere.
@@ -6597,7 +6624,6 @@ void ImGui::PushFocusScope(ImGuiID id)
     ImGuiWindow* window = g.CurrentWindow;
     window->IDStack.push_back(window->DC.NavFocusScopeIdCurrent);
     window->DC.NavFocusScopeIdCurrent = id;
-    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_ID, NULL);
 }
 
 void ImGui::PopFocusScope()
@@ -6653,7 +6679,6 @@ void ImGui::PushID(const char* str_id)
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiID id = window->GetIDNoKeepAlive(str_id);
     window->IDStack.push_back(id);
-    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_String, str_id);
 }
 
 void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
@@ -6662,7 +6687,6 @@ void ImGui::PushID(const char* str_id_begin, const char* str_id_end)
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiID id = window->GetIDNoKeepAlive(str_id_begin, str_id_end);
     window->IDStack.push_back(id);
-    IMGUI_TEST_ENGINE_PUSH_ID2(id, ImGuiDataType_String, str_id_begin, str_id_end);
 }
 
 void ImGui::PushID(const void* ptr_id)
@@ -6671,7 +6695,6 @@ void ImGui::PushID(const void* ptr_id)
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiID id = window->GetIDNoKeepAlive(ptr_id);
     window->IDStack.push_back(id);
-    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_Pointer, ptr_id);
 }
 
 void ImGui::PushID(int int_id)
@@ -6680,7 +6703,6 @@ void ImGui::PushID(int int_id)
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiID id = window->GetIDNoKeepAlive(int_id);
     window->IDStack.push_back(id);
-    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_S32, (intptr_t)int_id);
 }
 
 // Push a given id value ignoring the ID stack as a seed.
@@ -6689,7 +6711,6 @@ void ImGui::PushOverrideID(ImGuiID id)
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     window->IDStack.push_back(id);
-    IMGUI_TEST_ENGINE_PUSH_ID(id, ImGuiDataType_ID, NULL);
 }
 
 void ImGui::PopID()
