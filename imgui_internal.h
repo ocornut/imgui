@@ -158,9 +158,12 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #endif
 
 // Debug Logging for selected systems. Remove the '((void)0) //' to enable.
-#define IMGUI_DEBUG_LOG_POPUP(...)      ((void)0) // IMGUI_DEBUG_LOG(__VA_ARGS__)
-#define IMGUI_DEBUG_LOG_VIEWPORT(...)   ((void)0) // IMGUI_DEBUG_LOG(__VA_ARGS__)
-#define IMGUI_DEBUG_LOG_DOCKING(...)    ((void)0) // IMGUI_DEBUG_LOG(__VA_ARGS__)
+//#define IMGUI_DEBUG_LOG_POPUP         IMGUI_DEBUG_LOG // Enable log
+//#define IMGUI_DEBUG_LOG_VIEWPORT      IMGUI_DEBUG_LOG // Enable log
+//#define IMGUI_DEBUG_LOG_DOCKING       IMGUI_DEBUG_LOG // Enable log
+#define IMGUI_DEBUG_LOG_POPUP(...)      ((void)0)       // Disable log
+#define IMGUI_DEBUG_LOG_VIEWPORT(...)   ((void)0)       // Disable log
+#define IMGUI_DEBUG_LOG_DOCKING(...)    ((void)0)       // Disable log
 
 // Static Asserts
 #if (__cplusplus >= 201100)
@@ -1751,7 +1754,7 @@ struct IMGUI_API ImGuiWindow
     ImGuiItemStatusFlags    DockTabItemStatusFlags;
     ImRect                  DockTabItemRect;
     short                   DockOrder;                          // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
-    bool                    DockIsActive        :1;             // When docking artifacts are actually visible. When this is set, DockNode is guaranteed to be != NULL. ~~ (DockNode != NULL) && (DockNode->Windows.Size > 1). 
+    bool                    DockIsActive        :1;             // When docking artifacts are actually visible. When this is set, DockNode is guaranteed to be != NULL. ~~ (DockNode != NULL) && (DockNode->Windows.Size > 1).
     bool                    DockTabIsVisible    :1;             // Is our window visible this frame? ~~ is the corresponding tab selected?
     bool                    DockTabWantClose    :1;
 
