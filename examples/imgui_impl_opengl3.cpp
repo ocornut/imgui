@@ -121,12 +121,16 @@
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
 #include <glad/glad.h>          // Needs to be initialized with gladLoadGL() in user's code.
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
+#ifndef GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
+#endif
 #include <glbinding/Binding.h>  // Needs to be initialized with glbinding::Binding::initialize() in user's code.
 #include <glbinding/gl/gl.h>
 using namespace gl;
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING3)
+#ifndef GLFW_INCLUDE_NONE
 #define GLFW_INCLUDE_NONE       // GLFW including OpenGL headers causes ambiguity or multiple definition errors.
+#endif
 #include <glbinding/glbinding.h>// Needs to be initialized with glbinding::initialize() in user's code.
 #include <glbinding/gl/gl.h>
 using namespace gl;
