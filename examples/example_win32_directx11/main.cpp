@@ -95,6 +95,8 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
+    MSG msg;
+    ZeroMemory(&msg, sizeof(msg));
     bool done = false;
     while (!done)
     {
@@ -103,11 +105,12 @@ int main(int, char**)
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        MSG msg;
+        ImGui_ImplWin32_WaitForEvent();
         while (::PeekMessage(&msg, NULL, 0U, 0U, PM_REMOVE))
         {
             ::TranslateMessage(&msg);
             ::DispatchMessage(&msg);
+
             if (msg.message == WM_QUIT)
                 done = true;
         }
@@ -143,6 +146,7 @@ int main(int, char**)
             ImGui::Text("counter = %d", counter);
 
             ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::Text("Frames since last input: %d", ImGui::GetIO().FrameCountSinceLastInput);
             ImGui::End();
         }
 

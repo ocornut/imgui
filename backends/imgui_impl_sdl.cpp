@@ -59,6 +59,8 @@
 #include "TargetConditionals.h"
 #endif
 
+#include <math.h> // isinf
+
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_WINDOW_ALPHA                SDL_VERSION_ATLEAST(2,0,5)
 #define SDL_HAS_ALWAYS_ON_TOP               SDL_VERSION_ATLEAST(2,0,5)
@@ -97,6 +99,26 @@ static void ImGui_ImplSDL2_SetClipboardText(void*, const char* text)
     SDL_SetClipboardText(text);
 }
 
+void ImGui_ImplSDL2_WaitForEvent()
+{
+    if (!(ImGui::GetIO().ConfigFlags & ImGuiConfigFlags_EnablePowerSavingMode))
+        return;
+
+    Uint32 window_flags = SDL_GetWindowFlags(g_Window);
+    bool window_is_hidden = window_flags & (SDL_WINDOW_HIDDEN | SDL_WINDOW_MINIMIZED);
+    double waiting_time = window_is_hidden ? INFINITY : ImGui::GetEventWaitingTime();
+    if (waiting_time > 0.0)
+    {
+        if (isinf(waiting_time))
+            SDL_WaitEvent(NULL);
+        else
+        {
+            const int waiting_time_ms = (int)(1000.0 * ImGui::GetEventWaitingTime());
+            SDL_WaitEventTimeout(NULL, waiting_time_ms);
+        }
+    }
+}
+
 // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
@@ -105,6 +127,8 @@ static void ImGui_ImplSDL2_SetClipboardText(void*, const char* text)
 bool ImGui_ImplSDL2_ProcessEvent(const SDL_Event* event)
 {
     ImGuiIO& io = ImGui::GetIO();
+    io.FrameCountSinceLastInput = 0;
+
     switch (event->type)
     {
     case SDL_MOUSEWHEEL:
