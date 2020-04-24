@@ -644,7 +644,7 @@ static void ShowDemoWindowWidgets()
             static bool test_drag_and_drop = false;
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnArrow", (unsigned int*)&base_flags, ImGuiTreeNodeFlags_OpenOnArrow);
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_OpenOnDoubleClick", (unsigned int*)&base_flags, ImGuiTreeNodeFlags_OpenOnDoubleClick);
-            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAvailWidth", (unsigned int*)&base_flags, ImGuiTreeNodeFlags_SpanAvailWidth); ImGui::SameLine(); HelpMarker("Extend hit area to all available width instead of allowing more items to be layed out after the node.");
+            ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanAvailWidth", (unsigned int*)&base_flags, ImGuiTreeNodeFlags_SpanAvailWidth); ImGui::SameLine(); HelpMarker("Extend hit area to all available width instead of allowing more items to be laid out after the node.");
             ImGui::CheckboxFlags("ImGuiTreeNodeFlags_SpanFullWidth", (unsigned int*)&base_flags, ImGuiTreeNodeFlags_SpanFullWidth);
             ImGui::Checkbox("Align label with current X position", &align_label_with_current_x_position);
             ImGui::Checkbox("Test tree node as drag source", &test_drag_and_drop);
@@ -994,7 +994,7 @@ static void ShowDemoWindowWidgets()
         }
         if (ImGui::TreeNode("Alignment"))
         {
-            HelpMarker("By default, Selectables uses style.SelectableTextAlign but it can be overriden on a per-item basis using PushStyleVar(). You'll probably want to always keep your default situation to left-align otherwise it becomes difficult to layout multiple items on a same line");
+            HelpMarker("By default, Selectables uses style.SelectableTextAlign but it can be overridden on a per-item basis using PushStyleVar(). You'll probably want to always keep your default situation to left-align otherwise it becomes difficult to layout multiple items on a same line");
             static bool selected[3*3] = { true, false, true, false, true, false, true, false, true };
             for (int y = 0; y < 3; y++)
             {
@@ -1065,7 +1065,7 @@ static void ShowDemoWindowWidgets()
         if (ImGui::TreeNode("Resize Callback"))
         {
             // To wire InputText() with std::string or any other custom string type,
-            // you can use the ImGuiInputTextFlags_CallbackResize flag + create a custom ImGui::InputText() wrapper using your prefered type.
+            // you can use the ImGuiInputTextFlags_CallbackResize flag + create a custom ImGui::InputText() wrapper using your preferred type.
             // See misc/cpp/imgui_stdlib.h for an implementation of this using std::string.
             HelpMarker("Demonstrate using ImGuiInputTextFlags_CallbackResize to wire your resizable string type to InputText().\n\nSee misc/cpp/imgui_stdlib.h for an implementation of this for std::string.");
             struct Funcs
@@ -1082,7 +1082,7 @@ static void ShowDemoWindowWidgets()
                     return 0;
                 }
 
-                // Tip: Because ImGui:: is a namespace you would typicall add your own function into the namespace in your own source files.
+                // Tip: Because ImGui:: is a namespace you would typically add your own function into the namespace in your own source files.
                 // For example, you may add a function called ImGui::InputText(const char* label, MyString* my_str).
                 static bool MyInputTextMultiline(const char* label, ImVector<char>* my_str, const ImVec2& size = ImVec2(0, 0), ImGuiInputTextFlags flags = 0)
                 {
@@ -3865,7 +3865,7 @@ struct ExampleAppConsole
             AddLog("Unknown command: '%s'\n", command_line);
         }
 
-        // On commad input, we scroll to bottom even if AutoScroll==false
+        // On command input, we scroll to bottom even if AutoScroll==false
         ScrollToBottom = true;
     }
 

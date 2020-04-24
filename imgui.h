@@ -371,7 +371,7 @@ namespace ImGui
     // Cursor / Layout
     // - By "cursor" we mean the current output position.
     // - The typical widget behavior is to output themselves at the current cursor position, then move the cursor one line down.
-    // - You can call SameLine() between widgets to undo the last carriage return and output at the right of the preceeding widget.
+    // - You can call SameLine() between widgets to undo the last carriage return and output at the right of the preceding widget.
     // - Attention! We currently have inconsistencies between window-local and absolute positions we will aim to fix with future API:
     //    Window-local coordinates:   SameLine(), GetCursorPos(), SetCursorPos(), GetCursorStartPos(), GetContentRegionMax(), GetWindowContentRegion*(), PushTextWrapPos()
     //    Absolute coordinate:        GetCursorScreenPos(), SetCursorScreenPos(), all ImDrawList:: functions.
@@ -2299,7 +2299,7 @@ struct ImFont
     float                       Scale;              // 4     // in  // = 1.f      // Base font scale, multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
     float                       Ascent, Descent;    // 4+4   // out //            // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
     int                         MetricsTotalSurface;// 4     // out //            // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
-    ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations accross all used codepoints.
+    ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
 
     // Methods
     IMGUI_API ImFont();

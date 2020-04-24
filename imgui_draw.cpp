@@ -615,7 +615,7 @@ void ImDrawList::PrimQuadUV(const ImVec2& a, const ImVec2& b, const ImVec2& c, c
     _IdxWritePtr += 6;
 }
 
-// On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superflous function calls to optimize debug/non-inlined builds.
+// On AddPolyline() and AddConvexPolyFilled() we intentionally avoid using ImVec2 and superfluous function calls to optimize debug/non-inlined builds.
 // Those macros expects l-values.
 #define IM_NORMALIZE2F_OVER_ZERO(VX,VY)     do { float d2 = VX*VX + VY*VY; if (d2 > 0.0f) { float inv_len = 1.0f / ImSqrt(d2); VX *= inv_len; VY *= inv_len; } } while (0)
 #define IM_FIXNORMAL2F(VX,VY)               do { float d2 = VX*VX + VY*VY; if (d2 < 0.5f) d2 = 0.5f; float inv_lensq = 1.0f / d2; VX *= inv_lensq; VY *= inv_lensq; } while (0)
@@ -684,7 +684,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 dm_x *= AA_SIZE;
                 dm_y *= AA_SIZE;
 
-                // Add temporary vertexes
+                // Add temporary vertices
                 ImVec2* out_vtx = &temp_points[i2*2];
                 out_vtx[0].x = points[i2].x + dm_x;
                 out_vtx[0].y = points[i2].y + dm_y;
@@ -701,7 +701,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 idx1 = idx2;
             }
 
-            // Add vertexes
+            // Add vertices
             for (int i = 0; i < points_count; i++)
             {
                 _VtxWritePtr[0].pos = points[i];          _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col;
@@ -741,7 +741,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 float dm_in_x = dm_x * half_inner_thickness;
                 float dm_in_y = dm_y * half_inner_thickness;
 
-                // Add temporary vertexes
+                // Add temporary vertices
                 ImVec2* out_vtx = &temp_points[i2*4];
                 out_vtx[0].x = points[i2].x + dm_out_x;
                 out_vtx[0].y = points[i2].y + dm_out_y;
@@ -764,7 +764,7 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
                 idx1 = idx2;
             }
 
-            // Add vertexes
+            // Add vertices
             for (int i = 0; i < points_count; i++)
             {
                 _VtxWritePtr[0].pos = temp_points[i*4+0]; _VtxWritePtr[0].uv = uv; _VtxWritePtr[0].col = col_trans;
@@ -2307,7 +2307,7 @@ void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
 
     // Ellipsis character is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
     // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
-    // FIXME: Also note that 0x2026 is currently seldomly included in our font ranges. Because of this we are more likely to use three individual dots.
+    // FIXME: Also note that 0x2026 is currently seldom included in our font ranges. Because of this we are more likely to use three individual dots.
     for (int i = 0; i < atlas->Fonts.size(); i++)
     {
         ImFont* font = atlas->Fonts[i];
@@ -3329,7 +3329,7 @@ void ImGui::RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, Im
 
 // Helper for ColorPicker4()
 // NB: This is rather brittle and will show artifact when rounding this enabled if rounded corners overlap multiple cells. Caller currently responsible for avoiding that.
-// Spent a non reasonable amount of time trying to getting this right for ColorButton with rounding+anti-aliasing+ImGuiColorEditFlags_HalfAlphaPreview flag + various grid sizes and offsets, and eventually gave up... probably more reasonable to disable rounding alltogether.
+// Spent a non reasonable amount of time trying to getting this right for ColorButton with rounding+anti-aliasing+ImGuiColorEditFlags_HalfAlphaPreview flag + various grid sizes and offsets, and eventually gave up... probably more reasonable to disable rounding altogether.
 // FIXME: uses ImGui::GetColorU32
 void ImGui::RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 col, float grid_step, ImVec2 grid_off, float rounding, int rounding_corners_flags)
 {
