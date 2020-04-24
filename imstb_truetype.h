@@ -652,7 +652,7 @@ STBTT_DEF void stbtt_PackSetOversampling(stbtt_pack_context *spc, unsigned int h
 STBTT_DEF void stbtt_PackSetSkipMissingCodepoints(stbtt_pack_context *spc, int skip);
 // If skip != 0, this tells stb_truetype to skip any codepoints for which
 // there is no corresponding glyph. If skip=0, which is the default, then
-// codepoints without a glyph recived the font's "missing character" glyph,
+// codepoints without a glyph received the font's "missing character" glyph,
 // typically an empty box by convention.
 
 STBTT_DEF void stbtt_GetPackedQuad(const stbtt_packedchar *chardata, int pw, int ph,  // same data as above
@@ -4302,7 +4302,7 @@ static int stbtt__compute_crossings_x(float x, float y, int nverts, stbtt_vertex
    int winding = 0;
 
    orig[0] = x;
-   //orig[1] = y; // [DEAR IMGUI] commmented double assignment
+   //orig[1] = y; // [DEAR IMGUI] commented double assignment
 
    // make sure y never passes through a vertex of the shape
    y_frac = (float) STBTT_fmod(y, 1.0f);
