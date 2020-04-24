@@ -2409,8 +2409,8 @@ void    ImFontAtlas::ClearInputData()
             font->ConfigDataCount = 0;
         }
     ConfigData.clear();
-    CustomRects.clear();
-    PackIdMouseCursors = PackIdLines = -1;
+    MarkDirty();
+    MarkDirty();
     // Important: we leave TexReady untouched
 }
 
@@ -2425,6 +2425,7 @@ void    ImFontAtlas::ClearTexData()
     TexPixelsRGBA32 = NULL;
     TexPixelsUseColors = false;
     // Important: we leave TexReady untouched
+    MarkDirty();
 }
 
 void    ImFontAtlas::ClearFonts()
@@ -2432,6 +2433,7 @@ void    ImFontAtlas::ClearFonts()
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     Fonts.clear_delete();
     TexReady = false;
+    MarkDirty();
 }
 
 void    ImFontAtlas::Clear()
@@ -2441,10 +2443,25 @@ void    ImFontAtlas::Clear()
     ClearFonts();
 }
 
+void    ImFontAtlas::MarkDirty()
+{
+    TexDirty = true;
+}
+
+void    ImFontAtlas::MarkClean()
+{
+    TexDirty = false;
+}
+
+bool    ImFontAtlas::IsDirty()
+{
+    return TexDirty;
+}
+
 void    ImFontAtlas::GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel)
 {
     // Build atlas on demand
-    if (TexPixelsAlpha8 == NULL)
+    if (TexPixelsAlpha8 == NULL || IsDirty())
         Build();
 
     *out_pixels = TexPixelsAlpha8;
@@ -2457,7 +2474,7 @@ void    ImFontAtlas::GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_wid
 {
     // Convert to RGBA32 format on demand
     // Although it is likely to be the most commonly used format, our font rendering is 1 channel / 8 bpp
-    if (!TexPixelsRGBA32)
+    if (TexPixelsRGBA32 == NULL || IsDirty())
     {
         unsigned char* pixels = NULL;
         GetTexDataAsAlpha8(&pixels, NULL, NULL);
@@ -2508,6 +2525,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     // Invalidate texture
     TexReady = false;
     ClearTexData();
+    MarkDirty();
     return new_font_cfg.DstFont;
 }
 
