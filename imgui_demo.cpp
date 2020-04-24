@@ -994,7 +994,7 @@ static void ShowDemoWindowWidgets()
         }
         if (ImGui::TreeNode("Alignment"))
         {
-            HelpMarker("By default, Selectables uses style.SelectableTextAlign but it can be overriden on a per-item basis using PushStyleVar(). You'll probably want to always keep your default situation to left-align otherwise it becomes difficult to layout multiple items on a same line");
+            HelpMarker("By default, Selectables uses style.SelectableTextAlign but it can be overridden on a per-item basis using PushStyleVar(). You'll probably want to always keep your default situation to left-align otherwise it becomes difficult to layout multiple items on a same line");
             static bool selected[3*3] = { true, false, true, false, true, false, true, false, true };
             for (int y = 0; y < 3; y++)
             {
