@@ -2068,6 +2068,7 @@ struct ImDrawList
     inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)     { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); }
     IMGUI_API void  UpdateClipRect();
     IMGUI_API void  UpdateTextureID();
+    IMGUI_API void  UpdateStaleDrawCmd();
 };
 
 // All draw data to render a Dear ImGui frame
