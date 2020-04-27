@@ -49,8 +49,10 @@ Other Changes:
 - Backends: Win32: Support for #define NOGDI, won't try to call GetDeviceCaps(). (#3137, #2327)
 - Backends: OpenGL: Fixed handling of GL 4.5+ glClipControl(GL_UPPER_LEFT) by inverting the
   projection matrix top and bottom values. (#3143, #3146) [@u3shit]
-- Backends: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData 
+- Backends: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData
   structure didn't have any vertices. (#2697) [@kudaba]
+- Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
+  drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
 
 
 -----------------------------------------------------------------------
