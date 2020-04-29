@@ -14183,6 +14183,12 @@ void ImGui::DockBuilderRemoveNode(ImGuiID node_id)
         return;
     DockBuilderRemoveNodeDockedWindows(node_id, true);
     DockBuilderRemoveNodeChildNodes(node_id);
+
+    // Check is node_id still available (#3111)
+    node = DockContextFindNodeByID(ctx, node_id);
+    if (node == NULL)
+        return;
+
     if (node->IsCentralNode() && node->ParentNode)
         node->ParentNode->LocalFlags |= ImGuiDockNodeFlags_CentralNode;
     DockContextRemoveNode(ctx, node, true);
