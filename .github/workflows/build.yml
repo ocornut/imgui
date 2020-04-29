@@ -59,6 +59,29 @@ jobs:
           echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
           g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
 
+      - name: Build example_null (with IMGUI_DISABLE_WIN32_FUNCTIONS)
+        shell: bash
+        run: |
+          echo '#define IMGUI_DISABLE_WIN32_FUNCTIONS'           >  example_single_file.cpp
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+
+      - name: Build example_null (as DLL)
+        shell: cmd
+        run: |
+          "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          echo '#ifdef _EXPORT'                                  >  example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllexport)'       >> example_single_file.cpp
+          echo '#else'                                           >> example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllimport)'       >> example_single_file.cpp
+          echo '#endif'                                          >> example_single_file.cpp
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          cl.exe /D_USRDLL /D_WINDLL /D_EXPORT /I. example_single_file.cpp /LD /FeImGui.dll /link
+          cl.exe /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
+
       - name: Build Win32 example_glfw_opengl2
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
@@ -231,6 +254,38 @@ jobs:
         echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
         echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
         echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_DISABLE_FILE_FUNCTIONS)
+      run: |
+        echo '#define IMGUI_DISABLE_FILE_FUNCTIONS'            >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_USE_BGRA_PACKED_COLOR)
+      run: |
+        echo '#define IMGUI_USE_BGRA_PACKED_COLOR'             >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IM_VEC2_CLASS_EXTRA and IM_VEC4_CLASS_EXTRA)
+      run: |
+        echo 'struct MyVec2 { float x; float y; MyVec2(float x, float y) : x(x), y(y) { } };' >  example_single_file.cpp
+        echo 'struct MyVec4 { float x; float y; float z; float w;'                            >> example_single_file.cpp
+        echo 'MyVec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) { } };'     >> example_single_file.cpp
+        echo '#define IM_VEC2_CLASS_EXTRA                                             \'      >> example_single_file.cpp
+        echo '        ImVec2(const MyVec2& f) { x = f.x; y = f.y; }                   \'      >> example_single_file.cpp
+        echo '        operator MyVec2() const { return MyVec2(x, y); }'                       >> example_single_file.cpp
+        echo '#define IM_VEC4_CLASS_EXTRA                                             \'      >> example_single_file.cpp
+        echo '        ImVec4(const MyVec4& f) { x = f.x; y = f.y; z = f.z; w = f.w; } \'      >> example_single_file.cpp
+        echo '        operator MyVec4() const { return MyVec4(x, y, z, w); }'                 >> example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                                                   >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"'                                >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'                                      >> example_single_file.cpp
         g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
 
     - name: Build example_glfw_opengl2
