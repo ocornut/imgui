@@ -1,4 +1,6 @@
-# editorconfig.org
+# See http://editorconfig.org to read about the EditorConfig format.
+# - Automatically supported by VS2017+ and most common IDE or text editors.
+# - For older VS2010 to VS2015, install https://marketplace.visualstudio.com/items?itemName=EditorConfigTeam.EditorConfig
 
 # top-most EditorConfig file
 root = true
