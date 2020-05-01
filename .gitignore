@@ -1,13 +1,61 @@
+## OSX artifacts
+.DS_Store
+
+## Dear ImGui artifacts
+imgui.ini
+
+## General build artifacts
+*.o
+*.obj
+*.exe
+examples/build/*
+examples/*/Debug/*
+examples/*/Release/*
+examples/*/x64/*
+
+## Visual Studio artifacts
+.vs
+ipch
+*.opensdf
+*.log
+*.pdb
+*.ilk
+*.user
+*.sdf
+*.suo
+*.VC.db
+*.VC.VC.opendb
+
+## Xcode artifacts
+project.xcworkspace
+xcuserdata
+
+## Emscripten artifacts
+examples/*.o.tmp
+examples/*.out.js
+examples/*.out.wasm
+examples/example_emscripten/example_emscripten.*
+
+## JetBrains IDE artifacts
+.idea
+cmake-build-*
+
+## Unix executables from our example Makefiles
+examples/example_glfw_opengl2/example_glfw_opengl2
+examples/example_glfw_opengl3/example_glfw_opengl3
+examples/example_glut_opengl2/example_glut_opengl2
+examples/example_null/example_null
+examples/example_sdl_opengl2/example_sdl_opengl2
+examples/example_sdl_opengl3/example_sdl_opengl3
+
+# Hazel-specific
 # Directories
-.vs/
 bin/
 bin-int/
 
  # Files
-*.user
 Makefile 
 
 # Visual Studio files and folder
-.vs/
 *.sln
 *.vcxproj*
