@@ -81,7 +81,7 @@
 //#define ImDrawIdx unsigned int
 
 //---- Override ImDrawList with a custom structure derived from ImDrawList
-#ifndef IM_CUSTOM_DRAWLIST
+#ifdef IM_CUSTOM_DRAWLIST
 // struct myDrawList : ImDrawList
 // {
 //     myDrawList(const ImDrawListSharedData *shared_data) : ImDrawList(shared_data) {};
