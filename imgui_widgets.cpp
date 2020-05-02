@@ -1803,18 +1803,32 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
     while (ImCharIsBlankA(*buf))
         buf++;
 
-    // We don't support '-' op because it would conflict with inputing negative value.
-    // Instead you can use +-100 to subtract from an existing value
-    char op = buf[0];
-    if (op == '+' || op == '*' || op == '/')
+	//You can apply arithmetic operators +,-,*,/ on numerical values.
+	//	e.g. [ 100 ], input '++2', result becomes [ 102 ]
+	//	e.g. [ 100 ], input '--2', result becomes [  98 ]
+	//	e.g. [ 100 ], input '*2', result becomes [ 200 ]
+	//	e.g. [ 100 ], input '/2', result becomes [  50 ]
+    char op = 0;
+	if (buf[0] == '+' && buf[1] == '+')
     {
-        buf++;
-        while (ImCharIsBlankA(*buf))
+		op = buf[1];
+		buf+=2;
+		while (ImCharIsBlankA(*buf))
             buf++;
     }
-    else
+	else if (buf[0] == '-' && buf[1] == '-')
     {
-        op = 0;
+		op = buf[1];
+		buf+=2;
+		while (ImCharIsBlankA(*buf))
+            buf++;
+    }
+	else if (buf[0] == '*' || buf[0] == '/')
+    {
+		op = buf[0];
+		buf++;
+		while (ImCharIsBlankA(*buf))
+            buf++;
     }
     if (!buf[0])
         return false;
@@ -1839,7 +1853,8 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         if (op && sscanf(initial_value_buf, format, &arg0i) < 1)
             return false;
         // Store operand in a float so we can use fractional value for multipliers (*1.1), but constant always parsed as integer so we can fit big integers (e.g. 2000000003) past float precision
-        if (op == '+')      { if (sscanf(buf, "%d", &arg1i)) *v = (int)(arg0i + arg1i); }                   // Add (use "+-" to subtract)
+		if (op == '+') { if (sscanf(buf, "%d", &arg1i)) *v = (int)(arg0i + arg1i); }                        // Add
+		else if (op == '-') { if (sscanf(buf, "%d", &arg1i)) *v = (int)(arg0i - arg1i); }                   // Subtract
         else if (op == '*') { if (sscanf(buf, "%f", &arg1f)) *v = (int)(arg0i * arg1f); }                   // Multiply
         else if (op == '/') { if (sscanf(buf, "%f", &arg1f) && arg1f != 0.0f) *v = (int)(arg0i / arg1f); }  // Divide
         else                { if (sscanf(buf, format, &arg1i) == 1) *v = arg1i; }                           // Assign constant
@@ -1854,7 +1869,8 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
             return false;
         if (sscanf(buf, format, &arg1f) < 1)
             return false;
-        if (op == '+')      { *v = arg0f + arg1f; }                    // Add (use "+-" to subtract)
+		if (op == '+') { *v = arg0f + arg1f; }                         // Add
+		else if (op == '-') { *v = arg0f - arg1f; }                    // Subtract
         else if (op == '*') { *v = arg0f * arg1f; }                    // Multiply
         else if (op == '/') { if (arg1f != 0.0f) *v = arg0f / arg1f; } // Divide
         else                { *v = arg1f; }                            // Assign constant
@@ -1868,7 +1884,8 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
             return false;
         if (sscanf(buf, format, &arg1f) < 1)
             return false;
-        if (op == '+')      { *v = arg0f + arg1f; }                    // Add (use "+-" to subtract)
+		if (op == '+') { *v = arg0f + arg1f; }                         // Add
+		else if (op == '-') { *v = arg0f + arg1f; }                    // Subtract
         else if (op == '*') { *v = arg0f * arg1f; }                    // Multiply
         else if (op == '/') { if (arg1f != 0.0f) *v = arg0f / arg1f; } // Divide
         else                { *v = arg1f; }                            // Assign constant
