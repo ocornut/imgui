@@ -4928,8 +4928,10 @@ static ImVec2 CalcWindowSizeAfterConstraint(ImGuiWindow* window, ImVec2 new_size
     {
         // Using -1,-1 on either X/Y axis to preserve the current size.
         ImRect cr = g.NextWindowData.SizeConstraintRect;
-        new_size.x = (cr.Min.x >= 0 && cr.Max.x >= 0) ? ImClamp(new_size.x, cr.Min.x, cr.Max.x) : window->SizeFull.x;
-        new_size.y = (cr.Min.y >= 0 && cr.Max.y >= 0) ? ImClamp(new_size.y, cr.Min.y, cr.Max.y) : window->SizeFull.y;
+        new_size.x = cr.Min.x >= 0 ? ImMax(new_size.x, cr.Min.x) : window->SizeFull.x;
+        new_size.y = cr.Min.y >= 0 ? ImMax(new_size.y, cr.Min.y) : window->SizeFull.y;
+        new_size.x = cr.Max.x >= 0 ? ImMin(new_size.x, cr.Max.x) : new_size.x;
+        new_size.y = cr.Max.y >= 0 ? ImMin(new_size.y, cr.Max.y) : new_size.y;
         if (g.NextWindowData.SizeCallback)
         {
             ImGuiSizeCallbackData data;
