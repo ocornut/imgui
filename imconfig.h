@@ -80,6 +80,14 @@
 // Read about ImGuiBackendFlags_RendererHasVtxOffset for details.
 //#define ImDrawIdx unsigned int
 
+//---- Override ImDrawList with a custom structure derived from ImDrawList
+#ifdef IM_CUSTOM_DRAWLIST
+// struct myDrawList : ImDrawList;
+#define ImDrawList_t myDrawList
+#else
+#define ImDrawList_t ImDrawList
+#endif
+
 //---- Override ImDrawCallback signature (will need to modify renderer back-ends accordingly)
 //struct ImDrawList;
 //struct ImDrawCmd;
