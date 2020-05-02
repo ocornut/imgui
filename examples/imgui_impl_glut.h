@@ -2,7 +2,7 @@
 // This needs to be used along with a Renderer (e.g. OpenGL2)
 
 // !!! GLUT/FreeGLUT IS OBSOLETE SOFTWARE. Using GLUT is not recommended unless you really miss the 90's. !!!
-// !!! If someone or something is teaching you GLUT in 2019, you are being abused. Please show some resistance. !!!
+// !!! If someone or something is teaching you GLUT in 2020, you are being abused. Please show some resistance. !!!
 // !!! Nowadays, prefer using GLFW or SDL instead!
 
 // Issues:
@@ -16,6 +16,7 @@
 // https://github.com/ocornut/imgui
 
 #pragma once
+#include "imgui.h"      // IMGUI_IMPL_API
 
 IMGUI_IMPL_API bool     ImGui_ImplGLUT_Init();
 IMGUI_IMPL_API void     ImGui_ImplGLUT_InstallFuncs();
