@@ -64,6 +64,11 @@ static SDL_Cursor*  g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static char*        g_ClipboardTextData = NULL;
 static bool         g_MouseCanUseGlobalState = true;
 
+// Forward Declarations
+extern "C" {
+    extern DECLSPEC void SDLCALL SDL_Vulkan_GetDrawableSize(SDL_Window * window, int * w, int * h);
+}
+
 static const char* ImGui_ImplSDL2_GetClipboardText(void*)
 {
     if (g_ClipboardTextData)
@@ -348,7 +353,10 @@ void ImGui_ImplSDL2_NewFrame(SDL_Window* window)
     int w, h;
     int display_w, display_h;
     SDL_GetWindowSize(window, &w, &h);
-    SDL_GL_GetDrawableSize(window, &display_w, &display_h);
+    if (SDL_GetWindowFlags(window) & SDL_WINDOW_VULKAN)
+        SDL_Vulkan_GetDrawableSize(window, &display_w, &display_h);
+    else
+        SDL_GL_GetDrawableSize(window, &display_w, &display_h);
     io.DisplaySize = ImVec2((float)w, (float)h);
     if (w > 0 && h > 0)
         io.DisplayFramebufferScale = ImVec2((float)display_w / w, (float)display_h / h);
