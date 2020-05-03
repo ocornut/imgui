@@ -86,7 +86,7 @@
 // {
 //     myDrawList(const ImDrawListSharedData *shared_data) : ImDrawList(shared_data) {};
 // };
-#define ImDrawList_t myDrawList
+#define ImDrawList_t IM_CUSTOM_DRAWLIST
 #else
 #define ImDrawList_t ImDrawList
 #endif
