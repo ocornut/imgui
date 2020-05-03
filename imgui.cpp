@@ -13421,6 +13421,10 @@ static void ImGui::DockNodePreviewDockSetup(ImGuiWindow* host_window, ImGuiDockN
     if (!host_window->Collapsed)
         for (int dir = ImGuiDir_None; dir < ImGuiDir_COUNT; dir++)
         {
+            if (data->SplitNode->GetMergedFlags() & ImGuiDockNodeFlags_OnlySplitSideways) {
+                if (dir == ImGuiDir_Up || dir == ImGuiDir_Down)
+                    continue;
+            }
             if (dir == ImGuiDir_None && !data->IsCenterAvailable)
                 continue;
             if (dir != ImGuiDir_None && !data->IsSidesAvailable)
