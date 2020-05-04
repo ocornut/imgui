@@ -22,6 +22,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-05-04: Vulkan: Fixed crash if initial frame has no vertices.
 //  2020-04-26: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData didn't have vertices.
 //  2019-08-01: Vulkan: Added support for specifying multisample count. Set ImGui_ImplVulkan_InitInfo::MSAASamples to one of the VkSampleCountFlagBits values to use, default is non-multisampled as before.
 //  2019-05-29: Vulkan: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
@@ -334,22 +335,20 @@ void ImGui_ImplVulkan_RenderDrawData(ImDrawData* draw_data, VkCommandBuffer comm
     wrb->Index = (wrb->Index + 1) % wrb->Count;
     ImGui_ImplVulkanH_FrameRenderBuffers* rb = &wrb->FrameRenderBuffers[wrb->Index];
 
-    VkResult err;
-
-    // Create or resize the vertex/index buffers
-    size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
-    size_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
-    if (rb->VertexBuffer == VK_NULL_HANDLE || rb->VertexBufferSize < vertex_size)
-        CreateOrResizeBuffer(rb->VertexBuffer, rb->VertexBufferMemory, rb->VertexBufferSize, vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
-    if (rb->IndexBuffer == VK_NULL_HANDLE || rb->IndexBufferSize < index_size)
-        CreateOrResizeBuffer(rb->IndexBuffer, rb->IndexBufferMemory, rb->IndexBufferSize, index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
-
-    // Upload vertex/index data into a single contiguous GPU buffer
-    if (vertex_size > 0)
+    if (draw_data->TotalVtxCount > 0)
     {
+        // Create or resize the vertex/index buffers
+        size_t vertex_size = draw_data->TotalVtxCount * sizeof(ImDrawVert);
+        size_t index_size = draw_data->TotalIdxCount * sizeof(ImDrawIdx);
+        if (rb->VertexBuffer == VK_NULL_HANDLE || rb->VertexBufferSize < vertex_size)
+            CreateOrResizeBuffer(rb->VertexBuffer, rb->VertexBufferMemory, rb->VertexBufferSize, vertex_size, VK_BUFFER_USAGE_VERTEX_BUFFER_BIT);
+        if (rb->IndexBuffer == VK_NULL_HANDLE || rb->IndexBufferSize < index_size)
+            CreateOrResizeBuffer(rb->IndexBuffer, rb->IndexBufferMemory, rb->IndexBufferSize, index_size, VK_BUFFER_USAGE_INDEX_BUFFER_BIT);
+
+        // Upload vertex/index data into a single contiguous GPU buffer
         ImDrawVert* vtx_dst = NULL;
         ImDrawIdx* idx_dst = NULL;
-        err = vkMapMemory(v->Device, rb->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
+        VkResult err = vkMapMemory(v->Device, rb->VertexBufferMemory, 0, vertex_size, 0, (void**)(&vtx_dst));
         check_vk_result(err);
         err = vkMapMemory(v->Device, rb->IndexBufferMemory, 0, index_size, 0, (void**)(&idx_dst));
         check_vk_result(err);
