@@ -585,14 +585,11 @@ bool    ImGui_ImplDX12_CreateDeviceObjects()
         desc.BackFace = desc.FrontFace;
     }
 
-    if (g_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_pPipelineState)) != S_OK)
-    {
-        vertexShaderBlob->Release();
-        pixelShaderBlob->Release();
-        return false;
-    }
+    HRESULT result_pipeline_state = g_pd3dDevice->CreateGraphicsPipelineState(&psoDesc, IID_PPV_ARGS(&g_pPipelineState));
     vertexShaderBlob->Release();
     pixelShaderBlob->Release();
+    if (result_pipeline_state != S_OK)
+        return false;
 
     ImGui_ImplDX12_CreateFontsTexture();
 
