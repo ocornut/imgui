@@ -4,7 +4,7 @@ project(example_emscripten)
 find_package(OpenGL REQUIRED)
 find_package(Threads REQUIRED)
 
-set(IMGUI_SRCS imgui/imgui.cpp
+set(IMGUI_SRCS ../../imgui.cpp
     ../../imgui_demo.cpp 
     ../../imgui_draw.cpp 
     ../../imgui_widgets.cpp

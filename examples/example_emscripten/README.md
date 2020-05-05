@@ -10,3 +10,12 @@
 - Note that Emscripten 1.39.0 (October 2019) obsoleted the `BINARYEN_TRAP_MODE=clamp` compilation flag which was required with version older than 1.39.0 to avoid rendering artefacts. See [#2877](https://github.com/ocornut/imgui/issues/2877) for details. If you use an older version, uncomment this line in the Makefile:
 
 `#EMS += -s BINARYEN_TRAP_MODE=clamp`
+
+## How to build using CMake
+- As above, you need to install the Emscripten toolchain.
+
+- Then build using emcmake which is distributed by the Emscripten toolchain.
+```
+emcmake cmake -B bin
+cmake --build bin
+```
