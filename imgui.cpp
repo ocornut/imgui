@@ -4,7 +4,7 @@
 // Help:
 // - Read FAQ at http://dearimgui.org/faq
 // - Newcomers, read 'Programmer guide' below for notes on how to setup Dear ImGui in your codebase.
-// - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code. All applications in examples/ are doing that.
+// - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp. All applications in examples/ are doing that.
 // Read imgui.cpp for details, links and comments.
 
 // Resources:
