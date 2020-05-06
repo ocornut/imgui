@@ -103,7 +103,7 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
-void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
+void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data, bool csgoFixEnable = false)
 {
     // Avoid rendering when minimized
     if (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f)
@@ -127,7 +127,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
 
     // Backup the DX9 state
     IDirect3DStateBlock9* d3d9_state_block = NULL;
-    if (g_pd3dDevice->CreateStateBlock(D3DSBT_ALL, &d3d9_state_block) < 0)
+    if (g_pd3dDevice->CreateStateBlock(csgoFixEnable ? D3DSBT_PIXELSTATE : D3DSBT_ALL, &d3d9_state_block) < 0)
         return;
 
     // Backup the DX9 transform (DX9 documentation suggests that it is included in the StateBlock but it doesn't appear to)
