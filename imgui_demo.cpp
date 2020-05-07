@@ -114,12 +114,21 @@ Index of this file:
 #define IM_NEWLINE  "\n"
 #endif
 
+// Helpers
 #if defined(_MSC_VER) && !defined(snprintf)
 #define snprintf    _snprintf
 #endif
 #if defined(_MSC_VER) && !defined(vsnprintf)
 #define vsnprintf   _vsnprintf
 #endif
+
+// Helpers macros
+// We normally try to not use many helpers in imgui_demo.cpp in order to make code easier to copy and paste,
+// but making an exception here as those are largely simplifying code...
+// In other imgui sources we can use nicer internal functions from imgui_internal.h (ImMin/ImMax) but not in the demo.
+#define IM_MIN(A, B)            (((A) < (B)) ? (A) : (B))
+#define IM_MAX(A, B)            (((A) >= (B)) ? (A) : (B))
+#define IM_CLAMP(V, MN, MX)     ((V) < (MN) ? (MN) : (V) > (MX) ? (MX) : (V))
 
 //-----------------------------------------------------------------------------
 // [SECTION] Forward Declarations, Helpers
@@ -709,7 +718,7 @@ static void ShowDemoWindowWidgets()
             //  You may retain selection state inside or outside your objects in whatever format you see fit.
             // 'node_clicked' is temporary storage of what node we have clicked to process selection at the end
             /// of the loop. May be a pointer to your own node type, etc.
-            static int selection_mask = (1 << 2); 
+            static int selection_mask = (1 << 2);
             int node_clicked = -1;
             for (int i = 0; i < 6; i++)
             {
@@ -1294,7 +1303,7 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
         ImGui::Text("Progress Bar");
 
-        float progress_saturated = (progress < 0.0f) ? 0.0f : (progress > 1.0f) ? 1.0f : progress;
+        float progress_saturated = IM_CLAMP(progress, 0.0f, 1.0f);
         char buf[32];
         sprintf(buf, "%d/%d", (int)(progress_saturated*1753), 1753);
         ImGui::ProgressBar(progress, ImVec2(0.f,0.f), buf);
@@ -2379,7 +2388,7 @@ static void ShowDemoWindowLayout()
             ImGui::AlignTextToFramePadding();
 
             // Common mistake to avoid: if we want to SameLine after TreeNode we need to do it before we add
-            // other contents below the node. 
+            // other contents below the node.
             bool node_open = ImGui::TreeNode("Node##2");
             ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
             if (node_open)
@@ -3792,11 +3801,20 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 ImGui::TreePop();
             }
 
-            HelpMarker("Those are old settings provided for convenience.\nHowever, the _correct_ way of scaling your UI is currently to reload your font at the designed size, rebuild the font atlas, and call style.ScaleAllSizes() on a reference ImGuiStyle structure.");
+            // Post-baking font scaling. Note that this is NOT the nice way of scaling fonts, read below.
+            // (we enforce hard clamping manually as by default DragFloat/SliderFloat allows CTRL+Click text to get out of bounds).
+            const float MIN_SCALE = 0.3f;
+            const float MAX_SCALE = 2.0f;
+            HelpMarker(
+                "Those are old settings provided for convenience.\n"
+                "However, the _correct_ way of scaling your UI is currently to reload your font at the designed size, "
+                "rebuild the font atlas, and call style.ScaleAllSizes() on a reference ImGuiStyle structure.\n"
+                "Using those settings here will give you poor quality results.");
             static float window_scale = 1.0f;
-            if (ImGui::DragFloat("window scale", &window_scale, 0.005f, 0.3f, 2.0f, "%.2f"))   // Scale only this window
-                ImGui::SetWindowFontScale(window_scale);
-            ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, 0.3f, 2.0f, "%.2f"); // Scale everything
+            if (ImGui::DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f"))       // Scale only this window
+                ImGui::SetWindowFontScale(IM_MAX(window_scale, MIN_SCALE));
+            if (ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f")) // Scale everything
+                io.FontGlobalScale = IM_MAX(io.FontGlobalScale, MIN_SCALE);
             ImGui::PopItemWidth();
 
             ImGui::EndTabItem();
@@ -4682,7 +4700,7 @@ static void ShowExampleAppConstrainedResize(bool* p_open)
     struct CustomConstraints
     {
         // Helper functions to demonstrate programmatic constraints
-        static void Square(ImGuiSizeCallbackData* data) { data->DesiredSize.x = data->DesiredSize.y = (data->DesiredSize.x > data->DesiredSize.y ? data->DesiredSize.x : data->DesiredSize.y); }
+        static void Square(ImGuiSizeCallbackData* data) { data->DesiredSize.x = data->DesiredSize.y = IM_MAX(data->DesiredSize.x, data->DesiredSize.y); }
         static void Step(ImGuiSizeCallbackData* data)   { float step = (float)(int)(intptr_t)data->UserData; data->DesiredSize = ImVec2((int)(data->DesiredSize.x / step + 0.5f) * step, (int)(data->DesiredSize.y / step + 0.5f) * step); }
     };
 
