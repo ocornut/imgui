@@ -1669,6 +1669,7 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
 // - DataTypeFormatString()
 // - DataTypeApplyOp()
 // - DataTypeApplyOpFromText()
+// - DataTypeClamp()
 // - GetMinimumStepAtDecimalPrecision
 // - RoundScalarWithFormat<>()
 //-------------------------------------------------------------------------
@@ -1820,11 +1821,9 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
         return false;
 
     // Copy the value in an opaque buffer so we can compare at the end of the function if it changed at all.
-    IM_ASSERT(data_type < ImGuiDataType_COUNT);
-    int data_backup[2];
-    const ImGuiDataTypeInfo* type_info = ImGui::DataTypeGetInfo(data_type);
-    IM_ASSERT(type_info->Size <= sizeof(data_backup));
-    memcpy(data_backup, p_data, type_info->Size);
+    const ImGuiDataTypeInfo* type_info = DataTypeGetInfo(data_type);
+    ImGuiDataTypeTempStorage data_backup;
+    memcpy(&data_backup, p_data, type_info->Size);
 
     if (format == NULL)
         format = type_info->ScanFmt;
@@ -1896,7 +1895,35 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
             IM_ASSERT(0);
     }
 
-    return memcmp(data_backup, p_data, type_info->Size) != 0;
+    return memcmp(&data_backup, p_data, type_info->Size) != 0;
+}
+
+template<typename T>
+static bool ClampBehaviorT(T* v, T v_min, T v_max)
+{
+    if (*v < v_min) { *v = v_min; return true; }
+    if (*v > v_max) { *v = v_max; return true; }
+    return false;
+}
+
+bool ImGui::DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max)
+{
+    switch (data_type)
+    {
+    case ImGuiDataType_S8:     return ClampBehaviorT<ImS8  >((ImS8*  )p_data, *(const ImS8*  )p_min, *(const ImS8*  )p_max);
+    case ImGuiDataType_U8:     return ClampBehaviorT<ImU8  >((ImU8*  )p_data, *(const ImU8*  )p_min, *(const ImU8*  )p_max);
+    case ImGuiDataType_S16:    return ClampBehaviorT<ImS16 >((ImS16* )p_data, *(const ImS16* )p_min, *(const ImS16* )p_max);
+    case ImGuiDataType_U16:    return ClampBehaviorT<ImU16 >((ImU16* )p_data, *(const ImU16* )p_min, *(const ImU16* )p_max);
+    case ImGuiDataType_S32:    return ClampBehaviorT<ImS32 >((ImS32* )p_data, *(const ImS32* )p_min, *(const ImS32* )p_max);
+    case ImGuiDataType_U32:    return ClampBehaviorT<ImU32 >((ImU32* )p_data, *(const ImU32* )p_min, *(const ImU32* )p_max);
+    case ImGuiDataType_S64:    return ClampBehaviorT<ImS64 >((ImS64* )p_data, *(const ImS64* )p_min, *(const ImS64* )p_max);
+    case ImGuiDataType_U64:    return ClampBehaviorT<ImU64 >((ImU64* )p_data, *(const ImU64* )p_min, *(const ImU64* )p_max);
+    case ImGuiDataType_Float:  return ClampBehaviorT<float >((float* )p_data, *(const float* )p_min, *(const float* )p_max);
+    case ImGuiDataType_Double: return ClampBehaviorT<double>((double*)p_data, *(const double*)p_min, *(const double*)p_max);
+    case ImGuiDataType_COUNT:  break;
+    }
+    IM_ASSERT(0);
+    return false;
 }
 
 static float GetMinimumStepAtDecimalPrecision(int decimal_precision)
@@ -2148,8 +2175,10 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
             }
         }
     }
+
+    // Our current specs do NOT clamp when using CTRL+Click manual input, but we should eventually add a flag for that..
     if (temp_input_is_active || temp_input_start)
-        return TempInputScalar(frame_bb, id, label, data_type, p_data, format);
+        return TempInputScalar(frame_bb, id, label, data_type, p_data, format);// , p_min, p_max);
 
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
@@ -2599,8 +2628,10 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
             }
         }
     }
+
+    // Our current specs do NOT clamp when using CTRL+Click manual input, but we should eventually add a flag for that..
     if (temp_input_is_active || temp_input_start)
-        return TempInputScalar(frame_bb, id, label, data_type, p_data, format);
+        return TempInputScalar(frame_bb, id, label, data_type, p_data, format);// , p_min, p_max);
 
     // Draw frame
     const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : g.HoveredId == id ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
@@ -2899,7 +2930,21 @@ bool ImGui::TempInputText(const ImRect& bb, ImGuiID id, const char* label, char*
     return value_changed;
 }
 
-bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format)
+// Note that Drag/Slider functions are currently NOT forwarding the min/max values clamping values!
+// This is intended: this way we allow CTRL+Click manual input to set a value out of bounds, for maximum flexibility.
+// However this may not be ideal for all uses, as some user code may break on out of bound values.
+// In the future we should add flags to Slider/Drag to specify how to enforce min/max values with CTRL+Click.
+// See GitHub issues #1829 and #3209
+// In the meanwhile, you can easily "wrap" those functions to enforce clamping, using wrapper functions, e.g.
+//   bool SliderFloatClamp(const char* label, float* v, float v_min, float v_max)
+//   {
+//      float v_backup = *v;
+//      if (!SliderFloat(label, v, v_min, v_max))
+//         return false;
+//      *v = ImClamp(*v, v_min, v_max);
+//      return v_backup != *v;
+//   }
+bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min, const void* p_clamp_max)
 {
     ImGuiContext& g = *GImGui;
 
@@ -2911,10 +2956,21 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
 
     ImGuiInputTextFlags flags = ImGuiInputTextFlags_AutoSelectAll | ImGuiInputTextFlags_NoMarkEdited;
     flags |= ((data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) ? ImGuiInputTextFlags_CharsScientific : ImGuiInputTextFlags_CharsDecimal);
-    bool value_changed = TempInputText(bb, id, label, data_buf, IM_ARRAYSIZE(data_buf), flags);
-    if (value_changed)
+    bool value_changed = false;
+    if (TempInputText(bb, id, label, data_buf, IM_ARRAYSIZE(data_buf), flags))
     {
-        value_changed = DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialTextA.Data, data_type, p_data, NULL);
+        // Backup old value
+        size_t data_type_size = DataTypeGetInfo(data_type)->Size;
+        ImGuiDataTypeTempStorage data_backup;
+        memcpy(&data_backup, p_data, data_type_size);
+
+        // Apply new value (or operations) then clamp
+        DataTypeApplyOpFromText(data_buf, g.InputTextState.InitialTextA.Data, data_type, p_data, NULL);
+        if (p_clamp_min && p_clamp_max)
+            DataTypeClamp(data_type, p_data, p_clamp_min, p_clamp_max);
+
+        // Only mark as edited if new value is different
+        value_changed = memcmp(&data_type, p_data, data_type_size) != 0;
         if (value_changed)
             MarkItemEdited(id);
     }
