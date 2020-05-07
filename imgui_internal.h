@@ -824,8 +824,9 @@ struct ImGuiWindowSettings
     ImVec2ih    Pos;
     ImVec2ih    Size;
     bool        Collapsed;
+    bool        WantApply;      // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
-    ImGuiWindowSettings()       { ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = false; }
+    ImGuiWindowSettings()       { ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = WantApply = false; }
     char* GetName()             { return (char*)(this + 1); }
 };
 
@@ -833,6 +834,8 @@ struct ImGuiSettingsHandler
 {
     const char* TypeName;       // Short description stored in .ini file. Disallowed characters: '[' ']'
     ImGuiID     TypeHash;       // == ImHashStr(TypeName)
+    void        (*ClearAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);                                // Clear all settings data
+    void        (*ApplyAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);                                // Read: Called after reading (in registration order)
     void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);              // Read: Called when entering into a new ini entry e.g. "[Window][Name]"
     void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line); // Read: Called for every line of text within an ini entry
     void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'

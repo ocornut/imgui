@@ -917,6 +917,8 @@ static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted
 static ImRect           GetViewportRect();
 
 // Settings
+static void             WindowSettingsHandler_ClearAll(ImGuiContext*, ImGuiSettingsHandler*);
+static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*);
 static void*            WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
 static void             WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
 static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
@@ -3941,6 +3943,8 @@ void ImGui::Initialize(ImGuiContext* context)
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "Window";
         ini_handler.TypeHash = ImHashStr("Window");
+        ini_handler.ClearAllFn = WindowSettingsHandler_ClearAll;
+        ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
         ini_handler.ReadOpenFn = WindowSettingsHandler_ReadOpen;
         ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
@@ -9707,9 +9711,9 @@ void ImGui::ClearIniSettings()
 {
     ImGuiContext& g = *GImGui;
     g.SettingsIniData.clear();
-    for (int i = 0; i != g.Windows.Size; i++)
-        g.Windows[i]->SettingsOffset = -1;
-    g.SettingsWindows.clear();
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        if (g.SettingsHandlers[handler_n].ClearAllFn)
+            g.SettingsHandlers[handler_n].ClearAllFn(&g, &g.SettingsHandlers[handler_n]);
 }
 
 void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
@@ -9727,7 +9731,8 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
-    IM_ASSERT(g.SettingsLoaded == false && g.FrameCount == 0);
+    //IM_ASSERT(!g.WithinFrameScope && "Cannot be called between NewFrame() and EndFrame()");
+    //IM_ASSERT(g.SettingsLoaded == false && g.FrameCount == 0);
 
     // For user convenience, we allow passing a non zero-terminated string (hence the ini_size parameter).
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
@@ -9779,6 +9784,11 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 
     // [DEBUG] Restore untouched copy so it can be browsed in Metrics (not strictly necessary)
     memcpy(buf, ini_data, ini_size);
+
+    // Call post-read handlers
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        if (g.SettingsHandlers[handler_n].ApplyAllFn)
+            g.SettingsHandlers[handler_n].ApplyAllFn(&g, &g.SettingsHandlers[handler_n]);
 }
 
 void ImGui::SaveIniSettingsToDisk(const char* ini_filename)
@@ -9814,11 +9824,33 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
     return g.SettingsIniData.c_str();
 }
 
+static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiContext& g = *ctx;
+    for (int i = 0; i != g.Windows.Size; i++)
+        g.Windows[i]->SettingsOffset = -1;
+    g.SettingsWindows.clear();
+}
+
+// Apply to existing windows (if any)
+static void WindowSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiContext& g = *ctx;
+    for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+        if (settings->WantApply)
+        {
+            if (ImGuiWindow* window = ImGui::FindWindowByID(settings->ID))
+                ApplyWindowSettings(window, settings);
+            settings->WantApply = false;
+        }
+}
+
 static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHashStr(name));
     if (!settings)
         settings = ImGui::CreateNewWindowSettings(name);
+    settings->WantApply = true;
     return (void*)settings;
 }
 
