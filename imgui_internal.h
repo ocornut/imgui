@@ -730,6 +730,11 @@ struct IMGUI_API ImRect
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
 };
 
+struct ImGuiDataTypeTempStorage
+{
+    ImU8        Data[8];        // Can fit any data up to ImGuiDataType_COUNT
+};
+
 // Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
 struct ImGuiDataTypeInfo
 {
@@ -839,8 +844,9 @@ struct ImGuiWindowSettings
     ImGuiID     ClassId;        // ID of window class if specified
     short       DockOrder;      // Order of the last time the window was visible within its DockNode. This is used to reorder windows that are reappearing on the same frame. Same value between windows that were active and windows that were none are possible.
     bool        Collapsed;
+    bool        WantApply;      // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
-    ImGuiWindowSettings()       { ID = 0; Pos = Size = ViewportPos = ImVec2ih(0, 0); ViewportId = DockId = ClassId = 0; DockOrder = -1; Collapsed = false; }
+    ImGuiWindowSettings()       { ID = 0; Pos = Size = ViewportPos = ImVec2ih(0, 0); ViewportId = DockId = ClassId = 0; DockOrder = -1; Collapsed = WantApply = false; }
     char* GetName()             { return (char*)(this + 1); }
 };
 
@@ -848,6 +854,8 @@ struct ImGuiSettingsHandler
 {
     const char* TypeName;       // Short description stored in .ini file. Disallowed characters: '[' ']'
     ImGuiID     TypeHash;       // == ImHashStr(TypeName)
+    void        (*ClearAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);                                // Clear all settings data
+    void        (*ApplyAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler);                                // Read: Called after reading (in registration order)
     void*       (*ReadOpenFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, const char* name);              // Read: Called when entering into a new ini entry e.g. "[Window][Name]"
     void        (*ReadLineFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, void* entry, const char* line); // Read: Called for every line of text within an ini entry
     void        (*WriteAllFn)(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* out_buf);      // Write: Output every entries into 'out_buf'
@@ -1924,6 +1932,7 @@ namespace ImGui
     // Settings
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
+    IMGUI_API void                  ClearIniSettings();
     IMGUI_API ImGuiWindowSettings*  CreateNewWindowSettings(const char* name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
     IMGUI_API ImGuiWindowSettings*  FindOrCreateWindowSettings(const char* name);
@@ -2153,11 +2162,12 @@ namespace ImGui
     IMGUI_API int           DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type, const void* p_data, const char* format);
     IMGUI_API void          DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg_1, const void* arg_2);
     IMGUI_API bool          DataTypeApplyOpFromText(const char* buf, const char* initial_value_buf, ImGuiDataType data_type, void* p_data, const char* format);
+    IMGUI_API bool          DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max);
 
     // InputText
     IMGUI_API bool          InputTextEx(const char* label, const char* hint, char* buf, int buf_size, const ImVec2& size_arg, ImGuiInputTextFlags flags, ImGuiInputTextCallback callback = NULL, void* user_data = NULL);
     IMGUI_API bool          TempInputText(const ImRect& bb, ImGuiID id, const char* label, char* buf, int buf_size, ImGuiInputTextFlags flags);
-    IMGUI_API bool          TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format);
+    IMGUI_API bool          TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImGuiDataType data_type, void* p_data, const char* format, const void* p_clamp_min = NULL, const void* p_clamp_max = NULL);
     inline bool             TempInputIsActive(ImGuiID id)       { ImGuiContext& g = *GImGui; return (g.ActiveId == id && g.TempInputId == id); }
     inline ImGuiInputTextState* GetInputTextState(ImGuiID id)   { ImGuiContext& g = *GImGui; return (g.InputTextState.ID == id) ? &g.InputTextState : NULL; } // Get input text state if active
 

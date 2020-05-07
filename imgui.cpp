@@ -4,7 +4,7 @@
 // Help:
 // - Read FAQ at http://dearimgui.org/faq
 // - Newcomers, read 'Programmer guide' below for notes on how to setup Dear ImGui in your codebase.
-// - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp for demo code. All applications in examples/ are doing that.
+// - Call and read ImGui::ShowDemoWindow() in imgui_demo.cpp. All applications in examples/ are doing that.
 // Read imgui.cpp for details, links and comments.
 
 // Resources:
@@ -923,13 +923,15 @@ static const float DOCKING_TRANSPARENT_PAYLOAD_ALPHA        = 0.50f;    // For u
 static void             SetCurrentWindow(ImGuiWindow* window);
 static void             SetWindowHitTestHole(ImGuiWindow* window, const ImVec2& pos, const ImVec2& size);
 static void             FindHoveredWindow();
-static ImGuiWindow*     CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags);
+static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags);
 static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges);
 
 static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
 static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
 
 // Settings
+static void             WindowSettingsHandler_ClearAll(ImGuiContext*, ImGuiSettingsHandler*);
+static void             WindowSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*);
 static void*            WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
 static void             WindowSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
 static void             WindowSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
@@ -4130,6 +4132,8 @@ void ImGui::Initialize(ImGuiContext* context)
         ImGuiSettingsHandler ini_handler;
         ini_handler.TypeName = "Window";
         ini_handler.TypeHash = ImHashStr("Window");
+        ini_handler.ClearAllFn = WindowSettingsHandler_ClearAll;
+        ini_handler.ApplyAllFn = WindowSettingsHandler_ApplyAll;
         ini_handler.ReadOpenFn = WindowSettingsHandler_ReadOpen;
         ini_handler.ReadLineFn = WindowSettingsHandler_ReadLine;
         ini_handler.WriteAllFn = WindowSettingsHandler_WriteAll;
@@ -5200,7 +5204,23 @@ ImGuiWindow* ImGui::FindWindowByName(const char* name)
     return FindWindowByID(id);
 }
 
-static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFlags flags)
+static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settings)
+{
+    if (settings->ViewportId)
+    {
+        window->ViewportId = settings->ViewportId;
+        window->ViewportPos = ImVec2(settings->ViewportPos.x, settings->ViewportPos.y);
+    }
+    window->Pos = ImFloor(ImVec2(settings->Pos.x + window->ViewportPos.x, settings->Pos.y + window->ViewportPos.y));
+    if (settings->Size.x > 0 && settings->Size.y > 0)
+        window->Size = window->SizeFull = ImFloor(ImVec2(settings->Size.x, settings->Size.y));
+    window->Collapsed = settings->Collapsed;
+    window->DockId = settings->DockId;
+    window->DockOrder = settings->DockOrder;
+
+}
+
+static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     //IMGUI_DEBUG_LOG("CreateNewWindow '%s', flags = 0x%08X\n", name, flags);
@@ -5221,23 +5241,9 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImVec2 size, ImGuiWindowFl
             // Retrieve settings from .ini file
             window->SettingsOffset = g.SettingsWindows.offset_from_ptr(settings);
             SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
-            if (settings->ViewportId)
-            {
-                window->ViewportId = settings->ViewportId;
-                window->ViewportPos = ImVec2(settings->ViewportPos.x, settings->ViewportPos.y);
-            }
-            else
-            {
-                window->ViewportPos = main_viewport->Pos;
-            }
-            window->Pos = ImVec2(settings->Pos.x + window->ViewportPos.x, settings->Pos.y + window->ViewportPos.y);
-            window->Collapsed = settings->Collapsed;
-            if (settings->Size.x > 0 && settings->Size.y > 0)
-                size = ImVec2(settings->Size.x, settings->Size.y);
-            window->DockId = settings->DockId;
-            window->DockOrder = settings->DockOrder;
+            window->ViewportPos = main_viewport->Pos;
+            ApplyWindowSettings(window, settings);
         }
-    window->Size = window->SizeFull = ImFloor(size);
     window->DC.CursorStartPos = window->DC.CursorMaxPos = window->Pos; // So first call to CalcContentSize() doesn't return crazy values
 
     if ((flags & ImGuiWindowFlags_AlwaysAutoResize) != 0)
@@ -5861,10 +5867,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     ImGuiWindow* window = FindWindowByName(name);
     const bool window_just_created = (window == NULL);
     if (window_just_created)
-    {
-        ImVec2 size_on_first_use = (g.NextWindowData.Flags & ImGuiNextWindowDataFlags_HasSize) ? g.NextWindowData.SizeVal : ImVec2(0.0f, 0.0f); // Any condition flag will do since we are creating a new window here.
-        window = CreateNewWindow(name, size_on_first_use, flags);
-    }
+        window = CreateNewWindow(name, flags);
 
     // Automatically disable manual moving/resizing when NoInputs is set
     if ((flags & ImGuiWindowFlags_NoInputs) == ImGuiWindowFlags_NoInputs)
@@ -7306,6 +7309,7 @@ ImVec2 ImGui::GetFontTexUvWhitePixel()
 
 void ImGui::SetWindowFontScale(float scale)
 {
+    IM_ASSERT(scale > 0.0f);
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
     window->FontWindowScale = scale;
@@ -7557,6 +7561,7 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     ImGuiContext& g = *GImGui;
 
     // Verify that io.KeyXXX fields haven't been tampered with. Key mods should not be modified between NewFrame() and EndFrame()
+    // One possible reason leading to this assert is that your back-ends update inputs _AFTER_ NewFrame().
     const ImGuiKeyModFlags expected_key_mod_flags = GetMergedKeyModFlags();
     IM_ASSERT(g.IO.KeyMods == expected_key_mod_flags && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
     IM_UNUSED(expected_key_mod_flags);
@@ -10372,6 +10377,19 @@ void ImGui::LogButtons()
 //-----------------------------------------------------------------------------
 // [SECTION] SETTINGS
 //-----------------------------------------------------------------------------
+// - UpdateSettings() [Internal]
+// - MarkIniSettingsDirty() [Internal]
+// - CreateNewWindowSettings() [Internal]
+// - FindWindowSettings() [Internal]
+// - FindOrCreateWindowSettings() [Internal]
+// - FindSettingsHandler() [Internal]
+// - ClearIniSettings() [Internal]
+// - LoadIniSettingsFromDisk()
+// - LoadIniSettingsFromMemory()
+// - SaveIniSettingsToDisk()
+// - SaveIniSettingsToMemory()
+// - WindowSettingsHandler_***() [Internal]
+//-----------------------------------------------------------------------------
 
 // Called by NewFrame()
 void ImGui::UpdateSettings()
@@ -10454,16 +10472,6 @@ ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name)
     return CreateNewWindowSettings(name);
 }
 
-void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
-{
-    size_t file_data_size = 0;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
-    if (!file_data)
-        return;
-    LoadIniSettingsFromMemory(file_data, (size_t)file_data_size);
-    IM_FREE(file_data);
-}
-
 ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
@@ -10474,21 +10482,42 @@ ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
     return NULL;
 }
 
+void ImGui::ClearIniSettings()
+{
+    ImGuiContext& g = *GImGui;
+    g.SettingsIniData.clear();
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        if (g.SettingsHandlers[handler_n].ClearAllFn)
+            g.SettingsHandlers[handler_n].ClearAllFn(&g, &g.SettingsHandlers[handler_n]);
+}
+
+void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
+{
+    size_t file_data_size = 0;
+    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
+    if (!file_data)
+        return;
+    LoadIniSettingsFromMemory(file_data, (size_t)file_data_size);
+    IM_FREE(file_data);
+}
+
 // Zero-tolerance, no error reporting, cheap .ini parsing
 void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
-    IM_ASSERT(g.SettingsLoaded == false && g.FrameCount == 0);
+    //IM_ASSERT(!g.WithinFrameScope && "Cannot be called between NewFrame() and EndFrame()");
+    //IM_ASSERT(g.SettingsLoaded == false && g.FrameCount == 0);
 
     // For user convenience, we allow passing a non zero-terminated string (hence the ini_size parameter).
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
     if (ini_size == 0)
         ini_size = strlen(ini_data);
-    char* buf = (char*)IM_ALLOC(ini_size + 1);
-    char* buf_end = buf + ini_size;
+    g.SettingsIniData.Buf.resize((int)ini_size + 1);
+    char* const buf = g.SettingsIniData.Buf.Data;
+    char* const buf_end = buf + ini_size;
     memcpy(buf, ini_data, ini_size);
-    buf[ini_size] = 0;
+    buf_end[0] = 0;
 
     void* entry_data = NULL;
     ImGuiSettingsHandler* entry_handler = NULL;
@@ -10526,8 +10555,16 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
             entry_handler->ReadLineFn(&g, entry_handler, entry_data, line);
         }
     }
-    IM_FREE(buf);
     g.SettingsLoaded = true;
+
+    // [DEBUG] Restore untouched copy so it can be browsed in Metrics (not strictly necessary)
+    memcpy(buf, ini_data, ini_size);
+
+    // Call post-read handlers
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        if (g.SettingsHandlers[handler_n].ApplyAllFn)
+            g.SettingsHandlers[handler_n].ApplyAllFn(&g, &g.SettingsHandlers[handler_n]);
+
     DockContextOnLoadSettings(&g);
 }
 
@@ -10564,11 +10601,33 @@ const char* ImGui::SaveIniSettingsToMemory(size_t* out_size)
     return g.SettingsIniData.c_str();
 }
 
+static void WindowSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiContext& g = *ctx;
+    for (int i = 0; i != g.Windows.Size; i++)
+        g.Windows[i]->SettingsOffset = -1;
+    g.SettingsWindows.clear();
+}
+
+// Apply to existing windows (if any)
+static void WindowSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiContext& g = *ctx;
+    for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+        if (settings->WantApply)
+        {
+            if (ImGuiWindow* window = ImGui::FindWindowByID(settings->ID))
+                ApplyWindowSettings(window, settings);
+            settings->WantApply = false;
+        }
+}
+
 static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHashStr(name));
     if (!settings)
         settings = ImGui::CreateNewWindowSettings(name);
+    settings->WantApply = true;
     return (void*)settings;
 }
 
@@ -15426,6 +15485,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::TreePop();
         }
 
+        static void NodeWindowSettings(ImGuiWindowSettings* settings)
+        {
+            ImGui::Text("0x%08X \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
+                settings->ID, settings->GetName(), settings->Pos.x, settings->Pos.y, settings->Size.x, settings->Size.y, settings->Collapsed);
+        }
+
         static void NodeViewport(ImGuiViewportP* viewport)
         {
             ImGui::SetNextItemOpen(true, ImGuiCond_Once);
@@ -15674,6 +15739,41 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 #endif // #define IMGUI_HAS_DOCK
+
+    // Settings
+    if (ImGui::TreeNode("Settings"))
+    {
+        if (ImGui::SmallButton("Clear"))
+            ImGui::ClearIniSettings();
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Save to disk"))
+            ImGui::SaveIniSettingsToDisk(g.IO.IniFilename);
+        ImGui::SameLine();
+        if (g.IO.IniFilename)
+            ImGui::Text("\"%s\"", g.IO.IniFilename);
+        else
+            ImGui::TextUnformatted("<NULL>");
+        ImGui::Text("SettingsDirtyTimer %.2f", g.SettingsDirtyTimer);
+        if (ImGui::TreeNode("SettingsHandlers", "Settings handlers: (%d)", g.SettingsHandlers.Size))
+        {
+            for (int n = 0; n < g.SettingsHandlers.Size; n++)
+                ImGui::TextUnformatted(g.SettingsHandlers[n].TypeName);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("SettingsWindows", "Settings packed data: Windows: %d bytes", g.SettingsWindows.size()))
+        {
+            for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+                Funcs::NodeWindowSettings(settings);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
+        {
+            char* buf = (char*)(void*)(g.SettingsIniData.Buf.Data ? g.SettingsIniData.Buf.Data : "");
+            ImGui::InputTextMultiline("##Ini", buf, g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, 0.0f), ImGuiInputTextFlags_ReadOnly);
+            ImGui::TreePop();
+        }
+        ImGui::TreePop();
+    }
 
     // Misc Details
     if (ImGui::TreeNode("Internal state"))
