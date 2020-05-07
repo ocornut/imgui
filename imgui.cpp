@@ -10487,6 +10487,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 Funcs::NodeWindowSettings(settings);
             ImGui::TreePop();
         }
+
 #ifdef IMGUI_HAS_TABLE
         if (ImGui::TreeNode("SettingsTables", "Settings packed data: Tables: %d bytes", g.SettingsTables.size()))
         {
@@ -10495,6 +10496,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::TreePop();
         }
 #endif
+
+#ifdef IMGUI_HAS_DOCK
+#endif
+
         if (ImGui::TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
         {
             char* buf = (char*)(void*)(g.SettingsIniData.Buf.Data ? g.SettingsIniData.Buf.Data : "");
