@@ -10446,6 +10446,24 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::TreePop();
         }
 
+        static void NodeTableSettings(ImGuiTableSettings* settings)
+        {
+            if (!ImGui::TreeNode((void*)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
+                return;
+            ImGui::BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
+            ImGui::BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
+            for (int n = 0; n < settings->ColumnsCount; n++)
+            {
+                ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
+                ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
+                ImGui::BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
+                    n, column_settings->DisplayOrder, column_settings->SortOrder,
+                    (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
+                    column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
+            }
+            ImGui::TreePop();
+        }
+
         static void NodeTable(ImGuiTable* table)
         {
             char buf[256];
@@ -10478,22 +10496,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                         (column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize) ? "WidthAlwaysAutoResize " : "",
                         (column->Flags & ImGuiTableColumnFlags_NoResize) ? "NoResize " : "");
                 }
-                ImGuiTableSettings* settings = TableFindSettings(table);
-                if (settings && ImGui::TreeNode("Settings"))
-                {
-                    ImGui::BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
-                    ImGui::BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
-                    for (int n = 0; n < settings->ColumnsCount; n++)
-                    {
-                        ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-                        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
-                        ImGui::BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
-                            n, column_settings->DisplayOrder, column_settings->SortOrder,
-                            (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
-                            column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
-                    }
-                    ImGui::TreePop();
-                }
+                if (ImGuiTableSettings* settings = TableFindSettings(table))
+                    NodeTableSettings(settings);
                 ImGui::TreePop();
             }
         }
@@ -10650,8 +10654,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 #ifdef IMGUI_HAS_TABLE
         if (ImGui::TreeNode("SettingsTables", "Settings packed data: Tables: %d bytes", g.SettingsTables.size()))
         {
-            //for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
-            //    Funcs::NodeTableSettings(settings);
+            for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
+                Funcs::NodeTableSettings(settings);
             ImGui::TreePop();
         }
 #endif
