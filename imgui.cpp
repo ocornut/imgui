@@ -10282,6 +10282,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGui::TreePop();
         }
 
+        static void NodeWindowSettings(ImGuiWindowSettings* settings)
+        {
+            ImGui::Text("0x%08X \"%s\" Pos (%d,%d) Size (%d,%d) Collapsed=%d",
+                settings->ID, settings->GetName(), settings->Pos.x, settings->Pos.y, settings->Size.x, settings->Size.y, settings->Collapsed);
+        }
+
         static void NodeTabBar(ImGuiTabBar* tab_bar)
         {
             // Standalone tab bars (not associated to docking/windows functionality) currently hold no discernible strings.
@@ -10397,6 +10403,38 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::TreePop();
     }
 #endif // #define IMGUI_HAS_DOCK
+
+    // Settings
+    if (ImGui::TreeNode("Settings"))
+    {
+        if (ImGui::SmallButton("Save to disk"))
+            ImGui::SaveIniSettingsToDisk(g.IO.IniFilename);
+        ImGui::SameLine();
+        if (g.IO.IniFilename)
+            ImGui::Text("\"%s\"", g.IO.IniFilename);
+        else
+            ImGui::TextUnformatted("<NULL>");
+        ImGui::Text("SettingsDirtyTimer %.2f", g.SettingsDirtyTimer);
+        if (ImGui::TreeNode("SettingsHandlers", "Settings handlers: (%d)", g.SettingsHandlers.Size))
+        {
+            for (int n = 0; n < g.SettingsHandlers.Size; n++)
+                ImGui::TextUnformatted(g.SettingsHandlers[n].TypeName);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("SettingsWindows", "Settings packed data: Windows: %d bytes", g.SettingsWindows.size()))
+        {
+            for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+                Funcs::NodeWindowSettings(settings);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
+        {
+            char* buf = (char*)(void*)(g.SettingsIniData.Buf.Data ? g.SettingsIniData.Buf.Data : "");
+            ImGui::InputTextMultiline("##Ini", buf, g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, 0.0f), ImGuiInputTextFlags_ReadOnly);
+            ImGui::TreePop();
+        }
+        ImGui::TreePop();
+    }
 
     // Misc Details
     if (ImGui::TreeNode("Internal state"))
