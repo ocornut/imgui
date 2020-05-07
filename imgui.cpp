@@ -5206,6 +5206,8 @@ ImGuiWindow* ImGui::FindWindowByName(const char* name)
 
 static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settings)
 {
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    window->ViewportPos = main_viewport->Pos;
     if (settings->ViewportId)
     {
         window->ViewportId = settings->ViewportId;
@@ -5217,7 +5219,6 @@ static void ApplyWindowSettings(ImGuiWindow* window, ImGuiWindowSettings* settin
     window->Collapsed = settings->Collapsed;
     window->DockId = settings->DockId;
     window->DockOrder = settings->DockOrder;
-
 }
 
 static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
@@ -5233,6 +5234,7 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
     // Default/arbitrary window position. Use SetNextWindowPos() with the appropriate condition flag to change the initial position of a window.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     window->Pos = main_viewport->Pos + ImVec2(60, 60);
+    window->ViewportPos = main_viewport->Pos;
 
     // User can disable loading and saving of settings. Tooltip and child windows also don't store settings.
     if (!(flags & ImGuiWindowFlags_NoSavedSettings))
@@ -5241,7 +5243,6 @@ static ImGuiWindow* CreateNewWindow(const char* name, ImGuiWindowFlags flags)
             // Retrieve settings from .ini file
             window->SettingsOffset = g.SettingsWindows.offset_from_ptr(settings);
             SetWindowConditionAllowFlags(window, ImGuiCond_FirstUseEver, false);
-            window->ViewportPos = main_viewport->Pos;
             ApplyWindowSettings(window, settings);
         }
     window->DC.CursorStartPos = window->DC.CursorMaxPos = window->Pos; // So first call to CalcContentSize() doesn't return crazy values
@@ -10564,8 +10565,6 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
         if (g.SettingsHandlers[handler_n].ApplyAllFn)
             g.SettingsHandlers[handler_n].ApplyAllFn(&g, &g.SettingsHandlers[handler_n]);
-
-    DockContextOnLoadSettings(&g);
 }
 
 void ImGui::SaveIniSettingsToDisk(const char* ini_filename)
@@ -10624,9 +10623,10 @@ static void WindowSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandl
 
 static void* WindowSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
-    ImGuiWindowSettings* settings = ImGui::FindWindowSettings(ImHashStr(name));
-    if (!settings)
-        settings = ImGui::CreateNewWindowSettings(name);
+    ImGuiWindowSettings* settings = ImGui::FindOrCreateWindowSettings(name);
+    ImGuiID id = settings->ID;
+    *settings = ImGuiWindowSettings();
+    settings->ID = id;
     settings->WantApply = true;
     return (void*)settings;
 }
@@ -11683,6 +11683,7 @@ namespace ImGui
     static void             DockSettingsRenameNodeReferences(ImGuiID old_node_id, ImGuiID new_node_id);
     static void             DockSettingsRemoveNodeReferences(ImGuiID* node_ids, int node_ids_count);
     static ImGuiDockNodeSettings*   DockSettingsFindNodeSettings(ImGuiContext* ctx, ImGuiID node_id);
+    static void             DockSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*);
     static void*            DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
     static void             DockSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
     static void             DockSettingsHandler_WriteAll(ImGuiContext* imgui_ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf);
@@ -11700,7 +11701,6 @@ namespace ImGui
 //-----------------------------------------------------------------------------
 // - DockContextInitialize()
 // - DockContextShutdown()
-// - DockContextOnLoadSettings()
 // - DockContextClearNodes()
 // - DockContextRebuildNodes()
 // - DockContextUpdateUndocking()
@@ -11726,6 +11726,7 @@ void ImGui::DockContextInitialize(ImGuiContext* ctx)
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Docking";
     ini_handler.TypeHash = ImHashStr("Docking");
+    ini_handler.ApplyAllFn = DockSettingsHandler_ApplyAll;
     ini_handler.ReadOpenFn = DockSettingsHandler_ReadOpen;
     ini_handler.ReadLineFn = DockSettingsHandler_ReadLine;
     ini_handler.WriteAllFn = DockSettingsHandler_WriteAll;
@@ -11741,13 +11742,6 @@ void ImGui::DockContextShutdown(ImGuiContext* ctx)
             IM_DELETE(node);
     IM_DELETE(g.DockContext);
     g.DockContext = NULL;
-}
-
-void ImGui::DockContextOnLoadSettings(ImGuiContext* ctx)
-{
-    ImGuiDockContext* dc = ctx->DockContext;
-    DockContextPruneUnusedSettingsNodes(ctx);
-    DockContextBuildNodesFromSettings(ctx, dc->SettingsNodes.Data, dc->SettingsNodes.Size);
 }
 
 void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear_persistent_docking_references)
@@ -14251,6 +14245,7 @@ void ImGui::DockBuilderRemoveNode(ImGuiID node_id)
     DockContextRemoveNode(ctx, node, true);
 }
 
+// root_id = 0 to remove all, root_id != 0 to remove child of given node.
 void ImGui::DockBuilderRemoveNodeChildNodes(ImGuiID root_id)
 {
     ImGuiContext* ctx = GImGui;
@@ -14821,6 +14816,7 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
 // - DockSettingsRenameNodeReferences()
 // - DockSettingsRemoveNodeReferences()
 // - DockSettingsFindNodeSettings()
+// - DockSettingsHandler_ApplyAll()
 // - DockSettingsHandler_ReadOpen()
 // - DockSettingsHandler_ReadLine()
 // - DockSettingsHandler_DockNodeToSettings()
@@ -14869,6 +14865,15 @@ static ImGuiDockNodeSettings* ImGui::DockSettingsFindNodeSettings(ImGuiContext* 
         if (dc->SettingsNodes[n].ID == id)
             return &dc->SettingsNodes[n];
     return NULL;
+}
+
+static void ImGui::DockSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    // Prune settings at boot time only
+    ImGuiDockContext* dc = ctx->DockContext;
+    if (ctx->Windows.Size == 0)
+        DockContextPruneUnusedSettingsNodes(ctx);
+    DockContextBuildNodesFromSettings(ctx, dc->SettingsNodes.Data, dc->SettingsNodes.Size);
 }
 
 static void* ImGui::DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
@@ -15690,52 +15695,17 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
     // Details for Docking
 #ifdef IMGUI_HAS_DOCK
-    if (ImGui::TreeNode("Docking"))
+    if (ImGui::TreeNode("Dock nodes"))
     {
         ImGuiDockContext* dc = g.DockContext;
         ImGui::Checkbox("Ctrl shows window dock info", &show_docking_nodes);
-
-        if (ImGui::TreeNode("Dock nodes"))
-        {
-            if (ImGui::SmallButton("Clear settings")) { DockContextClearNodes(&g, 0, true); }
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
-            for (int n = 0; n < dc->Nodes.Data.Size; n++)
-                if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
-                    if (node->IsRootNode())
-                        Funcs::NodeDockNode(node, "Node");
-            ImGui::TreePop();
-        }
-
-        if (ImGui::TreeNode("Settings"))
-        {
-            if (ImGui::SmallButton("Refresh"))
-                SaveIniSettingsToMemory();
-            ImGui::SameLine();
-            if (ImGui::SmallButton("Save to disk"))
-                SaveIniSettingsToDisk(g.IO.IniFilename);
-            ImGui::Separator();
-            ImGui::Text("Docked Windows:");
-            for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
-                if (settings->DockId != 0)
-                    ImGui::BulletText("Window '%s' -> DockId %08X", settings->GetName(), settings->DockId);
-            ImGui::Separator();
-            ImGui::Text("Dock Nodes:");
-            for (int n = 0; n < dc->SettingsNodes.Size; n++)
-            {
-                ImGuiDockNodeSettings* settings = &dc->SettingsNodes[n];
-                const char* selected_tab_name = NULL;
-                if (settings->SelectedWindowId)
-                {
-                    if (ImGuiWindow* window = FindWindowByID(settings->SelectedWindowId))
-                        selected_tab_name = window->Name;
-                    else if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->SelectedWindowId))
-                        selected_tab_name = window_settings->GetName();
-                }
-                ImGui::BulletText("Node %08X, Parent %08X, SelectedTab %08X ('%s')", settings->ID, settings->ParentNodeId, settings->SelectedWindowId, selected_tab_name ? selected_tab_name : settings->SelectedWindowId ? "N/A" : "");
-            }
-            ImGui::TreePop();
-        }
+        if (ImGui::SmallButton("Clear nodes")) { DockContextClearNodes(&g, 0, true); }
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
+        for (int n = 0; n < dc->Nodes.Data.Size; n++)
+            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+                if (node->IsRootNode())
+                    Funcs::NodeDockNode(node, "Node");
         ImGui::TreePop();
     }
 #endif // #define IMGUI_HAS_DOCK
@@ -15745,6 +15715,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         if (ImGui::SmallButton("Clear"))
             ImGui::ClearIniSettings();
+        ImGui::SameLine();
+        if (ImGui::SmallButton("Save to memory"))
+            ImGui::SaveIniSettingsToMemory();
         ImGui::SameLine();
         if (ImGui::SmallButton("Save to disk"))
             ImGui::SaveIniSettingsToDisk(g.IO.IniFilename);
@@ -15757,13 +15730,35 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         if (ImGui::TreeNode("SettingsHandlers", "Settings handlers: (%d)", g.SettingsHandlers.Size))
         {
             for (int n = 0; n < g.SettingsHandlers.Size; n++)
-                ImGui::TextUnformatted(g.SettingsHandlers[n].TypeName);
+                ImGui::BulletText("%s", g.SettingsHandlers[n].TypeName);
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("SettingsWindows", "Settings packed data: Windows: %d bytes", g.SettingsWindows.size()))
         {
             for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
                 Funcs::NodeWindowSettings(settings);
+            ImGui::TreePop();
+        }
+        if (ImGui::TreeNode("SettingsDocking", "Settings packed data: Docking"))
+        {
+            ImGui::Text("In SettingsWindows:");
+            for (ImGuiWindowSettings* settings = g.SettingsWindows.begin(); settings != NULL; settings = g.SettingsWindows.next_chunk(settings))
+                if (settings->DockId != 0)
+                    ImGui::BulletText("Window '%s' -> DockId %08X", settings->GetName(), settings->DockId);
+            ImGui::Text("In SettingsNodes:");
+            for (int n = 0; n < g.DockContext->SettingsNodes.Size; n++)
+            {
+                ImGuiDockNodeSettings* settings = &g.DockContext->SettingsNodes[n];
+                const char* selected_tab_name = NULL;
+                if (settings->SelectedWindowId)
+                {
+                    if (ImGuiWindow* window = FindWindowByID(settings->SelectedWindowId))
+                        selected_tab_name = window->Name;
+                    else if (ImGuiWindowSettings* window_settings = FindWindowSettings(settings->SelectedWindowId))
+                        selected_tab_name = window_settings->GetName();
+                }
+                ImGui::BulletText("Node %08X, Parent %08X, SelectedTab %08X ('%s')", settings->ID, settings->ParentNodeId, settings->SelectedWindowId, selected_tab_name ? selected_tab_name : settings->SelectedWindowId ? "N/A" : "");
+            }
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
