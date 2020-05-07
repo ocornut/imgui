@@ -2505,25 +2505,30 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
                 (column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize) ? "WidthAlwaysAutoResize " : "",
                 (column->Flags & ImGuiTableColumnFlags_NoResize) ? "NoResize " : "");
         }
-        ImGuiTableSettings* settings = TableFindSettings(table);
-        if (settings && TreeNode("Settings"))
-        {
-            BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
-            BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
-            for (int n = 0; n < settings->ColumnsCount; n++)
-            {
-                ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
-                ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
-                BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
-                    n, column_settings->DisplayOrder, column_settings->SortOrder,
-                    (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
-                    column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
-            }
-            TreePop();
-        }
+        if (ImGuiTableSettings* settings = TableFindSettings(table))
+            DebugNodeTableSettings(settings);
         TreePop();
     }
 }
+
+void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
+{
+    if (!TreeNode((void*)(intptr_t)settings->ID, "Settings 0x%08X (%d columns)", settings->ID, settings->ColumnsCount))
+        return;
+    BulletText("SaveFlags: 0x%08X", settings->SaveFlags);
+    BulletText("ColumnsCount: %d (max %d)", settings->ColumnsCount, settings->ColumnsCountMax);
+    for (int n = 0; n < settings->ColumnsCount; n++)
+    {
+        ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
+        ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
+        BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
+            n, column_settings->DisplayOrder, column_settings->SortOrder,
+            (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
+            column_settings->Visible, column_settings->UserID, column_settings->WidthOrWeight);
+    }
+    TreePop();
+}
+
 #endif // #ifndef IMGUI_DISABLE_METRICS_WINDOW
 
 //-------------------------------------------------------------------------
