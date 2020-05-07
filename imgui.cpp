@@ -10520,6 +10520,12 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     memcpy(buf, ini_data, ini_size);
     buf_end[0] = 0;
 
+    // Call pre-read handlers
+    // Some types will clear their data (e.g. dock information) some types will allow merge/override (window)
+    for (int handler_n = 0; handler_n < g.SettingsHandlers.Size; handler_n++)
+        if (g.SettingsHandlers[handler_n].ReadInitFn)
+            g.SettingsHandlers[handler_n].ReadInitFn(&g, &g.SettingsHandlers[handler_n]);
+
     void* entry_data = NULL;
     ImGuiSettingsHandler* entry_handler = NULL;
 
@@ -11683,6 +11689,7 @@ namespace ImGui
     static void             DockSettingsRenameNodeReferences(ImGuiID old_node_id, ImGuiID new_node_id);
     static void             DockSettingsRemoveNodeReferences(ImGuiID* node_ids, int node_ids_count);
     static ImGuiDockNodeSettings*   DockSettingsFindNodeSettings(ImGuiContext* ctx, ImGuiID node_id);
+    static void             DockSettingsHandler_ClearAll(ImGuiContext*, ImGuiSettingsHandler*);
     static void             DockSettingsHandler_ApplyAll(ImGuiContext*, ImGuiSettingsHandler*);
     static void*            DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
     static void             DockSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
@@ -11726,9 +11733,11 @@ void ImGui::DockContextInitialize(ImGuiContext* ctx)
     ImGuiSettingsHandler ini_handler;
     ini_handler.TypeName = "Docking";
     ini_handler.TypeHash = ImHashStr("Docking");
-    ini_handler.ApplyAllFn = DockSettingsHandler_ApplyAll;
+    ini_handler.ClearAllFn = DockSettingsHandler_ClearAll;
+    ini_handler.ReadInitFn = DockSettingsHandler_ClearAll; // Also clear on read
     ini_handler.ReadOpenFn = DockSettingsHandler_ReadOpen;
     ini_handler.ReadLineFn = DockSettingsHandler_ReadLine;
+    ini_handler.ApplyAllFn = DockSettingsHandler_ApplyAll;
     ini_handler.WriteAllFn = DockSettingsHandler_WriteAll;
     g.SettingsHandlers.push_back(ini_handler);
 }
@@ -11752,7 +11761,8 @@ void ImGui::DockContextClearNodes(ImGuiContext* ctx, ImGuiID root_id, bool clear
     DockBuilderRemoveNodeChildNodes(root_id);
 }
 
-// This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
+// [DEBUG] This function also acts as a defacto test to make sure we can rebuild from scratch without a glitch
+// (Different from DockSettingsHandler_ClearAll() + DockSettingsHandler_ApplyAll() because this reuses current settings!)
 void ImGui::DockContextRebuildNodes(ImGuiContext* ctx)
 {
     IMGUI_DEBUG_LOG_DOCKING("DockContextRebuild()\n");
@@ -14867,6 +14877,15 @@ static ImGuiDockNodeSettings* ImGui::DockSettingsFindNodeSettings(ImGuiContext* 
     return NULL;
 }
 
+// Clear settings data
+static void ImGui::DockSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiDockContext* dc = ctx->DockContext;
+    dc->SettingsNodes.clear();
+    DockContextClearNodes(ctx, 0, true);
+}
+
+// Recreate dones based on settings data
 static void ImGui::DockSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
 {
     // Prune settings at boot time only
@@ -14874,6 +14893,7 @@ static void ImGui::DockSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettings
     if (ctx->Windows.Size == 0)
         DockContextPruneUnusedSettingsNodes(ctx);
     DockContextBuildNodesFromSettings(ctx, dc->SettingsNodes.Data, dc->SettingsNodes.Size);
+    DockContextBuildAddWindowsToNodes(ctx, 0);
 }
 
 static void* ImGui::DockSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
