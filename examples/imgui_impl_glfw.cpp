@@ -557,13 +557,13 @@ static void ImGui_ImplGlfw_CreateWindow(ImGuiViewport* viewport)
     glfwWindowHint(GLFW_FLOATING, (viewport->Flags & ImGuiViewportFlags_TopMost) ? true : false);
 #endif
     GLFWwindow* share_window = (g_ClientApi == GlfwClientApi_OpenGL) ? g_Window : NULL;
-    data->Window = glfwCreateWindow((int)viewport->Size.x, (int)viewport->Size.y, "No Title Yet", NULL, share_window);
+    data->Window = glfwCreateWindow((int)viewport->PlatformSize.x, (int)viewport->PlatformSize.y, "No Title Yet", NULL, share_window);
     data->WindowOwned = true;
     viewport->PlatformHandle = (void*)data->Window;
 #ifdef _WIN32
     viewport->PlatformHandleRaw = glfwGetWin32Window(data->Window);
 #endif
-    glfwSetWindowPos(data->Window, (int)viewport->Pos.x, (int)viewport->Pos.y);
+    glfwSetWindowPos(data->Window, (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y);
 
     // Install GLFW callbacks for secondary viewports
     glfwSetMouseButtonCallback(data->Window, ImGui_ImplGlfw_MouseButtonCallback);

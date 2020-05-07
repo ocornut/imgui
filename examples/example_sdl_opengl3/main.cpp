@@ -4,8 +4,12 @@
 // (GL3W is a helper library to access OpenGL functions since there is no standard header to access modern OpenGL functions easily. Alternatives are GLEW, Glad, etc.)
 
 #include "imgui.h"
+#include "imgui_internal.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
+#if _WIN32
+#include "imgui_impl_win32.h"
+#endif
 #include <stdio.h>
 #include <SDL.h>
 
@@ -36,6 +40,9 @@ using namespace gl;
 // Main code
 int main(int, char**)
 {
+#if _WIN32
+    ImGui_ImplWin32_EnableDpiAwareness();
+#endif
     // Setup SDL
     // (Some versions of SDL before <2.0.10 appears to have performance/stalling issues on a minority of Windows systems,
     // depending on whether SDL_INIT_GAMECONTROLLER is enabled or disabled.. updating to latest version of SDL is recommended!)
@@ -102,6 +109,7 @@ int main(int, char**)
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
     io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
     io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
+    io.ConfigFlags |= ImGuiConfigFlags_DpiEnableScaleViewports;
     //io.ConfigViewportsNoAutoMerge = true;
     //io.ConfigViewportsNoTaskBarIcon = true;
 
@@ -129,7 +137,7 @@ int main(int, char**)
     // - Read 'docs/FONTS.txt' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
+    io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
@@ -199,6 +207,35 @@ int main(int, char**)
             ImGui::Text("Hello from another window!");
             if (ImGui::Button("Close Me"))
                 show_another_window = false;
+
+            static char input[32]{""};
+            ImGui::InputText("##input", input, sizeof(input));
+            ImGui::SameLine();
+            static bool isOpen = false;
+            bool isFocused = ImGui::IsItemFocused();
+            isOpen |= ImGui::IsItemActive();
+            if (isOpen)
+            {
+                ImGui::SetNextWindowPos({ImGui::GetItemRectMin().x, ImGui::GetItemRectMax().y});
+                ImGui::SetNextWindowSize({ImGui::GetItemRectSize().x, 0});
+                if (ImGui::Begin("##popup", &isOpen, ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoMove|ImGuiWindowFlags_NoResize))
+                {
+                    isFocused |= ImGui::IsWindowFocused();
+                    static const char* autocomplete[] = {"cats", "dogs", "rabbits", "turtles"};
+                    for (int i = 0; i < IM_ARRAYSIZE(autocomplete); i++)
+                    {
+                        if (strstr(autocomplete[i], input) == NULL)
+                            continue;
+                        if (ImGui::Selectable(autocomplete[i]) || (ImGui::IsItemFocused() && ImGui::IsKeyPressedMap(ImGuiKey_Enter)))
+                        {
+                            strcpy(input, autocomplete[i]);
+                            isOpen = false;
+                        }
+                    }
+                }
+                ImGui::End();
+                isOpen &= isFocused;
+            }
             ImGui::End();
         }
 

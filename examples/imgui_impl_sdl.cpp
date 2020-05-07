@@ -55,6 +55,7 @@
 #include <SDL_syswm.h>
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
+float ImGui_ImplOSX_GetBackingScaleFactorForPoint(float x, float y);
 #endif
 
 #define SDL_HAS_CAPTURE_AND_GLOBAL_MOUSE    SDL_VERSION_ATLEAST(2,0,4)
@@ -64,6 +65,8 @@
 #define SDL_HAS_PER_MONITOR_DPI             SDL_VERSION_ATLEAST(2,0,4)
 #define SDL_HAS_VULKAN                      SDL_VERSION_ATLEAST(2,0,6)
 #define SDL_HAS_MOUSE_FOCUS_CLICKTHROUGH    SDL_VERSION_ATLEAST(2,0,5)
+#define SDL_HAS_DPI_BACKING_SCALE_FACTOR    SDL_VERSION_ATLEAST(2,0,11)
+
 #if !SDL_HAS_VULKAN
 static const Uint32 SDL_WINDOW_VULKAN = 0x10000000;
 #endif
@@ -435,10 +438,15 @@ static void ImGui_ImplSDL2_UpdateMonitors()
         monitor.WorkSize = ImVec2((float)r.w, (float)r.h);
 #endif
 #if SDL_HAS_PER_MONITOR_DPI
+#if __APPLE__ && !SDL_HAS_DPI_BACKING_SCALE_FACTOR
+        // On MacOS SDL reports DPI scale reduced by scaling factor. Fixed in https://hg.libsdl.org/SDL/rev/3b03741c0095
+        monitor.DpiScale = ImGui_ImplOSX_GetBackingScaleFactorForPoint(r.x, r.y);
+#else
         float dpi = 0.0f;
         if (!SDL_GetDisplayDPI(n, &dpi, NULL, NULL))
             monitor.DpiScale = dpi / 96.0f;
-#endif
+#endif  // __APPLE__ && !SDL_HAS_DPI_BACKING_SCALE_FACTOR
+#endif  // SDL_HAS_PER_MONITOR_DPI
         platform_io.Monitors.push_back(monitor);
     }
 }
@@ -519,7 +527,7 @@ static void ImGui_ImplSDL2_CreateWindow(ImGuiViewport* viewport)
 #if SDL_HAS_ALWAYS_ON_TOP
     sdl_flags |= (viewport->Flags & ImGuiViewportFlags_TopMost) ? SDL_WINDOW_ALWAYS_ON_TOP : 0;
 #endif
-    data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->Pos.x, (int)viewport->Pos.y, (int)viewport->Size.x, (int)viewport->Size.y, sdl_flags);
+    data->Window = SDL_CreateWindow("No Title Yet", (int)viewport->PlatformPos.x, (int)viewport->PlatformPos.y, (int)viewport->PlatformSize.x, (int)viewport->PlatformSize.y, sdl_flags);
     data->WindowOwned = true;
     if (use_opengl)
     {

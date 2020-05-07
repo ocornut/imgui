@@ -11,6 +11,9 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_vulkan.h"
+#if _WIN32
+#include "imgui_impl_win32.h"
+#endif
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
 #include <SDL.h>
@@ -318,6 +321,9 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 
 int main(int, char**)
 {
+#if _WIN32
+    ImGui_ImplWin32_EnableDpiAwareness();
+#endif
     // Setup SDL
     if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
     {

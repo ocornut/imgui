@@ -68,8 +68,8 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
     // Setup viewport
     D3D10_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D10_VIEWPORT));
-    vp.Width = (UINT)draw_data->DisplaySize.x;
-    vp.Height = (UINT)draw_data->DisplaySize.y;
+    vp.Width = (UINT)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    vp.Height = (UINT)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0;
@@ -222,6 +222,7 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
+    ImVec2 clip_scale = draw_data->FramebufferScale;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -240,7 +241,12 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
             else
             {
                 // Apply scissor/clipping rectangle
-                const D3D10_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y)};
+                const D3D10_RECT r = {
+                    (LONG)(pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
+                    (LONG)(pcmd->ClipRect.y - clip_off.y) * clip_scale.y,
+                    (LONG)(pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+                    (LONG)(pcmd->ClipRect.w - clip_off.y) * clip_scale.y
+                };
                 ctx->RSSetScissorRects(1, &r);
 
                 // Bind texture, Draw
@@ -574,8 +580,8 @@ static void ImGui_ImplDX10_CreateWindow(ImGuiViewport* viewport)
     // Create swap chain
     DXGI_SWAP_CHAIN_DESC sd;
     ZeroMemory(&sd, sizeof(sd));
-    sd.BufferDesc.Width = (UINT)viewport->Size.x;
-    sd.BufferDesc.Height = (UINT)viewport->Size.y;
+    sd.BufferDesc.Width = (UINT)viewport->PlatformSize.x;
+    sd.BufferDesc.Height = (UINT)viewport->PlatformSize.y;
     sd.BufferDesc.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd.SampleDesc.Count = 1;
     sd.SampleDesc.Quality = 0;

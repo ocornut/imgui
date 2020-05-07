@@ -24,6 +24,9 @@
     <ClInclude Include="..\imgui_impl_sdl.h">
       <Filter>sources</Filter>
     </ClInclude>
+    <ClInclude Include="..\imgui_impl_win32.h">
+      <Filter>sources</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\..\imgui.cpp">
@@ -45,6 +48,9 @@
       <Filter>imgui</Filter>
     </ClCompile>
     <ClCompile Include="..\imgui_impl_sdl.cpp">
+      <Filter>sources</Filter>
+    </ClCompile>
+    <ClCompile Include="..\imgui_impl_win32.cpp">
       <Filter>sources</Filter>
     </ClCompile>
   </ItemGroup>

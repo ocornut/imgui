@@ -58,8 +58,8 @@ static void ImGui_ImplDX9_SetupRenderState(ImDrawData* draw_data)
     // Setup viewport
     D3DVIEWPORT9 vp;
     vp.X = vp.Y = 0;
-    vp.Width = (DWORD)draw_data->DisplaySize.x;
-    vp.Height = (DWORD)draw_data->DisplaySize.y;
+    vp.Width = (DWORD)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
+    vp.Height = (DWORD)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     vp.MinZ = 0.0f;
     vp.MaxZ = 1.0f;
     g_pd3dDevice->SetViewport(&vp);
@@ -186,6 +186,7 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
+    ImVec2 clip_scale = draw_data->FramebufferScale;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -203,7 +204,12 @@ void ImGui_ImplDX9_RenderDrawData(ImDrawData* draw_data)
             }
             else
             {
-                const RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
+                const RECT r = {
+                    (LONG)(pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
+                    (LONG)(pcmd->ClipRect.y - clip_off.y) * clip_scale.y,
+                    (LONG)(pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+                    (LONG)(pcmd->ClipRect.w - clip_off.y) * clip_scale.y
+                };
                 const LPDIRECT3DTEXTURE9 texture = (LPDIRECT3DTEXTURE9)pcmd->TextureId;
                 g_pd3dDevice->SetTexture(0, texture);
                 g_pd3dDevice->SetScissorRect(&r);
@@ -333,8 +339,8 @@ static void ImGui_ImplDX9_CreateWindow(ImGuiViewport* viewport)
     ZeroMemory(&data->d3dpp, sizeof(D3DPRESENT_PARAMETERS));
     data->d3dpp.Windowed = TRUE;
     data->d3dpp.SwapEffect = D3DSWAPEFFECT_DISCARD;
-    data->d3dpp.BackBufferWidth = (UINT)viewport->Size.x;
-    data->d3dpp.BackBufferHeight = (UINT)viewport->Size.y;
+    data->d3dpp.BackBufferWidth = (UINT)viewport->PlatformSize.x;
+    data->d3dpp.BackBufferHeight = (UINT)viewport->PlatformSize.y;
     data->d3dpp.BackBufferFormat = D3DFMT_UNKNOWN;
     data->d3dpp.hDeviceWindow = hwnd;
     data->d3dpp.EnableAutoDepthStencil = FALSE;

@@ -1135,7 +1135,6 @@ enum ImGuiConfigFlags_
     // When using viewports it is recommended that your default value for ImGuiCol_WindowBg is opaque (Alpha=1.0) so transition to a viewport won't be noticeable.
     ImGuiConfigFlags_ViewportsEnable        = 1 << 10,  // Viewport enable flags (require both ImGuiConfigFlags_PlatformHasViewports + ImGuiConfigFlags_RendererHasViewports set by the respective back-ends)
     ImGuiConfigFlags_DpiEnableScaleViewports= 1 << 14,  // [BETA: Don't use] FIXME-DPI: Reposition and resize imgui windows when the DpiScale of a viewport changed (mostly useful for the main viewport hosting other window). Note that resizing the main window itself is up to your application.
-    ImGuiConfigFlags_DpiEnableScaleFonts    = 1 << 15,  // [BETA: Don't use] FIXME-DPI: Request bitmap-scaled fonts to match DpiScale. This is a very low-quality workaround. The correct way to handle DPI is _currently_ to replace the atlas and/or fonts in the Platform_OnChangedViewport callback, but this is all early work in progress.
 
     // User storage (to allow your back-end/engine to communicate to code that may be shared between multiple projects. Those flags are not used by core Dear ImGui)
     ImGuiConfigFlags_IsSRGB                 = 1 << 20,  // Application is SRGB-aware.
@@ -2088,6 +2087,7 @@ struct ImDrawList
     ImVector<ImTextureID>   _TextureIdStack;    // [Internal]
     ImVector<ImVec2>        _Path;              // [Internal] current path building
     ImDrawListSplitter      _Splitter;          // [Internal] for channels api
+    float                   _FringeScale;       // [Internal]
 
     // If you want to create ImDrawList instances, pass them ImGui::GetDrawListSharedData() or create and use your own ImDrawListSharedData (so you can use ImDrawList without ImGui)
     ImDrawList(const ImDrawListSharedData* shared_data) { _Data = shared_data; _OwnerName = NULL; Clear(); }
@@ -2219,6 +2219,9 @@ struct ImFontConfig
     unsigned int    RasterizerFlags;        // 0x00     // Settings for custom font rasterizer (e.g. ImGuiFreeType). Leave as zero if you aren't using one.
     float           RasterizerMultiply;     // 1.0f     // Brighten (>1.0f) or darken (<1.0f) font output. Brightening small fonts may be a good workaround to make them more readable.
     ImWchar         EllipsisChar;           // -1       // Explicitly specify unicode codepoint of ellipsis character. When fonts are being merged first specified ellipsis will be used.
+    float           DpiScale;               // 1.0f     // Set to scale of specific monitor font config is used for.
+    bool            IsDuplicated;           // false    // Indicates that this font config is a copy created for one of monitors using it's DPI.
+    bool            IsUpsacled;             // false    // Indicates that this font config has DPI scaling applied already.
 
     // [Internal]
     char            Name[40];               // Name (strictly to ease debugging)
@@ -2350,6 +2353,8 @@ struct ImFontAtlas
     // [Internal]
     IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
     IMGUI_API bool              GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
+    IMGUI_API void              CreatePerDpiFonts();
+    IMGUI_API ImFont*           MapFontToDpi(ImFont* base_font, float dpi);
 
     //-------------------------------------------
     // Members
@@ -2384,9 +2389,10 @@ struct ImFontAtlas
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 struct ImFont
 {
-    // Members: Hot ~20/24 bytes (for CalcTextSize)
+    // Members: Hot ~24/28 bytes (for CalcTextSize)
     ImVector<float>             IndexAdvanceX;      // 12-16 // out //            // Sparse. Glyphs->AdvanceX in a directly indexable way (cache-friendly for CalcTextSize functions which only this this info, and are often bottleneck in large UI).
     float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
+    float                       FontScaleRatioInv;  // 4     // out // = 1.0f / FontSize / ConfigData->DpiScale
     float                       FontSize;           // 4     // in  //            // Height of characters/line, set during loading (don't change after loading)
 
     // Members: Hot ~36/48 bytes (for CalcTextSize + render loop)
@@ -2406,6 +2412,8 @@ struct ImFont
     float                       Ascent, Descent;    // 4+4   // out //            // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
     int                         MetricsTotalSurface;// 4     // out //            // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
+    int                         FontID;             // 4     // out //            // Identifier different for distinct fonts.
+    float                       DpiScale;           // 1.0f  // out //            // Set to scale of specific monitor font config is used for.
 
     // Methods
     IMGUI_API ImFont();
@@ -2584,7 +2592,10 @@ struct ImGuiViewport
     ImVec2              Size;                   // Main Area: Size of the viewport.
     ImVec2              WorkOffsetMin;          // Work Area: Offset from Pos to top-left corner of Work Area. Generally (0,0) or (0,+main_menu_bar_height). Work Area is Full Area but without menu-bars/status-bars (so WorkArea always fit inside Pos/Size!)
     ImVec2              WorkOffsetMax;          // Work Area: Offset from Pos+Size to bottom-right corner of Work Area. Generally (0,0) or (0,-status_bar_height).
+    ImVec2              PlatformPos;            // Position of viewport in OS desktop/native space
+    ImVec2              PlatformSize;           // Size of viewport in OS desktop/native space
     float               DpiScale;               // 1.0f = 96 DPI = No extra scale.
+    float               CoordinateScale;        // Native viewport coordinate scale compared to virtual 96 DPI Dear ImGui. Equals to DpiScale on most platforms and 1.0f on MacOS.
     ImDrawData*         DrawData;               // The ImDrawData corresponding to this viewport. Valid after Render() and until the next call to NewFrame().
     ImGuiID             ParentViewportId;       // (Advanced) 0: no parent. Instruct the platform back-end to setup a parent/child relationship between platform windows.
 
@@ -2595,12 +2606,12 @@ struct ImGuiViewport
     void*               RendererUserData;       // void* to hold custom data structure for the renderer (e.g. swap chain, framebuffers etc.). generally set by your Renderer_CreateWindow function.
     void*               PlatformUserData;       // void* to hold custom data structure for the OS / platform (e.g. windowing info, render context). generally set by your Platform_CreateWindow function.
     void*               PlatformHandle;         // void* for FindViewportByPlatformHandle(). (e.g. suggested to use natural platform handle such as HWND, GLFWWindow*, SDL_Window*)
-    void*               PlatformHandleRaw;      // void* to hold lower-level, platform-native window handle (e.g. the HWND) when using an abstraction layer like GLFW or SDL (where PlatformHandle would be a SDL_Window*)
+    void*               PlatformHandleRaw;      // void* to hold low-level, platform-native window handle (e.g. the HWND) when using an abstraction layer like GLFW or SDL (where PlatformHandle would be a SDL_Window*)
+    bool                PlatformRequestClose;   // Platform window requested closure (e.g. window was moved by the OS / host window manager, e.g. pressing ALT-F4)
     bool                PlatformRequestMove;    // Platform window requested move (e.g. window was moved by the OS / host window manager, authoritative position will be OS window position)
     bool                PlatformRequestResize;  // Platform window requested resize (e.g. window was resized by the OS / host window manager, authoritative size will be OS window size)
-    bool                PlatformRequestClose;   // Platform window requested closure (e.g. window was moved by the OS / host window manager, e.g. pressing ALT-F4)
 
-    ImGuiViewport()     { ID = 0; Flags = 0; DpiScale = 0.0f; DrawData = NULL; ParentViewportId = 0; RendererUserData = PlatformUserData = PlatformHandle = PlatformHandleRaw = NULL; PlatformRequestMove = PlatformRequestResize = PlatformRequestClose = false; }
+    ImGuiViewport()     { ID = 0; Flags = 0; DpiScale = 1.0f; CoordinateScale = 1.0f; DrawData = NULL; ParentViewportId = 0; RendererUserData = PlatformUserData = PlatformHandle = PlatformHandleRaw = NULL; PlatformRequestMove = PlatformRequestResize = PlatformRequestClose = false; }
     ~ImGuiViewport()    { IM_ASSERT(PlatformUserData == NULL && RendererUserData == NULL); }
 
     // Access work-area rectangle

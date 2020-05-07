@@ -165,8 +165,8 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     // Setup viewport
     D3D12_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-    vp.Width = draw_data->DisplaySize.x;
-    vp.Height = draw_data->DisplaySize.y;
+    vp.Width = draw_data->DisplaySize.x * draw_data->FramebufferScale.x;
+    vp.Height = draw_data->DisplaySize.y * draw_data->FramebufferScale.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -286,6 +286,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     int global_vtx_offset = 0;
     int global_idx_offset = 0;
     ImVec2 clip_off = draw_data->DisplayPos;
+    ImVec2 clip_scale = draw_data->FramebufferScale;
     for (int n = 0; n < draw_data->CmdListsCount; n++)
     {
         const ImDrawList* cmd_list = draw_data->CmdLists[n];
@@ -304,7 +305,12 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
             else
             {
                 // Apply Scissor, Bind texture, Draw
-                const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
+                const D3D12_RECT r = {
+                    (LONG)(pcmd->ClipRect.x - clip_off.x) * clip_scale.x,
+                    (LONG)(pcmd->ClipRect.y - clip_off.y) * clip_scale.y,
+                    (LONG)(pcmd->ClipRect.z - clip_off.x) * clip_scale.x,
+                    (LONG)(pcmd->ClipRect.w - clip_off.y) * clip_scale.y
+                };
                 ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
                 ctx->RSSetScissorRects(1, &r);
                 ctx->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
@@ -783,8 +789,8 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     DXGI_SWAP_CHAIN_DESC1 sd1;
     ZeroMemory(&sd1, sizeof(sd1));
     sd1.BufferCount = g_numFramesInFlight;
-    sd1.Width = (UINT)viewport->Size.x;
-    sd1.Height = (UINT)viewport->Size.y;
+    sd1.Width = (UINT)viewport->PlatformSize.x;
+    sd1.Height = (UINT)viewport->PlatformSize.y;
     sd1.Format = DXGI_FORMAT_R8G8B8A8_UNORM;
     sd1.BufferUsage = DXGI_USAGE_RENDER_TARGET_OUTPUT;
     sd1.SampleDesc.Count = 1;

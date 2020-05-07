@@ -198,7 +198,23 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 #define IM_F32_TO_INT8_UNBOUND(_VAL)    ((int)((_VAL) * 255.0f + ((_VAL)>=0 ? 0.5f : -0.5f)))   // Unsaturated, for display purpose
 #define IM_F32_TO_INT8_SAT(_VAL)        ((int)(ImSaturate(_VAL) * 255.0f + 0.5f))               // Saturated, always output 0..255
 #define IM_FLOOR(_VAL)                  ((float)(int)(_VAL))                                    // ImFloor() is not inlined in MSVC debug builds
-#define IM_ROUND(_VAL)                  ((float)(int)((_VAL) + 0.5f))                           //
+#define IM_ROUND(_VAL)                  ((float)(int)((_VAL) + ((_VAL) < 0 ? -0.501f : 0.501f)))
+// This rounding function contains a workaround for an edgecase where we may round incorrectly due to floating point
+// imprecision. Consider a following situation:
+//   float dpi = 1.13440943f;
+//   float f = 885.482727f;
+//
+// Upscaling value to size on physical screen yields almost 1005, however it will be rounded down by (float)(int)f method.
+//   f * dpi = 1004.49994
+// Adding 0.001f to upscaled value essentially achieves rounding by fractional part by 3 decimal points before adding
+// 0.5f flooring and flooring resulting number by casting it to integer.
+//   f * dpi + 0.001f = 1004.50092
+//
+// These are rounding results we get with and without rounding fix:
+//   IM_ROUND(f * dpi)          / dpi = 885.04199
+//   IM_ROUND(f * dpi + 0.001f) / dpi = 885.92352
+// Difference is rather big, which is enough to introduce shaking of UI elements in rare conditions. However this
+// issue is non-deterministic (thanks float!) therefore catching it in action may take several attempts.
 
 // Enforce cdecl calling convention for functions called by the standard library, in case compilation settings changed the default to e.g. __vectorcall
 #ifdef _MSC_VER
@@ -280,6 +296,8 @@ static inline ImVec2 operator+(const ImVec2& lhs, const ImVec2& rhs)            
 static inline ImVec2 operator-(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x-rhs.x, lhs.y-rhs.y); }
 static inline ImVec2 operator*(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x*rhs.x, lhs.y*rhs.y); }
 static inline ImVec2 operator/(const ImVec2& lhs, const ImVec2& rhs)            { return ImVec2(lhs.x/rhs.x, lhs.y/rhs.y); }
+static inline bool operator==(const ImVec2& lhs, const ImVec2& rhs)             { return rhs.x == lhs.x && rhs.y == lhs.y; }
+static inline bool operator!=(const ImVec2& lhs, const ImVec2& rhs)             { return rhs.x != lhs.x || rhs.y != lhs.y; }
 static inline ImVec2& operator*=(ImVec2& lhs, const float rhs)                  { lhs.x *= rhs; lhs.y *= rhs; return lhs; }
 static inline ImVec2& operator/=(ImVec2& lhs, const float rhs)                  { lhs.x /= rhs; lhs.y /= rhs; return lhs; }
 static inline ImVec2& operator+=(ImVec2& lhs, const ImVec2& rhs)                { lhs.x += rhs.x; lhs.y += rhs.y; return lhs; }
@@ -350,8 +368,14 @@ static inline float  ImSaturate(float f)                                        
 static inline float  ImLengthSqr(const ImVec2& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y; }
 static inline float  ImLengthSqr(const ImVec4& lhs)                             { return lhs.x*lhs.x + lhs.y*lhs.y + lhs.z*lhs.z + lhs.w*lhs.w; }
 static inline float  ImInvLength(const ImVec2& lhs, float fail_value)           { float d = lhs.x*lhs.x + lhs.y*lhs.y; if (d > 0.0f) return 1.0f / ImSqrt(d); return fail_value; }
-static inline float  ImFloor(float f)                                           { return (float)(int)(f); }
-static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2((float)(int)(v.x), (float)(int)(v.y)); }
+static inline float  ImFloor(float v)                                           { return IM_FLOOR(v); }
+static inline float  ImRound(float v)                                           { return IM_ROUND(v); }
+static inline ImVec2 ImFloor(const ImVec2& v)                                   { return ImVec2(IM_FLOOR(v.x), IM_FLOOR(v.y)); }
+static inline ImVec2 ImRound(const ImVec2& v)                                   { return ImVec2(IM_ROUND(v.x), IM_ROUND(v.y)); }
+static inline float  ImFloorToPixel(float v);
+static inline float  ImRoundToPixel(float v);
+static inline ImVec2 ImFloorToPixel(const ImVec2& v)                            { return ImVec2(ImFloorToPixel(v.x), ImFloorToPixel(v.y)); }
+static inline ImVec2 ImRoundToPixel(const ImVec2& v)                            { return ImVec2(ImRoundToPixel(v.x), ImRoundToPixel(v.y)); }
 static inline int    ImModPositive(int a, int b)                                { return (a + b) % b; }
 static inline float  ImDot(const ImVec2& a, const ImVec2& b)                    { return a.x * b.x + a.y * b.y; }
 static inline ImVec2 ImRotate(const ImVec2& v, float cos_a, float sin_a)        { return ImVec2(v.x * cos_a - v.y * sin_a, v.x * sin_a + v.y * cos_a); }
@@ -726,9 +750,15 @@ struct IMGUI_API ImRect
     void        TranslateY(float dy)                { Min.y += dy; Max.y += dy; }
     void        ClipWith(const ImRect& r)           { Min = ImMax(Min, r.Min); Max = ImMin(Max, r.Max); }                   // Simple version, may lead to an inverted rectangle, which is fine for Contains/Overlaps test but not for display.
     void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
-    void        Floor()                             { Min.x = IM_FLOOR(Min.x); Min.y = IM_FLOOR(Min.y); Max.x = IM_FLOOR(Max.x); Max.y = IM_FLOOR(Max.y); }
+    void        Floor()                             { Min.x = ImFloorToPixel(Min.x); Min.y = ImFloorToPixel(Min.y); Max.x = ImFloorToPixel(Max.x); Max.y = ImFloorToPixel(Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
 };
+#ifdef IMGUI_DEFINE_MATH_OPERATORS
+static inline ImRect operator*(const ImRect& lhs, const float rhs)              { return ImRect(lhs.Min*rhs, lhs.Max*rhs); }
+static inline ImRect operator/(const ImRect& lhs, const float rhs)              { return ImRect(lhs.Min/rhs, lhs.Max/rhs); }
+static inline ImRect& operator*=(ImRect& lhs, const float rhs)                  { lhs.Min *= rhs; lhs.Max*=rhs; return lhs; }
+static inline ImRect& operator/=(ImRect& lhs, const float rhs)                  { lhs.Min /= rhs; lhs.Max/=rhs; return lhs; }
+#endif
 
 // Type information associated to one ImGuiDataType. Retrieve with DataTypeGetInfo().
 struct ImGuiDataTypeInfo
@@ -980,8 +1010,11 @@ struct ImGuiViewportP : public ImGuiViewport
     ImGuiViewportP()                { Idx = -1; LastFrameActive = LastFrameDrawLists[0] = LastFrameDrawLists[1] = LastFrontMostStampCount = -1; LastNameHash = 0; Alpha = LastAlpha = 1.0f; PlatformMonitor = -1; PlatformWindowCreated = false; Window = NULL; DrawLists[0] = DrawLists[1] = NULL; LastPlatformPos = LastPlatformSize = LastRendererSize = ImVec2(FLT_MAX, FLT_MAX); }
     ~ImGuiViewportP()               { if (DrawLists[0]) IM_DELETE(DrawLists[0]); if (DrawLists[1]) IM_DELETE(DrawLists[1]); }
     ImRect  GetMainRect() const     { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
+    ImRect  GetPlatformRect() const{ return ImRect(PlatformPos.x, PlatformPos.y, PlatformPos.x + PlatformSize.x, PlatformPos.y + PlatformSize.y); }
     ImRect  GetWorkRect() const     { return ImRect(Pos.x + WorkOffsetMin.x, Pos.y + WorkOffsetMin.y, Pos.x + Size.x + WorkOffsetMax.x, Pos.y + Size.y + WorkOffsetMax.y); }
     void    ClearRequestFlags()     { PlatformRequestClose = PlatformRequestMove = PlatformRequestResize = false; }
+    void    SetPos(ImVec2 pos)  { Pos = pos; PlatformPos.x = pos.x * CoordinateScale; PlatformPos.y = pos.y * CoordinateScale; }
+    void    SetSize(ImVec2 size){ Size = size; PlatformSize.x = size.x * CoordinateScale; PlatformSize.y = size.y * CoordinateScale; }
 };
 
 struct ImGuiNavMoveResult
@@ -1261,11 +1294,15 @@ struct ImGuiContext
     // Viewports
     ImVector<ImGuiViewportP*> Viewports;                        // Active viewports (always 1+, and generally 1 unless multi-viewports are enabled). Each viewports hold their copy of ImDrawData.
     float                   CurrentDpiScale;                    // == CurrentViewport->DpiScale
+    float                   CurrentDpiScaleInverse;             // == 1.f / CurrentViewport->DpiScale
     ImGuiViewportP*         CurrentViewport;                    // We track changes of viewport (happening in Begin) so we can call Platform_OnChangedViewport()
     ImGuiViewportP*         MouseViewport;
     ImGuiViewportP*         MouseLastHoveredViewport;           // Last known viewport that was hovered by mouse (even if we are not hovering any viewport any more) + honoring the _NoInputs flag.
     ImGuiID                 PlatformLastFocusedViewport;        // Record of last focused platform window/viewport, when this changes we stamp the viewport as front-most
     int                     ViewportFrontMostStampCount;        // Every time the front-most window changes, we stamp its viewport with an incrementing counter
+    ImVec2                  LastMousePos;                       // Mouse position at the end of frame. Used to detect mouse position changes in NewFrame().
+    ImVec2                  LastDisplaySize;                    // Display size at the end of frame. Used to detect display size changes in NewFrame().
+    float                   LastDisplayScale;                   // DPI scale of main viewport at the end of frame. Used to detect display size changes in NewFrame().
 
     // Gamepad/keyboard Navigation
     ImGuiWindow*            NavWindow;                          // Focused window for navigation. Could be called 'FocusWindow'
@@ -1460,11 +1497,15 @@ struct ImGuiContext
         LastActiveId = 0;
         LastActiveIdTimer = 0.0f;
 
-        CurrentDpiScale = 0.0f;
+        CurrentDpiScale = 1.0f;
+        CurrentDpiScaleInverse = 1.0f;
         CurrentViewport = NULL;
         MouseViewport = MouseLastHoveredViewport = NULL;
         PlatformLastFocusedViewport = 0;
         ViewportFrontMostStampCount = 0;
+        LastMousePos = ImVec2(0, 0);
+        LastDisplaySize = ImVec2(0, 0);
+        LastDisplayScale = 1.f;
 
         NavWindow = NULL;
         NavId = NavFocusScopeId = NavActivateId = NavActivateDownId = NavActivatePressedId = NavInputId = 0;
@@ -1728,7 +1769,6 @@ struct IMGUI_API ImGuiWindow
     ImGuiStorage            StateStorage;
     ImVector<ImGuiColumns>  ColumnsStorage;
     float                   FontWindowScale;                    // User scale multiplier per-window, via SetWindowFontScale()
-    float                   FontDpiScale;
     int                     SettingsOffset;                     // Offset into SettingsWindows[] (offsets are always valid as we only grow the array from the back)
 
     ImDrawList*             DrawList;                           // == &DrawListInst (for backward compatibility reason with code using imgui_internal.h we keep this a pointer)
@@ -1772,7 +1812,7 @@ public:
 
     // We don't use g.FontSize because the window may be != g.CurrentWidow.
     ImRect      Rect() const                { return ImRect(Pos.x, Pos.y, Pos.x+Size.x, Pos.y+Size.y); }
-    float       CalcFontSize() const        { ImGuiContext& g = *GImGui; float scale = g.FontBaseSize * FontWindowScale * FontDpiScale; if (ParentWindow) scale *= ParentWindow->FontWindowScale; return scale; }
+    float       CalcFontSize() const        { ImGuiContext& g = *GImGui; float scale = g.FontBaseSize * FontWindowScale; if (ParentWindow) scale *= ParentWindow->FontWindowScale; return scale; }
     float       TitleBarHeight() const      { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_NoTitleBar) ? 0.0f : CalcFontSize() + g.Style.FramePadding.y * 2.0f; }
     ImRect      TitleBarRect() const        { return ImRect(Pos, ImVec2(Pos.x + SizeFull.x, Pos.y + TitleBarHeight())); }
     float       MenuBarHeight() const       { ImGuiContext& g = *GImGui; return (Flags & ImGuiWindowFlags_MenuBar) ? DC.MenuBarOffset.y + CalcFontSize() + g.Style.FramePadding.y * 2.0f : 0.0f; }
@@ -1887,7 +1927,7 @@ namespace ImGui
     IMGUI_API ImVec2        CalcWindowExpectedSize(ImGuiWindow* window);
     IMGUI_API bool          IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent);
     IMGUI_API bool          IsWindowNavFocusable(ImGuiWindow* window);
-    IMGUI_API ImRect        GetWindowAllowedExtentRect(ImGuiWindow* window);
+    IMGUI_API ImRect        GetWindowAllowedExtentRect(ImGuiWindow* window, float* dpi_scale = NULL);
     IMGUI_API void          SetWindowPos(ImGuiWindow* window, const ImVec2& pos, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowSize(ImGuiWindow* window, const ImVec2& size, ImGuiCond cond = 0);
     IMGUI_API void          SetWindowCollapsed(ImGuiWindow* window, bool collapsed, ImGuiCond cond = 0);
@@ -2191,6 +2231,16 @@ IMGUI_API void              ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, 
 IMGUI_API void              ImFontAtlasBuildFinish(ImFontAtlas* atlas);
 IMGUI_API void              ImFontAtlasBuildMultiplyCalcLookupTable(unsigned char out_table[256], float in_multiply_factor);
 IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned char table[256], unsigned char* pixels, int x, int y, int w, int h, int stride);
+
+static inline float ImFloorToPixel(float f)
+{
+    return IM_FLOOR(f * GImGui->CurrentDpiScale) * GImGui->CurrentDpiScaleInverse;
+}
+
+static inline float ImRoundToPixel(float f)
+{
+    return IM_ROUND(f * GImGui->CurrentDpiScale) * GImGui->CurrentDpiScaleInverse;
+}
 
 // Debug Tools
 // Use 'Metrics->Tools->Item Picker' to break into the call-stack of a specific item.
