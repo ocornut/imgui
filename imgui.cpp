@@ -9598,6 +9598,19 @@ void ImGui::LogButtons()
 //-----------------------------------------------------------------------------
 // [SECTION] SETTINGS
 //-----------------------------------------------------------------------------
+// - UpdateSettings() [Internal]
+// - MarkIniSettingsDirty() [Internal]
+// - CreateNewWindowSettings() [Internal]
+// - FindWindowSettings() [Internal]
+// - FindOrCreateWindowSettings() [Internal]
+// - FindSettingsHandler() [Internal]
+// - ClearIniSettings() [Internal]
+// - LoadIniSettingsFromDisk()
+// - LoadIniSettingsFromMemory()
+// - SaveIniSettingsToDisk()
+// - SaveIniSettingsToMemory()
+// - WindowSettingsHandler_***() [Internal]
+//-----------------------------------------------------------------------------
 
 // Called by NewFrame()
 void ImGui::UpdateSettings()
@@ -9680,16 +9693,6 @@ ImGuiWindowSettings* ImGui::FindOrCreateWindowSettings(const char* name)
     return CreateNewWindowSettings(name);
 }
 
-void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
-{
-    size_t file_data_size = 0;
-    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
-    if (!file_data)
-        return;
-    LoadIniSettingsFromMemory(file_data, (size_t)file_data_size);
-    IM_FREE(file_data);
-}
-
 ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
 {
     ImGuiContext& g = *GImGui;
@@ -9698,6 +9701,25 @@ ImGuiSettingsHandler* ImGui::FindSettingsHandler(const char* type_name)
         if (g.SettingsHandlers[handler_n].TypeHash == type_hash)
             return &g.SettingsHandlers[handler_n];
     return NULL;
+}
+
+void ImGui::ClearIniSettings()
+{
+    ImGuiContext& g = *GImGui;
+    g.SettingsIniData.clear();
+    for (int i = 0; i != g.Windows.Size; i++)
+        g.Windows[i]->SettingsOffset = -1;
+    g.SettingsWindows.clear();
+}
+
+void ImGui::LoadIniSettingsFromDisk(const char* ini_filename)
+{
+    size_t file_data_size = 0;
+    char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
+    if (!file_data)
+        return;
+    LoadIniSettingsFromMemory(file_data, (size_t)file_data_size);
+    IM_FREE(file_data);
 }
 
 // Zero-tolerance, no error reporting, cheap .ini parsing
@@ -9711,10 +9733,11 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
     if (ini_size == 0)
         ini_size = strlen(ini_data);
-    char* buf = (char*)IM_ALLOC(ini_size + 1);
-    char* buf_end = buf + ini_size;
+    g.SettingsIniData.Buf.resize((int)ini_size + 1);
+    char* const buf = g.SettingsIniData.Buf.Data;
+    char* const buf_end = buf + ini_size;
     memcpy(buf, ini_data, ini_size);
-    buf[ini_size] = 0;
+    buf_end[0] = 0;
 
     void* entry_data = NULL;
     ImGuiSettingsHandler* entry_handler = NULL;
@@ -9752,8 +9775,10 @@ void ImGui::LoadIniSettingsFromMemory(const char* ini_data, size_t ini_size)
             entry_handler->ReadLineFn(&g, entry_handler, entry_data, line);
         }
     }
-    IM_FREE(buf);
     g.SettingsLoaded = true;
+
+    // [DEBUG] Restore untouched copy so it can be browsed in Metrics (not strictly necessary)
+    memcpy(buf, ini_data, ini_size);
 }
 
 void ImGui::SaveIniSettingsToDisk(const char* ini_filename)
@@ -10407,6 +10432,9 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Settings
     if (ImGui::TreeNode("Settings"))
     {
+        if (ImGui::SmallButton("Clear"))
+            ImGui::ClearIniSettings();
+        ImGui::SameLine();
         if (ImGui::SmallButton("Save to disk"))
             ImGui::SaveIniSettingsToDisk(g.IO.IniFilename);
         ImGui::SameLine();

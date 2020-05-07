@@ -1718,6 +1718,7 @@ namespace ImGui
     // Settings
     IMGUI_API void                  MarkIniSettingsDirty();
     IMGUI_API void                  MarkIniSettingsDirty(ImGuiWindow* window);
+    IMGUI_API void                  ClearIniSettings();
     IMGUI_API ImGuiWindowSettings*  CreateNewWindowSettings(const char* name);
     IMGUI_API ImGuiWindowSettings*  FindWindowSettings(ImGuiID id);
     IMGUI_API ImGuiWindowSettings*  FindOrCreateWindowSettings(const char* name);
