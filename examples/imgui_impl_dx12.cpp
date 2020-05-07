@@ -846,22 +846,26 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     }
 }
 
+static void ImGui_WaitForPendingOperations(ImGuiViewportDataDx12* data)
+{
+    HRESULT hr = S_FALSE;
+    if (data && data->CommandQueue && data->Fence && data->FenceEvent)
+    {
+        hr = data->CommandQueue->Signal(data->Fence, ++data->FenceSignaledValue);
+        IM_ASSERT(hr == S_OK);
+        ::WaitForSingleObject(data->FenceEvent, 0); // Reset any forgotten waits
+        hr = data->Fence->SetEventOnCompletion(data->FenceSignaledValue, data->FenceEvent);
+        IM_ASSERT(hr == S_OK);
+        ::WaitForSingleObject(data->FenceEvent, INFINITE);
+    }
+}
+
 static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
 {
     // The main viewport (owned by the application) will always have RendererUserData == NULL since we didn't create the data for it.
     if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData)
     {
-        // Wait for pending operations to complete to safely release objects below
-        HRESULT hr;
-        if (data->CommandQueue && data->Fence && data->FenceEvent)
-        {
-           hr = data->CommandQueue->Signal(data->Fence, ++data->FenceSignaledValue);
-           IM_ASSERT(hr == S_OK);
-           ::WaitForSingleObject(data->FenceEvent, 0); // Reset any forgotten waits
-           hr = data->Fence->SetEventOnCompletion(data->FenceSignaledValue, data->FenceEvent);
-           IM_ASSERT(hr == S_OK);
-           ::WaitForSingleObject(data->FenceEvent, INFINITE);
-        }
+        ImGui_WaitForPendingOperations(data);
 
         SafeRelease(data->CommandQueue);
         SafeRelease(data->CommandList);
@@ -886,6 +890,8 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
 static void ImGui_ImplDX12_SetWindowSize(ImGuiViewport* viewport, ImVec2 size)
 {
     ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)viewport->RendererUserData;
+
+    ImGui_WaitForPendingOperations(data);
 
     for (UINT i = 0; i < g_numFramesInFlight; i++)
         SafeRelease(data->FrameCtx[i].RenderTarget);
