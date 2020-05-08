@@ -6161,19 +6161,18 @@ void ImGui::FocusWindow(ImGuiWindow* window)
     // Close popups if any
     ClosePopupsOverWindow(window, false);
 
+    // Move the root window to the top of the pile
+    IM_ASSERT(window == NULL || window->RootWindow != NULL);
+    ImGuiWindow* focus_front_window = window ? window->RootWindow : NULL; // NB: In docking branch this is window->RootWindowDockStop
+    ImGuiWindow* display_front_window = window ? window->RootWindow : NULL;
+
+    // Steal focus on active widgets
+    if (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->RootWindow != focus_front_window)
+        ClearActiveID();
+
     // Passing NULL allow to disable keyboard focus
     if (!window)
         return;
-
-    // Move the root window to the top of the pile
-    IM_ASSERT(window->RootWindow != NULL);
-    ImGuiWindow* focus_front_window = window->RootWindow; // NB: In docking branch this is window->RootWindowDockStop
-    ImGuiWindow* display_front_window = window->RootWindow;
-
-    // Steal focus on active widgets
-    if (focus_front_window->Flags & ImGuiWindowFlags_Popup) // FIXME: This statement may be unnecessary? Need further testing before removing it..
-        if (g.ActiveId != 0 && g.ActiveIdWindow && g.ActiveIdWindow->RootWindow != focus_front_window)
-            ClearActiveID();
 
     // Bring to front
     BringWindowToFocusFront(focus_front_window);
