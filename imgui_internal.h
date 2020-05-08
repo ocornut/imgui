@@ -17,7 +17,8 @@ Index of this file:
 // [SECTION] Macros
 // [SECTION] Generic helpers
 // [SECTION] ImDrawList support
-// [SECTION] Misc flags, enums and data structures
+// [SECTION] Widgets support: flags, enums, data structures
+// [SECTION] Columns support
 // [SECTION] Settings support
 // [SECTION] ImGuiContext (main imgui context)
 // [SECTION] ImGuiWindowTempData, ImGuiWindow
@@ -552,8 +553,44 @@ struct ImDrawDataBuilder
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Misc flags, enums and data structures
+// [SECTION] Widgets support: flags, enums, data structures
 //-----------------------------------------------------------------------------
+
+// Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
+// This is going to be exposed in imgui.h when stabilized enough.
+enum ImGuiItemFlags_
+{
+    ImGuiItemFlags_None                     = 0,
+    ImGuiItemFlags_NoTabStop                = 1 << 0,  // false
+    ImGuiItemFlags_ButtonRepeat             = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
+    ImGuiItemFlags_Disabled                 = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
+    ImGuiItemFlags_NoNav                    = 1 << 3,  // false
+    ImGuiItemFlags_NoNavDefaultFocus        = 1 << 4,  // false
+    ImGuiItemFlags_SelectableDontClosePopup = 1 << 5,  // false    // MenuItem/Selectable() automatically closes current Popup window
+    ImGuiItemFlags_MixedValue               = 1 << 6,  // false    // [BETA] Represent a mixed/indeterminate value, generally multi-selection where values differ. Currently only supported by Checkbox() (later should support all sorts of widgets)
+    ImGuiItemFlags_Default_                 = 0
+};
+
+// Storage for LastItem data
+enum ImGuiItemStatusFlags_
+{
+    ImGuiItemStatusFlags_None               = 0,
+    ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
+    ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1,
+    ImGuiItemStatusFlags_Edited             = 1 << 2,   // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
+    ImGuiItemStatusFlags_ToggledSelection   = 1 << 3,   // Set when Selectable(), TreeNode() reports toggling a selection. We can't report "Selected" because reporting the change allows us to handle clipping with less issues.
+    ImGuiItemStatusFlags_ToggledOpen        = 1 << 4,   // Set when TreeNode() reports toggling their open state.
+    ImGuiItemStatusFlags_HasDeactivated     = 1 << 5,   // Set if the widget/group is able to provide data for the ImGuiItemStatusFlags_Deactivated flag.
+    ImGuiItemStatusFlags_Deactivated        = 1 << 6    // Only valid if ImGuiItemStatusFlags_HasDeactivated is set.
+
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    , // [imgui_tests only]
+    ImGuiItemStatusFlags_Openable           = 1 << 10,  //
+    ImGuiItemStatusFlags_Opened             = 1 << 11,  //
+    ImGuiItemStatusFlags_Checkable          = 1 << 12,  //
+    ImGuiItemStatusFlags_Checked            = 1 << 13   //
+#endif
+};
 
 enum ImGuiButtonFlags_
 {
@@ -597,17 +634,6 @@ enum ImGuiDragFlags_
     ImGuiDragFlags_Vertical                 = 1 << 0
 };
 
-enum ImGuiColumnsFlags_
-{
-    // Default: 0
-    ImGuiColumnsFlags_None                  = 0,
-    ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
-    ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
-    ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
-    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3,   // Disable forcing columns to fit within window
-    ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4    // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
-};
-
 // Extend ImGuiSelectableFlags_
 enum ImGuiSelectableFlagsPrivate_
 {
@@ -632,42 +658,6 @@ enum ImGuiSeparatorFlags_
     ImGuiSeparatorFlags_Horizontal          = 1 << 0,   // Axis default to current layout type, so generally Horizontal unless e.g. in a menu bar
     ImGuiSeparatorFlags_Vertical            = 1 << 1,
     ImGuiSeparatorFlags_SpanAllColumns      = 1 << 2
-};
-
-// Transient per-window flags, reset at the beginning of the frame. For child window, inherited from parent on first Begin().
-// This is going to be exposed in imgui.h when stabilized enough.
-enum ImGuiItemFlags_
-{
-    ImGuiItemFlags_None                     = 0,
-    ImGuiItemFlags_NoTabStop                = 1 << 0,  // false
-    ImGuiItemFlags_ButtonRepeat             = 1 << 1,  // false    // Button() will return true multiple times based on io.KeyRepeatDelay and io.KeyRepeatRate settings.
-    ImGuiItemFlags_Disabled                 = 1 << 2,  // false    // [BETA] Disable interactions but doesn't affect visuals yet. See github.com/ocornut/imgui/issues/211
-    ImGuiItemFlags_NoNav                    = 1 << 3,  // false
-    ImGuiItemFlags_NoNavDefaultFocus        = 1 << 4,  // false
-    ImGuiItemFlags_SelectableDontClosePopup = 1 << 5,  // false    // MenuItem/Selectable() automatically closes current Popup window
-    ImGuiItemFlags_MixedValue               = 1 << 6,  // false    // [BETA] Represent a mixed/indeterminate value, generally multi-selection where values differ. Currently only supported by Checkbox() (later should support all sorts of widgets)
-    ImGuiItemFlags_Default_                 = 0
-};
-
-// Storage for LastItem data
-enum ImGuiItemStatusFlags_
-{
-    ImGuiItemStatusFlags_None               = 0,
-    ImGuiItemStatusFlags_HoveredRect        = 1 << 0,
-    ImGuiItemStatusFlags_HasDisplayRect     = 1 << 1,
-    ImGuiItemStatusFlags_Edited             = 1 << 2,   // Value exposed by item was edited in the current frame (should match the bool return value of most widgets)
-    ImGuiItemStatusFlags_ToggledSelection   = 1 << 3,   // Set when Selectable(), TreeNode() reports toggling a selection. We can't report "Selected" because reporting the change allows us to handle clipping with less issues.
-    ImGuiItemStatusFlags_ToggledOpen        = 1 << 4,   // Set when TreeNode() reports toggling their open state.
-    ImGuiItemStatusFlags_HasDeactivated     = 1 << 5,   // Set if the widget/group is able to provide data for the ImGuiItemStatusFlags_Deactivated flag.
-    ImGuiItemStatusFlags_Deactivated        = 1 << 6    // Only valid if ImGuiItemStatusFlags_HasDeactivated is set.
-
-#ifdef IMGUI_ENABLE_TEST_ENGINE
-    , // [imgui_tests only]
-    ImGuiItemStatusFlags_Openable           = 1 << 10,  //
-    ImGuiItemStatusFlags_Opened             = 1 << 11,  //
-    ImGuiItemStatusFlags_Checkable          = 1 << 12,  //
-    ImGuiItemStatusFlags_Checked            = 1 << 13   //
-#endif
 };
 
 enum ImGuiTextFlags_
@@ -897,50 +887,6 @@ struct ImGuiPopupData
     ImGuiPopupData() { PopupId = 0; Window = SourceWindow = NULL; OpenFrameCount = -1; OpenParentId = 0; }
 };
 
-struct ImGuiColumnData
-{
-    float               OffsetNorm;         // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
-    float               OffsetNormBeforeResize;
-    ImGuiColumnsFlags   Flags;              // Not exposed
-    ImRect              ClipRect;
-
-    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; Flags = ImGuiColumnsFlags_None; }
-};
-
-struct ImGuiColumns
-{
-    ImGuiID             ID;
-    ImGuiColumnsFlags   Flags;
-    bool                IsFirstFrame;
-    bool                IsBeingResized;
-    int                 Current;
-    int                 Count;
-    float               OffMinX, OffMaxX;       // Offsets from HostWorkRect.Min.x
-    float               LineMinY, LineMaxY;
-    float               HostCursorPosY;         // Backup of CursorPos at the time of BeginColumns()
-    float               HostCursorMaxPosX;      // Backup of CursorMaxPos at the time of BeginColumns()
-    ImRect              HostClipRect;           // Backup of ClipRect at the time of BeginColumns()
-    ImRect              HostWorkRect;           // Backup of WorkRect at the time of BeginColumns()
-    ImVector<ImGuiColumnData> Columns;
-    ImDrawListSplitter  Splitter;
-
-    ImGuiColumns()      { Clear(); }
-    void Clear()
-    {
-        ID = 0;
-        Flags = ImGuiColumnsFlags_None;
-        IsFirstFrame = false;
-        IsBeingResized = false;
-        Current = 0;
-        Count = 1;
-        OffMinX = OffMaxX = 0.0f;
-        LineMinY = LineMaxY = 0.0f;
-        HostCursorPosY = 0.0f;
-        HostCursorMaxPosX = 0.0f;
-        Columns.clear();
-    }
-};
-
 struct ImGuiNavMoveResult
 {
     ImGuiWindow*    Window;             // Best candidate window
@@ -1023,6 +969,65 @@ struct ImGuiPtrOrIndex
 
     ImGuiPtrOrIndex(void* ptr)  { Ptr = ptr; Index = -1; }
     ImGuiPtrOrIndex(int index)  { Ptr = NULL; Index = index; }
+};
+
+//-----------------------------------------------------------------------------
+// [SECTION] Columns support
+//-----------------------------------------------------------------------------
+
+enum ImGuiColumnsFlags_
+{
+    // Default: 0
+    ImGuiColumnsFlags_None                  = 0,
+    ImGuiColumnsFlags_NoBorder              = 1 << 0,   // Disable column dividers
+    ImGuiColumnsFlags_NoResize              = 1 << 1,   // Disable resizing columns when clicking on the dividers
+    ImGuiColumnsFlags_NoPreserveWidths      = 1 << 2,   // Disable column width preservation when adjusting columns
+    ImGuiColumnsFlags_NoForceWithinWindow   = 1 << 3,   // Disable forcing columns to fit within window
+    ImGuiColumnsFlags_GrowParentContentsSize= 1 << 4    // (WIP) Restore pre-1.51 behavior of extending the parent window contents size but _without affecting the columns width at all_. Will eventually remove.
+};
+
+struct ImGuiColumnData
+{
+    float               OffsetNorm;         // Column start offset, normalized 0.0 (far left) -> 1.0 (far right)
+    float               OffsetNormBeforeResize;
+    ImGuiColumnsFlags   Flags;              // Not exposed
+    ImRect              ClipRect;
+
+    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; Flags = ImGuiColumnsFlags_None; }
+};
+
+struct ImGuiColumns
+{
+    ImGuiID             ID;
+    ImGuiColumnsFlags   Flags;
+    bool                IsFirstFrame;
+    bool                IsBeingResized;
+    int                 Current;
+    int                 Count;
+    float               OffMinX, OffMaxX;       // Offsets from HostWorkRect.Min.x
+    float               LineMinY, LineMaxY;
+    float               HostCursorPosY;         // Backup of CursorPos at the time of BeginColumns()
+    float               HostCursorMaxPosX;      // Backup of CursorMaxPos at the time of BeginColumns()
+    ImRect              HostClipRect;           // Backup of ClipRect at the time of BeginColumns()
+    ImRect              HostWorkRect;           // Backup of WorkRect at the time of BeginColumns()
+    ImVector<ImGuiColumnData> Columns;
+    ImDrawListSplitter  Splitter;
+
+    ImGuiColumns()      { Clear(); }
+    void Clear()
+    {
+        ID = 0;
+        Flags = ImGuiColumnsFlags_None;
+        IsFirstFrame = false;
+        IsBeingResized = false;
+        Current = 0;
+        Count = 1;
+        OffMinX = OffMaxX = 0.0f;
+        LineMinY = LineMaxY = 0.0f;
+        HostCursorPosY = 0.0f;
+        HostCursorMaxPosX = 0.0f;
+        Columns.clear();
+    }
 };
 
 //-----------------------------------------------------------------------------
