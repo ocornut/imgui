@@ -20,9 +20,13 @@ Index of this file:
 // [SECTION] Widgets support: flags, enums, data structures
 // [SECTION] Columns support
 // [SECTION] Settings support
+// [SECTION] Multi-select support
+// [SECTION] Docking support
+// [SECTION] Viewport support
 // [SECTION] ImGuiContext (main imgui context)
 // [SECTION] ImGuiWindowTempData, ImGuiWindow
-// [SECTION] Tab bar, Tab item
+// [SECTION] Tab bar, Tab item support
+// [SECTION] Table support
 // [SECTION] Internal API
 // [SECTION] Test Engine Hooks (imgui_test_engine)
 
@@ -1031,6 +1035,30 @@ struct ImGuiColumns
 };
 
 //-----------------------------------------------------------------------------
+// [SECTION] Multi-select support
+//-----------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_MULTI_SELECT
+// <this is filled in 'range_select' branch>
+#endif // #ifdef IMGUI_HAS_MULTI_SELECT
+
+//-----------------------------------------------------------------------------
+// [SECTION] Docking support
+//-----------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_DOCK
+// <this is filled in 'docking' branch>
+#endif // #ifdef IMGUI_HAS_DOCK
+
+//-----------------------------------------------------------------------------
+// [SECTION] Viewport support
+//-----------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_VIEWPORT
+// <this is filled in 'docking' branch>
+#endif // #ifdef IMGUI_HAS_VIEWPORT
+
+//-----------------------------------------------------------------------------
 // [SECTION] Settings support
 //-----------------------------------------------------------------------------
 
@@ -1636,7 +1664,7 @@ struct ImGuiItemHoveredDataBackup
 };
 
 //-----------------------------------------------------------------------------
-// [SECTION] Tab bar, Tab item
+// [SECTION] Tab bar, Tab item support
 //-----------------------------------------------------------------------------
 
 // Extend ImGuiTabBarFlags_
@@ -1704,6 +1732,14 @@ struct ImGuiTabBar
         return TabsNames.Buf.Data + tab->NameOffset;
     }
 };
+
+//-----------------------------------------------------------------------------
+// [SECTION] Table support
+//-----------------------------------------------------------------------------
+
+#ifdef IMGUI_HAS_TABLE
+// <this is filled in 'tables' branch>
+#endif // #ifdef IMGUI_HAS_TABLE
 
 //-----------------------------------------------------------------------------
 // [SECTION] Internal API
