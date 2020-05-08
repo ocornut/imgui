@@ -4419,7 +4419,7 @@ static void ImGui::EndFrameDrawDimmedBackgrounds()
             ImGuiViewportP* viewport = g.Viewports[viewport_n];
             if (modal_window && viewport == modal_window->Viewport)
                 continue;
-            if (g.NavWindowingList && viewport == g.NavWindowingList->Viewport)
+            if (g.NavWindowingListWindow && viewport == g.NavWindowingListWindow->Viewport)
                 continue;
             if (g.NavWindowingTargetAnim && viewport == g.NavWindowingTargetAnim->Viewport)
                 continue;
@@ -4567,7 +4567,7 @@ void ImGui::Render()
     // Add ImDrawList to render
     ImGuiWindow* windows_to_render_top_most[2];
     windows_to_render_top_most[0] = (g.NavWindowingTarget && !(g.NavWindowingTarget->Flags & ImGuiWindowFlags_NoBringToFrontOnFocus)) ? g.NavWindowingTarget->RootWindow : NULL;
-    windows_to_render_top_most[1] = (g.NavWindowingTarget ? g.NavWindowingList : NULL);
+    windows_to_render_top_most[1] = (g.NavWindowingTarget ? g.NavWindowingListWindow : NULL);
     for (int n = 0; n != g.Windows.Size; n++)
     {
         ImGuiWindow* window = g.Windows[n];
@@ -6030,7 +6030,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         bool window_title_visible_elsewhere = false;
         if ((window->Viewport && window->Viewport->Window == window) || (window->DockIsActive))
             window_title_visible_elsewhere = true;
-        else if (g.NavWindowingList != NULL && (window->Flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using CTRL+TAB
+        else if (g.NavWindowingListWindow != NULL && (window->Flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using CTRL+TAB
             window_title_visible_elsewhere = true;
         if (window_title_visible_elsewhere && !window_just_created && strcmp(name, window->Name) != 0)
         {
@@ -6427,8 +6427,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
         // Draw modal or window list full viewport dimming background (for other viewports we'll render them in EndFrame)
+        ImGuiWindow* window_window_list = g.NavWindowingListWindow;
         const bool dim_bg_for_modal = (flags & ImGuiWindowFlags_Modal) && window == GetTopMostPopupModal() && window->HiddenFramesCannotSkipItems <= 0;
-        const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && ((window == g.NavWindowingTargetAnim->RootWindow) || (g.NavWindowingList && (window == g.NavWindowingList) && g.NavWindowingList->Viewport != g.NavWindowingTargetAnim->Viewport));
+        const bool dim_bg_for_window_list = g.NavWindowingTargetAnim && ((window == g.NavWindowingTargetAnim->RootWindow) || (window == window_window_list && window_window_list->Viewport != g.NavWindowingTargetAnim->Viewport));
         if (dim_bg_for_modal || dim_bg_for_window_list)
         {
             const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
@@ -7323,6 +7324,7 @@ void ImGui::ActivateItem(ImGuiID id)
     g.NavNextActivateId = id;
 }
 
+// Note: this is storing in same stack as IDStack, so Push/Pop mismatch will be reported there.
 void ImGui::PushFocusScope(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
@@ -9841,8 +9843,8 @@ void ImGui::NavUpdateWindowingOverlay()
     if (g.NavWindowingTimer < NAV_WINDOWING_LIST_APPEAR_DELAY)
         return;
 
-    if (g.NavWindowingList == NULL)
-        g.NavWindowingList = FindWindowByName("###NavWindowingList");
+    if (g.NavWindowingListWindow == NULL)
+        g.NavWindowingListWindow = FindWindowByName("###NavWindowingList");
     ImGuiViewportP* viewport = /*g.NavWindow ? g.NavWindow->Viewport :*/ (ImGuiViewportP*)GetMainViewport();
     SetNextWindowSizeConstraints(ImVec2(viewport->Size.x * 0.20f, viewport->Size.y * 0.20f), ImVec2(FLT_MAX, FLT_MAX));
     SetNextWindowPos(viewport->Pos + viewport->Size * 0.5f, ImGuiCond_Always, ImVec2(0.5f, 0.5f));
