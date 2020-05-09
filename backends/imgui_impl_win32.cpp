@@ -86,7 +86,7 @@ typedef DWORD (WINAPI *PFN_XInputGetState)(DWORD, XINPUT_STATE*);
 //  2016-11-12: Inputs: Only call Win32 ::SetCursor(nullptr) when io.MouseDrawCursor is set.
 
 // Forward Declarations
-static void ImGui_ImplWin32_InitPlatformInterface();
+static void ImGui_ImplWin32_InitPlatformInterface(bool platformHasOwnDC);
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
 
@@ -122,7 +122,7 @@ static ImGui_ImplWin32_Data* ImGui_ImplWin32_GetBackendData()
 }
 
 // Functions
-bool    ImGui_ImplWin32_Init(void* hwnd)
+static bool ImGui_ImplWin32_Init(void* hwnd, bool platformHasOwnDC)
 {
     ImGuiIO& io = ImGui::GetIO();
     IM_ASSERT(io.BackendPlatformUserData == nullptr && "Already initialized a platform backend!");
@@ -152,7 +152,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)bd->hWnd;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplWin32_InitPlatformInterface();
+        ImGui_ImplWin32_InitPlatformInterface(platformHasOwnDC);
 
     // Dynamically load XInput library
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
@@ -176,6 +176,17 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
 #endif // IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
 
     return true;
+}
+
+IMGUI_IMPL_API bool     ImGui_ImplWin32_Init(void* hwnd)
+{
+    return ImGui_ImplWin32_Init(hwnd, false);
+}
+
+IMGUI_IMPL_API bool     ImGui_ImplWin32_InitForOpenGL(void* hwnd)
+{
+    // OpenGL needs CS_OWNDC
+    return ImGui_ImplWin32_Init(hwnd, true);
 }
 
 void    ImGui_ImplWin32_Shutdown()
@@ -1152,11 +1163,11 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-static void ImGui_ImplWin32_InitPlatformInterface()
+static void ImGui_ImplWin32_InitPlatformInterface(bool platformHasOwnDC)
 {
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
-    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.style = CS_HREDRAW | CS_VREDRAW | (platformHasOwnDC ? CS_OWNDC : 0);
     wcex.lpfnWndProc = ImGui_ImplWin32_WndProcHandler_PlatformWindow;
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
