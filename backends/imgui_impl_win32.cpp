@@ -67,7 +67,7 @@ static bool                 g_WantUpdateHasGamepad = true;
 static bool                 g_WantUpdateMonitors = true;
 
 // Forward Declarations
-static void ImGui_ImplWin32_InitPlatformInterface();
+static void ImGui_ImplWin32_InitPlatformInterface(bool platformHasOwnDC);
 static void ImGui_ImplWin32_ShutdownPlatformInterface();
 static void ImGui_ImplWin32_UpdateMonitors();
 
@@ -79,7 +79,7 @@ static PFN_XInputGetState           g_XInputGetState = NULL;
 #endif
 
 // Functions
-bool    ImGui_ImplWin32_Init(void* hwnd)
+bool    ImGui_ImplWin32_Init(void* hwnd, bool platformHasOwnDC)
 {
     if (!::QueryPerformanceFrequency((LARGE_INTEGER*)&g_TicksPerSecond))
         return false;
@@ -99,7 +99,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)g_hWnd;
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-        ImGui_ImplWin32_InitPlatformInterface();
+        ImGui_ImplWin32_InitPlatformInterface(platformHasOwnDC);
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -873,11 +873,11 @@ static LRESULT CALLBACK ImGui_ImplWin32_WndProcHandler_PlatformWindow(HWND hWnd,
     return DefWindowProc(hWnd, msg, wParam, lParam);
 }
 
-static void ImGui_ImplWin32_InitPlatformInterface()
+static void ImGui_ImplWin32_InitPlatformInterface(bool platformHasOwnDC)
 {
     WNDCLASSEX wcex;
     wcex.cbSize = sizeof(WNDCLASSEX);
-    wcex.style = CS_HREDRAW | CS_VREDRAW;
+    wcex.style = CS_HREDRAW | CS_VREDRAW | (platformHasOwnDC ? CS_OWNDC : 0);
     wcex.lpfnWndProc = ImGui_ImplWin32_WndProcHandler_PlatformWindow;
     wcex.cbClsExtra = 0;
     wcex.cbWndExtra = 0;
