@@ -50,6 +50,7 @@ Other Changes:
   Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
   Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
   Set to an intermediary value to toggle behavior based on width (same as Firefox).
+- Fix GetGlyphRangesKorean() end-range to end at 0xD7A3 (instead of 0xD79D). (#348, #3217) [@marukrap]
 - Metrics: Added a "Settings" section with some details about persistent ini settings.
 - Nav, Menus: Fix vertical wrap-around in menus or popups created with multiple appending calls to
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
