@@ -22,75 +22,6 @@ void CreateRenderTarget();
 void CleanupRenderTarget();
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
 
-#include <random>
-void ShowBackendCheckerWindow(bool* p_open)
-{
-    if (!ImGui::Begin("Dear ImGui Backend Checker", p_open))
-    {
-        ImGui::End();
-        return;
-    }
-
-    ImGuiIO& io = ImGui::GetIO();
-    ImGui::Text("Dear ImGui %s Backend Checker", ImGui::GetVersion());
-    ImGui::Text("io.BackendPlatformName: %s", io.BackendPlatformName ? io.BackendPlatformName : "NULL");
-    ImGui::Text("io.BackendRendererName: %s", io.BackendRendererName ? io.BackendRendererName : "NULL");
-    ImGui::Text("RendererHasVtxOffset: %s", ((io.BackendFlags & ImGuiBackendFlags_RendererHasVtxOffset) != 0) ? "True" : "False");
-    ImGui::Text("sizeof(ImDrawIdx): %d", sizeof(ImDrawIdx));
-    ImGui::Separator();
-
-    //if (ImGui::TreeNode("0001: Renderer: Large Mesh Support"))
-    {
-        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-        {
-            static int vtx_count = 64722;// 60000;
-            ImGui::SliderInt("VtxCount##1", &vtx_count, 0, 100000);
-
-            static int map[100000 / 4];
-            for (int n = 0; n < vtx_count / 4; n++)
-                map[n] = n;
-            std::srand(13);
-            std::random_shuffle(std::begin(map), std::end(map), [](auto n) { return std::rand() % n; });
-
-            ImDrawListSplitter splitter;
-            splitter.Split(draw_list, 100000 / 4);
-
-            ImVec2 p = ImGui::GetCursorScreenPos();
-            for (int n = 0; n < vtx_count / 4; n++)
-            {
-                splitter.SetCurrentChannel(draw_list, map[n]);
-
-                float off_x = (float)(n % 100) * 3.0f;
-                float off_y = (float)(n % 100) * 1.0f;
-                ImU32 col = IM_COL32(((n * 17) & 255), ((n * 59) & 255), ((n * 83) & 255), 255);
-                draw_list->AddRectFilled(ImVec2(p.x + off_x, p.y + off_y), ImVec2(p.x + off_x + 50, p.y + off_y + 50), col);
-            }
-
-            splitter.Merge(draw_list);
-
-            ImGui::Dummy(ImVec2(300 + 50, 100 + 50));
-            ImGui::Text("VtxBuffer.Size = %d", draw_list->VtxBuffer.Size);
-        }
-        {
-            static int vtx_count = 60000;
-            ImGui::SliderInt("VtxCount##2", &vtx_count, 0, 100000);
-            ImVec2 p = ImGui::GetCursorScreenPos();
-            for (int n = 0; n < vtx_count / (10 * 4); n++)
-            {
-                float off_x = (float)(n % 100) * 3.0f;
-                float off_y = (float)(n % 100) * 1.0f;
-                ImU32 col = IM_COL32(((n * 17) & 255), ((n * 59) & 255), ((n * 83) & 255), 255);
-                draw_list->AddText(ImVec2(p.x + off_x, p.y + off_y), col, "ABCDEFGHIJ");
-            }
-            ImGui::Dummy(ImVec2(300 + 50, 100 + 20));
-            ImGui::Text("VtxBuffer.Size = %d", draw_list->VtxBuffer.Size);
-        }
-        //ImGui::TreePop();
-    }
-
-    ImGui::End();
-}
-
 // Main code
 int main(int, char**)
 {
@@ -167,10 +98,6 @@ int main(int, char**)
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
-
-        static bool show_check_window = true;
-        if (show_check_window)
-            ShowBackendCheckerWindow(&show_check_window);
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
         if (show_demo_window)
