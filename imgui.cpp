@@ -3593,7 +3593,7 @@ void ImGui::UpdateMouseWheel()
     // If a child window has the ImGuiWindowFlags_NoScrollWithMouse flag, we give a chance to scroll its parent
 
     // Vertical Mouse Wheel scrolling
-    const float wheel_y = (g.IO.MouseWheel != 0.0f && !g.IO.KeyShift) ? g.IO.MouseWheel : 0.0f;
+    const float wheel_y = (g.IO.MouseWheel != 0.0f && ImFabs(g.IO.MouseWheelH) < ImFabs(g.IO.MouseWheel) && !g.IO.KeyShift) ? g.IO.MouseWheel : 0.0f;
     if (wheel_y != 0.0f && !g.IO.KeyCtrl)
     {
         StartLockWheelingWindow(window);
