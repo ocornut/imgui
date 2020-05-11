@@ -6236,7 +6236,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 UpdateViewportPlatformMonitor(window->Viewport);
 
             // Update common viewport flags
-            ImGuiViewportFlags viewport_flags = (window->Viewport->Flags) & ~(ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration);
+            const ImGuiViewportFlags viewport_flags_to_clear = ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoRendererClear;
+            ImGuiViewportFlags viewport_flags = window->Viewport->Flags & ~viewport_flags_to_clear;
             const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
             if (flags & ImGuiWindowFlags_Tooltip)
                 viewport_flags |= ImGuiViewportFlags_TopMost;
@@ -6266,7 +6267,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
                 viewport_flags &= ~window->WindowClass.ViewportFlagsOverrideClear;
 
             // We also tell the back-end that clearing the platform window won't be necessary, as our window is filling the viewport and we have disabled BgAlpha
-            viewport_flags |= ImGuiViewportFlags_NoRendererClear;
+            if (!(flags & ImGuiWindowFlags_NoBackground))
+                viewport_flags &= ~ImGuiViewportFlags_NoRendererClear;
+
             window->Viewport->Flags = viewport_flags;
         }
 
