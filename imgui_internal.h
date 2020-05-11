@@ -1207,6 +1207,8 @@ struct ImGuiContext
     ImGuiNavMoveResult      NavMoveResultLocal;                 // Best move request candidate within NavWindow
     ImGuiNavMoveResult      NavMoveResultLocalVisibleSet;       // Best move request candidate within NavWindow that are mostly visible (when using ImGuiNavMoveFlags_AlsoScoreVisibleSet flag)
     ImGuiNavMoveResult      NavMoveResultOther;                 // Best move request candidate within NavWindow's flattened hierarchy (when using ImGuiWindowFlags_NavFlattened flag)
+    ImGuiWindow*            NavWrapRequestWindow;               // Window which requested trying nav wrap-around.
+    ImGuiNavMoveFlags       NavWrapRequestFlags;                // Wrap-around operation flags.
 
     // Navigation: Windowing (CTRL+TAB for list, or Menu button + keys or directional pads to move/resize)
     ImGuiWindow*            NavWindowingTarget;                 // Target window when doing CTRL+Tab (or Pad Menu + FocusPrev/Next), this window is temporarily displayed top-most!
@@ -1383,6 +1385,8 @@ struct ImGuiContext
         NavMoveRequestForward = ImGuiNavForward_None;
         NavMoveRequestKeyMods = ImGuiKeyModFlags_None;
         NavMoveDir = NavMoveDirLast = NavMoveClipDir = ImGuiDir_None;
+        NavWrapRequestWindow = NULL;
+        NavWrapRequestFlags = ImGuiNavMoveFlags_None;
 
         NavWindowingTarget = NavWindowingTargetAnim = NavWindowingListWindow = NULL;
         NavWindowingTimer = NavWindowingHighlightAlpha = 0.0f;

@@ -937,6 +937,7 @@ static void             NavUpdateWindowingOverlay();
 static void             NavUpdateMoveResult();
 static float            NavUpdatePageUpPageDown();
 static inline void      NavUpdateAnyRequestFlag();
+static void             NavEndFrame();
 static bool             NavScoreItem(ImGuiNavMoveResult* result, ImRect cand);
 static void             NavProcessItem(ImGuiWindow* window, const ImRect& nav_bb, ImGuiID id);
 static ImVec2           NavCalcPreferredRefPos();
@@ -4209,9 +4210,8 @@ void ImGui::EndFrame()
         g.CurrentWindow->Active = false;
     End();
 
-    // Show CTRL+TAB list window
-    if (g.NavWindowingTarget != NULL)
-        NavUpdateWindowingOverlay();
+    // Update navigation: CTRL+Tab, wrap-around requests
+    NavEndFrame();
 
     // Drag and Drop: Elapse payload (if delivered, or if source stops being submitted)
     if (g.DragDropActive)
@@ -7819,7 +7819,8 @@ void ImGui::EndPopup()
     IM_ASSERT(g.BeginPopupStack.Size > 0);
 
     // Make all menus and popups wrap around for now, may need to expose that policy.
-    NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY);
+    if (g.NavWindow == window)
+        NavMoveRequestTryWrapping(window, ImGuiNavMoveFlags_LoopY);
 
     // Child-popups don't need to be laid out
     IM_ASSERT(g.WithinEndChild == false);
@@ -8298,36 +8299,11 @@ void ImGui::NavMoveRequestForward(ImGuiDir move_dir, ImGuiDir clip_dir, const Im
 void ImGui::NavMoveRequestTryWrapping(ImGuiWindow* window, ImGuiNavMoveFlags move_flags)
 {
     ImGuiContext& g = *GImGui;
-    if (g.NavWindow != window || !NavMoveRequestButNoResultYet() || g.NavMoveRequestForward != ImGuiNavForward_None || g.NavLayer != ImGuiNavLayer_Main)
-        return;
-    IM_ASSERT(move_flags != 0); // No points calling this with no wrapping
-    ImRect bb_rel = window->NavRectRel[0];
 
-    ImGuiDir clip_dir = g.NavMoveDir;
-    if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
-    {
-        bb_rel.Min.x = bb_rel.Max.x = ImMax(window->SizeFull.x, window->ContentSize.x + window->WindowPadding.x * 2.0f) - window->Scroll.x;
-        if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(-bb_rel.GetHeight()); clip_dir = ImGuiDir_Up; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-    if (g.NavMoveDir == ImGuiDir_Right && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
-    {
-        bb_rel.Min.x = bb_rel.Max.x = -window->Scroll.x;
-        if (move_flags & ImGuiNavMoveFlags_WrapX) { bb_rel.TranslateY(+bb_rel.GetHeight()); clip_dir = ImGuiDir_Down; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-    if (g.NavMoveDir == ImGuiDir_Up && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
-    {
-        bb_rel.Min.y = bb_rel.Max.y = ImMax(window->SizeFull.y, window->ContentSize.y + window->WindowPadding.y * 2.0f) - window->Scroll.y;
-        if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(-bb_rel.GetWidth()); clip_dir = ImGuiDir_Left; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
-    if (g.NavMoveDir == ImGuiDir_Down && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
-    {
-        bb_rel.Min.y = bb_rel.Max.y = -window->Scroll.y;
-        if (move_flags & ImGuiNavMoveFlags_WrapY) { bb_rel.TranslateX(+bb_rel.GetWidth()); clip_dir = ImGuiDir_Right; }
-        NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
-    }
+    // Navigation wrap-around logic is delayed to the end of the frame because this operation is only valid after entire
+    // popup is assembled and in case of appended popups it is not clear which EndPopup() call is final.
+    g.NavWrapRequestWindow = window;
+    g.NavWrapRequestFlags = move_flags;
 }
 
 // FIXME: This could be replaced by updating a frame number in each window when (window == NavWindow) and (NavLayer == 0).
@@ -8457,6 +8433,8 @@ static void ImGui::NavUpdate()
 {
     ImGuiContext& g = *GImGui;
     g.IO.WantSetMousePos = false;
+    g.NavWrapRequestWindow = NULL;
+    g.NavWrapRequestFlags = ImGuiNavMoveFlags_None;
 #if 0
     if (g.NavScoringCount > 0) IMGUI_DEBUG_LOG("NavScoringCount %d for '%s' layer %d (Init:%d, Move:%d)\n", g.FrameCount, g.NavScoringCount, g.NavWindow ? g.NavWindow->Name : "NULL", g.NavLayer, g.NavInitRequest || g.NavInitResultId != 0, g.NavMoveRequest);
 #endif
@@ -8868,6 +8846,68 @@ static float ImGui::NavUpdatePageUpPageDown()
         }
     }
     return 0.0f;
+}
+
+static void ImGui::NavEndFrame()
+{
+    ImGuiContext& g = *GImGui;
+
+    // Show CTRL+TAB list window
+    if (g.NavWindowingTarget != NULL)
+        NavUpdateWindowingOverlay();
+
+    // Perform wrap-around in menus
+    ImGuiWindow* window = g.NavWrapRequestWindow;
+    ImGuiNavMoveFlags move_flags = g.NavWrapRequestFlags;
+    if (window != NULL && g.NavWindow == window && NavMoveRequestButNoResultYet() && g.NavMoveRequestForward == ImGuiNavForward_None && g.NavLayer == ImGuiNavLayer_Main)
+    {
+        IM_ASSERT(move_flags != 0); // No points calling this with no wrapping
+        ImRect bb_rel = window->NavRectRel[0];
+
+        ImGuiDir clip_dir = g.NavMoveDir;
+        if (g.NavMoveDir == ImGuiDir_Left && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
+        {
+            bb_rel.Min.x = bb_rel.Max.x =
+                ImMax(window->SizeFull.x, window->ContentSize.x + window->WindowPadding.x * 2.0f) - window->Scroll.x;
+            if (move_flags & ImGuiNavMoveFlags_WrapX)
+            {
+                bb_rel.TranslateY(-bb_rel.GetHeight());
+                clip_dir = ImGuiDir_Up;
+            }
+            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+        }
+        if (g.NavMoveDir == ImGuiDir_Right && (move_flags & (ImGuiNavMoveFlags_WrapX | ImGuiNavMoveFlags_LoopX)))
+        {
+            bb_rel.Min.x = bb_rel.Max.x = -window->Scroll.x;
+            if (move_flags & ImGuiNavMoveFlags_WrapX)
+            {
+                bb_rel.TranslateY(+bb_rel.GetHeight());
+                clip_dir = ImGuiDir_Down;
+            }
+            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+        }
+        if (g.NavMoveDir == ImGuiDir_Up && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
+        {
+            bb_rel.Min.y = bb_rel.Max.y =
+                ImMax(window->SizeFull.y, window->ContentSize.y + window->WindowPadding.y * 2.0f) - window->Scroll.y;
+            if (move_flags & ImGuiNavMoveFlags_WrapY)
+            {
+                bb_rel.TranslateX(-bb_rel.GetWidth());
+                clip_dir = ImGuiDir_Left;
+            }
+            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+        }
+        if (g.NavMoveDir == ImGuiDir_Down && (move_flags & (ImGuiNavMoveFlags_WrapY | ImGuiNavMoveFlags_LoopY)))
+        {
+            bb_rel.Min.y = bb_rel.Max.y = -window->Scroll.y;
+            if (move_flags & ImGuiNavMoveFlags_WrapY)
+            {
+                bb_rel.TranslateX(+bb_rel.GetWidth());
+                clip_dir = ImGuiDir_Right;
+            }
+            NavMoveRequestForward(g.NavMoveDir, clip_dir, bb_rel, move_flags);
+        }
+    }
 }
 
 static int ImGui::FindWindowFocusIndex(ImGuiWindow* window) // FIXME-OPT O(N)
