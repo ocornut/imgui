@@ -1905,11 +1905,11 @@ struct ImGuiTableColumn
     float                   ContentMaxPosRowsFrozen;        // Submitted contents absolute maximum position, from which we can infer width.
     float                   ContentMaxPosRowsUnfrozen;      // (kept as float because we need to manipulate those between each cell change)
     float                   ContentMaxPosHeadersUsed;
-    float                   ContentMaxPosHeadersDesired;
+    float                   ContentMaxPosHeadersIdeal;
     ImS16                   ContentWidthRowsFrozen;         // Contents width. Because row freezing is not correlated with headers/not-headers we need all 4 variants (ImDrawCmd merging uses different data than alignment code).
     ImS16                   ContentWidthRowsUnfrozen;       // (encoded as ImS16 because we actually rarely use those width)
     ImS16                   ContentWidthHeadersUsed;        // TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
-    ImS16                   ContentWidthHeadersDesired;
+    ImS16                   ContentWidthHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
     bool                    IsActive;                       // Is the column not marked Hidden by the user (regardless of clipping). We're not calling this "Visible" here because visibility also depends on clipping.
     bool                    IsActiveNextFrame;
@@ -1982,7 +1982,8 @@ struct ImGuiTable
     float                       LastOuterHeight;            // Outer height from last frame
     float                       LastFirstRowHeight;         // Height of first row from last frame
     float                       ColumnsTotalWidth;
-    float                       InnerWidth;
+    float                       InnerWidth;                 // User value passed to BeginTable(), see comments at the top of BeginTable() for details.
+    float                       IdealTotalWidth;            // Sum of ideal column width for nothing to be clipped
     float                       ResizedColumnNextWidth;
     ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
     ImRect                      WorkRect;
@@ -2264,14 +2265,14 @@ namespace ImGui
     IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_n);
     IMGUI_API void          TableEndCell(ImGuiTable* table);
     IMGUI_API ImRect        TableGetCellRect();
-    IMGUI_API const char*   TableGetColumnName(ImGuiTable* table, int column_n);
-    IMGUI_API ImGuiID       TableGetColumnResizeID(ImGuiTable* table, int column_n, int instance_no = 0);
+    IMGUI_API const char*   TableGetColumnName(const ImGuiTable* table, int column_n);
+    IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
     IMGUI_API void          TableLoadSettings(ImGuiTable* table);
     IMGUI_API void          TableSaveSettings(ImGuiTable* table);
-    IMGUI_API ImGuiTableSettings* TableFindSettings(ImGuiTable* table);
+    IMGUI_API ImGuiTableSettings* TableFindSettings(const ImGuiTable* table);
     IMGUI_API void*         TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
     IMGUI_API void          TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
     IMGUI_API void          TableSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);

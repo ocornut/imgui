@@ -3680,8 +3680,8 @@ static void ShowDemoWindowTables()
                 ImGui::CheckboxFlags("_NoSortDescending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoSortDescending);
                 ImGui::CheckboxFlags("_PreferSortAscending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_PreferSortAscending);
                 ImGui::CheckboxFlags("_PreferSortDescending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_PreferSortDescending);
-                ImGui::CheckboxFlags("_IndentEnable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentEnable);
-                ImGui::CheckboxFlags("_IndentDisable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentDisable);
+                ImGui::CheckboxFlags("_IndentEnable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentEnable); ImGui::SameLine(); HelpMarker("Default for column 0");
+                ImGui::CheckboxFlags("_IndentDisable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentDisable); ImGui::SameLine(); HelpMarker("Default for column >0");
                 ImGui::PopID();
                 ImGui::PopStyleVar(2);
             }
@@ -4089,7 +4089,6 @@ static void ShowDemoWindowTables()
         static int items_count = IM_ARRAYSIZE(template_items_names);
         static ImVec2 outer_size_value = ImVec2(0, 250);
         static float row_min_height = 0.0f; // Auto
-        static float inner_width_without_scroll = 0.0f; // Fill 
         static float inner_width_with_scroll = 0.0f; // Auto-extend
         static bool outer_size_enabled = true;
         static bool lock_first_column_visibility = false;
@@ -4171,10 +4170,7 @@ static void ShowDemoWindowTables()
 
             // From a user point of view we will tend to use 'inner_width' differently depending on whether our table is embedding scrolling.
             // To facilitate experimentation we expose two values and will select the right one depending on active flags.
-            if (flags & ImGuiTableFlags_ScrollX)
-                ImGui::DragFloat("inner_width (when ScrollX active)", &inner_width_with_scroll, 1.0f, 0.0f, FLT_MAX);
-            else
-                ImGui::DragFloat("inner_width (when ScrollX inactive)", &inner_width_without_scroll, 1.0f, 0.0f, FLT_MAX);
+            ImGui::DragFloat("inner_width (when ScrollX active)", &inner_width_with_scroll, 1.0f, 0.0f, FLT_MAX);
             ImGui::DragFloat("row_min_height", &row_min_height, 1.0f, 0.0f, FLT_MAX);
             ImGui::SameLine(); HelpMarker("Specify height of the Selectable item.");
             ImGui::DragInt("items_count", &items_count, 0.1f, 0, 5000);
@@ -4213,7 +4209,7 @@ static void ShowDemoWindowTables()
         ImVec2 table_scroll_cur, table_scroll_max; // For debug display
         const ImDrawList* table_draw_list = NULL;  // "
 
-        const float inner_width_to_use = (flags & ImGuiTableFlags_ScrollX) ? inner_width_with_scroll : inner_width_without_scroll;
+        const float inner_width_to_use = (flags & ImGuiTableFlags_ScrollX) ? inner_width_with_scroll : 0.0f;
         if (ImGui::BeginTable("##table", 6, flags, outer_size_enabled ? outer_size_value : ImVec2(0, 0), inner_width_to_use))
         {
             // Declare columns
