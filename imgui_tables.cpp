@@ -1466,12 +1466,12 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
             column->ResizeWeight = 1.0f;
         }
     }
-    if (table->IsInitializing && !table->IsSettingsLoaded)
+    if (table->IsInitializing)
     {
         // Init default visibility/sort state
-        if (flags & ImGuiTableColumnFlags_DefaultHide)
+        if ((flags & ImGuiTableColumnFlags_DefaultHide) && (table->SettingsLoadedFlags & ImGuiTableFlags_Hideable) == 0)
             column->IsActive = column->IsActiveNextFrame = false;
-        if (flags & ImGuiTableColumnFlags_DefaultSort)
+        if (flags & ImGuiTableColumnFlags_DefaultSort && (table->SettingsLoadedFlags & ImGuiTableFlags_Sortable) == 0)
         {
             column->SortOrder = 0; // Multiple columns using _DefaultSort will be reordered when building the sort specs.
             column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
@@ -2360,7 +2360,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     }
     settings->ColumnsCount = (ImS8)table->ColumnsCount;
 
-    // Serialize ImGuiTableSettings/ImGuiTableColumnSettings --> ImGuiTable/ImGuiTableColumn
+    // Serialize ImGuiTable/ImGuiTableColumn into ImGuiTableSettings/ImGuiTableColumnSettings
     IM_ASSERT(settings->ID == table->ID);
     IM_ASSERT(settings->ColumnsCount == table->ColumnsCount && settings->ColumnsCountMax >= settings->ColumnsCount);
     ImGuiTableColumn* column = table->Columns.Data;
@@ -2378,7 +2378,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         column_settings->Visible = column->IsActive;
 
         // We skip saving some data in the .ini file when they are unnecessary to restore our state
-        // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet.
+        // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved.
         if (column->DisplayOrder != n)
             settings->SaveFlags |= ImGuiTableFlags_Reorderable;
         if (column_settings->SortOrder != -1)
@@ -2411,10 +2411,9 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     {
         settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
     }
-    table->IsSettingsLoaded = true;
-    settings->SaveFlags = table->Flags;
+    table->SettingsLoadedFlags = settings->SaveFlags;
 
-    // Serialize ImGuiTable/ImGuiTableColumn --> ImGuiTableSettings/ImGuiTableColumnSettings
+    // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {

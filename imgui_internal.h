@@ -1952,7 +1952,7 @@ struct ImGuiTable
     ImU64                       ActiveMaskByIndex;          // Column Index -> IsActive map (Active == not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImU64                       ActiveMaskByDisplayOrder;   // Column DisplayOrder -> IsActive map
     ImU64                       VisibleMaskByIndex;         // Visible (== Active and not Clipped)
-    ImGuiTableFlags             SettingsSaveFlags;          // Pre-compute which data we are going to save into the .ini file (e.g. when order is not altered we won't save order)
+    ImGuiTableFlags             SettingsLoadedFlags;        // Which data were loaded from the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
     int                         ColumnsCount;               // Number of columns declared in BeginTable()
@@ -2022,7 +2022,6 @@ struct ImGuiTable
     bool                        IsUsingHeaders;             // Set when the first row had the ImGuiTableRowFlags_Headers flag.
     bool                        IsContextPopupOpen;         // Set when default context menu is open (also see: ContextPopupColumn, InstanceInteracted).
     bool                        IsSettingsRequestLoad;
-    bool                        IsSettingsLoaded;
     bool                        IsSettingsDirty;            // Set when table settings have changed and needs to be reported into ImGuiTableSetttings data.
     bool                        IsDefaultDisplayOrder;      // Set when display order is unchanged from default (DisplayOrder contains 0...Count-1)
     bool                        IsResetDisplayOrderRequest;
@@ -2050,7 +2049,7 @@ struct ImGuiTableColumnSettings
     ImS8    DisplayOrder;
     ImS8    SortOrder;
     ImS8    SortDirection : 7;
-    ImU8    Visible : 1;        // This is called Active in ImGuiTableColumn, in .ini file we call it Visible.
+    ImU8    Visible : 1;        // This is called Active in ImGuiTableColumn, but in user-facing code we call this Visible (thus in .ini file)
 
     ImGuiTableColumnSettings()
     {
