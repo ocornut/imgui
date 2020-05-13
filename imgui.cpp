@@ -12014,7 +12014,7 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id
 
         ImGuiDockNode* node = DockContextFindNodeByID(ctx, window->DockId);
         IM_ASSERT(node != NULL);   // This should have been called after DockContextBuildNodesFromSettings()
-        if (root_id == 0 || DockNodeGetRootNode(node)->ID == root_id)
+        if ((root_id == 0 || DockNodeGetRootNode(node)->ID == root_id) && node->SplitAxis == ImGuiAxis_None)
             DockNodeAddWindow(node, window, true);
     }
 }
@@ -15006,7 +15006,7 @@ static void ImGui::DockSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettings
             buf->appendf(" NoWindowMenuButton=1");
         if (node_settings->Flags & ImGuiDockNodeFlags_NoCloseButton)
             buf->appendf(" NoCloseButton=1");
-        if (node_settings->SelectedWindowId)
+        if (node_settings->SplitAxis == ImGuiAxis_None && node_settings->SelectedWindowId)
             buf->appendf(" Selected=0x%08X", node_settings->SelectedWindowId);
 
 #if IMGUI_DEBUG_INI_SETTINGS
