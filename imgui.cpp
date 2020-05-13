@@ -1684,7 +1684,7 @@ ImU32 ImHashStr(const char* str, size_t size, ImU32 seed)
     if (!size) size = strlen(str);
 
    // skip anything prior '###' which effectively resets the hash
-    for (const char* c = (const char*)memchr(str, '#', size - 2); c; c = (const char*)memchr(c, '#', size - 2))
+    if (size >= 3) for (const char* c = (const char*)memchr(str, '#', size - 2); c; c = (const char*)memchr(c, '#', size - 2))
     {
         bool skip1 = (c[1] == '#'); // skip one extra char if it's '##' only
         if (!skip1 | (c[2] != '#'))
