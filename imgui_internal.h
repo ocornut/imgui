@@ -94,6 +94,7 @@ struct ImGuiColumns;                // Storage data for a columns set
 struct ImGuiContext;                // Main Dear ImGui context
 struct ImGuiDataTypeInfo;           // Type information associated to a ImGuiDataType enum
 struct ImGuiDockContext;            // Docking system context
+struct ImGuiDockRequest;            // Docking system dock/undock queued request
 struct ImGuiDockNode;               // Docking system node (hold a list of Windows OR two child dock nodes)
 struct ImGuiDockNodeSettings;       // Storage for a dock node in .ini file (we preserve those even if the associated dock node isn't active during the session)
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
@@ -1161,6 +1162,15 @@ struct ImGuiDockNode
     ImRect                  Rect() const            { return ImRect(Pos.x, Pos.y, Pos.x + Size.x, Pos.y + Size.y); }
 };
 
+struct ImGuiDockContext
+{
+    ImGuiStorage                    Nodes;          // Map ID -> ImGuiDockNode*: Active nodes
+    ImVector<ImGuiDockRequest>      Requests;
+    ImVector<ImGuiDockNodeSettings> NodesSettings;
+    bool                            WantFullRebuild;
+    ImGuiDockContext()              { WantFullRebuild = false; }
+};
+
 #endif // #ifdef IMGUI_HAS_DOCK
 
 //-----------------------------------------------------------------------------
@@ -1443,7 +1453,7 @@ struct ImGuiContext
 
     // Extensions
     // FIXME: We could provide an API to register one slot in an array held in ImGuiContext?
-    ImGuiDockContext*       DockContext;
+    ImGuiDockContext        DockContext;
 
     // Settings
     bool                    SettingsLoaded;
@@ -1596,8 +1606,6 @@ struct ImGuiContext
 
         PlatformImePos = PlatformImeLastPos = ImVec2(FLT_MAX, FLT_MAX);
         PlatformImePosViewport = 0;
-
-        DockContext = NULL;
 
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
