@@ -971,6 +971,7 @@ static bool             UpdateWindowManualResize(ImGuiWindow* window, const ImVe
 static void             RenderWindowOuterBorders(ImGuiWindow* window);
 static void             RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar_rect, bool title_bar_is_highlight, bool handle_borders_and_resize_grips, int resize_grip_count, const ImU32 resize_grip_col[4], float resize_grip_draw_size);
 static void             RenderWindowTitleBarContents(ImGuiWindow* window, const ImRect& title_bar_rect, const char* name, bool* p_open);
+static void             EndFrameDrawEmptyDockNodes(ImGuiContext* ctx);
 static void             EndFrameDrawDimmedBackgrounds();
 
 // Viewports
@@ -4480,6 +4481,9 @@ void ImGui::EndFrame()
     if (g.CurrentWindow && !g.CurrentWindow->WriteAccessed)
         g.CurrentWindow->Active = false;
     End();
+
+    // Draw dock nodes with no windows with alternate backgrounds
+    EndFrameDrawEmptyDockNodes(&g);
 
     // Draw modal whitening background on _other_ viewports than the one the modal is one
     EndFrameDrawDimmedBackgrounds();
@@ -11715,6 +11719,7 @@ namespace ImGui
 // - DockContextPruneUnusedSettingsNodes()
 // - DockContextBuildNodesFromSettings()
 // - DockContextBuildAddWindowsToNodes()
+// - EndFrameDrawEmptyDockNodes()
 //-----------------------------------------------------------------------------
 
 void ImGui::DockContextInitialize(ImGuiContext* ctx)
@@ -12017,6 +12022,19 @@ void ImGui::DockContextBuildAddWindowsToNodes(ImGuiContext* ctx, ImGuiID root_id
         if ((root_id == 0 || DockNodeGetRootNode(node)->ID == root_id) && node->SplitAxis == ImGuiAxis_None)
             DockNodeAddWindow(node, window, true);
     }
+}
+
+void ImGui::EndFrameDrawEmptyDockNodes(ImGuiContext* ctx)
+{
+    ImGuiDockContext* dc = &ctx->DockContext;
+    for (int n = 0; n < dc->Nodes.Data.Size; n++)
+        if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
+        {
+            // Draw empty node background (currently can only be the Central Node)
+            ImGuiWindow* host_window = node->HostWindow;
+            if (host_window && node->IsEmpty() && node->IsVisible && !(node->GetMergedFlags() & ImGuiDockNodeFlags_PassthruCentralNode))
+                host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
+        }
 }
 
 //-----------------------------------------------------------------------------
@@ -12921,10 +12939,6 @@ static void ImGui::DockNodeUpdate(ImGuiDockNode* node)
         DockNodeTreeUpdatePosSize(node, host_window->Pos, host_window->Size);
         DockNodeTreeUpdateSplitter(node);
     }
-
-    // Draw empty node background (currently can only be the Central Node)
-    if (host_window && node->IsEmpty() && node->IsVisible && !(node_flags & ImGuiDockNodeFlags_PassthruCentralNode))
-        host_window->DrawList->AddRectFilled(node->Pos, node->Pos + node->Size, GetColorU32(ImGuiCol_DockingEmptyBg));
 
     // Draw whole dockspace background if ImGuiDockNodeFlags_PassthruCentralNode if set.
     if (render_dockspace_bg && node->IsVisible)
