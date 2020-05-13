@@ -1981,9 +1981,9 @@ struct ImGuiTable
     float                       CellSpacingX;               // Spacing between non-bordered cells
     float                       LastOuterHeight;            // Outer height from last frame
     float                       LastFirstRowHeight;         // Height of first row from last frame
-    float                       ColumnsTotalWidth;
     float                       InnerWidth;                 // User value passed to BeginTable(), see comments at the top of BeginTable() for details.
-    float                       IdealTotalWidth;            // Sum of ideal column width for nothing to be clipped
+    float                       ColumnsTotalWidth;          // Sum of current column width
+    float                       ColumnsAutoFitWidth;        // Sum of ideal column width in order nothing to be clipped, used for auto-fitting and content width submission in outer window
     float                       ResizedColumnNextWidth;
     ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
     ImRect                      WorkRect;

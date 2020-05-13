@@ -558,13 +558,14 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // (can't make auto padding larger than what WorkRect knows about so right-alignment matches)
     const ImRect work_rect = table->WorkRect;
     const float padding_auto_x = table->CellPaddingX2;
+    const float spacing_auto_x = table->CellSpacingX * (1.0f + 2.0f); // CellSpacingX is >0.0f when there's no vertical border, in which case we add two extra CellSpacingX to make auto-fit look nice instead of cramped. We may want to expose this somehow.
     const float min_column_width = TableGetMinColumnWidth();
 
     int count_fixed = 0;
     float width_fixed = 0.0f;
     float total_weights = 0.0f;
     table->LeftMostStretchedColumnDisplayOrder = -1;
-    table->IdealTotalWidth = 0.0f;
+    table->ColumnsAutoFitWidth = 0.0f;
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
         if (!(table->ActiveMaskByDisplayOrder & ((ImU64)1 << order_n)))
@@ -591,7 +592,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         if (!(table->Flags & ImGuiTableFlags_NoHeadersWidth) && !(column->Flags & ImGuiTableColumnFlags_NoHeaderWidth))
             column_width_ideal = ImMax(column_width_ideal, column_content_width_headers);
         column_width_ideal = ImMax(column_width_ideal + padding_auto_x, min_column_width);
-        table->IdealTotalWidth += column_width_ideal;
+        table->ColumnsAutoFitWidth += column_width_ideal;
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthAlwaysAutoResize | ImGuiTableColumnFlags_WidthFixed))
         {
@@ -622,6 +623,10 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
                 table->LeftMostStretchedColumnDisplayOrder = (ImS8)column->DisplayOrder;
         }
     }
+
+    // CellSpacingX is >0.0f when there's no vertical border, in which case we add two extra CellSpacingX to make auto-fit look nice instead of cramped.
+    // We may want to expose this somehow.
+    table->ColumnsAutoFitWidth += spacing_auto_x * (table->ColumnsActiveCount - 1);
 
     // Layout
     // Remove -1.0f to cancel out the +1.0f we are doing in EndTable() to make last column line visible
@@ -956,28 +961,6 @@ void    ImGui::EndTable()
     table->WorkRect.Max.y = ImMax(table->WorkRect.Max.y, table->OuterRect.Max.y);
     table->LastOuterHeight = table->OuterRect.GetHeight();
 
-    // Store content width reference for each column
-    float max_pos_x = inner_window->DC.CursorMaxPos.x;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-
-        // Store content width (for both Headers and Rows)
-        //float ref_x = column->MinX;
-        float ref_x_rows = column->StartXRows - table->CellPaddingX1;
-        float ref_x_headers = column->StartXHeaders - table->CellPaddingX1;
-        column->ContentWidthRowsFrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsFrozen - ref_x_rows);
-        column->ContentWidthRowsUnfrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsUnfrozen - ref_x_rows);
-        column->ContentWidthHeadersUsed = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersUsed - ref_x_headers);
-        column->ContentWidthHeadersIdeal = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersIdeal - ref_x_headers);
-
-        // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
-        if (table->ActiveMaskByIndex & ((ImU64)1 << column_n))
-            max_pos_x = ImMax(max_pos_x, column->MaxX + 1.0f);
-    }
-
-    inner_window->DC.CursorMaxPos.x = max_pos_x;
-
     if (!(flags & ImGuiTableFlags_NoClipX))
         inner_window->DrawList->PopClipRect();
     inner_window->ClipRect = inner_window->DrawList->_ClipRectStack.back();
@@ -1015,16 +998,16 @@ void    ImGui::EndTable()
     }
 
     // Layout in outer window
+    const float backup_outer_cursor_pos_x = outer_window->DC.CursorPos.x;
+    const float backup_outer_max_pos_x = outer_window->DC.CursorMaxPos.x;
+    const float backup_inner_max_pos_x = inner_window->DC.CursorMaxPos.x;
     inner_window->WorkRect = table->HostWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
     outer_window->DC.ColumnsOffset.x = 0.0f;
     if (inner_window != outer_window)
     {
-        // Override EndChild's ItemSize with our own to enable auto-resize on the X axis when possible
-        float backup_outer_cursor_pos_x = outer_window->DC.CursorPos.x;
         EndChild();
-        outer_window->DC.CursorMaxPos.x = backup_outer_cursor_pos_x + table->ColumnsTotalWidth + 1.0f + inner_window->ScrollbarSizes.x;
     }
     else
     {
@@ -1032,6 +1015,38 @@ void    ImGui::EndTable()
         ImVec2 item_size = table->OuterRect.GetSize();
         item_size.x = table->ColumnsTotalWidth;
         ItemSize(item_size);
+    }
+
+    // Store content width reference for each column
+    float max_pos_x = backup_inner_max_pos_x;
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+
+        // Store content width (for both Headers and Rows)
+        //float ref_x = column->MinX;
+        float ref_x_rows = column->StartXRows - table->CellPaddingX1;
+        float ref_x_headers = column->StartXHeaders - table->CellPaddingX1;
+        column->ContentWidthRowsFrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsFrozen - ref_x_rows);
+        column->ContentWidthRowsUnfrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsUnfrozen - ref_x_rows);
+        column->ContentWidthHeadersUsed = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersUsed - ref_x_headers);
+        column->ContentWidthHeadersIdeal = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersIdeal - ref_x_headers);
+
+        // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
+        if (table->ActiveMaskByIndex & ((ImU64)1 << column_n))
+            max_pos_x = ImMax(max_pos_x, column->MaxX + 1.0f);
+    }
+
+    // Override EndChild/ItemSize max extent with our own to enable auto-resize on the X axis when possible
+    // FIXME-TABLE: This can be improved (e.g. for Fixed columns we don't want to auto AutoFitWidth? or propagate window auto-fit to table?)
+    if (table->Flags & ImGuiTableFlags_ScrollX)
+    {
+        inner_window->DC.CursorMaxPos.x = max_pos_x; // Set contents width for scrolling
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, backup_outer_cursor_pos_x + table->ColumnsTotalWidth + 1.0f + inner_window->ScrollbarSizes.x); // For auto-fit
+    }
+    else
+    {
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, table->WorkRect.Min.x + table->ColumnsAutoFitWidth); // For auto-fit
     }
 
     // Save settings
@@ -2571,7 +2586,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
-    BulletText("OuterWidth: %.1f, InnerWidth: %.1f%s, IdealWidth: %.1f", table->OuterRect.GetWidth(), table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "", table->IdealTotalWidth);
+    BulletText("OuterWidth: %.1f, InnerWidth: %.1f%s, ColumnsWidth: %.1f, AutoFitWidth: %.1f", table->OuterRect.GetWidth(), table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "", table->ColumnsTotalWidth, table->ColumnsAutoFitWidth);
     for (int n = 0; n < table->ColumnsCount; n++)
     {
         ImGuiTableColumn* column = &table->Columns[n];

@@ -3570,6 +3570,24 @@ static void ShowDemoWindowTables()
             }
             ImGui::EndTable();
         }
+
+        if (ImGui::BeginTable("##table2", 3, flags | ImGuiTableFlags_SizingPolicyFixedX))
+        {
+            ImGui::TableSetupColumn("One");
+            ImGui::TableSetupColumn("Two");
+            ImGui::TableSetupColumn("Three");
+            ImGui::TableAutoHeaders();
+            for (int row = 0; row < 6; row++)
+            {
+                ImGui::TableNextRow();
+                for (int column = 0; column < 3; column++)
+                {
+                    ImGui::TableSetColumnIndex(column);
+                    ImGui::Text("Fixed %d,%d", row, column);
+                }
+            }
+            ImGui::EndTable();
+        }
         ImGui::TreePop();
     }
 
