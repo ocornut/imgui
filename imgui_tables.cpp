@@ -971,12 +971,12 @@ void    ImGui::EndTable()
         column->ContentWidthHeadersUsed = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersUsed - ref_x_headers);
         column->ContentWidthHeadersIdeal = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersIdeal - ref_x_headers);
 
+        // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
         if (table->ActiveMaskByIndex & ((ImU64)1 << column_n))
-            max_pos_x = ImMax(max_pos_x, column->MaxX);
+            max_pos_x = ImMax(max_pos_x, column->MaxX + 1.0f);
     }
 
-    // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
-    inner_window->DC.CursorMaxPos.x = max_pos_x + 1;
+    inner_window->DC.CursorMaxPos.x = max_pos_x;
 
     if (!(flags & ImGuiTableFlags_NoClipX))
         inner_window->DrawList->PopClipRect();
