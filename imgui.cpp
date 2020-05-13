@@ -8016,11 +8016,22 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
             continue;
         float avail_w = (dir == ImGuiDir_Left ? r_avoid.Min.x : r_outer.Max.x) - (dir == ImGuiDir_Right ? r_avoid.Max.x : r_outer.Min.x);
         float avail_h = (dir == ImGuiDir_Up ? r_avoid.Min.y : r_outer.Max.y) - (dir == ImGuiDir_Down ? r_avoid.Max.y : r_outer.Min.y);
-        if (avail_w < size.x || avail_h < size.y)
+
+        // There is no point in switching left/right sides when popup height exceeds available height or top/bottom
+        // sides when popup width exceeds available width.
+        if (avail_h < size.y && (dir == ImGuiDir_Up || dir == ImGuiDir_Down))
             continue;
+        else if (avail_w < size.x && (dir == ImGuiDir_Left || dir == ImGuiDir_Right))
+            continue;
+
         ImVec2 pos;
         pos.x = (dir == ImGuiDir_Left) ? r_avoid.Min.x - size.x : (dir == ImGuiDir_Right) ? r_avoid.Max.x : base_pos_clamped.x;
         pos.y = (dir == ImGuiDir_Up)   ? r_avoid.Min.y - size.y : (dir == ImGuiDir_Down)  ? r_avoid.Max.y : base_pos_clamped.y;
+
+        // Clamp top-left (or top-right for RTL languages in the future) corner of popup to remain visible.
+        pos.x = ImMax(pos.x, r_outer.Min.x);
+        pos.y = ImMax(pos.y, r_outer.Min.y);
+
         *last_dir = dir;
         return pos;
     }
