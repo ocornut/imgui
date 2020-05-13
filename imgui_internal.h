@@ -2066,9 +2066,10 @@ struct ImGuiTableColumnSettings
 struct ImGuiTableSettings
 {
     ImGuiID                     ID;                     // Set to 0 to invalidate/delete the setting
-    ImGuiTableFlags             SaveFlags;
+    ImGuiTableFlags             SaveFlags;              // Indicate data we want to save using the Resizable/Reorderable/Sortable/Hideable flags (could be using its own flags..)
     ImS8                        ColumnsCount;
-    ImS8                        ColumnsCountMax;
+    ImS8                        ColumnsCountMax;        // Maximum number of columns this settings instance can store, we can recycle a settings instance with lower number of columns but not higher
+    bool                        WantApply;              // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
     ImGuiTableSettings()        { memset(this, 0, sizeof(*this)); }
     ImGuiTableColumnSettings*   GetColumnSettings()     { return (ImGuiTableColumnSettings*)(this + 1); }
@@ -2271,10 +2272,8 @@ namespace ImGui
     IMGUI_API void          PopTableBackground();
     IMGUI_API void          TableLoadSettings(ImGuiTable* table);
     IMGUI_API void          TableSaveSettings(ImGuiTable* table);
-    IMGUI_API ImGuiTableSettings* TableFindSettings(const ImGuiTable* table);
-    IMGUI_API void*         TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name);
-    IMGUI_API void          TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line);
-    IMGUI_API void          TableSettingsHandler_WriteAll(ImGuiContext*, ImGuiSettingsHandler*, ImGuiTextBuffer* buf);
+    IMGUI_API ImGuiTableSettings* TableGetBoundSettings(const ImGuiTable* table);
+    IMGUI_API void          TableInstallSettingsHandler(ImGuiContext* context);
 
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);

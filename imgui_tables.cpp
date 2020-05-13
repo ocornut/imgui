@@ -2305,19 +2305,28 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
 // [Main] 4: TableSettingsHandler_WriteAll()   When .ini file is dirty (which can come from other source), save TableSettings into .ini file.
 //-------------------------------------------------------------------------
 
+// Clear and initialize empty settings instance
+static void InitTableSettings(ImGuiTableSettings* settings, ImGuiID id, int columns_count, int columns_count_max)
+{
+    IM_PLACEMENT_NEW(settings) ImGuiTableSettings();
+    ImGuiTableColumnSettings* settings_column = settings->GetColumnSettings();
+    for (int n = 0; n < columns_count_max; n++, settings_column++)
+        IM_PLACEMENT_NEW(settings_column) ImGuiTableColumnSettings();
+    settings->ID = id;
+    settings->ColumnsCount = (ImS8)columns_count;
+    settings->ColumnsCountMax = (ImS8)columns_count_max;
+    settings->WantApply = true;
+}
+
 static ImGuiTableSettings* CreateTableSettings(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(sizeof(ImGuiTableSettings) + (size_t)columns_count * sizeof(ImGuiTableColumnSettings));
-    IM_PLACEMENT_NEW(settings) ImGuiTableSettings();
-    ImGuiTableColumnSettings* settings_column = settings->GetColumnSettings();
-    for (int n = 0; n < columns_count; n++, settings_column++)
-        IM_PLACEMENT_NEW(settings_column) ImGuiTableColumnSettings();
-    settings->ID = id;
-    settings->ColumnsCount = settings->ColumnsCountMax = (ImS8)columns_count;
+    InitTableSettings(settings, id, columns_count, columns_count);
     return settings;
 }
 
+// Find existing settings
 static ImGuiTableSettings* FindTableSettingsByID(ImGuiID id)
 {
     // FIXME-OPT: Might want to store a lookup map for this?
@@ -2328,20 +2337,19 @@ static ImGuiTableSettings* FindTableSettingsByID(ImGuiID id)
     return NULL;
 }
 
-ImGuiTableSettings* ImGui::TableFindSettings(const ImGuiTable* table)
+// Get settings for a given table, NULL if none
+ImGuiTableSettings* ImGui::TableGetBoundSettings(const ImGuiTable* table)
 {
-    if (table->SettingsOffset == -1)
-        return NULL;
-
-    ImGuiContext& g = *GImGui;
-    ImGuiTableSettings* settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
-    IM_ASSERT(settings->ID == table->ID);
-    if (settings->ColumnsCountMax < table->ColumnsCount)
+    if (table->SettingsOffset != -1)
     {
-        settings->ID = 0; // Ditch storage if we won't fit because of a count change
-        return NULL;
+        ImGuiContext& g = *GImGui;
+        ImGuiTableSettings* settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
+        IM_ASSERT(settings->ID == table->ID);
+        if (settings->ColumnsCountMax >= table->ColumnsCount)
+            return settings; // OK
+        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
     }
-    return settings;
+    return NULL;
 }
 
 void ImGui::TableSaveSettings(ImGuiTable* table)
@@ -2352,7 +2360,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
 
     // Bind or create settings data
     ImGuiContext& g = *GImGui;
-    ImGuiTableSettings* settings = TableFindSettings(table);
+    ImGuiTableSettings* settings = TableGetBoundSettings(table);
     if (settings == NULL)
     {
         settings = CreateTableSettings(table->ID, table->ColumnsCount);
@@ -2370,7 +2378,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     settings->SaveFlags = ImGuiTableFlags_Resizable;
     for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
     {
-        //column_settings->WidthOrWeight = column->WidthRequested; // FIXME-WIP
+        //column_settings->WidthOrWeight = column->WidthRequested; // FIXME-TABLE: Missing
         column_settings->Index = (ImS8)n;
         column_settings->DisplayOrder = column->DisplayOrder;
         column_settings->SortOrder = column->SortOrder;
@@ -2378,7 +2386,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         column_settings->Visible = column->IsActive;
 
         // We skip saving some data in the .ini file when they are unnecessary to restore our state
-        // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved.
+        // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved when present.
         if (column->DisplayOrder != n)
             settings->SaveFlags |= ImGuiTableFlags_Reorderable;
         if (column_settings->SortOrder != -1)
@@ -2409,9 +2417,10 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     }
     else
     {
-        settings = g.SettingsTables.ptr_from_offset(table->SettingsOffset);
+        settings = TableGetBoundSettings(table);
     }
     table->SettingsLoadedFlags = settings->SaveFlags;
+    IM_ASSERT(settings->ColumnsCount == table->ColumnsCount);
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
@@ -2422,14 +2431,13 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
         //column->WidthRequested = column_settings->WidthOrWeight; // FIXME-WIP
-        if (column_settings->DisplayOrder != -1)
+        if (settings->SaveFlags & ImGuiTableFlags_Reorderable)
             column->DisplayOrder = column_settings->DisplayOrder;
-        if (column_settings->SortOrder != -1)
-        {
-            column->SortOrder = column_settings->SortOrder;
-            column->SortDirection = column_settings->SortDirection;
-        }
+        else
+            column->DisplayOrder = (ImS8)column_n;
         column->IsActive = column->IsActiveNextFrame = column_settings->Visible;
+        column->SortOrder = column_settings->SortOrder;
+        column->SortDirection = column_settings->SortDirection;
     }
 
     // FIXME-TABLE: Need to validate .ini data
@@ -2437,16 +2445,46 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = (ImS8)column_n;
 }
 
-void*   ImGui::TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
+static void TableSettingsHandler_ClearAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiContext& g = *ctx;
+    for (int i = 0; i != g.Tables.GetSize(); i++)
+        g.Tables.GetByIndex(i)->SettingsOffset = -1;
+    g.SettingsTables.clear();
+}
+
+// Apply to existing windows (if any)
+static void TableSettingsHandler_ApplyAll(ImGuiContext* ctx, ImGuiSettingsHandler*)
+{
+    ImGuiContext& g = *ctx;
+    for (int i = 0; i != g.Tables.GetSize(); i++)
+    {
+        ImGuiTable* table = g.Tables.GetByIndex(i);
+        table->IsSettingsRequestLoad = true;
+        table->SettingsOffset = -1;
+    }
+}
+
+static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*, const char* name)
 {
     ImGuiID id = 0;
     int columns_count = 0;
     if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
         return NULL;
+
+    if (ImGuiTableSettings* settings = FindTableSettingsByID(id))
+    {
+        if (settings->ColumnsCountMax >= columns_count)
+        {
+            InitTableSettings(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
+            return settings;
+        }
+        settings->ID = 0; // Invalidate storage if we won't fit because of a count change
+    }
     return CreateTableSettings(id, columns_count);
 }
 
-void    ImGui::TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
+static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
 {
     // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
     ImGuiTableSettings* settings = (ImGuiTableSettings*)entry;
@@ -2465,7 +2503,7 @@ void    ImGui::TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler
     if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)           { line = ImStrSkipBlank(line + r); column->SortOrder = (ImS8)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
 }
 
-void    ImGui::TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
+static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
 {
     ImGuiContext& g = *ctx;
     for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
@@ -2488,10 +2526,8 @@ void    ImGui::TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHan
         for (int column_n = 0; column_n < settings->ColumnsCount; column_n++, column++)
         {
             // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
-            if (column->UserID != 0)
-                buf->appendf("Column %-2d UserID=%08X", column_n, column->UserID);
-            else
-                buf->appendf("Column %-2d", column_n);
+            buf->appendf("Column %-2d", column_n);
+            if (column->UserID != 0)                    buf->appendf(" UserID=%08X", column->UserID);
             if (save_size)                              buf->appendf(" Width=%d", 0);// (int)settings_column->WidthOrWeight);  // FIXME-TABLE
             if (save_visible)                           buf->appendf(" Visible=%d", column->Visible);
             if (save_order)                             buf->appendf(" Order=%d", column->DisplayOrder);
@@ -2500,6 +2536,20 @@ void    ImGui::TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHan
         }
         buf->append("\n");
     }
+}
+
+void    ImGui::TableInstallSettingsHandler(ImGuiContext* context)
+{
+    ImGuiContext& g = *context;
+    ImGuiSettingsHandler ini_handler;
+    ini_handler.TypeName = "Table";
+    ini_handler.TypeHash = ImHashStr("Table");
+    ini_handler.ClearAllFn = TableSettingsHandler_ClearAll;
+    ini_handler.ReadOpenFn = TableSettingsHandler_ReadOpen;
+    ini_handler.ReadLineFn = TableSettingsHandler_ReadLine;
+    ini_handler.ApplyAllFn = TableSettingsHandler_ApplyAll;
+    ini_handler.WriteAllFn = TableSettingsHandler_WriteAll;
+    g.SettingsHandlers.push_back(ini_handler);
 }
 
 //-------------------------------------------------------------------------
@@ -2543,7 +2593,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             (column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize) ? "WidthAlwaysAutoResize " : "",
             (column->Flags & ImGuiTableColumnFlags_NoResize) ? "NoResize " : "");
     }
-    if (ImGuiTableSettings* settings = TableFindSettings(table))
+    if (ImGuiTableSettings* settings = TableGetBoundSettings(table))
         DebugNodeTableSettings(settings);
     TreePop();
 }
