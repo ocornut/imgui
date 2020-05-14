@@ -687,7 +687,7 @@ namespace ImGui
     // - Use TableSetupColumn() to specify label, resizing policy, default width, id, various other flags etc.
     // - The name passed to TableSetupColumn() is used by TableAutoHeaders() and by the context-menu
     // - Use TableAutoHeaders() to submit the whole header row, otherwise you may treat the header row as a regular row, manually call TableHeader() and other widgets.
-    // - Headers are required to perform some interactions: reordering, sorting, context menu // FIXME-TABLE: remove context from this list!
+    // - Headers are required to perform some interactions: reordering, sorting, context menu (FIXME-TABLE: context menu should work without!)
     IMGUI_API void          TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = -1.0f, ImU32 user_id = 0);
     IMGUI_API void          TableAutoHeaders();                         // submit all headers cells based on data provided to TableSetupColumn() + submit context menu
     IMGUI_API void          TableHeader(const char* label);             // submit one header cell manually.

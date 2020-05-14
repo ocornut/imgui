@@ -1888,7 +1888,7 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (2 + 64 * 2)        // See TableUpdateDrawChannels()
 
 // [Internal] sizeof() ~ 100
-// We use the terminology "Active" to refer to a column that is not Hidden by user or programmatically. We don't use the term "Visible" because it is ambiguous since an Active column can be non-visible because of scrolling.
+// We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
 struct ImGuiTableColumn
 {
     ImRect                  ClipRect;                       // Clipping rectangle for the column
@@ -1911,17 +1911,17 @@ struct ImGuiTableColumn
     ImS16                   ContentWidthHeadersUsed;        // TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
     ImS16                   ContentWidthHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
-    bool                    IsActive;                       // Is the column not marked Hidden by the user (regardless of clipping). We're not calling this "Visible" here because visibility also depends on clipping.
-    bool                    IsActiveNextFrame;
-    bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle. We don't use the opposite "!Visible" name because Clipped can be altered by events.
+    bool                    IsVisible;                      // Is the column not marked Hidden by the user? (could be clipped by scrolling, etc).
+    bool                    IsVisibleNextFrame;
+    bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle.
     bool                    SkipItems;
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
-    ImS8                    IndexWithinActiveSet;           // Index within active/visible set (<= IndexToDisplayOrder)
+    ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
     ImS8                    DrawChannelRowsBeforeFreeze;
     ImS8                    DrawChannelRowsAfterFreeze;
-    ImS8                    PrevActiveColumn;               // Index of prev active column within Columns[], -1 if first active column
-    ImS8                    NextActiveColumn;               // Index of next active column within Columns[], -1 if last active column
+    ImS8                    PrevVisibleColumn;              // Index of prev visible column within Columns[], -1 if first visible column
+    ImS8                    NextVisibleColumn;              // Index of next visible column within Columns[], -1 if last visible column
     ImS8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
     ImS8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
     ImS8                    SortOrder;                      // -1: Not sorting on this column
@@ -1932,10 +1932,10 @@ struct ImGuiTableColumn
         memset(this, 0, sizeof(*this));
         ResizeWeight = WidthRequested = WidthGiven = -1.0f;
         NameOffset = -1;
-        IsActive = IsActiveNextFrame = true;
-        DisplayOrder = IndexWithinActiveSet = -1;
+        IsVisible = IsVisibleNextFrame = true;
+        DisplayOrder = IndexWithinVisibleSet = -1;
         DrawChannelCurrent = DrawChannelRowsBeforeFreeze = DrawChannelRowsAfterFreeze = -1;
-        PrevActiveColumn = NextActiveColumn = -1;
+        PrevVisibleColumn = NextVisibleColumn = -1;
         AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_Ascending;
@@ -1949,14 +1949,14 @@ struct ImGuiTable
     ImVector<char>              RawData;
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImS8>                DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
-    ImU64                       ActiveMaskByIndex;          // Column Index -> IsActive map (Active == not hidden by user/api) in a format adequate for iterating column without touching cold data
-    ImU64                       ActiveMaskByDisplayOrder;   // Column DisplayOrder -> IsActive map
-    ImU64                       VisibleMaskByIndex;         // Visible (== Active and not Clipped)
+    ImU64                       VisibleMaskByIndex;         // Column Index -> IsVisible map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
+    ImU64                       VisibleMaskByDisplayOrder;  // Column DisplayOrder -> IsVisible map
+    ImU64                       VisibleUnclippedMaskByIndex;// Visible and not Clipped, aka "actually visible" "not hidden by some scrolling"
     ImGuiTableFlags             SettingsLoadedFlags;        // Which data were loaded from the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
     int                         ColumnsCount;               // Number of columns declared in BeginTable()
-    int                         ColumnsActiveCount;         // Number of non-hidden columns (<= ColumnsCount)
+    int                         ColumnsVisibleCount;        // Number of non-hidden columns (<= ColumnsCount)
     int                         CurrentColumn;
     int                         CurrentRow;
     ImS16                       InstanceCurrent;            // Count of BeginTable() calls with same ID in the same frame (generally 0). This is a little bit similar to BeginCount for a window, but multiple table with same ID look are multiple tables, they are just synched.
@@ -2007,7 +2007,7 @@ struct ImGuiTable
     ImS8                        HeldHeaderColumn;           // Index of column header being held.
     ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
     ImS8                        ReorderColumnDir;           // -1 or +1
-    ImS8                        RightMostActiveColumn;      // Index of right-most non-hidden column.
+    ImS8                        RightMostVisibleColumn;     // Index of right-most non-hidden column.
     ImS8                        LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
     ImS8                        ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
     ImS8                        DummyDrawChannel;           // Redirect non-visible columns here.
@@ -2049,7 +2049,7 @@ struct ImGuiTableColumnSettings
     ImS8    DisplayOrder;
     ImS8    SortOrder;
     ImS8    SortDirection : 7;
-    ImU8    Visible : 1;        // This is called Active in ImGuiTableColumn, but in user-facing code we call this Visible (thus in .ini file)
+    ImU8    Visible : 1;
 
     ImGuiTableColumnSettings()
     {
