@@ -40,6 +40,8 @@ struct ImGui_ImplVulkan_InitInfo
     VkSampleCountFlagBits        MSAASamples;   // >= VK_SAMPLE_COUNT_1_BIT
     const VkAllocationCallbacks* Allocator;
     void                (*CheckVkResultFn)(VkResult err);
+    // Optional. When nullptr and VK_NO_PROTOTYPES undefined, procs will be resolved statically.
+    PFN_vkVoidFunction  (*GetVulkanProcAddressFn)(const char* proc_name);
 };
 
 // Called by user code
