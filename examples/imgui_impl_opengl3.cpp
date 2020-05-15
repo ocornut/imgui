@@ -15,6 +15,7 @@
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
 //  2020-XX-XX: Platform: Added support for multiple windows via the ImGuiPlatformIO interface.
+//  2020-05-08: OpenGL: Made default GLSL version 150 (instead of 130) on OSX.
 //  2020-04-21: OpenGL: Fixed handling of glClipControl(GL_UPPER_LEFT) by inverting projection matrix.
 //  2020-04-12: OpenGL: Fixed context version check mistakenly testing for 4.0+ instead of 3.2+ to enable ImGuiBackendFlags_RendererHasVtxOffset.
 //  2020-03-24: OpenGL: Added support for glbinding 2.x OpenGL loader.
@@ -191,6 +192,9 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 #elif defined(IMGUI_IMPL_OPENGL_ES3)
     if (glsl_version == NULL)
         glsl_version = "#version 300 es";
+#elif defined(__APPLE__)
+    if (glsl_version == NULL)
+        glsl_version = "#version 150";
 #else
     if (glsl_version == NULL)
         glsl_version = "#version 130";
