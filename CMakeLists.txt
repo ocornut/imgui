@@ -17,12 +17,14 @@ option (IMGUI_IMPL_DX10 "Build the DirectX 10 implementation (only if supported)
 option (IMGUI_IMPL_DX11 "Build the DirectX 11 implementation (only if supported)" ${WIN32})
 option (IMGUI_IMPL_DX12 "Build the DirectX 12 implementation (only if supported)" ${WIN32})
 
-add_library (imgui STATIC
+add_library (imgui
     imgui.cpp
     imgui_draw.cpp
     imgui_widgets.cpp
     $<$<BOOL:IMGUI_DEMO>:imgui_demo.cpp>
 )
+
+add_library(imgui::imgui ALIAS imgui)
 
 target_include_directories (imgui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
 
