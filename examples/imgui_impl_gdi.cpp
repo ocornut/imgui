@@ -11,7 +11,6 @@
 // https://github.com/ocornut/imgui
 
 // CHANGELOG
-//  2020-01-14: GDI: Support partial acceleration with Windows GDI.
 //  2019-08-12: GDI: Improve the implementation of the GDI renderer.
 //  2019-08-12: GDI: Add Windows GDI Renderer Support.
 
@@ -23,25 +22,8 @@
 
 #include <vector>
 
-// ****************************************************************************
+#include <emmintrin.h> // SSE2
 
-static int old_fb_width = 0;
-static int old_fb_height = 0;
-
-static HDC g_hDC = nullptr;
-static HDC g_hBufferDC = nullptr;
-static HBITMAP g_hBitmap = nullptr;
-static uint32_t* g_PixelBuffer = nullptr;
-static size_t g_PixelBufferSize = 0;
-static HBRUSH g_BackgroundColorBrush = nullptr;
-
-std::vector<TRIVERTEX> g_VertexBuffer;
-std::vector<GRADIENT_TRIANGLE> g_MeshBuffer;
-
-const uint16_t FPS = 60;
-
-const uint16_t g_ShouldRenderTime = (1000 / FPS) - 5;
-static uint16_t g_RenderTime = 0;
 
 // ****************************************************************************
 
@@ -61,39 +43,12 @@ static uint16_t g_RenderTime = 0;
 
 #include <cstdint>
 
-namespace imgui_sw
-{
-
-    /// Optional: tweak ImGui style to make it render faster.
-    void make_style_fast();
-
-    /// Undo what make_style_fast did.
-    void restore_style();
-
-    /// Call once a the start of your program.
-    void bind_imgui_painting();
-
-    /// The buffer is assumed to follow how ImGui packs pixels, i.e. ABGR by default.
-    /// Change with IMGUI_USE_BGRA_PACKED_COLOR.
-    /// If width/height differs from ImGui::GetIO().DisplaySize then
-    /// the function scales the UI to fit the given pixel buffer.
-    void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels);
-
-    /// Free the resources allocated by bind_imgui_painting.
-    void unbind_imgui_painting();
-
-    /// Show rendering stats in an ImGui window if you want to.
-    void show_stats();
-
-} // namespace imgui_sw
-
 #include <algorithm>
 #include <cmath>
 #include <vector>
 
-namespace imgui_sw {
-    //namespace {
-
+namespace imgui_sw
+{
     struct Stats
     {
         int    uniform_triangle_pixels = 0;
@@ -219,10 +174,10 @@ namespace imgui_sw {
     {
         const float s = 1.0f / 255.0f;
         return ImVec4(
-            ((in >> IM_COL32_R_SHIFT) & 0xFF) * s,
-            ((in >> IM_COL32_G_SHIFT) & 0xFF) * s,
-            ((in >> IM_COL32_B_SHIFT) & 0xFF) * s,
-            ((in >> IM_COL32_A_SHIFT) & 0xFF) * s);
+            ((in >> IM_COL32_R_SHIFT) & 0xFF)* s,
+            ((in >> IM_COL32_G_SHIFT) & 0xFF)* s,
+            ((in >> IM_COL32_B_SHIFT) & 0xFF)* s,
+            ((in >> IM_COL32_A_SHIFT) & 0xFF)* s);
     }
 
     ImU32 color_convert_float4_to_u32(const ImVec4& in)
@@ -397,7 +352,7 @@ namespace imgui_sw {
 
         const ImVec4 c0 = color_convert_u32_to_float4(v0.col);
         const ImVec4 c1 = color_convert_u32_to_float4(v1.col);
-        const ImVec4 c2 = color_convert_u32_to_float4(v2.col);;
+        const ImVec4 c2 = color_convert_u32_to_float4(v2.col);
 
         // We often blend the same colors over and over again, so optimize for this (saves 10% total cpu):
         uint32_t last_target_pixel = 0;
@@ -477,112 +432,6 @@ namespace imgui_sw {
         }
     }
 
-    void pre_paint_draw_cmd(
-        const PaintTarget& target,
-        const ImDrawVert* vertices,
-        const ImDrawIdx* idx_buffer,
-        const ImDrawCmd& pcmd,
-        Stats* stats,
-        uint32_t &count)
-    {
-        const auto texture = reinterpret_cast<const Texture*>(pcmd.TextureId);
-        assert(texture);
-
-        // ImGui uses the first pixel for "white".
-        const ImVec2 white_uv = ImVec2(0.5f / texture->width, 0.5f / texture->height);
-
-        for (int i = 0; i + 3 <= pcmd.ElemCount; i += 3)
-        {
-            const ImDrawIdx& i0 = idx_buffer[i + 0];
-            const ImDrawIdx& i1 = idx_buffer[i + 1];
-            const ImDrawIdx& i2 = idx_buffer[i + 2];
-
-            const ImDrawVert& v0 = vertices[i0];
-            const ImDrawVert& v1 = vertices[i1];
-            const ImDrawVert& v2 = vertices[i2];
-
-            const bool has_texture = (v0.uv != white_uv || v1.uv != white_uv || v2.uv != white_uv);
-
-            if (has_texture)
-            {
-                continue;
-            }
-
-            size_t CurrentVertexIndex = g_VertexBuffer.size();
-            g_VertexBuffer.resize(CurrentVertexIndex + 3);
-
-            PTRIVERTEX CurrentVertexes = &g_VertexBuffer[CurrentVertexIndex];
-
-            CurrentVertexes[0].x = v0.pos.x;
-            CurrentVertexes[0].y = v0.pos.y;
-            CurrentVertexes[0].Red = ((uint8_t*)&v0.col)[0] << 8;
-            CurrentVertexes[0].Green = ((uint8_t*)&v0.col)[1] << 8;
-            CurrentVertexes[0].Blue = ((uint8_t*)&v0.col)[2] << 8;
-            CurrentVertexes[0].Alpha = ((uint8_t*)&v0.col)[3] << 8;
-
-            CurrentVertexes[1].x = v1.pos.x;
-            CurrentVertexes[1].y = v1.pos.y;
-            CurrentVertexes[1].Red = ((uint8_t*)&v1.col)[0] << 8;
-            CurrentVertexes[1].Green = ((uint8_t*)&v1.col)[1] << 8;
-            CurrentVertexes[1].Blue = ((uint8_t*)&v1.col)[2] << 8;
-            CurrentVertexes[1].Alpha = ((uint8_t*)&v1.col)[3] << 8;
-
-            CurrentVertexes[2].x = v2.pos.x;
-            CurrentVertexes[2].y = v2.pos.y;
-            CurrentVertexes[2].Red = ((uint8_t*)&v2.col)[0] << 8;
-            CurrentVertexes[2].Green = ((uint8_t*)&v2.col)[1] << 8;
-            CurrentVertexes[2].Blue = ((uint8_t*)&v2.col)[2] << 8;
-            CurrentVertexes[2].Alpha = ((uint8_t*)&v2.col)[3] << 8;
-
-            size_t CurrentMeshIndex = g_MeshBuffer.size();
-            g_MeshBuffer.resize(CurrentMeshIndex + 1);
-
-            PGRADIENT_TRIANGLE Mesh = &g_MeshBuffer[CurrentMeshIndex];
-
-            Mesh->Vertex1 = count;
-            Mesh->Vertex2 = count + 1;
-            Mesh->Vertex3 = count + 2;
-
-            count += 3;
-        }
-    }
-
-    void pre_paint_draw_list(const PaintTarget& target, const ImDrawList* cmd_list, Stats* stats)
-    {
-        const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer[0];
-        const ImDrawVert* vertices = cmd_list->VtxBuffer.Data;
-
-        uint32_t count = 0;
-
-        g_VertexBuffer.clear();
-        g_MeshBuffer.clear();
-
-        for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
-        {
-            const ImDrawCmd& pcmd = cmd_list->CmdBuffer[cmd_i];
-            if (pcmd.UserCallback)
-            {
-                pcmd.UserCallback(cmd_list, &pcmd);
-            }
-            else
-            {
-                pre_paint_draw_cmd(target, vertices, idx_buffer, pcmd, stats, count);
-            }
-            idx_buffer += pcmd.ElemCount;
-        }
-
-        if (count)
-        {
-            GdiGradientFill(
-                g_hBufferDC,
-                &g_VertexBuffer[0],
-                g_VertexBuffer.size(),
-                &g_MeshBuffer[0],
-                g_MeshBuffer.size(),
-                GRADIENT_FILL_TRIANGLE);
-        }
-    }
-
     void paint_draw_cmd(
         const PaintTarget& target,
         const ImDrawVert* vertices,
@@ -596,51 +445,36 @@ namespace imgui_sw {
         // ImGui uses the first pixel for "white".
         const ImVec2 white_uv = ImVec2(0.5f / texture->width, 0.5f / texture->height);
 
-        for (int i = 0; i + 3 <= pcmd.ElemCount; i += 3)
-        {
-            const ImDrawIdx& i0 = idx_buffer[i + 0];
-            const ImDrawIdx& i1 = idx_buffer[i + 1];
-            const ImDrawIdx& i2 = idx_buffer[i + 2];
-
-            const ImDrawVert& v0 = vertices[i0];
-            const ImDrawVert& v1 = vertices[i1];
-            const ImDrawVert& v2 = vertices[i2];
+        for (int i = 0; i + 3 <= pcmd.ElemCount; ) {
+            const ImDrawVert& v0 = vertices[idx_buffer[i + 0]];
+            const ImDrawVert& v1 = vertices[idx_buffer[i + 1]];
+            const ImDrawVert& v2 = vertices[idx_buffer[i + 2]];
 
             const bool has_texture = (v0.uv != white_uv || v1.uv != white_uv || v2.uv != white_uv);
-
-            if (!has_texture)
-            {
-                continue;
-            }
-
-            paint_triangle(target, texture, pcmd.ClipRect, v0, v1, v2, stats);
+            paint_triangle(target, has_texture ? texture : nullptr, pcmd.ClipRect, v0, v1, v2, stats);
+            i += 3;
         }
     }
 
     void paint_draw_list(const PaintTarget& target, const ImDrawList* cmd_list, Stats* stats)
     {
-        pre_paint_draw_list(target, cmd_list, stats);
-
         const ImDrawIdx* idx_buffer = &cmd_list->IdxBuffer[0];
         const ImDrawVert* vertices = cmd_list->VtxBuffer.Data;
 
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.size(); cmd_i++)
         {
             const ImDrawCmd& pcmd = cmd_list->CmdBuffer[cmd_i];
-            if (pcmd.UserCallback)
-            {
+            if (pcmd.UserCallback) {
                 pcmd.UserCallback(cmd_list, &pcmd);
             }
-            else
-            {
+            else {
                 paint_draw_cmd(target, vertices, idx_buffer, pcmd, stats);
             }
             idx_buffer += pcmd.ElemCount;
         }
     }
 
-    //} // namespace
-
+    /// Optional: tweak ImGui style to make it render faster.
     void make_style_fast()
     {
         ImGuiStyle& style = ImGui::GetStyle();
@@ -650,6 +484,7 @@ namespace imgui_sw {
         style.WindowRounding = 0;
     }
 
+    /// Undo what make_style_fast did.
     void restore_style()
     {
         ImGuiStyle& style = ImGui::GetStyle();
@@ -659,6 +494,7 @@ namespace imgui_sw {
         style.WindowRounding = default_style.WindowRounding;
     }
 
+    /// Call once a the start of your program.
     void bind_imgui_painting()
     {
         ImGuiIO& io = ImGui::GetIO();
@@ -673,6 +509,10 @@ namespace imgui_sw {
 
     static Stats s_stats; // TODO: pass as an argument?
 
+    /// The buffer is assumed to follow how ImGui packs pixels, i.e. ABGR by default.
+    /// Change with IMGUI_USE_BGRA_PACKED_COLOR.
+    /// If width/height differs from ImGui::GetIO().DisplaySize then
+    /// the function scales the UI to fit the given pixel buffer.
     void paint_imgui(uint32_t* pixels, int width_pixels, int height_pixels)
     {
         const float width_points = ImGui::GetIO().DisplaySize.x;
@@ -687,6 +527,7 @@ namespace imgui_sw {
         }
     }
 
+    /// Free the resources allocated by bind_imgui_painting.
     void unbind_imgui_painting()
     {
         ImGuiIO& io = ImGui::GetIO();
@@ -694,6 +535,7 @@ namespace imgui_sw {
         io.Fonts = nullptr;
     }
 
+    /// Show rendering stats in an ImGui window if you want to.
     void show_stats()
     {
         ImGui::Text("uniform_triangle_pixels:            %7d", s_stats.uniform_triangle_pixels);
@@ -710,28 +552,15 @@ namespace imgui_sw {
 
 // ****************************************************************************
 
-/**
- * Retrieves the number of milliseconds that have elapsed since the system was
- * started.
- *
- * @return The number of milliseconds.
- */
-ULONGLONG M2GetTickCount()
-{
-    LARGE_INTEGER Frequency = { 0 }, PerformanceCount = { 0 };
+static int old_fb_width = 0;
+static int old_fb_height = 0;
 
-    if (QueryPerformanceFrequency(&Frequency))
-    {
-        if (QueryPerformanceCounter(&PerformanceCount))
-        {
-            return (PerformanceCount.QuadPart * 1000 / Frequency.QuadPart);
-        }
-    }
-
-    return GetTickCount64();
-}
-
-// ****************************************************************************
+static HDC g_hDC = nullptr;
+static HDC g_hBufferDC = nullptr;
+static HBITMAP g_hBitmap = nullptr;
+static uint32_t* g_PixelBuffer = nullptr;
+static size_t g_PixelBufferSize = 0;
+static HBRUSH g_BackgroundColorBrush = nullptr;
 
 bool ImGui_ImplGDI_Init()
 {
@@ -752,14 +581,9 @@ void ImGui_ImplGDI_Shutdown()
 
 void ImGui_ImplGDI_NewFrame()
 {
-    g_RenderTime = M2GetTickCount();
-
     imgui_sw::bind_imgui_painting();
 }
 
-// Render function
-// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(),
-// but you can now call this directly from your main loop)
 void ImGui_ImplGDI_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized, scale coordinates for retina displays.
@@ -862,17 +686,6 @@ void ImGui_ImplGDI_RenderDrawData(ImDrawData* draw_data)
         SRCCOPY);
 
     SelectObject(g_hBufferDC, hOldBitmap);
-
-    g_RenderTime = M2GetTickCount() - g_RenderTime;
-
-    //printf("g_RenderTime = %d\n", g_RenderTime);
-
-    int32_t WaitTime = g_ShouldRenderTime - g_RenderTime;
-    printf("WaitTime = %d\n", WaitTime);
-    if (WaitTime > 0)
-    {
-        Sleep(WaitTime);
-    }
 }
 
 void ImGui_ImplGDI_SetBackgroundColor(ImVec4* BackgroundColor)
