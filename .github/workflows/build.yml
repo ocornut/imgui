@@ -1,0 +1,418 @@
+name: build
+
+on:
+  push: {}
+  pull_request: {}
+  schedule:
+    - cron:  '0 9 * * *'
+
+jobs:
+  Windows:
+    runs-on: windows-2019
+    env:
+      VS_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\
+      MSBUILD_PATH: C:\Program Files (x86)\Microsoft Visual Studio\2019\Enterprise\MSBuild\Current\Bin\
+      # Until gh-actions allow us to use env variables inside other env variables (because we need %GITHUB_WORKSPACE%) we have to use relative path to imgui/examples/example_name directory.
+      SDL2_DIR: ..\..\SDL2-devel-2.0.10-VC\SDL2-2.0.10\
+      VULKAN_SDK: ..\..\vulkan-sdk-1.1.121.2\
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install Dependencies
+        shell: powershell
+        run: |
+          Invoke-WebRequest -Uri "https://www.libsdl.org/release/SDL2-devel-2.0.10-VC.zip" -OutFile "SDL2-devel-2.0.10-VC.zip"
+          Expand-Archive -Path SDL2-devel-2.0.10-VC.zip
+          Invoke-WebRequest -Uri "https://github.com/ocornut/imgui/files/3789205/vulkan-sdk-1.1.121.2.zip" -OutFile vulkan-sdk-1.1.121.2.zip
+          Expand-Archive -Path vulkan-sdk-1.1.121.2.zip
+
+      - name: Fix Projects
+        shell: powershell
+        run: |
+          # WARNING: This will need updating if toolset/sdk change in project files!
+          gci -recurse -filter "*.vcxproj" | ForEach-Object {
+            # Fix SDK and toolset for most samples.
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v110</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+            # Fix SDK and toolset for samples that require newer SDK/toolset. At the moment it is only dx12.
+            (Get-Content $_.FullName) -Replace "<PlatformToolset>v140</PlatformToolset>","<PlatformToolset>v142</PlatformToolset>" | Set-Content -Path $_.FullName
+            (Get-Content $_.FullName) -Replace "<WindowsTargetPlatformVersion>10.0.14393.0</WindowsTargetPlatformVersion>","<WindowsTargetPlatformVersion>10.0.18362.0</WindowsTargetPlatformVersion>" | Set-Content -Path $_.FullName
+          }
+
+      # Not using matrix here because it would inflate job count too much. Check out and setup is done for every job and that makes build times way too long.
+      - name: Build example_null (extra warnings, mingw 64-bit)
+        run: mingw32-make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+      - name: Build example_null (extra warnings, msvc 64-bit)
+        shell: cmd
+        run: |
+          cd examples\example_null
+          "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64 && .\build_win32.bat /W4
+
+      - name: Build example_null (single file build)
+        shell: bash
+        run: |
+          echo '#define IMGUI_IMPLEMENTATION'                    >  example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+
+      - name: Build example_null (with IMGUI_DISABLE_WIN32_FUNCTIONS)
+        shell: bash
+        run: |
+          echo '#define IMGUI_DISABLE_WIN32_FUNCTIONS'           >  example_single_file.cpp
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+          g++ -I. -Wall -Wformat -o example_single_file.exe example_single_file.cpp
+
+      - name: Build example_null (as DLL)
+        shell: cmd
+        run: |
+          "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
+          echo '#ifdef _EXPORT'                                  >  example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllexport)'       >> example_single_file.cpp
+          echo '#else'                                           >> example_single_file.cpp
+          echo '#  define IMGUI_API __declspec(dllimport)'       >> example_single_file.cpp
+          echo '#endif'                                          >> example_single_file.cpp
+          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          cl.exe /D_USRDLL /D_WINDLL /D_EXPORT /I. example_single_file.cpp /LD /FeImGui.dll /link
+          cl.exe /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
+
+      - name: Build Win32 example_glfw_opengl2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_glfw_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build Win32 example_glfw_vulkan
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build Win32 example_sdl_vulkan
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build Win32 example_sdl_opengl2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build Win32 example_sdl_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl3/example_sdl_opengl3.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_sdl_directx11
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_directx11/example_sdl_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build Win32 example_win32_directx9
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_win32_directx10
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+
+      - name: Build Win32 example_win32_directx11
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=Win32 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_glfw_opengl2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl2/example_glfw_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_glfw_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_opengl3/example_glfw_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_glfw_vulkan
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_glfw_vulkan/example_glfw_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_sdl_vulkan
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_vulkan/example_sdl_vulkan.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_sdl_opengl2
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl2/example_sdl_opengl2.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_sdl_opengl3
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_opengl3/example_sdl_opengl3.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_sdl_directx11
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_sdl_directx11/example_sdl_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+      - name: Build x64 example_win32_directx9
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx9/example_win32_directx9.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_win32_directx10
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx10/example_win32_directx10.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_win32_directx11
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx11/example_win32_directx11.vcxproj /p:Platform=x64 /p:Configuration=Release'
+        if: github.event_name == 'schedule'
+
+      - name: Build x64 example_win32_directx12
+        shell: cmd
+        run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
+
+  Linux:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Install Dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libglfw3-dev libsdl2-dev gcc-multilib g++-multilib libfreetype6-dev
+
+    - name: Build example_null (extra warnings, gcc 32-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m32 -Werror" make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, gcc 64-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m64 -Werror" make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, clang 32-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m32 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (extra warnings, clang 64-bit)
+      run: |
+        make -C examples/example_null clean
+        CXXFLAGS="$CXXFLAGS -m64 -Werror" CXX=clang++ make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (freetype)
+      run: |
+        make -C examples/example_null clean
+        make -C examples/example_null WITH_FREETYPE=1
+
+    - name: Build example_null (single file build)
+      run: |
+        echo '#define IMGUI_IMPLEMENTATION'                    >  example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with ImWchar32)
+      run: |
+        echo '#define IMGUI_USE_WCHAR32'                       >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with large ImDrawIdx)
+      run: |
+        echo '#define ImDrawIdx unsigned int'                  >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_DISABLE_OBSOLETE_FUNCTIONS)
+      run: |
+        echo '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS'        >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_DISABLE_DEMO_WINDOWS and IMGUI_DISABLE_METRICS_WINDOW)
+      run: |
+        echo '#define IMGUI_DISABLE_DEMO_WINDOWS'              >  example_single_file.cpp
+        echo '#define IMGUI_DISABLE_METRICS_WINDOW'            >> example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_DISABLE_FILE_FUNCTIONS)
+      run: |
+        echo '#define IMGUI_DISABLE_FILE_FUNCTIONS'            >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IMGUI_USE_BGRA_PACKED_COLOR)
+      run: |
+        echo '#define IMGUI_USE_BGRA_PACKED_COLOR'             >  example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_null (with IM_VEC2_CLASS_EXTRA and IM_VEC4_CLASS_EXTRA)
+      run: |
+        echo 'struct MyVec2 { float x; float y; MyVec2(float x, float y) : x(x), y(y) { } };' >  example_single_file.cpp
+        echo 'struct MyVec4 { float x; float y; float z; float w;'                            >> example_single_file.cpp
+        echo 'MyVec4(float x, float y, float z, float w) : x(x), y(y), z(z), w(w) { } };'     >> example_single_file.cpp
+        echo '#define IM_VEC2_CLASS_EXTRA                                             \'      >> example_single_file.cpp
+        echo '        ImVec2(const MyVec2& f) { x = f.x; y = f.y; }                   \'      >> example_single_file.cpp
+        echo '        operator MyVec2() const { return MyVec2(x, y); }'                       >> example_single_file.cpp
+        echo '#define IM_VEC4_CLASS_EXTRA                                             \'      >> example_single_file.cpp
+        echo '        ImVec4(const MyVec4& f) { x = f.x; y = f.y; z = f.z; w = f.w; } \'      >> example_single_file.cpp
+        echo '        operator MyVec4() const { return MyVec4(x, y, z, w); }'                 >> example_single_file.cpp
+        echo '#define IMGUI_IMPLEMENTATION'                                                   >> example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"'                                >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'                                      >> example_single_file.cpp
+        g++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_glfw_opengl2
+      run: make -C examples/example_glfw_opengl2
+
+    - name: Build example_glfw_opengl3
+      run: make -C examples/example_glfw_opengl3
+      if: github.event_name == 'schedule'
+
+    - name: Build example_sdl_opengl2
+      run: make -C examples/example_sdl_opengl2
+      if: github.event_name == 'schedule'
+
+    - name: Build example_sdl_opengl3
+      run: make -C examples/example_sdl_opengl3
+
+  MacOS:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Install Dependencies
+      run: |
+        brew install glfw3
+        brew install sdl2
+
+    - name: Build example_null (extra warnings, clang 64-bit)
+      run: make -C examples/example_null WITH_EXTRA_WARNINGS=1
+
+    - name: Build example_null (single file build)
+      run: |
+        echo '#define IMGUI_IMPLEMENTATION'                    >  example_single_file.cpp
+        echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+        echo '#include "examples/example_null/main.cpp"'       >> example_single_file.cpp
+        clang++ -I. -Wall -Wformat -o example_single_file example_single_file.cpp
+
+    - name: Build example_glfw_opengl2
+      run: make -C examples/example_glfw_opengl2
+
+    - name: Build example_glfw_opengl3
+      run: make -C examples/example_glfw_opengl3
+      if: github.event_name == 'schedule'
+
+    - name: Build example_glfw_metal
+      run: make -C examples/example_glfw_metal
+
+    - name: Build example_sdl_metal
+      run: make -C examples/example_sdl_metal
+
+    - name: Build example_sdl_opengl2
+      run: make -C examples/example_sdl_opengl2
+      if: github.event_name == 'schedule'
+
+    - name: Build example_sdl_opengl3
+      run: make -C examples/example_sdl_opengl3
+
+    - name: Build example_apple_metal
+      run: xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_macos
+
+    - name: Build example_apple_opengl2
+      run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
+
+  iOS:
+    runs-on: macOS-latest
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Build example_apple_metal
+      run: |
+        # Code signing is required, but we disable it because it is irrelevant for CI builds.
+        xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+  Emscripten:
+    runs-on: ubuntu-18.04
+    steps:
+    - uses: actions/checkout@v1
+      with:
+        fetch-depth: 1
+
+    - name: Install Dependencies
+      run: |
+        wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
+        tar -xvf master.tar.gz
+        emsdk-master/emsdk update
+        emsdk-master/emsdk install latest-fastcomp
+        emsdk-master/emsdk activate latest-fastcomp
+
+    - name: Build example_emscripten
+      run: |
+        source emsdk-master/emsdk_env.sh
+        make -C examples/example_emscripten
+
+  Static-Analysis:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install Dependencies
+        env:
+          PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+        run: |
+          if [[ "$PVS_STUDIO_LICENSE" != "" ]];
+          then
+            echo "$PVS_STUDIO_LICENSE" > pvs-studio.lic
+            wget -q https://files.viva64.com/etc/pubkey.txt
+            sudo apt-key add pubkey.txt
+            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.viva64.com/etc/viva64.list
+            sudo apt-get update
+            sudo apt-get install -y pvs-studio
+          fi
+
+      - name: PVS-Studio static analysis
+        run: |
+          if [[ ! -f pvs-studio.lic ]];
+          then
+            echo "PVS Studio license is missing. No analysis will be performed."
+            echo "If you have a PVS Studio license please create a project secret named PVS_STUDIO_LICENSE with your license."
+            echo "You may use a free license. More information at https://www.viva64.com/en/b/0457/"
+            exit 0
+          fi
+          cd examples/example_null
+          pvs-studio-analyzer trace -- make WITH_EXTRA_WARNINGS=1
+          pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
+          plog-converter -a 'GA:1,2;OP:1' -t errorfile -w pvs-studio.log

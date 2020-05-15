@@ -41,7 +41,13 @@ endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	ECHO_MESSAGE = "MinGW"
-	LIBS += -lgdi32 -lopengl32 -limm32 -lglut
+	LIBS += -lgdi32 -lopengl32 -limm32
+ifeq ($(shell pkg-config freeglut --exists 2> /dev/null && echo yes || echo no),yes)
+	CXXFLAGS += $(shell pkg-config freeglut --cflags)
+	LIBS += $(shell pkg-config freeglut --libs)
+else
+	LIBS += -lglut
+endif
 	CFLAGS = $(CXXFLAGS)
 endif
 
