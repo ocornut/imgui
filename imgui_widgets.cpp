@@ -2970,7 +2970,7 @@ bool ImGui::TempInputScalar(const ImRect& bb, ImGuiID id, const char* label, ImG
             DataTypeClamp(data_type, p_data, p_clamp_min, p_clamp_max);
 
         // Only mark as edited if new value is different
-        value_changed = memcmp(&data_type, p_data, data_type_size) != 0;
+        value_changed = memcmp(&data_backup, p_data, data_type_size) != 0;
         if (value_changed)
             MarkItemEdited(id);
     }
