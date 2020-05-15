@@ -17,8 +17,6 @@ option (IMGUI_IMPL_DX10 "Build the DirectX 10 implementation (only if supported)
 option (IMGUI_IMPL_DX11 "Build the DirectX 11 implementation (only if supported)" ${WIN32})
 option (IMGUI_IMPL_DX12 "Build the DirectX 12 implementation (only if supported)" ${WIN32})
 
-set (CMAKE_CXX_STANDARD 11)
-
 add_library (imgui STATIC
     imgui.cpp
     imgui_draw.cpp
@@ -27,6 +25,8 @@ add_library (imgui STATIC
 )
 
 target_include_directories (imgui PUBLIC "${CMAKE_CURRENT_SOURCE_DIR}")
+
+set_target_properties(imgui PROPERTIES CXX_STANDARD 11)
 
 if (IMGUI_EXAMPLES)
     # Sets up polyfill libraries for Windows examples (e.g. GLFW)
