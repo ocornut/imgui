@@ -529,9 +529,6 @@ struct IMGUI_API ImChunkStream
 #define IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER             1
 #endif
 
-// The maximum line width to build anti-aliased textures for (note that this needs to be one greater than the maximum line width you want to be able to draw using the textured path)
-#define IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX                      65
-
 // Data shared between all ImDrawList instances
 // You may want to create your own instance of this if you want to use ImDrawList completely without ImGui. In that case, watch out for future changes to this structure.
 struct IMGUI_API ImDrawListSharedData
@@ -548,7 +545,7 @@ struct IMGUI_API ImDrawListSharedData
     ImVec2          ArcFastVtx[12 * IM_DRAWLIST_ARCFAST_TESSELLATION_MULTIPLIER];  // FIXME: Bake rounded corners fill/borders in atlas
     ImU8            CircleSegmentCounts[64];    // Precomputed segment count for given radius (array index + 1) before we calculate it dynamically (to avoid calculation overhead)
 
-    ImVector<ImVec4>* TexUvAALines;             // UV of anti-aliased lines in the atlas
+    const ImVec4*   TexUvAALines;               // UV of anti-aliased lines in the atlas
 
     ImDrawListSharedData();
     void SetCircleSegmentMaxError(float max_error);
