@@ -17,7 +17,7 @@
 // Gamma Correct Blending:
 //  FreeType assumes blending in linear space rather than gamma space.
 //  See https://www.freetype.org/freetype2/docs/reference/ft2-base_interface.html#FT_Render_Glyph
-//  For correct results you need to be using sRGB and convert to linear space in the pixel shader output.
+//  For correct results you need to be using a sRGB framebuffer and convert vertex colors to linear space in the vertex shader.
 //  The default imgui styles will be impacted by this change (alpha values will need tweaking).
 
 // FIXME: cfg.OversampleH, OversampleV are not supported (but perhaps not so necessary with this rasterizer).
@@ -26,6 +26,7 @@
 #include "imgui_internal.h"     // ImMin,ImMax,ImFontAtlasBuild*,
 #include <stdint.h>
 #include <ft2build.h>
+#include <freetype/ftlcdfil.h>
 #include FT_FREETYPE_H          // <freetype/freetype.h>
 #include FT_MODULE_H            // <freetype/ftmodapi.h>
 #include FT_GLYPH_H             // <freetype/ftglyph.h>
@@ -103,22 +104,43 @@ namespace
         void                    SetPixelHeight(int pixel_height); // Change font pixel size. All following calls to RasterizeGlyph() will use this size
         const FT_Glyph_Metrics* LoadGlyph(uint32_t in_codepoint);
         const FT_Bitmap*        RenderGlyphAndGetInfo(GlyphInfo* out_glyph_info);
+        uint8_t                 LuminanceFromLinearRGB(uint8_t r, uint8_t g, uint8_t b);
         void                    BlitGlyph(const FT_Bitmap* ft_bitmap, uint8_t* dst, uint32_t dst_pitch, unsigned char* multiply_table = NULL);
         ~FreeTypeFont()         { CloseFont(); }
 
         // [Internals]
         FontInfo        Info;               // Font descriptor of the current font.
         FT_Face         Face;
-        unsigned int    UserFlags;          // = ImFontConfig::RasterizerFlags
+        unsigned int    UserFlags;          // = ImFontConfig::RasterizerFlags, overridden by extra flags
         FT_Int32        LoadFlags;
         FT_Render_Mode  RenderMode;
     };
 
-    // From SDL_ttf: Handy routines for converting from fixed point
-    #define FT_CEIL(X)  (((X + 63) & -64) / 64)
+    #define FT_CEIL(X)  (((X + 63) & -64) / 64)         // From SDL_ttf: Handy routines for converting from fixed point
+    #define ZERO_OR_ONE_BIT_SET(X) (!((X) & ((X) - 1))) // Named that way to match the intent at call site but it's a basic POW2 check
 
     bool FreeTypeFont::InitFont(FT_Library ft_library, const ImFontConfig& cfg, unsigned int extra_user_flags)
     {
+        // Override font flags with extra flags
+        UserFlags = cfg.RasterizerFlags | (extra_user_flags & ImGuiFreeType::OptionsMask);
+        if (extra_user_flags & ImGuiFreeType::HinterMask)
+        {
+            UserFlags &= ~ImGuiFreeType::HinterMask;
+            UserFlags |= extra_user_flags & ImGuiFreeType::HinterMask;
+        }
+        if (extra_user_flags & ImGuiFreeType::HintingAlgorithmMask)
+        {
+            UserFlags &= ~ImGuiFreeType::HintingAlgorithmMask;
+            UserFlags |= extra_user_flags & ImGuiFreeType::HintingAlgorithmMask;
+        }
+        if (extra_user_flags & ImGuiFreeType::RenderModeMask)
+        {
+            UserFlags &= ~ImGuiFreeType::RenderModeMask;
+            UserFlags |= extra_user_flags & ImGuiFreeType::RenderModeMask;
+        }
+        if (!ZERO_OR_ONE_BIT_SET(UserFlags & ImGuiFreeType::HinterMask) || !ZERO_OR_ONE_BIT_SET(UserFlags & ImGuiFreeType::HintingAlgorithmMask) || !ZERO_OR_ONE_BIT_SET(UserFlags & ImGuiFreeType::RenderModeMask))
+            return false;
+
         FT_Error error = FT_New_Memory_Face(ft_library, (uint8_t*)cfg.FontData, (uint32_t)cfg.FontDataSize, (uint32_t)cfg.FontNo, &Face);
         if (error != 0)
             return false;
@@ -129,26 +151,38 @@ namespace
         memset(&Info, 0, sizeof(Info));
         SetPixelHeight((uint32_t)cfg.SizePixels);
 
-        // Convert to FreeType flags (NB: Bold and Oblique are processed separately)
-        UserFlags = cfg.RasterizerFlags | extra_user_flags;
+        // Convert UserFlags to FreeType flags (NB: Bold and Oblique are processed separately)
         LoadFlags = FT_LOAD_NO_BITMAP;
-        if (UserFlags & ImGuiFreeType::NoHinting)
-            LoadFlags |= FT_LOAD_NO_HINTING;
-        if (UserFlags & ImGuiFreeType::NoAutoHint)
-            LoadFlags |= FT_LOAD_NO_AUTOHINT;
-        if (UserFlags & ImGuiFreeType::ForceAutoHint)
+
+        if (UserFlags & ImGuiFreeType::PreferAutoHinter)
             LoadFlags |= FT_LOAD_FORCE_AUTOHINT;
+        else if (UserFlags & ImGuiFreeType::NoAutoHinter)
+            LoadFlags |= FT_LOAD_NO_AUTOHINT;
+        else if (UserFlags & ImGuiFreeType::NoHinter)
+            LoadFlags |= FT_LOAD_NO_HINTING;
+
         if (UserFlags & ImGuiFreeType::LightHinting)
             LoadFlags |= FT_LOAD_TARGET_LIGHT;
         else if (UserFlags & ImGuiFreeType::MonoHinting)
             LoadFlags |= FT_LOAD_TARGET_MONO;
+        else if (UserFlags & ImGuiFreeType::LcdHinting)
+            LoadFlags |= FT_LOAD_TARGET_LCD;
+        else if (UserFlags & ImGuiFreeType::LcdVHinting)
+            LoadFlags |= FT_LOAD_TARGET_LCD_V;
         else
             LoadFlags |= FT_LOAD_TARGET_NORMAL;
-
-        if (UserFlags & ImGuiFreeType::Monochrome)
+        if (UserFlags & ImGuiFreeType::MonoMode)
             RenderMode = FT_RENDER_MODE_MONO;
+        else if (UserFlags & ImGuiFreeType::LcdMode)
+            RenderMode = FT_RENDER_MODE_LCD;
+        else if (UserFlags & ImGuiFreeType::LcdVMode)
+            RenderMode = FT_RENDER_MODE_LCD_V;
         else
             RenderMode = FT_RENDER_MODE_NORMAL;
+
+        if (UserFlags & (ImGuiFreeType::LcdMode | ImGuiFreeType::LcdVMode))
+            if (FT_Library_SetLcdFilter(ft_library, (UserFlags & ImGuiFreeType::LcdLightFilter) ? FT_LCD_FILTER_LIGHT : FT_LCD_FILTER_DEFAULT) != 0)
+                return false;
 
         return true;
     }
@@ -221,13 +255,20 @@ namespace
             return NULL;
 
         FT_Bitmap* ft_bitmap = &Face->glyph->bitmap;
-        out_glyph_info->Width = (int)ft_bitmap->width;
-        out_glyph_info->Height = (int)ft_bitmap->rows;
+        out_glyph_info->Width = (int)ft_bitmap->width / (RenderMode == FT_RENDER_MODE_LCD ? 3 : 1);
+        out_glyph_info->Height = (int)ft_bitmap->rows / (RenderMode == FT_RENDER_MODE_LCD_V ? 3 : 1);
         out_glyph_info->OffsetX = Face->glyph->bitmap_left;
         out_glyph_info->OffsetY = -Face->glyph->bitmap_top;
         out_glyph_info->AdvanceX = (float)FT_CEIL(slot->advance.x);
 
         return ft_bitmap;
+    }
+
+    uint8_t FreeTypeFont::LuminanceFromLinearRGB(uint8_t r, uint8_t g, uint8_t b)
+    {
+        // Luminance Y is defined by the CIE 1931 XYZ color space. Linear RGB to Y is a weighted average based on factors from the color conversion matrix:
+        // Y = 0.2126*R + 0.7152*G + 0.0722*B. Computed on the integer pipe.
+        return (4732UL * r + 46871UL * g + 13933UL * b) >> 16;
     }
 
     void FreeTypeFont::BlitGlyph(const FT_Bitmap* ft_bitmap, uint8_t* dst, uint32_t dst_pitch, unsigned char* multiply_table)
@@ -240,19 +281,61 @@ namespace
 
         switch (ft_bitmap->pixel_mode)
         {
+        case FT_PIXEL_MODE_LCD: // RGB image, 3 horizontal bytes per pixel.
+            {
+                uint32_t* dst_rgba32 = (uint32_t*)dst;
+                if (multiply_table)
+                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst_rgba32 += dst_pitch / 4)
+                        for (uint32_t x = 0; x < w; x++)
+                        {
+                            const uint8_t r = multiply_table[src[x * 3]];
+                            const uint8_t g = multiply_table[src[x * 3 + 1]];
+                            const uint8_t b = multiply_table[src[x * 3 + 2]];
+                            dst_rgba32[x] = LuminanceFromLinearRGB(r, g, b) << 24 | b << 16 | g << 8 | r;
+                        }
+                else
+                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst_rgba32 += dst_pitch / 4)
+                        for (uint32_t x = 0; x < w; x++)
+                        {
+                            const uint8_t r = src[x * 3];
+                            const uint8_t g = src[x * 3 + 1];
+                            const uint8_t b = src[x * 3 + 2];
+                            dst_rgba32[x] = LuminanceFromLinearRGB(r, g, b) << 24 | b << 16 | g << 8 | r;
+                        }
+                break;
+            }
+        case FT_PIXEL_MODE_LCD_V: // RGB image, 3 vertical bytes per pixel.
+            {
+                uint32_t* dst_rgba32 = (uint32_t*)dst;
+                if (multiply_table)
+                    for (uint32_t y = 0; y < h; y += 3, src += 3 * src_pitch, dst_rgba32 += dst_pitch / 4)
+                        for (uint32_t x = 0; x < w; x++)
+                        {
+                            const uint8_t r = multiply_table[src[x]];
+                            const uint8_t g = multiply_table[src[x + src_pitch]];
+                            const uint8_t b = multiply_table[src[x + 2 * src_pitch]];
+                            dst_rgba32[x] = LuminanceFromLinearRGB(r, g, b) << 24 | b << 16 | g << 8 | r;
+                        }
+                else
+                    for (uint32_t y = 0; y < h; y += 3, src += 3 * src_pitch, dst_rgba32 += dst_pitch / 4)
+                        for (uint32_t x = 0; x < w; x++)
+                        {
+                            const uint8_t r = src[x];
+                            const uint8_t g = src[x + src_pitch];
+                            const uint8_t b = src[x + 2 * src_pitch];
+                            dst_rgba32[x] = LuminanceFromLinearRGB(r, g, b) << 24 | b << 16 | g << 8 | r;
+                        }
+                break;
+            }
         case FT_PIXEL_MODE_GRAY: // Grayscale image, 1 byte per pixel.
             {
-                if (multiply_table == NULL)
-                {
-                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
-                        memcpy(dst, src, w);
-                }
-                else
-                {
+                if (multiply_table)
                     for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
                         for (uint32_t x = 0; x < w; x++)
                             dst[x] = multiply_table[src[x]];
-                }
+                else
+                    for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
+                        memcpy(dst, src, w);
                 break;
             }
         case FT_PIXEL_MODE_MONO: // Monochrome image, 1 bit per pixel. The bits in each byte are ordered from MSB to LSB.
@@ -337,10 +420,11 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     ImVector<ImFontBuildDstDataFT> dst_tmp_array;
     src_tmp_array.resize(atlas->ConfigData.Size);
     dst_tmp_array.resize(atlas->Fonts.Size);
-    memset(src_tmp_array.Data, 0, (size_t)src_tmp_array.size_in_bytes());
-    memset(dst_tmp_array.Data, 0, (size_t)dst_tmp_array.size_in_bytes());
+    memset((void*)src_tmp_array.Data, 0, (size_t)src_tmp_array.size_in_bytes());
+    memset((void*)dst_tmp_array.Data, 0, (size_t)dst_tmp_array.size_in_bytes());
 
     // 1. Initialize font loading structure, check font data validity
+    bool rgba32_rendering = false;
     for (int src_i = 0; src_i < atlas->ConfigData.Size; src_i++)
     {
         ImFontBuildSrcDataFT& src_tmp = src_tmp_array[src_i];
@@ -368,6 +452,10 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             src_tmp.GlyphsHighest = ImMax(src_tmp.GlyphsHighest, (int)src_range[1]);
         dst_tmp.SrcCount++;
         dst_tmp.GlyphsHighest = ImMax(dst_tmp.GlyphsHighest, src_tmp.GlyphsHighest);
+
+        // A single font using LCD rendering implies that all fonts must be rendered to both Alpha8 and RGBA32 textures for the user to get consistent results.
+        if (font_face.UserFlags & (ImGuiFreeType::LcdMode | ImGuiFreeType::LcdVMode))
+            rgba32_rendering = true;
     }
 
     // 2. For every requested codepoint, check for their presence in the font data, and handle redundancy or overlaps between source fonts to avoid unused glyphs.
@@ -476,7 +564,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             IM_ASSERT(ft_bitmap);
 
             // Allocate new temporary chunk if needed
-            const int bitmap_size_in_bytes = src_glyph.Info.Width * src_glyph.Info.Height;
+            const int bitmap_stride = src_glyph.Info.Width * (src_tmp.Font.UserFlags & (ImGuiFreeType::LcdMode | ImGuiFreeType::LcdVMode) ? 4 : 1);
+            const int bitmap_size_in_bytes = bitmap_stride * src_glyph.Info.Height;
             if (buf_bitmap_current_used_bytes + bitmap_size_in_bytes > BITMAP_BUFFERS_CHUNK_SIZE)
             {
                 buf_bitmap_current_used_bytes = 0;
@@ -486,7 +575,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             // Blit rasterized pixels to our temporary buffer and keep a pointer to it.
             src_glyph.BitmapData = buf_bitmap_buffers.back() + buf_bitmap_current_used_bytes;
             buf_bitmap_current_used_bytes += bitmap_size_in_bytes;
-            src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, src_glyph.Info.Width * 1, multiply_enabled ? multiply_table : NULL);
+            src_tmp.Font.BlitGlyph(ft_bitmap, src_glyph.BitmapData, bitmap_stride, multiply_enabled ? multiply_table : NULL);
 
             src_tmp.Rects[glyph_i].w = (stbrp_coord)(src_glyph.Info.Width + padding);
             src_tmp.Rects[glyph_i].h = (stbrp_coord)(src_glyph.Info.Height + padding);
@@ -530,11 +619,16 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
                 atlas->TexHeight = ImMax(atlas->TexHeight, src_tmp.Rects[glyph_i].y + src_tmp.Rects[glyph_i].h);
     }
 
-    // 7. Allocate texture
+    // 7. Allocate textures
     atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
     atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
     atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight);
     memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+    if (rgba32_rendering)
+    {
+        atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(4 * atlas->TexWidth * atlas->TexHeight);
+        memset(atlas->TexPixelsRGBA32, 0, 4 * atlas->TexWidth * atlas->TexHeight);
+    }
 
     // 8. Copy rasterized font characters back into the main texture
     // 9. Setup ImFont and glyphs for runtime
@@ -552,6 +646,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
         ImFontAtlasBuildSetupFont(atlas, dst_font, &cfg, ascent, descent);
         const float font_off_x = cfg.GlyphOffset.x;
         const float font_off_y = cfg.GlyphOffset.y + IM_ROUND(dst_font->Ascent);
+        const bool lcd_mode = !!(src_tmp.Font.UserFlags & (ImGuiFreeType::LcdMode | ImGuiFreeType::LcdVMode));
 
         const int padding = atlas->TexGlyphPadding;
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsCount; glyph_i++)
@@ -566,13 +661,36 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             const int tx = pack_rect.x + padding;
             const int ty = pack_rect.y + padding;
 
-            // Blit from temporary buffer to final texture
-            size_t blit_src_stride = (size_t)src_glyph.Info.Width;
-            size_t blit_dst_stride = (size_t)atlas->TexWidth;
-            unsigned char* blit_src = src_glyph.BitmapData;
-            unsigned char* blit_dst = atlas->TexPixelsAlpha8 + (ty * blit_dst_stride) + tx;
-            for (int y = info.Height; y > 0; y--, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
-                memcpy(blit_dst, blit_src, blit_src_stride);
+            // Blit from temporary buffer to final textures. 32-bit buffers are written to both the alpha8 (using the alpha value) and the rgba32
+            // textures. 8-bit buffers are written to the alpha8 texture and to the rgba32 texture if at least one of the fonts has a LCD flag set.
+            // LCD texels are written with their UVs vertically flipped to distinguish between standard texels and subpixel texels at shading time.
+            size_t blit_src_width = (size_t)info.Width;
+            size_t blit_dst_width = (size_t)atlas->TexWidth;
+            unsigned char* blit_src_alpha8 = src_glyph.BitmapData;
+            unsigned int* blit_src_rgba32 = (unsigned int*)src_glyph.BitmapData;
+            if (lcd_mode)
+            {
+                unsigned char* blit_dst_alpha8 = atlas->TexPixelsAlpha8 + ((ty + info.Height - 1) * blit_dst_width) + tx;
+                unsigned int* blit_dst_rgba32 = atlas->TexPixelsRGBA32 + ((ty + info.Height - 1) * blit_dst_width) + tx;
+                for (int y = info.Height; y > 0; y--, blit_dst_alpha8 -= blit_dst_width, blit_dst_rgba32 -= blit_dst_width, blit_src_rgba32 += blit_src_width)
+                {
+                    for (int x = 0; x < (int)blit_src_width; x++)
+                        blit_dst_alpha8[x] = (blit_src_rgba32[x] >> 24) & 0xff;
+                    memcpy(blit_dst_rgba32, blit_src_rgba32, blit_src_width * 4);
+                }
+            }
+            else
+            {
+                unsigned char* blit_dst_alpha8 = atlas->TexPixelsAlpha8 + (ty * blit_dst_width) + tx;
+                unsigned int* blit_dst_rgba32 = atlas->TexPixelsRGBA32 + (ty * blit_dst_width) + tx;
+                for (int y = info.Height; y > 0; y--, blit_dst_alpha8 += blit_dst_width, blit_dst_rgba32 += blit_dst_width, blit_src_alpha8 += blit_src_width)
+                {
+                    memcpy(blit_dst_alpha8, blit_src_alpha8, blit_src_width);
+                    if (rgba32_rendering)
+                        for (int x = 0; x < (int)blit_src_width; x++)
+                            blit_dst_rgba32[x] = blit_src_alpha8[x] << 24 | blit_src_alpha8[x] << 16 | blit_src_alpha8[x] << 8 | blit_src_alpha8[x];
+                }
+            }
 
             float char_advance_x_org = info.AdvanceX;
             float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
@@ -586,9 +704,9 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             float x1 = x0 + info.Width;
             float y1 = y0 + info.Height;
             float u0 = (tx) / (float)atlas->TexWidth;
-            float v0 = (ty) / (float)atlas->TexHeight;
+            float v0 = (ty + (lcd_mode ? info.Height : 0)) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
-            float v1 = (ty + info.Height) / (float)atlas->TexHeight;
+            float v1 = (ty + (lcd_mode ? 0 : info.Height)) / (float)atlas->TexHeight;
             dst_font->AddGlyph((ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, char_advance_x_mod);
         }
 

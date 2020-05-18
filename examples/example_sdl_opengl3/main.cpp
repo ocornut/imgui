@@ -6,6 +6,9 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 #include "imgui_impl_opengl3.h"
+#if defined(IMGUI_IMPL_FREETYPE)
+#include "misc/freetype/imgui_freetype.h"
+#endif
 #include <stdio.h>
 #include <SDL.h>
 
@@ -62,12 +65,23 @@ int main(int, char**)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0);
 #endif
 
+#if defined(IMGUI_IMPL_FREETYPE)
+    // Subpixel rendering requires dual source blending support from OpenGL 3.3.
+    const char* title = "Dear ImGui SDL2+OpenGL3 example (FreeType)";
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_FRAMEBUFFER_SRGB_CAPABLE, 1);
+    glsl_version = "#version 410";
+#else
+    const char* title = "Dear ImGui SDL2+OpenGL3 example";
+#endif
+
     // Create window with graphics context
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
     SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
     SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+OpenGL3 example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow(title, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_MakeCurrent(window, gl_context);
     SDL_GL_SetSwapInterval(1); // Enable vsync
@@ -109,6 +123,7 @@ int main(int, char**)
     ImGui_ImplSDL2_InitForOpenGL(window, gl_context);
     ImGui_ImplOpenGL3_Init(glsl_version);
 
+#if !defined(IMGUI_IMPL_FREETYPE)
     // Load Fonts
     // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
     // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
@@ -123,6 +138,17 @@ int main(int, char**)
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
+#else
+    // Load Fonts with FreeType
+    io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 15.0f);
+    io.Fonts->AddFontFromFileTTF("../../misc/fonts/Karla-Regular.ttf", 15.0f);
+    io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+    io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 15.0f);
+    if (!ImGuiFreeType::BuildFontAtlas(io.Fonts, ImGuiFreeType::LcdMode | ImGuiFreeType::LcdLightFilter | ImGuiFreeType::LightHinting)) {
+        fprintf(stderr, "Failed to build font atlas with FreeType!\n");
+        return 1;
+    }
+#endif
 
     // Our state
     bool show_demo_window = true;
