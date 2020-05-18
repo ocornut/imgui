@@ -12,18 +12,26 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#ifndef WINVER
+#define WINVER 0x0601 // Target Win7, unless specified otherwise
+#endif
+#ifndef _WIN32_WINNT
+#define _WIN32_WINNT 0x0601
+#endif
 #include <windows.h>
 #include <tchar.h>
 
-// Using XInput library for gamepad (with recent Windows SDK this may leads to executables which won't run on Windows 7)
+// Using XInput library for gamepad
 #ifndef IMGUI_IMPL_WIN32_DISABLE_GAMEPAD
+#ifndef XINPUT_USE_9_1_0
+#define XINPUT_USE_9_1_0 // Make the DXSDK-sourced XInput header use xinput 9_1_0.dll (if used)
+#endif
 #include <XInput.h>
 #else
 #define IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT
 #endif
 #if defined(_MSC_VER) && !defined(IMGUI_IMPL_WIN32_DISABLE_LINKING_XINPUT)
-#pragma comment(lib, "xinput")
-//#pragma comment(lib, "Xinput9_1_0")
+#pragma comment(lib, "Xinput9_1_0")
 #endif
 
 // CHANGELOG
