@@ -30,7 +30,7 @@ jobs:
 
       - name: Fix Projects
         shell: powershell
-        run: misc/scripts/update-toolset.ps1
+        run: misc/scripts/update-toolset.ps1 v142 10.0.18362.0
 
       # Not using matrix here because it would inflate job count too much. Check out and setup is done for every job and that makes build times way too long.
       - name: Build example_null (extra warnings, mingw 64-bit)
