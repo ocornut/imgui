@@ -357,7 +357,8 @@ bool ImGui_ImplAllegro5_ProcessEvent(ALLEGRO_EVENT *ev)
         return true;
     case ALLEGRO_EVENT_KEY_CHAR:
         if (ev->keyboard.display == g_Display)
-            io.AddInputCharacter((unsigned int)ev->keyboard.unichar);
+            if (ev->keyboard.unichar != 0)
+                io.AddInputCharacter((unsigned int)ev->keyboard.unichar);
         return true;
     case ALLEGRO_EVENT_KEY_DOWN:
     case ALLEGRO_EVENT_KEY_UP:
