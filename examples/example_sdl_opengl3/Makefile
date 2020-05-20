@@ -8,7 +8,7 @@
 # Mac OS X:
 #   brew install sdl2
 # MSYS2:
-#   pacman -S mingw-w64-i686-SDL
+#   pacman -S mingw-w64-i686-SDL2
 #
 
 #CXX = g++
