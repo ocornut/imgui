@@ -66,6 +66,7 @@ Other Changes:
 - Backends: OpenGL: Fixed handling of GL 4.5+ glClipControl(GL_UPPER_LEFT) by inverting the
   projection matrix top and bottom values. (#3143, #3146) [@u3shit]
 - Backends: OpenGL: On OSX, if unspecified by app, made default GLSL version 150. (#3199) [@albertvaka]
+- Backends: OpenGL: Fixed loader auto-detection to not interfere with ES2/ES3 defines. (#3246) [@funchal]
 - Backends: Vulkan: Fixed error in if initial frame has no vertices. (#3177)
 - Backends: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData
   structure didn't have any vertices. (#2697) [@kudaba]
