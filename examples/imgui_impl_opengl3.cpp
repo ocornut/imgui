@@ -79,27 +79,7 @@
 #else
 #include <stdint.h>     // intptr_t
 #endif
-#if defined(__APPLE__)
-#include "TargetConditionals.h"
-#endif
 
-// Auto-enable GLES on matching platforms
-#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3)
-#if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
-#define IMGUI_IMPL_OPENGL_ES3           // iOS, Android  -> GL ES 3, "#version 300 es"
-#elif defined(__EMSCRIPTEN__)
-#define IMGUI_IMPL_OPENGL_ES2           // Emscripten    -> GL ES 2, "#version 100"
-#endif
-#endif
-
-#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3)
-#undef IMGUI_IMPL_OPENGL_LOADER_GL3W
-#undef IMGUI_IMPL_OPENGL_LOADER_GLEW
-#undef IMGUI_IMPL_OPENGL_LOADER_GLAD
-#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING2
-#undef IMGUI_IMPL_OPENGL_LOADER_GLBINDING3
-#undef IMGUI_IMPL_OPENGL_LOADER_CUSTOM
-#endif
 
 // GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
