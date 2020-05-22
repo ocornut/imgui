@@ -3246,7 +3246,7 @@ struct MyItem
     int         Quantity;
 
     // We have a problem which is affecting _only this demo_ and should not affect your code:
-    // As we don't rely on std:: or other third-party library to compile dear imgui, we only have reliable access to qsort(), 
+    // As we don't rely on std:: or other third-party library to compile dear imgui, we only have reliable access to qsort(),
     // however qsort doesn't allow passing user data to comparing function.
     // As a workaround, we are storing the sort specs in a static/global for the comparing function to access.
     // In your own use case you would probably pass the sort specs to your sorting/comparing functions directly and not use a global.
@@ -3326,9 +3326,9 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Basic"))
     {
         // Here we will showcase 4 different ways to output a table. They are very simple variations of a same thing!
-        
+
         // Basic use of tables using TableNextRow() to create a new row, and TableSetColumnIndex() to select the column.
-        // In many situations, this is the most flexible and easy to use pattern. 
+        // In many situations, this is the most flexible and easy to use pattern.
         HelpMarker("Using TableNextRow() + calling TableSetColumnIndex() _before_ each cell, in a loop.");
         if (ImGui::BeginTable("##table1", 3))
         {
@@ -3363,7 +3363,7 @@ static void ShowDemoWindowTables()
         }
 
         // Another subtle variant, we call TableNextCell() _before_ each cell. At the end of a row, TableNextCell() will create a new row.
-        // Note that we don't call TableNextRow() here! 
+        // Note that we don't call TableNextRow() here!
         // If we want to call TableNextRow(), then we don't need to call TableNextCell() for the first cell.
         HelpMarker("Only using TableNextCell(), which tends to be convenient for tables where every cells contains the same type of contents.\nThis is also more similar to the old NextColumn() function of the Columns API, and provided to facilitate the Columns->Tables API transition.");
         if (ImGui::BeginTable("##table4", 3))
@@ -3449,7 +3449,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
         ImGui::SameLine(); HelpMarker("Using the _Resizable flag automatically enables the _BordersV flag as well.");
-        
+
         if (ImGui::BeginTable("##table1", 3, flags))
         {
             for (int row = 0; row < 5; row++)
@@ -3550,7 +3550,7 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
         ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", (unsigned int*)&flags, ImGuiTableFlags_Reorderable);
         ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", (unsigned int*)&flags, ImGuiTableFlags_Hideable);
-        
+
         if (ImGui::BeginTable("##table1", 3, flags))
         {
             // Submit columns name with TableSetupColumn() and call TableAutoHeaders() to create a row with a header in each column.
@@ -3600,7 +3600,7 @@ static void ShowDemoWindowTables()
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollFreezeTopRow | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeTopRow", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeTopRow);
-        
+
         if (ImGui::BeginTable("##table1", 3, flags, size))
         {
             ImGui::TableSetupColumn("One", ImGuiTableColumnFlags_None);
@@ -3735,7 +3735,7 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Recursive"))
     {
         HelpMarker("This demonstrate embedding a table into another table cell.");
-        
+
         if (ImGui::BeginTable("recurse1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersVFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
         {
             ImGui::TableSetupColumn("A0");
@@ -3904,13 +3904,13 @@ static void ShowDemoWindowTables()
             ImGui::TableAutoHeaders();
 
             // Simple storage to output a dummy file-system.
-            struct MyTreeNode 
-            { 
-                const char*     Name; 
-                const char*     Type; 
-                int             Size; 
-                int             ChildIdx; 
-                int             ChildCount; 
+            struct MyTreeNode
+            {
+                const char*     Name;
+                const char*     Type;
+                int             Size;
+                int             ChildIdx;
+                int             ChildCount;
                 static void DisplayNode(const MyTreeNode* node, const MyTreeNode* all_nodes)
                 {
                     ImGui::TableNextRow();
@@ -3960,7 +3960,7 @@ static void ShowDemoWindowTables()
     }
 
     // Demonstrate using TableHeader() calls instead of TableAutoHeaders()
-    // FIXME-TABLE: Currently this doesn't get us feature-parity with TableAutoHeaders(), e.g. missing context menu.  Tables API needs some work! 
+    // FIXME-TABLE: Currently this doesn't get us feature-parity with TableAutoHeaders(), e.g. missing context menu.  Tables API needs some work!
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Custom headers"))

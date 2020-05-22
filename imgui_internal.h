@@ -1897,9 +1897,9 @@ struct ImGuiTableColumn
     ImGuiTableColumnFlags   Flags;                          // Effective flags. See ImGuiTableColumnFlags_
     float                   MinX;                           // Absolute positions
     float                   MaxX;
-    float                   ResizeWeight;                   //  ~1.0f. Master width data when (Flags & _WidthStretch)
-    float                   WidthRequested;                 // Master width data when !(Flags & _WidthStretch)
-    float                   WidthGiven;                     // == (MaxX - MinX). FIXME-TABLE: Store all persistent width in multiple of FontSize?
+    float                   WidthStretchWeight;             // Master width weight when (Flags & _WidthStretch). Often around ~1.0f initially.
+    float                   WidthRequest;                   // Master width absolute value when !(Flags & _WidthStretch). When Stretch this is derived every frame from WidthStretchWeight in TableUpdateLayout()
+    float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be >WidthRequest to honor minimum width, may be <WidthRequest to honor shrinking columns down in tight space.
     float                   StartXRows;                     // Start position for the frame, currently ~(MinX + CellPaddingX)
     float                   StartXHeaders;
     float                   ContentMaxPosRowsFrozen;        // Submitted contents absolute maximum position, from which we can infer width.
@@ -1930,7 +1930,7 @@ struct ImGuiTableColumn
     ImGuiTableColumn()
     {
         memset(this, 0, sizeof(*this));
-        ResizeWeight = WidthRequested = WidthGiven = -1.0f;
+        WidthStretchWeight = WidthRequest = WidthGiven = -1.0f;
         NameOffset = -1;
         IsVisible = IsVisibleNextFrame = true;
         DisplayOrder = IndexWithinVisibleSet = -1;
