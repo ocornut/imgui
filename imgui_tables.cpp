@@ -1180,7 +1180,7 @@ static void TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
         if (!column->IsVisible || !(column->Flags & ImGuiTableColumnFlags_WidthStretch))
             continue;
-        column->WidthStretchWeight = (column->WidthRequest + 0.0f) / visible_width;
+        column->WidthStretchWeight = ((column->WidthRequest + 0.0f) / visible_width) * visible_weight;
     }
 }
 
@@ -2506,18 +2506,21 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
     // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
     ImGuiTableSettings* settings = (ImGuiTableSettings*)entry;
     int column_n = 0, r = 0, n = 0;
-    if (sscanf(line, "Column %d%n", &column_n, &r) == 1)        { line = ImStrSkipBlank(line + r); } else { return; }
-    if (column_n < 0 || column_n >= settings->ColumnsCount)
-        return;
 
-    char c = 0;
-    ImGuiTableColumnSettings* column = settings->GetColumnSettings() + column_n;
-    column->Index = (ImS8)column_n;
-    if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r) == 1)   { line = ImStrSkipBlank(line + r); column->UserID = (ImGuiID)n; }
-    if (sscanf(line, "Width=%d%n", &n, &r) == 1)                { line = ImStrSkipBlank(line + r); /* .. */ settings->SaveFlags |= ImGuiTableFlags_Resizable; }
-    if (sscanf(line, "Visible=%d%n", &n, &r) == 1)              { line = ImStrSkipBlank(line + r); column->Visible = (ImU8)n; settings->SaveFlags |= ImGuiTableFlags_Hideable; }
-    if (sscanf(line, "Order=%d%n", &n, &r) == 1)                { line = ImStrSkipBlank(line + r); column->DisplayOrder = (ImS8)n; settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
-    if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)           { line = ImStrSkipBlank(line + r); column->SortOrder = (ImS8)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
+    if (sscanf(line, "Column %d%n", &column_n, &r) == 1)
+    {
+        if (column_n < 0 || column_n >= settings->ColumnsCount)
+            return;
+        line = ImStrSkipBlank(line + r);
+        char c = 0;
+        ImGuiTableColumnSettings* column = settings->GetColumnSettings() + column_n;
+        column->Index = (ImS8)column_n;
+        if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r)==1) { line = ImStrSkipBlank(line + r); column->UserID = (ImGuiID)n; }
+        if (sscanf(line, "Width=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); /* .. */ settings->SaveFlags |= ImGuiTableFlags_Resizable; }
+        if (sscanf(line, "Visible=%d%n", &n, &r) == 1)          { line = ImStrSkipBlank(line + r); column->Visible = (ImU8)n; settings->SaveFlags |= ImGuiTableFlags_Hideable; }
+        if (sscanf(line, "Order=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->DisplayOrder = (ImS8)n; settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
+        if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)       { line = ImStrSkipBlank(line + r); column->SortOrder = (ImS8)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
+    }
 }
 
 static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandler* handler, ImGuiTextBuffer* buf)
