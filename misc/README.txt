@@ -17,6 +17,9 @@ misc/natvis/
   With this, types like ImVector<> will be displayed nicely in the debugger.
   You can include this file a Visual Studio project file, or install it in Visual Studio folder.
 
+misc/scripts/
+  Build related scripts
+
 misc/single_file/
   Single-file header stub.
   We use this to validate compiling all *.cpp files in a same compilation unit.
