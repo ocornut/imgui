@@ -5064,6 +5064,21 @@ static const ImGuiResizeGripDef resize_grip_def[4] =
     { ImVec2(1,0), ImVec2(-1,+1), 9,12 }, // Upper-right (Unused)
 };
 
+struct ImGuiResizeBorderDef
+{
+    ImVec2 InnerDir;
+    ImVec2 CornerPosN1, CornerPosN2;
+    float  OuterAngle;
+};
+
+static const ImGuiResizeBorderDef resize_border_def[4] =
+{
+    { ImVec2(0,+1), ImVec2(0,0), ImVec2(1,0), IM_PI*1.50f }, // Top
+    { ImVec2(-1,0), ImVec2(1,0), ImVec2(1,1), IM_PI*0.00f }, // Right
+    { ImVec2(0,-1), ImVec2(1,1), ImVec2(0,1), IM_PI*0.50f }, // Bottom
+    { ImVec2(+1,0), ImVec2(0,1), ImVec2(0,0), IM_PI*1.00f }  // Left
+};
+
 static ImRect GetResizeBorderRect(ImGuiWindow* window, int border_n, float perp_padding, float thickness)
 {
     ImRect rect = window->Rect();
@@ -5229,19 +5244,6 @@ static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
     int border_held = window->ResizeBorderHeld;
     if (border_held != -1)
     {
-        struct ImGuiResizeBorderDef
-        {
-            ImVec2 InnerDir;
-            ImVec2 CornerPosN1, CornerPosN2;
-            float  OuterAngle;
-        };
-        static const ImGuiResizeBorderDef resize_border_def[4] =
-        {
-            { ImVec2(0,+1), ImVec2(0,0), ImVec2(1,0), IM_PI*1.50f }, // Top
-            { ImVec2(-1,0), ImVec2(1,0), ImVec2(1,1), IM_PI*0.00f }, // Right
-            { ImVec2(0,-1), ImVec2(1,1), ImVec2(0,1), IM_PI*0.50f }, // Bottom
-            { ImVec2(+1,0), ImVec2(0,1), ImVec2(0,0), IM_PI*1.00f }  // Left
-        };
         const ImGuiResizeBorderDef& def = resize_border_def[border_held];
         ImRect border_r = GetResizeBorderRect(window, border_held, rounding, 0.0f);
         window->DrawList->PathArcTo(ImLerp(border_r.Min, border_r.Max, def.CornerPosN1) + ImVec2(0.5f, 0.5f) + def.InnerDir * rounding, rounding, def.OuterAngle - IM_PI*0.25f, def.OuterAngle);
