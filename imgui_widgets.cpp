@@ -2374,15 +2374,57 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
 // - VSliderInt()
 //-------------------------------------------------------------------------
 
+// Convert a value v in the output space of a slider into a parametric position on the slider itself
 template<typename TYPE, typename FLOATTYPE>
-float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos)
+float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos, float logarithmic_zero_epsilon)
 {
     if (v_min == v_max)
         return 0.0f;
 
-    const bool is_power = (power != 1.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
+    const bool is_logarithmic = (power == 0.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
+    const bool is_power = (power != 1.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) && (!is_logarithmic);
     const TYPE v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
-    if (is_power)
+    if (is_logarithmic)
+    {
+        bool flipped = v_max < v_min;
+
+        if (flipped) // Handle the case where the range is backwards
+            ImSwap(v_min, v_max);
+
+        // Fudge min/max to avoid getting close to log(0)
+        FLOATTYPE v_min_fudged = (ImAbs((FLOATTYPE)v_min) < logarithmic_zero_epsilon) ? ((v_min < 0.0f) ? -logarithmic_zero_epsilon : logarithmic_zero_epsilon) : (FLOATTYPE)v_min;
+        FLOATTYPE v_max_fudged = (ImAbs((FLOATTYPE)v_max) < logarithmic_zero_epsilon) ? ((v_max < 0.0f) ? -logarithmic_zero_epsilon : logarithmic_zero_epsilon) : (FLOATTYPE)v_max;
+
+        // Awkward special cases - we need ranges of the form (-100 .. 0) to convert to (-100 .. -epsilon), not (-100 .. epsilon)
+        if ((v_min == 0.0f) && (v_max < 0.0f))
+            v_min_fudged = -logarithmic_zero_epsilon;
+        else if ((v_max == 0.0f) && (v_min < 0.0f))
+            v_max_fudged = -logarithmic_zero_epsilon;
+
+        float result;
+
+        if (v_clamped <= v_min_fudged)
+            result = 0.0f; // Workaround for values that are in-range but below our fudge
+        else if (v_clamped >= v_max_fudged)
+            result = 1.0f; // Workaround for values that are in-range but above our fudge
+        else if ((v_min * v_max) < 0.0f) // Range crosses zero, so split into two portions
+        {
+            float zero_point = (-(float)v_min) / ((float)v_max - (float)v_min); // The zero point in parametric space.  There's an argument we should take the logarithmic nature into account when calculating this, but for now this should do (and the most common case of a symmetrical range works fine)
+            if (v == 0.0f)
+                result = zero_point; // Special case for exactly zero
+            else if (v < 0.0f)
+                result = (1.0f - (float)(ImLog(-(FLOATTYPE)v_clamped / logarithmic_zero_epsilon) / ImLog(-v_min_fudged / logarithmic_zero_epsilon))) * zero_point;
+            else
+                result = zero_point + ((float)(ImLog((FLOATTYPE)v_clamped / logarithmic_zero_epsilon) / ImLog(v_max_fudged / logarithmic_zero_epsilon)) * (1.0f - zero_point));
+        }
+        else if ((v_min < 0.0f) || (v_max < 0.0f)) // Entirely negative slider
+            result = 1.0f - (float)(ImLog(-(FLOATTYPE)v_clamped / -v_max_fudged) / ImLog(-v_min_fudged / -v_max_fudged));
+        else
+            result = (float)(ImLog((FLOATTYPE)v_clamped / v_min_fudged) / ImLog(v_max_fudged / v_min_fudged));
+
+        return flipped ? (1.0f - result) : result;
+    }
+    else if (is_power)
     {
         if (v_clamped < 0.0f)
         {
@@ -2409,7 +2451,8 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 
     const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
-    const bool is_power = (power != 1.0f) && is_decimal;
+    const bool is_logarithmic = (power == 0.0f) && is_decimal;
+    const bool is_power = (power != 1.0f) && is_decimal && (!is_logarithmic);
 
     const float grab_padding = 2.0f;
     const float slider_sz = (bb.Max[axis] - bb.Min[axis]) - grab_padding * 2.0f;
@@ -2435,6 +2478,14 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
     {
         // Same sign
         linear_zero_pos = v_min < 0.0f ? 1.0f : 0.0f;
+    }
+
+    float logarithmic_zero_epsilon = 0.0f; // Only valid when is_logarithmic is true
+    if (is_logarithmic)
+    {
+        // When using logarithmic sliders, we need to clamp to avoid hitting zero, but our choice of clamp value greatly affects slider precision. We attempt to use the specified precision to estimate a good lower bound.
+        const int decimal_precision = is_decimal ? ImParseFormatPrecision(format, 3) : 1;
+        logarithmic_zero_epsilon = ImPow(0.1f, (float)decimal_precision);
     }
 
     // Process interacting with the slider
@@ -2468,7 +2519,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             }
             else if (delta != 0.0f)
             {
-                clicked_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos);
+                clicked_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos, logarithmic_zero_epsilon);
                 const int decimal_precision = is_decimal ? ImParseFormatPrecision(format, 3) : 0;
                 if ((decimal_precision > 0) || is_power)
                 {
@@ -2496,7 +2547,49 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
         if (set_new_value)
         {
             TYPE v_new;
-            if (is_power)
+            if (is_logarithmic)
+            {
+                // We special-case the extents because otherwise our fudging can lead to "mathematically correct" but non-intuitive behaviors like a fully-left slider not actually reaching the minimum value
+                if (clicked_t <= 0.0f)
+                    v_new = v_min;
+                else if (clicked_t >= 1.0f)
+                    v_new = v_max;
+                else
+                {
+                    bool flipped = v_max < v_min;
+
+                    // Fudge min/max to avoid getting silly results close to zero
+                    FLOATTYPE v_min_fudged = (ImAbs((FLOATTYPE)v_min) < logarithmic_zero_epsilon) ? ((v_min < 0.0f) ? -logarithmic_zero_epsilon : logarithmic_zero_epsilon) : (FLOATTYPE)v_min;
+                    FLOATTYPE v_max_fudged = (ImAbs((FLOATTYPE)v_max) < logarithmic_zero_epsilon) ? ((v_max < 0.0f) ? -logarithmic_zero_epsilon : logarithmic_zero_epsilon) : (FLOATTYPE)v_max;
+
+                    // Awkward special cases - we need ranges of the form (-100 .. 0) to convert to (-100 .. -epsilon), not (-100 .. epsilon)
+                    if ((v_min == 0.0f) && (v_max < 0.0f))
+                        v_min_fudged = -logarithmic_zero_epsilon;
+                    else if ((v_max == 0.0f) && (v_min < 0.0f))
+                        v_max_fudged = -logarithmic_zero_epsilon;
+
+                    if (flipped)
+                        ImSwap(v_min_fudged, v_max_fudged);
+
+                    float clicked_t_with_flip = flipped ? (1.0f - clicked_t) : clicked_t;
+
+                    if ((v_min * v_max) < 0.0f) // Range crosses zero, so we have to do this in two parts
+                    {
+                        float zero_point = (-(float)ImMin(v_min, v_max)) / ImAbs((float)v_max - (float)v_min); // The zero point in parametric space
+                        if (clicked_t_with_flip == zero_point)
+                            v_new = (TYPE)0.0f; // Special case to make getting exactly zero possible (the epsilon prevents it otherwise)
+                        else if (clicked_t_with_flip < zero_point)
+                            v_new = (TYPE)-(logarithmic_zero_epsilon * ImPow(-v_min_fudged / logarithmic_zero_epsilon, (FLOATTYPE)(1.0f - (clicked_t_with_flip / zero_point))));
+                        else
+                            v_new = (TYPE)(logarithmic_zero_epsilon * ImPow(v_max_fudged / logarithmic_zero_epsilon, (FLOATTYPE)((clicked_t_with_flip - zero_point) / (1.0f - zero_point))));
+                    }
+                    else if ((v_min < 0.0f) || (v_max < 0.0f)) // Entirely negative slider
+                        v_new = (TYPE)-(-v_max_fudged * ImPow(-v_min_fudged / -v_max_fudged, (FLOATTYPE)(1.0f - clicked_t_with_flip)));
+                    else
+                        v_new = (TYPE)(v_min_fudged * ImPow(v_max_fudged / v_min_fudged, (FLOATTYPE)clicked_t_with_flip));
+                }
+            }
+            else if (is_power)
             {
                 // Account for power curve scale on both sides of the zero
                 if (clicked_t < linear_zero_pos)
@@ -2558,7 +2651,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
     else
     {
         // Output grab position so it can be displayed by the caller
-        float grab_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos);
+        float grab_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos, logarithmic_zero_epsilon);
         if (axis == ImGuiAxis_Y)
             grab_t = 1.0f - grab_t;
         const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
