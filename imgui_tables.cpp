@@ -328,6 +328,21 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->IsSettingsRequestLoad)
         TableLoadSettings(table);
 
+    // Handle DPI/font resize
+    // This is designed to facilitate DPI changes with the assumption that e.g. style.CellPadding has been scaled as well.
+    // It will also react to changing fonts with mixed results. It doesn't need to be perfect but merely provide a decent transition.
+    // FIXME-DPI: Provide consistent standards for reference size. Perhaps using g.CurrentDpiScale would be more self explanatory.
+    // This is will lead us to non-rounded WidthRequest in columns, which should work but is a poorly tested path.
+    const float new_ref_scale_unit = g.FontSize; // g.Font->GetCharAdvance('A') ?
+    if (table->RefScale != 0.0f && table->RefScale != new_ref_scale_unit)
+    {
+        const float scale_factor = new_ref_scale_unit / table->RefScale;
+        //IMGUI_DEBUG_LOG("[table] %08X RefScaleUnit %.3f -> %.3f, scaling width by %.3f\n", table->ID, table->RefScaleUnit, new_ref_scale_unit, scale_factor);
+        for (int n = 0; n < columns_count; n++)
+            table->Columns[n].WidthRequest = table->Columns[n].WidthRequest * scale_factor;
+    }
+    table->RefScale = new_ref_scale_unit;
+
     // Disable output until user calls TableNextRow() or TableNextCell() leading to the TableUpdateLayout() call..
     // This is not strictly necessary but will reduce cases were "out of table" output will be misleading to the user.
     // Because we cannot safely assert in EndTable() when no rows have been created, this seems like our best option.
@@ -607,6 +622,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
                 // (e.g. TextWrapped) too much. Otherwise what tends to happen is that TextWrapped would output a very
                 // large height (= first frame scrollbar display very off + clipper would skip lots of items).
                 // This is merely making the side-effect less extreme, but doesn't properly fixes it.
+                // FIXME: Move this to ->WidthGiven to avoid temporary lossyless?
                 if (column->AutoFitQueue > 0x01 && table->IsInitializing)
                     column->WidthRequest = ImMax(column->WidthRequest, min_column_width * 4.0f);
             }
@@ -2392,6 +2408,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
 
     // FIXME-TABLE: Logic to avoid saving default widths?
+    bool save_ref_scale = false;
     settings->SaveFlags = ImGuiTableFlags_Resizable;
     for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
     {
@@ -2402,6 +2419,8 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         column_settings->SortDirection = column->SortDirection;
         column_settings->IsVisible = column->IsVisible;
         column_settings->IsWeighted = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? 1 : 0;
+        if ((column->Flags & ImGuiTableColumnFlags_WidthStretch) == 0)
+            save_ref_scale = true;
 
         // We skip saving some data in the .ini file when they are unnecessary to restore our state
         // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved when present.
@@ -2413,6 +2432,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
             settings->SaveFlags |= ImGuiTableFlags_Hideable;
     }
     settings->SaveFlags &= table->Flags;
+    settings->RefScale = save_ref_scale ? table->RefScale : 0.0f;
 
     MarkIniSettingsDirty();
 }
@@ -2438,6 +2458,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         settings = TableGetBoundSettings(table);
     }
     table->SettingsLoadedFlags = settings->SaveFlags;
+    table->RefScale = settings->RefScale;
     IM_ASSERT(settings->ColumnsCount == table->ColumnsCount);
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
@@ -2517,6 +2538,8 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
     float f = 0.0f;
     int column_n = 0, r = 0, n = 0;
 
+    if (sscanf(line, "RefScale=%f", &f) == 1) { settings->RefScale = f; return; }
+
     if (sscanf(line, "Column %d%n", &column_n, &r) == 1)
     {
         if (column_n < 0 || column_n >= settings->ColumnsCount)
@@ -2553,6 +2576,8 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
 
         buf->reserve(buf->size() + 30 + settings->ColumnsCount * 50); // ballpark reserve
         buf->appendf("[%s][0x%08X,%d]\n", handler->TypeName, settings->ID, settings->ColumnsCount);
+        if (settings->RefScale != 0.0f)
+            buf->appendf("RefScale=%g\n", settings->RefScale);
         ImGuiTableColumnSettings* column = settings->GetColumnSettings();
         for (int column_n = 0; column_n < settings->ColumnsCount; column_n++, column++)
         {
@@ -2610,7 +2635,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         const char* name = TableGetColumnName(table, n);
         BulletText("Column %d order %d name '%s': +%.1f to +%.1f\n"
             "Visible: %d, Clipped: %d, DrawChannels: %d,%d\n"
-            "WidthGiven/Request: %.1f/%.1f, WidthWeight: %.3f\n"
+            "WidthGiven/Request: %.2f/%.2f, WidthWeight: %.3f\n"
             "ContentWidth: RowsFrozen %d, RowsUnfrozen %d, HeadersUsed/Ideal %d/%d\n"
             "SortOrder: %d, SortDir: %s\n"
             "UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
