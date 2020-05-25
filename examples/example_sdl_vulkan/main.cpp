@@ -442,13 +442,35 @@ int main(int, char**)
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window))
+            switch (event.type)
             {
-                g_SwapChainResizeWidth = (int)event.window.data1;
-                g_SwapChainResizeHeight = (int)event.window.data2;
-                g_SwapChainRebuild = true;
+                case SDL_WINDOWEVENT:
+					if (event.window.event == SDL_WINDOWEVENT_MINIMIZED)
+					{
+						g_SwapChainRebuild = true;
+						g_SwapChainResizeWidth = (int)event.window.data1;
+						g_SwapChainResizeHeight = (int)event.window.data2;
+					}
+
+					if (event.window.event == SDL_WINDOWEVENT_RESTORED)
+					{
+						g_SwapChainRebuild = true;
+						g_SwapChainResizeWidth = (int)event.window.data1;
+						g_SwapChainResizeHeight = (int)event.window.data2;
+					}
+
+					if (event.window.event == SDL_WINDOWEVENT_RESIZED)// && event.window.windowID == SDL_GetWindowID(window))
+					{
+						g_SwapChainResizeWidth = (int)event.window.data1;
+						g_SwapChainResizeHeight = (int)event.window.data2;
+						g_SwapChainRebuild = true;
+					}
+
+					break;
+
+                case SDL_QUIT:
+                    done = true;
+                    break;
             }
         }
 
