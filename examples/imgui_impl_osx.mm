@@ -28,8 +28,8 @@
 static CFAbsoluteTime g_Time = 0.0;
 static NSCursor*      g_MouseCursors[ImGuiMouseCursor_COUNT] = {};
 static bool           g_MouseCursorHidden = false;
-static bool           g_MouseJustPressed[5] = { false, false, false, false, false };
-static bool           g_MouseDown[5] = { false, false, false, false, false };
+static bool           g_MouseJustPressed[ImGuiMouseButton_COUNT] = {};
+static bool           g_MouseDown[ImGuiMouseButton_COUNT] = {};
 
 // Undocumented methods for creating cursors.
 @interface NSCursor()
@@ -126,9 +126,9 @@ void ImGui_ImplOSX_Shutdown()
 
 static void ImGui_ImplOSX_UpdateMouseCursorAndButtons()
 {
+    // Update buttons
     ImGuiIO& io = ImGui::GetIO();
-
-    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown) && i < IM_ARRAYSIZE(g_MouseJustPressed); i++)
+    for (int i = 0; i < IM_ARRAYSIZE(io.MouseDown); i++)
     {
         // If a mouse press event came, always pass it as "mouse held this frame", so we don't miss click-release events that are shorter than 1 frame.
         io.MouseDown[i] = g_MouseJustPressed[i] || g_MouseDown[i];
@@ -208,11 +208,8 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeLeftMouseDown || event.type == NSEventTypeRightMouseDown || event.type == NSEventTypeOtherMouseDown)
     {
         int button = (int)[event buttonNumber];
-        if (button >= 0 && button < IM_ARRAYSIZE(g_MouseJustPressed))
-        {
-            g_MouseJustPressed[button] = true;
-            g_MouseDown[button] = true;
-        }
+        if (button >= 0 && button < IM_ARRAYSIZE(g_MouseDown))
+            g_MouseDown[button] = g_MouseJustPressed[button] = true;
         return io.WantCaptureMouse;
     }
 

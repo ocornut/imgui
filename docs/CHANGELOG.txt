@@ -64,6 +64,7 @@ Other Changes:
 - Backends: Vulkan: Fixed error in if initial frame has no vertices. (#3177)
 - Backends: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData
   structure didn't have any vertices. (#2697) [@kudaba]
+- Backends: OSX: Added workaround to avoid fast mouse clicks. (#3261, #1992, #2525) [@nburrus]
 - Examples: Apple: Fixed example_apple_metal and example_apple_opengl2 using imgui_impl_osx.mm 
   not forwarding right and center mouse clicks. (#3260) [@nburrus]
 
