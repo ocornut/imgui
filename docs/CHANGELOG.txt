@@ -56,6 +56,9 @@ Other Changes:
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
 - Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
+- CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
+  static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
+  Fixed a static contructor which led to this dependency on some compiler setups (unclear which).
 - Backends: Win32: Support for #define NOGDI, won't try to call GetDeviceCaps(). (#3137, #2327)
 - Backends: Win32: Fix _WIN32_WINNT < 0x0600 (MinGW defaults to 0x502 == Windows 2003). (#3183)
 - Backends: SDL: Report a zero display-size when window is minimized, consistent with other backends,
@@ -67,7 +70,7 @@ Other Changes:
 - Backends: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData
   structure didn't have any vertices. (#2697) [@kudaba]
 - Backends: OSX: Added workaround to avoid fast mouse clicks. (#3261, #1992, #2525) [@nburrus]
-- Examples: Apple: Fixed example_apple_metal and example_apple_opengl2 using imgui_impl_osx.mm 
+- Examples: Apple: Fixed example_apple_metal and example_apple_opengl2 using imgui_impl_osx.mm
   not forwarding right and center mouse clicks. (#3260) [@nburrus]
 
 
