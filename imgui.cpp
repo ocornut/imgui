@@ -10158,8 +10158,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Debugging enums
     enum { WRT_OuterRect, WRT_OuterRectClipped, WRT_InnerRect, WRT_InnerClipRect, WRT_WorkRect, WRT_Content, WRT_ContentRegionRect, WRT_Count }; // Windows Rect Type
     const char* wrt_rects_names[WRT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Content", "ContentRegionRect" };
-    enum { TRT_OuterRect, TRT_WorkRect, TRT_HostClipRect, TRT_InnerClipRect, TRT_BackgroundClipRect, TRT_ColumnsRect, TRT_ColumnsClipRect, TRT_ColumnsContentHeadersUsed, TRT_ColumnsContentHeadersDesired, TRT_ColumnsContentRowsFrozen, TRT_ColumnsContentRowsUnfrozen, TRT_Count }; // Tables Rect Type
-    const char* trt_rects_names[TRT_Count] = { "OuterRect", "WorkRect", "HostClipRect", "InnerClipRect", "BackgroundClipRect", "ColumnsRect", "ColumnsClipRect", "ColumnsContentHeadersUsed", "ColumnsContentHeadersDesired", "ColumnsContentRowsFrozen", "ColumnsContentRowsUnfrozen" };
+    enum { TRT_OuterRect, TRT_WorkRect, TRT_HostClipRect, TRT_InnerClipRect, TRT_BackgroundClipRect, TRT_ColumnsRect, TRT_ColumnsClipRect, TRT_ColumnsContentHeadersUsed, TRT_ColumnsContentHeadersIdeal, TRT_ColumnsContentRowsFrozen, TRT_ColumnsContentRowsUnfrozen, TRT_Count }; // Tables Rect Type
+    const char* trt_rects_names[TRT_Count] = { "OuterRect", "WorkRect", "HostClipRect", "InnerClipRect", "BackgroundClipRect", "ColumnsRect", "ColumnsClipRect", "ColumnsContentHeadersUsed", "ColumnsContentHeadersIdeal", "ColumnsContentRowsFrozen", "ColumnsContentRowsUnfrozen" };
 
     // State
     static bool show_windows_rects = false;
@@ -10433,7 +10433,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         }
     };
 
-
     // Tools
     if (ImGui::TreeNode("Tools"))
     {
@@ -10504,7 +10503,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             Funcs::NodeTable(g.Tables.GetByIndex(n));
         ImGui::TreePop();
     }
-#endif // #define IMGUI_HAS_TABLE
+#endif // #ifdef IMGUI_HAS_TABLE
 
     // Details for Docking
 #ifdef IMGUI_HAS_DOCK
@@ -10512,7 +10511,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     {
         ImGui::TreePop();
     }
-#endif // #define IMGUI_HAS_DOCK
+#endif // #ifdef IMGUI_HAS_DOCK
 
     // Settings
     if (ImGui::TreeNode("Settings"))
@@ -10548,10 +10547,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 Funcs::NodeTableSettings(settings);
             ImGui::TreePop();
         }
-#endif
+#endif // #ifdef IMGUI_HAS_TABLE
 
 #ifdef IMGUI_HAS_DOCK
-#endif
+#endif // #ifdef IMGUI_HAS_DOCK
 
         if (ImGui::TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
         {
@@ -10617,14 +10616,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             ImGuiTable* table = g.Tables.GetByIndex(table_n);
         }
     }
-#endif // #define IMGUI_HAS_TABLE
+#endif // #ifdef IMGUI_HAS_TABLE
 
 #ifdef IMGUI_HAS_DOCK
     // Overlay: Display Docking info
     if (show_docking_nodes && g.IO.KeyCtrl)
     {
     }
-#endif // #define IMGUI_HAS_DOCK
+#endif // #ifdef IMGUI_HAS_DOCK
 
     ImGui::End();
 }
