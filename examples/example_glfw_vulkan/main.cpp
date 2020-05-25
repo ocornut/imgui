@@ -248,7 +248,7 @@ static void CleanupVulkanWindow()
     ImGui_ImplVulkanH_DestroyWindow(g_Instance, g_Device, &g_MainWindowData, g_Allocator);
 }
 
-static void FrameRender(ImGui_ImplVulkanH_Window* wd)
+static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 {
     VkResult err;
 
@@ -286,8 +286,8 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd)
         vkCmdBeginRenderPass(fd->CommandBuffer, &info, VK_SUBPASS_CONTENTS_INLINE);
     }
 
-    // Record Imgui Draw Data and draw funcs into command buffer
-    ImGui_ImplVulkan_RenderDrawData(ImGui::GetDrawData(), fd->CommandBuffer);
+    // Record dear imgui primitives into command buffer
+    ImGui_ImplVulkan_RenderDrawData(draw_data, fd->CommandBuffer);
 
     // Submit command buffer
     vkCmdEndRenderPass(fd->CommandBuffer);
@@ -456,7 +456,8 @@ int main(int, char**)
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
         glfwPollEvents();
 
-        if (g_SwapChainRebuild)
+        // Resize swap chain?
+        if (g_SwapChainRebuild && g_SwapChainResizeWidth > 0 && g_SwapChainResizeHeight > 0)
         {
             g_SwapChainRebuild = false;
             ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
@@ -508,10 +509,13 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
-        memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
-        FrameRender(wd);
-
-        FramePresent(wd);
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+        if (!is_minimized)
+        {
+            FrameRender(wd, draw_data);
+            FramePresent(wd);
+        }
     }
 
     // Cleanup

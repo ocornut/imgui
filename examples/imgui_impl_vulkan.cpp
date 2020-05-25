@@ -999,6 +999,7 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
 {
     VkResult err;
     VkSwapchainKHR old_swapchain = wd->Swapchain;
+    wd->Swapchain = NULL;
     err = vkDeviceWaitIdle(device);
     check_vk_result(err);
 
