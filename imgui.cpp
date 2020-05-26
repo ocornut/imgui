@@ -7268,7 +7268,7 @@ float ImGui::GetWindowContentRegionWidth()
 
 float ImGui::GetWindowContentRegionHeight()
 {
-	ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiWindow* window = GImGui->CurrentWindow;
     return window->ContentRegionRect.GetHeight();
 }
 
