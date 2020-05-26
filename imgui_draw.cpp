@@ -1203,7 +1203,7 @@ void ImDrawList::AddBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2
     PathStroke(col, false, thickness);
 }
 
-void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect, ImGuiTextColorCallback color_callback, void* color_user_data)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
@@ -1229,7 +1229,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL);
+    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, cpu_fine_clip_rect != NULL, color_callback, color_user_data);
 }
 
 void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
@@ -2971,7 +2971,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     draw_list->PrimRectUV(ImVec2(pos.x + glyph->X0 * scale, pos.y + glyph->Y0 * scale), ImVec2(pos.x + glyph->X1 * scale, pos.y + glyph->Y1 * scale), ImVec2(glyph->U0, glyph->V0), ImVec2(glyph->U1, glyph->V1), col);
 }
 
-void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip) const
+void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, bool cpu_fine_clip, ImGuiTextColorCallback color_callback, void* color_user_data) const
 {
     if (!text_end)
         text_end = text_begin + strlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
@@ -3026,6 +3026,12 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     ImDrawIdx* idx_write = draw_list->_IdxWritePtr;
     unsigned int vtx_current_idx = draw_list->_VtxCurrentIdx;
 
+    // Token idx is for user code to track the current token via the color_callback. Otherwise unused by ImGui.
+    int token_idx = 0;
+    ImU32 col_selected = col;
+    int remaining_chars_for_color = color_callback ? 1 : 0;
+    int remaining_chars_until_callback = color_callback ? 1 : 0;
+
     while (s < text_end)
     {
         if (word_wrap_enabled)
@@ -3056,16 +3062,37 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
         // Decode and advance source
         unsigned int c = (unsigned int)*s;
-        if (c < 0x80)
+        int advance_bytes = 1;
+        if (c >= 0x80)
         {
-            s += 1;
-        }
-        else
-        {
-            s += ImTextCharFromUtf8(&c, s, text_end);
+            advance_bytes = ImTextCharFromUtf8(&c, s, text_end);
             if (c == 0) // Malformed UTF-8?
                 break;
         }
+
+        if (--remaining_chars_for_color == 0)
+            col_selected = col;
+
+        if (--remaining_chars_until_callback == 0)
+        {
+            ImGuiTextColorCallbackData color_callback_data;
+            color_callback_data.Color = col;
+            color_callback_data.TokenIdx = token_idx;
+            color_callback_data.CharsForColor = 1;
+            color_callback_data.CharsUntilCallback = 1;
+            color_callback_data.UserData = color_user_data;
+            color_callback_data.TextBegin = text_begin;
+            color_callback_data.TextEnd = text_end;
+            color_callback_data.Char = s;
+            color_callback_data.CharValue = c;
+            color_callback(&color_callback_data);
+            col_selected = color_callback_data.Color;
+            token_idx = color_callback_data.TokenIdx;
+            remaining_chars_for_color = ImMax(1, color_callback_data.CharsForColor);
+            remaining_chars_until_callback = ImMax(0, color_callback_data.CharsUntilCallback); // if set to 0, stops calling the callback.
+        }
+
+        s += advance_bytes;
 
         if (c < 32)
         {
@@ -3135,10 +3162,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 {
                     idx_write[0] = (ImDrawIdx)(vtx_current_idx); idx_write[1] = (ImDrawIdx)(vtx_current_idx+1); idx_write[2] = (ImDrawIdx)(vtx_current_idx+2);
                     idx_write[3] = (ImDrawIdx)(vtx_current_idx); idx_write[4] = (ImDrawIdx)(vtx_current_idx+2); idx_write[5] = (ImDrawIdx)(vtx_current_idx+3);
-                    vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
-                    vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
-                    vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
-                    vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
+                    vtx_write[0].pos.x = x1; vtx_write[0].pos.y = y1; vtx_write[0].col = col_selected; vtx_write[0].uv.x = u1; vtx_write[0].uv.y = v1;
+                    vtx_write[1].pos.x = x2; vtx_write[1].pos.y = y1; vtx_write[1].col = col_selected; vtx_write[1].uv.x = u2; vtx_write[1].uv.y = v1;
+                    vtx_write[2].pos.x = x2; vtx_write[2].pos.y = y2; vtx_write[2].col = col_selected; vtx_write[2].uv.x = u2; vtx_write[2].uv.y = v2;
+                    vtx_write[3].pos.x = x1; vtx_write[3].pos.y = y2; vtx_write[3].col = col_selected; vtx_write[3].uv.x = u1; vtx_write[3].uv.y = v2;
                     vtx_write += 4;
                     vtx_current_idx += 4;
                     idx_write += 6;
