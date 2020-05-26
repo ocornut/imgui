@@ -7266,6 +7266,12 @@ float ImGui::GetWindowContentRegionWidth()
     return window->ContentRegionRect.GetWidth();
 }
 
+float ImGui::GetWindowContentRegionHeight()
+{
+	ImGuiWindow* window = GImGui->CurrentWindow;
+    return window->ContentRegionRect.GetHeight();
+}
+
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
 void ImGui::BeginGroup()
 {
