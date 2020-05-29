@@ -416,6 +416,14 @@ ImDrawList* ImDrawList::CloneOutput() const
     return dst;
 }
 
+void ImDrawList::SwapInto(ImDrawList& rhs)
+{
+    rhs.CmdBuffer.swap(CmdBuffer);
+    rhs.IdxBuffer.swap(IdxBuffer);
+    rhs.VtxBuffer.swap(VtxBuffer);
+    rhs.Flags = Flags;
+}
+
 // Using macros because C++ is a terrible language, we want guaranteed inline, no code in header, and no overhead in Debug builds
 #define GetCurrentClipRect()    (_ClipRectStack.Size ? _ClipRectStack.Data[_ClipRectStack.Size-1]  : _Data->ClipRectFullscreen)
 #define GetCurrentTextureId()   (_TextureIdStack.Size ? _TextureIdStack.Data[_TextureIdStack.Size-1] : (ImTextureID)NULL)
@@ -1458,6 +1466,55 @@ void ImDrawData::ScaleClipRects(const ImVec2& fb_scale)
             ImDrawCmd* cmd = &cmd_list->CmdBuffer[cmd_i];
             cmd->ClipRect = ImVec4(cmd->ClipRect.x * fb_scale.x, cmd->ClipRect.y * fb_scale.y, cmd->ClipRect.z * fb_scale.x, cmd->ClipRect.w * fb_scale.y);
         }
+    }
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] ImDrawDataBuffered
+//-----------------------------------------------------------------------------
+
+ImDrawDataBuffered::~ImDrawDataBuffered()
+{
+    for (int i = 0; i < CmdListData.size(); ++i)
+    {
+        CmdListData[i].~ImDrawList();
+    }
+}
+
+// copy state and swap memory with existing draw lists
+void ImDrawDataBuffered::CopyDrawData(const ImDrawData* source)
+{
+    CmdListData.resize(source->CmdListsCount);
+    CmdListPointers.resize(source->CmdListsCount, NULL);
+
+    Valid = source->Valid;
+    CmdLists = source->CmdListsCount ? CmdListPointers.Data : NULL;
+    CmdListsCount = source->CmdListsCount;
+    TotalIdxCount = source->TotalIdxCount;
+    TotalVtxCount = source->TotalVtxCount;
+    DisplayPos = source->DisplayPos;
+    DisplaySize = source->DisplaySize;
+
+    for (int i = 0; i < CmdListsCount; ++i)
+    {
+        ImDrawList* src_list = source->CmdLists[i];
+
+        if (CmdListPointers[i] == NULL)
+        {
+            IM_PLACEMENT_NEW(&CmdListData[i]) ImDrawList(src_list->_Data); 
+        }
+
+        // always copy pointer in case the data list gets reallocated
+        CmdListPointers[i] = &CmdListData[i];
+
+        ImDrawList* dst_list = CmdListPointers[i];
+
+        // pre-allocate to the same size so we don't suffer multiple allocations next frame
+        dst_list->CmdBuffer.reserve(src_list->CmdBuffer.size());
+        dst_list->IdxBuffer.reserve(src_list->IdxBuffer.size());
+        dst_list->VtxBuffer.reserve(src_list->VtxBuffer.size());
+
+        src_list->SwapInto(*dst_list);
     }
 }
 
