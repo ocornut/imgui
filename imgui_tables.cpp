@@ -1331,11 +1331,10 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
     bool merge_groups_all_fit_within_inner_rect = (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0;
 
     // 1. Scan channels and take note of those which can be merged
-    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
-        if (!(table->VisibleMaskByDisplayOrder & ((ImU64)1 << order_n)))
+        if (!(table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)))
             continue;
-        const int column_n = table->DisplayOrderToIndex[order_n];
         ImGuiTableColumn* column = &table->Columns[column_n];
 
         const int merge_group_sub_count = is_frozen_v ? 2 : 1;
