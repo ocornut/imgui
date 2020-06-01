@@ -2330,6 +2330,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             // Fix: Make sure only one column has a SortOrder if ImGuiTableFlags_MultiSortable is not set.
             if (need_fix_single_sort_order)
             {
+                sort_order_count = 1;
                 for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
                     if (column_n != column_with_smallest_sort_order)
                         table->Columns[column_n].SortOrder = -1;
