@@ -68,20 +68,26 @@ struct VERTEX_CONSTANT_BUFFER
     float   mvp[4][4];
 };
 
+float g_dpi = 1.0f;
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, FrameResources* fr)
 {
+   ImVec2 DisplaySize = draw_data->DisplaySize;
+   ImVec2 DisplayPos = draw_data->DisplayPos;
+   DisplaySize.x *= g_dpi; DisplaySize.y *= g_dpi;
+   DisplayPos.x *= g_dpi; DisplayPos.y *= g_dpi;
+
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
     VERTEX_CONSTANT_BUFFER vertex_constant_buffer;
     {
-        float L = draw_data->DisplayPos.x;
-        float R = draw_data->DisplayPos.x + draw_data->DisplaySize.x;
-        float T = draw_data->DisplayPos.y;
-        float B = draw_data->DisplayPos.y + draw_data->DisplaySize.y;
+        float L = DisplayPos.x;
+        float R = DisplayPos.x + DisplaySize.x;
+        float T = DisplayPos.y;
+        float B = DisplayPos.y + DisplaySize.y;
         float mvp[4][4] =
         {
-            { 2.0f/(R-L),   0.0f,           0.0f,       0.0f },
-            { 0.0f,         2.0f/(T-B),     0.0f,       0.0f },
+            { 2.0f/(R-L)*g_dpi,   0.0f,           0.0f,       0.0f },
+            { 0.0f,         2.0f/(T-B)*g_dpi,     0.0f,       0.0f },
             { 0.0f,         0.0f,           0.5f,       0.0f },
             { (R+L)/(L-R),  (T+B)/(B-T),    0.5f,       1.0f },
         };
@@ -91,8 +97,8 @@ static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12Graphic
     // Setup viewport
     D3D12_VIEWPORT vp;
     memset(&vp, 0, sizeof(D3D12_VIEWPORT));
-    vp.Width = draw_data->DisplaySize.x;
-    vp.Height = draw_data->DisplaySize.y;
+    vp.Width = DisplaySize.x;
+    vp.Height = DisplaySize.y;
     vp.MinDepth = 0.0f;
     vp.MaxDepth = 1.0f;
     vp.TopLeftX = vp.TopLeftY = 0.0f;
@@ -231,7 +237,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
             else
             {
                 // Apply Scissor, Bind texture, Draw
-                const D3D12_RECT r = { (LONG)(pcmd->ClipRect.x - clip_off.x), (LONG)(pcmd->ClipRect.y - clip_off.y), (LONG)(pcmd->ClipRect.z - clip_off.x), (LONG)(pcmd->ClipRect.w - clip_off.y) };
+                const D3D12_RECT r = { (LONG)((pcmd->ClipRect.x - clip_off.x)*g_dpi), (LONG)((pcmd->ClipRect.y - clip_off.y) * g_dpi), (LONG)((pcmd->ClipRect.z - clip_off.x) * g_dpi), (LONG)((pcmd->ClipRect.w - clip_off.y) * g_dpi) };
                 ctx->SetGraphicsRootDescriptorTable(1, *(D3D12_GPU_DESCRIPTOR_HANDLE*)&pcmd->TextureId);
                 ctx->RSSetScissorRects(1, &r);
                 ctx->DrawIndexedInstanced(pcmd->ElemCount, 1, pcmd->IdxOffset + global_idx_offset, pcmd->VtxOffset + global_vtx_offset, 0);
