@@ -68,7 +68,7 @@ struct VERTEX_CONSTANT_BUFFER
     float   mvp[4][4];
 };
 
-float g_dpi = 1.0f;
+extern float g_dpi;
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, FrameResources* fr)
 {
    ImVec2 DisplaySize = draw_data->DisplaySize;

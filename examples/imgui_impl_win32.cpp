@@ -59,7 +59,7 @@ static INT64                g_TicksPerSecond = 0;
 static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 static bool                 g_HasGamepad = false;
 static bool                 g_WantUpdateHasGamepad = true;
-extern float g_dpi;
+float g_dpi = 1.0f;
 // Functions
 bool    ImGui_ImplWin32_Init(void* hwnd)
 {
