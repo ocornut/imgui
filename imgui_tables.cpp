@@ -1247,9 +1247,9 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
 
     // Rules:
     // - [Resize Rule 1] Can't resize from right of right-most visible column if there is any Stretch column. Implemented in TableUpdateLayout().
-    // - [Resize Rule 2] Resizing from right-side of a Stretch column before a fixed column froward sizing to left-side of fixed column.
+    // - [Resize Rule 2] Resizing from right-side of a Stretch column before a fixed column forward sizing to left-side of fixed column.
     // - [Resize Rule 3] If we are are followed by a fixed column and we have a Stretch column before, we need to ensure that our left border won't move.
-
+    table->IsSettingsDirty = true;
     if (column_0->Flags & ImGuiTableColumnFlags_WidthFixed)
     {
         // [Resize Rule 3] If we are are followed by a fixed column and we have a Stretch column before, we need to ensure
@@ -1285,7 +1285,6 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
         column_0->WidthRequest = column_0_width;
         TableUpdateColumnsWeightFromWidth(table);
     }
-    table->IsSettingsDirty = true;
 }
 
 // Columns where the contents didn't stray off their local clip rectangle can be merged into a same draw command.
@@ -2294,6 +2293,8 @@ bool ImGui::TableGetColumnIsSorted(int column_n)
 
 void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
 {
+    IM_ASSERT(table->Flags & ImGuiTableFlags_Sortable);
+
     // Clear SortOrder from hidden column and verify that there's no gap or duplicate.
     int sort_order_count = 0;
     ImU64 sort_order_mask = 0x00;
@@ -2339,8 +2340,8 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
         }
     }
 
-    // Fallback default sort order (if no column has the ImGuiTableColumnFlags_DefaultSort flag)
-    if (sort_order_count == 0 && table->IsInitializing)
+    // Fallback default sort order (if no column had the ImGuiTableColumnFlags_DefaultSort flag)
+    if (sort_order_count == 0)
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
