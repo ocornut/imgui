@@ -546,7 +546,7 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
    if (hwnd)
    {
 #if (WINVER >= 0x0605)
-      UINT dpi = GetDpiForWindow(hwnd);
+      UINT dpi = GetDpiForWindow((HWND)hwnd);
       return float(double(dpi) /
 #ifdef USER_DEFAULT_SCREEN_DPI
          USER_DEFAULT_SCREEN_DPI
@@ -570,8 +570,9 @@ float ImGui_ImplWin32_GetDpiScaleForHwnd(void* hwnd)
 
       HMONITOR monitor = ::MonitorFromWindow((HWND)hwnd, MONITOR_DEFAULTTONEAREST);
       return ImGui_ImplWin32_GetDpiScaleForMonitor(monitor);
-   }
 #endif
+   }
+
    
    return float(double(getDpiForSystem())
       /
