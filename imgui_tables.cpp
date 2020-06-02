@@ -2376,7 +2376,7 @@ static void InitTableSettings(ImGuiTableSettings* settings, ImGuiID id, int colu
     settings->WantApply = true;
 }
 
-static ImGuiTableSettings* CreateTableSettings(ImGuiID id, int columns_count)
+ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(sizeof(ImGuiTableSettings) + (size_t)columns_count * sizeof(ImGuiTableColumnSettings));
@@ -2385,7 +2385,7 @@ static ImGuiTableSettings* CreateTableSettings(ImGuiID id, int columns_count)
 }
 
 // Find existing settings
-static ImGuiTableSettings* FindTableSettingsByID(ImGuiID id)
+ImGuiTableSettings* ImGui::TableSettingsFindByID(ImGuiID id)
 {
     // FIXME-OPT: Might want to store a lookup map for this?
     ImGuiContext& g = *GImGui;
@@ -2395,8 +2395,14 @@ static ImGuiTableSettings* FindTableSettingsByID(ImGuiID id)
     return NULL;
 }
 
+void ImGui::TableSettingsClearByID(ImGuiID id)
+{
+    if (ImGuiTableSettings* settings = TableSettingsFindByID(id))
+        settings->ID = 0;
+}
+
 // Get settings for a given table, NULL if none
-ImGuiTableSettings* ImGui::TableGetBoundSettings(const ImGuiTable* table)
+ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiTable* table)
 {
     if (table->SettingsOffset != -1)
     {
@@ -2421,7 +2427,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     ImGuiTableSettings* settings = TableGetBoundSettings(table);
     if (settings == NULL)
     {
-        settings = CreateTableSettings(table->ID, table->ColumnsCount);
+        settings = TableSettingsCreate(table->ID, table->ColumnsCount);
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
     settings->ColumnsCount = (ImS8)table->ColumnsCount;
@@ -2473,7 +2479,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
     ImGuiTableSettings* settings;
     if (table->SettingsOffset == -1)
     {
-        settings = FindTableSettingsByID(table->ID);
+        settings = TableSettingsFindByID(table->ID);
         if (settings == NULL)
             return;
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
@@ -2544,7 +2550,7 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
     if (sscanf(name, "0x%08X,%d", &id, &columns_count) < 2)
         return NULL;
 
-    if (ImGuiTableSettings* settings = FindTableSettingsByID(id))
+    if (ImGuiTableSettings* settings = ImGui::TableSettingsFindByID(id))
     {
         if (settings->ColumnsCountMax >= columns_count)
         {
@@ -2553,7 +2559,7 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
         }
         settings->ID = 0; // Invalidate storage if we won't fit because of a count change
     }
-    return CreateTableSettings(id, columns_count);
+    return ImGui::TableSettingsCreate(id, columns_count);
 }
 
 static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, void* entry, const char* line)
@@ -2620,7 +2626,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
     }
 }
 
-void    ImGui::TableInstallSettingsHandler(ImGuiContext* context)
+void    ImGui::TableSettingsInstallHandler(ImGuiContext* context)
 {
     ImGuiContext& g = *context;
     ImGuiSettingsHandler ini_handler;

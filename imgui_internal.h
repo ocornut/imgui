@@ -2275,10 +2275,13 @@ namespace ImGui
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
-    IMGUI_API void          TableLoadSettings(ImGuiTable* table);
-    IMGUI_API void          TableSaveSettings(ImGuiTable* table);
-    IMGUI_API ImGuiTableSettings* TableGetBoundSettings(const ImGuiTable* table);
-    IMGUI_API void          TableInstallSettingsHandler(ImGuiContext* context);
+    IMGUI_API void                  TableSettingsInstallHandler(ImGuiContext* context);
+    IMGUI_API ImGuiTableSettings*   TableSettingsCreate(ImGuiID id, int columns_count);
+    IMGUI_API ImGuiTableSettings*   TableSettingsFindByID(ImGuiID id);
+    IMGUI_API void                  TableSettingsClearByID(ImGuiID id);
+    IMGUI_API void                  TableLoadSettings(ImGuiTable* table);
+    IMGUI_API void                  TableSaveSettings(ImGuiTable* table);
+    IMGUI_API ImGuiTableSettings*   TableGetBoundSettings(ImGuiTable* table);
 
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);
