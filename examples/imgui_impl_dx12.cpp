@@ -71,10 +71,10 @@ struct VERTEX_CONSTANT_BUFFER
 extern float g_dpi;
 static void ImGui_ImplDX12_SetupRenderState(ImDrawData* draw_data, ID3D12GraphicsCommandList* ctx, FrameResources* fr)
 {
-   ImVec2 DisplaySize = draw_data->DisplaySize;
-   ImVec2 DisplayPos = draw_data->DisplayPos;
-   DisplaySize.x *= g_dpi; DisplaySize.y *= g_dpi;
-   DisplayPos.x *= g_dpi; DisplayPos.y *= g_dpi;
+    ImVec2 DisplaySize = draw_data->DisplaySize;
+    ImVec2 DisplayPos = draw_data->DisplayPos;
+    DisplaySize.x *= g_dpi; DisplaySize.y *= g_dpi;
+    DisplayPos.x *= g_dpi; DisplayPos.y *= g_dpi;
 
     // Setup orthographic projection matrix into our constant buffer
     // Our visible imgui space lies from draw_data->DisplayPos (top left) to draw_data->DisplayPos+data_data->DisplaySize (bottom right).
