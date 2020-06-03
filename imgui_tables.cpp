@@ -546,6 +546,10 @@ static ImGuiTableColumnFlags TableFixColumnFlags(ImGuiTable* table, ImGuiTableCo
 
 static void TableFixColumnSortDirection(ImGuiTableColumn* column)
 {
+    // Initial sort state
+    if (column->SortDirection == ImGuiSortDirection_None)
+        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
+
     // Handle NoSortAscending/NoSortDescending
     if (column->SortDirection == ImGuiSortDirection_Ascending && (column->Flags & ImGuiTableColumnFlags_NoSortAscending))
         column->SortDirection = ImGuiSortDirection_Descending;
@@ -872,6 +876,11 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 1);
     else
         inner_window->DrawList->PushClipRect(inner_window->ClipRect.Min, inner_window->ClipRect.Max, false);
+
+    // Sanitize and build sort specs before we have a change to use them for display.
+    // This path will only be exercised when sort specs are modified before header rows (e.g. init or visibility change)
+    if (table->IsSortSpecsDirty && (table->Flags & ImGuiTableFlags_Sortable))
+        TableSortSpecsBuild(table);
 }
 
 // Process interaction on resizing borders. Actual size change will be applied in EndTable()
@@ -2224,10 +2233,9 @@ void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* click
             if (column->SortOrder == -1 || !add_to_existing_sort_orders)
                 column->SortOrder = add_to_existing_sort_orders ? sort_order_max + 1 : 0;
         }
-        else
+        else if (!add_to_existing_sort_orders)
         {
-            if (!add_to_existing_sort_orders)
-                column->SortOrder = -1;
+            column->SortOrder = -1;
         }
         TableFixColumnSortDirection(column);
     }
@@ -2248,34 +2256,11 @@ const ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
     if (!(table->Flags & ImGuiTableFlags_Sortable))
         return NULL;
 
-    // Flatten sort specs into user facing data
-    const bool was_dirty = table->IsSortSpecsDirty;
-    if (was_dirty)
-    {
-        TableSortSpecsSanitize(table);
+    if (table->IsSortSpecsDirty)
+        TableSortSpecsBuild(table);
 
-        // Write output
-        table->SortSpecsData.resize(table->SortSpecsCount);
-        table->SortSpecs.ColumnsMask = 0x00;
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        {
-            ImGuiTableColumn* column = &table->Columns[column_n];
-            if (column->SortOrder == -1)
-                continue;
-            ImGuiTableSortSpecsColumn* sort_spec = &table->SortSpecsData[column->SortOrder];
-            sort_spec->ColumnUserID = column->UserID;
-            sort_spec->ColumnIndex = (ImU8)column_n;
-            sort_spec->SortOrder = (ImU8)column->SortOrder;
-            sort_spec->SortDirection = column->SortDirection;
-            table->SortSpecs.ColumnsMask |= (ImU64)1 << column_n;
-        }
-    }
-
-    // User facing data
-    table->SortSpecs.Specs = table->SortSpecsData.Data;
-    table->SortSpecs.SpecsCount = table->SortSpecsData.Size;
-    table->SortSpecs.SpecsChanged = was_dirty;
-    table->IsSortSpecsDirty = false;
+    table->SortSpecs.SpecsChanged = table->IsSortSpecsChangedForUser;
+    table->IsSortSpecsChangedForUser = false;
     return table->SortSpecs.SpecsCount ? &table->SortSpecs : NULL;
 }
 
@@ -2345,15 +2330,43 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
-            if (!(column->Flags & ImGuiTableColumnFlags_NoSort) && column->IsVisible)
+            if (column->IsVisible && !(column->Flags & ImGuiTableColumnFlags_NoSort))
             {
                 sort_order_count = 1;
                 column->SortOrder = 0;
+                TableFixColumnSortDirection(column);
                 break;
             }
         }
 
     table->SortSpecsCount = (ImS8)sort_order_count;
+}
+
+void ImGui::TableSortSpecsBuild(ImGuiTable* table)
+{
+    IM_ASSERT(table->IsSortSpecsDirty);
+    TableSortSpecsSanitize(table);
+
+    // Write output
+    table->SortSpecsData.resize(table->SortSpecsCount);
+    table->SortSpecs.ColumnsMask = 0x00;
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (column->SortOrder == -1)
+            continue;
+        ImGuiTableSortSpecsColumn* sort_spec = &table->SortSpecsData[column->SortOrder];
+        sort_spec->ColumnUserID = column->UserID;
+        sort_spec->ColumnIndex = (ImU8)column_n;
+        sort_spec->SortOrder = (ImU8)column->SortOrder;
+        sort_spec->SortDirection = column->SortDirection;
+        table->SortSpecs.ColumnsMask |= (ImU64)1 << column_n;
+    }
+    table->SortSpecs.Specs = table->SortSpecsData.Data;
+    table->SortSpecs.SpecsCount = table->SortSpecsData.Size;
+
+    table->IsSortSpecsDirty = false;
+    table->IsSortSpecsChangedForUser = true;
 }
 
 //-------------------------------------------------------------------------

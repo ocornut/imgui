@@ -1938,7 +1938,7 @@ struct ImGuiTableColumn
         PrevVisibleColumn = NextVisibleColumn = -1;
         AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
         SortOrder = -1;
-        SortDirection = ImGuiSortDirection_Ascending;
+        SortDirection = ImGuiSortDirection_None;
     }
 };
 
@@ -2020,6 +2020,7 @@ struct ImGuiTable
     bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
     bool                        IsInitializing;
     bool                        IsSortSpecsDirty;
+    bool                        IsSortSpecsChangedForUser;  // Reported to end-user via TableGetSortSpecs()->SpecsChanged and then clear.
     bool                        IsUsingHeaders;             // Set when the first row had the ImGuiTableRowFlags_Headers flag.
     bool                        IsContextPopupOpen;         // Set when default context menu is open (also see: ContextPopupColumn, InstanceInteracted).
     bool                        IsSettingsRequestLoad;
@@ -2265,6 +2266,7 @@ namespace ImGui
     IMGUI_API void          TableDrawContextMenu(ImGuiTable* table, int column_n);
     IMGUI_API void          TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* column, bool add_to_existing_sort_orders);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
+    IMGUI_API void          TableSortSpecsBuild(ImGuiTable* table);
     IMGUI_API void          TableBeginRow(ImGuiTable* table);
     IMGUI_API void          TableEndRow(ImGuiTable* table);
     IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_n);
