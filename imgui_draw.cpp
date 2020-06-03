@@ -470,7 +470,9 @@ void ImDrawList::UpdateClipRect()
         _VtxCurrentIdx = VtxBuffer.size() - prev_cmd->VtxOffset;
     }
     else
+    {
         curr_cmd->ClipRect = curr_clip_rect;
+    }
 }
 
 void ImDrawList::UpdateTextureID()
