@@ -463,11 +463,11 @@ void ImDrawList::UpdateClipRect()
     ImDrawCmd* prev_cmd = CmdBuffer.Size > 1 ? curr_cmd - 1 : NULL;
     if (curr_cmd->ElemCount == 0 && prev_cmd && memcmp(&prev_cmd->ClipRect, &curr_clip_rect, sizeof(ImVec4)) == 0 && prev_cmd->TextureId == GetCurrentTextureId() && prev_cmd->UserCallback == NULL)
     {       
-       CmdBuffer.pop_back();
+        CmdBuffer.pop_back();
 
-       //The command being popped may have triggered VtxOffset update (and _VtxCurrentIdx reset - see above AddDrawCmd), restore it here to avoid triangle mess on the screen
-       _VtxCurrentOffset = prev_cmd->VtxOffset;
-       _VtxCurrentIdx = VtxBuffer.size() - prev_cmd->VtxOffset;
+        //The command being popped may have triggered VtxOffset update (and _VtxCurrentIdx reset - see above AddDrawCmd), restore it here to avoid triangle mess on the screen
+        _VtxCurrentOffset = prev_cmd->VtxOffset;
+        _VtxCurrentIdx = VtxBuffer.size() - prev_cmd->VtxOffset;
     }
     else
         curr_cmd->ClipRect = curr_clip_rect;
