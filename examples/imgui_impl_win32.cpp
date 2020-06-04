@@ -417,7 +417,8 @@ void ImGui_ImplWin32_EnableDpiAwareness()
 float ImGui_ImplWin32_GetDpiScaleForMonitor(void* monitor)
 {
     UINT xdpi = 96, ydpi = 96;
-    if (IsWindows8Point1OrGreater())
+    static BOOL bIsWindows8Point1OrGreater = IsWindows8Point1OrGreater();
+    if (bIsWindows8Point1OrGreater)
     {
         static HINSTANCE shcore_dll = ::LoadLibraryA("shcore.dll"); // Reference counted per-process
         if (PFN_GetDpiForMonitor GetDpiForMonitorFn = (PFN_GetDpiForMonitor)::GetProcAddress(shcore_dll, "GetDpiForMonitor"))
