@@ -56,6 +56,7 @@ Other Changes:
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
 - Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
+- Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
   Fixed a static contructor which led to this dependency on some compiler setups (unclear which).
