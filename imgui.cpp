@@ -2049,6 +2049,9 @@ void ImGuiStorage::SetAllInt(int v)
 
 // Helper: Parse and apply text filters. In format "aaaaa[,bbbb][,ccccc]"
 ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
+    : MatchMode(ImGuiTextFilterMode_Or)
+    , WordSplitter(',')
+    , MinWordSize(0)
 {
     if (default_filter)
     {
@@ -2058,7 +2061,6 @@ ImGuiTextFilter::ImGuiTextFilter(const char* default_filter)
     else
     {
         InputBuf[0] = 0;
-        CountGrep = 0;
     }
 }
 
@@ -2072,7 +2074,21 @@ bool ImGuiTextFilter::Draw(const char* label, float width)
     return value_changed;
 }
 
-void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const
+static void AddWordToTextRange(const char* begin, const char* end, ImVector<ImGuiTextFilter::ImGuiTextRange>* out, char minWordSize)
+{
+    if (*begin == '-')
+    {
+        if ((end - begin) > minWordSize + 1)
+            out->push_front(ImGuiTextFilter::ImGuiTextRange(begin, end));
+    }
+    else
+    {
+        if ((end - begin) > minWordSize)
+            out->push_back(ImGuiTextFilter::ImGuiTextRange(begin, end));
+    }
+}
+
+void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out, char minWordSize) const
 {
     out->resize(0);
     const char* wb = b;
@@ -2081,33 +2097,46 @@ void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRa
     {
         if (*we == separator)
         {
-            out->push_back(ImGuiTextRange(wb, we));
+            AddWordToTextRange(wb, we, out, minWordSize);
             wb = we + 1;
         }
         we++;
     }
-    if (wb != we)
-        out->push_back(ImGuiTextRange(wb, we));
+
+    AddWordToTextRange(wb, we, out, minWordSize);
 }
 
 void ImGuiTextFilter::Build()
 {
+    NegativeFilterCount = 0;
     Filters.resize(0);
     ImGuiTextRange input_range(InputBuf, InputBuf+strlen(InputBuf));
-    input_range.split(',', &Filters);
+    input_range.split(WordSplitter, &Filters, MinWordSize);
 
-    CountGrep = 0;
     for (int i = 0; i != Filters.Size; i++)
     {
         ImGuiTextRange& f = Filters[i];
+        IM_ASSERT(!f.empty());
+
+        if (f.b[0] == '-')
+        {
+            IM_ASSERT(NegativeFilterCount == i);
+            NegativeFilterCount++;
+            f.b++;
+        }
+
         while (f.b < f.e && ImCharIsBlankA(f.b[0]))
             f.b++;
         while (f.e > f.b && ImCharIsBlankA(f.e[-1]))
             f.e--;
+
         if (f.empty())
-            continue;
-        if (Filters[i].b[0] != '-')
-            CountGrep += 1;
+        {
+            Filters.erase(&f);
+            if (NegativeFilterCount == i)
+                NegativeFilterCount--;
+            i--;
+        }
     }
 }
 
@@ -2119,30 +2148,127 @@ bool ImGuiTextFilter::PassFilter(const char* text, const char* text_end) const
     if (text == NULL)
         text = "";
 
-    for (int i = 0; i != Filters.Size; i++)
+    int i = 0;
+    for (; i != NegativeFilterCount; i++)
     {
         const ImGuiTextRange& f = Filters[i];
-        if (f.empty())
-            continue;
-        if (f.b[0] == '-')
+
+        // Subtract
+        if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
+            return false;
+    }
+
+    // Implicit * grep
+    if (NegativeFilterCount == Filters.Size)
+        return true;
+
+    for (; i != Filters.Size; i++)
+    {
+        const ImGuiTextRange& f = Filters[i];
+
+        if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
         {
-            // Subtract
-            if (ImStristr(text, text_end, f.b + 1, f.e) != NULL)
-                return false;
+            // in Or mode we stop testing after a single hit
+            if (MatchMode == ImGuiTextFilterMode_Or)
+                return true;
         }
         else
         {
-            // Grep
-            if (ImStristr(text, text_end, f.b, f.e) != NULL)
-                return true;
+            // in And mode we stop testing after a single miss
+            if (MatchMode == ImGuiTextFilterMode_And)
+                return false;
+        }
+    }
+
+    return MatchMode == ImGuiTextFilterMode_And;
+}
+
+//-----------------------------------------------------------------------------
+// [SECTION] ImGuiTextFilterMatch
+//-----------------------------------------------------------------------------
+ImGuiTextFilterMatch::ImGuiTextFilterMatch(const ImGuiTextFilter& filter)
+    : Filter(filter)
+    , MatchStates(0)
+    , MatchMask(0)
+    , MatchCount(filter.Filters.Size - filter.NegativeFilterCount)
+    , State(ImGuiTextFilterMatchResultNone)
+{
+    MatchMask = (1 << MatchCount) - 1;
+}
+
+// duplicated so we don't add overhead to regular filters since it can add up quick when processing large amount of items
+void ImGuiTextFilterMatch::PassFilter(const char* text, const char* text_end)
+{
+    if (Filter.Filters.empty())
+        return;
+
+    // stop processing on any failure
+    if (State == ImGuiTextFilterMatchResultFail)
+        return;
+
+    // stop processing on any success with no negative filters
+    if (Filter.NegativeFilterCount == 0 && State == ImGuiTextFilterMatchResultPass)
+        return;
+
+    if (text == NULL)
+        text = "";
+
+    int i = 0;
+    for (; i != Filter.NegativeFilterCount; i++)
+    {
+        const ImGuiTextFilter::ImGuiTextRange& f = Filter.Filters[i];
+
+        // Subtract
+        if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
+        {
+            State = ImGuiTextFilterMatchResultFail;
+            return;
         }
     }
 
     // Implicit * grep
-    if (CountGrep == 0)
-        return true;
+    if (Filter.NegativeFilterCount == Filter.Filters.Size)
+    {
+        State = ImGuiTextFilterMatchResultPass;
+        return;
+    }
 
-    return false;
+    // already passed all statements, no sense in continuing
+    if (State == ImGuiTextFilterMatchResultPass)
+    {
+        return;
+    }
+
+    for (; i != Filter.Filters.Size; i++)
+    {
+        const ImGuiTextFilter::ImGuiTextRange& f = Filter.Filters[i];
+
+        ImU64 test_bit = (1 << i) - Filter.NegativeFilterCount;
+        if ((MatchStates & test_bit) != 0)
+        {
+            continue;
+        }
+
+        if (ImStristr(text, text_end, f.begin(), f.end()) != NULL)
+        {
+            // in Or mode we stop testing after a single hit
+            if (Filter.MatchMode == ImGuiTextFilterMode_Or)
+            {
+                State = ImGuiTextFilterMatchResultPass;
+                return;
+            }
+            else
+            {
+                MatchStates |= test_bit;
+            }
+        }
+    }
+
+    // Check if all bits are set after each check
+    if (MatchStates == MatchMask)
+    {
+        State = ImGuiTextFilterMatchResultPass;
+    }
 }
 
 //-----------------------------------------------------------------------------
