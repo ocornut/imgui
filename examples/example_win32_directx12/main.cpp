@@ -52,14 +52,18 @@ void WaitForLastSubmittedFrame();
 FrameContext* WaitForNextFrameResources();
 void ResizeSwapChain(HWND hWnd, int width, int height);
 LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam);
-
+extern float g_dpi;
 // Main code
 int main(int, char**)
 {
+    ImGui_ImplWin32_EnableDpiAwareness();
+
+    g_dpi = ImGui_ImplWin32_GetDpiScaleForHwnd(nullptr);
+
     // Create application window
     WNDCLASSEX wc = { sizeof(WNDCLASSEX), CS_CLASSDC, WndProc, 0L, 0L, GetModuleHandle(NULL), NULL, NULL, NULL, NULL, _T("ImGui Example"), NULL };
     ::RegisterClassEx(&wc);
-    HWND hwnd = ::CreateWindow(wc.lpszClassName, _T("Dear ImGui DirectX12 Example"), WS_OVERLAPPEDWINDOW, 100, 100, 1280, 800, NULL, NULL, wc.hInstance, NULL);
+    HWND hwnd = ::CreateWindow(wc.lpszClassName, _T("Dear ImGui DirectX12 Example"), WS_OVERLAPPEDWINDOW, (int)(100*g_dpi), (int)(100*g_dpi), (int)(1280*g_dpi), int(800 * g_dpi), NULL, NULL, wc.hInstance, NULL);
 
     // Initialize Direct3D
     if (!CreateDeviceD3D(hwnd))
