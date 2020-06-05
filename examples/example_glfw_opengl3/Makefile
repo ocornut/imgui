@@ -35,7 +35,8 @@ CXXFLAGS += -I../libs/gl3w -DIMGUI_IMPL_OPENGL_LOADER_GL3W
 
 ## Using OpenGL loader: glew
 ## (This assumes a system-wide installation)
-# CXXFLAGS += -lGLEW -DIMGUI_IMPL_OPENGL_LOADER_GLEW
+# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLEW
+# LIBS += -lGLEW
 
 ## Using OpenGL loader: glad
 # SOURCES += ../libs/glad/src/glad.c
@@ -44,9 +45,11 @@ CXXFLAGS += -I../libs/gl3w -DIMGUI_IMPL_OPENGL_LOADER_GL3W
 ## Using OpenGL loader: glbinding
 ## This assumes a system-wide installation
 ## of either version 3.0.0 (or newer)
-# CXXFLAGS += -lglbinding -DIMGUI_IMPL_OPENGL_LOADER_GLBINDING3
+# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLBINDING3
+# LIBS += -lglbinding
 ## or the older version 2.x
-# CXXFLAGS += -lglbinding -DIMGUI_IMPL_OPENGL_LOADER_GLBINDING2
+# CXXFLAGS += -DIMGUI_IMPL_OPENGL_LOADER_GLBINDING2
+# LIBS += -lglbinding
 
 ##---------------------------------------------------------------------
 ## BUILD FLAGS PER PLATFORM
