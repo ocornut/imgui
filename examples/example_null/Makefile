@@ -40,7 +40,10 @@ endif
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
 	ifneq ($(WITH_EXTRA_WARNINGS), 0)
-		CXXFLAGS += -Wextra -pedantic
+		CXXFLAGS += -Wextra -Wpedantic
+		ifeq ($(shell $(CXX) -v 2>&1 | grep -c "clang version"), 1)
+			CXXFLAGS += -Wshadow -Wsign-conversion
+		endif
 	endif
 	CFLAGS = $(CXXFLAGS)
 endif
@@ -56,7 +59,7 @@ endif
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	ECHO_MESSAGE = "MinGW"
 	ifneq ($(WITH_EXTRA_WARNINGS), 0)
-		CXXFLAGS += -Wextra -pedantic
+		CXXFLAGS += -Wextra -Wpedantic
 	endif
 	CFLAGS = $(CXXFLAGS)
 endif
