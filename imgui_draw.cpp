@@ -482,7 +482,7 @@ void ImDrawList::UpdateTextureID()
     // If current command is used with different settings we need to add a new command
     const ImTextureID curr_texture_id = GetCurrentTextureId();
     ImDrawCmd* curr_cmd = &CmdBuffer.Data[CmdBuffer.Size - 1];
-    if (!curr_cmd || (curr_cmd->ElemCount != 0 && curr_cmd->TextureId != curr_texture_id) || curr_cmd->UserCallback != NULL)
+    if ((curr_cmd->ElemCount != 0 && curr_cmd->TextureId != curr_texture_id) || curr_cmd->UserCallback != NULL)
     {
         AddDrawCmd();
         return;
