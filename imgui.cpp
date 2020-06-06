@@ -4077,15 +4077,15 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
 
 static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
-    if (draw_list->CmdBuffer.empty())
+    if (draw_list->CmdBuffer.Size == 0)
         return;
 
     // Remove trailing command if unused
-    ImDrawCmd& last_cmd = draw_list->CmdBuffer.back();
-    if (last_cmd.ElemCount == 0 && last_cmd.UserCallback == NULL)
+    ImDrawCmd* curr_cmd = &draw_list->CmdBuffer.back();
+    if (curr_cmd->ElemCount == 0 && curr_cmd->UserCallback == NULL)
     {
         draw_list->CmdBuffer.pop_back();
-        if (draw_list->CmdBuffer.empty())
+        if (draw_list->CmdBuffer.Size == 0)
             return;
     }
 
