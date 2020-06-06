@@ -1359,6 +1359,7 @@ void ImDrawListSplitter::Split(ImDrawList* draw_list, int channels_count)
             ImDrawCmd draw_cmd;
             draw_cmd.ClipRect = draw_list->_ClipRectStack.back();
             draw_cmd.TextureId = draw_list->_TextureIdStack.back();
+            draw_cmd.VtxOffset = draw_list->_VtxCurrentOffset;
             _Channels[i]._CmdBuffer.push_back(draw_cmd);
         }
     }
