@@ -54,16 +54,27 @@ Other Changes:
 - Metrics: Added a "Settings" section with some details about persistent ini settings.
 - Nav, Menus: Fix vertical wrap-around in menus or popups created with multiple appending calls to
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
+- Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
+  drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
+- Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
+- CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
+  static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
+  Fixed a static contructor which led to this dependency on some compiler setups (unclear which).
 - Backends: Win32: Support for #define NOGDI, won't try to call GetDeviceCaps(). (#3137, #2327)
 - Backends: Win32: Fix _WIN32_WINNT < 0x0600 (MinGW defaults to 0x502 == Windows 2003). (#3183)
+- Backends: SDL: Report a zero display-size when window is minimized, consistent with other backends,
+  making more render/clipping code use an early out path.
 - Backends: OpenGL: Fixed handling of GL 4.5+ glClipControl(GL_UPPER_LEFT) by inverting the
   projection matrix top and bottom values. (#3143, #3146) [@u3shit]
 - Backends: OpenGL: On OSX, if unspecified by app, made default GLSL version 150. (#3199) [@albertvaka]
+- Backends: OpenGL: Fixed loader auto-detection to not interfere with ES2/ES3 defines. (#3246) [@funchal]
 - Backends: Vulkan: Fixed error in if initial frame has no vertices. (#3177)
 - Backends: Vulkan: Fixed edge case where render callbacks wouldn't be called if the ImDrawData
   structure didn't have any vertices. (#2697) [@kudaba]
-- Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
-  drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
+- Backends: OSX: Added workaround to avoid fast mouse clicks. (#3261, #1992, #2525) [@nburrus]
+- Examples: GLFW+Vulkan, SDL+Vulkan: Fix for handling of minimized windows. (#3259)
+- Examples: Apple: Fixed example_apple_metal and example_apple_opengl2 using imgui_impl_osx.mm
+  not forwarding right and center mouse clicks. (#3260) [@nburrus]
 
 
 -----------------------------------------------------------------------
