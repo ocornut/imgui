@@ -56,6 +56,9 @@ Other Changes:
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
 - Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
+- ImDrawList: Fixed an issue when draw command merging or cancelling while crossing the VtxOffset
+  boundary would lead to draw command being emitted with wrong VtxOffset value. (#3129, #3163, #3232)
+  [@thedmd, @Shironekoben, @sergeyn, @ocornut]
 - Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
