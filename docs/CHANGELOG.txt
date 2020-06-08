@@ -59,6 +59,9 @@ Other Changes:
 - ImDrawList: Fixed an issue where draw command merging or primitive unreserve while crossing the 
   VtxOffset boundary would lead to draw commands with wrong VtxOffset. (#3129, #3163, #3232, #2591)
   [@thedmd, @Shironekoben, @sergeyn, @ocornut]
+- ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where changing channels with different
+  TextureId, VtxOffset would incorrectly apply new settings to draw channels. (#3129, #3163)
+  [@ocornut, @thedmd, @Shironekoben]
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split when current 
   VtxOffset was not zero would lead to draw commands with wrong VtxOffset. (#2591)
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split right after

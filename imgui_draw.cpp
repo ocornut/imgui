@@ -1435,8 +1435,13 @@ void ImDrawListSplitter::Merge(ImDrawList* draw_list)
     if (draw_list->CmdBuffer.Size == 0 || draw_list->CmdBuffer.back().UserCallback != NULL)
         draw_list->AddDrawCmd();
 
-    draw_list->_OnChangedClipRect(); // We call this instead of AddDrawCmd(), so that empty channels won't produce an extra draw call.
-    draw_list->_OnChangedTextureID();
+    // If current command is used with different settings we need to add a new command
+    ImDrawCmd* curr_cmd = &draw_list->CmdBuffer.Data[draw_list->CmdBuffer.Size - 1];
+    if (curr_cmd->ElemCount == 0)
+        ImDrawCmd_HeaderCopy(curr_cmd, &draw_list->_CmdHeader); // Copy ClipRect, TextureId, VtxOffset
+    else if (ImDrawCmd_HeaderCompare(curr_cmd, &draw_list->_CmdHeader) != 0)
+        draw_list->AddDrawCmd();
+
     _Count = 1;
 }
 
@@ -1453,6 +1458,13 @@ void ImDrawListSplitter::SetCurrentChannel(ImDrawList* draw_list, int idx)
     memcpy(&draw_list->CmdBuffer, &_Channels.Data[idx]._CmdBuffer, sizeof(draw_list->CmdBuffer));
     memcpy(&draw_list->IdxBuffer, &_Channels.Data[idx]._IdxBuffer, sizeof(draw_list->IdxBuffer));
     draw_list->_IdxWritePtr = draw_list->IdxBuffer.Data + draw_list->IdxBuffer.Size;
+
+    // If current command is used with different settings we need to add a new command
+    ImDrawCmd* curr_cmd = &draw_list->CmdBuffer.Data[draw_list->CmdBuffer.Size - 1];
+    if (curr_cmd->ElemCount == 0)
+        ImDrawCmd_HeaderCopy(curr_cmd, &draw_list->_CmdHeader); // Copy ClipRect, TextureId, VtxOffset
+    else if (ImDrawCmd_HeaderCompare(curr_cmd, &draw_list->_CmdHeader) != 0)
+        draw_list->AddDrawCmd();
 }
 
 //-----------------------------------------------------------------------------
