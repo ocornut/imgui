@@ -46,6 +46,8 @@ Other Changes:
   flag was also set, and _OpenOnArrow is frequently set along with _OpenOnDoubleClick).
 - TreeNode: Fixed bug where dragging a payload over a TreeNode() with either _OpenOnDoubleClick
   or _OpenOnArrow would open the node. (#143)
+- Columns: Lower overhead on column switches and switching to background channel (some of our stress
+  tests in debug builds went 3->2 ms). Benefits Columns but was primarily made with Tables in mind!
 - Style: Added style.TabMinWidthForUnselectedCloseButton settings.
   Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
   Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
