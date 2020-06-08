@@ -1991,7 +1991,7 @@ struct ImDrawList
     // If you want to create ImDrawList instances, pass them ImGui::GetDrawListSharedData() or create and use your own ImDrawListSharedData (so you can use ImDrawList without ImGui)
     ImDrawList(const ImDrawListSharedData* shared_data) { _Data = shared_data; Flags = ImDrawListFlags_None; _VtxCurrentIdx = 0; _VtxWritePtr = NULL; _IdxWritePtr = NULL; _OwnerName = NULL; }
 
-    ~ImDrawList() { ClearFreeMemory(); }
+    ~ImDrawList() { _ClearFreeMemory(); }
     IMGUI_API void  PushClipRect(ImVec2 clip_rect_min, ImVec2 clip_rect_max, bool intersect_with_current_clip_rect = false);  // Render-level scissoring. This is passed down to your render function but not used for CPU-side coarse clipping. Prefer using higher-level ImGui::PushClipRect() to affect logic (hit-testing and widget culling)
     IMGUI_API void  PushClipRectFullScreen();
     IMGUI_API void  PopClipRect();
@@ -2070,11 +2070,11 @@ struct ImDrawList
     inline    void  PrimVtx(const ImVec2& pos, const ImVec2& uv, ImU32 col)         { PrimWriteIdx((ImDrawIdx)_VtxCurrentIdx); PrimWriteVtx(pos, uv, col); } // Write vertex with unique index
 
     // [Internal helpers]
-    IMGUI_API void  ResetForNewFrame();
-    IMGUI_API void  ClearFreeMemory();
-    IMGUI_API void  PopUnusedDrawCmd();
-    IMGUI_API void  UpdateClipRect();
-    IMGUI_API void  UpdateTextureID();
+    IMGUI_API void  _ResetForNewFrame();
+    IMGUI_API void  _ClearFreeMemory();
+    IMGUI_API void  _PopUnusedDrawCmd();
+    IMGUI_API void  _OnChangedClipRect();
+    IMGUI_API void  _OnChangedTextureID();
 };
 
 // All draw data to render a Dear ImGui frame
