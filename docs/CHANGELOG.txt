@@ -61,6 +61,8 @@ Other Changes:
   [@thedmd, @Shironekoben, @sergeyn, @ocornut]
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split when current 
   VtxOffset was not zero would lead to draw commands with wrong VtxOffset. (#2591)
+- ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split right after
+  a callback draw command would incorrectly override the callback draw command.
 - Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).

@@ -4077,17 +4077,11 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
 
 static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
+    // Remove trailing command if unused.
+    // Technically we could return directly instead of popping, but this make things looks neat in Metrics window as well.
+    draw_list->PopUnusedDrawCmd();
     if (draw_list->CmdBuffer.Size == 0)
         return;
-
-    // Remove trailing command if unused
-    ImDrawCmd* curr_cmd = &draw_list->CmdBuffer.back();
-    if (curr_cmd->ElemCount == 0 && curr_cmd->UserCallback == NULL)
-    {
-        draw_list->CmdBuffer.pop_back();
-        if (draw_list->CmdBuffer.Size == 0)
-            return;
-    }
 
     // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
     // May trigger for you if you are using PrimXXX functions incorrectly.

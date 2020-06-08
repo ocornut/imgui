@@ -2061,6 +2061,7 @@ struct ImDrawList
     // NB: all primitives needs to be reserved via PrimReserve() beforehand!
     IMGUI_API void  ResetForNewFrame();
     IMGUI_API void  ClearFreeMemory();
+    IMGUI_API void  PopUnusedDrawCmd();
     IMGUI_API void  PrimReserve(int idx_count, int vtx_count);
     IMGUI_API void  PrimUnreserve(int idx_count, int vtx_count);
     IMGUI_API void  PrimRect(const ImVec2& a, const ImVec2& b, ImU32 col);      // Axis aligned rectangle (composed of two triangles)
