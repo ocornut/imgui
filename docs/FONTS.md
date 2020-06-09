@@ -14,6 +14,7 @@ In the [misc/fonts/](https://github.com/ocornut/imgui/tree/master/misc/fonts) fo
 
 ## Index
 - [Readme First](#readme-first)
+- [How should I handle DPI in my application?](#how-should-i-handle-dpi-in-my-application)
 - [Fonts Loading Instructions](#font-loading-instructions)
 - [Using Icons](#using-icons)
 - [Using FreeType Rasterizer](#using-freetype-rasterizer)
@@ -43,6 +44,13 @@ u8"こんにちは"   // this will be encoded as UTF-8
 
 ##### [Return to Index](#index)
 
+## How should I handle DPI in my application?
+
+See [FAQ entry](https://github.com/ocornut/imgui/blob/master/docs/FAQ.md#q-how-should-i-handle-dpi-in-my-application).
+
+##### [Return to Index](#index)
+
+
 ## Font Loading Instructions
 
 **Load default font:**
@@ -51,12 +59,14 @@ ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontDefault();
 ```
 
+
 **Load .TTF/.OTF file with:**
 ```cpp
 ImGuiIO& io = ImGui::GetIO();
 io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
 ```
 If you get an assert stating "Could not load font file!", your font filename is likely incorrect. Read "[About filenames](#about-filenames)" carefully.
+
 
 **Load multiple fonts:**
 ```cpp
@@ -71,6 +81,7 @@ ImGui::Text("Hello with another font");
 ImGui::PopFont();
 ```
 
+
 **For advanced options create a ImFontConfig structure and pass it to the AddFont() function (it will be copied internally):**
 ```cpp
 ImFontConfig config;
@@ -79,6 +90,7 @@ config.OversampleV = 1;
 config.GlyphExtraSpacing.x = 1.0f;
 ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, &config);
 ```
+
 
 **Combine multiple fonts into one:**
 ```cpp
@@ -97,6 +109,7 @@ io.Fonts->Build();
 ```
 
 **Add a fourth parameter to bake specific font ranges only:**
+
 ```cpp
 // Basic Latin, Extended Latin
 io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesDefault());
@@ -108,6 +121,27 @@ io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRa
 io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels, NULL, io.Fonts->GetGlyphRangesJapanese());
 ```
 See [Using Custom Glyph Ranges](#using-custom-glyph-ranges) section to create your own ranges.
+
+
+**Example loading and using a Japanese font:**
+
+```cpp
+ImGuiIO& io = ImGui::GetIO();
+io.Fonts->AddFontFromFileTTF("NotoSansCJKjp-Medium.otf", 20.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+```
+```cpp
+ImGui::Text(u8"こんにちは！テスト %d", 123);
+if (ImGui::Button(u8"ロード"))
+{
+    // do stuff
+}
+ImGui::InputText("string", buf, IM_ARRAYSIZE(buf));
+ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
+```
+
+![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02_jp.png)
+<br>_(settings: Dark style (left), Light style (right) / Font: NotoSansCJKjp-Medium, 20px / Rounding: 5)_
+
 
 **Offset font vertically by altering the `io.Font->DisplayOffset` value:**
 ```cpp

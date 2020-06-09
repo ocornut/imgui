@@ -765,11 +765,12 @@ CODE
  Q&A: Fonts, Text
  ================
 
+ Q: How should I handle DPI in my application?
  Q: How can I load a different font than the default?
  Q: How can I easily use icons in my application?
  Q: How can I load multiple fonts?
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
- >> See https://www.dearimgui.org/faq (docs/FAQ.md) docs/FONTS.md
+ >> See https://www.dearimgui.org/faq and https://github.com/ocornut/imgui/edit/master/docs/FONTS.md
 
  Q&A: Concerns
  =============

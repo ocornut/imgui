@@ -69,6 +69,8 @@ Other Changes:
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split right after
   a callback draw command would incorrectly override the callback draw command.
 - Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
+- Docs: Improved and moved font documentation to docs/FONTS.md so it can be readable on the web. 
+  Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut] 
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
   Fixed a static contructor which led to this dependency on some compiler setups (unclear which).
