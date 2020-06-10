@@ -7549,11 +7549,6 @@ void ImGui::PushColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
-
-    // Set cmd header ahead to avoid SetCurrentChannel+PushClipRect doing an unnecessary AddDrawCmd/Pop
-    //if (window->DrawList->Flags & ImDrawListFlags_Debug) IMGUI_DEBUG_LOG("PushColumnsBackground()\n");
-    window->DrawList->_CmdHeader.ClipRect = columns->HostClipRect.ToVec4();
-
     columns->Splitter.SetCurrentChannel(window->DrawList, 0);
     int cmd_size = window->DrawList->CmdBuffer.Size;
     PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false);
@@ -7567,12 +7562,6 @@ void ImGui::PopColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
-
-    // Set cmd header ahead to avoid SetCurrentChannel+PushClipRect doing an unnecessary AddDrawCmd/Pop
-    //if (window->DrawList->Flags & ImDrawListFlags_Debug) IMGUI_DEBUG_LOG("PopColumnsBackground()\n");
-    ImVec4 pop_clip_rect = window->DrawList->_ClipRectStack.Data[window->DrawList->_ClipRectStack.Size - 2];
-    window->DrawList->_CmdHeader.ClipRect = pop_clip_rect;
-
     columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
     PopClipRect();
 }
@@ -7695,22 +7684,11 @@ void ImGui::NextColumn()
         return;
     }
     PopItemWidth();
-
-    // Next column
-    if (++columns->Current == columns->Count)
-        columns->Current = 0;
-
-    // As a small optimization, to avoid doing PopClipRect() + SetCurrentChannel() + PushClipRect()
-    // (which would needlessly attempt to update commands in the wrong channel, then pop or overwrite them),
-    // We use a shortcut: we override ClipRect in window and drawlist's CmdHeader + SetCurrentChannel().
-    ImGuiColumnData* column = &columns->Columns[columns->Current];
-    window->ClipRect = column->ClipRect;
-    window->DrawList->_CmdHeader.ClipRect = column->ClipRect.ToVec4();
-    //PopClipRect();
+    PopClipRect();
 
     const float column_padding = g.Style.ItemSpacing.x;
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
-    if (columns->Current > 0)
+    if (++columns->Current < columns->Count)
     {
         // Columns 1+ ignore IndentX (by canceling it out)
         // FIXME-COLUMNS: Unnecessary, could be locked?
@@ -7723,6 +7701,7 @@ void ImGui::NextColumn()
         // Column 0 honor IndentX
         window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
         columns->Splitter.SetCurrentChannel(window->DrawList, 1);
+        columns->Current = 0;
         columns->LineMinY = columns->LineMaxY;
     }
     window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
@@ -7730,7 +7709,7 @@ void ImGui::NextColumn()
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     window->DC.CurrLineTextBaseOffset = 0.0f;
 
-    //PushColumnClipRect(columns->Current);
+    PushColumnClipRect(columns->Current);     // FIXME-COLUMNS: Could it be an overwrite?
 
     // FIXME-COLUMNS: Share code with BeginColumns() - move code on columns setup.
     float offset_0 = GetColumnOffset(columns->Current);
