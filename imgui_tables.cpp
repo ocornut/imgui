@@ -1316,7 +1316,7 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
 //   matches, by e.g. calling SetCursorScreenPos().
 // - The channel uses more than one draw command itself. We drop all our attempt at merging stuff here..
 //   we could do better but it's going to be rare and probably not worth the hassle.
-// Columns for which the draw chnanel(s) haven't been merged with other will use their own ImDrawCmd.
+// Columns for which the draw channel(s) haven't been merged with other will use their own ImDrawCmd.
 //
 // This function is particularly tricky to understand.. take a breath.
 void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
@@ -1658,7 +1658,10 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         }
 
         if (bg_col != 0 || border_col != 0)
+        {
+            window->DrawList->_CmdHeader.ClipRect = table->HostClipRect.ToVec4();
             table->DrawSplitter.SetCurrentChannel(window->DrawList, 0);
+        }
 
         // Draw background
         // We soft/cpu clip this so all backgrounds and borders can share the same clipping rectangle
@@ -1896,6 +1899,9 @@ void    ImGui::PushTableBackground()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
+
+    // Set cmd header ahead to avoid SetCurrentChannel+PushClipRect doing an unnecessary AddDrawCmd/Pop
+    window->DrawList->_CmdHeader.ClipRect = table->HostClipRect.ToVec4();
     table->DrawSplitter.SetCurrentChannel(window->DrawList, 0);
     PushClipRect(table->HostClipRect.Min, table->HostClipRect.Max, false);
 }
@@ -1906,6 +1912,10 @@ void    ImGui::PopTableBackground()
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
+
+    // Set cmd header ahead to avoid SetCurrentChannel+PopClipRect doing an unnecessary AddDrawCmd/Pop
+    ImVec4 pop_clip_rect = window->DrawList->_ClipRectStack.Data[window->DrawList->_ClipRectStack.Size - 2];
+    window->DrawList->_CmdHeader.ClipRect = pop_clip_rect;
     table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
     PopClipRect();
 }
