@@ -2075,6 +2075,7 @@ struct ImDrawList
     IMGUI_API void  _PopUnusedDrawCmd();
     IMGUI_API void  _OnChangedClipRect();
     IMGUI_API void  _OnChangedTextureID();
+    IMGUI_API void  _OnChangedVtxOffset();
 };
 
 // All draw data to render a Dear ImGui frame
