@@ -5,7 +5,7 @@ Dear ImGui
 <sub>(This library is available under a free and permissive license, but needs financial support to sustain its continued improvements. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using Dear ImGui, please consider reaching out.)</sub>
 
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
-<br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
+<br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot com_
 
 Individuals: support continued maintenance and development with [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S).
 
@@ -99,7 +99,7 @@ Calling the `ImGui::ShowDemoWindow()` function will create a demo window showcas
 You should be able to build the examples from sources (tested on Windows/Mac/Linux). If you don't, let me know! If you want to have a quick look at some Dear ImGui features, you can download Windows binaries of the demo app here:
 - [imgui-demo-binaries-20190715.zip](http://www.dearimgui.org/binaries/imgui-demo-binaries-20200412.zip) (Windows binaries, 1.76, built 2020/04/12, master branch) or [older demo binaries](http://www.dearimgui.org/binaries).
 
-The demo applications are not DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your style with `style.ScaleAllSizes()`.
+The demo applications are not DPI aware so expect some blurriness on a 4K screen. For DPI awareness in your application, you can load/reload your font at different scale, and scale your style with `style.ScaleAllSizes()` (see [FAQ](https://www.dearimgui.org/faq)).
 
 ### Integration
 
@@ -122,11 +122,11 @@ Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 ### Upcoming Changes
 
 Some of the goals for 2020 are:
-- Finish work on docking, tabs. (see [#2109](https://github.com/ocornut/imgui/issues/2109), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch looking for feedback)
-- Finish work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch looking for feedback)
-- Finish work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
-- Finish work on new Tables API (to replace Columns). (see [#2957](https://github.com/ocornut/imgui/issues/2957))
-- Add an automation and testing system, both to test the library and end-user apps. (see [#435](https://github.com/ocornut/imgui/issues/435))
+- Work on docking. (see [#2109](https://github.com/ocornut/imgui/issues/2109), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch)
+- Work on multiple viewports / multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch looking for feedback)
+- Work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))
+- Work on new Tables API (to replace Columns). (see [#2957](https://github.com/ocornut/imgui/issues/2957))
+- Work on automation and testing system, both to test the library and end-user apps. (see [#435](https://github.com/ocornut/imgui/issues/435))
 - Make the examples look better, improve styles, improve font support, make the examples hi-DPI and multi-DPI aware.
 
 ### Gallery
@@ -154,7 +154,7 @@ If you are new to Dear ImGui and have issues with: compiling, linking, adding fo
 
 Otherwise, for any other questions, bug reports, requests, feedback, you may post on https://github.com/ocornut/imgui/issues. Please read and fill the New Issue template carefully.
 
-Paid private support is available for business customers (E-mail: _contact @ dearimgui dot org_).
+Private support is available for paying business customers (E-mail: _contact @ dearimgui dot com_).
 
 **Which version should I get?**
 
@@ -174,14 +174,14 @@ How to help
 - You may participate in the [Discord server](http://discord.dearimgui.org), [GitHub forum/issues](https://github.com/ocornut/imgui/issues).
 - You may help with development and submit pull requests! Please understand that by submitting a PR you are also submitting a request for the maintainer to review your code and then take over its maintenance forever. PR should be crafted both in the interest in the end-users and also to ease the maintainer into understanding and accepting it.
 - See [Help wanted](https://github.com/ocornut/imgui/wiki/Help-Wanted) on the [Wiki](https://github.com/ocornut/imgui/wiki/) for some more ideas.
-- Have your company financially support this project.
+- Have your company financially support this project (please reach by e-mail)
 
 **How can I help financing further development of Dear ImGui?**
 
 Your contributions are keeping this project alive. The library is available under a free and permissive license, but continued maintenance and development are a full-time endeavor and I would like to grow the team. In addition to maintenance and stability there are many desirable features yet to be added. If your company is using Dear ImGui, please consider reaching out for invoiced technical support and maintenance contracts. Thank you!
 
 Businesses: support continued development via invoiced technical support, maintenance, sponsoring contracts:
-<br>&nbsp;&nbsp;_E-mail: contact @ dearimgui dot org_
+<br>&nbsp;&nbsp;_E-mail: contact @ dearimgui.com_
 
 Individuals: support continued maintenance and development with [PayPal](https://www.paypal.com/cgi-bin/webscr?cmd=_s-xclick&hosted_button_id=WGHNC6MBFLZ2S).
 
@@ -194,7 +194,7 @@ Ongoing Dear ImGui development is financially supported by users and private spo
 - [Blizzard](https://careers.blizzard.com/en-us/openings/engineering/all/all/all/1), [Google](https://github.com/google/filament), [Nvidia](https://developer.nvidia.com/nvidia-omniverse), [Ubisoft](https://montreal.ubisoft.com/en/ubisoft-sponsors-user-interface-library-for-c-dear-imgui/)
 
 *Double-chocolate and Salty caramel sponsors*
-- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Arkane Studios](https://www.arkane-studios.com), [Dotemu](http://www.dotemu.com), [Framefield](http://framefield.com), [Hexagon](https://hexagonxalt.com/the-technology/xalt-visualization), [Kylotonn](https://www.kylotonn.com), [Media Molecule](http://www.mediamolecule.com), [Mesh Consultants](https://www.meshconsultants.ca), [Mobigame](http://www.mobigame.net), [Nadeo](https://www.nadeo.com), [Next Level Games](https://www.nextlevelgames.com), [Supercell](http://www.supercell.com), [Remedy Entertainment](https://www.remedygames.com/), [Unit 2 Games](https://unit2games.com/)
+- [Activision](https://careers.activision.com/c/programmingsoftware-engineering-jobs), [Arkane Studios](https://www.arkane-studios.com), [Dotemu](http://www.dotemu.com), [Framefield](http://framefield.com), [Hexagon](https://hexagonxalt.com/the-technology/xalt-visualization), [Kylotonn](https://www.kylotonn.com), [Media Molecule](http://www.mediamolecule.com), [Mesh Consultants](https://www.meshconsultants.ca), [Mobigame](http://www.mobigame.net), [Nadeo](https://www.nadeo.com), [Next Level Games](https://www.nextlevelgames.com), [RAD Game Tools](http://www.radgametools.com/), [Supercell](http://www.supercell.com), [Remedy Entertainment](https://www.remedygames.com/), [Unit 2 Games](https://unit2games.com/)
 
 From November 2014 to December 2019, ongoing development has also been financially supported by its users on Patreon and through individual donations. Please see [detailed list of Dear ImGui supporters](https://github.com/ocornut/imgui/wiki/Sponsors).
 
@@ -208,9 +208,12 @@ Dear ImGui is using software and services provided free of charge for open sourc
 Credits
 -------
 
-Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect contributors to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com) (PS Vita).
+Developed by [Omar Cornut](http://www.miracleworld.net) and every direct or indirect [contributors](https://github.com/ocornut/imgui/graphs/contributors) to the GitHub. The early version of this library was developed with the support of [Media Molecule](http://www.mediamolecule.com) and first used internally on the game [Tearaway](http://tearaway.mediamolecule.com) (PS Vita).
 
-I first discovered the IMGUI paradigm at [Q-Games](http://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it.
+Recurring contributors (2020): Omar Cornut [@ocornut](https://github.com/ocornut), Rokas Kupstys [@rokups](https://github.com/rokups), Ben Carter [@ShironekoBen](https://github.com/ShironekoBen).
+A large portion of work on automation systems, regression tests and other features are currently unpublished.
+
+"I first discovered the IMGUI paradigm at [Q-Games](http://www.q-games.com) where Atman Binstock had dropped his own simple implementation in the codebase, which I spent quite some time improving and thinking about. It turned out that Atman was exposed to the concept directly by working with Casey. When I moved to Media Molecule I rewrote a new library trying to overcome the flaws and limitations of the first one I've worked with. It became this library and since then I have spent an unreasonable amount of time iterating and improving it."
 
 Embeds [ProggyClean.ttf](http://upperbounds.net) font by Tristan Grimmer (MIT license).
 

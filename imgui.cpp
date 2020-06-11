@@ -633,7 +633,8 @@ CODE
  Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
  Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
  Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- >> See https://www.dearimgui.org/faq
+ Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..
+>> See https://www.dearimgui.org/faq
 
  Q&A: Usage
  ----------

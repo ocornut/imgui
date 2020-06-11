@@ -20,6 +20,7 @@ or view this file with any Markdown viewer.
 | [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
 | [I integrated Dear ImGui in my engine and the text or lines are blurry..](#q-i-integrated-dear-imgui-in-my-engine-and-the-text-or-lines-are-blurry) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
+| [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries)
 | **Q&A: Usage** |
 | **[Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
@@ -27,7 +28,7 @@ or view this file with any Markdown viewer.
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
 | [How can I display custom shapes? (using low-level ImDrawList API)](#q-how-can-i-display-custom-shapes-using-low-level-imdrawlist-api) |
 | **Q&A: Fonts, Text** |
-| [How should I handle DPi in my application?](#q-how-should-i-handle-dpi-in-my-application) |
+| [How should I handle DPI in my application?](#q-how-should-i-handle-dpi-in-my-application) |
 | [How can I load a different font than the default?](#q-how-can-i-load-a-different-font-than-the-default) |
 | [How can I easily use icons in my application?](#q-how-can-i-easily-use-icons-in-my-application) |
 | [How can I load multiple fonts?](#q-how-can-i-load-multiple-fonts) |
@@ -77,6 +78,9 @@ You may use the [docking](https://github.com/ocornut/imgui/tree/docking) branch 
 - [Multi-viewport features](https://github.com/ocornut/imgui/issues/1542)
 
 Many projects are using this branch and it is kept in sync with master regularly.
+
+You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) branch which includes:
+- [Table features](https://github.com/ocornut/imgui/issues/2957)
 
 ##### [Return to Index](#index)
 
@@ -144,11 +148,14 @@ Also make sure your orthographic projection matrix and io.DisplaySize matches yo
 ---
 
 ### Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
+### Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..
 You are probably mishandling the clipping rectangles in your render function.
-Rectangles provided by ImGui are defined as
+Each draw command needs the triangle rendered using the clipping rectangle provided in the ImDrawCmd structure (`ImDrawCmd->CllipRect`).
+Rectangles provided by Dear ImGui are defined as
 `(x1=left,y1=top,x2=right,y2=bottom)`
 and **NOT** as
 `(x1,y1,width,height)`
+Refer to rendering back-ends in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder for references of how to handle the `ClipRect` field.
 
 ##### [Return to Index](#index)
 
