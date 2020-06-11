@@ -644,7 +644,8 @@ CODE
  Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
  Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
  Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
- >> See https://www.dearimgui.org/faq
+ Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..
+>> See https://www.dearimgui.org/faq
 
  Q&A: Usage
  ----------
@@ -776,11 +777,12 @@ CODE
  Q&A: Fonts, Text
  ================
 
+ Q: How should I handle DPI in my application?
  Q: How can I load a different font than the default?
  Q: How can I easily use icons in my application?
  Q: How can I load multiple fonts?
  Q: How can I display and input non-Latin characters such as Chinese, Japanese, Korean, Cyrillic?
- >> See https://www.dearimgui.org/faq and docs/FONTS.txt
+ >> See https://www.dearimgui.org/faq and https://github.com/ocornut/imgui/edit/master/docs/FONTS.md
 
  Q&A: Concerns
  =============
@@ -1034,7 +1036,7 @@ ImGuiStyle::ImGuiStyle()
 {
     Alpha                   = 1.0f;             // Global alpha applies to everything in ImGui
     WindowPadding           = ImVec2(8,8);      // Padding within a window
-    WindowRounding          = 7.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows
+    WindowRounding          = 7.0f;             // Radius of window corners rounding. Set to 0.0f to have rectangular windows. Large values tend to lead to variety of artifacts and are not recommended.
     WindowBorderSize        = 1.0f;             // Thickness of border around windows. Generally set to 0.0f or 1.0f. Other values not well tested.
     WindowMinSize           = ImVec2(32,32);    // Minimum window size
     WindowTitleAlign        = ImVec2(0.0f,0.5f);// Alignment for title bar text
@@ -3046,7 +3048,7 @@ void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
     window->MemoryDrawListIdxCapacity = window->DrawList->IdxBuffer.Capacity;
     window->MemoryDrawListVtxCapacity = window->DrawList->VtxBuffer.Capacity;
     window->IDStack.clear();
-    window->DrawList->ClearFreeMemory();
+    window->DrawList->_ClearFreeMemory();
     window->DC.ChildWindows.clear();
     window->DC.ItemFlagsStack.clear();
     window->DC.ItemWidthStack.clear();
@@ -3432,7 +3434,7 @@ static ImDrawList* GetViewportDrawList(ImGuiViewportP* viewport, size_t drawlist
     // Our ImDrawList system requires that there is always a command
     if (viewport->LastFrameDrawLists[drawlist_no] != g.FrameCount)
     {
-        draw_list->ResetForNewFrame();
+        draw_list->_ResetForNewFrame();
         draw_list->PushTextureID(g.IO.Fonts->TexID);
         draw_list->PushClipRect(viewport->Pos, viewport->Pos + viewport->Size, false);
         viewport->LastFrameDrawLists[drawlist_no] = g.FrameCount;
@@ -4287,17 +4289,11 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
 
 static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
+    // Remove trailing command if unused.
+    // Technically we could return directly instead of popping, but this make things looks neat in Metrics window as well.
+    draw_list->_PopUnusedDrawCmd();
     if (draw_list->CmdBuffer.Size == 0)
         return;
-
-    // Remove trailing command if unused
-    ImDrawCmd* curr_cmd = &draw_list->CmdBuffer.back();
-    if (curr_cmd->ElemCount == 0 && curr_cmd->UserCallback == NULL)
-    {
-        draw_list->CmdBuffer.pop_back();
-        if (draw_list->CmdBuffer.Size == 0)
-            return;
-    }
 
     // Draw list sanity check. Detect mismatch between PrimReserve() calls and incrementing _VtxCurrentIdx, _VtxWritePtr etc.
     // May trigger for you if you are using PrimXXX functions incorrectly.
@@ -6311,10 +6307,15 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->Pos = ImFloor(window->Pos);
 
         // Lock window rounding for the frame (so that altering them doesn't cause inconsistencies)
+        // Large values tend to lead to variety of artifacts and are not recommended.
         if (window->ViewportOwned || window->DockIsActive)
             window->WindowRounding = 0.0f;
         else
             window->WindowRounding = (flags & ImGuiWindowFlags_ChildWindow) ? style.ChildRounding : ((flags & ImGuiWindowFlags_Popup) && !(flags & ImGuiWindowFlags_Modal)) ? style.PopupRounding : style.WindowRounding;
+
+        // For windows with title bar or menu bar, we clamp to FrameHeight(FontSize + FramePadding.y * 2.0f) to completely hide artifacts.
+        //if ((window->Flags & ImGuiWindowFlags_MenuBar) || !(window->Flags & ImGuiWindowFlags_NoTitleBar))
+        //    window->WindowRounding = ImMin(window->WindowRounding, g.FontSize + style.FramePadding.y * 2.0f);
 
         // Apply window focus (new and reactivated windows are moved to front)
         bool want_focus = false;
@@ -6435,7 +6436,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // DRAWING
 
         // Setup draw list and outer clipping rectangle
-        window->DrawList->ResetForNewFrame();
+        window->DrawList->_ResetForNewFrame();
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
