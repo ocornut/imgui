@@ -3790,10 +3790,10 @@ static void ShowDemoWindowTables()
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
         if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyStretchX))
             flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyStretchX);  // Can't specify both sizing polices so we clear the other
-        ImGui::SameLine(); HelpMarker("Default if _ScrollX if disabled.");
+        ImGui::SameLine(); HelpMarker("Default if _ScrollX if disabled. Makes columns use _WidthStretch policy by default.");
         if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyFixedX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyFixedX))
             flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyFixedX);    // Can't specify both sizing polices so we clear the other
-        ImGui::SameLine(); HelpMarker("Default if _ScrollX if enabled.");
+        ImGui::SameLine(); HelpMarker("Default if _ScrollX if enabled. Makes columns use _WidthFixed by default, or _WidthAlwaysAutoResize if _Resizable is not set.");
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoClipX", (unsigned int*)&flags, ImGuiTableFlags_NoClipX);
 

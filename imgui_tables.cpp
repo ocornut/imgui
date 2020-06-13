@@ -1626,6 +1626,8 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     const float bg_y1 = table->RowPosY1;
     const float bg_y2 = table->RowPosY2;
 
+    const bool unfreeze_rows = (table->CurrentRow + 1 == table->FreezeRowsCount && table->FreezeRowsCount > 0);
+
     if (table->CurrentRow == 0)
         table->LastFirstRowHeight = bg_y2 - bg_y1;
 
@@ -1657,8 +1659,11 @@ void    ImGui::TableEndRow(ImGuiTable* table)
             }
         }
 
-        if (bg_col != 0 || border_col != 0)
+        const bool draw_stong_bottom_border = unfreeze_rows;// || (table->RowFlags & ImGuiTableRowFlags_Headers);
+        if (bg_col != 0 || border_col != 0 || draw_stong_bottom_border)
         {
+            // In theory we could call SetWindowClipRectBeforeChannelChange() but since we know TableEndRow() is
+            // always followed by a change of clipping rectangle we perform the smallest overwrite possible here.
             window->DrawList->_CmdHeader.ClipRect = table->HostClipRect.ToVec4();
             table->DrawSplitter.SetCurrentChannel(window->DrawList, 0);
         }
@@ -1674,18 +1679,14 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         }
 
         // Draw top border
-        const float border_y = bg_y1;
-        if (border_col && border_y >= table->BackgroundClipRect.Min.y && border_y < table->BackgroundClipRect.Max.y)
-            window->DrawList->AddLine(ImVec2(table->BorderX1, border_y), ImVec2(table->BorderX2, border_y), border_col);
+        if (border_col && bg_y1 >= table->BackgroundClipRect.Min.y && bg_y1 < table->BackgroundClipRect.Max.y)
+            window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y1), ImVec2(table->BorderX2, bg_y1), border_col);
+
+        // Draw bottom border at the row unfreezing mark (always strong)
+        if (draw_stong_bottom_border)
+            if (bg_y2 >= table->BackgroundClipRect.Min.y && bg_y2 < table->BackgroundClipRect.Max.y)
+                window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y2), ImVec2(table->BorderX2, bg_y2), table->BorderColorStrong);
     }
-
-    const bool unfreeze_rows = (table->CurrentRow + 1 == table->FreezeRowsCount && table->FreezeRowsCount > 0);
-
-    // Draw bottom border (always strong)
-    const bool draw_separating_border = unfreeze_rows;// || (table->RowFlags & ImGuiTableRowFlags_Headers);
-    if (draw_separating_border)
-        if (bg_y2 >= table->BackgroundClipRect.Min.y && bg_y2 < table->BackgroundClipRect.Max.y)
-            window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y2), ImVec2(table->BorderX2, bg_y2), table->BorderColorStrong);
 
     // End frozen rows (when we are past the last frozen row line, teleport cursor and alter clipping rectangle)
     // We need to do that in TableEndRow() instead of TableBeginRow() so the list clipper can mark end of row and
@@ -1755,15 +1756,8 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     }
     else
     {
+        SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
         table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
-        //window->ClipRect = column->ClipRect;
-        //IM_ASSERT(column->ClipRect.Max.x > column->ClipRect.Min.x && column->ClipRect.Max.y > column->ClipRect.Min.y);
-        //window->DrawList->_ClipRectStack.back() = ImVec4(column->ClipRect.Min.x, column->ClipRect.Min.y, column->ClipRect.Max.x, column->ClipRect.Max.y);
-        //window->DrawList->UpdateClipRect();
-        window->DrawList->PopClipRect();
-        window->DrawList->PushClipRect(column->ClipRect.Min, column->ClipRect.Max, false);
-        //IMGUI_DEBUG_LOG("%d (%.0f,%.0f)(%.0f,%.0f)\n", column_n, column->ClipRect.Min.x, column->ClipRect.Min.y, column->ClipRect.Max.x, column->ClipRect.Max.y);
-        window->ClipRect = window->DrawList->_ClipRectStack.back();
     }
 }
 
@@ -1900,10 +1894,10 @@ void    ImGui::PushTableBackground()
     ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
 
-    // Set cmd header ahead to avoid SetCurrentChannel+PushClipRect doing an unnecessary AddDrawCmd/Pop
-    window->DrawList->_CmdHeader.ClipRect = table->HostClipRect.ToVec4();
+    // Optimization: avoid SetCurrentChannel() + PushClipRect()
+    table->HostBackupClipRect = window->ClipRect;
+    SetWindowClipRectBeforeSetChannel(window, table->HostClipRect);
     table->DrawSplitter.SetCurrentChannel(window->DrawList, 0);
-    PushClipRect(table->HostClipRect.Min, table->HostClipRect.Max, false);
 }
 
 void    ImGui::PopTableBackground()
@@ -1913,11 +1907,9 @@ void    ImGui::PopTableBackground()
     ImGuiTable* table = g.CurrentTable;
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
 
-    // Set cmd header ahead to avoid SetCurrentChannel+PopClipRect doing an unnecessary AddDrawCmd/Pop
-    ImVec4 pop_clip_rect = window->DrawList->_ClipRectStack.Data[window->DrawList->_ClipRectStack.Size - 2];
-    window->DrawList->_CmdHeader.ClipRect = pop_clip_rect;
+    // Optimization: avoid PopClipRect() + SetCurrentChannel()
+    SetWindowClipRectBeforeSetChannel(window, table->HostBackupClipRect);
     table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
-    PopClipRect();
 }
 
 // Output context menu into current window (generally a popup)
