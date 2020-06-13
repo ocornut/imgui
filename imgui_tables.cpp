@@ -753,7 +753,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         if (table->FreezeColumnsCount > 0 && table->FreezeColumnsCount == visible_n)
             offset_x += work_rect.Min.x - table->OuterRect.Min.x;
 
-        if (!(table->VisibleMaskByDisplayOrder & ((ImU64)1 << order_n)))
+        if ((table->VisibleMaskByDisplayOrder & ((ImU64)1 << order_n)) == 0)
         {
             // Hidden column: clear a few fields and we are done with it for the remainder of the function.
             // We set a zero-width clip rect but set Min.y/Max.y properly to not interfere with the clipper.
@@ -798,31 +798,27 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         column->ClipRect.ClipWithFull(host_clip_rect);
 
         column->IsClipped = (column->ClipRect.Max.x <= column->ClipRect.Min.x) && (column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0;
-        column->SkipItems = column->IsClipped || table->HostSkipItems;
         if (column->IsClipped)
-        {
-            // Columns with the _WidthAlwaysAutoResize sizing policy will never be updated then.
-            table->VisibleUnclippedMaskByIndex &= ~((ImU64)1 << column_n);
-        }
-        else
-        {
-            // Starting cursor position
-            column->StartXRows = column->StartXHeaders = column->MinX + table->CellPaddingX1;
+            table->VisibleUnclippedMaskByIndex &= ~((ImU64)1 << column_n);  // Columns with the _WidthAlwaysAutoResize sizing policy will never be updated then.
 
-            // Alignment
-            // FIXME-TABLE: This align based on the whole column width, not per-cell, and therefore isn't useful in
-            // many cases (to be able to honor this we might be able to store a log of cells width, per row, for
-            // visible rows, but nav/programmatic scroll would have visible artifacts.)
-            //if (column->Flags & ImGuiTableColumnFlags_AlignRight)
-            //    column->StartXRows = ImMax(column->StartXRows, column->MaxX - column->ContentWidthRowsUnfrozen);
-            //else if (column->Flags & ImGuiTableColumnFlags_AlignCenter)
-            //    column->StartXRows = ImLerp(column->StartXRows, ImMax(column->StartXRows, column->MaxX - column->ContentWidthRowsUnfrozen), 0.5f);
+        column->SkipItems = !column->IsVisible || table->HostSkipItems;
 
-            // Reset content width variables
-            const float initial_max_pos_x = column->MinX + table->CellPaddingX1;
-            column->ContentMaxPosRowsFrozen = column->ContentMaxPosRowsUnfrozen = initial_max_pos_x;
-            column->ContentMaxPosHeadersUsed = column->ContentMaxPosHeadersIdeal = initial_max_pos_x;
-        }
+        // Starting cursor position
+        column->StartXRows = column->StartXHeaders = column->MinX + table->CellPaddingX1;
+
+        // Alignment
+        // FIXME-TABLE: This align based on the whole column width, not per-cell, and therefore isn't useful in
+        // many cases (to be able to honor this we might be able to store a log of cells width, per row, for
+        // visible rows, but nav/programmatic scroll would have visible artifacts.)
+        //if (column->Flags & ImGuiTableColumnFlags_AlignRight)
+        //    column->StartXRows = ImMax(column->StartXRows, column->MaxX - column->ContentWidthRowsUnfrozen);
+        //else if (column->Flags & ImGuiTableColumnFlags_AlignCenter)
+        //    column->StartXRows = ImLerp(column->StartXRows, ImMax(column->StartXRows, column->MaxX - column->ContentWidthRowsUnfrozen), 0.5f);
+
+        // Reset content width variables
+        const float initial_max_pos_x = column->MinX + table->CellPaddingX1;
+        column->ContentMaxPosRowsFrozen = column->ContentMaxPosRowsUnfrozen = initial_max_pos_x;
+        column->ContentMaxPosHeadersUsed = column->ContentMaxPosHeadersIdeal = initial_max_pos_x;
 
         // Don't decrement auto-fit counters until container window got a chance to submit its items
         if (table->HostSkipItems == false)
@@ -1798,6 +1794,7 @@ bool    ImGui::TableNextCell()
         TableNextRow();
     }
 
+    // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
     int column_n = table->CurrentColumn;
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
@@ -1849,6 +1846,7 @@ bool    ImGui::TableSetColumnIndex(int column_idx)
         TableBeginCell(table, column_idx);
     }
 
+    // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_idx)) != 0;
 }
 

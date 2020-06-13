@@ -672,7 +672,7 @@ namespace ImGui
     // - If you are using tables as a sort of grid, populating every columns with the same type of contents,
     //   you may prefer using TableNextCell() instead of TableNextRow() + TableSetColumnIndex().
     // - See Demo->Tables for details.
-    // - See ImGuiTableFlags_ enums for a description of available flags.
+    // - See ImGuiTableFlags_ and ImGuiTableColumnsFlags_ enums for a description of available flags.
     #define IMGUI_HAS_TABLE 1
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
