@@ -435,6 +435,7 @@ struct IMGUI_API ImRect
     void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
     void        Floor()                             { Min.x = IM_FLOOR(Min.x); Min.y = IM_FLOOR(Min.y); Max.x = IM_FLOOR(Max.x); Max.y = IM_FLOOR(Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
+    ImVec4      ToVec4() const                      { return ImVec4(Min.x, Min.y, Max.x, Max.y); }
 };
 
 // Helper: ImBitArray
@@ -1012,7 +1013,8 @@ struct ImGuiColumns
     float               LineMinY, LineMaxY;
     float               HostCursorPosY;         // Backup of CursorPos at the time of BeginColumns()
     float               HostCursorMaxPosX;      // Backup of CursorMaxPos at the time of BeginColumns()
-    ImRect              HostClipRect;           // Backup of ClipRect at the time of BeginColumns()
+    ImRect              HostInitialClipRect;    // Backup of ClipRect at the time of BeginColumns()
+    ImRect              HostBackupClipRect;     // Backup of ClipRect during PushColumnsBackground()/PopColumnsBackground()
     ImRect              HostWorkRect;           // Backup of WorkRect at the time of BeginColumns()
     ImVector<ImGuiColumnData> Columns;
     ImDrawListSplitter  Splitter;
@@ -1894,6 +1896,7 @@ namespace ImGui
     IMGUI_API bool          IsDragDropPayloadBeingAccepted();
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
+    IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);
     IMGUI_API void          BeginColumns(const char* str_id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
     IMGUI_API void          EndColumns();                                                             // close columns
     IMGUI_API void          PushColumnClipRect(int column_index);

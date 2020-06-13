@@ -4169,7 +4169,12 @@ static void SetupDrawData(ImVector<ImDrawList*>* draw_lists, ImDrawData* draw_da
     }
 }
 
-// When using this function it is sane to ensure that float are perfectly rounded to integer values, to that e.g. (int)(max.x-min.x) in user's render produce correct result.
+// Push a clipping rectangle for both ImGui logic (hit-testing etc.) and low-level ImDrawList rendering.
+// - When using this function it is sane to ensure that float are perfectly rounded to integer values,
+//   so that e.g. (int)(max.x-min.x) in user's render produce correct result.
+// - If the code here changes, may need to update code of functions like NextColumn() and PushColumnClipRect():
+//   some frequently called functions which to modify both channels and clipping simultaneously tend to use the
+//   more specialized SetWindowClipRectBeforeSetChannel() to avoid extraneous updates of underlying ImDrawCmds.
 void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect)
 {
     ImGuiWindow* window = GetCurrentWindow();

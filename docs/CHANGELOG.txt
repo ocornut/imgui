@@ -56,6 +56,8 @@ Other Changes:
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
 - Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
+- Columns: Lower overhead on column switches and switching to background channel.
+  Benefits Columns but was primarily made with Tables in mind!
 - ImDrawList: Fixed an issue where draw command merging or primitive unreserve while crossing the
   VtxOffset boundary would lead to draw commands with wrong VtxOffset. (#3129, #3163, #3232, #2591)
   [@thedmd, @Shironekoben, @sergeyn, @ocornut]
