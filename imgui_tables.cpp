@@ -82,7 +82,7 @@
 // - [...]                                      user emit contents
 // - EndTable()                                 user ends the table
 //    | TableDrawBorders()                      - draw outer borders, inner vertical borders
-//    | TableDrawMergeChannels()                - merge draw channels if clipping isn't required
+//    | TableReorderDrawChannelsForMerge()      - merge draw channels if clipping isn't required
 //    | EndChild()                              - (if ScrollX/ScrollY is set)
 //-----------------------------------------------------------------------------
 
@@ -991,9 +991,34 @@ void    ImGui::EndTable()
     if ((flags & ImGuiTableFlags_Borders) != 0)
         TableDrawBorders(table);
 
+    // Store content width reference for each column (before attempting to merge draw calls)
+    const float backup_outer_cursor_pos_x = outer_window->DC.CursorPos.x;
+    const float backup_outer_max_pos_x = outer_window->DC.CursorMaxPos.x;
+    const float backup_inner_max_pos_x = inner_window->DC.CursorMaxPos.x;
+    float max_pos_x = backup_inner_max_pos_x;
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+
+        // Store content width (for both Headers and Rows)
+        //float ref_x = column->MinX;
+        float ref_x_rows = column->StartXRows - table->CellPaddingX1;
+        float ref_x_headers = column->StartXHeaders - table->CellPaddingX1;
+        column->ContentWidthRowsFrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsFrozen - ref_x_rows);
+        column->ContentWidthRowsUnfrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsUnfrozen - ref_x_rows);
+        column->ContentWidthHeadersUsed = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersUsed - ref_x_headers);
+        column->ContentWidthHeadersIdeal = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersIdeal - ref_x_headers);
+
+        // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
+        if (table->VisibleMaskByIndex & ((ImU64)1 << column_n))
+            max_pos_x = ImMax(max_pos_x, column->MaxX + 1.0f);
+    }
+
     // Flatten channels and merge draw calls
     table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 0);
-    TableDrawMergeChannels(table);
+    if ((table->Flags & ImGuiTableFlags_NoClipX) == 0)
+        TableReorderDrawChannelsForMerge(table);
+    table->DrawSplitter.Merge(inner_window->DrawList);
 
     // When releasing a column being resized, scroll to keep the resulting column in sight
     const float min_column_width = TableGetMinColumnWidth();
@@ -1020,9 +1045,6 @@ void    ImGui::EndTable()
     }
 
     // Layout in outer window
-    const float backup_outer_cursor_pos_x = outer_window->DC.CursorPos.x;
-    const float backup_outer_max_pos_x = outer_window->DC.CursorMaxPos.x;
-    const float backup_inner_max_pos_x = inner_window->DC.CursorMaxPos.x;
     inner_window->WorkRect = table->HostWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
@@ -1037,26 +1059,6 @@ void    ImGui::EndTable()
         ImVec2 item_size = table->OuterRect.GetSize();
         item_size.x = table->ColumnsTotalWidth;
         ItemSize(item_size);
-    }
-
-    // Store content width reference for each column
-    float max_pos_x = backup_inner_max_pos_x;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-
-        // Store content width (for both Headers and Rows)
-        //float ref_x = column->MinX;
-        float ref_x_rows = column->StartXRows - table->CellPaddingX1;
-        float ref_x_headers = column->StartXHeaders - table->CellPaddingX1;
-        column->ContentWidthRowsFrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsFrozen - ref_x_rows);
-        column->ContentWidthRowsUnfrozen = (ImS16)ImMax(0.0f, column->ContentMaxPosRowsUnfrozen - ref_x_rows);
-        column->ContentWidthHeadersUsed = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersUsed - ref_x_headers);
-        column->ContentWidthHeadersIdeal = (ImS16)ImMax(0.0f, column->ContentMaxPosHeadersIdeal - ref_x_headers);
-
-        // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
-        if (table->VisibleMaskByIndex & ((ImU64)1 << column_n))
-            max_pos_x = ImMax(max_pos_x, column->MaxX + 1.0f);
     }
 
     // Override EndChild/ItemSize max extent with our own to enable auto-resize on the X axis when possible
@@ -1292,9 +1294,13 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
     }
 }
 
-// Columns where the contents didn't stray off their local clip rectangle can be merged into a same draw command.
-// To achieve this we merge their clip rect and make them contiguous in the channel list so they can be merged.
-// This function first reorder the draw cmd which can be merged, by arranging them into a maximum of 4 distinct groups:
+// This function reorder draw channels based on matching clip rectangle, to facilitate merging them.
+//
+// Columns where the contents didn't stray off their local clip rectangle can be merged. To achieve
+// this we merge their clip rect and make them contiguous in the channel list, so they can be merged
+// by the call to DrawSplitter.Merge() following to the call to this function.
+//
+// We reorder draw commands by arranging them into a maximum of 4 distinct groups:
 //
 //   1 group:               2 groups:              2 groups:              4 groups:
 //   [ 0. ] no freeze       [ 0. ] row freeze      [ 01 ] col freeze      [ 02 ] row+col freeze
@@ -1303,8 +1309,10 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
 // Each column itself can use 1 channel (row freeze disabled) or 2 channels (row freeze enabled).
 // When the contents of a column didn't stray off its limit, we move its channels into the corresponding group
 // based on its position (within frozen rows/columns groups or not).
-// At the end of the operation our 1-4 groups will each have a ImDrawCmd using the same ClipRect, and they will be
-// merged by the DrawSplitter.Merge() call.
+// At the end of the operation our 1-4 groups will each have a ImDrawCmd using the same ClipRect.
+//
+// This function assume that each column are pointing to a distinct draw channel,
+// otherwise merge_group->ChannelsCount will not match set bit count of merge_group->ChannelsMask.
 //
 // Column channels will not be merged into one of the 1-4 groups in the following cases:
 // - The contents stray off its clipping rectangle (we only compare the MaxX value, not the MinX value).
@@ -1315,7 +1323,7 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
 // Columns for which the draw channel(s) haven't been merged with other will use their own ImDrawCmd.
 //
 // This function is particularly tricky to understand.. take a breath.
-void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
+void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     ImDrawListSplitter* splitter = &table->DrawSplitter;
@@ -1472,9 +1480,6 @@ void    ImGui::TableDrawMergeChannels(ImGuiTable* table)
         IM_ASSERT(dst_tmp == g.DrawChannelsTempMergeBuffer.Data + g.DrawChannelsTempMergeBuffer.Size);
         memcpy(splitter->_Channels.Data + 1, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - 1) * sizeof(ImDrawChannel));
     }
-
-    // 3. Actually merge (channels using the same clip rect will be contiguous and naturally merged)
-    splitter->Merge(table->InnerWindow->DrawList);
 }
 
 // We use a default parameter of 'init_width_or_weight == -1'

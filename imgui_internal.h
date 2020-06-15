@@ -2263,8 +2263,8 @@ namespace ImGui
     IMGUI_API void          TableSetColumnWidth(int column_n, float width);
     IMGUI_API void          TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column, float width);
     IMGUI_API void          TableDrawBorders(ImGuiTable* table);
-    IMGUI_API void          TableDrawMergeChannels(ImGuiTable* table);
     IMGUI_API void          TableDrawContextMenu(ImGuiTable* table, int column_n);
+    IMGUI_API void          TableReorderDrawChannelsForMerge(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* column, bool add_to_existing_sort_orders);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsBuild(ImGuiTable* table);
