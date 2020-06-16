@@ -7924,7 +7924,8 @@ bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiMouseButton mouse_but
         str_id = "void_context";
     ImGuiID id = window->GetID(str_id);
     if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-        OpenPopupEx(id);
+        if (GetTopMostPopupModal() == NULL)
+            OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
