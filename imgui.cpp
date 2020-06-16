@@ -7603,12 +7603,14 @@ void ImGui::SetTooltip(const char* fmt, ...)
 // [SECTION] POPUPS
 //-----------------------------------------------------------------------------
 
+// Return true if the popup is open at the current BeginPopup() level of the popup stack
 bool ImGui::IsPopupOpen(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == id;
 }
 
+// Return true if the popup is open at the current BeginPopup() level of the popup stack
 bool ImGui::IsPopupOpen(const char* str_id)
 {
     ImGuiContext& g = *GImGui;
@@ -7622,6 +7624,14 @@ bool ImGui::IsPopupOpenAtAnyLevel(ImGuiID id)
         if (g.OpenPopupStack[n].PopupId == id)
             return true;
     return false;
+}
+
+// Return true if any popup is open at the current BeginPopup() level of the popup stack
+// This may be used to e.g. test for another popups already opened in the same frame to handle popups priorities at the same level.
+bool ImGui::IsAnyPopupOpen()
+{
+    ImGuiContext& g = *GImGui;
+    return g.OpenPopupStack.Size > g.BeginPopupStack.Size;
 }
 
 ImGuiWindow* ImGui::GetTopMostPopupModal()
@@ -7879,8 +7889,10 @@ bool ImGui::OpenPopupContextItem(const char* str_id, ImGuiMouseButton mouse_butt
 }
 
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
-// You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
-// You can pass a NULL str_id to use the identifier of the last item.
+// - You can pass a NULL str_id to use the identifier of the last item.
+// - You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
+// - This is essentially the same as calling OpenPopupContextItem() + BeginPopupEx() but written to avoid
+//   computing the ID twice because BeginPopupContextXXX functions are called very frequently.
 bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiMouseButton mouse_button)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
@@ -7895,9 +7907,10 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiMouseButton mouse_but
 
 bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiMouseButton mouse_button, bool also_over_items)
 {
+    ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
         str_id = "window_context";
-    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
+    ImGuiID id = window->GetID(str_id);
     if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         if (also_over_items || !IsAnyItemHovered())
             OpenPopupEx(id);
@@ -7906,9 +7919,10 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiMouseButton mouse_b
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiMouseButton mouse_button)
 {
+    ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
         str_id = "void_context";
-    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
+    ImGuiID id = window->GetID(str_id);
     if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
         OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
