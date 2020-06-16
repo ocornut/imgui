@@ -2002,7 +2002,7 @@ struct ImGuiTable
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImS8                        SortSpecsCount;
     ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
-    ImS8                        HoveredColumnBody;          // [DEBUG] Unlike HoveredColumnBorder this doesn't fulfill all Hovering rules properly. Used for debugging/tools for now.
+    ImS8                        HoveredColumnBody;          // Index of column whose visible region is being hovered. Important: == ColumnsCount when hovering empty region after the right-most column!
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
     ImS8                        ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
     ImS8                        LastResizedColumn;          // Index of column being resized from previous frame.
@@ -2041,6 +2041,7 @@ struct ImGuiTable
         ContextPopupColumn = -1;
         ReorderColumn = -1;
         ResizedColumn = -1;
+        HoveredColumnBody = HoveredColumnBorder = -1;
     }
 };
 
@@ -2263,7 +2264,8 @@ namespace ImGui
     IMGUI_API void          TableSetColumnWidth(int column_n, float width);
     IMGUI_API void          TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column, float width);
     IMGUI_API void          TableDrawBorders(ImGuiTable* table);
-    IMGUI_API void          TableDrawContextMenu(ImGuiTable* table, int column_n);
+    IMGUI_API void          TableDrawContextMenu(ImGuiTable* table);
+    IMGUI_API void          TableOpenContextMenu(ImGuiTable* table, int column_n);
     IMGUI_API void          TableReorderDrawChannelsForMerge(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* column, bool add_to_existing_sort_orders);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
@@ -2278,13 +2280,15 @@ namespace ImGui
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
+
+    // Tables - Settings
+    IMGUI_API void                  TableLoadSettings(ImGuiTable* table);
+    IMGUI_API void                  TableSaveSettings(ImGuiTable* table);
+    IMGUI_API ImGuiTableSettings*   TableGetBoundSettings(ImGuiTable* table);
     IMGUI_API void                  TableSettingsInstallHandler(ImGuiContext* context);
     IMGUI_API ImGuiTableSettings*   TableSettingsCreate(ImGuiID id, int columns_count);
     IMGUI_API ImGuiTableSettings*   TableSettingsFindByID(ImGuiID id);
     IMGUI_API void                  TableSettingsClearByID(ImGuiID id);
-    IMGUI_API void                  TableLoadSettings(ImGuiTable* table);
-    IMGUI_API void                  TableSaveSettings(ImGuiTable* table);
-    IMGUI_API ImGuiTableSettings*   TableGetBoundSettings(ImGuiTable* table);
 
     // Tab Bars
     IMGUI_API bool          BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& bb, ImGuiTabBarFlags flags);

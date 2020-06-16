@@ -284,8 +284,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->FreezeColumnsCount = (inner_window->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
     table->IsFreezeRowsPassed = (table->FreezeRowsCount == 0);
     table->DeclColumnsCount = 0;
-    table->HoveredColumnBody = -1;
-    table->HoveredColumnBorder = -1;
     table->RightMostVisibleColumn = -1;
 
     // Using opaque colors facilitate overlapping elements of the grid
@@ -571,7 +569,11 @@ static float TableGetMinColumnWidth()
 // for WidthAlwaysAutoResize columns?
 void    ImGui::TableUpdateLayout(ImGuiTable* table)
 {
+    ImGuiContext& g = *GImGui;
     IM_ASSERT(table->IsLayoutLocked == false);
+
+    table->HoveredColumnBody = -1;
+    table->HoveredColumnBorder = -1;
 
     // Compute offset, clip rect for the frame
     // (can't make auto padding larger than what WorkRect knows about so right-alignment matches)
@@ -741,6 +743,10 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             width_remaining_for_stretched_columns -= 1.0f;
         }
 
+    // Detect hovered column
+    const ImRect mouse_hit_rect(table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.Max.x, ImMax(table->OuterRect.Max.y, table->OuterRect.Min.y + table->LastOuterHeight));
+    const bool is_hovering_table = ItemHoverable(mouse_hit_rect, 0);
+
     // Setup final position, offset and clipping rectangles
     int visible_n = 0;
     float offset_x = (table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x;
@@ -803,6 +809,10 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
         column->SkipItems = !column->IsVisible || table->HostSkipItems;
 
+        // Detect hovered column
+        if (is_hovering_table && g.IO.MousePos.x >= column->ClipRect.Min.x && g.IO.MousePos.x < column->ClipRect.Max.x)
+            table->HoveredColumnBody = (ImS8)column_n;
+
         // Starting cursor position
         column->StartXRows = column->StartXHeaders = column->MinX + table->CellPaddingX1;
 
@@ -834,6 +844,16 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         visible_n++;
     }
 
+    // Detect/store when we are hovering the unused space after the right-most column (so e.g. context menus can react on it)
+    if (is_hovering_table && table->HoveredColumnBody == -1)
+    {
+        float unused_x1 = table->WorkRect.Min.x;
+        if (table->RightMostVisibleColumn != -1)
+            unused_x1 = ImMax(unused_x1, table->Columns[table->RightMostVisibleColumn].ClipRect.Max.x);
+        if (g.IO.MousePos.x >= unused_x1)
+            table->HoveredColumnBody = (ImS8)table->ColumnsCount;
+    }
+
     // Clear Resizable flag if none of our column are actually resizable (either via an explicit _NoResize flag,
     // either because of using _WidthAlwaysAutoResize/_WidthStretch).
     // This will hide the resizing option from the context menu.
@@ -857,7 +877,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     {
         if (BeginPopup("##TableContextMenu"))
         {
-            TableDrawContextMenu(table, table->ContextPopupColumn);
+            TableDrawContextMenu(table);
             EndPopup();
         }
         else
@@ -897,7 +917,6 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
     const float hit_y1 = table->OuterRect.Min.y;
     const float hit_y2_full = ImMax(table->OuterRect.Max.y, hit_y1 + table->LastOuterHeight);
     const float hit_y2 = borders_full_height ? hit_y2_full : (hit_y1 + table->LastFirstRowHeight);
-    const float mouse_x_hover_body = (g.IO.MousePos.y >= hit_y1 && g.IO.MousePos.y < hit_y2_full) ? g.IO.MousePos.x : FLT_MAX;
 
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
@@ -906,13 +925,6 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
 
         const int column_n = table->DisplayOrderToIndex[order_n];
         ImGuiTableColumn* column = &table->Columns[column_n];
-
-        // Detect hovered column:
-        // - we perform an unusually low-level check here.. not using IsMouseHoveringRect() to avoid touch padding.
-        // - we don't care about the full set of IsItemHovered() feature either.
-        if (mouse_x_hover_body >= column->MinX && mouse_x_hover_body < column->MaxX)
-            table->HoveredColumnBody = (ImS8)column_n;
-
         if (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_))
             continue;
 
@@ -1798,9 +1810,12 @@ bool    ImGui::TableNextCell()
     {
         TableNextRow();
     }
+    int column_n = table->CurrentColumn;
+
+    // FIXME-TABLE: Need to clarify if we want to allow IsItemHovered() here
+    //g.CurrentWindow->DC.LastItemStatusFlags = (column_n == table->HoveredColumn) ? ImGuiItemStatusFlags_HoveredRect : ImGuiItemStatusFlags_None;
 
     // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
-    int column_n = table->CurrentColumn;
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
@@ -1850,6 +1865,9 @@ bool    ImGui::TableSetColumnIndex(int column_idx)
         IM_ASSERT(column_idx >= 0 && table->ColumnsCount);
         TableBeginCell(table, column_idx);
     }
+
+    // FIXME-TABLE: Need to clarify if we want to allow IsItemHovered() here
+    //g.CurrentWindow->DC.LastItemStatusFlags = (column_n == table->HoveredColumn) ? ImGuiItemStatusFlags_HoveredRect : ImGuiItemStatusFlags_None;
 
     // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_idx)) != 0;
@@ -1917,7 +1935,7 @@ void    ImGui::PopTableBackground()
 
 // Output context menu into current window (generally a popup)
 // FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
-void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
+void    ImGui::TableDrawContextMenu(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -1925,7 +1943,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
         return;
 
     bool want_separator = false;
-    selected_column_n  = ImClamp(selected_column_n, -1, table->ColumnsCount - 1);
+    const int selected_column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
 
     // Sizing
     if (table->Flags & ImGuiTableFlags_Resizable)
@@ -1983,28 +2001,44 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table, int selected_column_n)
     }
 }
 
+// Use -1 to open menu not specific to a given column.
+void    ImGui::TableOpenContextMenu(ImGuiTable* table, int column_n)
+{
+    IM_ASSERT(column_n >= -1 && column_n < table->ColumnsCount);
+    if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+    {
+        table->IsContextPopupOpen = true;
+        table->ContextPopupColumn = (ImS8)column_n;
+        table->InstanceInteracted = table->InstanceCurrent;
+        OpenPopup("##TableContextMenu");
+    }
+}
+
 // This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
-// The intent is that advanced users willing to create customized headers would not need to use this helper and may
-// create their own. However presently this function uses too many internal structures/calls.
+// The intent is that advanced users willing to create customized headers would not need to use this helper
+// and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
+// FIXME-TABLE: However presently this function uses too many internal structures/calls.
 void    ImGui::TableAutoHeaders()
 {
+    ImGuiStyle& style = ImGui::GetStyle();
+
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
     const int columns_count = table->ColumnsCount;
 
     // Calculate row height (for the unlikely case that labels may be are multi-line)
+    float row_y1 = GetCursorScreenPos().y;
     float row_height = GetTextLineHeight();
     for (int column_n = 0; column_n < columns_count; column_n++)
         if (TableGetColumnIsVisible(column_n))
             row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
-    row_height += g.Style.CellPadding.y * 2.0f;
+    row_height += style.CellPadding.y * 2.0f;
 
     // Open row
     TableNextRow(ImGuiTableRowFlags_Headers, row_height);
-    if (table->HostSkipItems) // Merely an optimization
+    if (table->HostSkipItems) // Merely an optimization, you may skip in your own code.
         return;
 
     // This for loop is constructed to not make use of internal functions,
@@ -2027,64 +2061,35 @@ void    ImGui::TableAutoHeaders()
             Checkbox("##", &b[column_n]);
             PopStyleVar();
             PopID();
-            SameLine(0.0f, g.Style.ItemInnerSpacing.x);
+            SameLine(0.0f, style.ItemInnerSpacing.x);
         }
 #endif
 
-        // [DEBUG]
-        //if (g.IO.KeyCtrl) { static char buf[32]; name = buf; ImGuiTableColumn* c = &table->Columns[column_n]; if (c->Flags & ImGuiTableColumnFlags_WidthStretch) ImFormatString(buf, 32, "%.3f>%.1f", c->ResizeWeight, c->WidthGiven); else ImFormatString(buf, 32, "%.1f", c->WidthGiven); }
-
         // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
+        // - in your own code you may omit the PushID/PopID all-together, provided you know you know they won't collide
+        // - table->InstanceCurrent is only >0 when we use multiple BeginTable/EndTable calls with same identifier.
         PushID(table->InstanceCurrent * table->ColumnsCount + column_n);
         TableHeader(name);
         PopID();
 
         // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
-        if (IsMouseReleased(1) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
+        if (IsMouseReleased(1) && IsItemHovered())
             open_context_popup = column_n;
     }
 
-    // FIXME-TABLE: This is not user-land code any more + need to explain WHY this is here!
+    // FIXME-TABLE: This is not user-land code any more + need to explain WHY this is here! (added in fa88f023)
     window->SkipItems = table->HostSkipItems;
 
     // Allow opening popup from the right-most section after the last column
-    // FIXME-TABLE: This is not user-land code any more... perhaps instead we should expose hovered column.
-    // and allow some sort of row-centric IsItemHovered() for full flexibility?
-    float unused_x1 = table->WorkRect.Min.x;
-    if (table->RightMostVisibleColumn != -1)
-        unused_x1 = ImMax(unused_x1, table->Columns[table->RightMostVisibleColumn].MaxX);
-    if (unused_x1 < table->WorkRect.Max.x)
-    {
-        // FIXME: We inherit ClipRect/SkipItem from last submitted column (active or not), let's temporarily override it.
-        // Because we don't perform any rendering here we just overwrite window->ClipRect used by logic.
-        window->ClipRect = table->InnerClipRect;
-
-        ImVec2 backup_cursor_max_pos = window->DC.CursorMaxPos;
-        window->DC.CursorPos = ImVec2(unused_x1, table->RowPosY1);
-        ImVec2 size = ImVec2(table->WorkRect.Max.x - window->DC.CursorPos.x, table->RowPosY2 - table->RowPosY1);
-        if (size.x > 0.0f && size.y > 0.0f)
-        {
-            InvisibleButton("##RemainingSpace", size);
-            window->DC.CursorPos.y -= g.Style.ItemSpacing.y;
-            window->DC.CursorMaxPos = backup_cursor_max_pos;    // Don't feed back into the width of the Header row
-
-            // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden.
-            if (IsMouseReleased(1) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-                open_context_popup = -1;
-        }
-
-        window->ClipRect = window->DrawList->_ClipRectStack.back();
-    }
+    // (We don't actually need to ImGuiHoveredFlags_AllowWhenBlockedByPopup because in reality this is generally
+    // not required anymore.. because popup opening code tends to be reacting on IsMouseReleased() and the click
+    // would already have closed any other popups!)
+    if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count && g.IO.MousePos.y >= row_y1 && g.IO.MousePos.y < row_y1 + row_height)
+        open_context_popup = -1; // Will open a non-column-specific popup.
 
     // Open Context Menu
     if (open_context_popup != INT_MAX)
-        if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
-        {
-            table->IsContextPopupOpen = true;
-            table->ContextPopupColumn = (ImS8)open_context_popup;
-            table->InstanceInteracted = table->InstanceCurrent;
-            OpenPopup("##TableContextMenu");
-        }
+        TableOpenContextMenu(table, open_context_popup);
 }
 
 // Emit a column header (text + optional sort order)
@@ -2279,6 +2284,15 @@ bool ImGui::TableGetColumnIsSorted(int column_n)
         column_n = table->CurrentColumn;
     ImGuiTableColumn* column = &table->Columns[column_n];
     return (column->SortOrder != -1);
+}
+
+int ImGui::TableGetHoveredColumn()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return -1;
+    return (int)table->HoveredColumnBody;
 }
 
 void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
@@ -2679,7 +2693,10 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
-    BulletText("OuterWidth: %.1f, InnerWidth: %.1f%s, ColumnsWidth: %.1f, AutoFitWidth: %.1f", table->OuterRect.GetWidth(), table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "", table->ColumnsTotalWidth, table->ColumnsAutoFitWidth);
+    BulletText("OuterWidth: %.1f, InnerWidth: %.1f%s", table->OuterRect.GetWidth(), table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
+    BulletText("ColumnsWidth: %.1f, AutoFitWidth: %.1f", table->ColumnsTotalWidth, table->ColumnsAutoFitWidth);
+    BulletText("HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
+    BulletText("ResizedColumn: %d, ReorderColumn: %d, HeldHeaderColumn: %d", table->ResizedColumn, table->ReorderColumn, table->HeldHeaderColumn);
     for (int n = 0; n < table->ColumnsCount; n++)
     {
         ImGuiTableColumn* column = &table->Columns[n];
