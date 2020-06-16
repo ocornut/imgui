@@ -7891,7 +7891,7 @@ bool ImGui::OpenPopupContextItem(const char* str_id, ImGuiMouseButton mouse_butt
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
 // - You can pass a NULL str_id to use the identifier of the last item.
 // - You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
-// - This is essentially the same as calling OpenPopupContextItem() + BeginPopupEx() but written to avoid
+// - This is essentially the same as calling OpenPopupContextItem() + BeginPopup() but written to avoid
 //   computing the ID twice because BeginPopupContextXXX functions are called very frequently.
 bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiMouseButton mouse_button)
 {

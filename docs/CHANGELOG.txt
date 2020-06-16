@@ -55,7 +55,7 @@ Other Changes:
 - Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
   would attempt to focus it and close other popups. (#2880)
 - Popups: Fix BeginPopupContextVoid() when clicking over the area made unavailable by a modal. (#1636)
-- Fix GetGlyphRangesKorean() end-range to end at 0xD7A3 (instead of 0xD79D). (#348, #3217) [@marukrap]
+- Popups: Clarified some of the comments and function prototypes.
 - Metrics: Added a "Settings" section with some details about persistent ini settings.
 - Nav, Menus: Fix vertical wrap-around in menus or popups created with multiple appending calls to
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
@@ -63,6 +63,7 @@ Other Changes:
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
 - Columns: Lower overhead on column switches and switching to background channel.
   Benefits Columns but was primarily made with Tables in mind!
+- Fonts: Fix GetGlyphRangesKorean() end-range to end at 0xD7A3 (instead of 0xD79D). (#348, #3217) [@marukrap]
 - ImDrawList: Fixed an issue where draw command merging or primitive unreserve while crossing the
   VtxOffset boundary would lead to draw commands with wrong VtxOffset. (#3129, #3163, #3232, #2591)
   [@thedmd, @Shironekoben, @sergeyn, @ocornut]

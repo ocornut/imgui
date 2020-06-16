@@ -202,11 +202,13 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: future api should allow to enable horizontal scrolling (#2510)
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
- - popups/modal: make modal title bar blink when trying to click outside the modal
+ - modals: make modal title bar blink when trying to click outside the modal
+ - modals: technically speaking, we could make Begin() with ImGuiWindowFlags_Modal work without involving popup. May help untangle a few things, as modals are more like regular windows than popups.
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
+ - popups/modals: although it is sometimes convenient that popups/modals lifetime is owned by imgui, we could also a bool-owned-by-user api as long as Begin() return value testing is enforced.
 
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
  - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
