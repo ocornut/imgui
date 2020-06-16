@@ -2023,7 +2023,7 @@ void    ImGui::TableAutoHeaders()
     ImGuiStyle& style = ImGui::GetStyle();
 
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
+    //ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
     const int columns_count = table->ColumnsCount;
@@ -2078,7 +2078,7 @@ void    ImGui::TableAutoHeaders()
     }
 
     // FIXME-TABLE: This is not user-land code any more + need to explain WHY this is here! (added in fa88f023)
-    window->SkipItems = table->HostSkipItems;
+    //window->SkipItems = table->HostSkipItems;
 
     // Allow opening popup from the right-most section after the last column
     // (We don't actually need to ImGuiHoveredFlags_AllowWhenBlockedByPopup because in reality this is generally
