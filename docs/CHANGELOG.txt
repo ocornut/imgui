@@ -52,6 +52,8 @@ Other Changes:
   Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
   Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
   Set to an intermediary value to toggle behavior based on width (same as Firefox).
+- Tab: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item 
+  (vs ImGuiTabBarFlags_NoTooltip for entire tab bar). [@Xipiryon]
 - Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
   would attempt to focus it and close other popups. (#2880)
 - Popups: Fix BeginPopupContextVoid() when clicking over the area made unavailable by a modal. (#1636)
