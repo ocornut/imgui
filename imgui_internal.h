@@ -66,6 +66,9 @@ Index of this file:
 #if __has_warning("-Wdouble-promotion")
 #pragma clang diagnostic ignored "-Wdouble-promotion"
 #endif
+#if __has_warning("-Wimplicit-int-float-conversion")
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"   // warning: implicit conversion from 'xxx' to 'float' may lose precision
+#endif
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"              // warning: unknown option after '#pragma GCC diagnostic' kind
