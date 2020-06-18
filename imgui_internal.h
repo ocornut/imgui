@@ -57,18 +57,16 @@ Index of this file:
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"    // for stb_textedit.h
-#pragma clang diagnostic ignored "-Wmissing-prototypes" // for stb_textedit.h
+#if __has_warning("-Wunknown-warning-option")
+#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'
+#endif
+#pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
+#pragma clang diagnostic ignored "-Wunused-function"                // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wmissing-prototypes"             // for stb_textedit.h
 #pragma clang diagnostic ignored "-Wold-style-cast"
-#if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif
-#if __has_warning("-Wdouble-promotion")
 #pragma clang diagnostic ignored "-Wdouble-promotion"
-#endif
-#if __has_warning("-Wimplicit-int-float-conversion")
-#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"   // warning: implicit conversion from 'xxx' to 'float' may lose precision
-#endif
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"              // warning: unknown option after '#pragma GCC diagnostic' kind
