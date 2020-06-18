@@ -5596,7 +5596,7 @@ static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& rect, cons
 {
     ImGuiContext& g = *GImGui;
     ImVec2 size_for_clamping = (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(window->Flags & ImGuiWindowFlags_NoTitleBar)) ? ImVec2(window->Size.x, window->TitleBarHeight()) : window->Size;
-    window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos + size_for_clamping, rect.Min + padding) - size_for_clamping);
+    window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos, rect.Min + padding - size_for_clamping));
 }
 
 static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
