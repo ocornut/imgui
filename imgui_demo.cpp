@@ -4006,6 +4006,70 @@ static void ShowDemoWindowTables()
         ImGui::TreePop();
     }
 
+    // Demonstrate creating custom context menus inside columns, while playing it nice with context menus provided by TableHeader()/TableAutoHeaders()
+    if (open_action != -1)
+        ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode("Context menus"))
+    {
+        HelpMarker("By default, TableHeader()/TableAutoHeaders() will open a context-menu on right-click.");
+        ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingPolicyFixedX | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Borders;
+        const int COLUMNS_COUNT = 3;
+        if (ImGui::BeginTable("##table1", COLUMNS_COUNT, flags))
+        {
+            ImGui::TableSetupColumn("One");
+            ImGui::TableSetupColumn("Two");
+            ImGui::TableSetupColumn("Three");
+
+            // Context Menu 1: right-click on header (including empty section after the third column!) should open Default Table Popup
+            ImGui::TableAutoHeaders();
+            for (int row = 0; row < 4; row++)
+            {
+                ImGui::TableNextRow();
+                for (int column = 0; column < COLUMNS_COUNT; column++)
+                {
+                    ImGui::TableSetColumnIndex(column);
+                    ImGui::PushID(row * COLUMNS_COUNT + column);
+                    ImGui::Text("Cell %d,%d", column, row);
+                    ImGui::SameLine();
+
+                    // Context Menu 2: right-click on buttons open Custom Button Popup
+                    ImGui::SmallButton("..");
+                    if (ImGui::BeginPopupContextItem())
+                    {
+                        ImGui::Text("This is the popup for Button() On Cell %d,%d", column, row);
+                        ImGui::Selectable("Close");
+                        ImGui::EndPopup();
+                    }
+                    ImGui::PopID();
+                }
+            }
+
+            // Context Menu 3: Right-click anywhere in columns opens a custom popup
+            // We use the ImGuiPopupFlags_NoOpenOverExistingPopup flag to avoid displaying over either the standard TableHeader context-menu or the Button context-menu.
+            const int hovered_column = ImGui::TableGetHoveredColumn();
+            for (int column = 0; column < COLUMNS_COUNT + 1; column++)
+            {
+                ImGui::PushID(column);
+                if (hovered_column == column && ImGui::IsMouseReleased(1))
+                    ImGui::OpenPopup("MyPopup", ImGuiPopupFlags_NoOpenOverExistingPopup);
+                if (ImGui::BeginPopup("MyPopup"))
+                {
+                    if (column == COLUMNS_COUNT)
+                        ImGui::Text("This is the popup for unused space after the last column.");
+                    else
+                        ImGui::Text("This is the popup for Column '%s'", ImGui::TableGetColumnName(column));
+                    ImGui::Selectable("Close");
+                    ImGui::EndPopup();
+                }
+                ImGui::PopID();
+            }
+
+            ImGui::EndTable();
+            ImGui::Text("TableGetHoveredColumn() returned: %d", hovered_column);
+        }
+        ImGui::TreePop();
+    }
+
     static const char* template_items_names[] =
     {
         "Banana", "Apple", "Cherry", "Watermelon", "Grapefruit", "Strawberry", "Mango",
