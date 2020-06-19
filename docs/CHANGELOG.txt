@@ -54,6 +54,9 @@ Other Changes:
   Set to an intermediary value to toggle behavior based on width (same as Firefox).
 - Tab: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item 
   (vs ImGuiTabBarFlags_NoTooltip for entire tab bar). [@Xipiryon]
+- Popups: Added ImGuiPopupFlags_AnyPopupId and ImGuiPopupFlags_AnyPopupLevel flags for IsPopupOpen(), 
+  allowing to check if any popup is open at the current level, if a given popup is open at any popup 
+  level, if any popup is open at all.
 - Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
   would attempt to focus it and close other popups. (#2880)
 - Popups: Fix BeginPopupContextVoid() when clicking over the area made unavailable by a modal. (#1636)

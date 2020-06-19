@@ -1492,7 +1492,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
 
     bool hovered, held;
     bool pressed = ButtonBehavior(frame_bb, id, &hovered, &held);
-    bool popup_open = IsPopupOpen(id);
+    bool popup_open = IsPopupOpen(id, ImGuiPopupFlags_None);
 
     const ImU32 frame_col = GetColorU32(hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
     const float value_x2 = ImMax(frame_bb.Min.x, frame_bb.Max.x - arrow_size);
@@ -6288,7 +6288,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
     const ImGuiID id = window->GetID(label);
-    bool menu_is_open = IsPopupOpen(id);
+    bool menu_is_open = IsPopupOpen(id, ImGuiPopupFlags_None);
 
     // Sub-menus are ChildWindow so that mouse can be hovering across them (otherwise top-most popup menu would steal focus and not allow hovering on parent menu)
     ImGuiWindowFlags flags = ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoNavFocus;
@@ -6414,7 +6414,7 @@ bool ImGui::BeginMenu(const char* label, bool enabled)
 
     if (!enabled) // explicitly close if an open menu becomes disabled, facilitate users code a lot in pattern such as 'if (BeginMenu("options", has_object)) { ..use object.. }'
         want_close = true;
-    if (want_close && IsPopupOpen(id))
+    if (want_close && IsPopupOpen(id, ImGuiPopupFlags_None))
         ClosePopupToLevel(g.BeginPopupStack.Size, true);
 
     IMGUI_TEST_ENGINE_ITEM_INFO(id, label, window->DC.ItemFlags | ImGuiItemStatusFlags_Openable | (menu_is_open ? ImGuiItemStatusFlags_Opened : 0));

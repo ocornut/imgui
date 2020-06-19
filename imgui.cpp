@@ -3468,7 +3468,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         // Handle the edge case of a popup being closed while clicking in its empty space.
         // If we try to focus it, FocusWindow() > ClosePopupsOverWindow() will accidentally close any parent popups because they are not linked together any more.
         ImGuiWindow* root_window = g.HoveredRootWindow;
-        const bool is_closed_popup = root_window && (root_window->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpenAtAnyLevel(root_window->PopupId);
+        const bool is_closed_popup = root_window && (root_window->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpen(root_window->PopupId, ImGuiPopupFlags_AnyPopupLevel);
 
         if (root_window != NULL && !is_closed_popup)
         {
@@ -7619,35 +7619,45 @@ void ImGui::SetTooltip(const char* fmt, ...)
 // [SECTION] POPUPS
 //-----------------------------------------------------------------------------
 
-// Return true if the popup is open at the current BeginPopup() level of the popup stack
-bool ImGui::IsPopupOpen(ImGuiID id)
+// Supported flags: ImGuiPopupFlags_AnyPopupId, ImGuiPopupFlags_AnyPopupLevel
+bool ImGui::IsPopupOpen(ImGuiID id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == id;
+    if (popup_flags & ImGuiPopupFlags_AnyPopupId)
+    {
+        // Return true if any popup is open at the current BeginPopup() level of the popup stack
+        // This may be used to e.g. test for another popups already opened to handle popups priorities at the same level.
+        IM_ASSERT(id == 0);
+        if (popup_flags & ImGuiPopupFlags_AnyPopupLevel)
+            return g.OpenPopupStack.Size > 0;
+        else
+            return g.OpenPopupStack.Size > g.BeginPopupStack.Size;
+    }
+    else
+    {
+        if (popup_flags & ImGuiPopupFlags_AnyPopupLevel)
+        {
+            // Return true if the popup is open anywhere in the popup stack
+            for (int n = 0; n < g.OpenPopupStack.Size; n++)
+                if (g.OpenPopupStack[n].PopupId == id)
+                    return true;
+            return false;
+        }
+        else
+        {
+            // Return true if the popup is open at the current BeginPopup() level of the popup stack (this is the most-common query)
+            return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == id;
+        }
+    }
 }
 
-// Return true if the popup is open at the current BeginPopup() level of the popup stack
-bool ImGui::IsPopupOpen(const char* str_id)
+bool ImGui::IsPopupOpen(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
-}
-
-bool ImGui::IsPopupOpenAtAnyLevel(ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    for (int n = 0; n < g.OpenPopupStack.Size; n++)
-        if (g.OpenPopupStack[n].PopupId == id)
-            return true;
-    return false;
-}
-
-// Return true if any popup is open at the current BeginPopup() level of the popup stack
-// This may be used to e.g. test for another popups already opened in the same frame to handle popups priorities at the same level.
-bool ImGui::IsAnyPopupOpen()
-{
-    ImGuiContext& g = *GImGui;
-    return g.OpenPopupStack.Size > g.BeginPopupStack.Size;
+    ImGuiID id = (popup_flags & ImGuiPopupFlags_AnyPopupId) ? 0 : g.CurrentWindow->GetID(str_id);
+    if ((popup_flags & ImGuiPopupFlags_AnyPopupLevel) && id != 0)
+        IM_ASSERT(0 && "Cannot use IsPopupOpen() with a string id and ImGuiPopupFlags_AnyPopupLevel."); // But non-string version is legal and used internally
+    return IsPopupOpen(id, popup_flags);
 }
 
 ImGuiWindow* ImGui::GetTopMostPopupModal()
@@ -7674,7 +7684,7 @@ void ImGui::OpenPopupEx(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
-    int current_stack_size = g.BeginPopupStack.Size;
+    const int current_stack_size = g.BeginPopupStack.Size;
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
@@ -7811,7 +7821,7 @@ void ImGui::CloseCurrentPopup()
 bool ImGui::BeginPopupEx(ImGuiID id, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    if (!IsPopupOpen(id))
+    if (!IsPopupOpen(id, ImGuiPopupFlags_None))
     {
         g.NextWindowData.ClearFlags(); // We behave like Begin() and need to consume those values
         return false;
@@ -7850,7 +7860,7 @@ bool ImGui::BeginPopupModal(const char* name, bool* p_open, ImGuiWindowFlags fla
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
     const ImGuiID id = window->GetID(name);
-    if (!IsPopupOpen(id))
+    if (!IsPopupOpen(id, ImGuiPopupFlags_None))
     {
         g.NextWindowData.ClearFlags(); // We behave like Begin() and need to consume those values
         return false;

@@ -161,6 +161,7 @@ typedef int ImGuiFocusedFlags;      // -> enum ImGuiFocusedFlags_    // Flags: f
 typedef int ImGuiHoveredFlags;      // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
 typedef int ImGuiInputTextFlags;    // -> enum ImGuiInputTextFlags_  // Flags: for InputText(), InputTextMultiline()
 typedef int ImGuiKeyModFlags;       // -> enum ImGuiKeyModFlags_     // Flags: for io.KeyMods (Ctrl/Shift/Alt/Super)
+typedef int ImGuiPopupFlags;        // -> enum ImGuiPopupFlags_      // Flags: for OpenPopup*(), BeginPopupContext*(), IsPopupOpen()
 typedef int ImGuiSelectableFlags;   // -> enum ImGuiSelectableFlags_ // Flags: for Selectable()
 typedef int ImGuiTabBarFlags;       // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
 typedef int ImGuiTabItemFlags;      // -> enum ImGuiTabItemFlags_    // Flags: for BeginTabItem()
@@ -612,13 +613,17 @@ namespace ImGui
     IMGUI_API void          OpenPopup(const char* str_id);                                                      // call to mark popup as open (don't call every frame!).
     IMGUI_API bool          OpenPopupContextItem(const char* str_id = NULL, ImGuiMouseButton mouse_b = 1);      // helper to open popup when clicked on last item. return true when just opened. (note: actually triggers on the mouse _released_ event to be consistent with popup behaviors)
     IMGUI_API void          CloseCurrentPopup();                                                                // manually close the popup we have begin-ed into.
-    IMGUI_API bool          IsPopupOpen(const char* str_id);                                                    // return true if the popup is open at the current BeginPopup() level of the popup stack
     // Popups: open+begin combined functions helpers
     //  - Helpers to do OpenPopup+BeginPopup where the Open action is triggered by e.g. hovering an item and right-clicking.
     //  - They are convenient to easily create context menus, hence the name.
     IMGUI_API bool          BeginPopupContextItem(const char* str_id = NULL, ImGuiMouseButton mouse_b = 1);     // open+begin popup when clicked on last item. if you can pass a NULL str_id only if the previous item had an id. If you want to use that on a non-interactive item such as Text() you need to pass in an explicit ID here. read comments in .cpp!
     IMGUI_API bool          BeginPopupContextWindow(const char* str_id = NULL, ImGuiMouseButton mouse_b = 1, bool also_over_items = true);  // open+begin popup when clicked on current window.
     IMGUI_API bool          BeginPopupContextVoid(const char* str_id = NULL, ImGuiMouseButton mouse_b = 1);     // open+begin popup when clicked in void (where there are no windows).
+    // Popups: test function
+    //  - IsPopupOpen(): return true if the popup is open at the current BeginPopup() level of the popup stack.
+    //  - IsPopupOpen() with ImGuiPopupFlags_AnyPopupId: return true if any popup is open at the current BeginPopup() level of the popup stack.
+    //  - IsPopupOpen() with ImGuiPopupFlags_AnyPopupId + ImGuiPopupFlags_AnyPopupLevel: return true if any popup is open.
+    IMGUI_API bool          IsPopupOpen(const char* str_id, ImGuiPopupFlags flags = 0);                         // return true if the popup is open.
 
     // Columns
     // - You can also use SameLine(pos_x) to mimic simplified columns.
@@ -863,6 +868,15 @@ enum ImGuiTreeNodeFlags_
     ImGuiTreeNodeFlags_NavLeftJumpsBackHere = 1 << 13,  // (WIP) Nav: left direction may move to this TreeNode() from any of its child (items submitted between TreeNode and TreePop)
     //ImGuiTreeNodeFlags_NoScrollOnOpen     = 1 << 14,  // FIXME: TODO: Disable automatic scroll on TreePop() if node got just open and contents is not visible
     ImGuiTreeNodeFlags_CollapsingHeader     = ImGuiTreeNodeFlags_Framed | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_NoAutoOpenOnLog
+};
+
+// Flags for IsPopupOpen() function.
+enum ImGuiPopupFlags_
+{
+    ImGuiPopupFlags_None                    = 0,
+    ImGuiPopupFlags_AnyPopupId              = 1 << 7,   // For IsPopupOpen(): ignore the ImGuiID parameter and test for any popup.
+    ImGuiPopupFlags_AnyPopupLevel           = 1 << 8,   // For IsPopupOpen(): search/test at any level of the popup stack (default test in the current level)
+    ImGuiPopupFlags_AnyPopup                = ImGuiPopupFlags_AnyPopupId | ImGuiPopupFlags_AnyPopupLevel
 };
 
 // Flags for ImGui::Selectable()
