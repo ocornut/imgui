@@ -382,6 +382,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
  - examples: dx11/dx12: try to use new swapchain blit models (#2970)
+ - backends: report it better when not able to create texture?
  - backends: apple: example_apple should be using modern GL3.
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
@@ -392,7 +393,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
- - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
+ - optimization: replace vsnprintf with stb_printf? using IMGUI_USE_STB_SPRINTF.(#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
  - optimization: fully covered window (covered by another with non-translucent bg + WindowRounding worth of padding) may want to clip rendering.

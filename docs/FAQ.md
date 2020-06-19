@@ -15,12 +15,13 @@ or view this file with any Markdown viewer.
 | [What is this library called?](#q-what-is-this-library-called) |
 | [Which version should I get?](#q-which-version-should-i-get) |
 | **Q&A: Integration** |
+| **[How to get started?](#q-how-to-get-started)** |
 | **[How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?](#q-how-can-i-tell-whether-to-dispatch-mousekeyboard-to-dear-imgui-or-to-my-application)** |
 | [How can I enable keyboard or gamepad controls?](#q-how-can-i-enable-keyboard-or-gamepad-controls) |
 | [How can I use this on a machine without mouse, keyboard or screen? (input share, remote display)](#q-how-can-i-use-this-on-a-machine-without-mouse-keyboard-or-screen-input-share-remote-display) |
-| [I integrated Dear ImGui in my engine and the text or lines are blurry..](#q-i-integrated-dear-imgui-in-my-engine-and-the-text-or-lines-are-blurry) |
+| [I integrated Dear ImGui in my engine and little squares are showing instead of text..](#q-i-integrated-dear-imgui-in-my-engine-and-little-squares-are-showing-instead-of-text) |
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
-| [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries)
+| [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
 | **[Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
@@ -88,6 +89,15 @@ You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) bran
 
 # Q&A: Integration
 
+### Q: How to get started?
+
+Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp).
+Read [examples/README.txt](https://github.com/ocornut/imgui/tree/master/examples/README.txt).
+
+##### [Return to Index](#index)
+
+---
+
 ### Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
 
 You can read the `io.WantCaptureMouse`, `io.WantCaptureKeyboard` and `io.WantTextInput` flags from the ImGuiIO structure.
@@ -139,9 +149,9 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 
 ---
 
-### Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
-In your Render function, try translating your projection matrix by (0.5f,0.5f) or (0.375f,0.375f).
-Also make sure your orthographic projection matrix and io.DisplaySize matches your actual framebuffer dimension.
+### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text..
+This usually means that: your font texture wasn't uploaded into GPU, or your shader or other rendering state are not reading from the right texture (e.g. texture wasn't bound).
+If this happens using the standard back-ends it is probably that the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 
 ##### [Return to Index](#index)
 
