@@ -874,7 +874,8 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // Context menu
     if (table->IsContextPopupOpen && table->InstanceCurrent == table->InstanceInteracted)
     {
-        if (BeginPopup("##TableContextMenu"))
+        const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
+        if (BeginPopupEx(context_menu_id, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoSavedSettings))
         {
             TableDrawContextMenu(table);
             EndPopup();
@@ -2010,20 +2011,19 @@ void    ImGui::TableOpenContextMenu(ImGuiTable* table, int column_n)
         table->IsContextPopupOpen = true;
         table->ContextPopupColumn = (ImS8)column_n;
         table->InstanceInteracted = table->InstanceCurrent;
-        OpenPopup("##TableContextMenu");
+        const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
+        OpenPopupEx(context_menu_id, ImGuiPopupFlags_None);
     }
 }
 
 // This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
 // The intent is that advanced users willing to create customized headers would not need to use this helper
 // and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
-// FIXME-TABLE: However presently this function uses too many internal structures/calls.
 void    ImGui::TableAutoHeaders()
 {
     ImGuiStyle& style = ImGui::GetStyle();
 
     ImGuiContext& g = *GImGui;
-    //ImGuiWindow* window = g.CurrentWindow;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
     const int columns_count = table->ColumnsCount;
@@ -2043,7 +2043,6 @@ void    ImGui::TableAutoHeaders()
 
     // This for loop is constructed to not make use of internal functions,
     // as this is intended to be a base template to copy and build from.
-    int open_context_popup = INT_MAX;
     for (int column_n = 0; column_n < columns_count; column_n++)
     {
         if (!TableSetColumnIndex(column_n))
@@ -2071,25 +2070,19 @@ void    ImGui::TableAutoHeaders()
         PushID(table->InstanceCurrent * table->ColumnsCount + column_n);
         TableHeader(name);
         PopID();
-
-        // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
-        if (IsMouseReleased(1) && IsItemHovered())
-            open_context_popup = column_n;
     }
 
     // FIXME-TABLE: This is not user-land code any more + need to explain WHY this is here! (added in fa88f023)
     //window->SkipItems = table->HostSkipItems;
 
-    // Allow opening popup from the right-most section after the last column
-    // (We don't actually need to ImGuiHoveredFlags_AllowWhenBlockedByPopup because in reality this is generally
-    // not required anymore.. because popup opening code tends to be reacting on IsMouseReleased() and the click
-    // would already have closed any other popups!)
-    if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count && g.IO.MousePos.y >= row_y1 && g.IO.MousePos.y < row_y1 + row_height)
-        open_context_popup = -1; // Will open a non-column-specific popup.
-
-    // Open Context Menu
-    if (open_context_popup != INT_MAX)
-        TableOpenContextMenu(table, open_context_popup);
+    // Allow opening popup from the right-most section after the last column.
+    // (We don't actually need to use ImGuiHoveredFlags_AllowWhenBlockedByPopup because in reality this is generally
+    // not required anymore.. because popup opening code tends to be reacting on IsMouseReleased() and the click would
+    // already have closed any other popups!)
+    // FIXME-TABLE: TableOpenContextMenu() is not public yet.
+    if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
+        if (g.IO.MousePos.y >= row_y1 && g.IO.MousePos.y < row_y1 + row_height)
+            TableOpenContextMenu(table, -1); // Will open a non-column-specific popup.    
 }
 
 // Emit a column header (text + optional sort order)
@@ -2214,6 +2207,10 @@ void    ImGui::TableHeader(const char* label)
     column->ContentMaxPosHeadersIdeal = ImMax(column->ContentMaxPosHeadersIdeal, max_pos_x);
 
     PopID();
+
+    // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
+    if (IsMouseReleased(1) && IsItemHovered())
+        TableOpenContextMenu(table, column_n);
 }
 
 void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* clicked_column, bool add_to_existing_sort_orders)
