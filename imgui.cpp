@@ -372,6 +372,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2020/06/23 (1.77) - removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor of BeginPopupContextWindow(const char*, ImGuiPopupFlags flags) with ImGuiPopupFlags_NoOverItems.
  - 2020/06/15 (1.77) - renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
  - 2020/06/15 (1.77) - removed CalcItemRectClosestPoint() entry point which was made obsolete and asserting in December 2017.
  - 2020/04/23 (1.77) - removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular().
@@ -7670,21 +7671,26 @@ ImGuiWindow* ImGui::GetTopMostPopupModal()
     return NULL;
 }
 
-void ImGui::OpenPopup(const char* str_id)
+void ImGui::OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
-    OpenPopupEx(g.CurrentWindow->GetID(str_id));
+    OpenPopupEx(g.CurrentWindow->GetID(str_id), popup_flags);
 }
 
 // Mark popup as open (toggle toward open state).
 // Popups are closed when user click outside, or activate a pressable item, or CloseCurrentPopup() is called within a BeginPopup()/EndPopup() block.
 // Popup identifiers are relative to the current ID-stack (so OpenPopup and BeginPopup needs to be at the same level).
 // One open popup per level of the popup hierarchy (NB: when assigning we reset the Window member of ImGuiPopupRef to NULL)
-void ImGui::OpenPopupEx(ImGuiID id)
+void ImGui::OpenPopupEx(ImGuiID id, ImGuiPopupFlags popup_flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* parent_window = g.CurrentWindow;
     const int current_stack_size = g.BeginPopupStack.Size;
+
+    if (popup_flags & ImGuiPopupFlags_NoOpenOverExistingPopup)
+        if (IsPopupOpen(0u, ImGuiPopupFlags_AnyPopupId))
+            return;
+
     ImGuiPopupData popup_ref; // Tagged as new ref as Window will be set back to NULL if we write this into OpenPopupStack.
     popup_ref.PopupId = id;
     popup_ref.Window = NULL;
@@ -7903,14 +7909,15 @@ void ImGui::EndPopup()
     g.WithinEndChild = false;
 }
 
-bool ImGui::OpenPopupContextItem(const char* str_id, ImGuiMouseButton mouse_button)
+bool ImGui::OpenPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
+    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
     {
         ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
         IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
-        OpenPopupEx(id);
+        OpenPopupEx(id, popup_flags);
         return true;
     }
     return false;
@@ -7921,39 +7928,42 @@ bool ImGui::OpenPopupContextItem(const char* str_id, ImGuiMouseButton mouse_butt
 // - You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
 // - This is essentially the same as calling OpenPopupContextItem() + BeginPopup() but written to avoid
 //   computing the ID twice because BeginPopupContextXXX functions are called very frequently.
-bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiMouseButton mouse_button)
+bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (window->SkipItems)
         return false;
     ImGuiID id = str_id ? window->GetID(str_id) : window->DC.LastItemId; // If user hasn't passed an ID, we can use the LastItemID. Using LastItemID as a Popup ID won't conflict!
     IM_ASSERT(id != 0);                                                  // You cannot pass a NULL str_id if the last item has no identifier (e.g. a Text() item)
+    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        OpenPopupEx(id);
+        OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
-bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiMouseButton mouse_button, bool also_over_items)
+bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
         str_id = "window_context";
     ImGuiID id = window->GetID(str_id);
+    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
     if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
-        if (also_over_items || !IsAnyItemHovered())
-            OpenPopupEx(id);
+        if (!(popup_flags & ImGuiPopupFlags_NoOpenOverItems) || !IsAnyItemHovered())
+            OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 
-bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiMouseButton mouse_button)
+bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiPopupFlags popup_flags)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
         str_id = "void_context";
     ImGuiID id = window->GetID(str_id);
+    int mouse_button = (popup_flags & ImGuiPopupFlags_MouseButtonMask_);
     if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
         if (GetTopMostPopupModal() == NULL)
-            OpenPopupEx(id);
+            OpenPopupEx(id, popup_flags);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 

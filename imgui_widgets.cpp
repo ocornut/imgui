@@ -1517,7 +1517,7 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     {
         if (window->DC.NavLayerCurrent == 0)
             window->NavLastIds[0] = id;
-        OpenPopupEx(id);
+        OpenPopupEx(id, ImGuiPopupFlags_None);
         popup_open = true;
     }
 
