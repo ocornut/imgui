@@ -5502,9 +5502,10 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     //   This is however not the case with current back-ends under Win32, but a custom borderless window implementation would benefit from it.
     // - When decoration are enabled we typically benefit from that distance, but then our resize elements would be conflicting with OS resize elements, so we also narrow.
     // - Note that we are unable to tell if the platform setup allows hovering with a distance threshold (on Win32, decorated window have such threshold).
+    // We only clip interaction so we overwrite window->ClipRect, cannot call PushClipRect() yet as DrawList is not yet setup.
     const bool clip_with_viewport_rect = !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseHoveredViewport) || (g.IO.MouseHoveredViewport != window->ViewportId) || !(window->Viewport->Flags & ImGuiViewportFlags_NoDecoration);
     if (clip_with_viewport_rect)
-        PushClipRect(window->Viewport->Pos, window->Viewport->Pos + window->Viewport->Size, true); // Won't incur a draw command as we are not drawing here.
+        window->ClipRect = window->Viewport->GetMainRect();
 
     // Resize grips and borders are on layer 1
     window->DC.NavLayerCurrent = ImGuiNavLayer_Menu;
@@ -5568,8 +5569,6 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         }
     }
     PopID();
-    if (clip_with_viewport_rect)
-        PopClipRect();
 
     // Restore nav layer
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
