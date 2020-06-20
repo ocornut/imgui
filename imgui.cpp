@@ -18,7 +18,7 @@
 
 // Developed by Omar Cornut and every direct or indirect contributors to the GitHub.
 // See LICENSE.txt for copyright and licensing details (standard MIT License).
-// This library is free but I need your support to sustain development and maintenance.
+// This library is free but needs your support to sustain development and maintenance.
 // Businesses: you can support continued development via invoiced technical support, maintenance and sponsoring contracts. Please reach out to "contact AT dearimgui.org".
 // Individuals: you can support continued development via donations. See docs/README or web page.
 
@@ -171,7 +171,7 @@ CODE
  ---------------------------------------------------------------
  - Run and study the examples and demo in imgui_demo.cpp to get acquainted with the library.
  - In the majority of cases you should be able to use unmodified back-ends files available in the examples/ folder.
- - Add the Dear ImGui source files to your projects or using your preferred build system.
+ - Add the Dear ImGui source files + selected back-end source files to your projects or using your preferred build system.
    It is recommended you build and statically link the .cpp files as part of your project and NOT as shared library (DLL).
  - You can later customize the imconfig.h file to tweak some compile-time behavior, such as integrating Dear ImGui types with your own maths types.
  - When using Dear ImGui, your programming IDE is your friend: follow the declaration of variables, functions and types to find comments about them.
@@ -383,7 +383,9 @@ CODE
  - 2019/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 
 
- - 2020/04/23 (1.77) - Removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular().
+ - 2020/06/15 (1.77) - renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
+ - 2020/06/15 (1.77) - removed CalcItemRectClosestPoint() entry point which was made obsolete and asserting in December 2017.
+ - 2020/04/23 (1.77) - removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular().
  - 2020/01/22 (1.75) - ImDrawList::AddCircle()/AddCircleFilled() functions don't accept negative radius any more.
  - 2019/12/17 (1.75) - [undid this change in 1.76] made Columns() limited to 64 columns by asserting above that limit. While the current code technically supports it, future code may not so we're putting the restriction ahead.
  - 2019/12/13 (1.75) - [imgui_internal.h] changed ImRect() default constructor initializes all fields to 0.0f instead of (FLT_MAX,FLT_MAX,-FLT_MAX,-FLT_MAX). If you used ImRect::Add() to create bounding boxes by adding multiple points into it, you may need to fix your initial value.
@@ -631,10 +633,13 @@ CODE
  Q: What is this library called?
  Q: Which version should I get?
  >> This library is called "Dear ImGui", please don't call it "ImGui" :)
- >> See https://www.dearimgui.org/faq
+ >> See https://www.dearimgui.org/faq for details.
 
  Q&A: Integration
  ================
+
+ Q: How to get started?
+ A: Read 'PROGRAMMER GUIDE' above. Read examples/README.txt.
 
  Q: How can I tell whether to dispatch mouse/keyboard to Dear ImGui or to my application?
  A: You should read the 'io.WantCaptureMouse', 'io.WantCaptureKeyboard' and 'io.WantTextInput' flags!
@@ -642,7 +647,7 @@ CODE
 
  Q. How can I enable keyboard controls?
  Q: How can I use this without a mouse, without a keyboard or without a screen? (gamepad, input share, remote display)
- Q: I integrated Dear ImGui in my engine and the text or lines are blurry..
+ Q: I integrated Dear ImGui in my engine and little squares are showing instead of text..
  Q: I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..
  Q: I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..
 >> See https://www.dearimgui.org/faq
@@ -873,21 +878,21 @@ CODE
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
-#pragma clang diagnostic ignored "-Wunknown-pragmas"        // warning : unknown warning group '-Wformat-pedantic *'        // not all warnings are known by all clang versions.. so ignoring warnings triggers new warnings on some configuration. great!
-#pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
-#pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants (typically 0.0f) is ok.
-#pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
-#pragma clang diagnostic ignored "-Wexit-time-destructors"  // warning : declaration requires an exit-time destructor       // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
-#pragma clang diagnostic ignored "-Wglobal-constructors"    // warning : declaration requires a global destructor           // similar to above, not sure what the exact difference is.
-#pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
-#pragma clang diagnostic ignored "-Wformat-pedantic"        // warning : format specifies type 'void *' but the argument has type 'xxxx *' // unreasonable, would lead to casting every %p arg to void*. probably enabled by -pedantic.
-#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"       // warning : cast to 'void *' from smaller integer type 'int'
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning : zero as null pointer constant              // some standard header variations use #define NULL 0
+#if __has_warning("-Wunknown-warning-option")
+#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'                      // not all warnings are known by all Clang versions and they tend to be rename-happy.. so ignoring warnings triggers new warnings on some configuration. Great!
 #endif
-#if __has_warning("-Wdouble-promotion")
-#pragma clang diagnostic ignored "-Wdouble-promotion"       // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
-#endif
+#pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
+#pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast                            // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wfloat-equal"                    // warning: comparing floating point with == or != is unsafe // storing and comparing against same constants (typically 0.0f) is ok.
+#pragma clang diagnostic ignored "-Wformat-nonliteral"              // warning: format string is not a string literal            // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
+#pragma clang diagnostic ignored "-Wexit-time-destructors"          // warning: declaration requires an exit-time destructor     // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
+#pragma clang diagnostic ignored "-Wglobal-constructors"            // warning: declaration requires a global destructor         // similar to above, not sure what the exact difference is.
+#pragma clang diagnostic ignored "-Wsign-conversion"                // warning: implicit conversion changes signedness
+#pragma clang diagnostic ignored "-Wformat-pedantic"                // warning: format specifies type 'void *' but the argument has type 'xxxx *' // unreasonable, would lead to casting every %p arg to void*. probably enabled by -pedantic.
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"       // warning: cast to 'void *' from smaller integer type 'int'
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                    // some standard header variations use #define NULL 0
+#pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
 // We disable -Wpragmas because GCC doesn't provide an has_warning equivalent and some forks/patches may not following the warning/version association.
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
@@ -3228,17 +3233,22 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
     if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
         return false;
 
-    SetHoveredID(id);
+    // We exceptionally allow this function to be called with id==0 to allow using it for easy high-level
+    // hover test in widgets code. We could also decide to split this function is two.
+    if (id != 0)
+    {
+        SetHoveredID(id);
 
-    // [DEBUG] Item Picker tool!
-    // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
-    // the cost of this tool near-zero. We can get slightly better call-stack and support picking non-hovered
-    // items if we perform the test in ItemAdd(), but that would incur a small runtime cost.
-    // #define IMGUI_DEBUG_TOOL_ITEM_PICKER_EX in imconfig.h if you want this check to also be performed in ItemAdd().
-    if (g.DebugItemPickerActive && g.HoveredIdPreviousFrame == id)
-        GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
-    if (g.DebugItemPickerBreakId == id)
-        IM_DEBUG_BREAK();
+        // [DEBUG] Item Picker tool!
+        // We perform the check here because SetHoveredID() is not frequently called (1~ time a frame), making
+        // the cost of this tool near-zero. We can get slightly better call-stack and support picking non-hovered
+        // items if we perform the test in ItemAdd(), but that would incur a small runtime cost.
+        // #define IMGUI_DEBUG_TOOL_ITEM_PICKER_EX in imconfig.h if you want this check to also be performed in ItemAdd().
+        if (g.DebugItemPickerActive && g.HoveredIdPreviousFrame == id)
+            GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 255, 0, 255));
+        if (g.DebugItemPickerBreakId == id)
+            IM_DEBUG_BREAK();
+    }
 
     return true;
 }
@@ -3595,8 +3605,12 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
     // (after we're done with all our widgets, so e.g. clicking on docking tab-bar which have set HoveredId already and not get us here!)
     if (g.IO.MouseClicked[0])
     {
+        // Handle the edge case of a popup being closed while clicking in its empty space.
+        // If we try to focus it, FocusWindow() > ClosePopupsOverWindow() will accidentally close any parent popups because they are not linked together any more.
         ImGuiWindow* root_window = g.HoveredWindow ? g.HoveredWindow->RootWindowDockStop : NULL;
-        if (root_window != NULL)
+        const bool is_closed_popup = root_window && (root_window->Flags & ImGuiWindowFlags_Popup) && !IsPopupOpenAtAnyLevel(root_window->PopupId);
+
+        if (root_window != NULL && !is_closed_popup)
         {
             StartMouseMovingWindow(g.HoveredWindow);
             if (g.IO.ConfigWindowsMoveFromTitleBarOnly)
@@ -3604,7 +3618,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
                     if (!root_window->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                         g.MovingWindow = NULL;
         }
-        else if (g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
+        else if (root_window != NULL && g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
         {
             // Clicking on void disable focus
             FocusWindow(NULL);
@@ -3868,7 +3882,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     for (int i = 0; i < IM_ARRAYSIZE(g.IO.MouseDown); i++)
     {
         if (g.IO.MouseClicked[i])
-            g.IO.MouseDownOwned[i] = (g.HoveredWindow != NULL) || (!g.OpenPopupStack.empty());
+            g.IO.MouseDownOwned[i] = (g.HoveredWindow != NULL) || (g.OpenPopupStack.Size > 0);
         mouse_any_down |= g.IO.MouseDown[i];
         if (g.IO.MouseDown[i])
             if (mouse_earliest_button_down == -1 || g.IO.MouseClickedTime[i] < g.IO.MouseClickedTime[mouse_earliest_button_down])
@@ -3886,7 +3900,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     if (g.WantCaptureMouseNextFrame != -1)
         g.IO.WantCaptureMouse = (g.WantCaptureMouseNextFrame != 0);
     else
-        g.IO.WantCaptureMouse = (mouse_avail_to_imgui && (g.HoveredWindow != NULL || mouse_any_down)) || (!g.OpenPopupStack.empty());
+        g.IO.WantCaptureMouse = (mouse_avail_to_imgui && (g.HoveredWindow != NULL || mouse_any_down)) || (g.OpenPopupStack.Size > 0);
 
     // Update io.WantCaptureKeyboard for the user application (true = dispatch keyboard info to imgui, false = dispatch keyboard info to Dear ImGui + app)
     if (g.WantCaptureKeyboardNextFrame != -1)
@@ -4387,7 +4401,12 @@ static void SetupViewportDrawData(ImGuiViewportP* viewport, ImVector<ImDrawList*
     }
 }
 
-// When using this function it is sane to ensure that float are perfectly rounded to integer values, to that e.g. (int)(max.x-min.x) in user's render produce correct result.
+// Push a clipping rectangle for both ImGui logic (hit-testing etc.) and low-level ImDrawList rendering.
+// - When using this function it is sane to ensure that float are perfectly rounded to integer values,
+//   so that e.g. (int)(max.x-min.x) in user's render produce correct result.
+// - If the code here changes, may need to update code of functions like NextColumn() and PushColumnClipRect():
+//   some frequently called functions which to modify both channels and clipping simultaneously tend to use the
+//   more specialized SetWindowClipRectBeforeSetChannel() to avoid extraneous updates of underlying ImDrawCmds.
 void ImGui::PushClipRect(const ImVec2& clip_rect_min, const ImVec2& clip_rect_max, bool intersect_with_current_clip_rect)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -5592,11 +5611,13 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
     return ret_auto_fit;
 }
 
-static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& rect, const ImVec2& padding)
+static inline void ClampWindowRect(ImGuiWindow* window, const ImRect& viewport_rect, const ImVec2& padding)
 {
     ImGuiContext& g = *GImGui;
-    ImVec2 size_for_clamping = (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(window->Flags & ImGuiWindowFlags_NoTitleBar)) ? ImVec2(window->Size.x, window->TitleBarHeight()) : window->Size;
-    window->Pos = ImMin(rect.Max - padding, ImMax(window->Pos + size_for_clamping, rect.Min + padding) - size_for_clamping);
+    ImVec2 size_for_clamping = window->Size;
+    if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(window->Flags & ImGuiWindowFlags_NoTitleBar))
+        size_for_clamping.y = window->TitleBarHeight();
+    window->Pos = ImClamp(window->Pos, viewport_rect.Min + padding - size_for_clamping, viewport_rect.Max - padding);
 }
 
 static void ImGui::RenderWindowOuterBorders(ImGuiWindow* window)
@@ -6026,6 +6047,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->HasCloseButton = (p_open != NULL);
         window->ClipRect = ImVec4(-FLT_MAX,-FLT_MAX,+FLT_MAX,+FLT_MAX);
         window->IDStack.resize(1);
+        window->DrawList->_ResetForNewFrame();
 
         // Restore buffer capacity when woken from a compacted state, to avoid
         if (window->MemoryCompacted)
@@ -6436,7 +6458,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         // DRAWING
 
         // Setup draw list and outer clipping rectangle
-        window->DrawList->_ResetForNewFrame();
+        IM_ASSERT(window->DrawList->CmdBuffer.Size == 1 && window->DrawList->CmdBuffer[0].ElemCount == 0);
         window->DrawList->PushTextureID(g.Font->ContainerAtlas->TexID);
         PushClipRect(host_rect.Min, host_rect.Max, false);
 
@@ -8337,16 +8359,35 @@ void ImGui::SetTooltip(const char* fmt, ...)
 // [SECTION] POPUPS
 //-----------------------------------------------------------------------------
 
+// Return true if the popup is open at the current BeginPopup() level of the popup stack
 bool ImGui::IsPopupOpen(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == id;
 }
 
+// Return true if the popup is open at the current BeginPopup() level of the popup stack
 bool ImGui::IsPopupOpen(const char* str_id)
 {
     ImGuiContext& g = *GImGui;
     return g.OpenPopupStack.Size > g.BeginPopupStack.Size && g.OpenPopupStack[g.BeginPopupStack.Size].PopupId == g.CurrentWindow->GetID(str_id);
+}
+
+bool ImGui::IsPopupOpenAtAnyLevel(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    for (int n = 0; n < g.OpenPopupStack.Size; n++)
+        if (g.OpenPopupStack[n].PopupId == id)
+            return true;
+    return false;
+}
+
+// Return true if any popup is open at the current BeginPopup() level of the popup stack
+// This may be used to e.g. test for another popups already opened in the same frame to handle popups priorities at the same level.
+bool ImGui::IsAnyPopupOpen()
+{
+    ImGuiContext& g = *GImGui;
+    return g.OpenPopupStack.Size > g.BeginPopupStack.Size;
 }
 
 ImGuiWindow* ImGui::GetTopMostPopupModal()
@@ -8400,8 +8441,8 @@ void ImGui::OpenPopupEx(ImGuiID id)
         else
         {
             // Close child popups if any, then flag popup for open/reopen
-            g.OpenPopupStack.resize(current_stack_size + 1);
-            g.OpenPopupStack[current_stack_size] = popup_ref;
+            ClosePopupToLevel(current_stack_size, false);
+            g.OpenPopupStack.push_back(popup_ref);
         }
 
         // When reopening a popup we first refocus its parent, otherwise if its parent is itself a popup it would get closed by ClosePopupsOverWindow().
@@ -8414,7 +8455,7 @@ void ImGui::OpenPopupEx(ImGuiID id)
 void ImGui::ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup)
 {
     ImGuiContext& g = *GImGui;
-    if (g.OpenPopupStack.empty())
+    if (g.OpenPopupStack.Size == 0)
         return;
 
     // When popups are stacked, clicking on a lower level popups puts focus back to it and close popups above it.
@@ -8454,6 +8495,8 @@ void ImGui::ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_
     ImGuiContext& g = *GImGui;
     IMGUI_DEBUG_LOG_POPUP("ClosePopupToLevel(%d), restore_focus_to_window_under_popup=%d\n", remaining, restore_focus_to_window_under_popup);
     IM_ASSERT(remaining >= 0 && remaining < g.OpenPopupStack.Size);
+
+    // Trim open popup stack
     ImGuiWindow* focus_window = g.OpenPopupStack[remaining].SourceWindow;
     ImGuiWindow* popup_window = g.OpenPopupStack[remaining].Window;
     g.OpenPopupStack.resize(remaining);
@@ -8592,7 +8635,7 @@ void ImGui::EndPopup()
     g.WithinEndChild = false;
 }
 
-bool ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiMouseButton mouse_button)
+bool ImGui::OpenPopupContextItem(const char* str_id, ImGuiMouseButton mouse_button)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
     if (IsMouseReleased(mouse_button) && IsItemHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
@@ -8606,8 +8649,10 @@ bool ImGui::OpenPopupOnItemClick(const char* str_id, ImGuiMouseButton mouse_butt
 }
 
 // This is a helper to handle the simplest case of associating one named popup to one given widget.
-// You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
-// You can pass a NULL str_id to use the identifier of the last item.
+// - You can pass a NULL str_id to use the identifier of the last item.
+// - You may want to handle this on user side if you have specific needs (e.g. tweaking IsItemHovered() parameters).
+// - This is essentially the same as calling OpenPopupContextItem() + BeginPopup() but written to avoid
+//   computing the ID twice because BeginPopupContextXXX functions are called very frequently.
 bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiMouseButton mouse_button)
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
@@ -8622,9 +8667,10 @@ bool ImGui::BeginPopupContextItem(const char* str_id, ImGuiMouseButton mouse_but
 
 bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiMouseButton mouse_button, bool also_over_items)
 {
+    ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
         str_id = "window_context";
-    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
+    ImGuiID id = window->GetID(str_id);
     if (IsMouseReleased(mouse_button) && IsWindowHovered(ImGuiHoveredFlags_AllowWhenBlockedByPopup))
         if (also_over_items || !IsAnyItemHovered())
             OpenPopupEx(id);
@@ -8633,11 +8679,13 @@ bool ImGui::BeginPopupContextWindow(const char* str_id, ImGuiMouseButton mouse_b
 
 bool ImGui::BeginPopupContextVoid(const char* str_id, ImGuiMouseButton mouse_button)
 {
+    ImGuiWindow* window = GImGui->CurrentWindow;
     if (!str_id)
         str_id = "void_context";
-    ImGuiID id = GImGui->CurrentWindow->GetID(str_id);
+    ImGuiID id = window->GetID(str_id);
     if (IsMouseReleased(mouse_button) && !IsWindowHovered(ImGuiHoveredFlags_AnyWindow))
-        OpenPopupEx(id);
+        if (GetTopMostPopupModal() == NULL)
+            OpenPopupEx(id);
     return BeginPopupEx(id, ImGuiWindowFlags_AlwaysAutoResize|ImGuiWindowFlags_NoTitleBar|ImGuiWindowFlags_NoSavedSettings);
 }
 

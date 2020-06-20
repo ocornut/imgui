@@ -57,15 +57,16 @@ Index of this file:
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
 #pragma clang diagnostic push
-#pragma clang diagnostic ignored "-Wunused-function"    // for stb_textedit.h
-#pragma clang diagnostic ignored "-Wmissing-prototypes" // for stb_textedit.h
+#if __has_warning("-Wunknown-warning-option")
+#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'
+#endif
+#pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
+#pragma clang diagnostic ignored "-Wunused-function"                // for stb_textedit.h
+#pragma clang diagnostic ignored "-Wmissing-prototypes"             // for stb_textedit.h
 #pragma clang diagnostic ignored "-Wold-style-cast"
-#if __has_warning("-Wzero-as-null-pointer-constant")
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"
-#endif
-#if __has_warning("-Wdouble-promotion")
 #pragma clang diagnostic ignored "-Wdouble-promotion"
-#endif
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wpragmas"              // warning: unknown option after '#pragma GCC diagnostic' kind
@@ -451,6 +452,7 @@ struct IMGUI_API ImRect
     void        ClipWithFull(const ImRect& r)       { Min = ImClamp(Min, r.Min, r.Max); Max = ImClamp(Max, r.Min, r.Max); } // Full version, ensure both points are fully clipped.
     void        Floor()                             { Min.x = IM_FLOOR(Min.x); Min.y = IM_FLOOR(Min.y); Max.x = IM_FLOOR(Max.x); Max.y = IM_FLOOR(Max.y); }
     bool        IsInverted() const                  { return Min.x > Max.x || Min.y > Max.y; }
+    ImVec4      ToVec4() const                      { return ImVec4(Min.x, Min.y, Max.x, Max.y); }
 };
 
 // Helper: ImBitArray
@@ -1036,7 +1038,8 @@ struct ImGuiColumns
     float               LineMinY, LineMaxY;
     float               HostCursorPosY;         // Backup of CursorPos at the time of BeginColumns()
     float               HostCursorMaxPosX;      // Backup of CursorMaxPos at the time of BeginColumns()
-    ImRect              HostClipRect;           // Backup of ClipRect at the time of BeginColumns()
+    ImRect              HostInitialClipRect;    // Backup of ClipRect at the time of BeginColumns()
+    ImRect              HostBackupClipRect;     // Backup of ClipRect during PushColumnsBackground()/PopColumnsBackground()
     ImRect              HostWorkRect;           // Backup of WorkRect at the time of BeginColumns()
     ImVector<ImGuiColumnData> Columns;
     ImDrawListSplitter  Splitter;
@@ -1766,7 +1769,7 @@ struct IMGUI_API ImGuiWindow
     bool                    WantCollapseToggle;
     bool                    SkipItems;                          // Set when items can safely be all clipped (e.g. window not visible or collapsed)
     bool                    Appearing;                          // Set during the frame where the window is appearing (or re-appearing)
-    bool                    Hidden;                             // Do not display (== (HiddenFrames*** > 0))
+    bool                    Hidden;                             // Do not display (== HiddenFrames*** > 0)
     bool                    IsFallbackWindow;                   // Set on the "Debug##Default" window.
     bool                    HasCloseButton;                     // Set when the window has a close button (p_open != NULL)
     signed char             ResizeBorderHeld;                   // Current border being held for resize (-1: none, otherwise 0-3)
@@ -2066,7 +2069,9 @@ namespace ImGui
     IMGUI_API void          OpenPopupEx(ImGuiID id);
     IMGUI_API void          ClosePopupToLevel(int remaining, bool restore_focus_to_window_under_popup);
     IMGUI_API void          ClosePopupsOverWindow(ImGuiWindow* ref_window, bool restore_focus_to_window_under_popup);
-    IMGUI_API bool          IsPopupOpen(ImGuiID id); // Test for id at current popup stack level (currently begin-ed into); this doesn't scan the whole popup stack!
+    IMGUI_API bool          IsPopupOpen(ImGuiID id); // Test for id at the current BeginPopup() level of the popup stack (this doesn't scan the whole popup stack!)
+    IMGUI_API bool          IsPopupOpenAtAnyLevel(ImGuiID id);
+    IMGUI_API bool          IsAnyPopupOpen();        // Return true if any popup is open at the current BeginPopup() level of the popup stack
     IMGUI_API bool          BeginPopupEx(ImGuiID id, ImGuiWindowFlags extra_flags);
     IMGUI_API void          BeginTooltipEx(ImGuiWindowFlags extra_flags, ImGuiTooltipFlags tooltip_flags);
     IMGUI_API ImGuiWindow*  GetTopMostPopupModal();
@@ -2156,6 +2161,7 @@ namespace ImGui
     IMGUI_API bool          IsDragDropPayloadBeingAccepted();
 
     // Internal Columns API (this is not exposed because we will encourage transitioning to the Tables API)
+    IMGUI_API void          SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect);
     IMGUI_API void          BeginColumns(const char* str_id, int count, ImGuiColumnsFlags flags = 0); // setup number of columns. use an identifier to distinguish multiple column sets. close with EndColumns().
     IMGUI_API void          EndColumns();                                                             // close columns
     IMGUI_API void          PushColumnClipRect(int column_index);

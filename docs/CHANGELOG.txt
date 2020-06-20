@@ -107,6 +107,8 @@ Breaking Changes:
 
 - Removed unncessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
   note that this is a Beta api and will likely be reworked to support multi-monitor multi-DPI.
+- Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
+- Removed CalcItemRectClosestPoint() entry point which was made obsolete and asserting in December 2017.
 
 Other Changes:
 
@@ -119,25 +121,35 @@ Other Changes:
   Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
   Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
   Set to an intermediary value to toggle behavior based on width (same as Firefox).
-- Fix GetGlyphRangesKorean() end-range to end at 0xD7A3 (instead of 0xD79D). (#348, #3217) [@marukrap]
+- Tab: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item 
+  (vs ImGuiTabBarFlags_NoTooltip for entire tab bar). [@Xipiryon]
+- Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
+  would attempt to focus it and close other popups. (#2880)
+- Popups: Fix BeginPopupContextVoid() when clicking over the area made unavailable by a modal. (#1636)
+- Popups: Clarified some of the comments and function prototypes.
 - Metrics: Added a "Settings" section with some details about persistent ini settings.
 - Nav, Menus: Fix vertical wrap-around in menus or popups created with multiple appending calls to
   BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
 - Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
-- ImDrawList: Fixed an issue where draw command merging or primitive unreserve while crossing the 
+- Columns: Lower overhead on column switches and switching to background channel.
+  Benefits Columns but was primarily made with Tables in mind!
+- Fonts: Fix GetGlyphRangesKorean() end-range to end at 0xD7A3 (instead of 0xD79D). (#348, #3217) [@marukrap]
+- ImDrawList: Fixed an issue where draw command merging or primitive unreserve while crossing the
   VtxOffset boundary would lead to draw commands with wrong VtxOffset. (#3129, #3163, #3232, #2591)
   [@thedmd, @Shironekoben, @sergeyn, @ocornut]
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where changing channels with different
   TextureId, VtxOffset would incorrectly apply new settings to draw channels. (#3129, #3163)
   [@ocornut, @thedmd, @Shironekoben]
-- ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split when current 
+- ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split when current
   VtxOffset was not zero would lead to draw commands with wrong VtxOffset. (#2591)
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split right after
   a callback draw command would incorrectly override the callback draw command.
+- ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would
+  generate an extra unrequired vertex. [@ShironekoBen]
 - Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
-- Docs: Improved and moved font documentation to docs/FONTS.md so it can be readable on the web. 
-  Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut] 
+- Docs: Improved and moved font documentation to docs/FONTS.md so it can be readable on the web.
+  Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut]
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
   Fixed a static contructor which led to this dependency on some compiler setups (unclear which).

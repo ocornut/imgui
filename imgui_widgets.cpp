@@ -58,19 +58,19 @@ Index of this file:
 
 // Clang/GCC warnings with -Weverything
 #if defined(__clang__)
-#pragma clang diagnostic ignored "-Wold-style-cast"         // warning : use of old-style cast                              // yes, they are more terse.
-#pragma clang diagnostic ignored "-Wfloat-equal"            // warning : comparing floating point with == or != is unsafe   // storing and comparing against same constants (typically 0.0f) is ok.
-#pragma clang diagnostic ignored "-Wformat-nonliteral"      // warning : format string is not a string literal              // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
-#pragma clang diagnostic ignored "-Wsign-conversion"        // warning : implicit conversion changes signedness             //
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning : zero as null pointer constant              // some standard header variations use #define NULL 0
+#if __has_warning("-Wunknown-warning-option")
+#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'                      // not all warnings are known by all Clang versions and they tend to be rename-happy.. so ignoring warnings triggers new warnings on some configuration. Great!
 #endif
-#if __has_warning("-Wdouble-promotion")
-#pragma clang diagnostic ignored "-Wdouble-promotion"       // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
-#endif
-#if __has_warning("-Wdeprecated-enum-enum-conversion")
-#pragma clang diagnostic ignored "-Wdeprecated-enum-enum-conversion" // warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
-#endif
+#pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
+#pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast                            // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wfloat-equal"                    // warning: comparing floating point with == or != is unsafe // storing and comparing against same constants (typically 0.0f) is ok.
+#pragma clang diagnostic ignored "-Wformat-nonliteral"              // warning: format string is not a string literal            // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
+#pragma clang diagnostic ignored "-Wsign-conversion"                // warning: implicit conversion changes signedness
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                    // some standard header variations use #define NULL 0
+#pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
+#pragma clang diagnostic ignored "-Wenum-enum-conversion"           // warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_')
+#pragma clang diagnostic ignored "-Wdeprecated-enum-enum-conversion"// warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
 #pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
 #pragma GCC diagnostic ignored "-Wformat-nonliteral"        // warning: format not a string literal, format string not checked
@@ -557,7 +557,8 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
             if ((flags & ImGuiButtonFlags_PressedOnRelease) && mouse_button_released != -1)
             {
                 // Repeat mode trumps on release behavior
-                if (!((flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay))
+                const bool has_repeated_at_least_once = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button_released] >= g.IO.KeyRepeatDelay;
+                if (!has_repeated_at_least_once)
                     pressed = true;
                 ClearActiveID();
             }
@@ -3476,18 +3477,22 @@ static bool InputTextFilterCharacter(unsigned int* p_char, ImGuiInputTextFlags f
     // Generic named filters
     if (flags & (ImGuiInputTextFlags_CharsDecimal | ImGuiInputTextFlags_CharsHexadecimal | ImGuiInputTextFlags_CharsUppercase | ImGuiInputTextFlags_CharsNoBlank | ImGuiInputTextFlags_CharsScientific))
     {
+        // Allow 0-9 . - + * /
         if (flags & ImGuiInputTextFlags_CharsDecimal)
             if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/'))
                 return false;
 
+        // Allow 0-9 . - + * / e E
         if (flags & ImGuiInputTextFlags_CharsScientific)
             if (!(c >= '0' && c <= '9') && (c != '.') && (c != '-') && (c != '+') && (c != '*') && (c != '/') && (c != 'e') && (c != 'E'))
                 return false;
 
+        // Allow 0-9 a-F A-F
         if (flags & ImGuiInputTextFlags_CharsHexadecimal)
             if (!(c >= '0' && c <= '9') && !(c >= 'a' && c <= 'f') && !(c >= 'A' && c <= 'F'))
                 return false;
 
+        // Turn a-z into A-Z
         if (flags & ImGuiInputTextFlags_CharsUppercase)
             if (c >= 'a' && c <= 'z')
                 *p_char = (c += (unsigned int)('A'-'a'));
@@ -4293,7 +4298,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
         PopFont();
 
     // Log as text
-    if (g.LogEnabled && !(is_password && !is_displaying_hint))
+    if (g.LogEnabled && (!is_password || is_displaying_hint))
         LogRenderedText(&draw_pos, buf_display, buf_display_end);
 
     if (label_size.x > 0)
@@ -4440,7 +4445,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 value_changed |= DragInt(ids[n], &i[n], 1.0f, 0, hdr ? 0 : 255, fmt_table_int[fmt_idx][n]);
             }
             if (!(flags & ImGuiColorEditFlags_NoOptions))
-                OpenPopupOnItemClick("context");
+                OpenPopupContextItem("context");
         }
     }
     else if ((flags & ImGuiColorEditFlags_DisplayHex) != 0 && (flags & ImGuiColorEditFlags_NoInputs) == 0)
@@ -4465,7 +4470,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
                 sscanf(p, "%02X%02X%02X", (unsigned int*)&i[0], (unsigned int*)&i[1], (unsigned int*)&i[2]);
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
-            OpenPopupOnItemClick("context");
+            OpenPopupContextItem("context");
     }
 
     ImGuiWindow* picker_active_window = NULL;
@@ -4486,7 +4491,7 @@ bool ImGui::ColorEdit4(const char* label, float col[4], ImGuiColorEditFlags flag
             }
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
-            OpenPopupOnItemClick("context");
+            OpenPopupContextItem("context");
 
         if (BeginPopup("picker"))
         {
@@ -4706,7 +4711,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             }
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
-            OpenPopupOnItemClick("context");
+            OpenPopupContextItem("context");
     }
     else if (flags & ImGuiColorEditFlags_PickerHueBar)
     {
@@ -4719,7 +4724,7 @@ bool ImGui::ColorPicker4(const char* label, float col[4], ImGuiColorEditFlags fl
             value_changed = value_changed_sv = true;
         }
         if (!(flags & ImGuiColorEditFlags_NoOptions))
-            OpenPopupOnItemClick("context");
+            OpenPopupContextItem("context");
 
         // Hue bar logic
         SetCursorScreenPos(ImVec2(bar0_pos_x, picker_pos.y));
@@ -7242,7 +7247,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         if (tab_bar->Tabs.Size == 1 && !(tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs))
             tab_contents_visible = true;
 
-    if (tab_appearing && !(tab_bar_appearing && !tab_is_new))
+    // Note that tab_is_new is not necessarily the same as tab_appearing! When a tab bar stops being submitted
+    // and then gets submitted again, the tabs will have 'tab_appearing=true' but 'tab_is_new=false'.
+    if (tab_appearing && (!tab_bar_appearing || tab_is_new))
     {
         PushItemFlag(ImGuiItemFlags_NoNav | ImGuiItemFlags_NoNavDefaultFocus, true);
         ItemAdd(ImRect(), id);
@@ -7401,14 +7408,16 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     // Tooltip (FIXME: Won't work over the close button because ItemOverlap systems messes up with HoveredIdTimer)
     // We test IsItemHovered() to discard e.g. when another item is active or drag and drop over the tab bar (which g.HoveredId ignores)
     if (g.HoveredId == id && !held && g.HoveredIdNotActiveTimer > 0.50f && IsItemHovered())
-        if (!(tab_bar->Flags & ImGuiTabBarFlags_NoTooltip))
+        if (!(tab_bar->Flags & ImGuiTabBarFlags_NoTooltip) && !(tab->Flags & ImGuiTabItemFlags_NoTooltip))
             SetTooltip("%.*s", (int)(FindRenderedTextEnd(label) - label), label);
 
     return tab_contents_visible;
 }
 
 // [Public] This is call is 100% optional but it allows to remove some one-frame glitches when a tab has been unexpectedly removed.
-// To use it to need to call the function SetTabItemClosed() after BeginTabBar() and before any call to BeginTabItem()
+// To use it to need to call the function SetTabItemClosed() after BeginTabBar() and before any call to BeginTabItem().
+// Tabs closed by the close button will automatically be flagged to avoid this issue.
+// FIXME: We should aim to support calling SetTabItemClosed() after the tab submission (for next frame)
 void    ImGui::SetTabItemClosed(const char* label)
 {
     ImGuiContext& g = *GImGui;
@@ -7541,6 +7550,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 // [SECTION] Widgets: Columns, BeginColumns, EndColumns, etc.
 // In the current version, Columns are very weak. Needs to be replaced with a more full-featured system.
 //-------------------------------------------------------------------------
+// - SetWindowClipRectBeforeSetChannel() [Internal]
 // - GetColumnIndex()
 // - GetColumnCount()
 // - GetColumnOffset()
@@ -7557,6 +7567,18 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
 // - EndColumns()
 // - Columns()
 //-------------------------------------------------------------------------
+
+// [Internal] Small optimization to avoid calls to PopClipRect/SetCurrentChannel/PushClipRect in sequences,
+// they would meddle many times with the underlying ImDrawCmd.
+// Instead, we do a preemptive overwrite of clipping rectangle _without_ altering the command-buffer and let
+// the subsequent single call to SetCurrentChannel() does it things once.
+void ImGui::SetWindowClipRectBeforeSetChannel(ImGuiWindow* window, const ImRect& clip_rect)
+{
+    ImVec4 clip_rect_vec4 = clip_rect.ToVec4();
+    window->ClipRect = clip_rect;
+    window->DrawList->_CmdHeader.ClipRect = clip_rect_vec4;
+    window->DrawList->_ClipRectStack.Data[window->DrawList->_ClipRectStack.Size - 1] = clip_rect_vec4;
+}
 
 int ImGui::GetColumnIndex()
 {
@@ -7692,11 +7714,11 @@ void ImGui::PushColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
+
+    // Optimization: avoid SetCurrentChannel() + PushClipRect()
+    columns->HostBackupClipRect = window->ClipRect;
+    SetWindowClipRectBeforeSetChannel(window, columns->HostInitialClipRect);
     columns->Splitter.SetCurrentChannel(window->DrawList, 0);
-    int cmd_size = window->DrawList->CmdBuffer.Size;
-    PushClipRect(columns->HostClipRect.Min, columns->HostClipRect.Max, false);
-    IM_UNUSED(cmd_size);
-    IM_ASSERT(cmd_size >= window->DrawList->CmdBuffer.Size); // Being in channel 0 this should not have created an ImDrawCmd
 }
 
 void ImGui::PopColumnsBackground()
@@ -7705,8 +7727,10 @@ void ImGui::PopColumnsBackground()
     ImGuiColumns* columns = window->DC.CurrentColumns;
     if (columns->Count == 1)
         return;
+
+    // Optimization: avoid PopClipRect() + SetCurrentChannel()
+    SetWindowClipRectBeforeSetChannel(window, columns->HostBackupClipRect);
     columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
-    PopClipRect();
 }
 
 ImGuiColumns* ImGui::FindOrCreateColumns(ImGuiWindow* window, ImGuiID id)
@@ -7754,7 +7778,7 @@ void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiColumnsFlag
 
     columns->HostCursorPosY = window->DC.CursorPos.y;
     columns->HostCursorMaxPosX = window->DC.CursorMaxPos.x;
-    columns->HostClipRect = window->ClipRect;
+    columns->HostInitialClipRect = window->ClipRect;
     columns->HostWorkRect = window->WorkRect;
 
     // Set state for first column
@@ -7826,33 +7850,37 @@ void ImGui::NextColumn()
         IM_ASSERT(columns->Current == 0);
         return;
     }
+
+    // Next column
+    if (++columns->Current == columns->Count)
+        columns->Current = 0;
+
     PopItemWidth();
-    PopClipRect();
+
+    // Optimization: avoid PopClipRect() + SetCurrentChannel() + PushClipRect()
+    // (which would needlessly attempt to update commands in the wrong channel, then pop or overwrite them),
+    ImGuiColumnData* column = &columns->Columns[columns->Current];
+    SetWindowClipRectBeforeSetChannel(window, column->ClipRect);
+    columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
 
     const float column_padding = g.Style.ItemSpacing.x;
     columns->LineMaxY = ImMax(columns->LineMaxY, window->DC.CursorPos.y);
-    if (++columns->Current < columns->Count)
+    if (columns->Current > 0)
     {
         // Columns 1+ ignore IndentX (by canceling it out)
         // FIXME-COLUMNS: Unnecessary, could be locked?
         window->DC.ColumnsOffset.x = GetColumnOffset(columns->Current) - window->DC.Indent.x + column_padding;
-        columns->Splitter.SetCurrentChannel(window->DrawList, columns->Current + 1);
     }
     else
     {
-        // New row/line
-        // Column 0 honor IndentX
+        // New row/line: column 0 honor IndentX.
         window->DC.ColumnsOffset.x = ImMax(column_padding - window->WindowPadding.x, 0.0f);
-        columns->Splitter.SetCurrentChannel(window->DrawList, 1);
-        columns->Current = 0;
         columns->LineMinY = columns->LineMaxY;
     }
     window->DC.CursorPos.x = IM_FLOOR(window->Pos.x + window->DC.Indent.x + window->DC.ColumnsOffset.x);
     window->DC.CursorPos.y = columns->LineMinY;
     window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
     window->DC.CurrLineTextBaseOffset = 0.0f;
-
-    PushColumnClipRect(columns->Current);     // FIXME-COLUMNS: Could it be an overwrite?
 
     // FIXME-COLUMNS: Share code with BeginColumns() - move code on columns setup.
     float offset_0 = GetColumnOffset(columns->Current);

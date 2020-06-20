@@ -80,32 +80,34 @@ Index of this file:
 #include <stdint.h>         // intptr_t
 #endif
 
+// Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (disable: 4996) // 'This function or variable may be unsafe': strcpy, strdup, sprintf, vsnprintf, sscanf, fopen
 #endif
+
+// Clang/GCC warnings with -Weverything
 #if defined(__clang__)
-#pragma clang diagnostic ignored "-Wold-style-cast"           // warning: use of old-style cast                          // yes, they are more terse.
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"  // warning: 'xx' is deprecated: The POSIX name for this..  // for strdup used in demo code (so user can copy & paste the code)
-#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast" // warning: cast to 'void *' from smaller integer type
-#pragma clang diagnostic ignored "-Wformat-security"          // warning: format string is not a string literal
-#pragma clang diagnostic ignored "-Wexit-time-destructors"    // warning: declaration requires an exit-time destructor   // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
-#pragma clang diagnostic ignored "-Wunused-macros"            // warning: macro is not used                              // we define snprintf/vsnprintf on Windows so they are available, but not always used.
-#if __has_warning("-Wzero-as-null-pointer-constant")
-#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant" // warning: zero as null pointer constant             // some standard header variations use #define NULL 0
+#if __has_warning("-Wunknown-warning-option")
+#pragma clang diagnostic ignored "-Wunknown-warning-option"         // warning: unknown warning group 'xxx'                     // not all warnings are known by all Clang versions and they tend to be rename-happy.. so ignoring warnings triggers new warnings on some configuration. Great!
 #endif
-#if __has_warning("-Wdouble-promotion")
-#pragma clang diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
-#endif
-#if __has_warning("-Wreserved-id-macro")
-#pragma clang diagnostic ignored "-Wreserved-id-macro"        // warning: macro name is a reserved identifier
-#endif
+#pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
+#pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast                           // yes, they are more terse.
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"        // warning: 'xx' is deprecated: The POSIX name for this..   // for strdup used in demo code (so user can copy & paste the code)
+#pragma clang diagnostic ignored "-Wint-to-void-pointer-cast"       // warning: cast to 'void *' from smaller integer type
+#pragma clang diagnostic ignored "-Wformat-security"                // warning: format string is not a string literal
+#pragma clang diagnostic ignored "-Wexit-time-destructors"          // warning: declaration requires an exit-time destructor    // exit-time destruction order is undefined. if MemFree() leads to users code that has been disabled before exit it might cause problems. ImGui coding style welcomes static/globals.
+#pragma clang diagnostic ignored "-Wunused-macros"                  // warning: macro is not used                               // we define snprintf/vsnprintf on Windows so they are available, but not always used.
+#pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                   // some standard header variations use #define NULL 0
+#pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
+#pragma clang diagnostic ignored "-Wreserved-id-macro"              // warning: macro name is a reserved identifier
+#pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wpragmas"                    // warning: unknown option after '#pragma GCC diagnostic' kind
-#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"        // warning: cast to pointer from integer of different size
-#pragma GCC diagnostic ignored "-Wformat-security"            // warning: format string is not a string literal (potentially insecure)
-#pragma GCC diagnostic ignored "-Wdouble-promotion"           // warning: implicit conversion from 'float' to 'double' when passing argument to function
-#pragma GCC diagnostic ignored "-Wconversion"                 // warning: conversion to 'xxxx' from 'xxxx' may alter its value
-#pragma GCC diagnostic ignored "-Wmisleading-indentation"     // [__GNUC__ >= 6] warning: this 'if' clause does not guard this statement      // GCC 6.0+ only. See #883 on GitHub.
+#pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wint-to-pointer-cast"      // warning: cast to pointer from integer of different size
+#pragma GCC diagnostic ignored "-Wformat-security"          // warning: format string is not a string literal (potentially insecure)
+#pragma GCC diagnostic ignored "-Wdouble-promotion"         // warning: implicit conversion from 'float' to 'double' when passing argument to function
+#pragma GCC diagnostic ignored "-Wconversion"               // warning: conversion to 'xxxx' from 'xxxx' may alter its value
+#pragma GCC diagnostic ignored "-Wmisleading-indentation"   // [__GNUC__ >= 6] warning: this 'if' clause does not guard this statement      // GCC 6.0+ only. See #883 on GitHub.
 #endif
 
 // Play it nice with Windows users (Update: May 2018, Notepad now supports Unix-style carriage returns!)
@@ -2870,7 +2872,7 @@ static void ShowDemoWindowPopups()
     if (ImGui::TreeNode("Context menus"))
     {
         // BeginPopupContextItem() is a helper to provide common/simple popup behavior of essentially doing:
-        //    if (IsItemHovered() && IsMouseReleased(0))
+        //    if (IsItemHovered() && IsMouseReleased(ImGuiMouseButton_Right))
         //       OpenPopup(id);
         //    return BeginPopup(id);
         // For more advanced uses you may want to replicate and customize this code.
@@ -2886,11 +2888,11 @@ static void ShowDemoWindowPopups()
             ImGui::EndPopup();
         }
 
-        // We can also use OpenPopupOnItemClick() which is the same as BeginPopupContextItem() but without the
+        // We can also use OpenPopupContextItem() which is the same as BeginPopupContextItem() but without the
         // Begin() call. So here we will make it that clicking on the text field with the right mouse button (1)
         // will toggle the visibility of the popup above.
         ImGui::Text("(You can also right-click me to open the same popup as above.)");
-        ImGui::OpenPopupOnItemClick("item context menu", 1);
+        ImGui::OpenPopupContextItem("item context menu", 1);
 
         // When used after an item that has an ID (e.g.Button), we can skip providing an ID to BeginPopupContextItem().
         // BeginPopupContextItem() will use the last item ID as the popup ID.
