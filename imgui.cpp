@@ -3255,11 +3255,21 @@ float ImGui::CalcWrapWidthForPos(const ImVec2& pos, float wrap_pos_x)
     if (wrap_pos_x < 0.0f)
         return 0.0f;
 
-    ImGuiWindow* window = GImGui->CurrentWindow;
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
     if (wrap_pos_x == 0.0f)
+    {
+        // We could decide to setup a default wrapping max point for auto-resizing windows,
+        // or have auto-wrap (with unspecified wrapping pos) behave as a ContentSize extending function?
+        //if (window->Hidden && (window->Flags & ImGuiWindowFlags_AlwaysAutoResize))
+        //    wrap_pos_x = ImMax(window->WorkRect.Min.x + g.FontSize * 10.0f, window->WorkRect.Max.x);
+        //else
         wrap_pos_x = window->WorkRect.Max.x;
+    }
     else if (wrap_pos_x > 0.0f)
+    {
         wrap_pos_x += window->Pos.x - window->Scroll.x; // wrap_pos_x is provided is window local space
+    }
 
     return ImMax(wrap_pos_x - pos.x, 1.0f);
 }
