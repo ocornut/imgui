@@ -55,17 +55,18 @@ Other Changes:
   Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
   Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
   Set to an intermediary value to toggle behavior based on width (same as Firefox).
-- Tab: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item 
+- Tab: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item
   (vs ImGuiTabBarFlags_NoTooltip for entire tab bar). [@Xipiryon]
-- Popups: All functions capable of opening popups (OpenPopup*, BeginPopupContext*) now take a new 
-  ImGuiPopupFlags sets of flags instead of a mouse button index. The API is automatically backward 
+- Windows: Fix unintended feedback loops when resizing windows close to main viewport edges. [@rokups]
+- Popups: All functions capable of opening popups (OpenPopup*, BeginPopupContext*) now take a new
+  ImGuiPopupFlags sets of flags instead of a mouse button index. The API is automatically backward
   compatible as ImGuiPopupFlags is guaranteed to hold mouse button index in the lower bits.
 - Popups: Added ImGuiPopupFlags_NoOpenOverExistingPopup for OpenPopup*/BeginPopupContext* functions
   to first test for the presence of another popup at the same level.
 - Popups: Added ImGuiPopupFlags_NoOpenOverItems for BeginPopupContextWindow() - similar to testing
   for !IsAnyItemHovered() prior to doing an OpenPopup.
-- Popups: Added ImGuiPopupFlags_AnyPopupId and ImGuiPopupFlags_AnyPopupLevel flags for IsPopupOpen(), 
-  allowing to check if any popup is open at the current level, if a given popup is open at any popup 
+- Popups: Added ImGuiPopupFlags_AnyPopupId and ImGuiPopupFlags_AnyPopupLevel flags for IsPopupOpen(),
+  allowing to check if any popup is open at the current level, if a given popup is open at any popup
   level, if any popup is open at all.
 - Popups: Fix an edge case where programatically closing a popup while clicking on its empty space
   would attempt to focus it and close other popups. (#2880)
@@ -73,7 +74,7 @@ Other Changes:
 - Popups: Clarified some of the comments and function prototypes.
 - Modals: BeginPopupModal() doesn't set the ImGuiWindowFlags_NoSavedSettings flag anymore, and will
   not always be auto-centered. Note that modals are more similar to regular windows than they are to
-  popups, so api and behavior may evolve further toward embracing this. (#915, #3091) 
+  popups, so api and behavior may evolve further toward embracing this. (#915, #3091)
   Enforce centering using e.g. SetNextWindowPos(io.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f,0.5f)).
 - Metrics: Added a "Settings" section with some details about persistent ini settings.
 - Nav, Menus: Fix vertical wrap-around in menus or popups created with multiple appending calls to

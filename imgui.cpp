@@ -5071,6 +5071,9 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
             // Resize from any of the four corners
             // We don't use an incremental MouseDelta but rather compute an absolute target size based on mouse position
             ImVec2 corner_target = g.IO.MousePos - g.ActiveIdClickOffset + ImLerp(grip.InnerDir * grip_hover_outer_size, grip.InnerDir * -grip_hover_inner_size, grip.CornerPosN); // Corner of the window corresponding to our corner grip
+            ImVec2 clamp_min = ImVec2(grip.CornerPosN.x == 1 ? g.Style.DisplayWindowPadding.x : -FLT_MAX, grip.CornerPosN.y == 1 ? g.Style.DisplayWindowPadding.y : -FLT_MAX);
+            ImVec2 clamp_max = ImVec2(grip.CornerPosN.x == 0 ? g.IO.DisplaySize.x - g.Style.DisplayWindowPadding.x : FLT_MAX, grip.CornerPosN.y == 0 ? g.IO.DisplaySize.y - g.Style.DisplayWindowPadding.y : FLT_MAX);
+            corner_target = ImClamp(corner_target, clamp_min, clamp_max);
             CalcResizePosSizeFromAnyCorner(window, corner_target, grip.CornerPosN, &pos_target, &size_target);
         }
         if (resize_grip_n == 0 || held || hovered)
@@ -5096,6 +5099,9 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
             if (border_n == 1) { border_posn = ImVec2(1, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); } // Right
             if (border_n == 2) { border_posn = ImVec2(0, 1); border_target.y = (g.IO.MousePos.y - g.ActiveIdClickOffset.y + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); } // Bottom
             if (border_n == 3) { border_posn = ImVec2(0, 0); border_target.x = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + WINDOWS_RESIZE_FROM_EDGES_HALF_THICKNESS); } // Left
+            ImVec2 clamp_min = ImVec2(border_n == 1 ? g.Style.DisplayWindowPadding.x : -FLT_MAX, border_n == 2 ? g.Style.DisplayWindowPadding.y : -FLT_MAX);
+            ImVec2 clamp_max = ImVec2(border_n == 3 ? g.IO.DisplaySize.x - g.Style.DisplayWindowPadding.x : FLT_MAX, border_n == 0 ? g.IO.DisplaySize.y - g.Style.DisplayWindowPadding.y : FLT_MAX);
+            border_target = ImClamp(border_target, clamp_min, clamp_max);
             CalcResizePosSizeFromAnyCorner(window, border_target, border_posn, &pos_target, &size_target);
         }
     }
@@ -5117,6 +5123,7 @@ static bool ImGui::UpdateWindowManualResize(ImGuiWindow* window, const ImVec2& s
         {
             const float NAV_RESIZE_SPEED = 600.0f;
             nav_resize_delta *= ImFloor(NAV_RESIZE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y));
+            nav_resize_delta = ImClamp(nav_resize_delta, g.Style.DisplayWindowPadding - window->Pos - window->Size, ImVec2(FLT_MAX, FLT_MAX));
             g.NavWindowingToggleLayer = false;
             g.NavDisableMouseHover = true;
             resize_grip_col[0] = GetColorU32(ImGuiCol_ResizeGripActive);
