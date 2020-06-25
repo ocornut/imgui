@@ -36,12 +36,13 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
-- Removed unncessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
+- Removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
   note that this is a Beta api and will likely be reworked to support multi-monitor multi-DPI.
 - Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
 - Removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor
   of BeginPopupContextWindow(const char*, ImGuiPopupFlags flags) with ImGuiPopupFlags_NoOverItems.
-- Removed CalcItemRectClosestPoint() entry point which was made obsolete and asserting in December 2017.
+  Kept inline redirection function (will obsolete).
+- Removed obsoleted CalcItemRectClosestPoint() entry point (has been asserting since December 2017).
 
 Other Changes:
 
