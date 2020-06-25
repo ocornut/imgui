@@ -1967,10 +1967,13 @@ static void ShowDemoWindowLayout()
         ImGui::Checkbox("Disable Menu", &disable_menu);
 
         static int line = 50;
-        bool goto_line = ImGui::Button("Goto");
-        ImGui::SameLine();
+        static float goto_anchor = 0.5f;
+
+        ImGui::SetNextItemWidth(80);
+        bool goto_line = ImGui::DragFloat("Scroll Anchor", &goto_anchor, 0.001f, 0.0f, 1.0f);
+
         ImGui::SetNextItemWidth(100);
-        goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
+        goto_line |= ImGui::InputInt("Goto Item", &line);
 
         // Child 1: no border, enable horizontal scrollbar
         {
@@ -1980,12 +1983,19 @@ static void ShowDemoWindowLayout()
             ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f, 260), false, window_flags);
             for (int i = 0; i < 100; i++)
             {
+                if (line == i)
+                    ImGui::PushStyleColor(ImGuiCol_Text, ImVec4(1.0f, 1.0f, 0.0f, 1.0f));
+
                 ImGui::Text("%04d: scrollable region", i);
-                if (goto_line && line == i)
-                    ImGui::SetScrollHereY();
+                if (line == i)
+                {
+                    ImGui::PopStyleColor();
+                    if (goto_line)
+                        ImGui::SetScrollHereY(goto_anchor);
+                }
             }
             if (goto_line && line >= 100)
-                ImGui::SetScrollHereY();
+                ImGui::SetScrollHereY(goto_anchor);
             ImGui::EndChild();
         }
 
