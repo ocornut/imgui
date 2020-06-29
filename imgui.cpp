@@ -3916,6 +3916,11 @@ void ImGui::Shutdown(ImGuiContext* context)
         SetCurrentContext(backup_context);
     }
 
+    // Notify hooked test engine, if any
+#ifdef IMGUI_ENABLE_TEST_ENGINE
+    ImGuiTestEngineHook_Shutdown(context);
+#endif
+
     // Clear everything else
     for (int i = 0; i < g.Windows.Size; i++)
         IM_DELETE(g.Windows[i]);

@@ -2028,8 +2028,8 @@ IMGUI_API void              ImFontAtlasBuildMultiplyRectAlpha8(const unsigned ch
 // [SECTION] Test Engine Hooks (imgui_test_engine)
 //-----------------------------------------------------------------------------
 
-//#define IMGUI_ENABLE_TEST_ENGINE
 #ifdef IMGUI_ENABLE_TEST_ENGINE
+extern void                 ImGuiTestEngineHook_Shutdown(ImGuiContext* ctx);
 extern void                 ImGuiTestEngineHook_PreNewFrame(ImGuiContext* ctx);
 extern void                 ImGuiTestEngineHook_PostNewFrame(ImGuiContext* ctx);
 extern void                 ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, const ImRect& bb, ImGuiID id);
