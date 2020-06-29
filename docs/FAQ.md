@@ -23,7 +23,7 @@ or view this file with any Markdown viewer.
 | [I integrated Dear ImGui in my engine and some elements are clipping or disappearing when I move windows around..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-clipping-or-disappearing-when-i-move-windows-around) |
 | [I integrated Dear ImGui in my engine and some elements are displaying outside their expected windows boundaries..](#q-i-integrated-dear-imgui-in-my-engine-and-some-elements-are-displaying-outside-their-expected-windows-boundaries) |
 | **Q&A: Usage** |
-| **[Why are multiple widgets reacting when I interact with a single one?<br>How can I have multiple widgets with the same label or with an empty label?](#q-why-are-multiple-widgets-reacting-when-i-interact-with-a-single-one-q-how-can-i-have-multiple-widgets-with-the-same-label-or-with-an-empty-label)** |
+| **[How can I have widgets with an empty label?<br>How can I have multiple widgets with the same label?<br>Why are multiple widgets reacting when I interact with one?](#q-how-can-i-have-widgets-with-an-empty-label)** |
 | [How can I display an image? What is ImTextureID, how does it work?](#q-how-can-i-display-an-image-what-is-imtextureid-how-does-it-work)|
 | [How can I use my own math types instead of ImVec2/ImVec4?](#q-how-can-i-use-my-own-math-types-instead-of-imvec2imvec4) |
 | [How can I interact with standard C++ types (such as std::string and std::vector)?](#q-how-can-i-interact-with-standard-c-types-such-as-stdstring-and-stdvector) |
@@ -173,7 +173,9 @@ Refer to rendering back-ends in the [examples/](https://github.com/ocornut/imgui
 
 # Q&A: Usage
 
-### Q: Why are multiple widgets reacting when I interact with a single one? <br>Q: How can I have multiple widgets with the same label or with an empty label?
+### Q: How can I have widgets with an empty label?
+### Q: How can I have multiple widgets with the same label?
+### Q: Why are multiple widgets reacting when I interact with one?
 
 A primer on labels and the ID Stack...
 
@@ -295,11 +297,12 @@ if (TreeNode("node"))  // <-- this function call will do a PushID() for you (unl
   TreePop();
 }
 ```
-- When working with trees, ID are used to preserve the open/close state of each tree node.
+
+When working with trees, ID are used to preserve the open/close state of each tree node.
 Depending on your use cases you may want to use strings, indices or pointers as ID.
-e.g. when following a single pointer that may change over time, using a static string as ID
+- e.g. when following a single pointer that may change over time, using a static string as ID
 will preserve your node open/closed state when the targeted object change.
-e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
+- e.g. when displaying a list of objects, using indices or pointers as ID will preserve the
 node open/closed state differently. See what makes more sense in your situation!
 
 ##### [Return to Index](#index)

@@ -9,11 +9,12 @@ RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
 REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
 COMMITS HISTORY:                https://github.com/ocornut/imgui/commits/master
 FAQ                             https://www.dearimgui.org/faq/
+WIKI                            https://github.com/ocornut/imgui/wiki
 
 WHEN TO UPDATE?
 
-- Keeping your copy of dear imgui updated once in a while is recommended.
-- It is generally safe to sync to the latest commit in master.
+- Keeping your copy of Dear ImGui updated regularly is recommended.
+- It is generally safe to sync to the latest commit in master or docking branches
   The library is fairly stable and regressions tends to be fixed fast when reported.
 
 HOW TO UPDATE?
@@ -100,17 +101,21 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.77 WIP (In Progress)
+ VERSION 1.77 (Released 2020-06-29)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.77
 
 Breaking Changes:
 
-- Removed unncessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
-  note that this is a Beta api and will likely be reworked to support multi-monitor multi-DPI.
+- Removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
+  note that this is a Beta api and will likely be reworked in order to support multi-DPI accross
+  multiple monitors.
 - Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
 - Removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor
   of BeginPopupContextWindow(const char*, ImGuiPopupFlags flags) with ImGuiPopupFlags_NoOverItems.
-- Removed CalcItemRectClosestPoint() entry point which was made obsolete and asserting in December 2017.
+  Kept inline redirection function (will obsolete).
+- Removed obsoleted CalcItemRectClosestPoint() entry point (has been asserting since December 2017).
 
 Other Changes:
 
@@ -119,20 +124,20 @@ Other Changes:
   flag was also set, and _OpenOnArrow is frequently set along with _OpenOnDoubleClick).
 - TreeNode: Fixed bug where dragging a payload over a TreeNode() with either _OpenOnDoubleClick
   or _OpenOnArrow would open the node. (#143)
-- Style: Added style.TabMinWidthForUnselectedCloseButton settings.
-  Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
-  Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
-  Set to an intermediary value to toggle behavior based on width (same as Firefox).
-- Tab: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item
-  (vs ImGuiTabBarFlags_NoTooltip for entire tab bar). [@Xipiryon]
 - Windows: Fix unintended feedback loops when resizing windows close to main viewport edges. [@rokups]
+- Tabs: Added style.TabMinWidthForUnselectedCloseButton settings:
+  - Set to 0.0f (default) to always make a close button appear on hover (same as Chrome, VS).
+  - Set to FLT_MAX to only display a close button when selected (merely hovering is not enough).
+  - Set to an intermediary value to toggle behavior based on width (same as Firefox).
+- Tabs: Added a ImGuiTabItemFlags_NoTooltip flag to disable the tooltip for individual tab item
+  (vs ImGuiTabBarFlags_NoTooltip for entire tab bar). [@Xipiryon]
 - Popups: All functions capable of opening popups (OpenPopup*, BeginPopupContext*) now take a new
   ImGuiPopupFlags sets of flags instead of a mouse button index. The API is automatically backward
   compatible as ImGuiPopupFlags is guaranteed to hold mouse button index in the lower bits.
 - Popups: Added ImGuiPopupFlags_NoOpenOverExistingPopup for OpenPopup*/BeginPopupContext* functions
   to first test for the presence of another popup at the same level.
 - Popups: Added ImGuiPopupFlags_NoOpenOverItems for BeginPopupContextWindow() - similar to testing
-  for !IsAnyItemHovered() prior to doing an OpenPopup.
+  for !IsAnyItemHovered() prior to doing an OpenPopup().
 - Popups: Added ImGuiPopupFlags_AnyPopupId and ImGuiPopupFlags_AnyPopupLevel flags for IsPopupOpen(),
   allowing to check if any popup is open at the current level, if a given popup is open at any popup
   level, if any popup is open at all.
@@ -146,7 +151,7 @@ Other Changes:
   Enforce centering using e.g. SetNextWindowPos(io.DisplaySize * 0.5f, ImGuiCond_Appearing, ImVec2(0.5f,0.5f)).
 - Metrics: Added a "Settings" section with some details about persistent ini settings.
 - Nav, Menus: Fix vertical wrap-around in menus or popups created with multiple appending calls to
-  BeginMenu()/EndMenu() or BeginPopup/EndPopup(). (#3223, #1207) [@rokups]
+  BeginMenu()/EndMenu() or BeginPopup(0/EndPopup(). (#3223, #1207) [@rokups]
 - Drag and Drop: Fixed unintended fallback "..." tooltip display during drag operation when
   drag source uses _SourceNoPreviewTooltip flags. (#3160) [@rokups]
 - Columns: Lower overhead on column switches and switching to background channel.
@@ -164,12 +169,12 @@ Other Changes:
   a callback draw command would incorrectly override the callback draw command.
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would
   generate an extra unrequired vertex. [@ShironekoBen]
-- Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
+- Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeeds but FT_Load_Glyph() fails.
 - Docs: Improved and moved font documentation to docs/FONTS.md so it can be readable on the web.
   Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut]
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
-  Fixed a static contructor which led to this dependency on some compiler setups (unclear which).
+  Fixed a static constructor which led to this dependency on some compiler setups.
 - Backends: Win32: Support for #define NOGDI, won't try to call GetDeviceCaps(). (#3137, #2327)
 - Backends: Win32: Fix _WIN32_WINNT < 0x0600 (MinGW defaults to 0x502 == Windows 2003). (#3183)
 - Backends: SDL: Report a zero display-size when window is minimized, consistent with other backends,
