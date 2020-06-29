@@ -34,7 +34,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/child: border could be emitted in parent as well.
  - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
- - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
  ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
@@ -111,7 +111,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
 
  - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
- - layout: generalization of the above: a concept equivalent to word processor ruler tab stop ~ mini columns (position in X, no clipping implied) (vaguely relate to #267, #395, also what is used internally for menu items)
+ - layout, font: horizontal tab support, A) text mode: forward only tabs (e.g. every 4 characters/N pixels from pos x1), B) manual mode: explicit tab stops acting as mini columns, no clipping (for menu items, many kind of uses, also vaguely relate to #267, #395)
  - layout: horizontal layout helper (#97)
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -166,7 +166,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: TabItem could honor SetNextItemWidth()?
  - tabs: explicit api (even if internal) to cleanly manipulate tab order.
  - tabs: Mouse wheel over tab bar could scroll? (#2702)
-
 
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
