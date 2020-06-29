@@ -69,13 +69,15 @@ int main(int, char**)
         return 1;
     }
 
+    // Setup Dear ImGui context
+    IMGUI_CHECKVERSION();
+    ImGui::CreateContext();
+
     // Show the window
     ::ShowWindow(hwnd, SW_SHOWDEFAULT);
     ::UpdateWindow(hwnd);
 
-    // Setup Dear ImGui context
-    IMGUI_CHECKVERSION();
-    ImGui::CreateContext();
+    
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
@@ -130,7 +132,9 @@ int main(int, char**)
 
         // Start the Dear ImGui frame
         ImGui_ImplDX12_NewFrame();
-        ImGui_ImplWin32_NewFrame();
+        if (!ImGui_ImplWin32_NewFrame())
+           break;
+
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -443,6 +447,7 @@ LRESULT WINAPI WndProc(HWND hWnd, UINT msg, WPARAM wParam, LPARAM lParam)
     case WM_SIZE:
         if (g_pd3dDevice != NULL && wParam != SIZE_MINIMIZED)
         {
+            ImGui::GetIO().NextRefresh = 0;
             WaitForLastSubmittedFrame();
             ImGui_ImplDX12_InvalidateDeviceObjects();
             CleanupRenderTarget();

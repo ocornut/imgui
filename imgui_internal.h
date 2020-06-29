@@ -47,7 +47,7 @@ Index of this file:
 #include <stdlib.h>     // NULL, malloc, free, qsort, atoi, atof
 #include <math.h>       // sqrtf, fabsf, fmodf, powf, floorf, ceilf, cosf, sinf
 #include <limits.h>     // INT_MIN, INT_MAX
-
+#include <limits>       // numeric_limits
 // Visual Studio warnings
 #ifdef _MSC_VER
 #pragma warning (push)
