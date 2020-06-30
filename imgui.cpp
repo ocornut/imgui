@@ -13793,16 +13793,14 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         IM_ASSERT(!(child_0->WantLockSizeOnce && child_1->WantLockSizeOnce));
         if (child_0->WantLockSizeOnce)
         {
-            child_0->WantLockSizeOnce = false;
-            child_0_size[axis] = child_0->SizeRef[axis] = child_0->Size[axis];
+            child_0_size[axis] = child_0->SizeRef[axis] = ImMin(size_avail - 1.0f, child_0->Size[axis]);
             child_1_size[axis] = child_1->SizeRef[axis] = (size_avail - child_0_size[axis]);
             IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
 
         }
         else if (child_1->WantLockSizeOnce)
         {
-            child_1->WantLockSizeOnce = false;
-            child_1_size[axis] = child_1->SizeRef[axis] = child_1->Size[axis];
+            child_1_size[axis] = child_1->SizeRef[axis] = ImMin(size_avail - 1.0f, child_1->Size[axis]);
             child_0_size[axis] = child_0->SizeRef[axis] = (size_avail - child_1_size[axis]);
             IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
         }
@@ -13825,8 +13823,11 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
             child_0_size[axis] = ImMax(size_min_each, ImFloor(size_avail * split_ratio + 0.5F));
             child_1_size[axis] = (size_avail - child_0_size[axis]);
         }
+
         child_1_pos[axis] += spacing + child_0_size[axis];
     }
+    child_0->WantLockSizeOnce = child_1->WantLockSizeOnce = false;
+
     if (child_0->IsVisible)
         DockNodeTreeUpdatePosSize(child_0, child_0_pos, child_0_size);
     if (child_1->IsVisible)
@@ -15584,7 +15585,12 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 NodeWindow(node->HostWindow, "HostWindow");
                 NodeWindow(node->VisibleWindow, "VisibleWindow");
                 ImGui::BulletText("SelectedTabID: 0x%08X, LastFocusedNodeID: 0x%08X", node->SelectedTabId, node->LastFocusedNodeId);
-                ImGui::BulletText("Misc:%s%s%s%s", node->IsDockSpace() ? " IsDockSpace" : "", node->IsCentralNode() ? " IsCentralNode" : "", (g.FrameCount - node->LastFrameAlive < 2) ? " IsAlive" : "", (g.FrameCount - node->LastFrameActive < 2) ? " IsActive" : "");
+                ImGui::BulletText("Misc:%s%s%s%s%s",
+                    node->IsDockSpace() ? " IsDockSpace" : "",
+                    node->IsCentralNode() ? " IsCentralNode" : "",
+                    (g.FrameCount - node->LastFrameAlive < 2) ? " IsAlive" : "",
+                    (g.FrameCount - node->LastFrameActive < 2) ? " IsActive" : "",
+                    node->WantLockSizeOnce ? " WantLockSizeOnce" : "");
                 if (ImGui::TreeNode("flags", "LocalFlags: 0x%04X SharedFlags: 0x%04X", node->LocalFlags, node->SharedFlags))
                 {
                     ImGui::CheckboxFlags("LocalFlags: NoDocking", (ImU32*)&node->LocalFlags, ImGuiDockNodeFlags_NoDocking);
