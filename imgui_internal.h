@@ -1,4 +1,4 @@
-// dear imgui, v1.77
+// dear imgui, v1.78 WIP
 // (internal structures/api)
 
 // You may use this file to debug, understand or extend ImGui features but we don't provide any guarantee of forward compatibility!

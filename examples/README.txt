@@ -1,5 +1,5 @@
 -----------------------------------------------------------------------
- dear imgui, v1.77
+ dear imgui, v1.78 WIP
 -----------------------------------------------------------------------
  examples/README.txt
  (This is the README file for the examples/ folder. See docs/ for more documentation)

@@ -1,4 +1,4 @@
-// dear imgui, v1.77
+// dear imgui, v1.78 WIP
 // (headers)
 
 // Help:
@@ -59,8 +59,8 @@ Index of this file:
 
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
-#define IMGUI_VERSION               "1.77"
-#define IMGUI_VERSION_NUM           17701
+#define IMGUI_VERSION               "1.78 WIP"
+#define IMGUI_VERSION_NUM           17702
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
