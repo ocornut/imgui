@@ -25,9 +25,9 @@
 #include "imgui.h"
 #include "imgui_impl_glut.h"
 #ifdef __APPLE__
-    #include <GLUT/glut.h>
+#include <GLUT/glut.h>
 #else
-    #include <GL/freeglut.h>
+#include <GL/freeglut.h>
 #endif
 
 #ifdef _MSC_VER
@@ -41,9 +41,9 @@ bool ImGui_ImplGLUT_Init()
     ImGuiIO& io = ImGui::GetIO();
 
 #ifdef FREEGLUT
-    io.BackendPlatformName ="imgui_impl_glut (freeglut)";
+    io.BackendPlatformName = "imgui_impl_glut (freeglut)";
 #else
-    io.BackendPlatformName ="imgui_impl_glut";
+    io.BackendPlatformName = "imgui_impl_glut";
 #endif
 
     g_Time = 0;
