@@ -13790,18 +13790,25 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
         const float size_min_each = ImFloor(ImMin(size_avail, g.Style.WindowMinSize[axis] * 2.0f) * 0.5f);
 
         // 2) Process locked absolute size (during a splitter resize we preserve the child of nodes not touching the splitter edge)
-        IM_ASSERT(!(child_0->WantLockSizeOnce && child_1->WantLockSizeOnce));
-        if (child_0->WantLockSizeOnce)
+        if (child_0->WantLockSizeOnce && !child_1->WantLockSizeOnce)
         {
             child_0_size[axis] = child_0->SizeRef[axis] = ImMin(size_avail - 1.0f, child_0->Size[axis]);
             child_1_size[axis] = child_1->SizeRef[axis] = (size_avail - child_0_size[axis]);
             IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
-
         }
-        else if (child_1->WantLockSizeOnce)
+        else if (child_1->WantLockSizeOnce && !child_0->WantLockSizeOnce)
         {
             child_1_size[axis] = child_1->SizeRef[axis] = ImMin(size_avail - 1.0f, child_1->Size[axis]);
             child_0_size[axis] = child_0->SizeRef[axis] = (size_avail - child_1_size[axis]);
+            IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
+        }
+        else if (child_0->WantLockSizeOnce && child_1->WantLockSizeOnce)
+        {
+            // FIXME-DOCK: We cannot honor the requested size, so apply ratio.
+            // Currently this path will only be taken if code programmatically sets WantLockSizeOnce
+            float ratio_0 = child_0_size[axis] / (child_0_size[axis] + child_1_size[axis]);
+            child_0_size[axis] = child_0->SizeRef[axis] = ImFloor(size_avail * ratio_0);
+            child_1_size[axis] = child_1->SizeRef[axis] = (size_avail - child_0_size[axis]);
             IM_ASSERT(child_0->SizeRef[axis] > 0.0f && child_1->SizeRef[axis] > 0.0f);
         }
 
