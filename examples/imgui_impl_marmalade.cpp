@@ -36,7 +36,7 @@ static char*        g_ClipboardText = NULL;
 static bool         g_osdKeyboardEnabled = false;
 
 // use this setting to scale the interface - e.g. on device you could use 2 or 3 scale factor
-static ImVec2       g_RenderScale = ImVec2(1.0f,1.0f);
+static ImVec2       g_RenderScale = ImVec2(1.0f, 1.0f);
 
 // Render function.
 // (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
@@ -272,18 +272,18 @@ void ImGui_Marmalade_NewFrame()
     // Setup display size (every frame to accommodate for window resizing)
     int w = IwGxGetScreenWidth(), h = IwGxGetScreenHeight();
     io.DisplaySize = ImVec2((float)w, (float)h);
-     // For retina display or other situations where window coordinates are different from framebuffer coordinates. User storage only, presently not used by ImGui.
+    // For retina display or other situations where window coordinates are different from framebuffer coordinates. User storage only, presently not used by ImGui.
     io.DisplayFramebufferScale = g_scale;
 
     // Setup time step
     double current_time = s3eTimerGetUST() / 1000.0f;
-    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f/60.0f);
+    io.DeltaTime = g_Time > 0.0 ? (float)(current_time - g_Time) : (float)(1.0f / 60.0f);
     g_Time = current_time;
 
     double mouse_x, mouse_y;
     mouse_x = s3ePointerGetX();
     mouse_y = s3ePointerGetY();
-    io.MousePos = ImVec2((float)mouse_x/g_scale.x, (float)mouse_y/g_scale.y);   // Mouse position (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)
+    io.MousePos = ImVec2((float)mouse_x / g_scale.x, (float)mouse_y / g_scale.y); // Mouse position (set to -FLT_MAX,-FLT_MAX if no mouse / on another screen, etc.)
 
     for (int i = 0; i < 3; i++)
     {
@@ -294,7 +294,7 @@ void ImGui_Marmalade_NewFrame()
     // TODO: Hide OS mouse cursor if ImGui is drawing it
     // s3ePointerSetInt(S3E_POINTER_HIDE_CURSOR,(io.MouseDrawCursor ? 0 : 1));
 
-     // Show/hide OSD keyboard
+    // Show/hide OSD keyboard
     if (io.WantTextInput)
     {
         // Some text input widget is active?
