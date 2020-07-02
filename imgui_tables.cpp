@@ -70,10 +70,11 @@
 //    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of weighted columns) from their respective width
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
-//    | TableSortSpecsClickColumn()             - when clicked: alter sort order and sort direction
+//    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
+//    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
 // - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
 // - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableAutoHeaders()
-//    | TableUpdateLayout()                     - lock all widths and columns positions! called by the FIRST call to TableNextRow()!
+//    | TableUpdateLayout()                     - lock all widths, columns positions, clipping rectangles. called by the FIRST call to TableNextRow()!
 //    | - TableUpdateDrawChannels()               - setup ImDrawList channels
 //    | - TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | - TableDrawContextMenu()                  - draw right-click context menu
@@ -650,13 +651,12 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     table->ColumnsAutoFitWidth += spacing_auto_x * (table->ColumnsVisibleCount - 1);
 
     // Layout
-    // Remove -1.0f to cancel out the +1.0f we are doing in EndTable() to make last column line visible
     const float width_spacings = table->CellSpacingX * (table->ColumnsVisibleCount - 1);
     float width_avail;
     if ((table->Flags & ImGuiTableFlags_ScrollX) && table->InnerWidth == 0.0f)
-        width_avail = table->InnerClipRect.GetWidth() - width_spacings - 1.0f;
+        width_avail = table->InnerClipRect.GetWidth() - width_spacings;
     else
-        width_avail = work_rect.GetWidth() - width_spacings - 1.0f;
+        width_avail = work_rect.GetWidth() - width_spacings;
     const float width_avail_for_stretched_columns = width_avail - sum_width_fixed_requests;
     float width_remaining_for_stretched_columns = width_avail_for_stretched_columns;
 
@@ -1023,7 +1023,7 @@ void    ImGui::EndTable()
 
         // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
         if (table->VisibleMaskByIndex & ((ImU64)1 << column_n))
-            max_pos_x = ImMax(max_pos_x, column->MaxX + 1.0f);
+            max_pos_x = ImMax(max_pos_x, column->MaxX);
     }
 
     // Flatten channels and merge draw calls
@@ -1079,7 +1079,7 @@ void    ImGui::EndTable()
     if (table->Flags & ImGuiTableFlags_ScrollX)
     {
         inner_window->DC.CursorMaxPos.x = max_pos_x; // Set contents width for scrolling
-        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, backup_outer_cursor_pos_x + table->ColumnsTotalWidth + 1.0f + inner_window->ScrollbarSizes.x); // For auto-fit
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, backup_outer_cursor_pos_x + table->ColumnsTotalWidth + inner_window->ScrollbarSizes.x); // For auto-fit
     }
     else
     {

@@ -3416,22 +3416,27 @@ static void ShowDemoWindowTables()
                 for (int column = 0; column < 3; column++)
                 {
                     ImGui::TableSetColumnIndex(column);
+                    char buf[32];
                     if (display_width)
                     {
+                        // [DEBUG] Draw limits
                         ImVec2 p = ImGui::GetCursorScreenPos();
-                        ImDrawList* draw_list = ImGui::GetWindowDrawList();
-                        float x1 = p.x;
-                        float x2 = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
-                        float x3 = draw_list->GetClipRectMax().x;
-                        float y2 = p.y + ImGui::GetTextLineHeight();
-                        draw_list->AddLine(ImVec2(x1, y2), ImVec2(x3, y2), IM_COL32(255, 255, 0, 255)); // Hard clipping limit
-                        draw_list->AddLine(ImVec2(x1, y2), ImVec2(x2, y2), IM_COL32(255, 0, 0, 255));   // Normal limit
-                        ImGui::Text("w=%.2f", x2 - x1);
+                        float contents_x1 = p.x;
+                        float contents_x2 = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
+                        float cliprect_x1 = ImGui::GetWindowDrawList()->GetClipRectMin().x;
+                        float cliprect_x2 = ImGui::GetWindowDrawList()->GetClipRectMax().x;
+                        float y1 = p.y;
+                        float y2 = p.y + ImGui::GetTextLineHeight() + 2.0f;
+                        ImDrawList* fg_draw_list = ImGui::GetForegroundDrawList();
+                        fg_draw_list->AddRect(ImVec2(contents_x1, y1 + 0.0f), ImVec2(contents_x2, y2 + 0.0f), IM_COL32(255, 0, 0, 255));   // Contents limit (e.g. Cell + Padding)
+                        fg_draw_list->AddLine(ImVec2(cliprect_x1, y2 + 1.0f), ImVec2(cliprect_x2, y2 + 1.0f), IM_COL32(255, 255, 0, 255)); // Hard clipping limit
+                        sprintf(buf, "w=%.2f", contents_x2 - contents_x1);
                     }
                     else
                     {
-                        ImGui::Text("Hello %d,%d", row, column);
+                        sprintf(buf, "Hello %d,%d", row, column);
                     }
+                    ImGui::TextUnformatted(buf);
                 }
             }
             ImGui::EndTable();
@@ -3776,10 +3781,10 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Sizing policies, cell contents"))
     {
         HelpMarker("This section allows you to interact and see the effect of StretchX vs FixedX sizing policies depending on whether Scroll is enabled and the contents of your columns.");
-        enum ContentsType { CT_ShortText, CT_LongText, CT_Button, CT_StretchButton, CT_InputText };
-        static int contents_type = CT_StretchButton;
+        enum ContentsType { CT_ShortText, CT_LongText, CT_Button, CT_FillButton, CT_InputText };
+        static int contents_type = CT_FillButton;
         ImGui::SetNextItemWidth(ImGui::GetFontSize() * 12);
-        ImGui::Combo("Contents", &contents_type, "Short Text\0Long Text\0Button\0Stretch Button\0InputText\0");
+        ImGui::Combo("Contents", &contents_type, "Short Text\0Long Text\0Button\0Fill Button\0InputText\0");
 
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
@@ -3810,11 +3815,11 @@ static void ShowDemoWindowTables()
                     sprintf(label, "Hello %d,%d", row, column);
                     switch (contents_type)
                     {
-                    case CT_ShortText:      ImGui::TextUnformatted(label); break;
-                    case CT_LongText:       ImGui::Text("Some longer text %d,%d\nOver two lines..", row, column); break;
-                    case CT_Button:         ImGui::Button(label); break;
-                    case CT_StretchButton:  ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f)); break;
-                    case CT_InputText:      ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText("##", text_buf, IM_ARRAYSIZE(text_buf)); break;
+                    case CT_ShortText:  ImGui::TextUnformatted(label); break;
+                    case CT_LongText:   ImGui::Text("Some longer text %d,%d\nOver two lines..", row, column); break;
+                    case CT_Button:     ImGui::Button(label); break;
+                    case CT_FillButton: ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f)); break;
+                    case CT_InputText:  ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText("##", text_buf, IM_ARRAYSIZE(text_buf)); break;
                     }
                 }
             }
@@ -4163,9 +4168,9 @@ static void ShowDemoWindowTables()
             | ImGuiTableFlags_SizingPolicyFixedX
             ;
 
-        enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_Selectable };
-        static int contents_type = CT_Button;
-        const char* contents_type_names[] = { "Text", "Button", "SmallButton", "Selectable" };
+        enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_FillButton, CT_Selectable };
+        static int contents_type = CT_FillButton;
+        const char* contents_type_names[] = { "Text", "Button", "SmallButton", "FillButton", "Selectable" };
 
         static int items_count = IM_ARRAYSIZE(template_items_names);
         static ImVec2 outer_size_value = ImVec2(0, 250);
@@ -4354,6 +4359,8 @@ static void ShowDemoWindowTables()
                         ImGui::Button(label);
                     else if (contents_type == CT_SmallButton)
                         ImGui::SmallButton(label);
+                    else if (contents_type == CT_FillButton)
+                        ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f));
                     else if (contents_type == CT_Selectable)
                     {
                         if (ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, row_min_height)))
