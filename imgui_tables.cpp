@@ -2117,25 +2117,27 @@ void    ImGui::TableHeader(const char* label)
 
     // If we already got a row height, there's use that.
     ImRect cell_r = TableGetCellRect();
+    cell_r.Min.x -= table->CellSpacingX; // FIXME-TABLE: TableGetCellRect() is misleading.
     float label_height = ImMax(label_size.y, table->RowMinHeight - g.Style.CellPadding.y * 2.0f);
 
     //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
-    ImRect work_r = cell_r;
-    work_r.Min.x = window->DC.CursorPos.x;
-    work_r.Max.y = work_r.Min.y + label_height;
-    float ellipsis_max = work_r.Max.x;
-
-    // Selectable
-    PushID(label);
-
-    // FIXME-TABLE: Fix when padding are disabled.
-    //window->DC.CursorPos.x = column->MinX + table->CellPadding.x;
 
     // Keep header highlighted when context menu is open.
     // (FIXME-TABLE: however we cannot assume the ID of said popup if it has been created by the user...)
     const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceCurrent);
-    const bool pressed = Selectable("", selected, ImGuiSelectableFlags_DrawHoveredWhenHeld | ImGuiSelectableFlags_DontClosePopups, ImVec2(0.0f, label_height));
-    const bool held = IsItemActive();
+    ImGuiID id = window->GetID(label);
+    ImRect bb(cell_r.Min.x, cell_r.Min.y, cell_r.Max.x, ImMax(cell_r.Max.y, cell_r.Min.y + label_height + g.Style.CellPadding.y * 2.0f));
+    if (!ItemAdd(bb, id))
+        return;
+
+    bool hovered, held;
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
+    if (hovered || selected)
+    {
+        const ImU32 col = GetColorU32(held ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
+        RenderFrame(bb.Min, bb.Max, col, false, 0.0f);
+        RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
+    }
     if (held)
         table->HeldHeaderColumn = (ImS8)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
@@ -2164,6 +2166,7 @@ void    ImGui::TableHeader(const char* label)
     // Sort order arrow
     float w_arrow = 0.0f;
     float w_sort_text = 0.0f;
+    float ellipsis_max = cell_r.Max.x;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
         const float ARROW_SCALE = 0.65f;
@@ -2179,7 +2182,7 @@ void    ImGui::TableHeader(const char* label)
                 w_sort_text = g.Style.ItemInnerSpacing.x + CalcTextSize(sort_order_suf).x;
             }
 
-            float x = ImMax(cell_r.Min.x, work_r.Max.x - w_arrow - w_sort_text);
+            float x = ImMax(cell_r.Min.x, cell_r.Max.x - w_arrow - w_sort_text);
             ellipsis_max -= w_arrow + w_sort_text;
 
             float y = label_pos.y;
@@ -2208,10 +2211,8 @@ void    ImGui::TableHeader(const char* label)
     // for merging.
     // FIXME-TABLE: Clarify policies of how label width and potential decorations (arrows) fit into auto-resize of the column
     float max_pos_x = label_pos.x + label_size.x + w_sort_text + w_arrow;
-    column->ContentMaxPosHeadersUsed = ImMax(column->ContentMaxPosHeadersUsed, work_r.Max.x);// ImMin(max_pos_x, work_r.Max.x));
+    column->ContentMaxPosHeadersUsed = ImMax(column->ContentMaxPosHeadersUsed, cell_r.Max.x);// ImMin(max_pos_x, cell_r.Max.x));
     column->ContentMaxPosHeadersIdeal = ImMax(column->ContentMaxPosHeadersIdeal, max_pos_x);
-
-    PopID();
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())
