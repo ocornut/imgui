@@ -811,6 +811,7 @@ static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 2.00f;    // Lock 
 
 // Docking
 static const float DOCKING_TRANSPARENT_PAYLOAD_ALPHA        = 0.50f;    // For use with io.ConfigDockingTransparentPayload. Apply to Viewport _or_ WindowBg in host viewport.
+static const float DOCKING_SPLITTER_SIZE                    = 2.0f; 
 
 //-------------------------------------------------------------------------
 // [SECTION] FORWARD DECLARATIONS
@@ -11602,8 +11603,6 @@ void ImGui::DestroyPlatformWindows()
 // - ImGuiDockContext
 //-----------------------------------------------------------------------------
 
-static float IMGUI_DOCK_SPLITTER_SIZE = 2.0f;
-
 enum ImGuiDockRequestType
 {
     ImGuiDockRequestType_None = 0,
@@ -13697,7 +13696,7 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->VisibleWindow = NULL;
     parent_node->AuthorityForPos = parent_node->AuthorityForSize = ImGuiDataAuthority_DockNode;
 
-    float size_avail = (parent_node->Size[split_axis] - IMGUI_DOCK_SPLITTER_SIZE);
+    float size_avail = (parent_node->Size[split_axis] - DOCKING_SPLITTER_SIZE);
     size_avail = ImMax(size_avail, g.Style.WindowMinSize[split_axis] * 2.0f);
     IM_ASSERT(size_avail > 0.0f); // If you created a node manually with DockBuilderAddNode(), you need to also call DockBuilderSetNodeSize() before splitting.
     child_0->SizeRef = child_1->SizeRef = parent_node->Size;
@@ -13785,7 +13784,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
     ImVec2 child_0_size = size, child_1_size = size;
     if (child_0->IsVisible && child_1->IsVisible)
     {
-        const float spacing = IMGUI_DOCK_SPLITTER_SIZE;
+        const float spacing = DOCKING_SPLITTER_SIZE;
         const ImGuiAxis axis = (ImGuiAxis)node->SplitAxis;
         const float size_avail = ImMax(size[axis] - spacing, 0.0f);
 
