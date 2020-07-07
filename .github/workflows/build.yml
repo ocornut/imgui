@@ -394,7 +394,9 @@ jobs:
 
     - name: Build example_emscripten
       run: |
-        source emsdk-master/emsdk_env.sh
+        pushd emsdk-master
+        source ./emsdk_env.sh
+        popd
         make -C examples/example_emscripten
 
   Static-Analysis:
