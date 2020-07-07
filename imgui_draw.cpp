@@ -681,8 +681,8 @@ void ImDrawList::AddPolyline(const ImVec2* points, const int points_count, ImU32
         const int integer_thickness = (int)thickness;
         const float fractional_thickness = thickness - integer_thickness;
 
-        // Do we want to draw this line using a texture?
-        const bool use_texture = (Flags & ImDrawListFlags_AntiAliasedLinesUseTex) && (integer_thickness < IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX);
+        // Do we want to draw this line using a texture? (for now, only draw integer-width lines using textures to avoid issues with the way scaling occurs)
+        const bool use_texture = (Flags & ImDrawListFlags_AntiAliasedLinesUseTex) && (integer_thickness < IM_DRAWLIST_TEX_AA_LINES_WIDTH_MAX) && (fractional_thickness >= -0.00001f) && (fractional_thickness <= 0.00001f);
 
         // We should never hit this, because NewFrame() doesn't set ImDrawListFlags_AntiAliasedLinesUseTexData unless ImFontAtlasFlags_NoAALines is off
         IM_ASSERT_PARANOID((!use_texture) || (!(_Data->Font->ContainerAtlas->Flags & ImFontAtlasFlags_NoAALines)));
