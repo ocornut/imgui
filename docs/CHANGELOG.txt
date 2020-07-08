@@ -35,6 +35,15 @@ HOW TO UPDATE?
  VERSION 1.78 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Other Changes:
+
+- ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based 
+  path, reducing the amount of vertices/indices and CPU/GPU usage. (#3245) [@Shironekoben]
+  - This change will facilitate the wider use of thick borders in future style changes. 
+  - Requires an extra bit of texture space (~64x64 by default), relies on GPU bilinear filtering.
+  - Clear io.AntiAliasedLinesUseTex = false; to disable rendering using this method.
+  - Clear ImFontAtlasFlags_NoBakedLines in ImFontAtlas::Flags to disable baking data in texture.
+
 
 -----------------------------------------------------------------------
  VERSION 1.77 (Released 2020-06-29)
