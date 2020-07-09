@@ -37,12 +37,14 @@ HOW TO UPDATE?
 
 Other Changes:
 
-- ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based 
+- ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based
   path, reducing the amount of vertices/indices and CPU/GPU usage. (#3245) [@Shironekoben]
-  - This change will facilitate the wider use of thick borders in future style changes. 
+  - This change will facilitate the wider use of thick borders in future style changes.
   - Requires an extra bit of texture space (~64x64 by default), relies on GPU bilinear filtering.
   - Clear io.AntiAliasedLinesUseTex = false; to disable rendering using this method.
   - Clear ImFontAtlasFlags_NoBakedLines in ImFontAtlas::Flags to disable baking data in texture.
+- ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
+  an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
 
 
 -----------------------------------------------------------------------
@@ -112,8 +114,6 @@ Other Changes:
   VtxOffset was not zero would lead to draw commands with wrong VtxOffset. (#2591)
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split right after
   a callback draw command would incorrectly override the callback draw command.
-- ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would
-  generate an extra unrequired vertex. [@ShironekoBen]
 - Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeeds but FT_Load_Glyph() fails.
 - Docs: Improved and moved font documentation to docs/FONTS.md so it can be readable on the web.
   Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut]
