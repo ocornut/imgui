@@ -49,6 +49,7 @@ static D3D12_GPU_DESCRIPTOR_HANDLE  g_hFontSrvGpuDescHandle = {};
 static ID3D12DescriptorHeap*        g_pd3dSrvDescHeap = NULL;
 static UINT                         g_numFramesInFlight = 0;
 
+// Buffers used during the rendering of a frame
 struct FrameResources
 {
     ID3D12Resource*     IndexBuffer;
@@ -57,6 +58,7 @@ struct FrameResources
     int                 VertexBufferSize;
 };
 
+// Buffers used for secondary viewports created by the multi-viewports systems
 struct FrameContext
 {
     ID3D12CommandAllocator*     CommandAllocator;
@@ -64,7 +66,7 @@ struct FrameContext
     D3D12_CPU_DESCRIPTOR_HANDLE RenderTargetCpuDescriptors;
 };
 
-// Helper structure we store in the void* RenderUserData field of each ImGuiViewport to easily retrieve our backend data.
+// Helper structure we store in the void* RendererUserData field of each ImGuiViewport to easily retrieve our backend data.
 struct ImGuiViewportDataDx12
 {
     ID3D12CommandQueue*         CommandQueue;
@@ -131,6 +133,13 @@ static void SafeRelease(T*& res)
     if (res)
         res->Release();
     res = NULL;
+}
+
+static void ImGui_ImplDX12_DestroyFrameResources(FrameResources* resources)
+{
+    SafeRelease(resources->IndexBuffer);
+    SafeRelease(resources->VertexBuffer);
+    resources->IndexBufferSize = resources->VertexBufferSize = 0;
 }
 
 struct VERTEX_CONSTANT_BUFFER
@@ -699,6 +708,8 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
     g_numFramesInFlight = num_frames_in_flight;
     g_pd3dSrvDescHeap = cbv_srv_heap;
 
+    // Create a dummy ImGuiViewportDataDx12 holder for the main viewport,
+    // Since this is created and managed by the application, we will only use the ->Resources[] fields.
     ImGuiViewport* main_viewport = ImGui::GetMainViewport();
     main_viewport->RendererUserData = IM_NEW(ImGuiViewportDataDx12)();
 
@@ -712,6 +723,18 @@ bool ImGui_ImplDX12_Init(ID3D12Device* device, int num_frames_in_flight, DXGI_FO
 
 void ImGui_ImplDX12_Shutdown()
 {
+    // Manually delete main viewport render resources in-case we haven't initialized for viewports
+    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+    if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)main_viewport->RendererUserData)
+    {
+        // We could just call ImGui_ImplDX12_DestroyWindow(main_viewport) as a convenience but that would be misleading since we only use data->Resources[]
+        for (UINT i = 0; i < g_numFramesInFlight; i++)
+            ImGui_ImplDX12_DestroyFrameResources(&data->Resources[i]);
+        IM_DELETE(data);
+        main_viewport->RendererUserData = NULL;
+    }
+
+    // Clean up windows and device objects
     ImGui_ImplDX12_ShutdownPlatformInterface();
     ImGui_ImplDX12_InvalidateDeviceObjects();
 
@@ -720,11 +743,6 @@ void ImGui_ImplDX12_Shutdown()
     g_hFontSrvGpuDescHandle.ptr = 0;
     g_numFramesInFlight = 0;
     g_pd3dSrvDescHeap = NULL;
-
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    if (ImGuiViewportDataDx12* data = (ImGuiViewportDataDx12*)main_viewport->RendererUserData)
-        IM_DELETE(data);
-    main_viewport->RendererUserData = NULL;
 }
 
 void ImGui_ImplDX12_NewFrame()
@@ -841,10 +859,7 @@ static void ImGui_ImplDX12_CreateWindow(ImGuiViewport* viewport)
     }
 
     for (UINT i = 0; i < g_numFramesInFlight; i++)
-    {
-        SafeRelease(data->Resources[i].IndexBuffer);
-        SafeRelease(data->Resources[i].VertexBuffer);
-    }
+        ImGui_ImplDX12_DestroyFrameResources(&data->Resources[i]);
 }
 
 static void ImGui_WaitForPendingOperations(ImGuiViewportDataDx12* data)
@@ -880,8 +895,7 @@ static void ImGui_ImplDX12_DestroyWindow(ImGuiViewport* viewport)
         {
             SafeRelease(data->FrameCtx[i].RenderTarget);
             SafeRelease(data->FrameCtx[i].CommandAllocator);
-            SafeRelease(data->Resources[i].IndexBuffer);
-            SafeRelease(data->Resources[i].VertexBuffer);
+            ImGui_ImplDX12_DestroyFrameResources(&data->Resources[i]);
         }
         IM_DELETE(data);
     }
