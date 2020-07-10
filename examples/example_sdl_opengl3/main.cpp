@@ -82,7 +82,7 @@ int main(int, char**)
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD)
     bool err = gladLoadGL() == 0;
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2)
-    bool err = gladLoadGL((GLADloadfunc) SDL_GL_GetProcAddress) == 0; // glad docs recommend using the windowing library loader instead of the (optionally) bundled one.
+    bool err = gladLoadGL((GLADloadfunc)SDL_GL_GetProcAddress) == 0; // glad2 recommend using the windowing library loader instead of the (optionally) bundled one.
 #elif defined(IMGUI_IMPL_OPENGL_LOADER_GLBINDING2)
     bool err = false;
     glbinding::Binding::initialize();

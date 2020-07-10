@@ -45,6 +45,7 @@ Other Changes:
   - Clear ImFontAtlasFlags_NoBakedLines in ImFontAtlas::Flags to disable baking data in texture.
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
   an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
+- Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
 
 
 -----------------------------------------------------------------------
