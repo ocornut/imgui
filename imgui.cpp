@@ -14145,6 +14145,17 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
     node->OnlyNodeWithWindows = NULL;
 
     IM_ASSERT(node->IsRootNode());
+
+    // We need to handle the rare case were a central node is missing.
+    // This can happen if the node was first created manually with DockBuilderAddNode() but _without_ the ImGuiDockNodeFlags_Dockspace.
+    // Doing it correctly would set the _CentralNode flags, which would then propagate according to subsequent split.
+    // It would also be ambiguous to attempt to assign a central node while there are split nodes, so we wait until there's a single node remaining.
+    // The specific sub-property of _CentralNode we are interested in recovering here is the "Don't delete when empty" property,
+    // as it doesn't make sense for an empty dockspace to not have this property.
+    if (node->IsLeafNode() && !node->IsCentralNode())
+        node->LocalFlags |= ImGuiDockNodeFlags_CentralNode;
+
+    // Update the node
     DockNodeUpdate(node);
 
     g.WithinEndChild = true;
@@ -15765,14 +15776,16 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 #ifdef IMGUI_HAS_DOCK
     if (ImGui::TreeNode("Dock nodes"))
     {
+        static bool root_nodes_only = true;
         ImGuiDockContext* dc = &g.DockContext;
+        ImGui::Checkbox("List root nodes", &root_nodes_only);
         ImGui::Checkbox("Ctrl shows window dock info", &show_docking_nodes);
         if (ImGui::SmallButton("Clear nodes")) { DockContextClearNodes(&g, 0, true); }
         ImGui::SameLine();
         if (ImGui::SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
         for (int n = 0; n < dc->Nodes.Data.Size; n++)
             if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
-                if (node->IsRootNode())
+                if (!root_nodes_only || node->IsRootNode())
                     Funcs::NodeDockNode(node, "Node");
         ImGui::TreePop();
     }
