@@ -308,7 +308,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
- - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
+ - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines). also see #3349.
+ - font/draw: fix for drawing 16k+ visible characters in same call.
  - font/draw: underline, squiggle line rendering helpers.
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct), would save on cache line.
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
