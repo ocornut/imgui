@@ -40,7 +40,13 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 //#define IMGUI_IMPL_OPENGL_ES2     // Auto-detected on Emscripten
 //#define IMGUI_IMPL_OPENGL_ES3     // Auto-detected on iOS/Android
 
-
+// Attempt to auto-detect the default Desktop GL loader based on available header files.
+// If auto-detection fails or doesn't select the same GL loader file as used by your application,
+// you are likely to get a crash in ImGui_ImplOpenGL3_Init().
+// You can explicitly select a loader by using one of the '#define IMGUI_IMPL_OPENGL_LOADER_XXX' in imconfig.h or compiler command-line.
+#if !defined(IMGUI_IMPL_OPENGL_ES2) \
+ && !defined(IMGUI_IMPL_OPENGL_ES3) \
+ && !defined(IMGUI_IMPL_OPENGL_LOADER_GL3W) \
  && !defined(IMGUI_IMPL_OPENGL_LOADER_GLEW) \
  && !defined(IMGUI_IMPL_OPENGL_LOADER_GLAD) \
  && !defined(IMGUI_IMPL_OPENGL_LOADER_GLAD2) \
@@ -52,7 +58,10 @@ IMGUI_IMPL_API void     ImGui_ImplOpenGL3_DestroyDeviceObjects();
 #if defined(__APPLE__)
 #include "TargetConditionals.h"
 #endif
-
+#if (defined(__APPLE__) && (TARGET_OS_IOS || TARGET_OS_TV)) || (defined(__ANDROID__))
+#define IMGUI_IMPL_OPENGL_ES3               // iOS, Android  -> GL ES 3, "#version 300 es"
+#elif defined(__EMSCRIPTEN__)
+#define IMGUI_IMPL_OPENGL_ES2               // Emscripten    -> GL ES 2, "#version 100"
 
 // Otherwise try to detect supported Desktop OpenGL loaders..
 #elif defined(__has_include)
