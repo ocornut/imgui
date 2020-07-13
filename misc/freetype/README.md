@@ -5,7 +5,7 @@ Build font atlases using FreeType instead of stb_truetype (which is the default 
 
 ### Usage
 
-1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype`).
+1. Get latest FreeType binaries or build yourself (under Windows you may use vcpkg with `vcpkg install freetype`, `vcpkg integrate install`).
 2. Add imgui_freetype.h/cpp alongside your imgui sources.
 3. Include imgui_freetype.h after imgui.h.
 4. Call `ImGuiFreeType::BuildFontAtlas()` *BEFORE* calling `ImFontAtlas::GetTexDataAsRGBA32()` or `ImFontAtlas::Build()` (so normal Build() won't be called):

@@ -72,11 +72,35 @@
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
+- (void)rightMouseDown:(NSEvent *)event {
+    ImGui_ImplOSX_HandleEvent(event, self.view);
+}
+
+- (void)otherMouseDown:(NSEvent *)event {
+    ImGui_ImplOSX_HandleEvent(event, self.view);
+}
+
 - (void)mouseUp:(NSEvent *)event {
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
+- (void)rightMouseUp:(NSEvent *)event {
+    ImGui_ImplOSX_HandleEvent(event, self.view);
+}
+
+- (void)otherMouseUp:(NSEvent *)event {
+    ImGui_ImplOSX_HandleEvent(event, self.view);
+}
+
 - (void)mouseDragged:(NSEvent *)event {
+    ImGui_ImplOSX_HandleEvent(event, self.view);
+}
+
+- (void)rightMouseDragged:(NSEvent *)event {
+    ImGui_ImplOSX_HandleEvent(event, self.view);
+}
+
+- (void)otherMouseDragged:(NSEvent *)event {
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
