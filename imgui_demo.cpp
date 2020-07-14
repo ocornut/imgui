@@ -8229,7 +8229,7 @@ void ImGui::ShowAboutWindow(bool* p_open)
 //-----------------------------------------------------------------------------
 
 // Demo helper function to select among default colors. See ShowStyleEditor() for more advanced options.
-bool ImGui::ShowStyleSelector(const char* label)
+bool ImGui::ShowStyleSelector(ImStrv label)
 {
     // FIXME: This is a bit tricky to get right as style are functions, they don't register a name nor the fact that one is active.
     // So we keep track of last active one among our limited selection.
@@ -10849,7 +10849,7 @@ void ImGui::ShowAboutWindow(bool*) {}
 void ImGui::ShowDemoWindow(bool*) {}
 void ImGui::ShowUserGuide() {}
 void ImGui::ShowStyleEditor(ImGuiStyle*) {}
-bool ImGui::ShowStyleSelector(const char*) { return false; }
+bool ImGui::ShowStyleSelector(ImStrv) { return false; }
 
 #endif // #ifndef IMGUI_DISABLE_DEMO_WINDOWS
 
