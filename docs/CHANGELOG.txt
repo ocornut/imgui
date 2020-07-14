@@ -101,6 +101,32 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.78 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Nav: Fixed clicking on void from not clearing focused window.
+  This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
+  flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
+- InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
+  than ~16 KB characters. (Note that current code is going to show corrupted display if after
+  clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
+  call. ImGui-level functions such as TextUnformatted() are not affected. This is quite rare
+  but it will be addressed later). (#3349)
+- ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based
+  path, reducing the amount of vertices/indices and CPU/GPU usage. (#3245) [@Shironekoben]
+  - This change will facilitate the wider use of thick borders in future style changes.
+  - Requires an extra bit of texture space (~64x64 by default), relies on GPU bilinear filtering.
+  - Clear io.AntiAliasedLinesUseTex = false; to disable rendering using this method.
+  - Clear ImFontAtlasFlags_NoBakedLines in ImFontAtlas::Flags to disable baking data in texture.
+- ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
+  an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
+- Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
+>>>>>>> master
+
+
+-----------------------------------------------------------------------
  VERSION 1.77 (Released 2020-06-29)
 -----------------------------------------------------------------------
 
@@ -109,7 +135,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.77
 Breaking Changes:
 
 - Removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
-  note that this is a Beta api and will likely be reworked in order to support multi-DPI accross
+  note that this is a Beta api and will likely be reworked in order to support multi-DPI across
   multiple monitors.
 - Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
 - Removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor
@@ -167,8 +193,6 @@ Other Changes:
   VtxOffset was not zero would lead to draw commands with wrong VtxOffset. (#2591)
 - ImDrawList, ImDrawListSplitter, Columns: Fixed an issue where starting a split right after
   a callback draw command would incorrectly override the callback draw command.
-- ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would
-  generate an extra unrequired vertex. [@ShironekoBen]
 - Misc, Freetype: Fix for rare case where FT_Get_Char_Index() succeeds but FT_Load_Glyph() fails.
 - Docs: Improved and moved font documentation to docs/FONTS.md so it can be readable on the web.
   Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut]

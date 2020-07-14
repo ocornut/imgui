@@ -42,6 +42,10 @@ CXXFLAGS += -I../libs/gl3w -DIMGUI_IMPL_OPENGL_LOADER_GL3W
 # SOURCES += ../libs/glad/src/glad.c
 # CXXFLAGS += -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD
 
+## Using OpenGL loader: glad2
+# SOURCES += ../libs/glad/src/gl.c
+# CXXFLAGS += -I../libs/glad/include -DIMGUI_IMPL_OPENGL_LOADER_GLAD2
+
 ## Using OpenGL loader: glbinding
 ## This assumes a system-wide installation
 ## of either version 3.0.0 (or newer)
