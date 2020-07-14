@@ -3367,7 +3367,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
                 if (!root_window->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                     g.MovingWindow = NULL;
         }
-        else if (root_window != NULL && g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
+        else if (root_window == NULL && g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
         {
             // Clicking on void disable focus
             FocusWindow(NULL);

@@ -37,6 +37,9 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- Nav: Fixed clicking on void from not clearing focused window.
+  This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
+  flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
   than ~16 KB characters. (Note that current code is going to show corrupted display if after
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
@@ -62,7 +65,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.77
 Breaking Changes:
 
 - Removed unnecessary ID (first arg) of ImFontAtlas::AddCustomRectRegular() function. Please
-  note that this is a Beta api and will likely be reworked in order to support multi-DPI accross
+  note that this is a Beta api and will likely be reworked in order to support multi-DPI across
   multiple monitors.
 - Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
 - Removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor
