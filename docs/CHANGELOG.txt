@@ -37,7 +37,7 @@ HOW TO UPDATE?
 
 Other Changes:
 
-- Nav: Fixed clicking on void from not clearing focused window.
+- Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
   This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
@@ -51,6 +51,9 @@ Other Changes:
   - Requires an extra bit of texture space (~64x64 by default), relies on GPU bilinear filtering.
   - Clear io.AntiAliasedLinesUseTex = false; to disable rendering using this method.
   - Clear ImFontAtlasFlags_NoBakedLines in ImFontAtlas::Flags to disable baking data in texture.
+- ImDrawList: changed AddCircle(), AddCircleFilled() default num_segments from 12 to 0, effectively
+  enabling auto-tessellation by default. Tweak tessellation in Style Editor->Rendering section, or
+  by modifying the 'style.CircleSegmentMaxError' value. [@ShironekoBen]
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
   an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
 - Demo: Tweak "Child Windows" section.
