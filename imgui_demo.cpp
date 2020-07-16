@@ -1969,12 +1969,6 @@ static void ShowDemoWindowLayout()
         ImGui::Checkbox("Disable Mouse Wheel", &disable_mouse_wheel);
         ImGui::Checkbox("Disable Menu", &disable_menu);
 
-        static int line = 50;
-        bool goto_line = ImGui::Button("Goto");
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(100);
-        goto_line |= ImGui::InputInt("##Line", &line, 0, 0, ImGuiInputTextFlags_EnterReturnsTrue);
-
         // Child 1: no border, enable horizontal scrollbar
         {
             ImGuiWindowFlags window_flags = ImGuiWindowFlags_HorizontalScrollbar;
@@ -1982,13 +1976,7 @@ static void ShowDemoWindowLayout()
                 window_flags |= ImGuiWindowFlags_NoScrollWithMouse;
             ImGui::BeginChild("ChildL", ImVec2(ImGui::GetWindowContentRegionWidth() * 0.5f, 260), false, window_flags);
             for (int i = 0; i < 100; i++)
-            {
                 ImGui::Text("%04d: scrollable region", i);
-                if (goto_line && line == i)
-                    ImGui::SetScrollHereY();
-            }
-            if (goto_line && line >= 100)
-                ImGui::SetScrollHereY();
             ImGui::EndChild();
         }
 
@@ -2034,15 +2022,21 @@ static void ShowDemoWindowLayout()
         // - Using ImGui::GetItemRectMin/Max() to query the "item" state (because the child window is an item from
         //   the POV of the parent window). See 'Demo->Querying Status (Active/Focused/Hovered etc.)' for details.
         {
-            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + 10);
+            static int offset_x = 0;
+            ImGui::SetNextItemWidth(100);
+            ImGui::DragInt("Offset X", &offset_x, 1.0f, -1000, 1000);
+
+            ImGui::SetCursorPosX(ImGui::GetCursorPosX() + (float)offset_x);
             ImGui::PushStyleColor(ImGuiCol_ChildBg, IM_COL32(255, 0, 0, 100));
             ImGui::BeginChild("Red", ImVec2(200, 100), true, ImGuiWindowFlags_None);
             for (int n = 0; n < 50; n++)
                 ImGui::Text("Some test %d", n);
             ImGui::EndChild();
+            bool child_is_hovered = ImGui::IsItemHovered();
             ImVec2 child_rect_min = ImGui::GetItemRectMin();
             ImVec2 child_rect_max = ImGui::GetItemRectMax();
             ImGui::PopStyleColor();
+            ImGui::Text("Hovered: %d", child_is_hovered);
             ImGui::Text("Rect of child window is: (%.0f,%.0f) (%.0f,%.0f)", child_rect_min.x, child_rect_min.y, child_rect_max.x, child_rect_max.y);
         }
 
@@ -2428,8 +2422,6 @@ static void ShowDemoWindowLayout()
         static float scroll_to_pos_px = 200.0f;
 
         ImGui::Checkbox("Decoration", &enable_extra_decorations);
-        ImGui::SameLine();
-        HelpMarker("We expose this for testing because scrolling sometimes had issues with window decoration such as menu-bars.");
 
         ImGui::Checkbox("Track", &enable_track);
         ImGui::PushItemWidth(100);
