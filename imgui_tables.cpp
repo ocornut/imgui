@@ -1529,25 +1529,26 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     flags = column->Flags;
 
     // Initialize defaults
-    // FIXME-TABLE: We don't restore widths/weight so let's avoid using IsSettingsLoaded for now
-    if (table->IsInitializing && column->WidthRequest < 0.0f && column->WidthStretchWeight < 0.0f)// && !table->IsSettingsLoaded)
+    if (flags & ImGuiTableColumnFlags_WidthStretch)
+    {
+        IM_ASSERT(init_width_or_weight != 0.0f && "Need to provide a valid weight!");
+        if (init_width_or_weight < 0.0f)
+            init_width_or_weight = 1.0f;
+    }
+    column->WidthOrWeightInitValue = init_width_or_weight;
+    if (table->IsInitializing && column->WidthRequest < 0.0f && column->WidthStretchWeight < 0.0f)
     {
         // Init width or weight
-        // Disable auto-fit if a default fixed width has been specified
         if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
         {
+            // Disable auto-fit if a default fixed width has been specified
             column->WidthRequest = init_width_or_weight;
             column->AutoFitQueue = 0x00;
         }
         if (flags & ImGuiTableColumnFlags_WidthStretch)
-        {
-            IM_ASSERT(init_width_or_weight < 0.0f || init_width_or_weight > 0.0f);
-            column->WidthStretchWeight = (init_width_or_weight < 0.0f ? 1.0f : init_width_or_weight);
-        }
+            column->WidthStretchWeight = init_width_or_weight;
         else
-        {
             column->WidthStretchWeight = 1.0f;
-        }
     }
     if (table->IsInitializing)
     {
@@ -2087,7 +2088,7 @@ void    ImGui::TableAutoHeaders()
     // FIXME-TABLE: TableOpenContextMenu() is not public yet.
     if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
         if (g.IO.MousePos.y >= row_y1 && g.IO.MousePos.y < row_y1 + row_height)
-            TableOpenContextMenu(table, -1); // Will open a non-column-specific popup.    
+            TableOpenContextMenu(table, -1); // Will open a non-column-specific popup.
 }
 
 // Emit a column header (text + optional sort order)
@@ -2475,12 +2476,12 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
     ImGuiTableColumn* column = table->Columns.Data;
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
 
-    // FIXME-TABLE: Logic to avoid saving default widths?
     bool save_ref_scale = false;
-    settings->SaveFlags = ImGuiTableFlags_Resizable;
+    settings->SaveFlags = ImGuiTableFlags_None;
     for (int n = 0; n < table->ColumnsCount; n++, column++, column_settings++)
     {
-        column_settings->WidthOrWeight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->WidthStretchWeight : column->WidthRequest;
+        const float width_or_weight = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? column->WidthStretchWeight : column->WidthRequest;
+        column_settings->WidthOrWeight = width_or_weight;
         column_settings->Index = (ImS8)n;
         column_settings->DisplayOrder = column->DisplayOrder;
         column_settings->SortOrder = column->SortOrder;
@@ -2490,8 +2491,11 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         if ((column->Flags & ImGuiTableColumnFlags_WidthStretch) == 0)
             save_ref_scale = true;
 
-        // We skip saving some data in the .ini file when they are unnecessary to restore our state
+        // We skip saving some data in the .ini file when they are unnecessary to restore our state.
+        // Note that fixed width where initial width was derived from auto-fit will always be saved as WidthOrWeightInitValue will be 0.0f.
         // FIXME-TABLE: We don't have logic to easily compare SortOrder to DefaultSortOrder yet so it's always saved when present.
+        if (width_or_weight != column->WidthOrWeightInitValue)
+            settings->SaveFlags |= ImGuiTableFlags_Resizable;
         if (column->DisplayOrder != n)
             settings->SaveFlags |= ImGuiTableFlags_Reorderable;
         if (column->SortOrder != -1)
