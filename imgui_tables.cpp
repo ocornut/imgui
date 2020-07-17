@@ -580,7 +580,6 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // (can't make auto padding larger than what WorkRect knows about so right-alignment matches)
     const ImRect work_rect = table->WorkRect;
     const float padding_auto_x = table->CellPaddingX2;
-    const float spacing_auto_x = table->CellSpacingX * (1.0f + 2.0f); // CellSpacingX is >0.0f when there's no vertical border, in which case we add two extra CellSpacingX to make auto-fit look nice instead of cramped. We may want to expose this somehow.
     const float min_column_width = TableGetMinColumnWidth();
 
     int count_fixed = 0;
@@ -614,7 +613,11 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         if (!(table->Flags & ImGuiTableFlags_NoHeadersWidth) && !(column->Flags & ImGuiTableColumnFlags_NoHeaderWidth))
             column_width_ideal = ImMax(column_width_ideal, column_content_width_headers);
         column_width_ideal = ImMax(column_width_ideal + padding_auto_x, min_column_width);
+
+        // CellSpacingX is >0.0f when there's no vertical border
         table->ColumnsAutoFitWidth += column_width_ideal;
+        if (column->PrevVisibleColumn != -1)
+            table->ColumnsAutoFitWidth += table->CellSpacingX;
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthAlwaysAutoResize | ImGuiTableColumnFlags_WidthFixed))
         {
@@ -646,10 +649,6 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
                 table->LeftMostStretchedColumnDisplayOrder = (ImS8)column->DisplayOrder;
         }
     }
-
-    // CellSpacingX is >0.0f when there's no vertical border, in which case we add two extra CellSpacingX to make auto-fit look nice instead of cramped.
-    // We may want to expose this somehow.
-    table->ColumnsAutoFitWidth += spacing_auto_x * (table->ColumnsVisibleCount - 1);
 
     // Layout
     const float width_spacings = table->CellSpacingX * (table->ColumnsVisibleCount - 1);

@@ -3598,6 +3598,32 @@ static void ShowDemoWindowTables()
 
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode("Explicit widths"))
+    {
+        static ImGuiTableFlags flags = ImGuiTableFlags_None;
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", (unsigned int*)&flags, ImGuiTableFlags_NoKeepColumnsVisible);
+        if (ImGui::BeginTable("##table1", 3, flags))
+        {
+            // We could also set ImGuiTableFlags_SizingPolicyFixedX on the table and all columns will default to ImGuiTableColumnFlags_WidthFixed.
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 200.0f);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            for (int row = 0; row < 5; row++)
+            {
+                ImGui::TableNextRow();
+                for (int column = 0; column < 3; column++)
+                {
+                    ImGui::TableSetColumnIndex(column);
+                    ImGui::Text("Hello %d,%d", row, column);
+                }
+            }
+            ImGui::EndTable();
+        }
+        ImGui::TreePop();
+    }
+
+    if (open_action != -1)
+        ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Vertical scrolling, with clipping"))
     {
         HelpMarker("Here we activate ScrollY, which will create a child window container to allow hosting scrollable contents.\n\nWe also demonstrate using ImGuiListClipper to virtualize the submission of many items.");
@@ -4223,6 +4249,8 @@ static void ShowDemoWindowTables()
             ImGui::SameLine(); HelpMarker("[Default if ScrollX is on]\nEnlarge as needed: enable scrollbar if ScrollX is enabled, otherwise extend parent window's contents rectangle. Only Fixed columns allowed. Stretched columns will calculate their width assuming no scrolling.");
             ImGui::CheckboxFlags("ImGuiTableFlags_NoHeadersWidth", (unsigned int*)&flags, ImGuiTableFlags_NoHeadersWidth);
             ImGui::CheckboxFlags("ImGuiTableFlags_NoHostExtendY", (unsigned int*)&flags, ImGuiTableFlags_NoHostExtendY);
+            ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", (unsigned int*)&flags, ImGuiTableFlags_NoKeepColumnsVisible);
+            ImGui::SameLine(); HelpMarker("Only available if ScrollX is disabled.");
             ImGui::Unindent();
 
             ImGui::BulletText("Scrolling:");
