@@ -614,6 +614,12 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             column_width_ideal = ImMax(column_width_ideal, column_content_width_headers);
         column_width_ideal = ImMax(column_width_ideal + padding_auto_x, min_column_width);
 
+        // Non-resizable columns also submit their requested width
+        if (column->Flags & ImGuiTableColumnFlags_WidthFixed)
+            if (column->WidthOrWeightInitValue > 0.0f)
+                if (!(table->Flags & ImGuiTableFlags_Resizable) || !(column->Flags & ImGuiTableColumnFlags_NoResize))
+                    column_width_ideal = ImMax(column_width_ideal, column->WidthOrWeightInitValue);
+
         // CellSpacingX is >0.0f when there's no vertical border
         table->ColumnsAutoFitWidth += column_width_ideal;
         if (column->PrevVisibleColumn != -1)
