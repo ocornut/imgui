@@ -454,11 +454,12 @@ void ImGui::StyleWin98(ImGuiStyle* dst)
     // In retrorespect I should have used an icon map like FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS
     unsigned char minimize[] = {86,6,6,6,0};
     unsigned char close[] = {14,2,4,2,5,2,2,2,7,4,9,2,9,4,7,2,2,2,5,2,4,2,0};
-    unsigned char *run_length[] = {minimize, close};
+    unsigned char *run_length[] = {close, minimize};
 
     int rect_ids[IM_ARRAYSIZE(run_length)];
     for (int i = 0; i < IM_ARRAYSIZE(run_length); i++) {
-        rect_ids[i] = io.Fonts->AddCustomRectFontGlyph(font, (ImWchar)(214 + i), 12, 9, 13+1);
+        // Starts with unicode multiplication sign and extends
+        rect_ids[i] = io.Fonts->AddCustomRectFontGlyph(font, (ImWchar)(215 + i), 12, 9, 13+1);
     }
 
     io.Fonts->Build();

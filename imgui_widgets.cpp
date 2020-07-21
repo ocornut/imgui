@@ -868,7 +868,7 @@ bool ImGui::CloseButton(ImGuiID id, const ImVec2& pos)
 #ifdef WIN98 // close button icon
     IM_UNUSED(cross_col);
     IM_UNUSED(cross_extent);
-    RenderText(bb.Min + ImVec2(2.0f, 2.0f), "\u00D7");
+    RenderText(bb.Min + ImVec2(2.0f, 2.0f), "\xC3\x97");
 #else
     window->DrawList->AddLine(center + ImVec2(+cross_extent, +cross_extent), center + ImVec2(-cross_extent, -cross_extent), cross_col, 1.0f);
     window->DrawList->AddLine(center + ImVec2(+cross_extent, -cross_extent), center + ImVec2(-cross_extent, +cross_extent), cross_col, 1.0f);
@@ -904,7 +904,7 @@ bool ImGui::CollapseButton(ImGuiID id, const ImVec2& pos)
     WinAddRect(bb.Min, bb.Max, hovered && held);
 
     // collapse icon
-    RenderText(bb.Min + ImVec2(2.0f, 2.0f), "\u00D6");
+    RenderText(bb.Min + ImVec2(2.0f, 2.0f), "\xC3\x98");
 #else
     if (hovered || held)
         window->DrawList->AddCircleFilled(bb.GetCenter() + ImVec2(0.0f, -0.5f), g.FontSize * 0.5f + 1.0f, bg_col);
