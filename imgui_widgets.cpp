@@ -2132,7 +2132,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
 
 bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragFlags flags)
 {
-    IM_ASSERT(((flags == 0) || (flags >= ImGuiDragFlags__AnythingBelowThisMightBeAPowerTerm)) && "Invalid ImGuiDragFlags flags - has a power term been mistakenly cast to flags?");
+    IM_ASSERT((flags == 1 || (flags & ImGuiDragFlags_InvalidMask_) == 0) && "Invalid ImGuiDragFlags flags! Has a power term been mistakenly cast to flags?");
 
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
@@ -2769,7 +2769,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 // It would be possible to lift that limitation with some work but it doesn't seem to be worth it for sliders.
 bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
-    IM_ASSERT(((flags == 0) || (flags >= ImGuiSliderFlags__AnythingBelowThisMightBeAPowerTerm)) && "Invalid ImGuiSliderFlags flags - has a power term been mistakenly cast to flags?");
+    IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flag! Has a power term been mistakenly cast to flags?");
 
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly)

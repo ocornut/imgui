@@ -1288,18 +1288,16 @@ enum ImGuiColorEditFlags_
 enum ImGuiDragFlags_
 {
     ImGuiDragFlags_None                     = 0,
-    ImGuiDragFlags__AnythingBelowThisMightBeAPowerTerm = 8,     // We treat anything < this as being potentially a (float) power term from the previous API that has got miscast to this enum, and trigger an assert
-    ImGuiDragFlags_Vertical                 = 1 << 3,           // Should this widget be orientated vertically?
-    ImGuiDragFlags_Logarithmic              = 1 << 4            // Should this widget be logarithmic? (linear otherwise)
+    ImGuiDragFlags_InvalidMask_             = 0x7000000F,   // [Internal] We treat using those bits as being potentially a 'float power' argument from the previous API that has got miscast to this enum, and will trigger an assert if needed.
+    ImGuiDragFlags_Logarithmic              = 1 << 4        // Should this widget be logarithmic? (linear otherwise)
 };
 
 // Flags for SliderFloat(), SliderInt() etc.
 enum ImGuiSliderFlags_
 {
     ImGuiSliderFlags_None                   = 0,
-    ImGuiSliderFlags__AnythingBelowThisMightBeAPowerTerm = 8,   // We treat anything < this as being potentially a (float) power term from the previous API that has got miscast to this enum, and trigger an assert
-    ImGuiSliderFlags_Vertical               = 1 << 3,           // Should this widget be orientated vertically?
-    ImGuiSliderFlags_Logarithmic            = 1 << 4            // Should this widget be logarithmic? (linear otherwise)
+    ImGuiSliderFlags_InvalidMask_           = 0x7000000F,   // [Internal] We treat using those bits as being potentially a 'float power' argument from the previous API that has got miscast to this enum, and will trigger an assert if needed.
+    ImGuiSliderFlags_Logarithmic            = 1 << 4        // Should this widget be logarithmic? (linear otherwise)
 };
 
 // Identify a mouse button.
