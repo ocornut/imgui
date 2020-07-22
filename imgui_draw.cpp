@@ -1667,10 +1667,10 @@ ImFontConfig::ImFontConfig()
 //-----------------------------------------------------------------------------
 
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
-// The white texels on the top left are the ones we'll use everywhere in Dear ImGui to render filled shapes.
-const int FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF = 108;
-const int FONT_ATLAS_DEFAULT_TEX_DATA_H      = 27;
-static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
+// The 2x2 white texels on the top left are the ones we'll use everywhere in Dear ImGui to render filled shapes.
+const int FONT_ATLAS_DEFAULT_TEX_DATA_W = 108; // Actual texture will be 2 times that + 1 spacing.
+const int FONT_ATLAS_DEFAULT_TEX_DATA_H = 27;
+static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
 {
     "..-         -XXXXXXX-    X    -           X           -XXXXXXX          -          XXXXXXX-     XX          "
     "..-         -X.....X-   X.X   -          X.X          -X.....X          -          X.....X-    X..X         "
@@ -2003,7 +2003,7 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
     *out_offset = FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[cursor_type][2];
     out_uv_border[0] = (pos) * TexUvScale;
     out_uv_border[1] = (pos + size) * TexUvScale;
-    pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
+    pos.x += FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
     out_uv_fill[0] = (pos) * TexUvScale;
     out_uv_fill[1] = (pos + size) * TexUvScale;
     return true;
@@ -2366,6 +2366,16 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opa
         }
 }
 
+void ImFontAtlasBuildRender1bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned char in_marker_pixel_value)
+{
+    IM_ASSERT(x >= 0 && x + w <= atlas->TexWidth);
+    IM_ASSERT(y >= 0 && y + h <= atlas->TexHeight);
+    unsigned char* out_pixel = atlas->TexPixelsAlpha8 + x + (y * atlas->TexWidth);
+    for (int off_y = 0; off_y < h; off_y++, out_pixel += atlas->TexWidth, in_str += w)
+        for (int off_x = 0; off_x < w; off_x++)
+            out_pixel[off_x] = (in_str[off_x] == in_marker_char) ? in_marker_pixel_value : 0x00;
+}
+
 static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
 {
     ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdMouseCursors);
@@ -2375,15 +2385,11 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
     if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
     {
         // Render/copy pixels
-        IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
-        for (int y = 0, n = 0; y < FONT_ATLAS_DEFAULT_TEX_DATA_H; y++)
-            for (int x = 0; x < FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF; x++, n++)
-            {
-                const int offset0 = (int)(r->X + x) + (int)(r->Y + y) * w;
-                const int offset1 = offset0 + FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF + 1;
-                atlas->TexPixelsAlpha8[offset0] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == '.' ? 0xFF : 0x00;
-                atlas->TexPixelsAlpha8[offset1] = FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[n] == 'X' ? 0xFF : 0x00;
-            }
+        IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
+        const int x_for_white = r->X;
+        const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
+        ImFontAtlasBuildRender1bppRectFromString(atlas, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
+        ImFontAtlasBuildRender1bppRectFromString(atlas, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
     }
     else
     {
@@ -2433,7 +2439,7 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     if (atlas->PackIdMouseCursors < 0)
     {
         if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
-            atlas->PackIdMouseCursors = atlas->AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W_HALF * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+            atlas->PackIdMouseCursors = atlas->AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
         else
             atlas->PackIdMouseCursors = atlas->AddCustomRectRegular(2, 2);
     }
