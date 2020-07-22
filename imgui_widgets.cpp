@@ -1997,13 +1997,13 @@ TYPE ImGui::RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, 
 
 // This is called by DragBehavior() when the widget is active (held by mouse or being manipulated with Nav controls)
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
-bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiDragFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiAxis axis = (flags & ImGuiDragSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
+    const ImGuiAxis axis = (flags & ImGuiDragFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
     const bool is_clamped = (v_min < v_max);
-    const bool is_logarithmic = (flags & ImGuiDragSliderFlags_Logarithmic) && is_decimal;
+    const bool is_logarithmic = (flags & ImGuiDragFlags_Logarithmic) && is_decimal;
     const bool is_power = (power != 1.0f && !is_logarithmic && is_decimal && is_clamped && (v_max - v_min < FLT_MAX));
     const bool is_locked = (v_min > v_max);
     if (is_locked)
@@ -2130,9 +2130,9 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     return true;
 }
 
-bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragFlags flags)
 {
-    IM_ASSERT(((flags == 0) || (flags >= ImGuiDragSliderFlags__AnythingBelowThisMightBeAPowerTerm)) && "Invalid ImGuiDragSliderFlags flags - has a power term been mistakenly cast to flags?");
+    IM_ASSERT(((flags == 0) || (flags >= ImGuiDragFlags__AnythingBelowThisMightBeAPowerTerm)) && "Invalid ImGuiDragFlags flags - has a power term been mistakenly cast to flags?");
 
     ImGuiContext& g = *GImGui;
     if (g.ActiveId == id)
@@ -2166,7 +2166,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
 }
 
 // Internal implementation - see below for entry points
-bool ImGui::DragScalarInternal(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::DragScalarInternal(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2241,21 +2241,15 @@ bool ImGui::DragScalarInternal(const char* label, ImGuiDataType data_type, void*
     return value_changed;
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
-{
-    return DragScalarInternal(label, data_type, p_data, v_speed, p_min, p_max, format, power, (ImGuiDragSliderFlags)0);
-}
-
 // Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a Drag widget, p_min and p_max are optional.
 // Read code of e.g. SliderFloat(), SliderInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
-bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarInternal(label, data_type, p_data, v_speed, p_min, p_max, format, 1.0f, flags);
 }
 
 // Internal implementation - see below for entry points
-bool ImGui::DragScalarNInternal(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::DragScalarNInternal(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2290,63 +2284,33 @@ bool ImGui::DragScalarNInternal(const char* label, ImGuiDataType data_type, void
     return value_changed;
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
-{
-    return DragScalarNInternal(label, data_type, p_data, components, v_speed, p_min, p_max, format, power);
-}
-
-bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarNInternal(label, data_type, p_data, components, v_speed, p_min, p_max, format, 1.0f, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, float power)
-{
-    return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, power);
-}
-
-bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, float power)
-{
-    return DragScalarN(label, ImGuiDataType_Float, v, 2, v_speed, &v_min, &v_max, format, power);
-}
-
-bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 2, v_speed, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, float power)
-{
-    return DragScalarN(label, ImGuiDataType_Float, v, 3, v_speed, &v_min, &v_max, format, power);
-}
-
-bool ImGui::DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 3, v_speed, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, float power)
-{
-    return DragScalarN(label, ImGuiDataType_Float, v, 4, v_speed, &v_min, &v_max, format, power);
-}
-
-bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_Float, v, 4, v_speed, &v_min, &v_max, format, flags);
 }
 
 // Internal implementation
-bool ImGui::DragFloatRange2Internal(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power, ImGuiDragSliderFlags flags)
+bool ImGui::DragFloatRange2Internal(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power, ImGuiDragFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2377,39 +2341,33 @@ bool ImGui::DragFloatRange2Internal(const char* label, float* v_current_min, flo
     return value_changed;
 }
 
-// Obsolete version with power parameter
-bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power)
-{
-    return DragFloatRange2Internal(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max, power);
-}
-
-bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, ImGuiDragSliderFlags flags)
+bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, ImGuiDragFlags flags)
 {
     return DragFloatRange2Internal(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max, 1.0f, flags);
 }
 
 // NB: v_speed is float to allow adjusting the drag speed with more precision
-bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragInt(const char* label, int* v, float v_speed, int v_min, int v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalar(label, ImGuiDataType_S32, v, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragInt2(const char* label, int v[2], float v_speed, int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragInt2(const char* label, int v[2], float v_speed, int v_min, int v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_S32, v, 2, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragInt3(const char* label, int v[3], float v_speed, int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragInt3(const char* label, int v[3], float v_speed, int v_min, int v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_S32, v, 3, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragInt4(const char* label, int v[4], float v_speed, int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::DragInt4(const char* label, int v[4], float v_speed, int v_min, int v_max, const char* format, ImGuiDragFlags flags)
 {
     return DragScalarN(label, ImGuiDataType_S32, v, 4, v_speed, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* format, const char* format_max, ImGuiDragSliderFlags flags)
+bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* format, const char* format_max, ImGuiDragFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2441,6 +2399,46 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     return value_changed;
 }
 
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
+// Obsolete versions with power parameter
+bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
+{
+    return DragScalarInternal(label, data_type, p_data, v_speed, p_min, p_max, format, power, ImGuiDragFlags_None);
+}
+
+bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power)
+{
+    return DragScalarNInternal(label, data_type, p_data, components, v_speed, p_min, p_max, format, power);
+}
+
+bool ImGui::DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, float power)
+{
+    return DragScalar(label, ImGuiDataType_Float, v, v_speed, &v_min, &v_max, format, power);
+}
+
+bool ImGui::DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, float power)
+{
+    return DragScalarN(label, ImGuiDataType_Float, v, 2, v_speed, &v_min, &v_max, format, power);
+}
+
+bool ImGui::DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, float power)
+{
+    return DragScalarN(label, ImGuiDataType_Float, v, 3, v_speed, &v_min, &v_max, format, power);
+}
+
+bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, float power)
+{
+    return DragScalarN(label, ImGuiDataType_Float, v, 4, v_speed, &v_min, &v_max, format, power);
+}
+
+bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power)
+{
+    return DragFloatRange2Internal(label, v_current_min, v_current_max, v_speed, v_min, v_max, format, format_max, power);
+}
+
+#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: SliderScalar, SliderFloat, SliderInt, etc.
 //-------------------------------------------------------------------------
@@ -2464,12 +2462,12 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
 
 // Convert a value v in the output space of a slider into a parametric position on the slider itself (the logical opposite of SliderCalcValueFromRatioT)
 template<typename TYPE, typename FLOATTYPE>
-float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos, float logarithmic_zero_epsilon, ImGuiDragSliderFlags flags)
+float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float power, float linear_zero_pos, float logarithmic_zero_epsilon, ImGuiSliderFlags flags)
 {
     if (v_min == v_max)
         return 0.0f;
 
-    const bool is_logarithmic = (flags & ImGuiDragSliderFlags_Logarithmic) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
+    const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
     const bool is_power = (power != 1.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) && (!is_logarithmic);
     const TYPE v_clamped = (v_min < v_max) ? ImClamp(v, v_min, v_max) : ImClamp(v, v_max, v_min);
     if (is_logarithmic)
@@ -2532,13 +2530,13 @@ float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_m
 
 // Convert a parametric position on a slider into a value v in the output space (the logical opposite of SliderCalcRatioFromValueT)
 template<typename TYPE, typename FLOATTYPE>
-TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, TYPE v_max, float power, float linear_zero_pos, float logarithmic_zero_epsilon, ImGuiDragSliderFlags flags)
+TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, TYPE v_max, float power, float linear_zero_pos, float logarithmic_zero_epsilon, ImGuiSliderFlags flags)
 {
     if (v_min == v_max)
         return (TYPE)0.0f;
 
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
-    const bool is_logarithmic = (flags & ImGuiDragSliderFlags_Logarithmic) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
+    const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double);
     const bool is_power = (power != 1.0f) && (data_type == ImGuiDataType_Float || data_type == ImGuiDataType_Double) && (!is_logarithmic);
 
     TYPE result;
@@ -2630,14 +2628,14 @@ TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_m
 
 // FIXME: Move some of the code into SliderBehavior(). Current responsibility is larger than what the equivalent DragBehaviorT<> does, we also do some rendering, etc.
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
-bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiDragSliderFlags flags, ImRect* out_grab_bb)
+bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
 
-    const ImGuiAxis axis = (flags & ImGuiDragSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
+    const ImGuiAxis axis = (flags & ImGuiSliderFlags_Vertical) ? ImGuiAxis_Y : ImGuiAxis_X;
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
-    const bool is_logarithmic = (flags & ImGuiDragSliderFlags_Logarithmic) && is_decimal;
+    const bool is_logarithmic = (flags & ImGuiSliderFlags_Logarithmic) && is_decimal;
     const bool is_power = (power != 1.0f) && is_decimal && (!is_logarithmic);
 
     const float grab_padding = 2.0f;
@@ -2769,9 +2767,9 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 // For 32-bit and larger types, slider bounds are limited to half the natural type range.
 // So e.g. an integer Slider between INT_MAX-10 and INT_MAX will fail, but an integer Slider between INT_MAX/2-10 and INT_MAX/2 will be ok.
 // It would be possible to lift that limitation with some work but it doesn't seem to be worth it for sliders.
-bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragSliderFlags flags, ImRect* out_grab_bb)
+bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format, float power, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
-    IM_ASSERT(((flags == 0) || (flags >= ImGuiDragSliderFlags__AnythingBelowThisMightBeAPowerTerm)) && "Invalid ImGuiDragSliderFlags flags - has a power term been mistakenly cast to flags?");
+    IM_ASSERT(((flags == 0) || (flags >= ImGuiSliderFlags__AnythingBelowThisMightBeAPowerTerm)) && "Invalid ImGuiSliderFlags flags - has a power term been mistakenly cast to flags?");
 
     ImGuiContext& g = *GImGui;
     if (g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly)
@@ -2808,7 +2806,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
 }
 
 // Internal implementation
-bool ImGui::SliderScalarInternal(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::SliderScalarInternal(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2887,18 +2885,12 @@ bool ImGui::SliderScalarInternal(const char* label, ImGuiDataType data_type, voi
 
 // Note: p_data, p_min and p_max are _pointers_ to a memory address holding the data. For a slider, they are all required.
 // Read code of e.g. SliderFloat(), SliderInt() etc. or examples in 'Demo->Widgets->Data Types' to understand how to use this function directly.
-bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarInternal(label, data_type, p_data, p_min, p_max, format, 1.0f, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power)
-{
-    return SliderScalarInternal(label, data_type, p_data, p_min, p_max, format, power);
-}
-
-bool ImGui::SliderScalarNInternal(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::SliderScalarNInternal(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -2934,62 +2926,32 @@ bool ImGui::SliderScalarNInternal(const char* label, ImGuiDataType data_type, vo
 }
 
 // Add multiple sliders on 1 line for compact edition of multiple components
-bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarNInternal(label, data_type, v, components, v_min, v_max, format, 1.0f, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power)
-{
-    return SliderScalarNInternal(label, data_type, v, components, v_min, v_max, format, power);
-}
-
-bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power)
-{
-    return SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, power);
-}
-
-bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, float power)
-{
-    return SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, power);
-}
-
-bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, float power)
-{
-    return SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, power);
-}
-
-bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, flags);
 }
 
-// Obsolete version with power parameter
-bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, float power)
-{
-    return SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, power);
-}
-
-bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, float v_degrees_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, float v_degrees_max, const char* format, ImGuiSliderFlags flags)
 {
     if (format == NULL)
         format = "%.0f deg";
@@ -2999,28 +2961,28 @@ bool ImGui::SliderAngle(const char* label, float* v_rad, float v_degrees_min, fl
     return value_changed;
 }
 
-bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderInt(const char* label, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalar(label, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 2, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 3, &v_min, &v_max, format, flags);
 }
 
-bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
 {
     return SliderScalarN(label, ImGuiDataType_S32, v, 4, &v_min, &v_max, format, flags);
 }
 
 // Internal implementation
-bool ImGui::VSliderScalarInternal(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power, ImGuiDragSliderFlags flags)
+bool ImGui::VSliderScalarInternal(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power, ImGuiSliderFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
@@ -3060,7 +3022,7 @@ bool ImGui::VSliderScalarInternal(const char* label, const ImVec2& size, ImGuiDa
 
     // Slider behavior
     ImRect grab_bb;
-    const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, power, flags | ImGuiDragSliderFlags_Vertical, &grab_bb);
+    const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, power, flags | ImGuiSliderFlags_Vertical, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
 
@@ -3079,32 +3041,65 @@ bool ImGui::VSliderScalarInternal(const char* label, const ImVec2& size, ImGuiDa
     return value_changed;
 }
 
-bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiDragSliderFlags flags)
+bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags)
 {
     return VSliderScalarInternal(label, size, data_type, p_data, p_min, p_max, format, 1.0f, flags);
 }
 
-// Obsolete version with power parameter
+bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, ImGuiSliderFlags flags)
+{
+    return VSliderScalar(label, size, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
+}
+
+bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* format, ImGuiSliderFlags flags)
+{
+    return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
+}
+
+#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
+
+// Obsolete versions with power parameter
+bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power)
+{
+    return SliderScalarInternal(label, data_type, p_data, p_min, p_max, format, power);
+}
+
+bool ImGui::SliderScalarN(const char* label, ImGuiDataType data_type, void* v, int components, const void* v_min, const void* v_max, const char* format, float power)
+{
+    return SliderScalarNInternal(label, data_type, v, components, v_min, v_max, format, power);
+}
+
+bool ImGui::SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power)
+{
+    return SliderScalar(label, ImGuiDataType_Float, v, &v_min, &v_max, format, power);
+}
+
+bool ImGui::SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, float power)
+{
+    return SliderScalarN(label, ImGuiDataType_Float, v, 2, &v_min, &v_max, format, power);
+}
+
+bool ImGui::SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, float power)
+{
+    return SliderScalarN(label, ImGuiDataType_Float, v, 3, &v_min, &v_max, format, power);
+}
+
+bool ImGui::SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, float power)
+{
+    return SliderScalarN(label, ImGuiDataType_Float, v, 4, &v_min, &v_max, format, power);
+}
+
 bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power)
 {
     return VSliderScalarInternal(label, size, data_type, p_data, p_min, p_max, format, power);
 }
 
-bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, ImGuiDragSliderFlags flags)
-{
-    return VSliderScalar(label, size, ImGuiDataType_Float, v, &v_min, &v_max, format, flags);
-}
-
-// Obsolete version with power parameter
 bool ImGui::VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, float power)
 {
     return VSliderScalar(label, size, ImGuiDataType_Float, v, &v_min, &v_max, format, power);
 }
 
-bool ImGui::VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* format, ImGuiDragSliderFlags flags)
-{
-    return VSliderScalar(label, size, ImGuiDataType_S32, v, &v_min, &v_max, format, flags);
-}
+#endif // IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 
 //-------------------------------------------------------------------------
 // [SECTION] Widgets: InputScalar, InputFloat, InputInt, etc.

@@ -157,6 +157,7 @@ typedef int ImGuiButtonFlags;       // -> enum ImGuiButtonFlags_     // Flags: f
 typedef int ImGuiColorEditFlags;    // -> enum ImGuiColorEditFlags_  // Flags: for ColorEdit4(), ColorPicker4() etc.
 typedef int ImGuiConfigFlags;       // -> enum ImGuiConfigFlags_     // Flags: for io.ConfigFlags
 typedef int ImGuiComboFlags;        // -> enum ImGuiComboFlags_      // Flags: for BeginCombo()
+typedef int ImGuiDragFlags;         // -> enum ImGuiDragFlags_       // Flags: for DragFloat(), DragInt() etc.
 typedef int ImGuiDragDropFlags;     // -> enum ImGuiDragDropFlags_   // Flags: for BeginDragDropSource(), AcceptDragDropPayload()
 typedef int ImGuiFocusedFlags;      // -> enum ImGuiFocusedFlags_    // Flags: for IsWindowFocused()
 typedef int ImGuiHoveredFlags;      // -> enum ImGuiHoveredFlags_    // Flags: for IsItemHovered(), IsWindowHovered() etc.
@@ -164,11 +165,11 @@ typedef int ImGuiInputTextFlags;    // -> enum ImGuiInputTextFlags_  // Flags: f
 typedef int ImGuiKeyModFlags;       // -> enum ImGuiKeyModFlags_     // Flags: for io.KeyMods (Ctrl/Shift/Alt/Super)
 typedef int ImGuiPopupFlags;        // -> enum ImGuiPopupFlags_      // Flags: for OpenPopup*(), BeginPopupContext*(), IsPopupOpen()
 typedef int ImGuiSelectableFlags;   // -> enum ImGuiSelectableFlags_ // Flags: for Selectable()
+typedef int ImGuiSliderFlags;       // -> enum ImGuiSliderFlags_     // Flags: for SliderFloat(), SliderInt() etc.
 typedef int ImGuiTabBarFlags;       // -> enum ImGuiTabBarFlags_     // Flags: for BeginTabBar()
 typedef int ImGuiTabItemFlags;      // -> enum ImGuiTabItemFlags_    // Flags: for BeginTabItem()
 typedef int ImGuiTreeNodeFlags;     // -> enum ImGuiTreeNodeFlags_   // Flags: for TreeNode(), TreeNodeEx(), CollapsingHeader()
 typedef int ImGuiWindowFlags;       // -> enum ImGuiWindowFlags_     // Flags: for Begin(), BeginChild()
-typedef int ImGuiDragSliderFlags;   // -> enum ImGuiDragSliderFlags_ // Flags: for SliderFloat()/DragFloat()/etc
 
 // Other types
 #ifndef ImTextureID                 // ImTextureID [configurable type: override in imconfig.h with '#define ImTextureID xxx']
@@ -466,57 +467,36 @@ namespace ImGui
     // - Speed are per-pixel of mouse movement (v_speed=0.2f: mouse needs to move by 5 pixels to increase value by 1). For gamepad/keyboard navigation, minimum speed is Max(v_speed, minimum_step_at_given_precision).
     // - Use v_min < v_max to clamp edits to given limits. Note that CTRL+Click manual input can override those limits.
     // - Use v_max = FLT_MAX / INT_MAX etc to avoid clamping to a maximum, same with v_min = -FLT_MAX / INT_MIN to avoid clamping to a minimum.
-    IMGUI_API bool          DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);     // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", const char* format_max = NULL, ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragSliderFlags flags = 0);  // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragInt2(const char* label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragInt3(const char* label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragInt4(const char* label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", const char* format_max = NULL, ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min = NULL, const void* p_max = NULL, const char* format = NULL, ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min = NULL, const void* p_max = NULL, const char* format = NULL, ImGuiDragSliderFlags flags = 0);
-
-    // [Obsolete]
-    // Old drag functions that take a power term instead of flags
-    IMGUI_API bool          DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, float power);     // If v_min >= v_max we have no bound
-    IMGUI_API bool          DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power);
-    IMGUI_API bool          DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power);
-    IMGUI_API bool          DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power);
+    IMGUI_API bool          DragFloat(const char* label, float* v, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragFlags flags = 0);     // If v_min >= v_max we have no bound
+    IMGUI_API bool          DragFloat2(const char* label, float v[2], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragFloat3(const char* label, float v[3], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragFloat4(const char* label, float v[4], float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed = 1.0f, float v_min = 0.0f, float v_max = 0.0f, const char* format = "%.3f", const char* format_max = NULL, ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragInt(const char* label, int* v, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragFlags flags = 0);  // If v_min >= v_max we have no bound
+    IMGUI_API bool          DragInt2(const char* label, int v[2], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragInt3(const char* label, int v[3], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragInt4(const char* label, int v[4], float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed = 1.0f, int v_min = 0, int v_max = 0, const char* format = "%d", const char* format_max = NULL, ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min = NULL, const void* p_max = NULL, const char* format = NULL, ImGuiDragFlags flags = 0);
+    IMGUI_API bool          DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min = NULL, const void* p_max = NULL, const char* format = NULL, ImGuiDragFlags flags = 0);
 
     // Widgets: Sliders
     // - CTRL+Click on any slider to turn them into an input box. Manually input values aren't clamped and can go off-bounds.
     // - Adjust format string to decorate the value with a prefix, a suffix, or adapt the editing and display precision e.g. "%.3f" -> 1.234; "%5.2f secs" -> 01.23 secs; "Biscuit: %.0f" -> Biscuit: 1; etc.
-    IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);     // adjust format to decorate the value with a prefix or a suffix for in-slider labels or unit display.
-    IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderInt(const char* label, int* v, int v_min, int v_max, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format = NULL, ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          SliderScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, const char* format = NULL, ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* format = "%d", ImGuiDragSliderFlags flags = 0);
-    IMGUI_API bool          VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format = NULL, ImGuiDragSliderFlags flags = 0);
-
-    // [Obsolete]
-    // Old slider functions that take a power term instead of flags
-    IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power);     // adjust format to decorate the value with a prefix or a suffix for in-slider labels or unit display. Use power!=1.0 for power curve sliders
-    IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power);
-    IMGUI_API bool          SliderScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, const char* format, float power);
-    IMGUI_API bool          VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, float power);
-    IMGUI_API bool          VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power);
+    IMGUI_API bool          SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0);     // adjust format to decorate the value with a prefix or a suffix for in-slider labels or unit display.
+    IMGUI_API bool          SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderAngle(const char* label, float* v_rad, float v_degrees_min = -360.0f, float v_degrees_max = +360.0f, const char* format = "%.0f deg", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderInt(const char* label, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderInt2(const char* label, int v[2], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderInt3(const char* label, int v[3], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderInt4(const char* label, int v[4], int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format = NULL, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          SliderScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, const char* format = NULL, ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format = "%.3f", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          VSliderInt(const char* label, const ImVec2& size, int* v, int v_min, int v_max, const char* format = "%d", ImGuiSliderFlags flags = 0);
+    IMGUI_API bool          VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format = NULL, ImGuiSliderFlags flags = 0);
 
     // Widgets: Input with Keyboard
     // - If you want to use InputText() with std::string or any custom dynamic string type, see misc/cpp/imgui_stdlib.h and comments in imgui_demo.cpp.
@@ -1304,12 +1284,22 @@ enum ImGuiColorEditFlags_
 #endif
 };
 
-// Flags for configuring drag/slider widgets
-enum ImGuiDragSliderFlags_
+// Flags for DragFloat(), DragInt() etc.
+enum ImGuiDragFlags_
 {
-    ImGuiDragSliderFlags__AnythingBelowThisMightBeAPowerTerm = 8,       // We treat anything < this as being potentially a (float) power term from the previous API that has got miscast to this enum, and trigger an assert
-    ImGuiDragSliderFlags_Vertical           = 1 << 3,                   // Should this widget be orientated vertically?
-    ImGuiDragSliderFlags_Logarithmic        = 1 << 4                    // Should this widget be logarithmic? (linear otherwise)
+    ImGuiDragFlags_None                     = 0,
+    ImGuiDragFlags__AnythingBelowThisMightBeAPowerTerm = 8,     // We treat anything < this as being potentially a (float) power term from the previous API that has got miscast to this enum, and trigger an assert
+    ImGuiDragFlags_Vertical                 = 1 << 3,           // Should this widget be orientated vertically?
+    ImGuiDragFlags_Logarithmic              = 1 << 4            // Should this widget be logarithmic? (linear otherwise)
+};
+
+// Flags for SliderFloat(), SliderInt() etc.
+enum ImGuiSliderFlags_
+{
+    ImGuiSliderFlags_None                   = 0,
+    ImGuiSliderFlags__AnythingBelowThisMightBeAPowerTerm = 8,   // We treat anything < this as being potentially a (float) power term from the previous API that has got miscast to this enum, and trigger an assert
+    ImGuiSliderFlags_Vertical               = 1 << 3,           // Should this widget be orientated vertically?
+    ImGuiSliderFlags_Logarithmic            = 1 << 4            // Should this widget be logarithmic? (linear otherwise)
 };
 
 // Identify a mouse button.
@@ -1715,6 +1705,23 @@ struct ImGuiPayload
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 namespace ImGui
 {
+    // OBSOLETED in 1.78 (from July 2020)
+    // Old drag/sliders functions that took a 'float power = 1.0' argument instead of flags
+    IMGUI_API bool      DragFloat(const char* label, float* v, float v_speed, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      DragFloat2(const char* label, float v[2], float v_speed, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      DragFloat3(const char* label, float v[3], float v_speed, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      DragFloat4(const char* label, float v[4], float v_speed, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, float power);
+    IMGUI_API bool      DragScalar(const char* label, ImGuiDataType data_type, void* p_data, float v_speed, const void* p_min, const void* p_max, const char* format, float power);
+    IMGUI_API bool      DragScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, float v_speed, const void* p_min, const void* p_max, const char* format, float power);
+    IMGUI_API bool      SliderFloat(const char* label, float* v, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      SliderFloat2(const char* label, float v[2], float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      SliderFloat3(const char* label, float v[3], float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      SliderFloat4(const char* label, float v[4], float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      SliderScalar(const char* label, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power);
+    IMGUI_API bool      SliderScalarN(const char* label, ImGuiDataType data_type, void* p_data, int components, const void* p_min, const void* p_max, const char* format, float power);
+    IMGUI_API bool      VSliderFloat(const char* label, const ImVec2& size, float* v, float v_min, float v_max, const char* format, float power);
+    IMGUI_API bool      VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType data_type, void* p_data, const void* p_min, const void* p_max, const char* format, float power);
     // OBSOLETED in 1.77 (from June 2020)
     static inline bool  OpenPopupOnItemClick(const char* str_id = NULL, ImGuiMouseButton mb = 1)          { return OpenPopupContextItem(str_id, mb); } // Passing a mouse button to ImGuiPopupFlags is legal
     static inline bool  BeginPopupContextWindow(const char* str_id, ImGuiMouseButton mb, bool over_items) { return BeginPopupContextWindow(str_id, mb | (over_items ? 0 : ImGuiPopupFlags_NoOpenOverItems)); }
