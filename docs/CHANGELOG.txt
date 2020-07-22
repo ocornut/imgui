@@ -35,6 +35,32 @@ HOW TO UPDATE?
  VERSION 1.78 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Obsoleted use of the trailing 'float power=1.0f' parameter for those functions: [@Shironekoben, @ocornut]
+  - DragFloat(), DragFloat2(), DragFloat3(), DragFloat4(), DragFloatRange2(), DragScalar(), DragScalarN()
+  - SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4(), SliderScalar(), SliderScalarN()
+  - VSliderFloat(), VSliderScalar()
+  Replaced the 'float power=1.0f' argument with integer-based flags defaulting to 0 (as with all our flags).
+  The type of those flags are ImGuiDragFlags and ImGuiSliderFlags (underlying int storage).
+  Worked out a backward-compatibility scheme so hopefully most C++ codebase should not be affected.
+  In short, when calling those functions:
+  - If you omitted the 'power' parameter (likely!), you are not affected.
+  - If you set the 'power' parameter to 1.0f (same as previous default value):
+    - Your compiler may warn on float>int conversion.
+    - Everything else will work.
+    - You can replace the 1.0f value with 0 to fix the warning, and be technically correct.
+  - If you set the 'power' parameter to >1.0f (to enable non-linear editing):
+    - Your compiler may warn on float>int conversion.
+    - Code will assert at runtime for IM_ASSERT(power == 1.0f) with the following assert description:
+      "Call Drag function with ImGuiDragFlags_Logarithmic instead of using the old 'float power' function!".
+    - In case asserts are disabled, the code will not crash and enable the _Logarithmic flag.
+    - You can replace the >1.0f value with ImGuiDragFlags_Logarithmic or ImGuiSliderFlags_Logarithmic
+      to fix the warning/assert and get a _similar_ effect as previous uses of power >1.0f.
+  See https://github.com/ocornut/imgui/issues/3361 for all details.
+  Kept inline redirection functions (will obsolete) apart for: DragFloatRange2(), VSliderFloat(), VSliderScalar().
+  For those three the 'float power=1.0f' version were removed directly as they were most unlikely ever used.
+
 Other Changes:
 
 - Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
@@ -42,6 +68,12 @@ Other Changes:
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
 - Window: Fixed clicking over an item which hovering has been disabled (e.g inhibited by a popup)
   from marking the window as moved.
+- Drag, Slider: Added ImGuiDragFlags and ImGuiSliderFlags parameters.
+  For float functions they replace the old trailing 'float power=1.0' parameter.
+  (See #3361 and the "Breaking Changes" block above for all details).
+- Drag, Slider: Added ImGuiDragFlags_Logarithmic/ImGuiSliderFlags_Logarithmic flags to
+  enable logarithmic editing (generally more precision around zero), as a replacement to the old
+  'float power' parameter which was obsoleted. (#1823, #1316, #642) [@Shironekoben, @AndrewBelt]
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
