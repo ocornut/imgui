@@ -2278,10 +2278,17 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
     BeginGroup();
     PushMultiItemsWidths(2, CalcItemWidth());
 
-    bool value_changed = DragFloat("##min", v_current_min, v_speed, (v_min >= v_max) ? -FLT_MAX : v_min, (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max), format, power);
+    float min = (v_min >= v_max) ? -FLT_MAX : v_min;
+    float max = (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max);
+    if (min == max) { min = FLT_MAX; max = -FLT_MAX; } // Lock edit
+    bool value_changed = DragScalar("##min", ImGuiDataType_Float, v_current_min, v_speed, &min, &max, format, power);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
-    value_changed |= DragFloat("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? FLT_MAX : v_max, format_max ? format_max : format, power);
+
+    min = (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min);
+    max = (v_min >= v_max) ? FLT_MAX : v_max;
+    if (min == max) { min = FLT_MAX; max = -FLT_MAX; } // Lock edit
+    value_changed |= DragScalar("##max", ImGuiDataType_Float, v_current_max, v_speed, &min, &max, format_max ? format_max : format, power);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
@@ -2323,10 +2330,17 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     BeginGroup();
     PushMultiItemsWidths(2, CalcItemWidth());
 
-    bool value_changed = DragInt("##min", v_current_min, v_speed, (v_min >= v_max) ? INT_MIN : v_min, (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max), format);
+    int min = (v_min >= v_max) ? INT_MIN : v_min;
+    int max = (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max);
+    if (min == max) { min = INT_MAX; max = INT_MIN; } // Lock edit
+    bool value_changed = DragInt("##min", v_current_min, v_speed, min, max, format);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
-    value_changed |= DragInt("##max", v_current_max, v_speed, (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min), (v_min >= v_max) ? INT_MAX : v_max, format_max ? format_max : format);
+
+    min = (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min);
+    max = (v_min >= v_max) ? INT_MAX : v_max;
+    if (min == max) { min = INT_MAX; max = INT_MIN; } // Lock edit
+    value_changed |= DragInt("##max", v_current_max, v_speed, min, max, format_max ? format_max : format);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 

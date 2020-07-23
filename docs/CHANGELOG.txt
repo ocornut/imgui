@@ -40,6 +40,8 @@ Other Changes:
 - Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
   This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
+- DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
+  min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
   than ~16 KB characters. (Note that current code is going to show corrupted display if after
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
