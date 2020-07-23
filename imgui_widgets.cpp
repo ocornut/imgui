@@ -2079,7 +2079,8 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     }
 
     // Round to user desired precision based on format string
-    v_cur = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_cur);
+    if (!(flags & ImGuiDragFlags_NoRoundToFormat))
+        v_cur = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_cur);
 
     // Preserve remainder after rounding has been applied. This also allow slow tweaking of values.
     g.DragCurrentAccumDirty = false;
@@ -2636,7 +2637,8 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
             TYPE v_new = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, logarithmic_zero_epsilon, flags);
 
             // Round to user desired precision based on format string
-            v_new = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_new);
+            if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
+                v_new = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_new);
 
             // Apply result
             if (*v != v_new)

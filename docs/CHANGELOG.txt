@@ -76,6 +76,8 @@ Other Changes:
   'float power' parameter which was obsoleted. (#1823, #1316, #642) [@Shironekoben, @AndrewBelt]
 - Drag, Slider: Added ImGuiDragFlags_ClampOnInput/ImGuiSliderFlags_ClampOnInput flags to force
   clamping value when using CTRL+Click to type in a value manually. (#1829, #3209, #946, #413).
+- Drag, Slider: Added ImGuiDragFlags_NoRoundToFormat/ImGuiSliderFlags_NoRoundToFormat flags
+  to disable rounding underlying value to match precision of the display format string. (#642)
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more

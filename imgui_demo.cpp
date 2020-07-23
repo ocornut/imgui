@@ -1496,13 +1496,16 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Always clamp value to min/max bounds (if any) when input manually with CTRL+Click.");
         ImGui::CheckboxFlags("ImGuiDragFlags_Logarithmic", (unsigned int*)&drag_flags, ImGuiDragFlags_Logarithmic);
         ImGui::SameLine(); HelpMarker("Enable logarithmic editing (more precision for small values).");
+        ImGui::CheckboxFlags("ImGuiDragFlags_NoRoundToFormat", (unsigned int*)&drag_flags, ImGuiDragFlags_NoRoundToFormat);
+        ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
 
         static float drag_f = 0.5f;
         static int drag_i = 50;
-        ImGui::DragFloat("DragFloat (0 -> 1)", &drag_f, 0.005f, 0.0f, 1.0f, "%f", drag_flags);
-        ImGui::DragFloat("DragFloat (0 -> +inf)", &drag_f, 0.005f, 0.0f, FLT_MAX, "%f", drag_flags);
-        ImGui::DragFloat("DragFloat (-inf -> 1)", &drag_f, 0.005f, -FLT_MAX, 1.0f, "%f", drag_flags);
-        ImGui::DragFloat("DragFloat (-inf -> +inf)", &drag_f, 0.005f, -FLT_MAX, +FLT_MAX, "%f", drag_flags);
+        ImGui::Text("Underlying float value: %f", drag_f);
+        ImGui::DragFloat("DragFloat (0 -> 1)", &drag_f, 0.005f, 0.0f, 1.0f, "%.3f", drag_flags);
+        ImGui::DragFloat("DragFloat (0 -> +inf)", &drag_f, 0.005f, 0.0f, FLT_MAX, "%.3f", drag_flags);
+        ImGui::DragFloat("DragFloat (-inf -> 1)", &drag_f, 0.005f, -FLT_MAX, 1.0f, "%.3f", drag_flags);
+        ImGui::DragFloat("DragFloat (-inf -> +inf)", &drag_f, 0.005f, -FLT_MAX, +FLT_MAX, "%.3f", drag_flags);
         ImGui::DragInt("DragInt (0 -> 100)", &drag_i, 0.5f, 0, 100, "%d", drag_flags);
 
         // Demonstrate using advanced flags for SliderXXX functions
@@ -1511,11 +1514,14 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Always clamp value to min/max bounds (if any) when input manually with CTRL+Click.");
         ImGui::CheckboxFlags("ImGuiSliderFlags_Logarithmic", (unsigned int*)&slider_flags, ImGuiSliderFlags_Logarithmic);
         ImGui::SameLine(); HelpMarker("Enable logarithmic editing (more precision for small values).");
+        ImGui::CheckboxFlags("ImGuiSliderFlags_NoRoundToFormat", (unsigned int*)&slider_flags, ImGuiSliderFlags_NoRoundToFormat);
+        ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
 
         static float slider_f = 0.5f;
         static int slider_i = 50;
-        ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, NULL, slider_flags);
-        ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, NULL, slider_flags);
+        ImGui::Text("Underlying float value: %f", slider_f);
+        ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", slider_flags);
+        ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%.3f", slider_flags);
 
         ImGui::TreePop();
     }
