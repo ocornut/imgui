@@ -78,6 +78,8 @@ Other Changes:
   clamping value when using CTRL+Click to type in a value manually. (#1829, #3209, #946, #413).
 - Drag, Slider: Added ImGuiDragFlags_NoRoundToFormat/ImGuiSliderFlags_NoRoundToFormat flags
   to disable rounding underlying value to match precision of the display format string. (#642)
+- Drag, Slider: Added ImGuiDragFlags_NoInput/ImGuiSliderFlags_NoInput to disable turning
+  widget into a text input with CTRL+Click or Nav Enter.
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more

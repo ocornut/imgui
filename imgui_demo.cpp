@@ -1498,6 +1498,8 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Enable logarithmic editing (more precision for small values).");
         ImGui::CheckboxFlags("ImGuiDragFlags_NoRoundToFormat", (unsigned int*)&drag_flags, ImGuiDragFlags_NoRoundToFormat);
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
+        ImGui::CheckboxFlags("ImGuiDragFlags_NoInput", (unsigned int*)&drag_flags, ImGuiDragFlags_NoInput);
+        ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
 
         static float drag_f = 0.5f;
         static int drag_i = 50;
@@ -1516,6 +1518,8 @@ static void ShowDemoWindowWidgets()
         ImGui::SameLine(); HelpMarker("Enable logarithmic editing (more precision for small values).");
         ImGui::CheckboxFlags("ImGuiSliderFlags_NoRoundToFormat", (unsigned int*)&slider_flags, ImGuiSliderFlags_NoRoundToFormat);
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
+        ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", (unsigned int*)&slider_flags, ImGuiSliderFlags_NoInput);
+        ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
 
         static float slider_f = 0.5f;
         static int slider_i = 50;

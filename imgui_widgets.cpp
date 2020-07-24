@@ -2179,10 +2179,11 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
 
     // Tabbing or CTRL-clicking on Drag turns it into an input box
     const bool hovered = ItemHoverable(frame_bb, id);
-    bool temp_input_is_active = TempInputIsActive(id);
+    const bool temp_input_allowed = (flags & ImGuiDragFlags_NoInput) == 0;
+    bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        const bool focus_requested = FocusableItemRegister(window, id);
+        const bool focus_requested = temp_input_allowed && FocusableItemRegister(window, id);
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
         const bool double_clicked = (hovered && g.IO.MouseDoubleClicked[0]);
         if (focus_requested || clicked || double_clicked || g.NavActivateId == id || g.NavInputId == id)
@@ -2191,7 +2192,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask = (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-            if (focus_requested || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavInputId == id)
+            if (temp_input_allowed && (focus_requested || (clicked && g.IO.KeyCtrl) || double_clicked || g.NavInputId == id))
             {
                 temp_input_is_active = true;
                 FocusableItemUnregister(window);
@@ -2740,10 +2741,11 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
 
     // Tabbing or CTRL-clicking on Slider turns it into an input box
     const bool hovered = ItemHoverable(frame_bb, id);
-    bool temp_input_is_active = TempInputIsActive(id);
+    const bool temp_input_allowed = (flags & ImGuiSliderFlags_NoInput) == 0;
+    bool temp_input_is_active = temp_input_allowed && TempInputIsActive(id);
     if (!temp_input_is_active)
     {
-        const bool focus_requested = FocusableItemRegister(window, id);
+        const bool focus_requested = temp_input_allowed && FocusableItemRegister(window, id);
         const bool clicked = (hovered && g.IO.MouseClicked[0]);
         if (focus_requested || clicked || g.NavActivateId == id || g.NavInputId == id)
         {
@@ -2751,7 +2753,7 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
             SetFocusID(id, window);
             FocusWindow(window);
             g.ActiveIdUsingNavDirMask |= (1 << ImGuiDir_Left) | (1 << ImGuiDir_Right);
-            if (focus_requested || (clicked && g.IO.KeyCtrl) || g.NavInputId == id)
+            if (temp_input_allowed && (focus_requested || (clicked && g.IO.KeyCtrl) || g.NavInputId == id))
             {
                 temp_input_is_active = true;
                 FocusableItemUnregister(window);
