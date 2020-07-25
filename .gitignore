@@ -47,3 +47,15 @@ examples/example_glut_opengl2/example_glut_opengl2
 examples/example_null/example_null
 examples/example_sdl_opengl2/example_sdl_opengl2
 examples/example_sdl_opengl3/example_sdl_opengl3
+
+# Hazel-specific
+# Directories
+bin/
+bin-int/
+
+ # Files
+Makefile 
+
+# Visual Studio files and folder
+*.sln
+*.vcxproj*
