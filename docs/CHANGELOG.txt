@@ -59,7 +59,7 @@ Breaking Changes:
       to fix the warning/assert and get a _similar_ effect as previous uses of power >1.0f.
   See https://github.com/ocornut/imgui/issues/3361 for all details.
   Kept inline redirection functions (will obsolete) apart for: DragFloatRange2(), VSliderFloat(), VSliderScalar().
-  For those three the 'float power=1.0f' version were removed directly as they were most unlikely ever used.
+  For those three the 'float power=1.0f' version was removed directly as they were most unlikely ever used.
 
 Other Changes:
 
@@ -80,6 +80,8 @@ Other Changes:
   to disable rounding underlying value to match precision of the display format string. (#642)
 - Drag, Slider: Added ImGuiDragFlags_NoInput/ImGuiSliderFlags_NoInput to disable turning
   widget into a text input with CTRL+Click or Nav Enter.
+- Nav, Slider: Fix using keyboard/gamepad controls with certain logarithmic sliders where
+  pushing a direction near zero values would be cancelled out. [@Shironekoben]
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more

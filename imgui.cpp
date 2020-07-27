@@ -973,6 +973,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     ScrollbarRounding = ImFloor(ScrollbarRounding * scale_factor);
     GrabMinSize = ImFloor(GrabMinSize * scale_factor);
     GrabRounding = ImFloor(GrabRounding * scale_factor);
+    LogSliderDeadzone = ImFloor(LogSliderDeadzone * scale_factor);
     TabRounding = ImFloor(TabRounding * scale_factor);
     if (TabMinWidthForUnselectedCloseButton != FLT_MAX)
         TabMinWidthForUnselectedCloseButton = ImFloor(TabMinWidthForUnselectedCloseButton * scale_factor);

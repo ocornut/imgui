@@ -2060,8 +2060,10 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     TYPE v_cur = *v;
     FLOATTYPE v_old_ref_for_accum_remainder = (FLOATTYPE)0.0f;
 
+    IM_ASSERT(ImGuiDragFlags_Logarithmic == ImGuiSliderFlags_Logarithmic);
+
     float logarithmic_zero_epsilon = 0.0f; // Only valid when is_logarithmic is true
-    const float zero_deadzone_size = 0.0f; // Drag widgets have no deadzone (as it doesn't make sense)
+    const float zero_deadzone_halfsize = 0.0f; // Drag widgets have no deadzone (as it doesn't make sense)
     if (is_logarithmic)
     {
         // When using logarithmic sliders, we need to clamp to avoid hitting zero, but our choice of clamp value greatly affects slider precision. We attempt to use the specified precision to estimate a good lower bound.
@@ -2069,9 +2071,9 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
         logarithmic_zero_epsilon = ImPow(0.1f, (float)decimal_precision);
 
         // Convert to parametric space, apply delta, convert back
-        float v_old_parametric = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, v_cur, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+        float v_old_parametric = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, v_cur, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
         float v_new_parametric = v_old_parametric + g.DragCurrentAccum;
-        v_cur = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, v_new_parametric, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+        v_cur = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, v_new_parametric, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
         v_old_ref_for_accum_remainder = v_old_parametric;
     }
     else
@@ -2088,7 +2090,7 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     if (is_logarithmic)
     {
         // Convert to parametric space, apply delta, convert back
-        float v_new_parametric = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, v_cur, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+        float v_new_parametric = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, v_cur, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
         g.DragCurrentAccum -= (float)(v_new_parametric - v_old_ref_for_accum_remainder);
     }
     else
@@ -2421,7 +2423,7 @@ bool ImGui::DragScalarN(const char* label, ImGuiDataType data_type, void* p_data
 
 // Convert a value v in the output space of a slider into a parametric position on the slider itself (the logical opposite of SliderCalcValueFromRatioT)
 template<typename TYPE, typename FLOATTYPE>
-float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float logarithmic_zero_epsilon, float zero_deadzone_size, ImGuiSliderFlags flags)
+float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_min, TYPE v_max, float logarithmic_zero_epsilon, float zero_deadzone_halfsize, ImGuiSliderFlags flags)
 {
     if (v_min == v_max)
         return 0.0f;
@@ -2453,13 +2455,15 @@ float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_m
             result = 1.0f; // Workaround for values that are in-range but above our fudge
         else if ((v_min * v_max) < 0.0f) // Range crosses zero, so split into two portions
         {
-            float zero_point = (-(float)v_min) / ((float)v_max - (float)v_min); // The zero point in parametric space.  There's an argument we should take the logarithmic nature into account when calculating this, but for now this should do (and the most common case of a symmetrical range works fine)
+            float zero_point_center = (-(float)v_min) / ((float)v_max - (float)v_min); // The zero point in parametric space.  There's an argument we should take the logarithmic nature into account when calculating this, but for now this should do (and the most common case of a symmetrical range works fine)
+            float zero_point_snap_L = zero_point_center - zero_deadzone_halfsize;
+            float zero_point_snap_R = zero_point_center + zero_deadzone_halfsize;
             if (v == 0.0f)
-                result = zero_point; // Special case for exactly zero
+                result = zero_point_center; // Special case for exactly zero
             else if (v < 0.0f)
-                result = (1.0f - (float)(ImLog(-(FLOATTYPE)v_clamped / logarithmic_zero_epsilon) / ImLog(-v_min_fudged / logarithmic_zero_epsilon))) * (zero_point - zero_deadzone_size);
+                result = (1.0f - (float)(ImLog(-(FLOATTYPE)v_clamped / logarithmic_zero_epsilon) / ImLog(-v_min_fudged / logarithmic_zero_epsilon))) * zero_point_snap_L;
             else
-                result = zero_point + zero_deadzone_size + ((float)(ImLog((FLOATTYPE)v_clamped / logarithmic_zero_epsilon) / ImLog(v_max_fudged / logarithmic_zero_epsilon)) * (1.0f - (zero_point + zero_deadzone_size)));
+                result = zero_point_snap_R + ((float)(ImLog((FLOATTYPE)v_clamped / logarithmic_zero_epsilon) / ImLog(v_max_fudged / logarithmic_zero_epsilon)) * (1.0f - zero_point_snap_R));
         }
         else if ((v_min < 0.0f) || (v_max < 0.0f)) // Entirely negative slider
             result = 1.0f - (float)(ImLog(-(FLOATTYPE)v_clamped / -v_max_fudged) / ImLog(-v_min_fudged / -v_max_fudged));
@@ -2475,7 +2479,7 @@ float ImGui::SliderCalcRatioFromValueT(ImGuiDataType data_type, TYPE v, TYPE v_m
 
 // Convert a parametric position on a slider into a value v in the output space (the logical opposite of SliderCalcRatioFromValueT)
 template<typename TYPE, typename FLOATTYPE>
-TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, TYPE v_max, float logarithmic_zero_epsilon, float zero_deadzone_size, ImGuiSliderFlags flags)
+TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_min, TYPE v_max, float logarithmic_zero_epsilon, float zero_deadzone_halfsize, ImGuiSliderFlags flags)
 {
     if (v_min == v_max)
         return (TYPE)0.0f;
@@ -2510,13 +2514,15 @@ TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_m
 
             if ((v_min * v_max) < 0.0f) // Range crosses zero, so we have to do this in two parts
             {
-                float zero_point = (-(float)ImMin(v_min, v_max)) / ImAbs((float)v_max - (float)v_min); // The zero point in parametric space
-                if ((t_with_flip >= (zero_point - zero_deadzone_size)) && (t_with_flip <= (zero_point + zero_deadzone_size)))
+                float zero_point_center = (-(float)ImMin(v_min, v_max)) / ImAbs((float)v_max - (float)v_min); // The zero point in parametric space
+                float zero_point_snap_L = zero_point_center - zero_deadzone_halfsize;
+                float zero_point_snap_R = zero_point_center + zero_deadzone_halfsize;
+                if (t_with_flip >= zero_point_snap_L && t_with_flip <= zero_point_snap_R)
                     result = (TYPE)0.0f; // Special case to make getting exactly zero possible (the epsilon prevents it otherwise)
-                else if (t_with_flip < zero_point)
-                    result = (TYPE)-(logarithmic_zero_epsilon * ImPow(-v_min_fudged / logarithmic_zero_epsilon, (FLOATTYPE)(1.0f - (t_with_flip / (zero_point - zero_deadzone_size)))));
+                else if (t_with_flip < zero_point_center)
+                    result = (TYPE)-(logarithmic_zero_epsilon * ImPow(-v_min_fudged / logarithmic_zero_epsilon, (FLOATTYPE)(1.0f - (t_with_flip / zero_point_snap_L))));
                 else
-                    result = (TYPE)(logarithmic_zero_epsilon * ImPow(v_max_fudged / logarithmic_zero_epsilon, (FLOATTYPE)((t_with_flip - (zero_point + zero_deadzone_size)) / (1.0f - (zero_point + zero_deadzone_size)))));
+                    result = (TYPE)(logarithmic_zero_epsilon * ImPow(v_max_fudged / logarithmic_zero_epsilon, (FLOATTYPE)((t_with_flip - zero_point_snap_R) / (1.0f - zero_point_snap_R))));
             }
             else if ((v_min < 0.0f) || (v_max < 0.0f)) // Entirely negative slider
                 result = (TYPE)-(-v_max_fudged * ImPow(-v_min_fudged / -v_max_fudged, (FLOATTYPE)(1.0f - t_with_flip)));
@@ -2548,7 +2554,7 @@ TYPE ImGui::SliderCalcValueFromRatioT(ImGuiDataType data_type, float t, TYPE v_m
     return result;
 }
 
-// FIXME: Move some of the code into SliderBehavior(). Current responsibility is larger than what the equivalent DragBehaviorT<> does, we also do some rendering, etc.
+// FIXME: Move more of the code into SliderBehavior()
 template<typename TYPE, typename SIGNEDTYPE, typename FLOATTYPE>
 bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, TYPE* v, const TYPE v_min, const TYPE v_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb)
 {
@@ -2568,16 +2574,16 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
     grab_sz = ImMin(grab_sz, slider_sz);
     const float slider_usable_sz = slider_sz - grab_sz;
     const float slider_usable_pos_min = bb.Min[axis] + grab_padding + grab_sz * 0.5f;
-    const float slider_usable_pos_max = bb.Max[axis] - grab_padding - grab_sz * 0.5f;    
+    const float slider_usable_pos_max = bb.Max[axis] - grab_padding - grab_sz * 0.5f;
 
     float logarithmic_zero_epsilon = 0.0f; // Only valid when is_logarithmic is true
-    float zero_deadzone_size = 0.0f; // Only valid when is_logarithmic is true
+    float zero_deadzone_halfsize = 0.0f; // Only valid when is_logarithmic is true
     if (is_logarithmic)
     {
         // When using logarithmic sliders, we need to clamp to avoid hitting zero, but our choice of clamp value greatly affects slider precision. We attempt to use the specified precision to estimate a good lower bound.
         const int decimal_precision = is_decimal ? ImParseFormatPrecision(format, 3) : 1;
         logarithmic_zero_epsilon = ImPow(0.1f, (float)decimal_precision);
-        zero_deadzone_size = (style.LogSliderDeadzone * 0.5f) / ImMax(slider_usable_sz, 1.0f);
+        zero_deadzone_halfsize = (style.LogSliderDeadzone * 0.5f) / ImMax(slider_usable_sz, 1.0f);
     }
 
     // Process interacting with the slider
@@ -2603,49 +2609,46 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav)
         {
-            const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard | ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
-            float delta = (axis == ImGuiAxis_X) ? delta2.x : -delta2.y;
-
             if (g.ActiveIdIsJustActivated)
             {
                 g.SliderCurrentAccum = 0.0f; // Reset any stored nav delta upon activation
                 g.SliderCurrentAccumDirty = false;
             }
 
-            if (delta != 0.0f)
+            const ImVec2 input_delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard | ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
+            float input_delta = (axis == ImGuiAxis_X) ? input_delta2.x : -input_delta2.y;
+            if (input_delta != 0.0f)
             {
                 const int decimal_precision = is_decimal ? ImParseFormatPrecision(format, 3) : 0;
                 if (decimal_precision > 0)
                 {
-                    delta /= 100.0f;    // Gamepad/keyboard tweak speeds in % of slider bounds
+                    input_delta /= 100.0f;    // Gamepad/keyboard tweak speeds in % of slider bounds
                     if (IsNavInputDown(ImGuiNavInput_TweakSlow))
-                        delta /= 10.0f;
+                        input_delta /= 10.0f;
                 }
                 else
                 {
                     if ((v_range >= -100.0f && v_range <= 100.0f) || IsNavInputDown(ImGuiNavInput_TweakSlow))
-                        delta = ((delta < 0.0f) ? -1.0f : +1.0f) / (float)v_range; // Gamepad/keyboard tweak speeds in integer steps
+                        input_delta = ((input_delta < 0.0f) ? -1.0f : +1.0f) / (float)v_range; // Gamepad/keyboard tweak speeds in integer steps
                     else
-                        delta /= 100.0f;
+                        input_delta /= 100.0f;
                 }
                 if (IsNavInputDown(ImGuiNavInput_TweakFast))
-                    delta *= 10.0f;
+                    input_delta *= 10.0f;
 
-                g.SliderCurrentAccum += delta;
+                g.SliderCurrentAccum += input_delta;
                 g.SliderCurrentAccumDirty = true;
-
-                delta = g.SliderCurrentAccum;
             }
-            
+
+            float delta = g.SliderCurrentAccum;
             if (g.NavActivatePressedId == id && !g.ActiveIdIsJustActivated)
             {
                 ClearActiveID();
             }
             else if (g.SliderCurrentAccumDirty)
             {
-                clicked_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+                clicked_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
                 
-                set_new_value = true;
                 if ((clicked_t >= 1.0f && delta > 0.0f) || (clicked_t <= 0.0f && delta < 0.0f)) // This is to avoid applying the saturation when already past the limits
                 {
                     set_new_value = false;
@@ -2653,15 +2656,15 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 }
                 else
                 {
+                    set_new_value = true;
                     float old_clicked_t = clicked_t;
-
                     clicked_t = ImSaturate(clicked_t + delta);
 
                     // Calculate what our "new" clicked_t will be, and thus how far we actually moved the slider, and subtract this from the accumulator
-                    TYPE v_new = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+                    TYPE v_new = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
                     if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
                         v_new = RoundScalarWithFormatT<TYPE, SIGNEDTYPE>(format, data_type, v_new);
-                    float new_clicked_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, v_new, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+                    float new_clicked_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, v_new, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
 
                     if (delta > 0)
                         g.SliderCurrentAccum -= ImMin(new_clicked_t - old_clicked_t, delta);
@@ -2675,7 +2678,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 
         if (set_new_value)
         {
-            TYPE v_new = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+            TYPE v_new = SliderCalcValueFromRatioT<TYPE, FLOATTYPE>(data_type, clicked_t, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
 
             // Round to user desired precision based on format string
             if (!(flags & ImGuiSliderFlags_NoRoundToFormat))
@@ -2697,7 +2700,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
     else
     {
         // Output grab position so it can be displayed by the caller
-        float grab_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_size, flags);
+        float grab_t = SliderCalcRatioFromValueT<TYPE, FLOATTYPE>(data_type, *v, v_min, v_max, logarithmic_zero_epsilon, zero_deadzone_halfsize, flags);
         if (axis == ImGuiAxis_Y)
             grab_t = 1.0f - grab_t;
         const float grab_pos = ImLerp(slider_usable_pos_min, slider_usable_pos_max, grab_t);
