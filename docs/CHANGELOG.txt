@@ -60,6 +60,8 @@ Breaking Changes:
   See https://github.com/ocornut/imgui/issues/3361 for all details.
   Kept inline redirection functions (will obsolete) apart for: DragFloatRange2(), VSliderFloat(), VSliderScalar().
   For those three the 'float power=1.0f' version was removed directly as they were most unlikely ever used.
+- DragInt, DragFloat, DragScalar: Obsoleted use of v_min > v_max to lock edits (introduced in 1.73, this was not
+  demoed nor documented much, will be replaced a more generic ReadOnly feature).
 
 Other Changes:
 

@@ -2005,9 +2005,6 @@ bool ImGui::DragBehaviorT(ImGuiDataType data_type, TYPE* v, float v_speed, const
     const bool is_decimal = (data_type == ImGuiDataType_Float) || (data_type == ImGuiDataType_Double);
     const bool is_clamped = (v_min < v_max);
     const bool is_logarithmic = (flags & ImGuiDragFlags_Logarithmic) && is_decimal;
-    const bool is_locked = (v_min > v_max);
-    if (is_locked)
-        return false;
 
     // Default tweak speed
     if (v_speed == 0.0f && is_clamped && (v_max - v_min < FLT_MAX))
@@ -2131,7 +2128,7 @@ bool ImGui::DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v
     }
     if (g.ActiveId != id)
         return false;
-    if (g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly)
+    if ((g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiDragFlags_ReadOnly))
         return false;
 
     switch (data_type)
@@ -2285,6 +2282,7 @@ bool ImGui::DragFloat4(const char* label, float v[4], float v_speed, float v_min
     return DragScalarN(label, ImGuiDataType_Float, v, 4, v_speed, &v_min, &v_max, format, flags);
 }
 
+// NB: You likely want to specify the ImGuiDragFlags_ClampOnInput when using this.
 bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_current_max, float v_speed, float v_min, float v_max, const char* format, const char* format_max, ImGuiDragFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -2296,17 +2294,17 @@ bool ImGui::DragFloatRange2(const char* label, float* v_current_min, float* v_cu
     BeginGroup();
     PushMultiItemsWidths(2, CalcItemWidth());
 
-    float min = (v_min >= v_max) ? -FLT_MAX : v_min;
-    float max = (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max);
-    if (min == max) { min = FLT_MAX; max = -FLT_MAX; } // Lock edit
-    bool value_changed = DragScalar("##min", ImGuiDataType_Float, v_current_min, v_speed, &min, &max, format, flags);
+    float min_min = (v_min >= v_max) ? -FLT_MAX : v_min;
+    float min_max = (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max);
+    ImGuiDragFlags min_flags = flags | ((min_min == min_max) ? ImGuiDragFlags_ReadOnly : 0);
+    bool value_changed = DragScalar("##min", ImGuiDataType_Float, v_current_min, v_speed, &min_min, &min_max, format, min_flags);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    min = (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min);
-    max = (v_min >= v_max) ? FLT_MAX : v_max;
-    if (min == max) { min = FLT_MAX; max = -FLT_MAX; } // Lock edit
-    value_changed |= DragScalar("##max", ImGuiDataType_Float, v_current_max, v_speed, &min, &max, format_max ? format_max : format, flags);
+    float max_min = (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min);
+    float max_max = (v_min >= v_max) ? FLT_MAX : v_max;
+    ImGuiDragFlags max_flags = flags | ((max_min == max_max) ? ImGuiDragFlags_ReadOnly : 0);
+    value_changed |= DragScalar("##max", ImGuiDataType_Float, v_current_max, v_speed, &max_min, &max_max, format_max ? format_max : format, max_flags);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
@@ -2337,6 +2335,7 @@ bool ImGui::DragInt4(const char* label, int v[4], float v_speed, int v_min, int 
     return DragScalarN(label, ImGuiDataType_S32, v, 4, v_speed, &v_min, &v_max, format, flags);
 }
 
+// NB: You likely want to specify the ImGuiDragFlags_ClampOnInput when using this.
 bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_max, float v_speed, int v_min, int v_max, const char* format, const char* format_max, ImGuiDragFlags flags)
 {
     ImGuiWindow* window = GetCurrentWindow();
@@ -2348,17 +2347,17 @@ bool ImGui::DragIntRange2(const char* label, int* v_current_min, int* v_current_
     BeginGroup();
     PushMultiItemsWidths(2, CalcItemWidth());
 
-    int min = (v_min >= v_max) ? INT_MIN : v_min;
-    int max = (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max);
-    if (min == max) { min = INT_MAX; max = INT_MIN; } // Lock edit
-    bool value_changed = DragInt("##min", v_current_min, v_speed, min, max, format, flags);
+    int min_min = (v_min >= v_max) ? INT_MIN : v_min;
+    int min_max = (v_min >= v_max) ? *v_current_max : ImMin(v_max, *v_current_max);
+    ImGuiDragFlags min_flags = flags | ((min_min == min_max) ? ImGuiDragFlags_ReadOnly : 0);
+    bool value_changed = DragInt("##min", v_current_min, v_speed, min_min, min_max, format, min_flags);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    min = (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min);
-    max = (v_min >= v_max) ? INT_MAX : v_max;
-    if (min == max) { min = INT_MAX; max = INT_MIN; } // Lock edit
-    value_changed |= DragInt("##max", v_current_max, v_speed, min, max, format_max ? format_max : format, flags);
+    int max_min = (v_min >= v_max) ? *v_current_min : ImMax(v_min, *v_current_min);
+    int max_max = (v_min >= v_max) ? INT_MAX : v_max;
+    ImGuiDragFlags max_flags = flags | ((max_min == max_max) ? ImGuiDragFlags_ReadOnly : 0);
+    value_changed |= DragInt("##max", v_current_max, v_speed, max_min, max_max, format_max ? format_max : format, max_flags);
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
@@ -2720,7 +2719,7 @@ bool ImGui::SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type
     IM_ASSERT((flags == 1 || (flags & ImGuiSliderFlags_InvalidMask_) == 0) && "Invalid ImGuiSliderFlags flag!  Has the 'float power' argument been mistakenly cast to flags? Call function with ImGuiSliderFlags_Logarithmic flags instead.");
 
     ImGuiContext& g = *GImGui;
-    if (g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly)
+    if ((g.CurrentWindow->DC.ItemFlags & ImGuiItemFlags_ReadOnly) || (flags & ImGuiSliderFlags_ReadOnly))
         return false;
 
     switch (data_type)

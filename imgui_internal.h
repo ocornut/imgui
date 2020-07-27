@@ -634,13 +634,15 @@ enum ImGuiButtonFlagsPrivate_
 // Extend ImGuiDragFlags_
 enum ImGuiDragFlagsPrivate_
 {
-    ImGuiDragFlags_Vertical                 = 1 << 20   // Should this widget be orientated vertically?
+    ImGuiDragFlags_Vertical                 = 1 << 20,  // Should this widget be orientated vertically?
+    ImGuiDragFlags_ReadOnly                 = 1 << 21
 };
 
 // Extend ImGuiSliderFlags_
 enum ImGuiSliderFlagsPrivate_
 {
-    ImGuiSliderFlags_Vertical               = 1 << 20   // Should this slider be orientated vertically?
+    ImGuiSliderFlags_Vertical               = 1 << 20,  // Should this slider be orientated vertically?
+    ImGuiSliderFlags_ReadOnly               = 1 << 21
 };
 
 // Extend ImGuiSelectableFlags_
