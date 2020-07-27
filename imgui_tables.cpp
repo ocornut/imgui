@@ -67,7 +67,7 @@
 //    | BeginChild()                            - (if ScrollX/ScrollY is set)
 //    | TableBeginUpdateColumns()               - apply resize/order requests, lock columns active state, order
 //    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
-//    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of weighted columns) from their respective width
+//    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
 //    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
@@ -109,7 +109,7 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
 
     // Adjust flags: enforce borders when resizable
     if (flags & ImGuiTableFlags_Resizable)
-        flags |= ImGuiTableFlags_BordersVInner;
+        flags |= ImGuiTableFlags_BordersInnerV;
 
     // Adjust flags: disable top rows freezing if there's no scrolling.
     // We could want to assert if ScrollFreeze was set without the corresponding scroll flag, but that would hinder demos.
@@ -258,11 +258,11 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Borders
     // - None               ........Content..... Pad .....Content........
-    // - VOuter             | Pad ..Content..... Pad .....Content.. Pad |       // FIXME-TABLE: Not handled properly
-    // - VInner             ........Content.. Pad | Pad ..Content........       // FIXME-TABLE: Not handled properly
-    // - VOuter+VInner      | Pad ..Content.. Pad | Pad ..Content.. Pad |
+    // - OuterV             | Pad ..Content..... Pad .....Content.. Pad |       // FIXME-TABLE: Not handled properly
+    // - InnerV             ........Content.. Pad | Pad ..Content........       // FIXME-TABLE: Not handled properly
+    // - OuterV+InnerV      | Pad ..Content.. Pad | Pad ..Content.. Pad |
 
-    const bool has_cell_padding_x = (flags & ImGuiTableFlags_BordersVOuter) != 0;
+    const bool has_cell_padding_x = (flags & ImGuiTableFlags_BordersOuterV) != 0;
     table->CellPaddingX1 = has_cell_padding_x ? g.Style.CellPadding.x + 1.0f : 0.0f;
     table->CellPaddingX2 = has_cell_padding_x ? g.Style.CellPadding.x : 0.0f;
     table->CellPaddingY = g.Style.CellPadding.y;
@@ -513,7 +513,7 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
     }
 }
 
-// Adjust flags: default width mode + weighted columns are not allowed when auto extending
+// Adjust flags: default width mode + stretch columns are not allowed when auto extending
 static ImGuiTableColumnFlags TableFixColumnFlags(ImGuiTable* table, ImGuiTableColumnFlags flags)
 {
     // Sizing Policy
@@ -684,7 +684,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             column->WidthRequest = IM_FLOOR(ImMax(width_avail_for_stretched_columns * weight_ratio, min_column_width) + 0.01f);
             width_remaining_for_stretched_columns -= column->WidthRequest;
 
-            // [Resize Rule 2] Resizing from right-side of a weighted column preceding a fixed column
+            // [Resize Rule 2] Resizing from right-side of a stretch column preceding a fixed column
             // needs to forward resizing to left-side of fixed column. We also need to copy the NoResize flag..
             if (column->NextVisibleColumn != -1)
                 if (ImGuiTableColumn* next_column = &table->Columns[column->NextVisibleColumn])
@@ -918,7 +918,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
     // use the final height from last frame. Because this is only affecting _interaction_ with columns, it is not
     // really problematic (whereas the actual visual will be displayed in EndTable() and using the current frame height).
     // Actual columns highlight/render will be performed in EndTable() and not be affected.
-    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersVFullHeight);
+    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersFullHeightV);
     const float hit_half_width = TABLE_RESIZE_SEPARATOR_HALF_THICKNESS;
     const float hit_y1 = table->OuterRect.Min.y;
     const float hit_y2_full = ImMax(table->OuterRect.Max.y, hit_y1 + table->LastOuterHeight);
@@ -943,7 +943,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         bool pressed = ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick);
         if (pressed && IsMouseDoubleClicked(0) && !(column->Flags & ImGuiTableColumnFlags_WidthStretch))
         {
-            // FIXME-TABLE: Double-clicking on column edge could auto-fit weighted column?
+            // FIXME-TABLE: Double-clicking on column edge could auto-fit Stretch column?
             TableSetColumnAutofit(table, column_n);
             ClearActiveID();
             held = hovered = false;
@@ -1121,7 +1121,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     float draw_y2_base = (table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight;
     float draw_y2_full = table->OuterRect.Max.y;
     ImU32 border_base_col;
-    if (!table->IsUsingHeaders || (table->Flags & ImGuiTableFlags_BordersVFullHeight))
+    if (!table->IsUsingHeaders || (table->Flags & ImGuiTableFlags_BordersFullHeightV))
     {
         draw_y2_base = draw_y2_full;
         border_base_col = table->BorderColorLight;
@@ -1131,10 +1131,10 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         border_base_col = table->BorderColorStrong;
     }
 
-    if ((table->Flags & ImGuiTableFlags_BordersVOuter) && (table->InnerWindow == table->OuterWindow))
+    if ((table->Flags & ImGuiTableFlags_BordersOuterV) && (table->InnerWindow == table->OuterWindow))
         inner_drawlist->AddLine(ImVec2(table->OuterRect.Min.x, draw_y1), ImVec2(table->OuterRect.Min.x, draw_y2_base), border_base_col, border_size);
 
-    if (table->Flags & ImGuiTableFlags_BordersVInner)
+    if (table->Flags & ImGuiTableFlags_BordersInnerV)
     {
         for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
         {
@@ -1182,18 +1182,18 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         {
             outer_drawlist->AddRect(outer_border.Min, outer_border.Max, outer_col, 0.0f, ~0, border_size);
         }
-        else if (table->Flags & ImGuiTableFlags_BordersVOuter)
+        else if (table->Flags & ImGuiTableFlags_BordersOuterV)
         {
             outer_drawlist->AddLine(outer_border.Min, ImVec2(outer_border.Min.x, outer_border.Max.y), outer_col, border_size);
             outer_drawlist->AddLine(ImVec2(outer_border.Max.x, outer_border.Min.y), outer_border.Max, outer_col, border_size);
         }
-        else if (table->Flags & ImGuiTableFlags_BordersHOuter)
+        else if (table->Flags & ImGuiTableFlags_BordersOuterH)
         {
             outer_drawlist->AddLine(outer_border.Min, ImVec2(outer_border.Max.x, outer_border.Min.y), outer_col, border_size);
             outer_drawlist->AddLine(ImVec2(outer_border.Min.x, outer_border.Max.y), outer_border.Max, outer_col, border_size);
         }
     }
-    if ((table->Flags & ImGuiTableFlags_BordersHInner) && table->RowPosY2 < table->OuterRect.Max.y)
+    if ((table->Flags & ImGuiTableFlags_BordersInnerH) && table->RowPosY2 < table->OuterRect.Max.y)
     {
         // Draw bottom-most row border
         const float border_y = table->RowPosY2;
@@ -1262,7 +1262,7 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
     // Scenarios:
     // - F1 F2 F3  resize from F1| or F2|   --> ok: alter ->WidthRequested of Fixed column. Subsequent columns will be offset.
     // - F1 F2 F3  resize from F3|          --> ok: alter ->WidthRequested of Fixed column. If active, ScrollX extent can be altered.
-    // - F1 F2 W3  resize from F1| or F2|   --> ok: alter ->WidthRequested of Fixed column. If active, ScrollX extent can be altered, but it doesn't make much sense as the Weighted column will always be minimal size.
+    // - F1 F2 W3  resize from F1| or F2|   --> ok: alter ->WidthRequested of Fixed column. If active, ScrollX extent can be altered, but it doesn't make much sense as the Stretch column will always be minimal size.
     // - F1 F2 W3  resize from W3|          --> ok: no-op (disabled by Resize Rule 1)
     // - W1 W2 W3  resize from W1| or W2|   --> FIXME
     // - W1 W2 W3  resize from W3|          --> ok: no-op (disabled by Resize Rule 1)
@@ -1669,7 +1669,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         const float border_size = TABLE_BORDER_SIZE;
         if (table->CurrentRow != 0 || table->InnerWindow == table->OuterWindow)
         {
-            if (table->Flags & ImGuiTableFlags_BordersHInner)
+            if (table->Flags & ImGuiTableFlags_BordersInnerH)
             {
                 //if (table->CurrentRow == 0 && table->InnerWindow == table->OuterWindow)
                 //    border_col = table->BorderOuterColor;
@@ -2492,7 +2492,7 @@ void ImGui::TableSaveSettings(ImGuiTable* table)
         column_settings->SortOrder = column->SortOrder;
         column_settings->SortDirection = column->SortDirection;
         column_settings->IsVisible = column->IsVisible;
-        column_settings->IsWeighted = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? 1 : 0;
+        column_settings->IsStretch = (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? 1 : 0;
         if ((column->Flags & ImGuiTableColumnFlags_WidthStretch) == 0)
             save_ref_scale = true;
 
@@ -2549,7 +2549,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
         if (settings->SaveFlags & ImGuiTableFlags_Resizable)
         {
-            if (column_settings->IsWeighted)
+            if (column_settings->IsStretch)
                 column->WidthStretchWeight = column_settings->WidthOrWeight;
             else
                 column->WidthRequest = column_settings->WidthOrWeight;
@@ -2626,8 +2626,8 @@ static void TableSettingsHandler_ReadLine(ImGuiContext*, ImGuiSettingsHandler*, 
         ImGuiTableColumnSettings* column = settings->GetColumnSettings() + column_n;
         column->Index = (ImS8)column_n;
         if (sscanf(line, "UserID=0x%08X%n", (ImU32*)&n, &r)==1) { line = ImStrSkipBlank(line + r); column->UserID = (ImGuiID)n; }
-        if (sscanf(line, "Width=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->WidthOrWeight = (float)n; column->IsWeighted = 0; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
-        if (sscanf(line, "Weight=%f%n", &f, &r) == 1)           { line = ImStrSkipBlank(line + r); column->WidthOrWeight = f; column->IsWeighted = 1; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
+        if (sscanf(line, "Width=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->WidthOrWeight = (float)n; column->IsStretch = 0; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
+        if (sscanf(line, "Weight=%f%n", &f, &r) == 1)           { line = ImStrSkipBlank(line + r); column->WidthOrWeight = f; column->IsStretch = 1; settings->SaveFlags |= ImGuiTableFlags_Resizable; }
         if (sscanf(line, "Visible=%d%n", &n, &r) == 1)          { line = ImStrSkipBlank(line + r); column->IsVisible = (ImU8)n; settings->SaveFlags |= ImGuiTableFlags_Hideable; }
         if (sscanf(line, "Order=%d%n", &n, &r) == 1)            { line = ImStrSkipBlank(line + r); column->DisplayOrder = (ImS8)n; settings->SaveFlags |= ImGuiTableFlags_Reorderable; }
         if (sscanf(line, "Sort=%d%c%n", &n, &c, &r) == 2)       { line = ImStrSkipBlank(line + r); column->SortOrder = (ImS8)n; column->SortDirection = (c == '^') ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending; settings->SaveFlags |= ImGuiTableFlags_Sortable; }
@@ -2661,8 +2661,8 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
             // "Column 0  UserID=0x42AD2D21 Width=100 Visible=1 Order=0 Sort=0v"
             buf->appendf("Column %-2d", column_n);
             if (column->UserID != 0)                    buf->appendf(" UserID=%08X", column->UserID);
-            if (save_size && column->IsWeighted)        buf->appendf(" Weight=%.4f", column->WidthOrWeight);
-            if (save_size && !column->IsWeighted)       buf->appendf(" Width=%d", (int)column->WidthOrWeight);
+            if (save_size && column->IsStretch)         buf->appendf(" Weight=%.4f", column->WidthOrWeight);
+            if (save_size && !column->IsStretch)        buf->appendf(" Width=%d", (int)column->WidthOrWeight);
             if (save_visible)                           buf->appendf(" Visible=%d", column->IsVisible);
             if (save_order)                             buf->appendf(" Order=%d", column->DisplayOrder);
             if (save_sort && column->SortOrder != -1)   buf->appendf(" Sort=%d%c", column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? 'v' : '^');

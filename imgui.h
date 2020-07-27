@@ -1009,10 +1009,22 @@ enum ImGuiTabItemFlags_
 };
 
 // Flags for ImGui::BeginTable()
-// - Columns can either varying resizing policy: "Fixed", "Stretch" or "AlwaysAutoResize". Toggling ScrollX needs to alter default sizing policy.
-// - Sizing policy have many subtle side effects which may be hard to fully comprehend at first.. They'll eventually make sense.
-//   - with SizingPolicyFixedX (default is ScrollX is on):     Columns can be enlarged as needed. Enable scrollbar if ScrollX is enabled, otherwise extend parent window's contents rect. Only Fixed columns allowed. Weighted columns will calculate their width assuming no scrolling.
-//   - with SizingPolicyStretchX (default is ScrollX is off):  Fit all columns within available table width (so it doesn't make sense to use ScrollX with Stretch columns!). Fixed and Weighted columns allowed.
+// - Important! Sizing policies have particularly complex and subtle side effects, more so than you would expect.
+//   Read comments/demos carefully + experiment with live demos to get acquainted with them.
+// - The default sizing policy for columns depends on whether the ScrollX flag is set on the table:
+//   When ScrollX is off:
+//    - Table defaults to ImGuiTableFlags_SizingPolicyStretchX -> all Columns defaults to ImGuiTableColumnFlags_WidthStretch.
+//    - Columns sizing policy allowed: Fixed/Auto or Stretch.
+//    - Stretch Columns will share the width available in table.
+//    - Fixed Columns will generally obtain their requested width unless the Table cannot fit them all.
+//   When ScrollX is on:
+//    - Table defaults to ImGuiTableFlags_SizingPolicyFixedX -> all Columns defaults to ImGuiTableColumnFlags_WidthFixed.
+//    - Columns sizing policy allowed: Fixed/Auto mostly! Using Stretch columns OFTEN DOES NOT MAKE SENSE if ScrollX is on, UNLESS you have specified a value for 'inner_width' in BeginTable().
+//    - Fixed Columns can be enlarged as needed. Table will show an horizontal scrollbar if needed. 
+//    - Stretch Columns, if any, will calculate their width using inner_width, assuming no scrolling (it really doesn't make sense to do otherwise). 
+// - Mixing up columns with different sizing policy is possible BUT can be tricky and has some side-effects and restrictions.
+//   (their visible order and the scrolling state have subtle but necessary effects on how they can be manually resized).
+//   The typical use of mixing sizing policies is to have ScrollX disabled, one or two Stretch Column and many Fixed Columns.
 enum ImGuiTableFlags_
 {
     // Features
@@ -1025,38 +1037,38 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_NoSavedSettings                 = 1 << 5,   // Disable persisting columns order, width and sort settings in the .ini file.
     // Decoration
     ImGuiTableFlags_RowBg                           = 1 << 6,   // Use ImGuiCol_TableRowBg and ImGuiCol_TableRowBgAlt colors behind each rows.
-    ImGuiTableFlags_BordersHInner                   = 1 << 7,   // Draw horizontal borders between rows.
-    ImGuiTableFlags_BordersHOuter                   = 1 << 8,   // Draw horizontal borders at the top and bottom.
-    ImGuiTableFlags_BordersVInner                   = 1 << 9,   // Draw vertical borders between columns.
-    ImGuiTableFlags_BordersVOuter                   = 1 << 10,  // Draw vertical borders on the left and right sides.
-    ImGuiTableFlags_BordersH                        = ImGuiTableFlags_BordersHInner | ImGuiTableFlags_BordersHOuter, // Draw horizontal borders.
-    ImGuiTableFlags_BordersV                        = ImGuiTableFlags_BordersVInner | ImGuiTableFlags_BordersVOuter, // Draw vertical borders.
-    ImGuiTableFlags_BordersInner                    = ImGuiTableFlags_BordersVInner | ImGuiTableFlags_BordersHInner, // Draw inner borders.
-    ImGuiTableFlags_BordersOuter                    = ImGuiTableFlags_BordersVOuter | ImGuiTableFlags_BordersHOuter, // Draw outer borders.
+    ImGuiTableFlags_BordersInnerH                   = 1 << 7,   // Draw horizontal borders between rows.
+    ImGuiTableFlags_BordersOuterH                   = 1 << 8,   // Draw horizontal borders at the top and bottom.
+    ImGuiTableFlags_BordersInnerV                   = 1 << 9,   // Draw vertical borders between columns.
+    ImGuiTableFlags_BordersOuterV                   = 1 << 10,  // Draw vertical borders on the left and right sides.
+    ImGuiTableFlags_BordersH                        = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_BordersOuterH, // Draw horizontal borders.
+    ImGuiTableFlags_BordersV                        = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersOuterV, // Draw vertical borders.
+    ImGuiTableFlags_BordersInner                    = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH, // Draw inner borders.
+    ImGuiTableFlags_BordersOuter                    = ImGuiTableFlags_BordersOuterV | ImGuiTableFlags_BordersOuterH, // Draw outer borders.
     ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,   // Draw all borders.
-    ImGuiTableFlags_BordersVFullHeight              = 1 << 11,  // Borders covers all rows even when Headers are being used. Allow resizing from any rows.
+    ImGuiTableFlags_BordersFullHeightV              = 1 << 11,  // Borders covers all rows even when Headers are being used. Allow resizing from any rows.
     // Padding, Sizing
-    ImGuiTableFlags_NoClipX                         = 1 << 12,  // Disable pushing clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow)
-    ImGuiTableFlags_SizingPolicyFixedX              = 1 << 13,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAlwaysAutoResize policy. Read description above for more details.
-    ImGuiTableFlags_SizingPolicyStretchX            = 1 << 14,  // Default if ScrollX is off. Columns will default to use _WidthStretch policy. Read description above for more details.
-    ImGuiTableFlags_NoHeadersWidth                  = 1 << 15,  // Disable header width contribution to automatic width calculation.
-    ImGuiTableFlags_NoHostExtendY                   = 1 << 16,  // (FIXME-TABLE: Reword as SizingPolicy?) Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
-    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 17,  // (FIXME-TABLE) Disable code that keeps column always minimally visible when table width gets too small and horizontal scrolling is off.
+    ImGuiTableFlags_NoClipX                         = 1 << 14,  // Disable pushing clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow)
+    ImGuiTableFlags_SizingPolicyFixedX              = 1 << 15,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAlwaysAutoResize policy. Read description above for more details.
+    ImGuiTableFlags_SizingPolicyStretchX            = 1 << 16,  // Default if ScrollX is off. Columns will default to use _WidthStretch policy. Read description above for more details.
+    ImGuiTableFlags_NoHeadersWidth                  = 1 << 17,  // Disable header width contribution to automatic width calculation.
+    ImGuiTableFlags_NoHostExtendY                   = 1 << 18,  // (FIXME-TABLE: Reword as SizingPolicy?) Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
+    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 19,  // (FIXME-TABLE) Disable code that keeps column always minimally visible when table width gets too small and horizontal scrolling is off.
     // Scrolling
-    ImGuiTableFlags_ScrollX                         = 1 << 18,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
-    ImGuiTableFlags_ScrollY                         = 1 << 19,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
+    ImGuiTableFlags_ScrollX                         = 1 << 20,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
+    ImGuiTableFlags_ScrollY                         = 1 << 21,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
     ImGuiTableFlags_Scroll                          = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY,
-    ImGuiTableFlags_ScrollFreezeTopRow              = 1 << 20,  // We can lock 1 to 3 rows (starting from the top). Use with ScrollY enabled.
-    ImGuiTableFlags_ScrollFreeze2Rows               = 2 << 20,
-    ImGuiTableFlags_ScrollFreeze3Rows               = 3 << 20,
-    ImGuiTableFlags_ScrollFreezeLeftColumn          = 1 << 22,  // We can lock 1 to 3 columns (starting from the left). Use with ScrollX enabled.
-    ImGuiTableFlags_ScrollFreeze2Columns            = 2 << 22,
-    ImGuiTableFlags_ScrollFreeze3Columns            = 3 << 22,
+    ImGuiTableFlags_ScrollFreezeTopRow              = 1 << 22,  // We can lock 1 to 3 rows (starting from the top). Use with ScrollY enabled.
+    ImGuiTableFlags_ScrollFreeze2Rows               = 2 << 22,
+    ImGuiTableFlags_ScrollFreeze3Rows               = 3 << 22,
+    ImGuiTableFlags_ScrollFreezeLeftColumn          = 1 << 24,  // We can lock 1 to 3 columns (starting from the left). Use with ScrollX enabled.
+    ImGuiTableFlags_ScrollFreeze2Columns            = 2 << 24,
+    ImGuiTableFlags_ScrollFreeze3Columns            = 3 << 24,
 
     // [Internal] Combinations and masks
     ImGuiTableFlags_SizingPolicyMaskX_              = ImGuiTableFlags_SizingPolicyStretchX | ImGuiTableFlags_SizingPolicyFixedX,
-    ImGuiTableFlags_ScrollFreezeRowsShift_          = 20,
-    ImGuiTableFlags_ScrollFreezeColumnsShift_       = 22,
+    ImGuiTableFlags_ScrollFreezeRowsShift_          = 22,
+    ImGuiTableFlags_ScrollFreezeColumnsShift_       = 24,
     ImGuiTableFlags_ScrollFreezeRowsMask_           = 0x03 << ImGuiTableFlags_ScrollFreezeRowsShift_,
     ImGuiTableFlags_ScrollFreezeColumnsMask_        = 0x03 << ImGuiTableFlags_ScrollFreezeColumnsShift_
 };

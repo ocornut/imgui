@@ -3388,19 +3388,19 @@ static void ShowDemoWindowTables()
         static bool display_width = false;
         ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
         ImGui::CheckboxFlags("ImGuiTableFlags_Borders", (unsigned int*)&flags, ImGuiTableFlags_Borders);
-        ImGui::SameLine(); HelpMarker("ImGuiTableFlags_Borders\n = ImGuiTableFlags_BordersVInner\n | ImGuiTableFlags_BordersVOuter\n | ImGuiTableFlags_BordersHInner\n | ImGuiTableFlags_BordersHOuter");
+        ImGui::SameLine(); HelpMarker("ImGuiTableFlags_Borders\n = ImGuiTableFlags_BordersInnerV\n | ImGuiTableFlags_BordersOuterV\n | ImGuiTableFlags_BordersInnerV\n | ImGuiTableFlags_BordersOuterH");
         ImGui::Indent();
 
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
         ImGui::Indent();
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersHOuter);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerH);
         ImGui::Unindent();
 
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
         ImGui::Indent();
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersVOuter);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVInner", (unsigned int*)&flags, ImGuiTableFlags_BordersVInner);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
         ImGui::Unindent();
 
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
@@ -3476,7 +3476,7 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Resizable, fixed"))
     {
         // Here we use ImGuiTableFlags_SizingPolicyFixedX (even though _ScrollX is not set)
-        // So columns will adopt the "Fixed" policy and will maintain a fixed weight regardless of the whole available width.
+        // So columns will adopt the "Fixed" policy and will maintain a fixed width regardless of the whole available width (unless table is small)
         // If there is not enough available width to fit all columns, they will however be resized down.
         // FIXME-TABLE: Providing a stretch-on-init would make sense especially for tables which don't have saved settings
         HelpMarker("Using _Resizable + _SizingPolicyFixedX flags.\nFixed-width columns generally makes more sense if you want to use horizontal scrolling.");
@@ -3767,7 +3767,7 @@ static void ShowDemoWindowTables()
     {
         HelpMarker("This demonstrate embedding a table into another table cell.");
 
-        if (ImGui::BeginTable("recurse1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersVFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
+        if (ImGui::BeginTable("recurse1", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersFullHeightV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
         {
             ImGui::TableSetupColumn("A0");
             ImGui::TableSetupColumn("A1");
@@ -3776,7 +3776,7 @@ static void ShowDemoWindowTables()
             ImGui::TableNextRow();  ImGui::Text("A0 Cell 0");
             {
                 float rows_height = ImGui::GetTextLineHeightWithSpacing() * 2;
-                if (ImGui::BeginTable("recurse2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersVFullHeight | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
+                if (ImGui::BeginTable("recurse2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersFullHeightV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
                 {
                     ImGui::TableSetupColumn("B0");
                     ImGui::TableSetupColumn("B1");
@@ -3813,10 +3813,10 @@ static void ShowDemoWindowTables()
         ImGui::Combo("Contents", &contents_type, "Short Text\0Long Text\0Button\0Fill Button\0InputText\0");
 
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersHOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersHOuter);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVInner", (unsigned int*)&flags, ImGuiTableFlags_BordersVInner);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersVOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersVOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX);
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
         if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyStretchX))
@@ -3922,7 +3922,7 @@ static void ShowDemoWindowTables()
         ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Tree view"))
     {
-        static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersHOuter | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
+        static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
         //ImGui::CheckboxFlags("ImGuiTableFlags_Scroll", (unsigned int*)&flags, ImGuiTableFlags_Scroll);
         //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeLeftColumn", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeLeftColumn);
 
@@ -4230,12 +4230,12 @@ static void ShowDemoWindowTables()
             ImGui::Indent();
             ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
             ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersVOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersVOuter);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersVInner", (unsigned int*)&flags, ImGuiTableFlags_BordersVInner);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
             ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersHOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersHOuter);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersHInner", (unsigned int*)&flags, ImGuiTableFlags_BordersHInner);
-            ImGui::CheckboxFlags("ImGuiTableFlags_BordersVFullHeight", (unsigned int*)&flags, ImGuiTableFlags_BordersVFullHeight);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterH);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerH);
+            ImGui::CheckboxFlags("ImGuiTableFlags_BordersFullHeightV", (unsigned int*)&flags, ImGuiTableFlags_BordersFullHeightV);
             ImGui::Unindent();
 
             ImGui::BulletText("Padding, Sizing:");

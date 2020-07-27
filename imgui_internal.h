@@ -2056,7 +2056,7 @@ struct ImGuiTableColumnSettings
     ImS8    SortOrder;
     ImU8    SortDirection : 2;
     ImU8    IsVisible : 1;
-    ImU8    IsWeighted : 1;
+    ImU8    IsStretch : 1;
 
     ImGuiTableColumnSettings()
     {
@@ -2066,7 +2066,7 @@ struct ImGuiTableColumnSettings
         DisplayOrder = SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
         IsVisible = 1;
-        IsWeighted = 0;
+        IsStretch = 0;
     }
 };
 
