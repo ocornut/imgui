@@ -307,13 +307,15 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->RawData.Size == 0)
     {
         // Allocate single buffer for our arrays
-        ImSpanAllocator<2> span_allocator;
+        ImSpanAllocator<3> span_allocator;
         span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
         span_allocator.ReserveBytes(1, columns_count * sizeof(ImS8));
+        span_allocator.ReserveBytes(2, columns_count * sizeof(ImGuiTableCellData));
         table->RawData.resize(span_allocator.GetArenaSizeInBytes());
         span_allocator.SetArenaBasePtr(table->RawData.Data);
         span_allocator.GetSpan(0, &table->Columns);
         span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
+        span_allocator.GetSpan(2, &table->RowCellData);
 
         for (int n = 0; n < columns_count; n++)
         {
@@ -1609,7 +1611,8 @@ void    ImGui::TableBeginRow(ImGuiTable* table)
     // New row
     table->CurrentRow++;
     table->CurrentColumn = -1;
-    table->RowBgColor = IM_COL32_DISABLE;
+    table->RowBgColor[0] = table->RowBgColor[1] = IM_COL32_DISABLE;
+    table->RowCellDataCount = 0;
     table->IsInsideRow = true;
 
     // Begin frozen rows
@@ -1626,7 +1629,7 @@ void    ImGui::TableBeginRow(ImGuiTable* table)
     // Making the header BG color non-transparent will allow us to overlay it multiple times when handling smooth dragging.
     if (table->RowFlags & ImGuiTableRowFlags_Headers)
     {
-        table->RowBgColor = GetColorU32(ImGuiCol_TableHeaderBg);
+        TableSetBgColor(ImGuiTableBgTarget_RowBg0, GetColorU32(ImGuiCol_TableHeaderBg));
         if (table->CurrentRow == 0)
             table->IsUsingHeaders = true;
     }
@@ -1655,14 +1658,18 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     if (table->CurrentRow == 0)
         table->LastFirstRowHeight = bg_y2 - bg_y1;
 
-    if (table->CurrentRow >= 0 && bg_y2 >= table->InnerClipRect.Min.y && bg_y1 <= table->InnerClipRect.Max.y)
+    const bool is_visible = table->CurrentRow >= 0 && bg_y2 >= table->InnerClipRect.Min.y && bg_y1 <= table->InnerClipRect.Max.y;
+    if (is_visible)
     {
         // Decide of background color for the row
-        ImU32 bg_col = 0;
-        if (table->RowBgColor != IM_COL32_DISABLE)
-            bg_col = table->RowBgColor;
+        ImU32 bg_col0 = 0;
+        ImU32 bg_col1 = 0;
+        if (table->RowBgColor[0] != IM_COL32_DISABLE)
+            bg_col0 = table->RowBgColor[0];
         else if (table->Flags & ImGuiTableFlags_RowBg)
-            bg_col = GetColorU32((table->RowBgColorCounter & 1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg);
+            bg_col0 = GetColorU32((table->RowBgColorCounter & 1) ? ImGuiCol_TableRowBgAlt : ImGuiCol_TableRowBg);
+        if (table->RowBgColor[1] != IM_COL32_DISABLE)
+            bg_col1 = table->RowBgColor[1];
 
         // Decide of top border color
         ImU32 border_col = 0;
@@ -1684,8 +1691,9 @@ void    ImGui::TableEndRow(ImGuiTable* table)
             }
         }
 
-        const bool draw_stong_bottom_border = unfreeze_rows;// || (table->RowFlags & ImGuiTableRowFlags_Headers);
-        if (bg_col != 0 || border_col != 0 || draw_stong_bottom_border)
+        const bool draw_cell_bg_color = table->RowCellDataCount > 0;
+        const bool draw_strong_bottom_border = unfreeze_rows;// || (table->RowFlags & ImGuiTableRowFlags_Headers);
+        if ((bg_col0 | bg_col1 | border_col) != 0 || draw_strong_bottom_border || draw_cell_bg_color)
         {
             // In theory we could call SetWindowClipRectBeforeChannelChange() but since we know TableEndRow() is
             // always followed by a change of clipping rectangle we perform the smallest overwrite possible here.
@@ -1693,14 +1701,29 @@ void    ImGui::TableEndRow(ImGuiTable* table)
             table->DrawSplitter.SetCurrentChannel(window->DrawList, 0);
         }
 
-        // Draw background
+        // Draw row background
         // We soft/cpu clip this so all backgrounds and borders can share the same clipping rectangle
-        if (bg_col)
+        if (bg_col0 || bg_col1)
         {
-            ImRect bg_rect(table->WorkRect.Min.x, bg_y1, table->WorkRect.Max.x, bg_y2);
-            bg_rect.ClipWith(table->BackgroundClipRect);
-            if (bg_rect.Min.y < bg_rect.Max.y)
-                window->DrawList->AddRectFilledMultiColor(bg_rect.Min, bg_rect.Max, bg_col, bg_col, bg_col, bg_col);
+            ImRect row_rect(table->WorkRect.Min.x, bg_y1, table->WorkRect.Max.x, bg_y2);
+            row_rect.ClipWith(table->BackgroundClipRect);
+            if (bg_col0 != 0 && row_rect.Min.y < row_rect.Max.y)
+                window->DrawList->AddRectFilled(row_rect.Min, row_rect.Max, bg_col0);
+            if (bg_col1 != 0 && row_rect.Min.y < row_rect.Max.y)
+                window->DrawList->AddRectFilled(row_rect.Min, row_rect.Max, bg_col1);
+        }
+
+        // Draw cell background color
+        if (draw_cell_bg_color)
+        {
+            ImGuiTableCellData* cell_data_end = &table->RowCellData[table->RowCellDataCount - 1];
+            for (ImGuiTableCellData* cell_data = &table->RowCellData[0]; cell_data <= cell_data_end; cell_data++)
+            {
+                ImGuiTableColumn* column = &table->Columns[cell_data->Column];
+                ImRect cell_rect(column->MinX - table->CellSpacingX, bg_y1, column->MaxX, bg_y2); // FIXME-TABLE: Padding currently wrong until we finish the padding refactor
+                cell_rect.ClipWith(table->BackgroundClipRect);
+                window->DrawList->AddRectFilled(cell_rect.Min, cell_rect.Max, cell_data->BgColor);
+            }
         }
 
         // Draw top border
@@ -1708,7 +1731,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
             window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y1), ImVec2(table->BorderX2, bg_y1), border_col, border_size);
 
         // Draw bottom border at the row unfreezing mark (always strong)
-        if (draw_stong_bottom_border)
+        if (draw_strong_bottom_border)
             if (bg_y2 >= table->BackgroundClipRect.Min.y && bg_y2 < table->BackgroundClipRect.Max.y)
                 window->DrawList->AddLine(ImVec2(table->BorderX1, bg_y2), ImVec2(table->BorderX2, bg_y2), table->BorderColorStrong, border_size);
     }
@@ -2303,6 +2326,46 @@ int ImGui::TableGetHoveredColumn()
     if (!table)
         return -1;
     return (int)table->HoveredColumnBody;
+}
+
+void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(bg_target != ImGuiTableBgTarget_None);
+
+    if (color == IM_COL32_DISABLE)
+        color = 0;
+
+    // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
+    switch (bg_target)
+    {
+    case ImGuiTableBgTarget_CellBg:
+    {
+        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+            return;
+        if (column_n == -1)
+            column_n = table->CurrentColumn;
+        if ((table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) == 0)
+            return;
+        ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCount++];
+        cell_data->BgColor = color;
+        cell_data->Column = (ImS8)column_n;
+        break;
+    }
+    case ImGuiTableBgTarget_RowBg0:
+    case ImGuiTableBgTarget_RowBg1:
+    {
+        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+            return;
+        IM_ASSERT(column_n == -1);
+        int bg_idx = (bg_target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
+        table->RowBgColor[bg_idx] = color;
+        break;
+    }
+    default:
+        IM_ASSERT(0);
+    }
 }
 
 void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
