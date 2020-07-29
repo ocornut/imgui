@@ -106,9 +106,11 @@ Other changes:
 
 Other Changes:
 
-- Nav: Fixed clicking on void from not clearing focused window.
+- Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
   This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
+- DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
+  min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
   than ~16 KB characters. (Note that current code is going to show corrupted display if after
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
@@ -120,8 +122,13 @@ Other Changes:
   - Requires an extra bit of texture space (~64x64 by default), relies on GPU bilinear filtering.
   - Clear io.AntiAliasedLinesUseTex = false; to disable rendering using this method.
   - Clear ImFontAtlasFlags_NoBakedLines in ImFontAtlas::Flags to disable baking data in texture.
+- ImDrawList: changed AddCircle(), AddCircleFilled() default num_segments from 12 to 0, effectively
+  enabling auto-tessellation by default. Tweak tessellation in Style Editor->Rendering section, or
+  by modifying the 'style.CircleSegmentMaxError' value. [@ShironekoBen]
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
   an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
+- Demo: Tweak "Child Windows" section.
+- Style Editor: Added preview of circle auto-tessellation when editing the corresponding value.
 - Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
 >>>>>>> master
 
@@ -198,7 +205,7 @@ Other Changes:
   Updated various links/wiki accordingly. Added FAQ entry about DPI. (#2861) [@ButternCream, @ocornut]
 - CI: Added CI test to verify we're never accidentally dragging libstdc++ (on some compiler setups,
   static constructors for non-pod data seems to drag in libstdc++ due to thread-safety concerns).
-  Fixed a static constructor which led to this dependency on some compiler setups.
+  Fixed a static constructor which led to this dependency on some compiler setups. [@rokups]
 - Backends: Win32: Support for #define NOGDI, won't try to call GetDeviceCaps(). (#3137, #2327)
 - Backends: Win32: Fix _WIN32_WINNT < 0x0600 (MinGW defaults to 0x502 == Windows 2003). (#3183)
 - Backends: SDL: Report a zero display-size when window is minimized, consistent with other backends,
