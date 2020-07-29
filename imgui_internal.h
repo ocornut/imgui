@@ -163,6 +163,10 @@ namespace ImStb
 #define IMGUI_DEBUG_LOG(_FMT,...)       printf("[%05d] " _FMT, GImGui->FrameCount, __VA_ARGS__)
 #endif
 
+// Debug Logging for selected systems. Remove the '((void)0) //' to enable.
+//#define IMGUI_DEBUG_LOG_POPUP         IMGUI_DEBUG_LOG // Enable log
+#define IMGUI_DEBUG_LOG_POPUP(...)      ((void)0)       // Disable log
+
 // Static Asserts
 #if (__cplusplus >= 201100)
 #define IM_STATIC_ASSERT(_COND)         static_assert(_COND, "")
