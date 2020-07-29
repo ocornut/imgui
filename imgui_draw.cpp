@@ -1721,6 +1721,7 @@ ImFontAtlas::ImFontAtlas()
     TexID = (ImTextureID)NULL;
     TexDesiredWidth = 0;
     TexGlyphPadding = 1;
+    TexGlyphShadowOffset = ImVec2(0.0f, 0.0f);
 
     TexPixelsAlpha8 = NULL;
     TexPixelsRGBA32 = NULL;
@@ -2197,7 +2198,7 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
 
         // Gather the sizes of all rectangles we will need to pack (this loop is based on stbtt_PackFontRangesGatherRects)
         const float scale = (cfg.SizePixels > 0) ? stbtt_ScaleForPixelHeight(&src_tmp.FontInfo, cfg.SizePixels) : stbtt_ScaleForMappingEmToPixels(&src_tmp.FontInfo, -cfg.SizePixels);
-        const int padding = atlas->TexGlyphPadding;
+        const int padding = atlas->TexGlyphPadding + ImMax(ImFabs(atlas->TexGlyphShadowOffset.x), ImFabs(atlas->TexGlyphShadowOffset.y));
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
             int x0, y0, x1, y1;
@@ -2224,7 +2225,8 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
     const int TEX_HEIGHT_MAX = 1024 * 32;
     stbtt_pack_context spc = {};
-    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, atlas->TexGlyphPadding, NULL);
+    const int padding = atlas->TexGlyphPadding + ImMax(ImFabs(atlas->TexGlyphShadowOffset.x), ImFabs(atlas->TexGlyphShadowOffset.y));
+    stbtt_PackBegin(&spc, NULL, atlas->TexWidth, TEX_HEIGHT_MAX, 0, padding, NULL);
     ImFontAtlasBuildPackCustomRects(atlas, spc.pack_info);
 
     // 6. Pack each source font. No rendering yet, we are working with rectangles in an infinitely tall texture at this point.
@@ -2313,7 +2315,26 @@ bool    ImFontAtlasBuildWithStbTruetype(ImFontAtlas* atlas)
             stbtt_aligned_quad q;
             float dummy_x = 0.0f, dummy_y = 0.0f;
             stbtt_GetPackedQuad(src_tmp.PackedChars, atlas->TexWidth, atlas->TexHeight, glyph_i, &dummy_x, &dummy_y, &q, 0);
-            dst_font->AddGlyph((ImWchar)codepoint, q.x0 + char_off_x, q.y0 + font_off_y, q.x1 + char_off_x, q.y1 + font_off_y, q.s0, q.t0, q.s1, q.t1, char_advance_x_mod);
+
+            const ImVec2& shadow_off = atlas->TexGlyphShadowOffset;
+            const ImVec2& uv_scale = atlas->TexUvScale;
+
+            ImVec4 offset = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+            offset.x = (shadow_off.x > 0.0f ? 0.0f : shadow_off.x);
+            offset.y = (shadow_off.y > 0.0f ? 0.0f : shadow_off.y);
+            offset.z = (shadow_off.x > 0.0f ? shadow_off.x : 0.0f);
+            offset.w = (shadow_off.y > 0.0f ? shadow_off.y : 0.0f);
+
+            dst_font->AddGlyph((ImWchar)codepoint,
+                               q.x0 + char_off_x + (offset.x / 3), // I don't understand this 3 here, is this OversampleH?
+                               q.y0 + font_off_y + offset.y,
+                               q.x1 + char_off_x + (offset.z / 3), // I don't understand this 3 here, is this OversampleH?
+                               q.y1 + font_off_y + offset.w,
+                               q.s0 + (uv_scale.x * (offset.x)),
+                               q.t0 + (uv_scale.y * offset.y),
+                               q.s1 + (uv_scale.x * (offset.z)),
+                               q.t1 + (uv_scale.y * offset.w),
+                               char_advance_x_mod);
         }
     }
 

@@ -462,7 +462,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             ImFontAtlasBuildMultiplyCalcLookupTable(multiply_table, cfg.RasterizerMultiply);
 
         // Gather the sizes of all rectangles we will need to pack
-        const int padding = atlas->TexGlyphPadding;
+        const int padding = atlas->TexGlyphPadding + ImMax(ImFabs(atlas->TexGlyphShadowOffset.x), ImFabs(atlas->TexGlyphShadowOffset.y));
         for (int glyph_i = 0; glyph_i < src_tmp.GlyphsList.Size; glyph_i++)
         {
             ImFontBuildSrcGlyphFT& src_glyph = src_tmp.GlyphsList[glyph_i];
@@ -582,6 +582,15 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             if (char_advance_x_org != char_advance_x_mod)
                 char_off_x += cfg.PixelSnapH ? IM_FLOOR((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
 
+            const ImVec2& shadow_off = atlas->TexGlyphShadowOffset;
+            const ImVec2& uv_scale = atlas->TexUvScale;
+
+            ImVec4 offset = ImVec4(0.0f, 0.0f, 0.0f, 0.0f);
+            offset.x = (shadow_off.x > 0.0f ? 0.0f : shadow_off.x);
+            offset.y = (shadow_off.y > 0.0f ? 0.0f : shadow_off.y);
+            offset.z = (shadow_off.x > 0.0f ? shadow_off.x : 0.0f);
+            offset.w = (shadow_off.y > 0.0f ? shadow_off.y : 0.0f);
+
             // Register glyph
             float x0 = info.OffsetX + char_off_x;
             float y0 = info.OffsetY + font_off_y;
@@ -591,7 +600,16 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             float v0 = (ty) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
             float v1 = (ty + info.Height) / (float)atlas->TexHeight;
-            dst_font->AddGlyph((ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, char_advance_x_mod);
+            dst_font->AddGlyph((ImWchar)src_glyph.Codepoint,
+                               x0 + offset.x,
+                               y0 + offset.y,
+                               x1 + offset.z,
+                               y1 + offset.w,
+                               u0 + (uv_scale.x * offset.x),
+                               v0 + (uv_scale.y * offset.y),
+                               u1 + (uv_scale.x * offset.z),
+                               v1 + (uv_scale.y * offset.w),
+                               char_advance_x_mod);
         }
 
         src_tmp.Rects = NULL;
