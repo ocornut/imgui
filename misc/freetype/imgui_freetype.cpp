@@ -569,8 +569,16 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     // 7. Allocate texture
     atlas->TexHeight = (atlas->Flags & ImFontAtlasFlags_NoPowerOfTwoHeight) ? (atlas->TexHeight + 1) : ImUpperPowerOfTwo(atlas->TexHeight);
     atlas->TexUvScale = ImVec2(1.0f / atlas->TexWidth, 1.0f / atlas->TexHeight);
-    atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight * 4);
-    memset(atlas->TexPixelsRGBA32, 0, atlas->TexWidth * atlas->TexHeight * 4);
+    if ((extra_flags & ImGuiFreeType::RasterizerFlags::LoadColor) == ImGuiFreeType::RasterizerFlags::LoadColor)
+    {
+        atlas->TexPixelsRGBA32 = (unsigned int*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight * 4);
+        memset(atlas->TexPixelsRGBA32, 0, atlas->TexWidth * atlas->TexHeight * 4);
+    }
+    else
+    {
+        atlas->TexPixelsAlpha8 = (unsigned char*)IM_ALLOC(atlas->TexWidth * atlas->TexHeight);
+        memset(atlas->TexPixelsAlpha8, 0, atlas->TexWidth * atlas->TexHeight);
+    }
 
     // 8. Copy rasterized font characters back into the main texture
     // 9. Setup ImFont and glyphs for runtime
@@ -608,10 +616,20 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             size_t blit_src_stride = (size_t)src_glyph.Info.Width;
             size_t blit_dst_stride = (size_t)atlas->TexWidth;
             unsigned int* blit_src = src_glyph.BitmapData;
-            unsigned int* blit_dst = atlas->TexPixelsRGBA32 + (ty * blit_dst_stride) + tx;
-            for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
-                for (int x = 0; x < info.Width; x++)
-                    blit_dst[x] = blit_src[x];
+            if (atlas->TexPixelsAlpha8 != NULL)
+            {
+                unsigned char* blit_dst = atlas->TexPixelsAlpha8 + (ty * blit_dst_stride) + tx;
+                for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
+                    for (int x = 0; x < info.Width; x++)
+                        blit_dst[x] = (unsigned char)((blit_src[x] >> IM_COL32_A_SHIFT) & 0xFF);
+            }
+            else
+            {
+                unsigned int* blit_dst = atlas->TexPixelsRGBA32 + (ty * blit_dst_stride) + tx;
+                for (int y = 0; y < info.Height; y++, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
+                    for (int x = 0; x < info.Width; x++)
+                        blit_dst[x] = blit_src[x];
+            }
 
             float char_advance_x_org = info.AdvanceX;
             float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
