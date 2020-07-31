@@ -391,7 +391,6 @@ int main(int, char**)
     // //ImGui::StyleColorsClassic();
 
     // // Setup Platform/Renderer bindings
-    // // ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
