@@ -47,6 +47,9 @@ Other Changes:
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
   call. ImGui-level functions such as TextUnformatted() are not affected. This is quite rare
   but it will be addressed later). (#3349)
+- Fonts: Fixed ImFontConfig::GlyphExtraSpacing and ImFontConfig::PixelSnapH settings being pulled
+  from the merged/target font settings when merging fonts, instead of being pulled from the source
+  font settings.
 - ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based
   path, reducing the amount of vertices/indices and CPU/GPU usage. (#3245) [@Shironekoben]
   - This change will facilitate the wider use of thick borders in future style changes.
