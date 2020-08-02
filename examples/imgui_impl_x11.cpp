@@ -128,6 +128,28 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
             io.AddInputCharacter(k);
             io.KeysDown[k] = 1;
         }
+        else if(k >= XK_Shift_L && k <= XK_Hyper_R) { // modifier keys
+            switch(k) {
+                case XK_Shift_L:
+                case XK_Shift_R:
+                    io.KeyShift = true;
+                    break;
+                case XK_Control_L:
+                case XK_Control_R:
+                    io.KeyCtrl = true;
+                    break;
+                case XK_Meta_L:
+                case XK_Meta_R:
+                case XK_Alt_L:
+                case XK_Alt_R:
+                    io.KeyAlt = true;
+                    break;
+                case XK_Super_L:
+                case XK_Super_R:
+                    io.KeySuper = true;
+                    break;
+            }
+        }
         else if(k >= 0x1000100 && k <= 0x110ffff) // utf range
             io.AddInputCharacterUTF16(k);
         else
@@ -140,6 +162,28 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
         xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, 0);
         if(k < 0xFF)
             io.KeysDown[k] = 0;
+        else if(k >= XK_Shift_L && k <= XK_Hyper_R) { // modifier keys
+            switch(k) {
+                case XK_Shift_L:
+                case XK_Shift_R:
+                    io.KeyShift = false;
+                    break;
+                case XK_Control_L:
+                case XK_Control_R:
+                    io.KeyCtrl = false;
+                    break;
+                case XK_Meta_L:
+                case XK_Meta_R:
+                case XK_Alt_L:
+                case XK_Alt_R:
+                    io.KeyAlt = false;
+                    break;
+                case XK_Super_L:
+                case XK_Super_R:
+                    io.KeySuper = false;
+                    break;
+            }
+        }
         else
             io.KeysDown[k - 0xFF00] = 0;
 
