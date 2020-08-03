@@ -109,6 +109,8 @@ Other Changes:
 - Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
   This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
+- Window: Fixed clicking over an item which hovering has been disabled (e.g inhibited by a popup)
+  from marking the window as moved.
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
@@ -116,6 +118,14 @@ Other Changes:
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
   call. ImGui-level functions such as TextUnformatted() are not affected. This is quite rare
   but it will be addressed later). (#3349)
+- InvisibleButton: Made public a small selection of ImGuiButtonFlags (previously in imgui_internal.h)
+  and allowed to pass them to InvisibleButton(): ImGuiButtonFlags_MouseButtonLeft/Right/Middle.
+  This is a small but rather important change because lots of multi-button behaviors could previously
+  only be achieved using lower-level/internal API. Now also available via high-level InvisibleButton()
+  with is a de-facto versatile building block to creating custom widgets with the public API.
+- Fonts: Fixed ImFontConfig::GlyphExtraSpacing and ImFontConfig::PixelSnapH settings being pulled
+  from the merged/target font settings when merging fonts, instead of being pulled from the source
+  font settings.
 - ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based
   path, reducing the amount of vertices/indices and CPU/GPU usage. (#3245) [@Shironekoben]
   - This change will facilitate the wider use of thick borders in future style changes.
@@ -127,6 +137,8 @@ Other Changes:
   by modifying the 'style.CircleSegmentMaxError' value. [@ShironekoBen]
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
   an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
+- Demo: Improve "Custom Rendering"->"Canvas" demo with a grid, scrolling and context menu.
+  Also showcase using InvisibleButton() will multiple mouse buttons flags.
 - Demo: Tweak "Child Windows" section.
 - Style Editor: Added preview of circle auto-tessellation when editing the corresponding value.
 - Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
