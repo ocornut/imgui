@@ -86,6 +86,11 @@ Other Changes:
   generate an unnecessary extra draw call.
 - Tab Bar: Fixed a small bug where toggling a tab bar from Reorderable to not Reorderable would leave
   tabs reordered in the tab list popup. [@Xipiryon]
+- Tab Bar: Added TabItemButton() to submit tab that behave like a button. (#3291) [@Xipiryon]
+- Tab Bar: Added ImGuiTabItemFlags_Leading and ImGuiTabItemFlags_Trailing flags to position tabs or button at
+  either end of the tab bar. Those tabs won't be part of the scrolling region, won't shrink down, and when
+  reordering cannot be moving outside of their section. Most often used with TabItemButton(). (#3291) [@Xipiryon]
+- Tab Bar: Added ImGuiTabItemFlags_NoReorder flag to disable reordering a given tab.
 - Columns: Fix inverted ClipRect being passed to renderer when using certain primitives inside of
   a fully clipped column. (#3475) [@szreder]
 - Popups, Tooltips: Fix edge cases issues with positionning popups and tooltips when they are larger than
