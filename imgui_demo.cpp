@@ -1243,7 +1243,7 @@ static void ShowDemoWindowWidgets()
         static float arr[] = { 0.6f, 0.1f, 1.0f, 0.5f, 0.92f, 0.1f, 0.2f };
         ImGui::PlotLines("Frame Times", arr, IM_ARRAYSIZE(arr));
 
-        // Create a dummy array of contiguous float values to plot
+        // Fill an array of contiguous float values to plot
         // Tip: If your float aren't contiguous but part of a structure, you can pass a pointer to your first float
         // and the sizeof() of your structure in the "stride" parameter.
         static float values[90] = {};
@@ -1251,7 +1251,7 @@ static void ShowDemoWindowWidgets()
         static double refresh_time = 0.0;
         if (!animate || refresh_time == 0.0)
             refresh_time = ImGui::GetTime();
-        while (refresh_time < ImGui::GetTime()) // Create dummy data at fixed 60 Hz rate for the demo
+        while (refresh_time < ImGui::GetTime()) // Create data at fixed 60 Hz rate for the demo
         {
             static float phase = 0.0f;
             values[values_offset] = cosf(phase);
@@ -1351,7 +1351,7 @@ static void ShowDemoWindowWidgets()
 
         ImGui::Text("Color button with Custom Picker Popup:");
 
-        // Generate a dummy default palette. The palette will persist and can be edited.
+        // Generate a default palette. The palette will persist and can be edited.
         static bool saved_palette_init = true;
         static ImVec4 saved_palette[32] = {};
         if (saved_palette_init)
@@ -1932,8 +1932,8 @@ static void ShowDemoWindowWidgets()
         if (embed_all_inside_a_child_window)
             ImGui::EndChild();
 
-        static char dummy_str[] = "This is a dummy field to be able to tab-out of the widgets above.";
-        ImGui::InputText("dummy", dummy_str, IM_ARRAYSIZE(dummy_str), ImGuiInputTextFlags_ReadOnly);
+        static char unused_str[] = "This widget is only here to be able to tab-out of the widgets above.";
+        ImGui::InputText("unused", unused_str, IM_ARRAYSIZE(unused_str), ImGuiInputTextFlags_ReadOnly);
 
         // Calling IsItemHovered() after begin returns the hovered status of the title bar.
         // This is useful in particular if you want to create a context menu associated to the title bar of a window.
@@ -2376,7 +2376,7 @@ static void ShowDemoWindowLayout()
             ImGui::SameLine(0.0f, spacing);
             if (ImGui::TreeNode("Node##1"))
             {
-                // Dummy tree data
+                // Placeholder tree data
                 for (int i = 0; i < 6; i++)
                     ImGui::BulletText("Item %d..", i);
                 ImGui::TreePop();
@@ -2392,7 +2392,7 @@ static void ShowDemoWindowLayout()
             ImGui::SameLine(0.0f, spacing); ImGui::Button("Button##2");
             if (node_open)
             {
-                // Dummy tree data
+                // Placeholder tree data
                 for (int i = 0; i < 6; i++)
                     ImGui::BulletText("Item %d..", i);
                 ImGui::TreePop();
@@ -2693,7 +2693,7 @@ static void ShowDemoWindowLayout()
         ImGui::TextWrapped("(Click and drag)");
         ImVec2 pos = ImGui::GetCursorScreenPos();
         ImVec4 clip_rect(pos.x, pos.y, pos.x + size.x, pos.y + size.y);
-        ImGui::InvisibleButton("##dummy", size);
+        ImGui::InvisibleButton("##empty", size);
         if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0))
         {
             offset.x += ImGui::GetIO().MouseDelta.x;
@@ -2869,8 +2869,8 @@ static void ShowDemoWindowPopups()
             ImGui::Text("All those beautiful files will be deleted.\nThis operation cannot be undone!\n\n");
             ImGui::Separator();
 
-            //static int dummy_i = 0;
-            //ImGui::Combo("Combo", &dummy_i, "Delete\0Delete harder\0");
+            //static int unused_i = 0;
+            //ImGui::Combo("Combo", &unused_i, "Delete\0Delete harder\0");
 
             static bool dont_ask_me_next_time = false;
             ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
@@ -2892,7 +2892,7 @@ static void ShowDemoWindowPopups()
             {
                 if (ImGui::BeginMenu("File"))
                 {
-                    if (ImGui::MenuItem("Dummy menu item")) {}
+                    if (ImGui::MenuItem("Some menu item")) {}
                     ImGui::EndMenu();
                 }
                 ImGui::EndMenuBar();
@@ -2911,8 +2911,8 @@ static void ShowDemoWindowPopups()
             // Also demonstrate passing a bool* to BeginPopupModal(), this will create a regular close button which
             // will close the popup. Note that the visibility state of popups is owned by imgui, so the input value
             // of the bool actually doesn't matter here.
-            bool dummy_open = true;
-            if (ImGui::BeginPopupModal("Stacked 2", &dummy_open))
+            bool unused_open = true;
+            if (ImGui::BeginPopupModal("Stacked 2", &unused_open))
             {
                 ImGui::Text("Hello from Stacked The Second!");
                 if (ImGui::Button("Close"))
@@ -3247,7 +3247,7 @@ static void ShowDemoWindowMisc()
         if (ImGui::TreeNode("Tabbing"))
         {
             ImGui::Text("Use TAB/SHIFT+TAB to cycle through keyboard editable fields.");
-            static char buf[32] = "dummy";
+            static char buf[32] = "hello";
             ImGui::InputText("1", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("2", buf, IM_ARRAYSIZE(buf));
             ImGui::InputText("3", buf, IM_ARRAYSIZE(buf));
@@ -3903,7 +3903,7 @@ static void ShowExampleAppMainMenuBar()
 // (future version will add explicit flags to BeginMenu() to request processing shortcuts)
 static void ShowExampleMenuFile()
 {
-    ImGui::MenuItem("(dummy menu)", NULL, false, false);
+    ImGui::MenuItem("(demo menu)", NULL, false, false);
     if (ImGui::MenuItem("New")) {}
     if (ImGui::MenuItem("Open", "Ctrl+O")) {}
     if (ImGui::BeginMenu("Open Recent"))
@@ -4067,8 +4067,8 @@ struct ExampleAppConsole
 
         // TODO: display items starting from the bottom
 
-        if (ImGui::SmallButton("Add Dummy Text"))  { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
-        if (ImGui::SmallButton("Add Dummy Error")) { AddLog("[error] something went wrong"); } ImGui::SameLine();
+        if (ImGui::SmallButton("Add Debug Text"))  { AddLog("%d some text", Items.Size); AddLog("some more text"); AddLog("display very important message here!"); } ImGui::SameLine();
+        if (ImGui::SmallButton("Add Debug Error")) { AddLog("[error] something went wrong"); } ImGui::SameLine();
         if (ImGui::SmallButton("Clear"))           { ClearLog(); } ImGui::SameLine();
         bool copy_to_clipboard = ImGui::SmallButton("Copy");
         //static float t = 0.0f; if (ImGui::GetTime() - t > 0.02f) { t = ImGui::GetTime(); AddLog("Spam %f", t); }
@@ -4558,7 +4558,7 @@ static void ShowExampleAppLayout(bool* p_open)
 // [SECTION] Example App: Property Editor / ShowExampleAppPropertyEditor()
 //-----------------------------------------------------------------------------
 
-static void ShowDummyObject(const char* prefix, int uid)
+static void ShowPlaceholderObject(const char* prefix, int uid)
 {
     // Use object uid as identifier. Most commonly you could also use the object pointer as a base ID.
     ImGui::PushID(uid);
@@ -4570,13 +4570,13 @@ static void ShowDummyObject(const char* prefix, int uid)
     ImGui::NextColumn();
     if (node_open)
     {
-        static float dummy_members[8] = { 0.0f, 0.0f, 1.0f, 3.1416f, 100.0f, 999.0f };
+        static float placeholder_members[8] = { 0.0f, 0.0f, 1.0f, 3.1416f, 100.0f, 999.0f };
         for (int i = 0; i < 8; i++)
         {
             ImGui::PushID(i); // Use field index as identifier.
             if (i < 2)
             {
-                ShowDummyObject("Child", 424242);
+                ShowPlaceholderObject("Child", 424242);
             }
             else
             {
@@ -4587,9 +4587,9 @@ static void ShowDummyObject(const char* prefix, int uid)
                 ImGui::NextColumn();
                 ImGui::SetNextItemWidth(-1);
                 if (i >= 5)
-                    ImGui::InputFloat("##value", &dummy_members[i], 1.0f);
+                    ImGui::InputFloat("##value", &placeholder_members[i], 1.0f);
                 else
-                    ImGui::DragFloat("##value", &dummy_members[i], 0.01f);
+                    ImGui::DragFloat("##value", &placeholder_members[i], 0.01f);
                 ImGui::NextColumn();
             }
             ImGui::PopID();
@@ -4619,9 +4619,9 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
     ImGui::Columns(2);
     ImGui::Separator();
 
-    // Iterate dummy objects with dummy members (all the same data)
+    // Iterate placeholder objects (all the same data)
     for (int obj_i = 0; obj_i < 3; obj_i++)
-        ShowDummyObject("Object", obj_i);
+        ShowPlaceholderObject("Object", obj_i);
 
     ImGui::Columns(1);
     ImGui::Separator();
@@ -4955,10 +4955,12 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             struct ItemLine { ImVec2 p0, p1; ItemLine(const ImVec2& _p0, const ImVec2& _p1) { p0 = _p0; p1 = _p1; } };
             static ImVector<ItemLine> lines;
             static ImVec2 scrolling(0.0f, 0.0f);
-            static bool show_grid = true;
+            static bool opt_enable_grid = true;
+            static bool opt_enable_context_menu = true;
             static bool adding_line = false;
 
-            ImGui::Checkbox("Show grid", &show_grid);
+            ImGui::Checkbox("Enable grid", &opt_enable_grid);
+            ImGui::Checkbox("Enable context menu", &opt_enable_context_menu);
             ImGui::Text("Mouse Left: drag to add lines,\nMouse Right: drag to scroll, click for context menu.");
 
             // Typically you would use a BeginChild()/EndChild() pair to benefit from a clipping region + own scrolling.
@@ -5005,17 +5007,18 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                     adding_line = false;
             }
 
-            // Pan (using zero mouse threshold)
-            if (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.0f))
+            // Pan (we use a zero mouse threshold when there's no context menu)
+            // You may decide to make that threshold dynamic based on whether the mouse is hovering something etc.
+            const float mouse_threshold_for_pan = opt_enable_context_menu ? -1.0f : 0.0f;
+            if (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Right, mouse_threshold_for_pan))
             {
                 scrolling.x += io.MouseDelta.x;
                 scrolling.y += io.MouseDelta.y;
             }
 
             // Context menu (under default mouse threshold)
-            // We intentionally use the same button to demonstrate using mouse drag threshold. Some may feel panning should rely on same threshold.
             ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
-            if (drag_delta.x == 0.0f && drag_delta.y == 0.0f)
+            if (opt_enable_context_menu && ImGui::IsMouseReleased(ImGuiMouseButton_Right) && drag_delta.x == 0.0f && drag_delta.y == 0.0f)
                 ImGui::OpenPopupContextItem("context");
             if (ImGui::BeginPopup("context"))
             {
@@ -5029,7 +5032,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
             // Draw grid + all lines in the canvas
             draw_list->PushClipRect(canvas_p0, canvas_p1, true);
-            if (show_grid)
+            if (opt_enable_grid)
             {
                 const float GRID_STEP = 64.0f;
                 for (float x = fmodf(scrolling.x, GRID_STEP); x < canvas_sz.x; x += GRID_STEP)
@@ -5095,7 +5098,7 @@ struct MyDocument
     void DoForceClose() { Open = false; Dirty = false; }
     void DoSave()       { Dirty = false; }
 
-    // Display dummy contents for the Document
+    // Display placeholder contents for the Document
     static void DisplayContents(MyDocument* doc)
     {
         ImGui::PushID(doc);
