@@ -123,12 +123,23 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
     }
     case XCB_KEY_PRESS: {
         xcb_key_press_event_t *e = (xcb_key_press_event_t *)event;
-        xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, 0);
-        if(k < 0xFF) { // latin-1 range
+        // since imgui processes modifiers internally by checking io.KeyCtrl and the like
+        // we don't need any other xcb key columns besides the shift modifier.
+        // without using the shift modifier we will only get the lower case letter
+        // i think this may be an issue if both shift and key were pressed in the same frame?
+        uint32_t col = io.KeyShift ? 1 : 0;
+        xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, col);
+        printf("key: %i\n", k);
+        fflush(stdout);
+
+        if(k < 0xFF) // latin-1 range
+        {
             io.AddInputCharacter(k);
-            io.KeysDown[k] = 1;
+            if(k == XK_space)
+                io.KeysDown[XK_space] = 1;
         }
-        else if(k >= XK_Shift_L && k <= XK_Hyper_R) { // modifier keys
+        else if(k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
+        {
             switch(k) {
                 case XK_Shift_L:
                 case XK_Shift_R:
@@ -151,7 +162,9 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
             }
         }
         else if(k >= 0x1000100 && k <= 0x110ffff) // utf range
+        {
             io.AddInputCharacterUTF16(k);
+        }
         else
             io.KeysDown[k - 0xFF00] = 1;
 
@@ -160,9 +173,13 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
     case XCB_KEY_RELEASE: {
         xcb_key_press_event_t *e = (xcb_key_press_event_t *)event;
         xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, 0);
-        if(k < 0xFF)
-            io.KeysDown[k] = 0;
-        else if(k >= XK_Shift_L && k <= XK_Hyper_R) { // modifier keys
+
+        if(k < 0xff) {
+            if(k == XK_space)
+                io.KeysDown[XK_space] = 0;
+        }
+        else if(k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
+        {
             switch(k) {
                 case XK_Shift_L:
                 case XK_Shift_R:
