@@ -1144,8 +1144,9 @@ struct ImGuiContext
 
     // Item/widgets state and tracking information
     ImGuiID                 HoveredId;                          // Hovered widget
-    bool                    HoveredIdAllowOverlap;
     ImGuiID                 HoveredIdPreviousFrame;
+    bool                    HoveredIdAllowOverlap;
+    bool                    HoveredIdDisabled;                  // At least one widget passed the rect test, but has been discarded by disabled flag or popup inhibit. May be true even if HoveredId == 0.
     float                   HoveredIdTimer;                     // Measure contiguous hovering time
     float                   HoveredIdNotActiveTimer;            // Measure contiguous hovering time where the item has not been active
     ImGuiID                 ActiveId;                           // Active widget
@@ -1348,9 +1349,9 @@ struct ImGuiContext
         WheelingWindow = NULL;
         WheelingWindowTimer = 0.0f;
 
-        HoveredId = 0;
+        HoveredId = HoveredIdPreviousFrame = 0;
         HoveredIdAllowOverlap = false;
-        HoveredIdPreviousFrame = 0;
+        HoveredIdDisabled = false;
         HoveredIdTimer = HoveredIdNotActiveTimer = 0.0f;
         ActiveId = 0;
         ActiveIdIsAlive = 0;

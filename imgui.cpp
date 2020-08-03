@@ -3061,10 +3061,13 @@ bool ImGui::ItemHoverable(const ImRect& bb, ImGuiID id)
         return false;
     if (!IsMouseHoveringRect(bb.Min, bb.Max))
         return false;
-    if (g.NavDisableMouseHover || !IsWindowContentHoverable(window, ImGuiHoveredFlags_None))
+    if (g.NavDisableMouseHover)
         return false;
-    if (window->DC.ItemFlags & ImGuiItemFlags_Disabled)
+    if (!IsWindowContentHoverable(window, ImGuiHoveredFlags_None) || (window->DC.ItemFlags & ImGuiItemFlags_Disabled))
+    {
+        g.HoveredIdDisabled = true;
         return false;
+    }
 
     // We exceptionally allow this function to be called with id==0 to allow using it for easy high-level
     // hover test in widgets code. We could also decide to split this function is two.
@@ -3364,9 +3367,15 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         if (root_window != NULL && !is_closed_popup)
         {
             StartMouseMovingWindow(g.HoveredWindow);
+
+            // Cancel moving if clicked outside of title bar
             if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(root_window->Flags & ImGuiWindowFlags_NoTitleBar))
                 if (!root_window->TitleBarRect().Contains(g.IO.MouseClickedPos[0]))
                     g.MovingWindow = NULL;
+
+            // Cancel moving if clicked over an item which was disabled or inhibited by popups
+            if (g.HoveredId == 0 && g.HoveredIdDisabled)
+                g.MovingWindow = NULL;
         }
         else if (root_window == NULL && g.NavWindow != NULL && GetTopMostPopupModal() == NULL)
         {
@@ -3723,6 +3732,7 @@ void ImGui::NewFrame()
     g.HoveredIdPreviousFrame = g.HoveredId;
     g.HoveredId = 0;
     g.HoveredIdAllowOverlap = false;
+    g.HoveredIdDisabled = false;
 
     // Update ActiveId data (clear reference to active widget if the widget isn't alive anymore)
     if (g.ActiveIdIsAlive != g.ActiveId && g.ActiveIdPreviousFrame == g.ActiveId && g.ActiveId != 0)

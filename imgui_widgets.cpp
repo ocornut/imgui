@@ -595,6 +595,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         }
     }
 
+    // Process while held
     bool held = false;
     if (g.ActiveId == id)
     {
@@ -615,6 +616,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
                 bool release_anywhere = (flags & ImGuiButtonFlags_PressedOnClickReleaseAnywhere) != 0;
                 if ((release_in || release_anywhere) && !g.DragDropActive)
                 {
+                    // Report as pressed when releasing the mouse (this is the most common path)
                     bool is_double_click_release = (flags & ImGuiButtonFlags_PressedOnDoubleClick) && g.IO.MouseDownWasDoubleClick[mouse_button];
                     bool is_repeating_already = (flags & ImGuiButtonFlags_Repeat) && g.IO.MouseDownDurationPrev[mouse_button] >= g.IO.KeyRepeatDelay; // Repeat mode trumps <on release>
                     if (!is_double_click_release && !is_repeating_already)
@@ -627,6 +629,7 @@ bool ImGui::ButtonBehavior(const ImRect& bb, ImGuiID id, bool* out_hovered, bool
         }
         else if (g.ActiveIdSource == ImGuiInputSource_Nav)
         {
+            // When activated using Nav, we hold on the ActiveID until activation button is released
             if (g.NavActivateDownId != id)
                 ClearActiveID();
         }

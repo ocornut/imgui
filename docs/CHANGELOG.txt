@@ -40,6 +40,8 @@ Other Changes:
 - Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
   This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
+- Window: Fixed clicking over an item which hovering has been disabled (e.g inhibited by a popup)
+  from marking the window as moved.
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
