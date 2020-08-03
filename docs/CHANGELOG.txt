@@ -68,6 +68,8 @@ Other Changes:
   by modifying the 'style.CircleSegmentMaxError' value. [@ShironekoBen]
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
   an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
+- Demo: Improve "Custom Rendering"->"Canvas" demo with a grid, scrolling and context menu.
+  Also showcase using InvisibleButton() will multiple mouse buttons flags.
 - Demo: Tweak "Child Windows" section.
 - Style Editor: Added preview of circle auto-tessellation when editing the corresponding value.
 - Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
