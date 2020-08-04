@@ -2684,23 +2684,66 @@ static void ShowDemoWindowLayout()
 
     if (ImGui::TreeNode("Clipping"))
     {
-        static ImVec2 size(100, 100), offset(50, 20);
-        ImGui::TextWrapped(
-            "On a per-widget basis we are occasionally clipping text CPU-side if it won't fit in its frame. "
-            "Otherwise we are doing coarser clipping + passing a scissor rectangle to the renderer. "
-            "The system is designed to try minimizing both execution and CPU/GPU rendering cost.");
+        static ImVec2 size(100.0f, 100.0f);
+        static ImVec2 offset(30.0f, 30.0f);
         ImGui::DragFloat2("size", (float*)&size, 0.5f, 1.0f, 200.0f, "%.0f");
-        ImGui::TextWrapped("(Click and drag)");
-        ImVec2 pos = ImGui::GetCursorScreenPos();
-        ImVec4 clip_rect(pos.x, pos.y, pos.x + size.x, pos.y + size.y);
-        ImGui::InvisibleButton("##empty", size);
-        if (ImGui::IsItemActive() && ImGui::IsMouseDragging(0))
+        ImGui::TextWrapped("(Click and drag to scroll)");
+
+        for (int n = 0; n < 3; n++)
         {
-            offset.x += ImGui::GetIO().MouseDelta.x;
-            offset.y += ImGui::GetIO().MouseDelta.y;
+            if (n > 0)
+                ImGui::SameLine();
+            ImGui::PushID(n);
+            ImGui::BeginGroup(); // Lock X position
+
+            ImGui::InvisibleButton("##empty", size);
+            if (ImGui::IsItemActive() && ImGui::IsMouseDragging(ImGuiMouseButton_Left))
+            {
+                offset.x += ImGui::GetIO().MouseDelta.x;
+                offset.y += ImGui::GetIO().MouseDelta.y;
+            }
+            const ImVec2 p0 = ImGui::GetItemRectMin();
+            const ImVec2 p1 = ImGui::GetItemRectMax();
+            const char* text_str = "Line 1 hello\nLine 2 clip me!";
+            const ImVec2 text_pos = ImVec2(p0.x + offset.x, p0.y + offset.y);
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+
+            switch (n)
+            {
+            case 0:
+                HelpMarker(
+                    "Using ImGui::PushClipRect():\n"
+                    "Will alter ImGui hit-testing logic + ImDrawList rendering.\n"
+                    "(use this if you want your clipping rectangle to affect interactions)");
+                ImGui::PushClipRect(p0, p1, true);
+                draw_list->AddRectFilled(p0, p1, IM_COL32(90, 90, 120, 255));
+                draw_list->AddText(text_pos, IM_COL32_WHITE, text_str);
+                ImGui::PopClipRect();
+                break;
+            case 1:
+                HelpMarker(
+                    "Using ImDrawList::PushClipRect():\n"
+                    "Will alter ImDrawList rendering only.\n"
+                    "(use this as a shortcut if you are only using ImDrawList calls)");
+                draw_list->PushClipRect(p0, p1, true);
+                draw_list->AddRectFilled(p0, p1, IM_COL32(90, 90, 120, 255));
+                draw_list->AddText(text_pos, IM_COL32_WHITE, text_str);
+                draw_list->PopClipRect();
+                break;
+            case 2:
+                HelpMarker(
+                    "Using ImDrawList::AddText() with a fine ClipRect:\n"
+                    "Will alter only this specific ImDrawList::AddText() rendering.\n"
+                    "(this is often used internally to avoid altering the clipping rectangle and minimize draw calls)");
+                ImVec4 clip_rect(p0.x, p0.y, p1.x, p1.y); // AddText() takes a ImVec4* here so let's convert.
+                draw_list->AddRectFilled(p0, p1, IM_COL32(90, 90, 120, 255));
+                draw_list->AddText(ImGui::GetFont(), ImGui::GetFontSize(), text_pos, IM_COL32_WHITE, text_str, NULL, 0.0f, &clip_rect);
+                break;
+            }
+            ImGui::EndGroup();
+            ImGui::PopID();
         }
-        ImGui::GetWindowDrawList()->AddRectFilled(pos, ImVec2(pos.x + size.x, pos.y + size.y), IM_COL32(90, 90, 120, 255));
-        ImGui::GetWindowDrawList()->AddText(ImGui::GetFont(), ImGui::GetFontSize()*2.0f, ImVec2(pos.x + offset.x, pos.y + offset.y), IM_COL32_WHITE, "Line 1 hello\nLine 2 clip me!", NULL, 0.0f, &clip_rect);
+
         ImGui::TreePop();
     }
 }
