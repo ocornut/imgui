@@ -2490,11 +2490,9 @@ static void ShowDemoWindowLayout()
         ImGui::Spacing();
         HelpMarker(
             "Use SetScrollHereX() or SetScrollFromPosX() to scroll to a given horizontal position.\n\n"
-            "Using the \"Scroll To Pos\" button above will make the discontinuity at edges visible: "
-            "scrolling to the top/bottom/left/right-most item will add an additional WindowPadding to reflect "
-            "on reaching the edge of the list.\n\nBecause the clipping rectangle of most window hides half "
-            "worth of WindowPadding on the left/right, using SetScrollFromPosX(+1) will usually result in "
-            "clipped text whereas the equivalent SetScrollFromPosY(+1) wouldn't.");
+            "Because the clipping rectangle of most window hides half worth of WindowPadding on the "
+            "left/right, using SetScrollFromPosX(+1) will usually result in clipped text whereas the "
+            "equivalent SetScrollFromPosY(+1) wouldn't.");
         ImGui::PushID("##HorizontalScrolling");
         for (int i = 0; i < 5; i++)
         {

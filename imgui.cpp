@@ -805,7 +805,7 @@ static const float WINDOWS_MOUSE_WHEEL_SCROLL_LOCK_TIMER    = 2.00f;    // Lock 
 static void             SetCurrentWindow(ImGuiWindow* window);
 static void             FindHoveredWindow();
 static ImGuiWindow*     CreateNewWindow(const char* name, ImGuiWindowFlags flags);
-static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges);
+static ImVec2           CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window);
 
 static void             AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list);
 static void             AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, ImGuiWindow* window);
@@ -5819,7 +5819,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->ScrollMax.y = ImMax(0.0f, window->ContentSize.y + window->WindowPadding.y * 2.0f - window->InnerRect.GetHeight());
 
         // Apply scrolling
-        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window, true);
+        window->Scroll = CalcNextScrollFromScrollTargetAndClamp(window);
         window->ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
 
         // DRAWING
@@ -7325,30 +7325,20 @@ void ImGui::EndGroup()
 // [SECTION] SCROLLING
 //-----------------------------------------------------------------------------
 
-static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window, bool snap_on_edges)
+static ImVec2 CalcNextScrollFromScrollTargetAndClamp(ImGuiWindow* window)
 {
-    ImGuiContext& g = *GImGui;
     ImVec2 scroll = window->Scroll;
     if (window->ScrollTarget.x < FLT_MAX)
     {
         float cr_x = window->ScrollTargetCenterRatio.x;
         float target_x = window->ScrollTarget.x;
-        if (snap_on_edges && cr_x <= 0.0f && target_x <= window->WindowPadding.x)
-            target_x = 0.0f;
-        else if (snap_on_edges && cr_x >= 1.0f && target_x >= window->ContentSize.x + window->WindowPadding.x + g.Style.ItemSpacing.x)
-            target_x = window->ContentSize.x + window->WindowPadding.x * 2.0f;
         scroll.x = target_x - cr_x * (window->SizeFull.x - window->ScrollbarSizes.x);
     }
     if (window->ScrollTarget.y < FLT_MAX)
     {
-        // 'snap_on_edges' allows for a discontinuity at the edge of scrolling limits to take account of WindowPadding so that scrolling to make the last item visible scroll far enough to see the padding.
         float decoration_up_height = window->TitleBarHeight() + window->MenuBarHeight();
         float cr_y = window->ScrollTargetCenterRatio.y;
         float target_y = window->ScrollTarget.y;
-        if (snap_on_edges && cr_y <= 0.0f && target_y <= window->WindowPadding.y)
-            target_y = 0.0f;
-        if (snap_on_edges && cr_y >= 1.0f && target_y >= window->ContentSize.y + window->WindowPadding.y + g.Style.ItemSpacing.y)
-            target_y = window->ContentSize.y + window->WindowPadding.y * 2.0f;
         scroll.y = target_y - cr_y * (window->SizeFull.y - window->ScrollbarSizes.y - decoration_up_height);
     }
     scroll.x = IM_FLOOR(ImMax(scroll.x, 0.0f));
@@ -7380,7 +7370,7 @@ ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_
         else if (item_rect.Max.y >= window_rect.Max.y)
             SetScrollFromPosY(window, item_rect.Max.y - window->Pos.y + g.Style.ItemSpacing.y, 1.0f);
 
-        ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window, false);
+        ImVec2 next_scroll = CalcNextScrollFromScrollTargetAndClamp(window);
         delta_scroll = next_scroll - window->Scroll;
     }
 
@@ -7441,10 +7431,10 @@ void ImGui::SetScrollY(ImGuiWindow* window, float new_scroll_y)
     window->ScrollTargetCenterRatio.y = 0.0f;
 }
 
-
+// Note that a local position will vary depending on initial scroll value
+// We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
 void ImGui::SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x_ratio)
 {
-    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     IM_ASSERT(center_x_ratio >= 0.0f && center_x_ratio <= 1.0f);
     window->ScrollTarget.x = IM_FLOOR(local_x + window->Scroll.x);
     window->ScrollTargetCenterRatio.x = center_x_ratio;
@@ -7452,10 +7442,8 @@ void ImGui::SetScrollFromPosX(ImGuiWindow* window, float local_x, float center_x
 
 void ImGui::SetScrollFromPosY(ImGuiWindow* window, float local_y, float center_y_ratio)
 {
-    // We store a target position so centering can occur on the next frame when we are guaranteed to have a known window size
     IM_ASSERT(center_y_ratio >= 0.0f && center_y_ratio <= 1.0f);
-    const float decoration_up_height = window->TitleBarHeight() + window->MenuBarHeight();
-    local_y -= decoration_up_height;
+    local_y -= window->TitleBarHeight() + window->MenuBarHeight(); // FIXME: Would be nice to have a more standardized access to our scrollable/client rect
     window->ScrollTarget.y = IM_FLOOR(local_y + window->Scroll.y);
     window->ScrollTargetCenterRatio.y = center_y_ratio;
 }
@@ -7472,15 +7460,34 @@ void ImGui::SetScrollFromPosY(float local_y, float center_y_ratio)
     SetScrollFromPosY(g.CurrentWindow, local_y, center_y_ratio);
 }
 
+// Tweak: snap on edges when aiming at an item very close to the edge,
+// So the difference between WindowPadding and ItemSpacing will be in the visible area after scrolling.
+// When we refactor the scrolling API this may be configurable with a flag?
+// Note that the effect for this won't be visible on X axis with default Style settings as WindowPadding.x == ItemSpacing.x by default.
+static float CalcScrollSnap(float target, float snap_min, float snap_max, float snap_threshold, float center_ratio)
+{
+    if (target <= snap_min + snap_threshold)
+        return ImLerp(snap_min, target, center_ratio);
+    if (target >= snap_max - snap_threshold)
+        return ImLerp(target, snap_max, center_ratio);
+    return target;
+}
+
 // center_x_ratio: 0.0f left of last item, 0.5f horizontal center of last item, 1.0f right of last item.
 void ImGui::SetScrollHereX(float center_x_ratio)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    float target_x = window->DC.LastItemRect.Min.x - window->Pos.x; // Left of last item, in window space
-    float last_item_width = window->DC.LastItemRect.GetWidth();
-    target_x += (last_item_width * center_x_ratio) + (g.Style.ItemSpacing.x * (center_x_ratio - 0.5f) * 2.0f); // Precisely aim before, in the middle or after the last item.
-    SetScrollFromPosX(target_x, center_x_ratio);
+    float spacing_x = g.Style.ItemSpacing.x;
+    float target_x = ImLerp(window->DC.LastItemRect.Min.x - spacing_x, window->DC.LastItemRect.Max.x + spacing_x, center_x_ratio);
+
+    // Tweak: snap on edges when aiming at an item very close to the edge
+    const float snap_x_threshold = ImMax(0.0f, window->WindowPadding.x - spacing_x);
+    const float snap_x_min = window->DC.CursorStartPos.x - window->WindowPadding.x;
+    const float snap_x_max = window->DC.CursorStartPos.x + window->ContentSize.x + window->WindowPadding.x;
+    target_x = CalcScrollSnap(target_x, snap_x_min, snap_x_max, snap_x_threshold, center_x_ratio);
+
+    SetScrollFromPosX(window, target_x - window->Pos.x, center_x_ratio);
 }
 
 // center_y_ratio: 0.0f top of last item, 0.5f vertical center of last item, 1.0f bottom of last item.
@@ -7488,9 +7495,16 @@ void ImGui::SetScrollHereY(float center_y_ratio)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    float target_y = window->DC.CursorPosPrevLine.y - window->Pos.y; // Top of last item, in window space
-    target_y += (window->DC.PrevLineSize.y * center_y_ratio) + (g.Style.ItemSpacing.y * (center_y_ratio - 0.5f) * 2.0f); // Precisely aim above, in the middle or below the last line.
-    SetScrollFromPosY(target_y, center_y_ratio);
+    float spacing_y = g.Style.ItemSpacing.y;
+    float target_y = ImLerp(window->DC.CursorPosPrevLine.y - spacing_y, window->DC.CursorPosPrevLine.y + window->DC.PrevLineSize.y + spacing_y, center_y_ratio);
+
+    // Tweak: snap on edges when aiming at an item very close to the edge
+    const float snap_y_threshold = ImMax(0.0f, window->WindowPadding.y - spacing_y);
+    const float snap_y_min = window->DC.CursorStartPos.y - window->WindowPadding.y;
+    const float snap_y_max = window->DC.CursorStartPos.y + window->ContentSize.y + window->WindowPadding.y;
+    target_y = CalcScrollSnap(target_y, snap_y_min, snap_y_max, snap_y_threshold, center_y_ratio);
+
+    SetScrollFromPosY(window, target_y - window->Pos.y, center_y_ratio);
 }
 
 //-----------------------------------------------------------------------------
