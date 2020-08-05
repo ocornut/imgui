@@ -4,7 +4,7 @@
 // of XLib and xcb using the X11/Xlib-xcb.h header. Use XLib to create the
 // GLX context, then use functions in Xlib-xcb.h to convert the XLib
 // structures to xcb, which you can then pass unmodified here.
-// Requires libxcb, libxcb-xfixes and libxcb-keysyms1
+// Requires libxcb, libxcb-xfixes, libxcb-xkb1 and libxcb-keysyms1
 
 // Implemented features:
 //  [ ] Platform: Clipboard support
@@ -17,6 +17,7 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
 #include <xcb/xfixes.h>
+#include <xcb/xkb.h>
 #include <time.h>
 #include <stdio.h>
 
@@ -47,12 +48,27 @@ bool    ImGui_ImplX11_Init(xcb_connection_t *connection, xcb_drawable_t *win)
     // Set initial display size
     xcb_generic_error_t *x_Err = nullptr;
     xcb_get_geometry_reply_t *resp = xcb_get_geometry_reply(g_Connection, xcb_get_geometry(g_Connection, *g_Win), &x_Err);
-    if(x_Err)
-        return false;
+    IM_ASSERT(!x_Err && "X error querying window geometry");
     io.DisplaySize = ImVec2(resp->width, resp->height);
 
     // Get the current key map
     g_KeySyms = xcb_key_symbols_alloc(connection);
+
+    // Turn off auto key repeat for this session
+    // By defaut X does key repeat as down/up/down/up
+    // Unfortunately unlike win32, X has no way of signaling the key event is a repeated key
+    // So it's still possible to get mised down/up inputs in the same frame
+    xcb_xkb_use_extension_cookie_t extension_cookie = xcb_xkb_use_extension(connection, 1, 0);
+    xcb_xkb_use_extension_reply_t *extension_reply = xcb_xkb_use_extension_reply(connection, extension_cookie, &x_Err);
+
+    if(!x_Err && extension_reply->supported) {
+        xcb_discard_reply(connection,
+            xcb_xkb_per_client_flags(connection,
+                        XCB_XKB_ID_USE_CORE_KBD,
+                        XCB_XKB_PER_CLIENT_FLAG_DETECTABLE_AUTO_REPEAT,
+                        XCB_XKB_PER_CLIENT_FLAG_DETECTABLE_AUTO_REPEAT,
+                        0, 0, 0).sequence);
+    }
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     // X Keyboard non-latin syms have the top high bits set.
@@ -76,6 +92,7 @@ bool    ImGui_ImplX11_Init(xcb_connection_t *connection, xcb_drawable_t *win)
     io.KeyMap[ImGuiKey_Enter] = XK_Return - 0xFF00;
     io.KeyMap[ImGuiKey_Escape] = XK_Escape - 0xFF00;
     io.KeyMap[ImGuiKey_KeyPadEnter] = XK_KP_Enter - 0xFF00;
+    io.KeyMap[ImGuiKey_Space] = XK_space;
     io.KeyMap[ImGuiKey_A] = 'A';
     io.KeyMap[ImGuiKey_C] = 'C';
     io.KeyMap[ImGuiKey_V] = 'V';
@@ -133,8 +150,6 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
         if(k < 0xFF) // latin-1 range
         {
             io.AddInputCharacter(k);
-            if(k == XK_space)
-                io.KeysDown[XK_space] = 1;
         }
         else if(k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
         {
