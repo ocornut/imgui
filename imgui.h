@@ -1525,19 +1525,19 @@ struct ImGuiIO
     // Input - Fill before calling NewFrame()
     //------------------------------------------------------------------
 
-    ImVec2         MousePos;                       // Mouse position, in pixels. Set to ImVec2(-FLT_MAX, -FLT_MAX) if mouse is unavailable (on another screen, etc.)
-    unsigned short MouseDown[5];                   // Mouse buttons: 0 = left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
-    unsigned short MouseUp[5];                     // Mouse buttons: 0 = left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
-    float          MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text.
-    float          MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all back-ends.
-    bool           KeyCtrl;                        // Keyboard modifier pressed: Control
-    bool           KeyShift;                       // Keyboard modifier pressed: Shift
-    bool           KeyAlt;                         // Keyboard modifier pressed: Alt
-    bool           KeySuper;                       // Keyboard modifier pressed: Cmd/Super/Windows
-    unsigned short KeysDown[512];                  // Number of keyboard key inputs that are pressed since last frame (ideally left in the "native" order your engine has access to keyboard keys, so you can use your own defines/enums for keys).
-    unsigned short KeysUp[512];                    // Number of keyboard up inputs since last frame
-    int            KeysUpPrev[512];                // Number of keyboard up inputs since last frame
-    float          NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
+    ImVec2        MousePos;                       // Mouse position, in pixels. Set to ImVec2(-FLT_MAX, -FLT_MAX) if mouse is unavailable (on another screen, etc.)
+    unsigned char MouseDown[5];                   // Mouse buttons: 0 = left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
+    unsigned char MouseUp[5];                     // Mouse buttons: 0 = left, 1=right, 2=middle + extras (ImGuiMouseButton_COUNT == 5). Dear ImGui mostly uses left and right buttons. Others buttons allows us to track if the mouse is being used by your application + available to user as a convenience via IsMouse** API.
+    float         MouseWheel;                     // Mouse wheel Vertical: 1 unit scrolls about 5 lines text.
+    float         MouseWheelH;                    // Mouse wheel Horizontal. Most users don't have a mouse with an horizontal wheel, may not be filled by all back-ends.
+    bool          KeyCtrl;                        // Keyboard modifier pressed: Control
+    bool          KeyShift;                       // Keyboard modifier pressed: Shift
+    bool          KeyAlt;                         // Keyboard modifier pressed: Alt
+    bool          KeySuper;                       // Keyboard modifier pressed: Cmd/Super/Windows
+    unsigned char KeysDown[512];                  // Number of keyboard key inputs that are pressed since last frame (ideally left in the "native" order your engine has access to keyboard keys, so you can use your own defines/enums for keys).
+    unsigned char KeysUp[512];                    // Number of keyboard up inputs since last frame
+    int           KeysUpPrev[512];                // Number of keyboard up inputs since last frame
+    float         NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
 
     // Functions
     IMGUI_API void  AddInputCharacter(unsigned int c);          // Queue new character input
