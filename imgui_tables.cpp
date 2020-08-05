@@ -193,7 +193,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     }
 
     flags = TableFixFlags(flags);
-    if (outer_window->Flags & ImGuiWindowFlags_NoSavedSettings)
+
+    // Inherit _NoSavedSettings from top-level window (child windows always have _NoSavedSettings set)
+#ifdef IMGUI_HAS_DOCK
+    ImGuiWindow* window_for_settings = outer_window->RootWindowDockStop;
+#else
+    ImGuiWindow* window_for_settings = outer_window->RootWindow;
+#endif
+    if (window_for_settings->Flags & ImGuiWindowFlags_NoSavedSettings)
         flags |= ImGuiTableFlags_NoSavedSettings;
 
     // Acquire storage for the table
@@ -253,8 +260,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostIndentX = inner_window->DC.Indent.x;
     table->HostClipRect = inner_window->ClipRect;
     table->HostSkipItems = inner_window->SkipItems;
-    table->HostWorkRect = inner_window->WorkRect;
+    table->HostBackupParentWorkRect = inner_window->ParentWorkRect;
     table->HostCursorMaxPos = inner_window->DC.CursorMaxPos;
+    inner_window->ParentWorkRect = inner_window->WorkRect;
 
     // Borders
     // - None               ........Content..... Pad .....Content........
@@ -1067,7 +1075,8 @@ void    ImGui::EndTable()
     // Layout in outer window
     IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table->ID + table->InstanceCurrent, "Mismatching PushID/PopID!");
     PopID();
-    inner_window->WorkRect = table->HostWorkRect;
+    inner_window->WorkRect = inner_window->ParentWorkRect;
+    inner_window->ParentWorkRect = table->HostBackupParentWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
     outer_window->DC.ColumnsOffset.x = 0.0f;

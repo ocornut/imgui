@@ -2001,7 +2001,7 @@ struct ImGuiTable
     ImRect                      InnerClipRect;
     ImRect                      BackgroundClipRect;         // We use this to cpu-clip cell background color fill
     ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
-    ImRect                      HostWorkRect;               // Backup of InnerWindow->WorkRect at the end of BeginTable()
+    ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
     ImRect                      HostBackupClipRect;         // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
     ImVec2                      HostCursorMaxPos;           // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
     ImGuiWindow*                OuterWindow;                // Parent window for the table
