@@ -19,7 +19,6 @@
 #include <xcb/xfixes.h>
 #include <xcb/xkb.h>
 #include <time.h>
-#include <stdio.h>
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
