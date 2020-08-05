@@ -49,6 +49,8 @@ Other Changes:
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
   call. ImGui-level functions such as TextUnformatted() are not affected. This is quite rare
   but it will be addressed later). (#3349)
+- Selectable: Fixed highlight/hit extent when used with horizontal scrolling (in or outside columns). 
+  Also fixed related text clipping when used in a column after the first one. (#3187, #3386)
 - Scrolling: Avoid SetScroll, SetScrollFromPos functions from snapping on the edge of scroll
   limits when close-enough by (WindowPadding - ItemPadding), which was a tweak with too many
   side-effects. The behavior is still present in SetScrollHere functions as they are more explicitly
