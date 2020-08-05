@@ -129,8 +129,6 @@ bool ImGui_ImplX11_Event(xcb_generic_event_t *event)
         // i think this may be an issue if both shift and key were pressed in the same frame?
         uint32_t col = io.KeyShift ? 1 : 0;
         xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, col);
-        printf("key: %i\n", k);
-        fflush(stdout);
 
         if(k < 0xFF) // latin-1 range
         {
