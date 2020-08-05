@@ -3609,7 +3609,7 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     {
         if (g.IO.MouseClicked[i])
             g.IO.MouseDownOwned[i] = (g.HoveredWindow != NULL) || (g.OpenPopupStack.Size > 0);
-        mouse_any_down |= g.IO.MouseDown[i] ? true : false;
+        mouse_any_down |= g.IO.MouseDown[i];
         if (g.IO.MouseDown[i])
             if (mouse_earliest_button_down == -1 || g.IO.MouseClickedTime[i] < g.IO.MouseClickedTime[mouse_earliest_button_down])
                 mouse_earliest_button_down = i;
