@@ -1960,7 +1960,7 @@ static void ShowDemoWindowWidgets()
 
 static void ShowDemoWindowLayout()
 {
-    if (!ImGui::CollapsingHeader("Layout"))
+    if (!ImGui::CollapsingHeader("Layout & Scrolling"))
         return;
 
     if (ImGui::TreeNode("Child windows"))
@@ -4993,8 +4993,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
         if (ImGui::BeginTabItem("Canvas"))
         {
-            struct ItemLine { ImVec2 p0, p1; ItemLine(const ImVec2& _p0, const ImVec2& _p1) { p0 = _p0; p1 = _p1; } };
-            static ImVector<ItemLine> lines;
+            static ImVector<ImVec2> points;
             static ImVec2 scrolling(0.0f, 0.0f);
             static bool opt_enable_grid = true;
             static bool opt_enable_context_menu = true;
@@ -5038,12 +5037,13 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             // Add first and second point
             if (is_hovered && !adding_line && ImGui::IsMouseClicked(ImGuiMouseButton_Left))
             {
-                lines.push_back(ItemLine(mouse_pos_in_canvas, mouse_pos_in_canvas));
+                points.push_back(mouse_pos_in_canvas);
+                points.push_back(mouse_pos_in_canvas);
                 adding_line = true;
             }
             if (adding_line)
             {
-                lines.back().p1 = mouse_pos_in_canvas;
+                points.back() = mouse_pos_in_canvas;
                 if (!ImGui::IsMouseDown(ImGuiMouseButton_Left))
                     adding_line = false;
             }
@@ -5064,10 +5064,10 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             if (ImGui::BeginPopup("context"))
             {
                 if (adding_line)
-                    lines.pop_back();
+                    points.resize(points.size() - 2);
                 adding_line = false;
-                if (ImGui::MenuItem("Remove one", NULL, false, lines.Size > 0)) { lines.pop_back(); }
-                if (ImGui::MenuItem("Remove all", NULL, false, lines.Size > 0)) { lines.clear(); }
+                if (ImGui::MenuItem("Remove one", NULL, false, points.Size > 0)) { points.resize(points.size() - 2); }
+                if (ImGui::MenuItem("Remove all", NULL, false, points.Size > 0)) { points.clear(); }
                 ImGui::EndPopup();
             }
 
@@ -5081,8 +5081,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 for (float y = fmodf(scrolling.y, GRID_STEP); y < canvas_sz.y; y += GRID_STEP)
                     draw_list->AddLine(ImVec2(canvas_p0.x, canvas_p0.y + y), ImVec2(canvas_p1.x, canvas_p0.y + y), IM_COL32(200, 200, 200, 40));
             }
-            for (int n = 0; n < lines.Size; n++)
-                draw_list->AddLine(ImVec2(origin.x + lines[n].p0.x, origin.y + lines[n].p0.y), ImVec2(origin.x + lines[n].p1.x, origin.y + lines[n].p1.y), IM_COL32(255, 255, 0, 255), 2.0f);
+            for (int n = 0; n < points.Size; n += 2)
+                draw_list->AddLine(ImVec2(origin.x + points[n].x, origin.y + points[n].y), ImVec2(origin.x + points[n + 1].x, origin.y + points[n + 1].y), IM_COL32(255, 255, 0, 255), 2.0f);
             draw_list->PopClipRect();
 
             ImGui::EndTabItem();
