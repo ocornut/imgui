@@ -1536,7 +1536,7 @@ struct ImGuiIO
     bool          KeySuper;                       // Keyboard modifier pressed: Cmd/Super/Windows
     unsigned char KeysDown[512];                  // Number of keyboard key inputs that are pressed since last frame (ideally left in the "native" order your engine has access to keyboard keys, so you can use your own defines/enums for keys).
     unsigned char KeysUp[512];                    // Number of keyboard up inputs since last frame
-    unsigned char KeysUpPrev[512];                // Number of keyboard up inputs since last frame
+    unsigned char KeysUpPrev[512];                // Number of keyboard up inputs since last frame - 1
     float         NavInputs[ImGuiNavInput_COUNT]; // Gamepad inputs. Cleared back to zero by EndFrame(). Keyboard keys will be auto-mapped and be written here by NewFrame().
 
     // Functions
