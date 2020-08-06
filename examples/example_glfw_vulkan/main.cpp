@@ -42,6 +42,7 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static int                      g_MinImageCount = 2;
+static GLFWwindow*              g_Window;
 static bool                     g_SwapChainRebuild = false;
 static int                      g_SwapChainResizeWidth = 0;
 static int                      g_SwapChainResizeHeight = 0;
@@ -321,20 +322,21 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &wd->FrameIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
-    check_vk_result(err);
+    if(err == VK_ERROR_OUT_OF_DATE_KHR) {
+        glfwGetFramebufferSize(g_Window, &g_SwapChainResizeWidth, &g_SwapChainResizeHeight);
+        g_SwapChainRebuild = true;
+        return;
+    }
+    else
+    {
+        check_vk_result(err);
+    }
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
 
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
-
-static void glfw_resize_callback(GLFWwindow*, int w, int h)
-{
-    g_SwapChainRebuild = true;
-    g_SwapChainResizeWidth = w;
-    g_SwapChainResizeHeight = h;
 }
 
 int main(int, char**)
@@ -345,7 +347,7 @@ int main(int, char**)
         return 1;
 
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    GLFWwindow* window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+Vulkan example", NULL, NULL);
+    g_Window = glfwCreateWindow(1280, 720, "Dear ImGui GLFW+Vulkan example", NULL, NULL);
 
     // Setup Vulkan
     if (!glfwVulkanSupported())
@@ -359,13 +361,12 @@ int main(int, char**)
 
     // Create Window Surface
     VkSurfaceKHR surface;
-    VkResult err = glfwCreateWindowSurface(g_Instance, window, g_Allocator, &surface);
+    VkResult err = glfwCreateWindowSurface(g_Instance, g_Window, g_Allocator, &surface);
     check_vk_result(err);
 
     // Create Framebuffers
     int w, h;
-    glfwGetFramebufferSize(window, &w, &h);
-    glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
+    glfwGetFramebufferSize(g_Window, &w, &h);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
     SetupVulkanWindow(wd, surface, w, h);
 
@@ -381,7 +382,7 @@ int main(int, char**)
     //ImGui::StyleColorsClassic();
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplGlfw_InitForVulkan(window, true);
+    ImGui_ImplGlfw_InitForVulkan(g_Window, true);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
@@ -447,7 +448,7 @@ int main(int, char**)
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
 
     // Main loop
-    while (!glfwWindowShouldClose(window))
+    while (!glfwWindowShouldClose(g_Window))
     {
         // Poll and handle events (inputs, window resize, etc.)
         // You can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if dear imgui wants to use your inputs.
@@ -528,7 +529,7 @@ int main(int, char**)
     CleanupVulkanWindow();
     CleanupVulkan();
 
-    glfwDestroyWindow(window);
+    glfwDestroyWindow(g_Window);
     glfwTerminate();
 
     return 0;
