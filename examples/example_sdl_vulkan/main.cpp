@@ -37,7 +37,6 @@ static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
 static int                      g_SwapChainResizeWidth = 0;
 static int                      g_SwapChainResizeHeight = 0;
-static SDL_Window*              g_Window;
 
 static void check_vk_result(VkResult err)
 {
@@ -335,20 +334,20 @@ int main(int, char**)
 
     // Setup window
     SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    g_Window = SDL_CreateWindow("Dear ImGui SDL2+Vulkan example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+Vulkan example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
 
     // Setup Vulkan
     uint32_t extensions_count = 0;
-    SDL_Vulkan_GetInstanceExtensions(g_Window, &extensions_count, NULL);
+    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, NULL);
     const char** extensions = new const char*[extensions_count];
-    SDL_Vulkan_GetInstanceExtensions(g_Window, &extensions_count, extensions);
+    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, extensions);
     SetupVulkan(extensions, extensions_count);
     delete[] extensions;
 
     // Create Window Surface
     VkSurfaceKHR surface;
     VkResult err;
-    if (SDL_Vulkan_CreateSurface(g_Window, g_Instance, &surface) == 0)
+    if (SDL_Vulkan_CreateSurface(window, g_Instance, &surface) == 0)
     {
         printf("Failed to create Vulkan surface.\n");
         return 1;
@@ -356,7 +355,7 @@ int main(int, char**)
 
     // Create Framebuffers
     int w, h;
-    SDL_GetWindowSize(g_Window, &w, &h);
+    SDL_GetWindowSize(window, &w, &h);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
     SetupVulkanWindow(wd, surface, w, h);
 
@@ -384,7 +383,7 @@ int main(int, char**)
     }
 
     // Setup Platform/Renderer bindings
-    ImGui_ImplSDL2_InitForVulkan(g_Window);
+    ImGui_ImplSDL2_InitForVulkan(window);
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
@@ -481,7 +480,7 @@ int main(int, char**)
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL2_NewFrame(g_Window);
+        ImGui_ImplSDL2_NewFrame(window);
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -544,7 +543,7 @@ int main(int, char**)
 
         // Present Main Platform Window
         if (!main_is_minimized)
-            FramePresent(wd);
+            FramePresent(wd, window);
     }
 
     // Cleanup
@@ -557,7 +556,7 @@ int main(int, char**)
     CleanupVulkanWindow();
     CleanupVulkan();
 
-    SDL_DestroyWindow(g_Window);
+    SDL_DestroyWindow(window);
     SDL_Quit();
 
     return 0;
