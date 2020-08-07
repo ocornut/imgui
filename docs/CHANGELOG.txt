@@ -80,6 +80,7 @@ Other Changes:
 - Demo: Improved "Layout & Scrolling" -> "Child Windows" section.
 - Style Editor: Added preview of circle auto-tessellation when editing the corresponding value.
 - Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
+- Examples: Vulkan: Fixed GLFW+Vulkan and SDL+Vulkan clear color not being set. (#3390) [@RoryO]
 
 
 -----------------------------------------------------------------------
