@@ -34,6 +34,8 @@ static xcb_key_symbols_t*   g_KeySyms;
 static timespec             g_LastTime;
 static timespec             g_CurrentTime;
 
+static bool                 g_HideXCursor = false;
+
 // Functions
 
 bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
@@ -72,6 +74,9 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
                         0, 0, 0).sequence);
     }
 
+    // Notify X for mouse cursor handling
+    xcb_discard_reply(connection, xcb_xfixes_query_version(connection, 4, 0).sequence);
+
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     // X Keyboard non-latin syms have the top high bits set.
     // ImGui enforces the lookup values between 0..512.
@@ -102,6 +107,7 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
     io.KeyMap[ImGuiKey_Y] = 'Y';
     io.KeyMap[ImGuiKey_Z] = 'Z';
 
+    g_HideXCursor = io.MouseDrawCursor;
     return true;
 }
 
@@ -110,6 +116,25 @@ void    ImGui_ImplX11_Shutdown()
     xcb_key_symbols_free(g_KeySyms);
     xcb_flush(g_Connection);
     xcb_disconnect(g_Connection);
+}
+
+void    ImGui_ImplX11_UpdateMouseCursor()
+{
+    ImGuiIO& io = ImGui::GetIO();
+    if (g_HideXCursor != io.MouseDrawCursor) // Change cursor if flag changed last frame
+    {
+        g_HideXCursor = io.MouseDrawCursor;
+        if (g_HideXCursor)
+        {
+            xcb_xfixes_hide_cursor(g_Connection, *g_Window);
+            xcb_flush(g_Connection);
+        }
+        else
+        {
+            xcb_xfixes_show_cursor(g_Connection, *g_Window);
+            xcb_flush(g_Connection);
+        }
+    }
 }
 
 void    ImGui_ImplX11_NewFrame()
@@ -121,6 +146,7 @@ void    ImGui_ImplX11_NewFrame()
     clock_gettime(CLOCK_MONOTONIC_RAW, &g_CurrentTime);
     io.DeltaTime = (g_CurrentTime.tv_sec - g_LastTime.tv_sec) + ((g_CurrentTime.tv_nsec - g_LastTime.tv_nsec) / 1000000000.0f);
     g_LastTime = g_CurrentTime;
+    ImGui_ImplX11_UpdateMouseCursor();
 }
 
 // X11 xcb message handler (process X11 mouse/keyboard inputs, etc.)
@@ -252,6 +278,22 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         io.MousePos = ImVec2(e->event_x, e->event_y);
         if (e->detail >= 1 && e->detail <= 3)
             io.MouseDown[e->detail - 1] = false;
+        return true;
+    }
+    case XCB_ENTER_NOTIFY:
+    {
+        if (g_HideXCursor)
+        {
+            xcb_xfixes_hide_cursor(g_Connection, *g_Window);
+            // Doesn't actually hide the cursor until sending a flush or sending another command like xcb_request_check
+            xcb_flush(g_Connection);
+        }
+        return true;
+    }
+    case XCB_LEAVE_NOTIFY:
+    {
+        xcb_xfixes_show_cursor(g_Connection, *g_Window);
+        xcb_flush(g_Connection);
         return true;
     }
     }
