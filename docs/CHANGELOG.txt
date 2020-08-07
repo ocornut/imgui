@@ -51,6 +51,7 @@ Other Changes:
   (This is also necessary to support full multi/range-select/drag and drop operations.)
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
+- Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]
 
 
 -----------------------------------------------------------------------
