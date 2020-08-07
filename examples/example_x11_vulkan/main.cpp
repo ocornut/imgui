@@ -405,19 +405,19 @@ int main(int, char**)
     init_info.CheckVkResultFn = check_vk_result;
     ImGui_ImplVulkan_Init(&init_info, wd->RenderPass);
 
-    // // Load Fonts
-    // // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
-    // // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
-    // // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
-    // // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
-    // // - Read 'docs/FONTS.md' for more instructions and details.
-    // // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
-    io.Fonts->AddFontDefault();
-    // //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
-    // //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
-    // //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
-    // //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
-    // //IM_ASSERT(font != NULL);
+    // Load Fonts
+    // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
+    // - AddFontFromFileTTF() will return the ImFont* so you can store it if you need to select the font among multiple.
+    // - If the file cannot be loaded, the function will return NULL. Please handle those errors in your application (e.g. use an assertion, or display an error and quit).
+    // - The fonts will be rasterized at a given size (w/ oversampling) and stored into a texture when calling ImFontAtlas::Build()/GetTexDataAsXXXX(), which ImGui_ImplXXXX_NewFrame below will call.
+    // - Read 'docs/FONTS.md' for more instructions and details.
+    // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
+    //io.Fonts->AddFontDefault();
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
+    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
+    //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
+    //IM_ASSERT(font != NULL);
 
     // Upload Fonts
     {
@@ -453,10 +453,6 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    wd->ClearValue.color.float32[0] = clear_color.x;
-    wd->ClearValue.color.float32[1] = clear_color.y;
-    wd->ClearValue.color.float32[2] = clear_color.z;
-    wd->ClearValue.color.float32[3] = clear_color.w;
 
     // Main loop
     bool done = false;
@@ -475,106 +471,105 @@ int main(int, char**)
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        xcb_generic_event_t *event;
-        event = xcb_poll_for_event(connection);
-        if(event)
+        xcb_generic_event_t* event = xcb_poll_for_event(connection);
+        if (event)
         {
-            if(!ImGui_ImplX11_Event(event))
+            if (!ImGui_ImplX11_ProcessEvent(event))
             {
-                switch (event->response_type & ~0x80) {
-                case XCB_EXPOSE: {
+                switch (event->response_type & ~0x80)
+                {
+                case XCB_EXPOSE:
+                {
                     xcb_flush(connection);
                     break;
                 }
-                case XCB_CLIENT_MESSAGE: {
-                    if(((xcb_client_message_event_t*)event)->data.data32[0] == wm_delete_window)
+                case XCB_CLIENT_MESSAGE:
+                {
+                    if (((xcb_client_message_event_t*)event)->data.data32[0] == wm_delete_window)
                         done = true;
                     break;
                 }
-                case XCB_CONFIGURE_NOTIFY: {
-                    xcb_configure_notify_event_t *config = (xcb_configure_notify_event_t*)event;
+                case XCB_CONFIGURE_NOTIFY:
+                {
+                    xcb_configure_notify_event_t* config = (xcb_configure_notify_event_t*)event;
                     // Set DisplaySize here instead of checking in X11 NewFrame
                     // Checking window size is request/response
                     g_SwapChainResizeWidth = config->width;
                     g_SwapChainResizeHeight = config->height;
                     g_MainWindowData.FrameIndex = 0;
-                    ImGui::GetIO().DisplaySize = ImVec2(config->width, config->height);
+                    ImGui::GetIO().DisplaySize = ImVec2(config->width, config->height); // FIXME: Why isn't this processed in ImGui_ImplX11_ProcessEvent?
                     break;
                 }
                 default:
                     break;
                 }
             }
-            // xcb allocates the memory for the event and specifies
-            // the user to free it
+
+            // xcb allocates the memory for the event and specifies the user to free it
             free(event);
+            continue;
         }
-        else
+
+        // Resize swap chain?
+        if (g_SwapChainRebuild && g_SwapChainResizeWidth > 0 && g_SwapChainResizeHeight > 0)
         {
-            // Resize swap chain?
-            if (g_SwapChainRebuild && g_SwapChainResizeWidth > 0 && g_SwapChainResizeHeight > 0)
-            {
-                g_SwapChainRebuild = false;
-                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
-                g_MainWindowData.FrameIndex = 0;
-            }
-            // Start the Dear ImGui frame
-            ImGui_ImplVulkan_NewFrame();
-            ImGui_ImplX11_NewFrame();
-            ImGui::NewFrame();
-            // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
-            if (show_demo_window)
-                ImGui::ShowDemoWindow(&show_demo_window);
+            g_SwapChainRebuild = false;
+            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
+            g_MainWindowData.FrameIndex = 0;
+        }
 
-            // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
-            {
-                static float f = 0.0f;
-                static int counter = 0;
+        // Start the Dear ImGui frame
+        ImGui_ImplVulkan_NewFrame();
+        ImGui_ImplX11_NewFrame();
+        ImGui::NewFrame();
 
-                ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
+        // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
+        if (show_demo_window)
+            ImGui::ShowDemoWindow(&show_demo_window);
 
-                ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
-                ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
-                ImGui::Checkbox("Another Window", &show_another_window);
+        // 2. Show a simple window that we create ourselves. We use a Begin/End pair to created a named window.
+        {
+            static float f = 0.0f;
+            static int counter = 0;
 
-                ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-                if(ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
-                {
-                    wd->ClearValue.color.float32[0] = clear_color.x;
-                    wd->ClearValue.color.float32[1] = clear_color.y;
-                    wd->ClearValue.color.float32[2] = clear_color.z;
-                    wd->ClearValue.color.float32[3] = clear_color.w;
-                };
+            ImGui::Begin("Hello, world!");                          // Create a window called "Hello, world!" and append into it.
 
-                if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
-                    counter++;
-                ImGui::SameLine();
-                ImGui::Text("counter = %d", counter);
+            ImGui::Text("This is some useful text.");               // Display some text (you can use a format strings too)
+            ImGui::Checkbox("Demo Window", &show_demo_window);      // Edit bools storing our window open/close state
+            ImGui::Checkbox("Another Window", &show_another_window);
 
-                ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-                ImGui::End();
-            }
+            ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
+            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
-            // 3. Show another simple window.
-            if (show_another_window)
-            {
-                ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
-                ImGui::Text("Hello from another window!");
-                if (ImGui::Button("Close Me"))
-                    show_another_window = false;
-                ImGui::End();
-            }
+            if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
+                counter++;
+            ImGui::SameLine();
+            ImGui::Text("counter = %d", counter);
 
-            // Rendering
-            ImGui::Render();
-            ImDrawData* draw_data = ImGui::GetDrawData();
-            const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
-            if (!is_minimized)
-            {
-                FrameRender(wd, draw_data);
-                FramePresent(wd);
-            }
+            ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+            ImGui::End();
+        }
+
+        // 3. Show another simple window.
+        if (show_another_window)
+        {
+            ImGui::Begin("Another Window", &show_another_window);   // Pass a pointer to our bool variable (the window will have a closing button that will clear the bool when clicked)
+            ImGui::Text("Hello from another window!");
+            if (ImGui::Button("Close Me"))
+                show_another_window = false;
+            ImGui::End();
+        }
+
+        // Rendering
+        ImGui::Render();
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
+        if (!is_minimized)
+        {
+            memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
+            FrameRender(wd, draw_data);
+            FramePresent(wd);
         }
     }
 
