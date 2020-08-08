@@ -289,9 +289,9 @@ namespace
                     {
                         for (uint32_t x = 0; x < w; x++)
                             dst[x] = IM_COL32(
-                                src[x * 4],
-                                src[x * 4 + 1],
                                 src[x * 4 + 2],
+                                src[x * 4 + 1],
+                                src[x * 4],
                                 src[x * 4 + 3]);
                     }
                 }
@@ -301,9 +301,9 @@ namespace
                     {
                         for (uint32_t x = 0; x < w; x++)
                             dst[x] = IM_COL32(
-                                multiply_table[src[x * 4]],
-                                multiply_table[src[x * 4 + 1]],
                                 multiply_table[src[x * 4 + 2]],
+                                multiply_table[src[x * 4 + 1]],
+                                multiply_table[src[x * 4]],
                                 multiply_table[src[x * 4 + 3]]);
                     }
                 }
