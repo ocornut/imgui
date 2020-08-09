@@ -25,6 +25,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+// 2020-08-09 Full mouse cursor support
 // 2020-07-30 Initial implementation
 
 // X11 Data
@@ -97,6 +98,7 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
 
     // Cursor context for looking up cursors for the current X cursor theme
     xcb_cursor_context_new(g_Connection, g_Screen, &g_CursorContext);
+    io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     // X Keyboard non-latin syms have the top high bits set.
