@@ -9,9 +9,9 @@
 
 // Implemented features:
 //  [X] Platform: Keyboard arrays indexed using XK symbols, e.g. ImGui::IsKeyPressed(XK_space).
+//  [X] Platform: Mouse cursor shape and visibility.
 // Missing features:
 //  [ ] Platform: Clipboard support
-//  [ ] Platform: Mouse cursor shape and visibility.
 //  [ ] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 
 #include "imgui.h"
