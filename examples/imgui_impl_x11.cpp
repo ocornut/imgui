@@ -5,7 +5,7 @@
 // of XLib and xcb using the X11/Xlib-xcb.h header. Use XLib to create the
 // GLX context, then use functions in Xlib-xcb.h to convert the XLib
 // structures to xcb, which you can then pass unmodified here.
-// Requires libxcb, libxcb-xfixes, libxcb-xkb1 and libxcb-keysyms1
+// Requires libxcb, libxcb-xfixes, libxcb-xkb1 -libxcb-cursor0 and libxcb-keysyms1
 
 // Implemented features:
 //  [X] Platform: Keyboard arrays indexed using XK symbols, e.g. ImGui::IsKeyPressed(XK_space).
@@ -20,6 +20,7 @@
 #include <xcb/xcb_keysyms.h>
 #include <xcb/xfixes.h>
 #include <xcb/xkb.h>
+#include <xcb/xcb_cursor.h>
 #include <time.h>
 
 // CHANGELOG
@@ -27,14 +28,29 @@
 // 2020-07-30 Initial implementation
 
 // X11 Data
-static xcb_connection_t*    g_Connection;
-static xcb_drawable_t*      g_Window;
-static xcb_key_symbols_t*   g_KeySyms;
+static xcb_connection_t*     g_Connection;
+static xcb_drawable_t*       g_Window;
+static xcb_key_symbols_t*    g_KeySyms;
+static xcb_cursor_context_t* g_CursorContext;
+static xcb_screen_t*         g_Screen;
 
 static timespec             g_LastTime;
 static timespec             g_CurrentTime;
 
 static bool                 g_HideXCursor = false;
+static ImGuiMouseCursor     g_CurrentCursor = ImGuiMouseCursor_Arrow;
+
+static const char* g_CursorMap[ImGuiMouseCursor_COUNT] = {
+    "arrow",               // ImGuiMouseCursor_Arrow
+    "xterm",               // ImGuiMouseCursor_TextInput
+    "fleur",               // ImGuiMouseCursor_ResizeAll
+    "sb_v_double_arrow",   // ImGuiMouseCursor_ResizeNS
+    "sb_h_double_arrow",   // ImGuiMouseCursor_ResizeEW
+    "bottom_left_corner",  // ImGuiMouseCursor_ResizeNESW
+    "bottom_right_corner", // ImGuiMouseCursor_ResizeNWSE
+    "hand1",               // ImGuiMouseCursor_Hand
+    "circle"               // ImGuiMouseCursor_NotAllowed
+};
 
 // Functions
 
@@ -42,6 +58,8 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
 {
     g_Connection = connection;
     g_Window = window;
+    g_Screen = xcb_setup_roots_iterator(xcb_get_setup(g_Connection)).data;
+
     clock_gettime(CLOCK_MONOTONIC_RAW, &g_LastTime);
 
     // Setup back-end capabilities flags
@@ -76,6 +94,9 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
 
     // Notify X for mouse cursor handling
     xcb_discard_reply(connection, xcb_xfixes_query_version(connection, 4, 0).sequence);
+
+    // Cursor context for looking up cursors for the current X cursor theme
+    xcb_cursor_context_new(g_Connection, g_Screen, &g_CursorContext);
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     // X Keyboard non-latin syms have the top high bits set.
@@ -113,9 +134,30 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
 
 void    ImGui_ImplX11_Shutdown()
 {
+    xcb_cursor_context_free(g_CursorContext);
     xcb_key_symbols_free(g_KeySyms);
     xcb_flush(g_Connection);
     xcb_disconnect(g_Connection);
+}
+
+void    ImGui_ImplX11_ChangeCursor(const char* name)
+{
+    xcb_font_t font = xcb_generate_id (g_Connection);
+    // There is xcb_xfixes_cursor_change_cursor_by_name. However xcb_cursor_load_cursor guarantees
+    // finding the cursor for the current X theme.
+    xcb_cursor_t cursor = xcb_cursor_load_cursor(g_CursorContext, name);
+    IM_ASSERT(cursor && "X cursor not found!");
+
+    uint32_t mask = XCB_GC_FOREGROUND | XCB_GC_BACKGROUND | XCB_GC_FONT;
+    uint32_t values_list[3];
+    values_list[0] = g_Screen->black_pixel;
+    values_list[1] = g_Screen->white_pixel;
+    values_list[2] = font;
+
+    uint32_t value_list = cursor;
+    xcb_change_window_attributes(g_Connection, *g_Window, XCB_CW_CURSOR, &value_list);
+    xcb_free_cursor(g_Connection, cursor);
+    xcb_close_font_checked(g_Connection, font);
 }
 
 void    ImGui_ImplX11_UpdateMouseCursor()
@@ -125,16 +167,19 @@ void    ImGui_ImplX11_UpdateMouseCursor()
     {
         g_HideXCursor = io.MouseDrawCursor;
         if (g_HideXCursor)
-        {
             xcb_xfixes_hide_cursor(g_Connection, *g_Window);
-            xcb_flush(g_Connection);
-        }
         else
-        {
             xcb_xfixes_show_cursor(g_Connection, *g_Window);
-            xcb_flush(g_Connection);
-        }
     }
+
+    ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
+    if(g_CurrentCursor != imgui_cursor)
+    {
+        g_CurrentCursor = imgui_cursor;
+        ImGui_ImplX11_ChangeCursor(g_CursorMap[g_CurrentCursor]);
+    }
+
+    xcb_flush(g_Connection);
 }
 
 void    ImGui_ImplX11_NewFrame()
