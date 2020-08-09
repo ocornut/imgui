@@ -47,6 +47,11 @@
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
 
+#ifndef _USE_MATH_DEFINES
+#define _USE_MATH_DEFINES // So M_PI and company get defined on MSVC when we include math.h
+#endif
+#include <math.h> // if this gets included after SDL.h, then M_PI is already defined and we get a warning
+
 // SDL
 #include <SDL.h>
 #include <SDL_syswm.h>
