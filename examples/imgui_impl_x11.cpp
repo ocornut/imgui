@@ -173,7 +173,7 @@ void    ImGui_ImplX11_UpdateMouseCursor()
     }
 
     ImGuiMouseCursor imgui_cursor = ImGui::GetMouseCursor();
-    if(g_CurrentCursor != imgui_cursor)
+    if (g_CurrentCursor != imgui_cursor)
     {
         g_CurrentCursor = imgui_cursor;
         ImGui_ImplX11_ChangeCursor(g_CursorMap[g_CurrentCursor]);
