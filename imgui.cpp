@@ -6056,10 +6056,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
         window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
 
-        // Lock menu offset so size calculation can use it as menu-bar windows need a minimum size.
-        window->DC.MenuBarOffset.x = ImMax(ImMax(window->WindowPadding.x, style.ItemSpacing.x), g.NextWindowData.MenuBarOffsetMinVal.x);
-        window->DC.MenuBarOffset.y = g.NextWindowData.MenuBarOffsetMinVal.y;
-
         // Collapse window by double-clicking on title bar
         // At this point we don't have a clipping rectangle setup yet, so we can use the title bar area for hit detection and drawing
         if (!(flags & ImGuiWindowFlags_NoTitleBar) && !(flags & ImGuiWindowFlags_NoCollapse) && !window->DockIsActive)
@@ -11757,7 +11753,7 @@ namespace ImGui
     static void             DockNodeTreeMerge(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImGuiDockNode* merge_lead_child);
     static void             DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 size, bool only_write_to_marked_nodes = false);
     static void             DockNodeTreeUpdateSplitter(ImGuiDockNode* node);
-    static ImGuiDockNode*   DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos);
+    static ImGuiDockNode*   DockNodeTreeFindVisibleNodeByPos(ImGuiDockNode* node, ImVec2 pos);
     static ImGuiDockNode*   DockNodeTreeFindFallbackLeafNode(ImGuiDockNode* node);
 
     // Settings
@@ -14026,13 +14022,13 @@ ImGuiDockNode* ImGui::DockNodeTreeFindFallbackLeafNode(ImGuiDockNode* node)
     return NULL;
 }
 
-ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
+ImGuiDockNode* ImGui::DockNodeTreeFindVisibleNodeByPos(ImGuiDockNode* node, ImVec2 pos)
 {
     if (!node->IsVisible)
         return NULL;
 
     ImGuiContext& g = *GImGui;
-    const float dock_spacing = g.Style.ItemInnerSpacing.x;
+    const float dock_spacing = g.Style.ItemInnerSpacing.x; // FIXME: Relation to DOCKING_SPLITTER_SIZE?
     ImRect r(node->Pos, node->Pos + node->Size);
     r.Expand(dock_spacing * 0.5f);
     bool inside = r.Contains(pos);
@@ -14041,19 +14037,10 @@ ImGuiDockNode* ImGui::DockNodeTreeFindNodeByPos(ImGuiDockNode* node, ImVec2 pos)
 
     if (node->IsLeafNode())
         return node;
-    if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[0], pos))
+    if (ImGuiDockNode* hovered_node = DockNodeTreeFindVisibleNodeByPos(node->ChildNodes[0], pos))
         return hovered_node;
-    if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(node->ChildNodes[1], pos))
+    if (ImGuiDockNode* hovered_node = DockNodeTreeFindVisibleNodeByPos(node->ChildNodes[1], pos))
         return hovered_node;
-
-    // There is an edge case when docking into a dockspace which only has inactive nodes (because none of the windows are active)
-    // In this case we need to fallback into any leaf mode, possibly the central node.
-    if (node->IsDockSpace() && node->IsRootNode())
-    {
-        if (node->CentralNode && node->IsLeafNode()) // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
-            return node->CentralNode;
-        return DockNodeTreeFindFallbackLeafNode(node);
-    }
 
     return NULL;
 }
@@ -14876,7 +14863,19 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
         ImGuiDockNode* node = NULL;
         bool allow_null_target_node = false;
         if (window->DockNodeAsHost)
-            node = DockNodeTreeFindNodeByPos(window->DockNodeAsHost, g.IO.MousePos);
+        {
+            node = DockNodeTreeFindVisibleNodeByPos(window->DockNodeAsHost, g.IO.MousePos);
+
+            // There is an edge case when docking into a dockspace which only has inactive nodes (because none of the windows are active)
+            // In this case we need to fallback into any leaf mode, possibly the central node.
+            if (node && node->IsDockSpace() && node->IsRootNode())
+            {
+                if (node->CentralNode && node->IsLeafNode()) // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
+                    node = node->CentralNode;
+                else
+                    node = DockNodeTreeFindFallbackLeafNode(node);
+            }
+        }
         else if (window->DockNode) // && window->DockIsActive)
             node = window->DockNode;
         else
@@ -15975,7 +15974,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
             {
                 ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-                if (ImGuiDockNode* hovered_node = DockNodeTreeFindNodeByPos(root_node, g.IO.MousePos))
+                if (ImGuiDockNode* hovered_node = DockNodeTreeFindVisibleNodeByPos(root_node, g.IO.MousePos))
                     if (hovered_node != node)
                         continue;
                 char buf[64] = "";
