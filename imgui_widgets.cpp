@@ -7395,8 +7395,9 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
                 // Undock
                 DockContextQueueUndockWindow(&g, docked_window);
                 g.MovingWindow = docked_window;
-                g.ActiveId = g.MovingWindow->MoveId;
+                SetActiveID(g.MovingWindow->MoveId, g.MovingWindow);
                 g.ActiveIdClickOffset -= g.MovingWindow->Pos - bb.Min;
+                g.ActiveIdNoClearOnFocusLoss = true;
             }
         }
     }
