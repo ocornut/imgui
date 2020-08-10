@@ -11892,6 +11892,16 @@ void ImGui::DockContextUpdateDocking(ImGuiContext* ctx)
     if (!(g.IO.ConfigFlags & ImGuiConfigFlags_DockingEnable))
         return;
 
+    // Store hovered dock node. We could in theory use DockNodeTreeFindVisibleNodeByPos() on the root host dock node, but using ->DockNode is a good shortcut.
+    g.HoveredDockNode = NULL;
+    if (ImGuiWindow* hovered_window = g.HoveredWindowUnderMovingWindow)
+    {
+        if (hovered_window->DockNode)
+            g.HoveredDockNode = hovered_window->DockNode;
+        else if (hovered_window->DockNodeAsHost)
+            g.HoveredDockNode = DockNodeTreeFindVisibleNodeByPos(hovered_window->DockNodeAsHost, g.IO.MousePos);
+    }
+
     // Process Docking requests
     for (int n = 0; n < dc->Requests.Size; n++)
         if (dc->Requests[n].Type == ImGuiDockRequestType_Dock)
@@ -14027,8 +14037,7 @@ ImGuiDockNode* ImGui::DockNodeTreeFindVisibleNodeByPos(ImGuiDockNode* node, ImVe
     if (!node->IsVisible)
         return NULL;
 
-    ImGuiContext& g = *GImGui;
-    const float dock_spacing = g.Style.ItemInnerSpacing.x; // FIXME: Relation to DOCKING_SPLITTER_SIZE?
+    const float dock_spacing = 0.0f;// g.Style.ItemInnerSpacing.x; // FIXME: Relation to DOCKING_SPLITTER_SIZE?
     ImRect r(node->Pos, node->Pos + node->Size);
     r.Expand(dock_spacing * 0.5f);
     bool inside = r.Contains(pos);
@@ -14860,26 +14869,19 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
     if (AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_WINDOW, ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
     {
         // Select target node
-        ImGuiDockNode* node = NULL;
-        bool allow_null_target_node = false;
-        if (window->DockNodeAsHost)
-        {
-            node = DockNodeTreeFindVisibleNodeByPos(window->DockNodeAsHost, g.IO.MousePos);
+        // (we should not assume that g.HoveredDockNode is != NULL when window is a host dock node: it depends on padding/spacing handled by DockNodeTreeFindVisibleNodeByPos)
+        ImGuiDockNode* node = g.HoveredDockNode;
+        const bool allow_null_target_node = window->DockNode == NULL && window->DockNodeAsHost == NULL;
 
-            // There is an edge case when docking into a dockspace which only has inactive nodes (because none of the windows are active)
-            // In this case we need to fallback into any leaf mode, possibly the central node.
-            if (node && node->IsDockSpace() && node->IsRootNode())
-            {
-                if (node->CentralNode && node->IsLeafNode()) // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
-                    node = node->CentralNode;
-                else
-                    node = DockNodeTreeFindFallbackLeafNode(node);
-            }
+        // There is an edge case when docking into a dockspace which only has inactive nodes (because none of the windows are active)
+        // In this case we need to fallback into any leaf mode, possibly the central node.
+        if (window->DockNodeAsHost && node && node->IsDockSpace() && node->IsRootNode())
+        {
+            if (node->CentralNode && node->IsLeafNode()) // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
+                node = node->CentralNode;
+            else
+                node = DockNodeTreeFindFallbackLeafNode(node);
         }
-        else if (window->DockNode) // && window->DockIsActive)
-            node = window->DockNode;
-        else
-            allow_null_target_node = true; // Dock into a regular window
 
         const ImRect explicit_target_rect = (node && node->TabBar && !node->IsHiddenTabBar() && !node->IsNoTabBar()) ? node->TabBar->BarRect : ImRect(window->Pos, window->Pos + ImVec2(window->Size.x, GetFrameHeight()));
         const bool is_explicit_target = g.IO.ConfigDockingWithShift || IsMouseHoveringRect(explicit_target_rect.Min, explicit_target_rect.Max);
@@ -15824,6 +15826,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         if (ImGui::SmallButton("Clear nodes")) { DockContextClearNodes(&g, 0, true); }
         ImGui::SameLine();
         if (ImGui::SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
+        ImGui::Text("HoveredDockNode: 0x%08X", g.HoveredDockNode ? g.HoveredDockNode->ID : 0);
         for (int n = 0; n < dc->Nodes.Data.Size; n++)
             if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
                 if (!root_nodes_only || node->IsRootNode())
@@ -15967,29 +15970,21 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
 #ifdef IMGUI_HAS_DOCK
     // Overlay: Display Docking info
-    if (show_docking_nodes && g.IO.KeyCtrl)
+    if (show_docking_nodes && g.IO.KeyCtrl && g.HoveredDockNode)
     {
-        ImGuiDockContext* dc = &g.DockContext;
-        for (int n = 0; n < dc->Nodes.Data.Size; n++)
-            if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
-            {
-                ImGuiDockNode* root_node = DockNodeGetRootNode(node);
-                if (ImGuiDockNode* hovered_node = DockNodeTreeFindVisibleNodeByPos(root_node, g.IO.MousePos))
-                    if (hovered_node != node)
-                        continue;
-                char buf[64] = "";
-                char* p = buf;
-                ImDrawList* overlay_draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList((ImGuiViewportP*)GetMainViewport());
-                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsCentralNode() ? " *CentralNode*" : "");
-                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "WindowClass: %08X\n", node->WindowClass.ClassId);
-                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
-                p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
-                int depth = DockNodeGetDepth(node);
-                overlay_draw_list->AddRect(node->Pos + ImVec2(3, 3) * (float)depth, node->Pos + node->Size - ImVec2(3, 3) * (float)depth, IM_COL32(200, 100, 100, 255));
-                ImVec2 pos = node->Pos + ImVec2(3, 3) * (float)depth;
-                overlay_draw_list->AddRectFilled(pos - ImVec2(1, 1), pos + CalcTextSize(buf) + ImVec2(1, 1), IM_COL32(200, 100, 100, 255));
-                overlay_draw_list->AddText(NULL, 0.0f, pos, IM_COL32(255, 255, 255, 255), buf);
-            }
+        char buf[64] = "";
+        char* p = buf;
+        ImGuiDockNode* node = g.HoveredDockNode;
+        ImDrawList* overlay_draw_list = node->HostWindow ? GetForegroundDrawList(node->HostWindow) : GetForegroundDrawList((ImGuiViewportP*)GetMainViewport());
+        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "DockId: %X%s\n", node->ID, node->IsCentralNode() ? " *CentralNode*" : "");
+        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "WindowClass: %08X\n", node->WindowClass.ClassId);
+        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "Size: (%.0f, %.0f)\n", node->Size.x, node->Size.y);
+        p += ImFormatString(p, buf + IM_ARRAYSIZE(buf) - p, "SizeRef: (%.0f, %.0f)\n", node->SizeRef.x, node->SizeRef.y);
+        int depth = DockNodeGetDepth(node);
+        overlay_draw_list->AddRect(node->Pos + ImVec2(3, 3) * (float)depth, node->Pos + node->Size - ImVec2(3, 3) * (float)depth, IM_COL32(200, 100, 100, 255));
+        ImVec2 pos = node->Pos + ImVec2(3, 3) * (float)depth;
+        overlay_draw_list->AddRectFilled(pos - ImVec2(1, 1), pos + CalcTextSize(buf) + ImVec2(1, 1), IM_COL32(200, 100, 100, 255));
+        overlay_draw_list->AddText(NULL, 0.0f, pos, IM_COL32(255, 255, 255, 255), buf);
     }
 #endif // #ifdef IMGUI_HAS_DOCK
 
