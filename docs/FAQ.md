@@ -111,11 +111,11 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 **Note:** You should always pass your mouse/keyboard inputs to Dear ImGui, even when the io.WantCaptureXXX flag are set false.
  This is because imgui needs to detect that you clicked in the void to unfocus its own windows.
 
-**Note:** The `io.WantCaptureMouse` is more correct that any manual attempt to "check if the mouse is hovering a window" (don't do that!). It handle mouse dragging correctly (both dragging that started over your application or over a Dear ImGui window) and handle e.g. popup and modal windows blocking inputs. 
+**Note:** The `io.WantCaptureMouse` is more correct that any manual attempt to "check if the mouse is hovering a window" (don't do that!). It handle mouse dragging correctly (both dragging that started over your application or over a Dear ImGui window) and handle e.g. popup and modal windows blocking inputs.
 
-**Note:** Those flags are updated by `ImGui::NewFrame()`. However it is generally more correct and easier that you poll flags from the previous frame, then submit your inputs, then call `NewFrame()`. If you attempt to do the opposite (which is generally harder) you are likely going to submit your inputs after `NewFrame()`, and therefore too late. 
+**Note:** Those flags are updated by `ImGui::NewFrame()`. However it is generally more correct and easier that you poll flags from the previous frame, then submit your inputs, then call `NewFrame()`. If you attempt to do the opposite (which is generally harder) you are likely going to submit your inputs after `NewFrame()`, and therefore too late.
 
-**Note:** If you are using a touch device, you may find use for an early call to `UpdateHoveredWindowAndCaptureFlags()` to correctly dispatch your initial touch. We will work on better out-of-the-box touch support in the future. 
+**Note:** If you are using a touch device, you may find use for an early call to `UpdateHoveredWindowAndCaptureFlags()` to correctly dispatch your initial touch. We will work on better out-of-the-box touch support in the future.
 
 **Note:** Text input widget releases focus on the "KeyDown" event of the Return key, so the subsequent "KeyUp" event that your application receive will typically have `io.WantCaptureKeyboard == false`. Depending on your application logic it may or not be inconvenient to receive that KeyUp event. You might want to track which key-downs were targeted for Dear ImGui, e.g. with an array of bool, and filter out the corresponding key-ups.)
 
@@ -453,7 +453,7 @@ ImGui::End();
 - To generate colors: you can use the macro `IM_COL32(255,255,255,255)` to generate them at compile time, or use `ImGui::GetColorU32(IM_COL32(255,255,255,255))` or `ImGui::GetColorU32(ImVec4(1.0f,1.0f,1.0f,1.0f))` to generate a color that is multiplied by the current value of `style.Alpha`.
 - Math operators: if you have setup `IM_VEC2_CLASS_EXTRA` in `imconfig.h` to bind your own math types, you can use your own math types and their natural operators instead of ImVec2. ImVec2 by default doesn't export any math operators in the public API. You may use `#define IMGUI_DEFINE_MATH_OPERATORS` `#include "imgui_internal.h"` to use the internally defined math operators, but instead prefer using your own math library and set it up in `imconfig.h`.
 - You can use `ImGui::GetBackgroundDrawList()` or `ImGui::GetForegroundDrawList()` to access draw lists which will be displayed behind and over every other dear imgui windows (one bg/fg drawlist per viewport). This is very convenient if you need to quickly display something on the screen that is not associated to a dear imgui window.
-- You can also create your own dummy window and draw inside it. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags (The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse). Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
+- You can also create your own empty window and draw inside it. Call Begin() with the NoBackground | NoDecoration | NoSavedSettings | NoInputs flags (The `ImGuiWindowFlags_NoDecoration` flag itself is a shortcut for NoTitleBar | NoResize | NoScrollbar | NoCollapse). Then you can retrieve the ImDrawList* via GetWindowDrawList() and draw to it in any way you like.
 - You can create your own ImDrawList instance. You'll need to initialize them with `ImGui::GetDrawListSharedData()`, or create your own instancing ImDrawListSharedData, and then call your renderer function with your own ImDrawList or ImDrawData data.
 
 ##### [Return to Index](#index)
@@ -464,7 +464,7 @@ ImGui::End();
 
 ### Q: How should I handle DPI in my application?
 
-The short answer is: obtain the desired DPI scale, load a suitable font resized with that scale (always round down font size to nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`. 
+The short answer is: obtain the desired DPI scale, load a suitable font resized with that scale (always round down font size to nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
 
 Your application may want to detect DPI change and reload the font and reset style being frames.
 

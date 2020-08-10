@@ -382,7 +382,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             dst_tmp.GlyphsSet.Create(dst_tmp.GlyphsHighest + 1);
 
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
-            for (int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
+            for (int codepoint = src_range[0]; codepoint <= (int)src_range[1]; codepoint++)
             {
                 if (dst_tmp.GlyphsSet.TestBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option (e.g. MergeOverwrite)
                     continue;
