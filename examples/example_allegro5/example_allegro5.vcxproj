@@ -19,7 +19,7 @@
     </ProjectConfiguration>
   </ItemGroup>
   <PropertyGroup Label="Globals">
-    <ProjectGuid>{2AE17FDE-F7F3-4CAC-ADAB-0710EDA4F741}</ProjectGuid>
+    <ProjectGuid>{73F235B5-7D31-4FC6-8682-DDC5A097B9C1}</ProjectGuid>
     <RootNamespace>example_allegro5</RootNamespace>
     <WindowsTargetPlatformVersion>8.1</WindowsTargetPlatformVersion>
   </PropertyGroup>

@@ -49,7 +49,7 @@ Other Changes:
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
   call. ImGui-level functions such as TextUnformatted() are not affected. This is quite rare
   but it will be addressed later). (#3349)
-- Selectable: Fixed highlight/hit extent when used with horizontal scrolling (in or outside columns). 
+- Selectable: Fixed highlight/hit extent when used with horizontal scrolling (in or outside columns).
   Also fixed related text clipping when used in a column after the first one. (#3187, #3386)
 - Scrolling: Avoid SetScroll, SetScrollFromPos functions from snapping on the edge of scroll
   limits when close-enough by (WindowPadding - ItemPadding), which was a tweak with too many
@@ -80,6 +80,8 @@ Other Changes:
 - Demo: Improved "Layout & Scrolling" -> "Child Windows" section.
 - Style Editor: Added preview of circle auto-tessellation when editing the corresponding value.
 - Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
+- Backends: Allegro 5: Fixed horizontal scrolling direction with mouse wheel / touch pads (it seems
+  like Allegro 5 reports it differently from GLFW and SDL). (#3394, #2424, #1463) [@nobody-special666]
 - Examples: Vulkan: Fixed GLFW+Vulkan and SDL+Vulkan clear color not being set. (#3390) [@RoryO]
 
 
