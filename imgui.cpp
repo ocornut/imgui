@@ -14316,10 +14316,15 @@ void ImGui::DockBuilderSetNodeSize(ImGuiID node_id, ImVec2 size)
 // - If you intend to split a node immediately after creation using DockBuilderSplitNode(), make sure to call DockBuilderSetNodeSize() beforehand!
 //   For various reason, the splitting code currently needs a base size otherwise space may not be allocated as precisely as you would expect.
 // - Use (id == 0) to let the system allocate a node identifier.
+// - Existing node with a same id will be removed.
 ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
 {
     ImGuiContext* ctx = GImGui;
     ImGuiDockNode* node = NULL;
+
+    if (id != 0)
+        DockBuilderRemoveNode(id);
+
     if (flags & ImGuiDockNodeFlags_DockSpace)
     {
         DockSpace(id, ImVec2(0, 0), (flags & ~ImGuiDockNodeFlags_DockSpace) | ImGuiDockNodeFlags_KeepAliveOnly);
@@ -14327,10 +14332,7 @@ ImGuiID ImGui::DockBuilderAddNode(ImGuiID id, ImGuiDockNodeFlags flags)
     }
     else
     {
-        if (id != 0)
-            node = DockContextFindNodeByID(ctx, id);
-        if (!node)
-            node = DockContextAddNode(ctx, id);
+        node = DockContextAddNode(ctx, id);
         node->LocalFlags = flags;
     }
     node->LastFrameAlive = ctx->FrameCount;   // Set this otherwise BeginDocked will undock during the same frame.
