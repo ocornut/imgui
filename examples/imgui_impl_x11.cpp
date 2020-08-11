@@ -72,6 +72,7 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
     xcb_get_geometry_reply_t* resp = xcb_get_geometry_reply(g_Connection, xcb_get_geometry(g_Connection, *g_Window), &x_Err);
     IM_ASSERT(!x_Err && "X error querying window geometry");
     io.DisplaySize = ImVec2(resp->width, resp->height);
+    free(resp);
 
     // Get the current key map
     g_KeySyms = xcb_key_symbols_alloc(connection);
@@ -92,6 +93,7 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
                         XCB_XKB_PER_CLIENT_FLAG_DETECTABLE_AUTO_REPEAT,
                         0, 0, 0).sequence);
     }
+    free(extension_reply);
 
     // Notify X for mouse cursor handling
     xcb_discard_reply(connection, xcb_xfixes_query_version(connection, 4, 0).sequence);
