@@ -15,6 +15,7 @@
 //  [ ] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 
 #include "imgui.h"
+#include <stdlib.h>
 #include <X11/keysym.h>
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
@@ -28,18 +29,33 @@
 // 2020-08-09 Full mouse cursor support
 // 2020-07-30 Initial implementation
 
+#define NUM_TARGET_NAMES 6
+
 // X11 Data
 static xcb_connection_t*     g_Connection;
 static xcb_drawable_t*       g_Window;
 static xcb_key_symbols_t*    g_KeySyms;
 static xcb_cursor_context_t* g_CursorContext;
 static xcb_screen_t*         g_Screen;
+static xcb_atom_t            g_ClipboardAtom;
+static xcb_atom_t            g_TargetsAtom;
+static xcb_atom_t            g_KnownTargetAtoms[NUM_TARGET_NAMES];
 
 static timespec             g_LastTime;
 static timespec             g_CurrentTime;
 
 static bool                 g_HideXCursor = false;
 static ImGuiMouseCursor     g_CurrentCursor = ImGuiMouseCursor_Arrow;
+static char*                g_CurrentClipboardData;
+
+static const char* g_KnownTargetNames[NUM_TARGET_NAMES] = {
+    "UTF8_STRING",
+    "COMPOUND_TEXT",
+    "TEXT",
+    "STRING",
+    "text/plain;charset=utf-8",
+    "text/plain"
+};
 
 static const char* g_CursorMap[ImGuiMouseCursor_COUNT] = {
     "arrow",               // ImGuiMouseCursor_Arrow
@@ -54,6 +70,64 @@ static const char* g_CursorMap[ImGuiMouseCursor_COUNT] = {
 };
 
 // Functions
+
+// Clipboards are a strange thing compared to any other system. There isn't a concept of a global system clipboard.
+// X has a concept of 'selections' instead. This is segement of data 'selected' within a window. It is usually text though
+// it can be any arbitrary data. The system identifies selections globally by name with atoms. There are two standard selection names
+// in use today, CLIPBOARD and PRIMARY. The CLIPBOARD selection is a direct analog to the concept of copying and pasting. The PRIMARY
+// selection is when a user highlights text in a window. The general protocol the middle mouse button 'pastes' the highlighted
+// text in a different window. Window managers generally support highlighting and middle mouse button, though sporadically
+// enabled by default as it's a strange concept for most people. Historically CLIPBOARD and PRIMARY were treated
+// as independent, in practice most applications set the same data for both.
+// For copying, instead of calling a function setting the system clipboard data like Win32 SetClipboardData, a window notifies
+// X that it has ownership of CLIPBOARD and usually PRIMARY. This is a cooperative system. Whatever window last notified X
+// is authoratative.
+// When another window wants to paste from CLIPBOARD or PRIMARY, it asks X which window has current ownership of either.
+// Then, the window wanting to paste dispatches a SelectionRequest event to the window owning the clipboard. See XCB_SELECTION_REQUEST below
+// for processing that event. We process selection requests within the main loop.
+// 'Pasting' from another window is called 'converting a selection'. Because ImGui wants the return value of the callback function
+// returning the pasted data, we do the selection conversion calls and event handling from a separate hidden window. This is a common
+// practice.
+const char* ImGui_ImplX11_GetClipboardText(void *user_data)
+{
+    //TODO create ImGui Requestor Window and process inbound selection events with that
+    //window name comes from Qt conventions
+    return "Test Clipboard";
+}
+
+void    ImGui_ImplX11_SetClipboardText(void* user_data, const char* text)
+{
+    xcb_generic_error_t *x_Err;
+    g_CurrentClipboardData = (char *)realloc(g_CurrentClipboardData, strlen(text));
+    strcpy(g_CurrentClipboardData, text);
+    // Notify that we now own the PRIMARY selection
+    xcb_set_selection_owner(g_Connection,
+                            (xcb_window_t)*g_Window,
+                            XCB_ATOM_PRIMARY,
+                            XCB_CURRENT_TIME);
+    xcb_xfixes_select_selection_input(g_Connection,
+                                      (xcb_window_t)*g_Window,
+                                      XCB_ATOM_PRIMARY,
+                                      XCB_XFIXES_SELECTION_EVENT_MASK_SET_SELECTION_OWNER);
+    xcb_discard_reply(g_Connection,
+        xcb_get_selection_owner_reply(g_Connection, xcb_get_selection_owner(g_Connection, XCB_ATOM_PRIMARY), &x_Err)->sequence);
+    IM_ASSERT(!x_Err && "Error owning the primary selection");
+
+    // And notify that we now own the CLIPBOARD selection
+    xcb_set_selection_owner(g_Connection,
+                            (xcb_window_t)*g_Window,
+                            g_ClipboardAtom,
+                            XCB_CURRENT_TIME);
+    xcb_xfixes_select_selection_input(g_Connection,
+                                      (xcb_window_t)*g_Window,
+                                      g_ClipboardAtom,
+                                      XCB_XFIXES_SELECTION_EVENT_MASK_SET_SELECTION_OWNER);
+    xcb_discard_reply(g_Connection,
+        xcb_get_selection_owner_reply(g_Connection, xcb_get_selection_owner(g_Connection, g_ClipboardAtom), &x_Err)->sequence);
+    IM_ASSERT(!x_Err && "Error owning the clipboard selection");
+
+    xcb_flush(g_Connection);
+}
 
 bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
 {
@@ -101,6 +175,36 @@ bool    ImGui_ImplX11_Init(xcb_connection_t* connection, xcb_drawable_t* window)
     // Cursor context for looking up cursors for the current X cursor theme
     xcb_cursor_context_new(g_Connection, g_Screen, &g_CursorContext);
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;
+
+    // Setting up selection communications
+    // PRIMARY selection atom already defined as XCB_ATOM_PRIMARY. CLIPBOARD is non-standard
+    xcb_intern_atom_cookie_t clipboard_cookie = xcb_intern_atom(g_Connection, 0, strlen("CLIPBOARD"), "CLIPBOARD");
+    xcb_intern_atom_reply_t *clipboard_reply = xcb_intern_atom_reply(g_Connection, clipboard_cookie, &x_Err);
+    IM_ASSERT(!x_Err && "Error sending clipboard atom request");
+    g_ClipboardAtom = clipboard_reply->atom;
+    free(clipboard_reply);
+
+    xcb_intern_atom_cookie_t targets_cookie = xcb_intern_atom(g_Connection, 0, strlen("TARGETS"), "TARGETS");
+    xcb_intern_atom_reply_t *targets_reply = xcb_intern_atom_reply(g_Connection, targets_cookie, &x_Err);
+    IM_ASSERT(!x_Err && "Error sending targets atom request");
+    g_TargetsAtom = targets_reply->atom;
+    free(targets_reply);
+
+    xcb_intern_atom_cookie_t atom_cookies[NUM_TARGET_NAMES];
+    for (int i = 0; i < NUM_TARGET_NAMES; ++i)
+        atom_cookies[i] = xcb_intern_atom(g_Connection, 0, strlen(g_KnownTargetNames[i]), g_KnownTargetNames[i]);
+
+    for (int i = 0; i < NUM_TARGET_NAMES; ++i)
+    {
+        xcb_intern_atom_reply_t *reply = xcb_intern_atom_reply(g_Connection, atom_cookies[i], &x_Err);
+        IM_ASSERT((reply && !x_Err) && "Error getting atom reply");
+        g_KnownTargetAtoms[i] = reply->atom;
+        free(reply);
+    }
+    g_CurrentClipboardData = (char *)malloc(sizeof(char));
+
+    io.GetClipboardTextFn = ImGui_ImplX11_GetClipboardText;
+    io.SetClipboardTextFn = ImGui_ImplX11_SetClipboardText;
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     // X Keyboard non-latin syms have the top high bits set.
@@ -343,6 +447,67 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
     {
         xcb_xfixes_show_cursor(g_Connection, *g_Window);
         xcb_flush(g_Connection);
+        return true;
+    }
+    case XCB_SELECTION_REQUEST:
+    {
+        // The payload of a selection request event contains three components we need:
+        // the ID of the target window as the requestor, the name of the property we change
+        // on the target window, and 'target'. You can think of 'target' as a MIME type.
+        // We can discard selection requests for targets, or types, types we don't know about.
+        // Currently ImGui only knows about text types specified in g_KnownTargetNames.
+        // Responding to a selection request event is two steps
+        // First change an internal property of the requesting window with the requested data.
+        // Then dispatch an event to the requesting window notifying that we set the data on it
+        xcb_selection_request_event_t* e = (xcb_selection_request_event_t *)event;
+
+        // If the 'target' of the request is TARGETS, the requesting window wants to know
+        // what are the supported types. Other windows use this internally. For instance, if
+        // a window wants audio data and the current selection owner doesn't say they have audio
+        // data, then the requesting window usually won't ask for the selection again. Qt apps do this
+        // query automatically. Also Qt apps won't ask for the selection again if it doesn't get a reply
+        // from TARGETS.
+        // Other apps might not care and will always send a selection request
+        // every time, specifying what it wants in the 'target' part of the event.
+        if (e->target == g_TargetsAtom)
+        {
+            xcb_change_property(g_Connection, XCB_PROP_MODE_REPLACE,
+                                e->requestor, e->property,
+                                XCB_ATOM_ATOM, sizeof(xcb_atom_t) * 8,
+                                sizeof(xcb_atom_t) * NUM_TARGET_NAMES,
+                                g_KnownTargetAtoms);
+        }
+        else
+        {
+            // Can we handle this target? If not, bubble it back up
+            bool is_known_target = false;
+            for (int i = 0; i < NUM_TARGET_NAMES; ++i)
+            {
+                if (g_KnownTargetAtoms[i] == e->target)
+                {
+                    is_known_target = true;
+                    break;
+                }
+            }
+            if (!is_known_target)
+                return false;
+            xcb_change_property(g_Connection, XCB_PROP_MODE_REPLACE, e->requestor,
+                                e->property, e->target, 8,
+                                strlen(g_CurrentClipboardData), g_CurrentClipboardData);
+        }
+
+        // Then tell the requesting window we're finished what they asked for
+        xcb_selection_notify_event_t notify_event = {};
+        notify_event.response_type = XCB_SELECTION_NOTIFY;
+        notify_event.time = XCB_CURRENT_TIME;
+        notify_event.requestor = e->requestor;
+        notify_event.selection = e->selection;
+        notify_event.target = e->target;
+        notify_event.property = e->property;
+        xcb_send_event(g_Connection, false,
+                    e->requestor,
+                    XCB_EVENT_MASK_PROPERTY_CHANGE,
+                    (const char*)&notify_event);
         return true;
     }
     }
