@@ -83,6 +83,7 @@ Other Changes:
 - Backends: Allegro 5: Fixed horizontal scrolling direction with mouse wheel / touch pads (it seems
   like Allegro 5 reports it differently from GLFW and SDL). (#3394, #2424, #1463) [@nobody-special666]
 - Examples: Vulkan: Fixed GLFW+Vulkan and SDL+Vulkan clear color not being set. (#3390) [@RoryO]
+- CI: Emscripten has stopped their support for their fastcomp backend, switching to latest sdk [@Xipiryon]
 
 
 -----------------------------------------------------------------------
