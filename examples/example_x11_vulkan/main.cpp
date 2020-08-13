@@ -584,5 +584,7 @@ int main(int, char**)
     CleanupVulkanWindow();
     CleanupVulkan();
 
+    xcb_disconnect(connection);
+
     return 0;
 }
