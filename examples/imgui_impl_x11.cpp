@@ -332,6 +332,7 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
 
         if (k < 0xFF) // latin-1 range
         {
+            io.KeysDown[k] = 1;
             io.AddInputCharacter(k);
         }
         else if (k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
@@ -359,13 +360,9 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
             }
         }
         else if (k >= 0x1000100 && k <= 0x110ffff) // utf range
-        {
             io.AddInputCharacterUTF16(k);
-        }
         else
-        {
             io.KeysDown[k - 0xFF00] = 1;
-        }
 
         return true;
     }
@@ -375,10 +372,7 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         xcb_keysym_t k = xcb_key_press_lookup_keysym(g_KeySyms, e, 0);
 
         if (k < 0xff)
-        {
-            if (k == XK_space)
-                io.KeysDown[XK_space] = 0;
-        }
+            io.KeysDown[k] = 0;
         else if (k >= XK_Shift_L && k <= XK_Hyper_R) // modifier keys
         {
             switch(k)
@@ -404,9 +398,7 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
             }
         }
         else
-        {
             io.KeysDown[k - 0xFF00] = 0;
-        }
 
         return true;
     }
