@@ -250,7 +250,7 @@ void    ImGui_ImplX11_Shutdown()
 
 void    ImGui_ImplX11_ChangeCursor(const char* name)
 {
-    xcb_font_t font = xcb_generate_id (g_Connection);
+    xcb_font_t font = xcb_generate_id(g_Connection);
     // There is xcb_xfixes_cursor_change_cursor_by_name. However xcb_cursor_load_cursor guarantees
     // finding the cursor for the current X theme.
     xcb_cursor_t cursor = xcb_cursor_load_cursor(g_CursorContext, name);
@@ -339,24 +339,24 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         {
             switch(k)
             {
-                case XK_Shift_L:
-                case XK_Shift_R:
-                    io.KeyShift = true;
-                    break;
-                case XK_Control_L:
-                case XK_Control_R:
-                    io.KeyCtrl = true;
-                    break;
-                case XK_Meta_L:
-                case XK_Meta_R:
-                case XK_Alt_L:
-                case XK_Alt_R:
-                    io.KeyAlt = true;
-                    break;
-                case XK_Super_L:
-                case XK_Super_R:
-                    io.KeySuper = true;
-                    break;
+            case XK_Shift_L:
+            case XK_Shift_R:
+                io.KeyShift = true;
+                break;
+            case XK_Control_L:
+            case XK_Control_R:
+                io.KeyCtrl = true;
+                break;
+            case XK_Meta_L:
+            case XK_Meta_R:
+            case XK_Alt_L:
+            case XK_Alt_R:
+                io.KeyAlt = true;
+                break;
+            case XK_Super_L:
+            case XK_Super_R:
+                io.KeySuper = true;
+                break;
             }
         }
         else if (k >= 0x1000100 && k <= 0x110ffff) // utf range
@@ -377,24 +377,24 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         {
             switch(k)
             {
-                case XK_Shift_L:
-                case XK_Shift_R:
-                    io.KeyShift = false;
-                    break;
-                case XK_Control_L:
-                case XK_Control_R:
-                    io.KeyCtrl = false;
-                    break;
-                case XK_Meta_L:
-                case XK_Meta_R:
-                case XK_Alt_L:
-                case XK_Alt_R:
-                    io.KeyAlt = false;
-                    break;
-                case XK_Super_L:
-                case XK_Super_R:
-                    io.KeySuper = false;
-                    break;
+            case XK_Shift_L:
+            case XK_Shift_R:
+                io.KeyShift = false;
+                break;
+            case XK_Control_L:
+            case XK_Control_R:
+                io.KeyCtrl = false;
+                break;
+            case XK_Meta_L:
+            case XK_Meta_R:
+            case XK_Alt_L:
+            case XK_Alt_R:
+                io.KeyAlt = false;
+                break;
+            case XK_Super_L:
+            case XK_Super_R:
+                io.KeySuper = false;
+                break;
             }
         }
         else
