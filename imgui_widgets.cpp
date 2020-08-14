@@ -2439,11 +2439,11 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
 
     // Process interacting with the slider
     bool value_changed = false;
-    if (g.ActiveId == id)
+    if (g.ActiveId == id || g.HoveredId == id)
     {
         bool set_new_value = false;
         float clicked_t = 0.0f;
-        if (g.ActiveIdSource == ImGuiInputSource_Mouse)
+        if (g.ActiveId == id && g.ActiveIdSource == ImGuiInputSource_Mouse)
         {
             if (!g.IO.MouseDown[0])
             {
@@ -2458,7 +2458,7 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 set_new_value = true;
             }
         }
-        else if (g.ActiveIdSource == ImGuiInputSource_Nav)
+        else if (g.ActiveId == id && g.ActiveIdSource == ImGuiInputSource_Nav)
         {
             const ImVec2 delta2 = GetNavInputAmount2d(ImGuiNavDirSourceFlags_Keyboard | ImGuiNavDirSourceFlags_PadDPad, ImGuiInputReadMode_RepeatFast, 0.0f, 0.0f);
             float delta = (axis == ImGuiAxis_X) ? delta2.x : -delta2.y;
@@ -2491,6 +2491,29 @@ bool ImGui::SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_typ
                 else
                     clicked_t = ImSaturate(clicked_t + delta);
             }
+        }
+        else if (g.HoveredId == id && g.IO.MouseWheel != 0.0f)
+        {
+          float delta = g.IO.MouseWheel;
+          clicked_t = SliderCalcRatioFromValueT<TYPE,FLOATTYPE>(data_type, *v, v_min, v_max, power, linear_zero_pos);
+          const int decimal_precision = is_decimal ? ImParseFormatPrecision(format, 3) : 0;
+          if ((decimal_precision > 0) || is_power)
+          {
+              delta /= 100.0f;
+              if (g.IO.KeyCtrl)
+                  delta /= 10.0f;
+          }
+          else
+          {
+              if ((v_range >= -100.0f && v_range <= 100.0f) || g.IO.KeyCtrl)
+                  delta = ((delta < 0.0f) ? -1.0f : +1.0f) / (float)v_range;
+              else
+                  delta /= 100.0f;
+          }
+          if (g.IO.KeyShift)
+              delta *= 10.0f;
+          set_new_value = true;
+          clicked_t += delta; // To allow to exceeds the limits
         }
 
         if (set_new_value)
