@@ -15,7 +15,7 @@
 //  [ ] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
 
 #pragma once
-#include "../imgui.h"      // IMGUI_IMPL_API
+#include "imgui.h"      // IMGUI_IMPL_API
 #include <stdint.h>
 #include <xcb/xcb.h>
 
