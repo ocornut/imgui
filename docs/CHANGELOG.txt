@@ -32,6 +32,75 @@ HOW TO UPDATE?
 
 
 -----------------------------------------------------------------------
+ DOCKING+MULTI-VIEWPORT BRANCH (In Progress)
+-----------------------------------------------------------------------
+
+DOCKING FEATURES
+
+- Added Docking system: [BETA] (#2109, #351)
+  - Added ImGuiConfigFlags_DockingEnable flag to enable Docking.
+    Set with `io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;`.
+  - Added DockSpace(), DockSpaceOverViewport() API.
+  - Added ImGuiDockNodeFlags flags for DockSpace().
+  - Added SetNextWindowDockID(), SetNextWindowClass() API.
+  - Added GetWindowDockID(), IsWindowDocked() API.
+  - Added ImGuiWindowFlags_NoDocking window flag to disable the possibility for a window to be docked.
+    Popup, Menu and Child windows always have the ImGuiWindowFlags_NoDocking flag set.
+  - Added ImGuiWindowClass to specify advanced docking/viewport related flags via SetNextWindowClass().
+  - Added io.ConfigDockingNoSplit option.
+  - Added io.ConfigDockingWithShift option.
+  - Added io.ConfigDockingAlwaysTabBar option.
+  - Added io.ConfigDockingTransparentPayload option.
+  - Style: Added ImGuiCol_DockingPreview, ImGuiCol_DockingEmptyBg colors.
+  - Demo: Added "DockSpace" example app showcasing use of explicit dockspace nodes.
+
+MULTI-VIEWPORT FEATURES (was previously 'viewport' branch, merged into 'docking')
+
+Breaking Changes:
+
+- IMPORTANT: When multi-viewports are enabled (with io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable),
+  all coordinates/positions will be in your natural OS coordinates space. It means that:
+   - Reference to hard-coded positions such as in SetNextWindowPos(ImVec2(0,0)) are _probably_ not what you want anymore.
+     Use GetMainViewport()->Pos to offset hard-coded positions, e.g. SetNextWindowPos(GetMainViewport()->Pos).
+   - Likewise io.MousePos and GetMousePos() will use OS coordinates.
+     If you query mouse positions to interact with non-imgui coordinates you will need to offset them.
+     e.g. subtract GetWindowViewport()->Pos.
+- Render function: the ImDrawData structure now contains 'DisplayPos' and 'DisplaySize' fields.
+  To support multi-viewport, you need to use those values when creating your orthographic projection matrix.
+  Use 'draw_data->DisplaySize' instead of 'io.DisplaySize', and 'draw_data->DisplayPos' instead of (0,0) as the upper-left point.
+  You need to subtract 'draw_data->DisplayPos' from your scissor rectangles to convert them from global coordinates to frame-buffer coordinates.
+- IO: Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
+- IO: Removed io.DisplayVisibleMin, io.DisplayVisibleMax settings (they were marked obsoleted, used to clip within the (0,0)..(DisplaySize) range).
+
+Other changes:
+(FIXME: This need a fuller explanation!)
+
+- Added ImGuiPlatformIO structure and GetPlatformIO().
+  Similarly to ImGuiIO and GetIO(), this structure is the main point of communication for back-ends supporting multi-viewports.
+- Added ImGuiPlatformMonitor to feed OS monitor information in the ImGuiPlatformIO::Monitors.
+- Added GetMainViewport().
+- Added GetWindowViewport(), SetNextWindowViewport().
+- Added GetWindowDpiScale().
+- Added GetOverlayDrawList(ImGuiViewport* viewport).
+  The no-parameter version of GetOverlayDrawList() return the overlay for the current window's viewport.
+- Added UpdatePlatformWindows(), RenderPlatformWindows(), DestroyPlatformWindows() for usage for application core.
+- Added FindViewportByID(), FindViewportByPlatformHandle() for usage by back-ends.
+- Added ImGuiConfigFlags_ViewportsEnable configuration flag and other viewport options.
+- Added io.ConfigViewportsNoAutoMerge, io.ConfigViewportsNoTaskBarIcon, io.ConfigViewportsNoDecoration, io.ConfigViewportsNoDefaultParent options.
+- Added ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_HasMouseHoveredViewport backend flags.
+- Added io.MainViewport, io.Viewports, io.MouseHoveredViewport (MouseHoveredViewport is optional _even_ for multi-viewport support).
+- Added ImGuiViewport structure, ImGuiViewportFlags flags.
+- Added ImGuiWindowClass and SetNextWindowClass() for passing viewport related hints to the OS/platform back-end.
+- Examples: Renderer: OpenGL2, OpenGL3, DirectX11, DirectX12, Vulkan: Added support for multi-viewports.
+- Examples: Platforms: Win32, GLFW, SDL2: Added support for multi-viewports.
+  Note that Linux/Mac still have inconsistent support for multi-viewports. If you want to help see https://github.com/ocornut/imgui/issues/2117.
+- Examples: Win32: Added DPI-related helpers to access DPI features without requiring the latest Windows SDK at compile time,
+  and without requiring Windows 10 at runtime.
+- Examples: Vulkan: Added various optional helpers in imgui_impl_vulkan.h (they are used for multi-viewport support)
+  to make the examples main.cpp easier to read.
+
+
+-----------------------------------------------------------------------
  VERSION 1.78 WIP (In Progress)
 -----------------------------------------------------------------------
 
@@ -40,6 +109,8 @@ Other Changes:
 - Nav: Fixed clicking on void (behind any windows) from not clearing the focused window.
   This would be problematic e.g. in situation where the application relies on io.WantCaptureKeyboard
   flag being cleared accordingly. (bug introduced in 1.77 WIP on 2020/06/16) (#3344, #2880)
+- Window: Fixed clicking over an item which hovering has been disabled (e.g inhibited by a popup)
+  from marking the window as moved.
 - DragFloatRange2, DragIntRange2: Fixed an issue allowing to drag out of bounds when both
   min and max value are on the same value. (#1441)
 - InputText, ImDrawList: Fixed assert triggering when drawing single line of text with more
@@ -47,6 +118,20 @@ Other Changes:
   clipping, more than 16 KB characters are visible in the same low-level ImDrawList::RenderText
   call. ImGui-level functions such as TextUnformatted() are not affected. This is quite rare
   but it will be addressed later). (#3349)
+- Selectable: Fixed highlight/hit extent when used with horizontal scrolling (in or outside columns).
+  Also fixed related text clipping when used in a column after the first one. (#3187, #3386)
+- Scrolling: Avoid SetScroll, SetScrollFromPos functions from snapping on the edge of scroll
+  limits when close-enough by (WindowPadding - ItemPadding), which was a tweak with too many
+  side-effects. The behavior is still present in SetScrollHere functions as they are more explicitly
+  aiming at making widgets visible. May later be moved to a flag.
+- InvisibleButton: Made public a small selection of ImGuiButtonFlags (previously in imgui_internal.h)
+  and allowed to pass them to InvisibleButton(): ImGuiButtonFlags_MouseButtonLeft/Right/Middle.
+  This is a small but rather important change because lots of multi-button behaviors could previously
+  only be achieved using lower-level/internal API. Now also available via high-level InvisibleButton()
+  with is a de-facto versatile building block to creating custom widgets with the public API.
+- Fonts: Fixed ImFontConfig::GlyphExtraSpacing and ImFontConfig::PixelSnapH settings being pulled
+  from the merged/target font settings when merging fonts, instead of being pulled from the source
+  font settings.
 - ImDrawList: Thick anti-aliased strokes (> 1.0f) with integer thickness now use a texture-based
   path, reducing the amount of vertices/indices and CPU/GPU usage. (#3245) [@Shironekoben]
   - This change will facilitate the wider use of thick borders in future style changes.
@@ -58,9 +143,13 @@ Other Changes:
   by modifying the 'style.CircleSegmentMaxError' value. [@ShironekoBen]
 - ImDrawList: Fixed minor bug introduced in 1.75 where AddCircle() with 12 segments would generate
   an extra vertex. (This bug was mistakenly marked as fixed in earlier 1.77 release). [@ShironekoBen]
-- Demo: Tweak "Child Windows" section.
+- Demo: Improved "Custom Rendering"->"Canvas" demo with a grid, scrolling and context menu.
+  Also showcase using InvisibleButton() will multiple mouse buttons flags.
+- Demo: Improved "Layout & Scrolling" -> "Clipping" section.
+- Demo: Improved "Layout & Scrolling" -> "Child Windows" section.
 - Style Editor: Added preview of circle auto-tessellation when editing the corresponding value.
 - Backends: OpenGL3: Added support for glad2 loader. (#3330) [@moritz-h]
+- Examples: Vulkan: Fixed GLFW+Vulkan and SDL+Vulkan clear color not being set. (#3390) [@RoryO]
 
 
 -----------------------------------------------------------------------
@@ -561,7 +650,7 @@ Other Changes:
   because it needs application to be linked with '-framework ApplicationServices'. It can be explicitly
   enabled back by using '#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS' in imconfig.h. Re-added
   equivalent using NSPasteboard api in the imgui_impl_osx.mm experimental back-end. (#2546)
-- Backends: SDL2: Added dummy ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
+- Backends: SDL2: Added ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
   (#2482, #2632) [@josiahmanson]
 - Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
 
@@ -721,7 +810,7 @@ Other Changes:
 - Misc: Made IMGUI_CHECKVERSION() macro also check for matching size of ImDrawIdx.
 - Metrics: Added "Show windows rectangles" tool to visualize the different rectangles.
 - Demo: Improved trees in columns demo.
-- Examples: OpenGL: Added a dummy GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
+- Examples: OpenGL: Added a test GL call + comments in ImGui_ImplOpenGL3_Init() to detect uninitialized
   GL function loaders early, and help users understand what they are missing. (#2421)
 - Examples: SDL: Added support for SDL_GameController gamepads (enable with ImGuiConfigFlags_NavEnableGamepad). (#2509) [@DJLink]
 - Examples: Emscripten: Added Emscripten+SDL+GLES2 example. (#2494, #2492, #2351, #336) [@nicolasnoble, @redblobgames]
@@ -829,7 +918,7 @@ Breaking Changes:
 
 - Removed io.DisplayVisibleMin/DisplayVisibleMax (which were marked obsolete and removed from viewport/docking branch already).
 - Made it illegal/assert when io.DisplayTime == 0.0f (with an exception for the first frame).
-  If for some reason your time step calculation gives you a zero value, replace it with a dummy small value!
+  If for some reason your time step calculation gives you a zero value, replace it with a arbitrary small value!
 
 Other Changes:
 
@@ -904,6 +993,7 @@ Breaking Changes:
 - Renamed ImFontAtlas::GlyphRangesBuilder to ImFontGlyphRangesBuilder. Kept redirection typedef (will obsolete).
 
 Other Changes:
+
 - Added BETA api for Tab Bar/Tabs widgets: (#261, #351)
   - Added BeginTabBar(), EndTabBar(), BeginTabItem(), EndTabItem(), SetTabItemClosed() API.
   - Added ImGuiTabBarFlags flags for BeginTabBar().
@@ -1320,7 +1410,7 @@ Other Changes:
 - ColorEdit: Fixed not being able to pass the ImGuiColorEditFlags_NoAlpha or ImGuiColorEditFlags_HDR flags to SetColorEditOptions().
 - Nav: Fixed hovering a Selectable() with the mouse so that it update the navigation cursor (as it happened in the pre-1.60 navigation branch). (#787)
 - Style: Changed default style.DisplaySafeAreaPadding values from (4,4) to (3,3) so it is smaller than FramePadding and has no effect on main menu bar on a computer. (#1439)
-- Fonts: When building font atlas, glyphs that are missing in the fonts are not using the glyph slot to render a dummy/default glyph. Saves space and allow merging fonts with
+- Fonts: When building font atlas, glyphs that are missing in the fonts are not using the glyph slot to render the default glyph. Saves space and allow merging fonts with
   overlapping font ranges such as FontAwesome5 which split out the Brands separately from the Solid fonts. (#1703, #1671)
 - Misc: Added IMGUI_CHECKVERSION() macro to compare version string and data structure sizes in order to catch issues with mismatching compilation unit settings. (#1695, #1769)
 - Misc: Added IMGUI_DISABLE_MATH_FUNCTIONS in imconfig.h to make it easier to redefine wrappers for std/crt math functions.

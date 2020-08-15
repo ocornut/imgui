@@ -3,8 +3,9 @@
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'D3D12_GPU_DESCRIPTOR_HANDLE' as ImTextureID. Read the FAQ about ImTextureID!
+//  [X] Renderer: Multi-viewport support. Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 //  [X] Renderer: Support for large meshes (64k+ vertices) with 16-bit indices.
-// Issues:
+// Missing features, issues:
 //  [ ] 64-bit only for now! (Because sizeof(ImTextureId) == sizeof(void*)). See github.com/ocornut/imgui/pull/301
 
 // You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.

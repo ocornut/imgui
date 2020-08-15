@@ -382,7 +382,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             dst_tmp.GlyphsSet.Create(dst_tmp.GlyphsHighest + 1);
 
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
-            for (int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
+            for (int codepoint = src_range[0]; codepoint <= (int)src_range[1]; codepoint++)
             {
                 if (dst_tmp.GlyphsSet.TestBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option (e.g. MergeOverwrite)
                     continue;
@@ -544,8 +544,11 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
         if (src_tmp.GlyphsCount == 0)
             continue;
 
+        // When merging fonts with MergeMode=true:
+        // - We can have multiple input fonts writing into a same destination font.
+        // - dst_font->ConfigData is != from cfg which is our source configuration.
         ImFontConfig& cfg = atlas->ConfigData[src_i];
-        ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
+        ImFont* dst_font = cfg.DstFont;
 
         const float ascent = src_tmp.Font.Info.Ascender;
         const float descent = src_tmp.Font.Info.Descender;
@@ -576,14 +579,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             for (int y = info.Height; y > 0; y--, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
                 memcpy(blit_dst, blit_src, blit_src_stride);
 
-            float char_advance_x_org = info.AdvanceX;
-            float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
-            float char_off_x = font_off_x;
-            if (char_advance_x_org != char_advance_x_mod)
-                char_off_x += cfg.PixelSnapH ? IM_FLOOR((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
-
             // Register glyph
-            float x0 = info.OffsetX + char_off_x;
+            float x0 = info.OffsetX + font_off_x;
             float y0 = info.OffsetY + font_off_y;
             float x1 = x0 + info.Width;
             float y1 = y0 + info.Height;
@@ -591,7 +588,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             float v0 = (ty) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
             float v1 = (ty + info.Height) / (float)atlas->TexHeight;
-            dst_font->AddGlyph((ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, char_advance_x_mod);
+            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
         }
 
         src_tmp.Rects = NULL;

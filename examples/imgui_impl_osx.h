@@ -7,6 +7,7 @@
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this back-end).
 // Issues:
 //  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
+//  [ ] Platform: Multi-viewport / platform windows.
 
 #include "imgui.h"      // IMGUI_IMPL_API
 

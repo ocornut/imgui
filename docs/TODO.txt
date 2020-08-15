@@ -158,8 +158,36 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - separator: width, thickness, centering (#1643)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
- - dock: merge docking branch (#2109)
- - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
+ - docking: merge docking branch (#2109)
+ - docking: B: ordering currently held in tab bar should be implicitly held by windows themselves (also see #2304)
+ - docking: B- tab bar: the order/focus restoring code could be part of TabBar and not DockNode? (#8)
+ - docking: B~ rework code to be able to lazily create tab bar instance in a single place. The _Unsorted tab flag could be replacing a trailing-counter in DockNode?
+ - docking: B~ fully track windows/settings reference in dock nodes. perhaps find a representation that allows facilitate use of dock builder functions.
+ - docking: B~ Unreal style document system (requires low-level controls of dockspace serialization fork/copy/delete). this is mostly working but the DockBuilderXXX api are not exposed/finished.
+ - docking: B: when docking outer, perform size locking on neighbors nodes the same way we do it with splitters, so other nodes are not resized.
+ - docking: B~ central node resizing behavior incorrect.
+ - docking: B: changing title font/style per-window is not supported as dock nodes are created in NewFrame.
+ - docking: B- dock node inside its own viewports creates 1 temporary viewport per window on startup before ditching them (doesn't affect the user nor request platform windows to be created, but unnecessary)
+ - docking: B- resize sibling locking behavior may be less desirable if we merged same-axis sibling in a same node level?
+ - docking: B- single visible node part of a hidden split hierarchy (OnlyNodeWithWindows != NULL) should show a normal title bar (not a tab bar)
+ - docking: B~ SetNextWindowDock() calls (with conditional) -> defer everything to DockContextUpdate (repro: Documents->[X]Windows->Dock 1 elsewhere->Click Redock All
+ - docking: B~ tidy up tab list popup buttons features (available with manual tab-bar, see ImGuiTabBarFlags_NoTabListPopupButton code, not used by docking nodes)
+ - docking: B- SetNextWindowDockId(0) with a second Begin() in the frame will asserts
+ - docking: B: resize grip drawn in host window typically appears under scrollbar.
+ - docking: B: resize grip auto-resize on multiple node hierarchy doesn't make much sense or should be improved?
+ - docking: B- SetNextWindowFocus() doesn't seem to apply if the window is hidden this frame, need repro (#4)
+ - docking: B- resizing a dock tree small currently has glitches (overlapping collapse and close button, etc.)
+ - docking: B- dpi: look at interaction with the hi-dpi and multi-dpi stuff.
+ - docking: B- tab bar: appearing on first frame with a dumb layout would do less harm that not appearing? (when behind dynamic branch) or store titles + render in EndTabBar()
+ - docking: B- tab bar: make selected tab always shows its full title?
+ - docking: B- hide close button on single tab bar?
+ - docking: B- nav: design interactions so nav controls can dock/undock
+ - docking: B- dockspace: flag to lock the dock tree and/or sizes (ImGuiDockNodeFlags_Locked?)
+ - docking: B- reintroduce collapsing a floating dock node. also collapsing a docked dock node!
+ - docking: B- allow dragging a non-floating dock node by clicking on the title-bar-looking section (not just the collapse/menu button)
+ - docking: B- option to remember undocked window size? (instead of keeping their docked size) (relate to #2104)
+ - docking: C- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
+ - docking: C- after a dock/undock, the Scrollbar Status update in Begin() should use an updated e.g. size_y_for_scrollbars to avoid a 1 frame scrollbar flicker.
 
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
@@ -207,6 +235,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
+ - popups: flags could be reworked to allow both mouse buttons as index (0..5 and as flags using higher-bit) allowing to or them.
  - popups/modals: although it is sometimes convenient that popups/modals lifetime is owned by imgui, we could also a bool-owned-by-user api as long as Begin() return value testing is enforced.
 
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
@@ -352,6 +381,20 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
 
+ - viewport: make it possible to have no main/hosting viewport
+ - viewport: We set ImGuiViewportFlags_NoFocusOnAppearing in a way that is required for GLFW/SDL binding, but could be handled better without
+   on a custom e.g. Win32 bindings. It prevents newly dragged-out viewports from taking the focus, which makes ALT+F4 more ambiguous.
+ - viewport: not focusing newly undocked viewport means clicking back on previous one doesn't bring OS window to front.
+ - viewport: with platform decoration enabled, platform may force constraint (e.g. minimum size)
+ - viewport: use getfocus/setfocus api to synchronize imgui<>platform focus better (e.g imgui-side ctrl-tab can focus os window, OS initial setup and alt-tab can focus imgui window etc.)
+ - viewport: store per-viewport/monitor DPI in .ini file so an application reload or main window changing DPI on reload can be properly patched for.
+ - viewport: implicit/fallback Debug window can hog a zombie viewport (harmless, noisy?) > could at least clear out the reference on a per session basis?
+ - viewport: need to clarify how to use GetMousePos() from a user point of view.
+ - platform: glfw: no support for ImGuiBackendFlags_HasMouseHoveredViewport.
+ - platform: sdl: no support for ImGuiBackendFlags_HasMouseHoveredViewport. maybe we could use SDL_GetMouseFocus() / SDL_WINDOW_MOUSE_FOCUS if imgui could fallback on its heuristic when NoInputs is set
+ - platform: sdl: no refresh of monitor/display (SDL doesn't seem to have an event for it).
+ - platform: sdl: multi-viewport + minimized window seems to break mouse wheel events (at least under Win32).
+
  - inputs: we need an explicit flag about whether the imgui window is focused, to be able to distinguish focused key releases vs alt-tabbing all release behaviors.
  - inputs: rework IO system to be able to pass actual ordered/timestamped events. use an event queue? (~#335, #71)
  - inputs: support track pad style scrolling & slider edit.
@@ -364,7 +407,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - misc: idle: if cursor blink if the _only_ visible animation, could even expose a dirty rectangle that optionally can be leverage by some app to render in a smaller viewport, getting rid of much pixel shading cost.
  - misc: no way to run a root-most GetID() with ImGui:: api since there's always a Debug window in the stack. (mentioned in #2960)
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
- - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
  - misc: possible compile-time support for string view/range instead of char* would e.g. facilitate usage with Rust (#683)
@@ -392,6 +434,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: vulkan: viewport: support for synchronized swapping of multiple swap chains.
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
+
+ - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h)
 
  - optimization: replace vsnprintf with stb_printf? using IMGUI_USE_STB_SPRINTF.(#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
