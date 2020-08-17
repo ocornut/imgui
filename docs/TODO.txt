@@ -189,6 +189,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - docking: C- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
  - docking: C- after a dock/undock, the Scrollbar Status update in Begin() should use an updated e.g. size_y_for_scrollbars to avoid a 1 frame scrollbar flicker.
 
+ - tabs: while dragging/reordering a tab, close button decoration shouldn't appear on other tabs
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
  - tabs: TabItem could honor SetNextItemWidth()?
@@ -208,7 +209,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: step option (#1183)
  - slider style: fill % of the bar instead of positioning a drag.
  - knob: rotating knob widget (#942)
- - drag float: power/logarithmic slider and drags are weird. (#1316)
+ - drag float: support for reversed drags (min > max) (removed is_locked, also see fdc526e)
  - drag float: up/down axis
  - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
