@@ -20,7 +20,9 @@
 #include <xcb/xcb.h>
 #include <xcb/xcb_keysyms.h>
 #include <xcb/xfixes.h>
+#define explicit c_explicit
 #include <xcb/xkb.h>
+#undef explicit
 #include <xcb/xcb_cursor.h>
 #include <time.h>
 
