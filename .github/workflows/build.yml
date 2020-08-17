@@ -386,15 +386,15 @@ jobs:
 
     - name: Install Dependencies
       run: |
-        wget -q https://github.com/emscripten-core/emsdk/archive/master.tar.gz
-        tar -xvf master.tar.gz
-        emsdk-master/emsdk update
-        emsdk-master/emsdk install latest
-        emsdk-master/emsdk activate latest
+        wget -q https://github.com/emscripten-core/emsdk/archive/1.40.1.tar.gz
+        tar -xvf 1.40.1.tar.gz
+        emsdk-1.40.1/emsdk update
+        emsdk-1.40.1/emsdk install latest
+        emsdk-1.40.1/emsdk activate latest
 
     - name: Build example_emscripten
       run: |
-        pushd emsdk-master
+        pushd emsdk-1.40.1
         source ./emsdk_env.sh
         popd
         make -C examples/example_emscripten
