@@ -161,6 +161,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: merge docking branch (#2109)
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
 
+ - tabs: while dragging/reordering a tab, close button decoration shouldn't appear on other tabs
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
  - tabs: TabItem could honor SetNextItemWidth()?
