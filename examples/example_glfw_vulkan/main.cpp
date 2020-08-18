@@ -455,10 +455,7 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    wd->ClearValue.color.float32[0] = clear_color.x;
-    wd->ClearValue.color.float32[1] = clear_color.y;
-    wd->ClearValue.color.float32[2] = clear_color.z;
-    wd->ClearValue.color.float32[3] = clear_color.w;
+    memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -501,12 +498,7 @@ int main(int, char**)
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
             if(ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
-            {
-                wd->ClearValue.color.float32[0] = clear_color.x;
-                wd->ClearValue.color.float32[1] = clear_color.y;
-                wd->ClearValue.color.float32[2] = clear_color.z;
-                wd->ClearValue.color.float32[3] = clear_color.w;
-            };
+                memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
                 counter++;
@@ -531,7 +523,6 @@ int main(int, char**)
         ImGui::Render();
         ImDrawData* main_draw_data = ImGui::GetDrawData();
         const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
-        memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         if (!main_is_minimized)
             FrameRender(wd, main_draw_data);
 
