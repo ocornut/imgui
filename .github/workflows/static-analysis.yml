@@ -1,0 +1,43 @@
+name: static-analysis
+
+on:
+  push: {}
+  pull_request: {}
+  schedule:
+    - cron:  '0 9 * * *'
+
+jobs:
+  PVS-Studio:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install Dependencies
+        env:
+          PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+        run: |
+          if [[ "$PVS_STUDIO_LICENSE" != "" ]];
+          then
+            echo "$PVS_STUDIO_LICENSE" > pvs-studio.lic
+            wget -q https://files.viva64.com/etc/pubkey.txt
+            sudo apt-key add pubkey.txt
+            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.viva64.com/etc/viva64.list
+            sudo apt-get update
+            sudo apt-get install -y pvs-studio
+          fi
+
+      - name: PVS-Studio static analysis
+        run: |
+          if [[ ! -f pvs-studio.lic ]];
+          then
+            echo "PVS Studio license is missing. No analysis will be performed."
+            echo "If you have a PVS Studio license please create a project secret named PVS_STUDIO_LICENSE with your license."
+            echo "You may use a free license. More information at https://www.viva64.com/en/b/0457/"
+            exit 0
+          fi
+          cd examples/example_null
+          pvs-studio-analyzer trace -- make WITH_EXTRA_WARNINGS=1
+          pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
+          plog-converter -a 'GA:1,2;OP:1' -t errorfile -w pvs-studio.log
