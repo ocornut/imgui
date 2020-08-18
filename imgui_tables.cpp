@@ -261,6 +261,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostClipRect = inner_window->ClipRect;
     table->HostSkipItems = inner_window->SkipItems;
     table->HostBackupParentWorkRect = inner_window->ParentWorkRect;
+    table->HostBackupColumnsOffset = outer_window->DC.ColumnsOffset;
     table->HostCursorMaxPos = inner_window->DC.CursorMaxPos;
     inner_window->ParentWorkRect = inner_window->WorkRect;
 
@@ -305,6 +306,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     g.CurrentTableStack.push_back(ImGuiPtrOrIndex(g.Tables.GetIndex(table)));
     g.CurrentTable = table;
     outer_window->DC.CurrentTable = table;
+    if (inner_window != outer_window) // So EndChild() within the inner window can restore the table properly.
+        inner_window->DC.CurrentTable = table;
     if ((table_last_flags & ImGuiTableFlags_Reorderable) && !(flags & ImGuiTableFlags_Reorderable))
         table->IsResetDisplayOrderRequest = true;
 
@@ -1079,7 +1082,7 @@ void    ImGui::EndTable()
     inner_window->ParentWorkRect = table->HostBackupParentWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
-    outer_window->DC.ColumnsOffset.x = 0.0f;
+    outer_window->DC.ColumnsOffset = table->HostBackupColumnsOffset;
     if (inner_window != outer_window)
     {
         EndChild();
@@ -1110,9 +1113,8 @@ void    ImGui::EndTable()
     // Clear or restore current table, if any
     IM_ASSERT(g.CurrentWindow == outer_window);
     IM_ASSERT(g.CurrentTable == table);
-    outer_window->DC.CurrentTable = NULL;
     g.CurrentTableStack.pop_back();
-    g.CurrentTable = g.CurrentTableStack.Size ? g.Tables.GetByIndex(g.CurrentTableStack.back().Index) : NULL;
+    outer_window->DC.CurrentTable = g.CurrentTable = g.CurrentTableStack.Size ? g.Tables.GetByIndex(g.CurrentTableStack.back().Index) : NULL;
 }
 
 // FIXME-TABLE: This is a mess, need to redesign how we render borders.
@@ -2601,15 +2603,17 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
         settings = TableSettingsFindByID(table->ID);
         if (settings == NULL)
             return;
+        if (settings->ColumnsCount != table->ColumnsCount) // Allow settings if columns count changed. We could otherwise decide to return...
+            table->IsSettingsDirty = true;
         table->SettingsOffset = g.SettingsTables.offset_from_ptr(settings);
     }
     else
     {
         settings = TableGetBoundSettings(table);
     }
+
     table->SettingsLoadedFlags = settings->SaveFlags;
     table->RefScale = settings->RefScale;
-    IM_ASSERT(settings->ColumnsCount == table->ColumnsCount);
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
@@ -2772,13 +2776,17 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     char buf[256];
     char* p = buf;
     const char* buf_end = buf + IM_ARRAYSIZE(buf);
-    ImFormatString(p, buf_end - p, "Table 0x%08X (%d columns, in '%s')", table->ID, table->ColumnsCount, table->OuterWindow->Name);
+    const bool is_active = (table->LastFrameActive >= ImGui::GetFrameCount() - 2);
+    ImFormatString(p, buf_end - p, "Table 0x%08X (%d columns, in '%s')%s", table->ID, table->ColumnsCount, table->OuterWindow->Name, is_active ? "" : " *Inactive*");
+    if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
     bool open = TreeNode(table, "%s", buf);
+    if (!is_active) { PopStyleColor(); }
     if (IsItemHovered())
         GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
-    BulletText("OuterWidth: %.1f, InnerWidth: %.1f%s", table->OuterRect.GetWidth(), table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
+    BulletText("OuterRect: Pos: (%.1f,%.1f) Size: (%.1f,%.1f)", table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.GetWidth(), table->OuterRect.GetHeight());
+    BulletText("InnerWidth: %.1f%s", table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
     BulletText("ColumnsWidth: %.1f, AutoFitWidth: %.1f", table->ColumnsTotalWidth, table->ColumnsAutoFitWidth);
     BulletText("HoveredColumnBody: %d, HoveredColumnBorder: %d", table->HoveredColumnBody, table->HoveredColumnBorder);
     BulletText("ResizedColumn: %d, ReorderColumn: %d, HeldHeaderColumn: %d", table->ResizedColumn, table->ReorderColumn, table->HeldHeaderColumn);
