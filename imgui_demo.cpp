@@ -1,4 +1,4 @@
-// dear imgui, v1.78 WIP
+// dear imgui, v1.78
 // (demo code)
 
 // Help:
@@ -1545,42 +1545,33 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Drag/Slider Flags"))
     {
-        // Demonstrate using advanced flags for DragXXX functions
-        static ImGuiDragFlags drag_flags = ImGuiDragFlags_None;
-        ImGui::CheckboxFlags("ImGuiDragFlags_ClampOnInput", (unsigned int*)&drag_flags, ImGuiDragFlags_ClampOnInput);
+        // Demonstrate using advanced flags for DragXXX and SliderXXX functions. Note that the flags are the same!
+        static ImGuiSliderFlags flags = ImGuiSliderFlags_None;
+        ImGui::CheckboxFlags("ImGuiSliderFlags_ClampOnInput", (unsigned int*)&flags, ImGuiSliderFlags_ClampOnInput);
         ImGui::SameLine(); HelpMarker("Always clamp value to min/max bounds (if any) when input manually with CTRL+Click.");
-        ImGui::CheckboxFlags("ImGuiDragFlags_Logarithmic", (unsigned int*)&drag_flags, ImGuiDragFlags_Logarithmic);
+        ImGui::CheckboxFlags("ImGuiSliderFlags_Logarithmic", (unsigned int*)&flags, ImGuiSliderFlags_Logarithmic);
         ImGui::SameLine(); HelpMarker("Enable logarithmic editing (more precision for small values).");
-        ImGui::CheckboxFlags("ImGuiDragFlags_NoRoundToFormat", (unsigned int*)&drag_flags, ImGuiDragFlags_NoRoundToFormat);
+        ImGui::CheckboxFlags("ImGuiSliderFlags_NoRoundToFormat", (unsigned int*)&flags, ImGuiSliderFlags_NoRoundToFormat);
         ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
-        ImGui::CheckboxFlags("ImGuiDragFlags_NoInput", (unsigned int*)&drag_flags, ImGuiDragFlags_NoInput);
+        ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", (unsigned int*)&flags, ImGuiSliderFlags_NoInput);
         ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
 
+        // Drags
         static float drag_f = 0.5f;
         static int drag_i = 50;
         ImGui::Text("Underlying float value: %f", drag_f);
-        ImGui::DragFloat("DragFloat (0 -> 1)", &drag_f, 0.005f, 0.0f, 1.0f, "%.3f", drag_flags);
-        ImGui::DragFloat("DragFloat (0 -> +inf)", &drag_f, 0.005f, 0.0f, FLT_MAX, "%.3f", drag_flags);
-        ImGui::DragFloat("DragFloat (-inf -> 1)", &drag_f, 0.005f, -FLT_MAX, 1.0f, "%.3f", drag_flags);
-        ImGui::DragFloat("DragFloat (-inf -> +inf)", &drag_f, 0.005f, -FLT_MAX, +FLT_MAX, "%.3f", drag_flags);
-        ImGui::DragInt("DragInt (0 -> 100)", &drag_i, 0.5f, 0, 100, "%d", drag_flags);
+        ImGui::DragFloat("DragFloat (0 -> 1)", &drag_f, 0.005f, 0.0f, 1.0f, "%.3f", flags);
+        ImGui::DragFloat("DragFloat (0 -> +inf)", &drag_f, 0.005f, 0.0f, FLT_MAX, "%.3f", flags);
+        ImGui::DragFloat("DragFloat (-inf -> 1)", &drag_f, 0.005f, -FLT_MAX, 1.0f, "%.3f", flags);
+        ImGui::DragFloat("DragFloat (-inf -> +inf)", &drag_f, 0.005f, -FLT_MAX, +FLT_MAX, "%.3f", flags);
+        ImGui::DragInt("DragInt (0 -> 100)", &drag_i, 0.5f, 0, 100, "%d", flags);
 
-        // Demonstrate using advanced flags for SliderXXX functions
-        static ImGuiSliderFlags slider_flags = ImGuiSliderFlags_None;
-        ImGui::CheckboxFlags("ImGuiSliderFlags_ClampOnInput", (unsigned int*)&slider_flags, ImGuiSliderFlags_ClampOnInput);
-        ImGui::SameLine(); HelpMarker("Always clamp value to min/max bounds (if any) when input manually with CTRL+Click.");
-        ImGui::CheckboxFlags("ImGuiSliderFlags_Logarithmic", (unsigned int*)&slider_flags, ImGuiSliderFlags_Logarithmic);
-        ImGui::SameLine(); HelpMarker("Enable logarithmic editing (more precision for small values).");
-        ImGui::CheckboxFlags("ImGuiSliderFlags_NoRoundToFormat", (unsigned int*)&slider_flags, ImGuiSliderFlags_NoRoundToFormat);
-        ImGui::SameLine(); HelpMarker("Disable rounding underlying value to match precision of the format string (e.g. %.3f values are rounded to those 3 digits).");
-        ImGui::CheckboxFlags("ImGuiSliderFlags_NoInput", (unsigned int*)&slider_flags, ImGuiSliderFlags_NoInput);
-        ImGui::SameLine(); HelpMarker("Disable CTRL+Click or Enter key allowing to input text directly into the widget.");
-
+        // Sliders
         static float slider_f = 0.5f;
         static int slider_i = 50;
         ImGui::Text("Underlying float value: %f", slider_f);
-        ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", slider_flags);
-        ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%.3f", slider_flags);
+        ImGui::SliderFloat("SliderFloat (0 -> 1)", &slider_f, 0.0f, 1.0f, "%.3f", flags);
+        ImGui::SliderInt("SliderInt (0 -> 100)", &slider_i, 0, 100, "%.3f", flags);
 
         ImGui::TreePop();
     }
@@ -1589,7 +1580,7 @@ static void ShowDemoWindowWidgets()
     {
         static float begin = 10, end = 90;
         static int begin_i = 100, end_i = 1000;
-        ImGui::DragFloatRange2("range float", &begin, &end, 0.25f, 0.0f, 100.0f, "Min: %.1f %%", "Max: %.1f %%", ImGuiDragFlags_ClampOnInput);
+        ImGui::DragFloatRange2("range float", &begin, &end, 0.25f, 0.0f, 100.0f, "Min: %.1f %%", "Max: %.1f %%", ImGuiSliderFlags_ClampOnInput);
         ImGui::DragIntRange2("range int", &begin_i, &end_i, 5, 0, 1000, "Min: %d units", "Max: %d units");
         ImGui::DragIntRange2("range int (no bounds)", &begin_i, &end_i, 5, 0, 0, "Min: %d units", "Max: %d units");
         ImGui::TreePop();
@@ -1655,9 +1646,9 @@ static void ShowDemoWindowWidgets()
         ImGui::DragScalar("drag s64",       ImGuiDataType_S64,    &s64_v, drag_speed, drag_clamp ? &s64_zero : NULL, drag_clamp ? &s64_fifty : NULL);
         ImGui::DragScalar("drag u64",       ImGuiDataType_U64,    &u64_v, drag_speed, drag_clamp ? &u64_zero : NULL, drag_clamp ? &u64_fifty : NULL);
         ImGui::DragScalar("drag float",     ImGuiDataType_Float,  &f32_v, 0.005f,  &f32_zero, &f32_one, "%f");
-        ImGui::DragScalar("drag float log", ImGuiDataType_Float,  &f32_v, 0.005f,  &f32_zero, &f32_one, "%f", ImGuiDragFlags_Logarithmic);
+        ImGui::DragScalar("drag float log", ImGuiDataType_Float,  &f32_v, 0.005f,  &f32_zero, &f32_one, "%f", ImGuiSliderFlags_Logarithmic);
         ImGui::DragScalar("drag double",    ImGuiDataType_Double, &f64_v, 0.0005f, &f64_zero, NULL,     "%.10f grams");
-        ImGui::DragScalar("drag double log",ImGuiDataType_Double, &f64_v, 0.0005f, &f64_zero, &f64_one, "0 < %.10f < 1", ImGuiDragFlags_Logarithmic);
+        ImGui::DragScalar("drag double log",ImGuiDataType_Double, &f64_v, 0.0005f, &f64_zero, &f64_one, "0 < %.10f < 1", ImGuiSliderFlags_Logarithmic);
 
         ImGui::Text("Sliders");
         ImGui::SliderScalar("slider s8 full",       ImGuiDataType_S8,     &s8_v,  &s8_min,   &s8_max,   "%d");
@@ -1677,10 +1668,10 @@ static void ShowDemoWindowWidgets()
         ImGui::SliderScalar("slider u64 high",      ImGuiDataType_U64,    &u64_v, &u64_hi_a, &u64_hi_b, "%I64u ms");
         ImGui::SliderScalar("slider u64 full",      ImGuiDataType_U64,    &u64_v, &u64_min,  &u64_max,  "%I64u ms");
         ImGui::SliderScalar("slider float low",     ImGuiDataType_Float,  &f32_v, &f32_zero, &f32_one);
-        ImGui::SliderScalar("slider float low log", ImGuiDataType_Float,  &f32_v, &f32_zero, &f32_one,  "%.10f", ImGuiDragFlags_Logarithmic);
+        ImGui::SliderScalar("slider float low log", ImGuiDataType_Float,  &f32_v, &f32_zero, &f32_one,  "%.10f", ImGuiSliderFlags_Logarithmic);
         ImGui::SliderScalar("slider float high",    ImGuiDataType_Float,  &f32_v, &f32_lo_a, &f32_hi_a, "%e");
         ImGui::SliderScalar("slider double low",    ImGuiDataType_Double, &f64_v, &f64_zero, &f64_one,  "%.10f grams");
-        ImGui::SliderScalar("slider double low log",ImGuiDataType_Double, &f64_v, &f64_zero, &f64_one,  "%.10f", ImGuiDragFlags_Logarithmic);
+        ImGui::SliderScalar("slider double low log",ImGuiDataType_Double, &f64_v, &f64_zero, &f64_one,  "%.10f", ImGuiSliderFlags_Logarithmic);
         ImGui::SliderScalar("slider double high",   ImGuiDataType_Double, &f64_v, &f64_lo_a, &f64_hi_a, "%e grams");
 
         static bool inputs_step = true;
@@ -3978,9 +3969,9 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
                 "rebuild the font atlas, and call style.ScaleAllSizes() on a reference ImGuiStyle structure.\n"
                 "Using those settings here will give you poor quality results.");
             static float window_scale = 1.0f;
-            if (ImGui::DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiDragFlags_ClampOnInput)) // Scale only this window
+            if (ImGui::DragFloat("window scale", &window_scale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_ClampOnInput)) // Scale only this window
                 ImGui::SetWindowFontScale(window_scale);
-            ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiDragFlags_ClampOnInput); // Scale everything
+            ImGui::DragFloat("global scale", &io.FontGlobalScale, 0.005f, MIN_SCALE, MAX_SCALE, "%.2f", ImGuiSliderFlags_ClampOnInput); // Scale everything
             ImGui::PopItemWidth();
 
             ImGui::EndTabItem();
