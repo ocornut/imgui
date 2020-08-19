@@ -27,6 +27,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: investigate better auto-positioning for new windows.
  - window: top most window flag? (#2574)
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
+ - window/size: how to allow to e.g. auto-size vertically to fit contents, but be horizontally resizable? Assuming SetNextWindowSize() is modified to treat -1.0f on each axis as "keep as-is" (would be good but might break erroneous code): Problem is UpdateWindowManualResize() and lots of code treat (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) together.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: background options for child windows, border option (disable rounding).
  - window/child: allow resizing of child windows (possibly given min/max for each axis?.)
@@ -35,6 +36,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
  - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331)
  ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
@@ -54,6 +56,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
  - drawlist: AddRect vs AddLine position confusing (#2441)
  - drawlist: channel splitter should be external helper and not stored in ImDrawList.
+ - drawlist: Add quadratic bezier curves? (#3127)
  - drawlist/opt: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding. (#1962)
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
  - drawlist/opt: thick AA line could be doable in same number of triangles as 1.0 AA line by storing gradient+full color in atlas.
@@ -78,6 +81,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
+ - input text: preserve scrolling when unfocused?
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text: expose CursorPos in char filter event (#816)
  - input text: try usage idiom of using InputText with data only exposed through get/set accessors, without extraneous copy/alloc. (#3009)
@@ -134,7 +138,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
  - columns: sizing is lossy when columns width is very small (default width may turn negative etc.)
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: flag to add horizontal separator above/below?
+ - columns: flag to add horizontal separator above/below)
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
 
 !- color: the color conversion helpers/types are a mess and needs sorting out.
@@ -155,12 +159,16 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - clipper: horizontal clipping support. (#2580)
 
  - separator: expose flags (#759)
+ - separator: take indent into consideration (optional)
  - separator: width, thickness, centering (#1643)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
  - dock: merge docking branch (#2109)
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
 
+ - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work
+ - tabs: close button tends to overlap unsaved-document star 
+ - tabs: consider showing the star at the same spot as the close button, like VS Code does.
  - tabs: while dragging/reordering a tab, close button decoration shouldn't appear on other tabs
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
@@ -179,7 +187,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: relative dragging? + precision dragging
  - slider: step option (#1183)
- - slider style: fill % of the bar instead of positioning a drag.
+ - slider: style: fill % of the bar instead of positioning a drag.
  - knob: rotating knob widget (#942)
  - drag float: support for reversed drags (min > max) (removed is_locked, also see fdc526e)
  - drag float: up/down axis
@@ -232,13 +240,15 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
- - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height?)
+ - tree node: flag to disable formatting and/or detect "%s"
+ - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height? format only %s/%c to be able to count height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - settings/persistence: helpers to make TreeNodeBehavior persist (even during dev!) - may need to store some semantic and/or data type in ImGuiStoragePair
 
  - style: better default styles. (#707)
+ - style: PushStyleVar: allow direct access to individual float X/Y elements.
  - style: add a highlighted text color (for headers, etc.)
  - style: border types: out-screen, in-screen, etc. (#447)
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
@@ -285,6 +295,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
  - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
+ - text/layout/tabs: \t pulling position from base pos + step, or offset array (e.g. could be used in text edit, menus for simple icon+text alignment, etc.)
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
  - text/wrapped: should be a more first-class citizen, e.g. wrapped text within a Selectable with known width.
  - text/wrapped: custom separator for text wrapping. (#3002)
@@ -383,6 +394,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
  - examples: dx11/dx12: try to use new swapchain blit models (#2970)
+ - backends: move to backends/ folder?
  - backends: report it better when not able to create texture?
  - backends: apple: example_apple should be using modern GL3.
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
