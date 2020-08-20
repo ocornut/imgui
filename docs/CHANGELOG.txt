@@ -45,6 +45,7 @@ Other Changes:
   where v_min == v_max. (#3361)
 - BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
   so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
+- Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
 
 
