@@ -116,11 +116,6 @@ int main(int, char**)
             ImGui::Checkbox("Another Window", &show_another_window);
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-
-            static float f2 = 0.0f;
-            ImGui::DragFloat("f2 limit", &f2, 1.0f, 0.0f, 100.0f, NULL, ImGuiSliderFlags_ClampOnInput);
-            ImGui::DragFloat("f2", &f2, 1.0f, 0.0f, 0.0f, NULL, ImGuiSliderFlags_ClampOnInput);
-
             ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
