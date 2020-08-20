@@ -37,6 +37,9 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
+  where v_min == v_max. (#3361)
+
 
 -----------------------------------------------------------------------
  VERSION 1.78 (Released 2020-08-18)

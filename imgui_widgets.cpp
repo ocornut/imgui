@@ -1758,7 +1758,7 @@ int ImGui::DataTypeFormatString(char* buf, int buf_size, ImGuiDataType data_type
     return 0;
 }
 
-void ImGui::DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, void* arg1, const void* arg2)
+void ImGui::DataTypeApplyOp(ImGuiDataType data_type, int op, void* output, const void* arg1, const void* arg2)
 {
     IM_ASSERT(op == '+' || op == '-');
     switch (data_type)
@@ -1910,11 +1910,39 @@ bool ImGui::DataTypeApplyOpFromText(const char* buf, const char* initial_value_b
 }
 
 template<typename T>
-static bool ClampBehaviorT(T* v, const T* v_min, const T* v_max)
+static int DataTypeCompareT(const T* lhs, const T* rhs)
 {
-    // Clamp, both sides are optional
+    if (*lhs < *rhs) return -1;
+    if (*lhs > *rhs) return +1;
+    return 0;
+}
+
+int ImGui::DataTypeCompare(ImGuiDataType data_type, const void* arg_1, const void* arg_2)
+{
+    switch (data_type)
+    {
+    case ImGuiDataType_S8:     return DataTypeCompareT<ImS8  >((const ImS8*  )arg_1, (const ImS8*  )arg_2);
+    case ImGuiDataType_U8:     return DataTypeCompareT<ImU8  >((const ImU8*  )arg_1, (const ImU8*  )arg_2);
+    case ImGuiDataType_S16:    return DataTypeCompareT<ImS16 >((const ImS16* )arg_1, (const ImS16* )arg_2);
+    case ImGuiDataType_U16:    return DataTypeCompareT<ImU16 >((const ImU16* )arg_1, (const ImU16* )arg_2);
+    case ImGuiDataType_S32:    return DataTypeCompareT<ImS32 >((const ImS32* )arg_1, (const ImS32* )arg_2);
+    case ImGuiDataType_U32:    return DataTypeCompareT<ImU32 >((const ImU32* )arg_1, (const ImU32* )arg_2);
+    case ImGuiDataType_S64:    return DataTypeCompareT<ImS64 >((const ImS64* )arg_1, (const ImS64* )arg_2);
+    case ImGuiDataType_U64:    return DataTypeCompareT<ImU64 >((const ImU64* )arg_1, (const ImU64* )arg_2);
+    case ImGuiDataType_Float:  return DataTypeCompareT<float >((const float* )arg_1, (const float* )arg_2);
+    case ImGuiDataType_Double: return DataTypeCompareT<double>((const double*)arg_1, (const double*)arg_2);
+    case ImGuiDataType_COUNT:  break;
+    }
+    IM_ASSERT(0);
+    return 0;
+}
+
+template<typename T>
+static bool DataTypeClampT(T* v, const T* v_min, const T* v_max)
+{
+    // Clamp, both sides are optional, return true if modified
     if (v_min && *v < *v_min) { *v = *v_min; return true; }
-    if (v_max && *v > *v_max) { *v = *v_max; return true; }
+    if (v_max && *v > * v_max) { *v = *v_max; return true; }
     return false;
 }
 
@@ -1922,16 +1950,16 @@ bool ImGui::DataTypeClamp(ImGuiDataType data_type, void* p_data, const void* p_m
 {
     switch (data_type)
     {
-    case ImGuiDataType_S8:     return ClampBehaviorT<ImS8  >((ImS8*  )p_data, (const ImS8*  )p_min, (const ImS8*  )p_max);
-    case ImGuiDataType_U8:     return ClampBehaviorT<ImU8  >((ImU8*  )p_data, (const ImU8*  )p_min, (const ImU8*  )p_max);
-    case ImGuiDataType_S16:    return ClampBehaviorT<ImS16 >((ImS16* )p_data, (const ImS16* )p_min, (const ImS16* )p_max);
-    case ImGuiDataType_U16:    return ClampBehaviorT<ImU16 >((ImU16* )p_data, (const ImU16* )p_min, (const ImU16* )p_max);
-    case ImGuiDataType_S32:    return ClampBehaviorT<ImS32 >((ImS32* )p_data, (const ImS32* )p_min, (const ImS32* )p_max);
-    case ImGuiDataType_U32:    return ClampBehaviorT<ImU32 >((ImU32* )p_data, (const ImU32* )p_min, (const ImU32* )p_max);
-    case ImGuiDataType_S64:    return ClampBehaviorT<ImS64 >((ImS64* )p_data, (const ImS64* )p_min, (const ImS64* )p_max);
-    case ImGuiDataType_U64:    return ClampBehaviorT<ImU64 >((ImU64* )p_data, (const ImU64* )p_min, (const ImU64* )p_max);
-    case ImGuiDataType_Float:  return ClampBehaviorT<float >((float* )p_data, (const float* )p_min, (const float* )p_max);
-    case ImGuiDataType_Double: return ClampBehaviorT<double>((double*)p_data, (const double*)p_min, (const double*)p_max);
+    case ImGuiDataType_S8:     return DataTypeClampT<ImS8  >((ImS8*  )p_data, (const ImS8*  )p_min, (const ImS8*  )p_max);
+    case ImGuiDataType_U8:     return DataTypeClampT<ImU8  >((ImU8*  )p_data, (const ImU8*  )p_min, (const ImU8*  )p_max);
+    case ImGuiDataType_S16:    return DataTypeClampT<ImS16 >((ImS16* )p_data, (const ImS16* )p_min, (const ImS16* )p_max);
+    case ImGuiDataType_U16:    return DataTypeClampT<ImU16 >((ImU16* )p_data, (const ImU16* )p_min, (const ImU16* )p_max);
+    case ImGuiDataType_S32:    return DataTypeClampT<ImS32 >((ImS32* )p_data, (const ImS32* )p_min, (const ImS32* )p_max);
+    case ImGuiDataType_U32:    return DataTypeClampT<ImU32 >((ImU32* )p_data, (const ImU32* )p_min, (const ImU32* )p_max);
+    case ImGuiDataType_S64:    return DataTypeClampT<ImS64 >((ImS64* )p_data, (const ImS64* )p_min, (const ImS64* )p_max);
+    case ImGuiDataType_U64:    return DataTypeClampT<ImU64 >((ImU64* )p_data, (const ImU64* )p_min, (const ImU64* )p_max);
+    case ImGuiDataType_Float:  return DataTypeClampT<float >((float* )p_data, (const float* )p_min, (const float* )p_max);
+    case ImGuiDataType_Double: return DataTypeClampT<double>((double*)p_data, (const double*)p_min, (const double*)p_max);
     case ImGuiDataType_COUNT:  break;
     }
     IM_ASSERT(0);
@@ -2201,7 +2229,7 @@ bool ImGui::DragScalar(const char* label, ImGuiDataType data_type, void* p_data,
     if (temp_input_is_active)
     {
         // Only clamp CTRL+Click input when ImGuiSliderFlags_ClampInput is set
-        const bool is_clamp_input = (flags & ImGuiSliderFlags_ClampOnInput) != 0;
+        const bool is_clamp_input = (flags & ImGuiSliderFlags_ClampOnInput) != 0 && (p_min == NULL || p_max == NULL || DataTypeCompare(data_type, p_min, p_max) < 0);
         return TempInputScalar(frame_bb, id, label, data_type, p_data, format, is_clamp_input ? p_min : NULL, is_clamp_input ? p_max : NULL);
     }
 
