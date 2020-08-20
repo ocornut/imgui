@@ -2857,7 +2857,7 @@ static void ShowDemoWindowMultiSelect()
             if (ImGui::RadioButton("Tree nodes", widget_type == WidgetType_TreeNode)) { widget_type = WidgetType_TreeNode; }
             ImGui::SameLine();
             ImGui::Checkbox("Use 2 columns", &use_columns);
-            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", (unsigned int*)&ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+            ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard", &ImGui::GetIO().ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
             ImGui::SameLine(); HelpMarker("Hold CTRL and click to select multiple items. Hold SHIFT to select a range. Keyboard is also supported.");
 
             // Open a scrolling region
@@ -2916,6 +2916,14 @@ static void ShowDemoWindowMultiSelect()
                                 selection.SetSelected(n, !item_is_selected);
                             if (open)
                                 ImGui::TreePop();
+                        }
+
+                        // Right-click: context menu
+                        if (ImGui::BeginPopupContextItem())
+                        {
+                            ImGui::Text("(Testing Selectable inside an embedded popup)");
+                            ImGui::Selectable("Close");
+                            ImGui::EndPopup();
                         }
 
                         if (use_columns)
