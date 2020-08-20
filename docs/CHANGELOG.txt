@@ -101,6 +101,29 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.79 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- InputText: Added selection helpers in ImGuiInputTextCallbackData().
+- InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
+  (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
+  underlying buffer while focus is active).
+- DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
+  where v_min == v_max. (#3361)
+- BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
+  so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
+- TreeNode, CollapsingHeader: Made clicking on arrow toggle toggle the open state on the Mouse Down event 
+  rather than the Mouse Down+Up sequence, even if the _OpenOnArrow flag isn't set. This is standard behavior 
+  and amends the change done in 1.76 which only affected cases were _OpenOnArrow flag was set. 
+  (This is also necessary to support full multi/range-select/drag and drop operations.)
+- Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
+- Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
+>>>>>>> master
+
+
+-----------------------------------------------------------------------
  VERSION 1.78 (Released 2020-08-18)
 -----------------------------------------------------------------------
 
