@@ -37,8 +37,13 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- InputText: Added selection helpers in ImGuiInputTextCallbackData().
+- InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
+  (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
+  underlying buffer while focus is active).
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
+- Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
 
 
 -----------------------------------------------------------------------
