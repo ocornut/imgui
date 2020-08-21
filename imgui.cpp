@@ -11912,10 +11912,10 @@ void ImGui::DockContextUpdateDocking(ImGuiContext* ctx)
     g.HoveredDockNode = NULL;
     if (ImGuiWindow* hovered_window = g.HoveredWindowUnderMovingWindow)
     {
-        if (hovered_window->DockNode)
-            g.HoveredDockNode = hovered_window->DockNode;
-        else if (hovered_window->DockNodeAsHost)
+        if (hovered_window->DockNodeAsHost)
             g.HoveredDockNode = DockNodeTreeFindVisibleNodeByPos(hovered_window->DockNodeAsHost, g.IO.MousePos);
+        else if (hovered_window->RootWindowDockStop->DockNode)
+            g.HoveredDockNode = hovered_window->RootWindowDockStop->DockNode;
     }
 
     // Process Docking requests
@@ -14872,6 +14872,7 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
     IM_ASSERT((window->Flags & ImGuiWindowFlags_NoDocking) == 0);
     if (!g.DragDropActive)
         return;
+    //GetForegroundDrawList(window)->AddRect(window->Pos, window->Pos + window->Size, IM_COL32(255, 255, 0, 255));
     if (!BeginDragDropTargetCustom(window->Rect(), window->ID))
         return;
 
@@ -15662,11 +15663,17 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         static void NodeDockNode(ImGuiDockNode* node, const char* label)
         {
             ImGuiContext& g = *GImGui;
+            const bool is_alive = (g.FrameCount - node->LastFrameAlive < 2);    // Submitted with ImGuiDockNodeFlags_KeepAliveOnly
+            const bool is_active = (g.FrameCount - node->LastFrameActive < 2);  // Submitted
+            if (!is_alive) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
             bool open;
             if (node->Windows.Size > 0)
                 open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %d windows (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", node->Windows.Size, node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
             else
                 open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
+            if (!is_alive) { PopStyleColor(); }
+            if (is_active && ImGui::IsItemHovered())
+                GetForegroundDrawList(node->HostWindow ? node->HostWindow : node->VisibleWindow)->AddRect(node->Pos, node->Pos + node->Size, IM_COL32(255, 255, 0, 255));
             if (open)
             {
                 IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
@@ -15679,8 +15686,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImGui::BulletText("Misc:%s%s%s%s%s",
                     node->IsDockSpace() ? " IsDockSpace" : "",
                     node->IsCentralNode() ? " IsCentralNode" : "",
-                    (g.FrameCount - node->LastFrameAlive < 2) ? " IsAlive" : "",
-                    (g.FrameCount - node->LastFrameActive < 2) ? " IsActive" : "",
+                    is_alive ? " IsAlive" : "", is_active ? " IsActive" : "",
                     node->WantLockSizeOnce ? " WantLockSizeOnce" : "");
                 if (ImGui::TreeNode("flags", "LocalFlags: 0x%04X SharedFlags: 0x%04X", node->LocalFlags, node->SharedFlags))
                 {
@@ -15854,7 +15860,6 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         if (ImGui::SmallButton("Clear nodes")) { DockContextClearNodes(&g, 0, true); }
         ImGui::SameLine();
         if (ImGui::SmallButton("Rebuild all")) { dc->WantFullRebuild = true; }
-        ImGui::Text("HoveredDockNode: 0x%08X", g.HoveredDockNode ? g.HoveredDockNode->ID : 0);
         for (int n = 0; n < dc->Nodes.Data.Size; n++)
             if (ImGuiDockNode* node = (ImGuiDockNode*)dc->Nodes.Data[n].val_p)
                 if (!root_nodes_only || node->IsRootNode())
@@ -15946,6 +15951,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         ImGui::Text("HoveredWindow: '%s'", g.HoveredWindow ? g.HoveredWindow->Name : "NULL");
         ImGui::Text("HoveredRootWindow: '%s'", g.HoveredRootWindow ? g.HoveredRootWindow->Name : "NULL");
         ImGui::Text("HoveredWindowUnderMovingWindow: '%s'", g.HoveredWindowUnderMovingWindow ? g.HoveredWindowUnderMovingWindow->Name : "NULL");
+        ImGui::Text("HoveredDockNode: 0x%08X", g.HoveredDockNode ? g.HoveredDockNode->ID : 0);
         ImGui::Text("MovingWindow: '%s'", g.MovingWindow ? g.MovingWindow->Name : "NULL");
         ImGui::Text("MouseViewport: 0x%08X (UserHovered 0x%08X, LastHovered 0x%08X)", g.MouseViewport->ID, g.IO.MouseHoveredViewport, g.MouseLastHoveredViewport ? g.MouseLastHoveredViewport->ID : 0);
         ImGui::Unindent();
