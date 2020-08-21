@@ -35,8 +35,6 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
-static int                      g_SwapChainResizeWidth = 0;
-static int                      g_SwapChainResizeHeight = 0;
 
 static void check_vk_result(VkResult err)
 {
@@ -247,6 +245,11 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        g_SwapChainRebuild = true;
+        return;
+    }
     check_vk_result(err);
 
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
@@ -315,7 +318,6 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd, SDL_Window* window)
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
     if (err == VK_ERROR_OUT_OF_DATE_KHR)
     {
-        SDL_GetWindowSize(window, &g_SwapChainResizeWidth, &g_SwapChainResizeHeight);
         g_SwapChainRebuild = true;
         return;
     }
@@ -467,11 +469,13 @@ int main(int, char**)
         }
 
         // Resize swap chain?
-        if (g_SwapChainRebuild && g_SwapChainResizeWidth > 0 && g_SwapChainResizeHeight > 0)
+        if (g_SwapChainRebuild)
         {
             g_SwapChainRebuild = false;
+            int width, height;
+            SDL_GetWindowSize(window, &width, &height);
             ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
             g_MainWindowData.FrameIndex = 0;
         }
 
@@ -496,7 +500,7 @@ int main(int, char**)
             ImGui::Checkbox("Another Window", &show_another_window);
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            if(ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
+            if (ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
                 memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -531,6 +535,9 @@ int main(int, char**)
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
         }
+
+        if (g_SwapChainRebuild) // Main viewport resized in the middle of this frame, go on to next frame.
+            continue;
 
         // Present Main Platform Window
         if (!main_is_minimized)
