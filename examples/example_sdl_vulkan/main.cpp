@@ -305,7 +305,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     }
 }
 
-static void FramePresent(ImGui_ImplVulkanH_Window* wd, SDL_Window* window)
+static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     VkPresentInfoKHR info = {};
@@ -541,7 +541,7 @@ int main(int, char**)
 
         // Present Main Platform Window
         if (!main_is_minimized)
-            FramePresent(wd, window);
+            FramePresent(wd);
     }
 
     // Cleanup
