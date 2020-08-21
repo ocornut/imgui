@@ -505,7 +505,7 @@ int main(int, char**)
             ImGui::Checkbox("Another Window", &show_another_window);
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            if(ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
+            if (ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
                 memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
@@ -540,6 +540,9 @@ int main(int, char**)
             ImGui::UpdatePlatformWindows();
             ImGui::RenderPlatformWindowsDefault();
         }
+
+        if (g_SwapChainRebuild) // Main viewport resized in the middle of this frame, go on to next frame.
+            continue;
 
         // Present Main Platform Window
         if (!main_is_minimized)
