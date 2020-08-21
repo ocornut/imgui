@@ -4386,9 +4386,10 @@ static void ImGui::EndFrameDrawDimmedBackgrounds()
         }
 
     // Draw modal whitening background between CTRL-TAB list
-    if (dim_bg_for_window_list)
+    if (dim_bg_for_window_list && g.NavWindowingTargetAnim->Active)
     {
         // Choose a draw list that will be front-most across all our children
+        // In the unlikely case that the window wasn't made active we can't rely on its drawlist and skip rendering all-together.
         ImGuiWindow* window = g.NavWindowingTargetAnim;
         ImDrawList* draw_list = FindFrontMostVisibleChildWindow(window->RootWindow)->DrawList;
         draw_list->PushClipRectFullScreen();
