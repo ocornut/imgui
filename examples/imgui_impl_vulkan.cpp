@@ -1357,6 +1357,11 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
         }
         {
             err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fsd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+            if (err == VK_ERROR_OUT_OF_DATE_KHR)
+            {
+                viewport->DrawData = NULL;
+                return;
+            }
             check_vk_result(err);
             fd = &wd->Frames[wd->FrameIndex];
         }
@@ -1416,6 +1421,9 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     ImGuiViewportDataVulkan* data = (ImGuiViewportDataVulkan*)viewport->RendererUserData;
     ImGui_ImplVulkanH_Window* wd = &data->Window;
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
+
+    if (!viewport->DrawData) // Frame data became invalid in the middle of rendering
+        return;
 
     VkResult err;
     uint32_t present_index = wd->FrameIndex;
