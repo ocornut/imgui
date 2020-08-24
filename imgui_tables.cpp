@@ -301,7 +301,7 @@ ImGuiTable* ImGui::TableFindByID(ImGuiID id)
 }
 
 // Read about "TABLE SIZING" at the top of this file.
-bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
+bool    ImGui::BeginTable(ImStrv str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
     ImGuiID id = GetID(str_id);
     return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
@@ -1406,7 +1406,7 @@ void    ImGui::EndTable()
 
 // See "COLUMN SIZING POLICIES" comments at the top of this file
 // If (init_width_or_weight <= 0.0f) it is ignored
-void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+void ImGui::TableSetupColumn(ImStrv label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1468,8 +1468,10 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     column->NameOffset = -1;
     if (label != NULL && label[0] != 0)
     {
+        char zero_terminator = 0;
         column->NameOffset = (ImS16)table->ColumnsNames.size();
-        table->ColumnsNames.append(label, label + strlen(label) + 1);
+        table->ColumnsNames.append(label.Begin, label.Begin + IM_IMSTR_LENGTH(label));
+        table->ColumnsNames.append(&zero_terminator, &zero_terminator + 1);
     }
 }
 
@@ -2874,7 +2876,7 @@ void ImGui::TableHeadersRow()
 // Emit a column header (text + optional sort order)
 // We cpu-clip text here so that all columns headers can be merged into a same draw call.
 // Note that because of how we cpu-clip and display sorting indicators, you _cannot_ use SameLine() after a TableHeader()
-void ImGui::TableHeader(const char* label)
+void ImGui::TableHeader(ImStrv label)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2888,10 +2890,11 @@ void ImGui::TableHeader(const char* label)
     ImGuiTableColumn* column = &table->Columns[column_n];
 
     // Label
-    if (label == NULL)
+    if (!label)
         label = "";
-    const char* label_end = FindRenderedTextEnd(label);
-    ImVec2 label_size = CalcTextSize(label, label_end, true);
+    ImGuiID id = window->GetID(label);
+    label.End = FindRenderedTextEnd(label);
+    ImVec2 label_size = CalcTextSize(label.Begin, label.End, true);
     ImVec2 label_pos = window->DC.CursorPos;
 
     // If we already got a row height, there's use that.
@@ -2921,7 +2924,6 @@ void ImGui::TableHeader(const char* label)
 
     // Keep header highlighted when context menu is open.
     const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceCurrent);
-    ImGuiID id = window->GetID(label);
     ImRect bb(cell_r.Min.x, cell_r.Min.y, cell_r.Max.x, ImMax(cell_r.Max.y, cell_r.Min.y + label_height + g.Style.CellPadding.y * 2.0f));
     ItemSize(ImVec2(0.0f, label_height)); // Don't declare unclipped width, it'll be fed ContentMaxPosHeadersIdeal
     if (!ItemAdd(bb, id))
@@ -3002,11 +3004,11 @@ void ImGui::TableHeader(const char* label)
     // Render clipped label. Clipping here ensure that in the majority of situations, all our header cells will
     // be merged into a single draw call.
     //window->DrawList->AddCircleFilled(ImVec2(ellipsis_max, label_pos.y), 40, IM_COL32_WHITE);
-    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
+    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, &label_size);
 
     const bool text_clipped = label_size.x > (ellipsis_max - label_pos.x);
     if (text_clipped && hovered && g.ActiveId == 0 && IsItemHovered(ImGuiHoveredFlags_DelayNormal))
-        SetTooltip("%.*s", (int)(label_end - label), label);
+        SetTooltip("%.*s", (int)(label.End - label.Begin), label.Begin);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())
@@ -3840,7 +3842,7 @@ ImGuiOldColumns* ImGui::FindOrCreateColumns(ImGuiWindow* window, ImGuiID id)
     return columns;
 }
 
-ImGuiID ImGui::GetColumnsID(const char* str_id, int columns_count)
+ImGuiID ImGui::GetColumnsID(ImStrv str_id, int columns_count)
 {
     ImGuiWindow* window = GetCurrentWindow();
 
@@ -3853,7 +3855,7 @@ ImGuiID ImGui::GetColumnsID(const char* str_id, int columns_count)
     return id;
 }
 
-void ImGui::BeginColumns(const char* str_id, int columns_count, ImGuiOldColumnFlags flags)
+void ImGui::BeginColumns(ImStrv str_id, int columns_count, ImGuiOldColumnFlags flags)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = GetCurrentWindow();
