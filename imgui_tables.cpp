@@ -1649,10 +1649,12 @@ void ImGui::TableSetupColumn(ImStrv label, ImGuiTableColumnFlags flags, float in
     // Store name (append with zero-terminator in contiguous buffer)
     // FIXME: If we recorded the number of \n in names we could compute header row height
     column->NameOffset = -1;
-    if (label != NULL && label[0] != 0)
+    if (!label.empty())
     {
+        char zero_terminator = 0;
         column->NameOffset = (ImS16)table->ColumnsNames.size();
-        table->ColumnsNames.append(label, label + ImStrlen(label) + 1);
+        table->ColumnsNames.append(label.Begin, label.End);
+        table->ColumnsNames.append(&zero_terminator, &zero_terminator + 1);
     }
 }
 
@@ -3172,10 +3174,11 @@ void ImGui::TableHeader(ImStrv label)
     ImGuiTableColumn* column = &table->Columns[column_n];
 
     // Label
-    if (label == NULL)
+    if (!label)
         label = "";
-    const char* label_end = FindRenderedTextEnd(label);
-    ImVec2 label_size = CalcTextSize(label, label_end, true);
+    ImGuiID id = window->GetID(label);
+    label.End = FindRenderedTextEnd(label);
+    ImVec2 label_size = CalcTextSize(label.Begin, label.End, true);
     ImVec2 label_pos = window->DC.CursorPos;
 
     // If we already got a row height, there's use that.
@@ -3207,7 +3210,6 @@ void ImGui::TableHeader(ImStrv label)
     column->ContentMaxXHeadersIdeal = ImMax(column->ContentMaxXHeadersIdeal, max_pos_x);
 
     // Keep header highlighted when context menu is open.
-    ImGuiID id = window->GetID(label);
     ImRect bb(cell_r.Min.x, cell_r.Min.y, cell_r.Max.x, ImMax(cell_r.Max.y, cell_r.Min.y + label_height + g.Style.CellPadding.y * 2.0f));
     ItemSize(ImVec2(0.0f, label_height)); // Don't declare unclipped width, it'll be fed ContentMaxPosHeadersIdeal
     if (!ItemAdd(bb, id))
@@ -3287,11 +3289,11 @@ void ImGui::TableHeader(ImStrv label)
     // Render clipped label. Clipping here ensure that in the majority of situations, all our header cells will
     // be merged into a single draw call.
     //window->DrawList->AddCircleFilled(ImVec2(ellipsis_max, label_pos.y), 40, IM_COL32_WHITE);
-    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, bb.Max.y), ellipsis_max, label, label_end, &label_size);
+    RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, bb.Max.y), ellipsis_max, label, &label_size);
 
     const bool text_clipped = label_size.x > (ellipsis_max - label_pos.x);
     if (text_clipped && hovered && g.ActiveId == 0)
-        SetItemTooltip("%.*s", (int)(label_end - label), label);
+        SetItemTooltip("%.*s", (int)(label.End - label.Begin), label.Begin);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())
@@ -3413,10 +3415,10 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
                 // Draw label
                 // - First draw at an offset where RenderTextXXX() function won't meddle with applying current ClipRect, then transform to final offset.
                 // - Handle multiple lines manually, as we want each lines to follow on the horizontal border, rather than see a whole block rotated.
-                const char* label_name = TableGetColumnName(table, column_n);
-                const char* label_name_end = FindRenderedTextEnd(label_name);
+                const char* label_name_s = TableGetColumnName(table, column_n);
+                ImStrv label_name(label_name_s, FindRenderedTextEnd(label_name_s));
                 const float line_off_step_x = (g.FontSize / -sin_a);
-                const int label_lines = ImTextCountLines(label_name, label_name_end);
+                const int label_lines = ImTextCountLines(label_name);
 
                 // Left<>Right alignment
                 float line_off_curr_x = flip_label ? (label_lines - 1) * line_off_step_x : 0.0f;
@@ -3426,20 +3428,20 @@ void ImGui::TableAngledHeadersRowEx(ImGuiID row_id, float angle, float max_label
                 // Register header width
                 column->ContentMaxXHeadersUsed = column->ContentMaxXHeadersIdeal = column->WorkMinX + ImCeil(label_lines * line_off_step_x - line_off_for_align_x);
 
-                while (label_name < label_name_end)
+                while (label_name.Begin < label_name.End)
                 {
-                    const char* label_name_eol = strchr(label_name, '\n');
+                    const char* label_name_eol = ImStrchrRange(label_name.Begin, label_name.End, '\n');
                     if (label_name_eol == NULL)
-                        label_name_eol = label_name_end;
+                        label_name_eol = label_name.End;
 
                     // FIXME: Individual line clipping for right-most column is broken for negative angles.
-                    ImVec2 label_size = CalcTextSize(label_name, label_name_eol);
+                    ImVec2 label_size = CalcTextSize(ImStrv(label_name.Begin, label_name_eol));
                     float clip_width = max_label_width - padding.y; // Using padding.y*2.0f would be symmetrical but hide more text.
                     float clip_height = ImMin(label_size.y, column->ClipRect.Max.x - column->WorkMinX - line_off_curr_x);
                     ImRect clip_r(window->ClipRect.Min, window->ClipRect.Min + ImVec2(clip_width, clip_height));
                     int vtx_idx_begin = draw_list->_VtxCurrentIdx;
                     PushStyleColor(ImGuiCol_Text, request->TextColor);
-                    RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, label_name, label_name_eol, &label_size);
+                    RenderTextEllipsis(draw_list, clip_r.Min, clip_r.Max, clip_r.Max.x, ImStrv(label_name.Begin, label_name_eol), &label_size);
                     PopStyleColor();
                     int vtx_idx_end = draw_list->_VtxCurrentIdx;
 

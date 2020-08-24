@@ -367,8 +367,9 @@ extern IMGUI_API ImGuiContext* GImGui;  // Current implicit context pointer
 
 // Helpers: Hashing
 IMGUI_API ImGuiID       ImHashData(const void* data, size_t data_size, ImGuiID seed = 0);
-IMGUI_API ImGuiID       ImHashStr(const char* data, size_t data_size = 0, ImGuiID seed = 0);
-IMGUI_API const char*   ImHashSkipUncontributingPrefix(const char* label);
+IMGUI_API ImGuiID       ImHashStr(ImStrv str, ImGuiID seed = 0);
+static inline ImGuiID   ImHashStr(const char* data, size_t data_size = 0, ImGuiID seed = 0) { return ImHashStr(ImStrv(data, data_size ? data + data_size : NULL), seed); }
+IMGUI_API const char*   ImHashSkipUncontributingPrefix(ImStrv label);
 
 // Helpers: Sorting
 #ifndef ImQsort
@@ -387,20 +388,26 @@ inline unsigned int     ImCountSetBits(unsigned int v)      { unsigned int count
 // Helpers: String
 #define ImStrlen strlen
 #define ImMemchr memchr
+IMGUI_API int           ImStrcmp(ImStrv str1, ImStrv str2);
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);                      // Case insensitive compare.
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);       // Case insensitive compare to a certain count.
-IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);                // Copy to a certain count and always zero terminate (strncpy doesn't).
-IMGUI_API char*         ImStrdup(const char* str);                                          // Duplicate a string.
+IMGUI_API void          ImStrncpy(char* dst, ImStrv src, size_t count);                     // Copy to a certain count and always zero terminate (strncpy doesn't).
+IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);
+IMGUI_API char*         ImStrdup(ImStrv str);                                               // Duplicate a string.
+IMGUI_API char*         ImStrdup(const char* str);
+IMGUI_API char*         ImStrdupcpy(char* dst, size_t* p_dst_size, ImStrv str);             // Copy in provided buffer, recreate buffer if needed.
+IMGUI_API char*         ImStrdupcpy(char* dst, size_t* p_dst_size, const char* str);
 IMGUI_API void*         ImMemdup(const void* src, size_t size);                             // Duplicate a chunk of memory.
-IMGUI_API char*         ImStrdupcpy(char* dst, size_t* p_dst_size, const char* str);        // Copy in provided buffer, recreate buffer if needed.
 IMGUI_API const char*   ImStrchrRange(const char* str_begin, const char* str_end, char c);  // Find first occurrence of 'c' in string range.
 IMGUI_API const char*   ImStreolRange(const char* str, const char* str_end);                // End end-of-line
-IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);  // Find a substring in a string range.
+IMGUI_API const char*   ImStrstr(ImStrv haystack, ImStrv needle);                           // Find a substring in a string range.
+IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
 IMGUI_API void          ImStrTrimBlanks(char* str);                                         // Remove leading and trailing blanks from a buffer.
 IMGUI_API const char*   ImStrSkipBlank(const char* str);                                    // Find first non-blank character.
 IMGUI_API int           ImStrlenW(const ImWchar* str);                                      // Computer string length (ImWchar string)
 IMGUI_API const char*   ImStrbol(const char* buf_mid_line, const char* buf_begin);          // Find beginning-of-line
 IM_MSVC_RUNTIME_CHECKS_OFF
+inline int              ImStrcmp(const char* str1, const char* str2) { return strcmp(str1, str2); }
 inline char             ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c &= ~32 : c; }
 inline bool             ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
 inline bool             ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
@@ -410,8 +417,8 @@ IM_MSVC_RUNTIME_CHECKS_RESTORE
 // Helpers: Formatting
 IMGUI_API int           ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IM_FMTARGS(3);
 IMGUI_API int           ImFormatStringV(char* buf, size_t buf_size, const char* fmt, va_list args) IM_FMTLIST(3);
-IMGUI_API void          ImFormatStringToTempBuffer(const char** out_buf, const char** out_buf_end, const char* fmt, ...) IM_FMTARGS(3);
-IMGUI_API void          ImFormatStringToTempBufferV(const char** out_buf, const char** out_buf_end, const char* fmt, va_list args) IM_FMTLIST(3);
+IMGUI_API void          ImFormatStringToTempBuffer(ImStrv* out_buf, const char* fmt, ...) IM_FMTARGS(2);
+IMGUI_API void          ImFormatStringToTempBufferV(ImStrv* out_buf, const char* fmt, va_list args) IM_FMTLIST(2);
 IMGUI_API const char*   ImParseFormatFindStart(const char* format);
 IMGUI_API const char*   ImParseFormatFindEnd(const char* format);
 IMGUI_API const char*   ImParseFormatTrimDecorations(const char* format, char* buf, size_t buf_size);
@@ -428,7 +435,7 @@ IMGUI_API int           ImTextCountCharsFromUtf8(const char* in_text, const char
 IMGUI_API int           ImTextCountUtf8BytesFromChar(const char* in_text, const char* in_text_end);                             // return number of bytes to express one char in UTF-8
 IMGUI_API int           ImTextCountUtf8BytesFromStr(const ImWchar* in_text, const ImWchar* in_text_end);                        // return number of bytes to express string in UTF-8
 IMGUI_API const char*   ImTextFindPreviousUtf8Codepoint(const char* in_text_start, const char* in_text_curr);                   // return previous UTF-8 code-point.
-IMGUI_API int           ImTextCountLines(const char* in_text, const char* in_text_end);                                         // return number of lines taken by text. trailing carriage return doesn't count as an extra line.
+IMGUI_API int           ImTextCountLines(ImStrv in_text);                                                                       // return number of lines taken by text. trailing carriage return doesn't count as an extra line.
 
 // Helpers: High-level text functions (DO NOT USE!!! THIS IS A MINIMAL SUBSET OF LARGER UPCOMING CHANGES)
 enum ImDrawTextFlags_
@@ -2715,7 +2722,9 @@ public:
     ImGuiWindow(ImGuiContext* context, ImStrv name);
     ~ImGuiWindow();
 
-    ImGuiID     GetID(const char* str, const char* str_end = NULL);
+    ImGuiID     GetID(ImStrv str);
+    ImGuiID     GetID(const char* str)                      { return GetID(ImStrv(str)); }
+    ImGuiID     GetID(const char* str, const char* str_end) { return GetID(ImStrv(str, str_end)); }
     ImGuiID     GetID(const void* ptr);
     ImGuiID     GetID(int n);
     ImGuiID     GetIDFromPos(const ImVec2& p_abs);
@@ -3261,7 +3270,8 @@ namespace ImGui
     // Logging/Capture
     IMGUI_API void          LogBegin(ImGuiLogFlags flags, int auto_open_depth);         // -> BeginCapture() when we design v2 api, for now stay under the radar by using the old name.
     IMGUI_API void          LogToBuffer(int auto_open_depth = -1);                      // Start logging/capturing to internal buffer
-    IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL);
+    IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, ImStrv text);
+    inline    void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end) { LogRenderedText(ref_pos, ImStrv(text, text_end)); }
     IMGUI_API void          LogSetNextTextDecoration(const char* prefix, const char* suffix);
 
     // Childs
@@ -3542,11 +3552,15 @@ namespace ImGui
     // Render helpers
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.
     // NB: All position are in absolute pixels coordinates (we are never using window coordinates internally)
-    IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
-    IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
-    IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
-    IMGUI_API void          RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
-    IMGUI_API void          RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float ellipsis_max_x, const char* text, const char* text_end, const ImVec2* text_size_if_known);
+    IMGUI_API void          RenderText(ImVec2 pos, ImStrv text, bool hide_text_after_hash = true);
+    inline    void          RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash = true) { RenderText(pos, ImStrv(text, text_end), hide_text_after_hash); }
+    IMGUI_API void          RenderTextWrapped(ImVec2 pos, ImStrv text, float wrap_width);
+    inline    void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width) { RenderTextWrapped(pos, ImStrv(text, text_end), wrap_width); }
+    IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImStrv text, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
+    inline    void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0,0), const ImRect* clip_rect = NULL) { RenderTextClipped(pos_min, pos_max, ImStrv(text, text_end), text_size_if_known, align, clip_rect); }
+    IMGUI_API void          RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, ImStrv text, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
+    inline    void          RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL) { RenderTextClippedEx(draw_list, pos_min, pos_max, ImStrv(text, text_end), text_size_if_known, align, clip_rect); }
+    IMGUI_API void          RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float ellipsis_max_x, ImStrv text, const ImVec2* text_size_if_known);
     IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool borders = true, float rounding = 0.0f);
     IMGUI_API void          RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding = 0.0f);
     IMGUI_API void          RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off, float rounding = 0.0f, ImDrawFlags flags = 0);
@@ -3554,7 +3568,8 @@ namespace ImGui
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
     inline    void          RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavRenderCursorFlags flags = ImGuiNavRenderCursorFlags_None) { RenderNavCursor(bb, id, flags); } // Renamed in 1.91.4
 #endif
-    IMGUI_API const char*   FindRenderedTextEnd(const char* text, const char* text_end = NULL); // Find the optional ## from which we stop displaying text.
+    IMGUI_API const char*   FindRenderedTextEnd(ImStrv text);                                    // Find the optional ## from which we stop displaying text.
+    inline    const char*   FindRenderedTextEnd(const char* text, const char* text_end) { return FindRenderedTextEnd(ImStrv(text, text_end)); }
     IMGUI_API void          RenderMouseCursor(ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow);
 
     // Render helpers (those functions don't access any ImGui state!)
@@ -3565,17 +3580,17 @@ namespace ImGui
     IMGUI_API void          RenderRectFilledRangeH(ImDrawList* draw_list, const ImRect& rect, ImU32 col, float x_start_norm, float x_end_norm, float rounding);
     IMGUI_API void          RenderRectFilledWithHole(ImDrawList* draw_list, const ImRect& outer, const ImRect& inner, ImU32 col, float rounding);
 
-    // Widgets: Text
-    IMGUI_API void          TextEx(const char* text, const char* text_end = NULL, ImGuiTextFlags flags = 0);
+    // Widgets
+    // Widgets
+    IMGUI_API void          TextEx(ImStrv text, ImGuiTextFlags flags = 0);
+    inline    void          TextEx(const char* text, const char* text_end, ImGuiTextFlags flags = 0) { TextEx(ImStrv(text, text_end), flags); }
     IMGUI_API void          TextAligned(float align_x, float size_x, const char* fmt, ...);               // FIXME-WIP: Works but API is likely to be reworked. This is designed for 1 item on the line. (#7024)
     IMGUI_API void          TextAlignedV(float align_x, float size_x, const char* fmt, va_list args);
-
-    // Widgets
     IMGUI_API bool          ButtonEx(ImStrv label, const ImVec2& size_arg = ImVec2(0, 0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          ArrowButtonEx(ImStrv str_id, ImGuiDir dir, ImVec2 size_arg, ImGuiButtonFlags flags = 0);
     IMGUI_API bool          ImageButtonEx(ImGuiID id, ImTextureRef tex_ref, const ImVec2& image_size, const ImVec2& uv0, const ImVec2& uv1, const ImVec4& bg_col, const ImVec4& tint_col, ImGuiButtonFlags flags = 0);
     IMGUI_API void          SeparatorEx(ImGuiSeparatorFlags flags, float thickness = 1.0f);
-    IMGUI_API void          SeparatorTextEx(ImGuiID id, const char* label, const char* label_end, float extra_width);
+    IMGUI_API void          SeparatorTextEx(ImGuiID id, ImStrv label, float extra_width);
     IMGUI_API bool          CheckboxFlags(ImStrv label, ImS64* flags, ImS64 flags_value);
     IMGUI_API bool          CheckboxFlags(ImStrv label, ImU64* flags, ImU64 flags_value);
 
@@ -3596,7 +3611,7 @@ namespace ImGui
     IMGUI_API bool          SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f, float hover_visibility_delay = 0.0f, ImU32 bg_col = 0);
 
     // Widgets: Tree Nodes
-    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
+    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, ImStrv label);
     IMGUI_API void          TreeNodeDrawLineToChildNode(const ImVec2& target_pos);
     IMGUI_API void          TreeNodeDrawLineToTreePop(const ImGuiTreeNodeStackData* data);
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
@@ -3612,7 +3627,7 @@ namespace ImGui
     template<typename T, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  DragBehaviorT(ImGuiDataType data_type, T* v, float v_speed, T v_min, T v_max, const char* format, ImGuiSliderFlags flags);
     template<typename T, typename SIGNED_T, typename FLOAT_T>   IMGUI_API bool  SliderBehaviorT(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, T* v, T v_min, T v_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb);
     template<typename T>                                        IMGUI_API T     RoundScalarWithFormatT(const char* format, ImGuiDataType data_type, T v);
-    template<typename T>                                        IMGUI_API bool  CheckboxFlagsT(const char* label, T* flags, T flags_value);
+    template<typename T>                                        IMGUI_API bool  CheckboxFlagsT(ImStrv label, T* flags, T flags_value);
 
     // Data type helpers
     IMGUI_API const ImGuiDataTypeInfo*  DataTypeGetInfo(ImGuiDataType data_type);
@@ -3909,7 +3924,7 @@ IMGUI_API bool      ImFontAtlasGetMouseCursorTexData(ImFontAtlas* atlas, ImGuiMo
 
 #ifdef IMGUI_ENABLE_TEST_ENGINE
 extern void         ImGuiTestEngineHook_ItemAdd(ImGuiContext* ctx, ImGuiID id, const ImRect& bb, const ImGuiLastItemData* item_data);           // item_data may be NULL
-extern void         ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, const char* label, ImGuiItemStatusFlags flags);
+extern void         ImGuiTestEngineHook_ItemInfo(ImGuiContext* ctx, ImGuiID id, ImStrv label, ImGuiItemStatusFlags flags);
 extern void         ImGuiTestEngineHook_Log(ImGuiContext* ctx, const char* fmt, ...);
 extern const char*  ImGuiTestEngine_FindItemDebugLabel(ImGuiContext* ctx, ImGuiID id);
 
