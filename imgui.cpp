@@ -2975,7 +2975,8 @@ ImGuiID ImGuiWindow::GetID(ImStrv str)
     ImGui::KeepAliveID(id);
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
+    IM_IMSTR_ENSURE_HAS_END(str);
+    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str.Begin, str.End);
 #endif
     return id;
 }
@@ -3010,7 +3011,8 @@ ImGuiID ImGuiWindow::GetIDNoKeepAlive(ImStrv str)
     ImGuiID id = ImHashStr(str, seed);
 #ifdef IMGUI_ENABLE_TEST_ENGINE
     ImGuiContext& g = *GImGui;
-    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str, str_end);
+    IM_IMSTR_ENSURE_HAS_END(str);
+    IMGUI_TEST_ENGINE_ID_INFO2(id, ImGuiDataType_String, str.Begin, str.End);
 #endif
     return id;
 }
