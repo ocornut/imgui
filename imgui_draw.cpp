@@ -1707,15 +1707,14 @@ void ImDrawList::AddBezierQuadratic(const ImVec2& p1, const ImVec2& p2, const Im
     PathStroke(col, 0, thickness);
 }
 
-void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width, const ImVec4* cpu_fine_clip_rect)
+void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStrv text, float wrap_width, const ImVec4* cpu_fine_clip_rect)
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
     // Accept null ranges
-    if (text_begin == text_end || text_begin[0] == 0)
+    if (text.Begin == text.End)
         return;
-    // No need to strlen() here: font->RenderText() will do it and may early out.
 
     // Pull default font/size from the shared ImDrawListSharedData instance
     if (font == NULL)
@@ -1731,12 +1730,12 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
         clip_rect.z = ImMin(clip_rect.z, cpu_fine_clip_rect->z);
         clip_rect.w = ImMin(clip_rect.w, cpu_fine_clip_rect->w);
     }
-    font->RenderText(this, font_size, pos, col, clip_rect, text_begin, text_end, wrap_width, (cpu_fine_clip_rect != NULL) ? ImDrawTextFlags_CpuFineClip : ImDrawTextFlags_None);
+    font->RenderText(this, font_size, pos, col, clip_rect, text, wrap_width, (cpu_fine_clip_rect != NULL) ? ImDrawTextFlags_CpuFineClip : ImDrawTextFlags_None);
 }
 
-void ImDrawList::AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end)
+void ImDrawList::AddText(const ImVec2& pos, ImU32 col, ImStrv text)
 {
-    AddText(_Data->Font, _Data->FontSize, pos, col, text_begin, text_end);
+    AddText(_Data->Font, _Data->FontSize, pos, col, text);
 }
 
 void ImDrawList::AddImage(ImTextureRef tex_ref, const ImVec2& p_min, const ImVec2& p_max, const ImVec2& uv_min, const ImVec2& uv_max, ImU32 col)
@@ -3106,11 +3105,13 @@ static unsigned int stb_decompress(unsigned char* output, const unsigned char* i
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(ImStrv src, unsigned char* dst)
 {
-    while (*src)
+    const char* p = src.Begin;
+    const char* p_end = src.End;
+    while (p < p_end)
     {
-        unsigned int tmp = Decode85Byte(src[0]) + 85 * (Decode85Byte(src[1]) + 85 * (Decode85Byte(src[2]) + 85 * (Decode85Byte(src[3]) + 85 * Decode85Byte(src[4]))));
+        unsigned int tmp = Decode85Byte(p[0]) + 85 * (Decode85Byte(p[1]) + 85 * (Decode85Byte(p[2]) + 85 * (Decode85Byte(p[3]) + 85 * Decode85Byte(p[4]))));
         dst[0] = ((tmp >> 0) & 0xFF); dst[1] = ((tmp >> 8) & 0xFF); dst[2] = ((tmp >> 16) & 0xFF); dst[3] = ((tmp >> 24) & 0xFF);   // We can't assume little-endianness.
-        src += 5;
+        p += 5;
         dst += 4;
     }
 }
@@ -3205,8 +3206,9 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(ImStrv filename, float size_pixels, cons
     {
         // Store a short copy of filename into into the font name for convenience
         const char* p;
-        for (p = filename + ImStrlen(filename); p > filename && p[-1] != '/' && p[-1] != '\\'; p--) {}
-        ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "%s", p);
+        for (p = filename.End; p > filename.Begin && p[-1] != '/' && p[-1] != '\\'; p--) {}
+        filename.Begin = p;
+        ImFormatString(font_cfg.Name, IM_COUNTOF(font_cfg.Name), "%.*s", (int)filename.length(), filename.Begin);
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -3240,7 +3242,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_d
 
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(ImStrv compressed_ttf_data_base85, float size_pixels, const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
 {
-    int compressed_ttf_size = (((int)ImStrlen(compressed_ttf_data_base85) + 4) / 5) * 4;
+    int compressed_ttf_size = (((int)compressed_ttf_data_base85.length() + 4) / 5) * 4;
     void* compressed_ttf = IM_ALLOC((size_t)compressed_ttf_size);
     Decode85(compressed_ttf_data_base85, (unsigned char*)compressed_ttf);
     ImFont* font = AddFontFromMemoryCompressedTTF(compressed_ttf, compressed_ttf_size, size_pixels, font_cfg, glyph_ranges);
@@ -5092,15 +5094,13 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesVietnamese()
 // [SECTION] ImFontGlyphRangesBuilder
 //-----------------------------------------------------------------------------
 
-void ImFontGlyphRangesBuilder::AddText(const char* text, const char* text_end)
+void ImFontGlyphRangesBuilder::AddText(ImStrv text)
 {
-    if (text_end == NULL)
-        text_end = text + strlen(text);
-    while (text < text_end)
+    while (text.Begin < text.End)
     {
         unsigned int c = 0;
-        int c_len = ImTextCharFromUtf8(&c, text, text_end);
-        text += c_len;
+        int c_len = ImTextCharFromUtf8(&c, text.Begin, text.End);
+        text.Begin += c_len;
         if (c_len == 0)
             break;
         AddChar((ImWchar)c);
@@ -5484,7 +5484,7 @@ void ImTextInitClassifiers()
 // Simple word-wrapping for English, not full-featured. Please submit failing cases!
 // This will return the next location to wrap from. If no wrapping if necessary, this will fast-forward to e.g. text_end.
 // Refer to imgui_test_suite's "drawlist_text_wordwrap_1" for tests.
-const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text, const char* text_end, float wrap_width, ImDrawTextFlags flags)
+const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* text_begin, const char* text_end, float wrap_width, ImDrawTextFlags flags)
 {
     // For references, possible wrap point marked with ^
     //  "aaa bbb, ccc,ddd. eee   fff. ggg!"
@@ -5503,7 +5503,7 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
     float blank_width = 0.0f;
     wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
-    const char* s = text;
+    const char* s = text_begin;
     IM_ASSERT(text_end != NULL);
 
     int prev_type = ImWcharClass_Other;
@@ -5594,29 +5594,28 @@ const char* ImFontCalcWordWrapPositionEx(ImFont* font, float size, const char* t
 
     // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
     // +1 may not be a character start point in UTF-8 but it's ok because caller loops use (text >= word_wrap_eol).
-    if (s == text && text < text_end)
+    if (s == text_begin && text_begin < text_end)
         return s + ImTextCountUtf8BytesFromChar(s, text_end);
     return s;
 }
 
-const char* ImFont::CalcWordWrapPosition(float size, const char* text, const char* text_end, float wrap_width)
+const char* ImFont::CalcWordWrapPosition(float size, ImStrv text, float wrap_width)
 {
-    return ImFontCalcWordWrapPositionEx(this, size, text, text_end, wrap_width, ImDrawTextFlags_None);
+    return ImFontCalcWordWrapPositionEx(this, size, text.Begin, text.End, wrap_width, ImDrawTextFlags_None);
 }
 
 ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wrap_width, const char* text_begin, const char* text_end_display, const char* text_end, const char** out_remaining, ImVec2* out_offset, ImDrawTextFlags flags)
 {
-    if (!text_end)
-        text_end = text_begin + ImStrlen(text_begin); // FIXME-OPT: Need to avoid this.
-    if (!text_end_display)
-        text_end_display = text_end;
-
     ImFontBaked* baked = font->GetFontBaked(size);
+
     const float line_height = size;
     const float scale = line_height / baked->Size;
 
     ImVec2 text_size = ImVec2(0, 0);
     float line_width = 0.0f;
+
+    if (!text_end_display)
+        text_end_display = text_end;
 
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
@@ -5695,9 +5694,9 @@ ImVec2 ImFontCalcTextSizeEx(ImFont* font, float size, float max_width, float wra
     return text_size;
 }
 
-ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** out_remaining)
+ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStrv text, const char** out_remaining)
 {
-    return ImFontCalcTextSizeEx(this, size, max_width, wrap_width, text_begin, text_end, text_end, out_remaining, NULL, ImDrawTextFlags_None);
+    return ImFontCalcTextSizeEx(this, size, max_width, wrap_width, text.Begin, text.End, text.End, out_remaining, NULL, ImDrawTextFlags_None);
 }
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
@@ -5741,7 +5740,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, Im
 
 // Note: as with every ImDrawList drawing function, this expects that the font atlas texture is bound.
 // DO NOT CALL DIRECTLY THIS WILL CHANGE WILDLY IN 2026. Use ImDrawList::AddText().
-void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width, ImDrawTextFlags flags)
+void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, ImStrv text, float wrap_width, ImDrawTextFlags flags)
 {
     // Align to be pixel perfect
 begin:
@@ -5749,9 +5748,6 @@ begin:
     float y = IM_TRUNC(pos.y);
     if (y > clip_rect.w)
         return;
-
-    if (!text_end)
-        text_end = text_begin + ImStrlen(text_begin); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
 
     const float line_height = size;
     ImFontBaked* baked = GetFontBaked(size);
@@ -5761,7 +5757,8 @@ begin:
     const bool word_wrap_enabled = (wrap_width > 0.0f);
 
     // Fast-forward to first visible line
-    const char* s = text_begin;
+    const char* s = text.Begin;
+    const char* text_end = text.End;
     if (y + line_height < clip_rect.y)
         while (y + line_height < clip_rect.y && s < text_end)
         {
@@ -5776,7 +5773,7 @@ begin:
             }
             else
             {
-                s = line_end ? line_end + 1 : text_end;
+                s = line_end ? line_end + 1 : text.End;
             }
             y += line_height;
         }
