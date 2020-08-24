@@ -2028,7 +2028,7 @@ struct ImGuiTable
     ImS8                        FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
     ImS8                        FreezeColumnsRequest;       // Requested frozen columns count
     ImS8                        FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
-    ImS8                        RowCellDataCount;           // Number of RowCellData[] entries in current row
+    ImS8                        RowCellDataCurrent;         // Index of current RowCellData[] entry in current row
     bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
     bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
     bool                        IsInitializing;
