@@ -247,7 +247,8 @@ namespace ImStb
 
 // Helpers: Hashing
 IMGUI_API ImU32         ImHashData(const void* data, size_t data_size, ImU32 seed = 0);
-IMGUI_API ImU32         ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0);
+IMGUI_API ImU32         ImHashStr(ImStr str, ImU32 seed = 0);
+static inline ImU32     ImHashStr(const char* data, size_t data_size = 0, ImU32 seed = 0) { return ImHashStr(ImStr(data, data_size ? data + data_size : NULL), seed); }
 #ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 static inline ImU32     ImHash(const void* data, int size, ImU32 seed = 0) { return size ? ImHashData(data, (size_t)size, seed) : ImHashStr((const char*)data, 0, seed); } // [moved to ImHashStr/ImHashData in 1.68]
 #endif
@@ -265,14 +266,18 @@ static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |=
 // Helpers: String, Formatting
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);
+IMGUI_API void          ImStrncpy(char* dst, ImStr src, size_t count);
 IMGUI_API void          ImStrncpy(char* dst, const char* src, size_t count);
 IMGUI_API char*         ImStrdup(const char* str);
+IMGUI_API char*         ImStrdup(ImStr str);
+IMGUI_API char*         ImStrdupcpy(char* dst, size_t* p_dst_size, ImStr str);
 IMGUI_API char*         ImStrdupcpy(char* dst, size_t* p_dst_size, const char* str);
 IMGUI_API const char*   ImStrchrRange(const char* str_begin, const char* str_end, char c);
 IMGUI_API int           ImStrlenW(const ImWchar* str);
 IMGUI_API const char*   ImStreolRange(const char* str, const char* str_end);                // End end-of-line
 IMGUI_API const ImWchar*ImStrbolW(const ImWchar* buf_mid_line, const ImWchar* buf_begin);   // Find beginning-of-line
 IMGUI_API const char*   ImStristr(const char* haystack, const char* haystack_end, const char* needle, const char* needle_end);
+IMGUI_API const char*   ImStrstr(ImStr haystack, ImStr needle);
 IMGUI_API void          ImStrTrimBlanks(char* str);
 IMGUI_API const char*   ImStrSkipBlank(const char* str);
 IMGUI_API int           ImFormatString(char* buf, size_t buf_size, const char* fmt, ...) IM_FMTARGS(3);
@@ -283,6 +288,8 @@ IMGUI_API const char*   ImParseFormatTrimDecorations(const char* format, char* b
 IMGUI_API int           ImParseFormatPrecision(const char* format, int default_value);
 static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
 static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
+static inline size_t    ImStrlen(const char* str)       { return strlen(str); }
+static inline size_t    ImStrlen(const ImWchar* str)    { const ImWchar* e = str; while (*e) ++e; return (size_t)(e - str); }
 
 // Helpers: UTF-8 <> wchar conversions
 IMGUI_API int           ImTextStrToUtf8(char* buf, int buf_size, const ImWchar* in_text, const ImWchar* in_text_end);      // return output UTF-8 bytes count
@@ -1676,10 +1683,13 @@ public:
     ImGuiWindow(ImGuiContext* context, ImStr name);
     ~ImGuiWindow();
 
-    ImGuiID     GetID(const char* str, const char* str_end = NULL);
+    ImGuiID     GetID(ImStr str);
+    ImGuiID     GetID(const char* str)                      { return GetID(ImStr(str)); }
+    ImGuiID     GetID(const char* str, const char* str_end) { return GetID(ImStr(str, str_end)); }
     ImGuiID     GetID(const void* ptr);
     ImGuiID     GetID(int n);
-    ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL);
+    ImGuiID     GetIDNoKeepAlive(ImStr str);
+    ImGuiID     GetIDNoKeepAlive(const char* str, const char* str_end = NULL) { return GetIDNoKeepAlive(ImStr(str, str_end));}
     ImGuiID     GetIDNoKeepAlive(const void* ptr);
     ImGuiID     GetIDNoKeepAlive(int n);
     ImGuiID     GetIDFromRectangle(const ImRect& r_abs);
@@ -1972,17 +1982,24 @@ namespace ImGui
     // Render helpers
     // AVOID USING OUTSIDE OF IMGUI.CPP! NOT FOR PUBLIC CONSUMPTION. THOSE FUNCTIONS ARE A MESS. THEIR SIGNATURE AND BEHAVIOR WILL CHANGE, THEY NEED TO BE REFACTORED INTO SOMETHING DECENT.
     // NB: All position are in absolute pixels coordinates (we are never using window coordinates internally)
-    IMGUI_API void          RenderText(ImVec2 pos, const char* text, const char* text_end = NULL, bool hide_text_after_hash = true);
-    IMGUI_API void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width);
-    IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
-    IMGUI_API void          RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
-    IMGUI_API void          RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end, const ImVec2* text_size_if_known);
+    IMGUI_API void          RenderText(ImVec2 pos, ImStr text, bool hide_text_after_hash = true);
+    inline    void          RenderText(ImVec2 pos, const char* text, const char* text_end, bool hide_text_after_hash = true) { RenderText(pos, ImStr(text, text_end), hide_text_after_hash); }
+    IMGUI_API void          RenderTextWrapped(ImVec2 pos, ImStr text, float wrap_width);
+    inline    void          RenderTextWrapped(ImVec2 pos, const char* text, const char* text_end, float wrap_width) { RenderTextWrapped(pos, ImStr(text, text_end), wrap_width); }
+    IMGUI_API void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImStr text, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
+    inline    void          RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0,0), const ImRect* clip_rect = NULL) { RenderTextClipped(pos_min, pos_max, ImStr(text, text_end), text_size_if_known, align, clip_rect); }
+    IMGUI_API void          RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, ImStr text, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL);
+    inline    void          RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, const char* text, const char* text_end, const ImVec2* text_size_if_known, const ImVec2& align = ImVec2(0, 0), const ImRect* clip_rect = NULL) { RenderTextClippedEx(draw_list, pos_min, pos_max, ImStr(text, text_end), text_size_if_known, align, clip_rect); }
+    IMGUI_API void          RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, ImStr text, const ImVec2* text_size_if_known);
+    inline    void          RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, const char* text, const char* text_end, const ImVec2* text_size_if_known);
     IMGUI_API void          RenderFrame(ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, bool border = true, float rounding = 0.0f);
     IMGUI_API void          RenderFrameBorder(ImVec2 p_min, ImVec2 p_max, float rounding = 0.0f);
     IMGUI_API void          RenderColorRectWithAlphaCheckerboard(ImDrawList* draw_list, ImVec2 p_min, ImVec2 p_max, ImU32 fill_col, float grid_step, ImVec2 grid_off, float rounding = 0.0f, int rounding_corners_flags = ~0);
     IMGUI_API void          RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFlags flags = ImGuiNavHighlightFlags_TypeDefault); // Navigation highlight
-    IMGUI_API const char*   FindRenderedTextEnd(const char* text, const char* text_end = NULL); // Find the optional ## from which we stop displaying text.
-    IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end = NULL);
+    IMGUI_API const char*   FindRenderedTextEnd(ImStr text);                                    // Find the optional ## from which we stop displaying text.
+    inline    const char*   FindRenderedTextEnd(const char* text, const char* text_end) { return FindRenderedTextEnd(ImStr(text, text_end)); }
+    IMGUI_API void          LogRenderedText(const ImVec2* ref_pos, ImStr text);
+    inline    void          LogRenderedText(const ImVec2* ref_pos, const char* text, const char* text_end) { LogRenderedText(ref_pos, ImStr(text, text_end)); }
 
     // Render helpers (those functions don't access any ImGui state!)
     IMGUI_API void          RenderArrow(ImDrawList* draw_list, ImVec2 pos, ImU32 col, ImGuiDir dir, float scale = 1.0f);
@@ -2000,7 +2017,8 @@ namespace ImGui
 #endif
 
     // Widgets
-    IMGUI_API void          TextEx(const char* text, const char* text_end = NULL, ImGuiTextFlags flags = 0);
+    IMGUI_API void          TextEx(ImStr text, ImGuiTextFlags flags = 0);
+    inline    void          TextEx(const char* text, const char* text_end, ImGuiTextFlags flags = 0) { TextEx(ImStr(text, text_end), flags); }
     IMGUI_API bool          ButtonEx(ImStr label, const ImVec2& size_arg = ImVec2(0, 0), ImGuiButtonFlags flags = 0);
     IMGUI_API bool          CloseButton(ImGuiID id, const ImVec2& pos);
     IMGUI_API bool          CollapseButton(ImGuiID id, const ImVec2& pos);
@@ -2018,7 +2036,7 @@ namespace ImGui
     IMGUI_API bool          DragBehavior(ImGuiID id, ImGuiDataType data_type, void* p_v, float v_speed, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags);
     IMGUI_API bool          SliderBehavior(const ImRect& bb, ImGuiID id, ImGuiDataType data_type, void* p_v, const void* p_min, const void* p_max, const char* format, ImGuiSliderFlags flags, ImRect* out_grab_bb);
     IMGUI_API bool          SplitterBehavior(const ImRect& bb, ImGuiID id, ImGuiAxis axis, float* size1, float* size2, float min_size1, float min_size2, float hover_extend = 0.0f, float hover_visibility_delay = 0.0f);
-    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, const char* label, const char* label_end = NULL);
+    IMGUI_API bool          TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, ImStr label);
     IMGUI_API bool          TreeNodeBehaviorIsOpen(ImGuiID id, ImGuiTreeNodeFlags flags = 0);                     // Consume previous SetNextItemOpen() data, if any. May return true when logging
     IMGUI_API void          TreePushOverrideID(ImGuiID id);
 
@@ -2065,7 +2083,6 @@ namespace ImGui
     // Debug Tools
     inline void             DebugDrawItemRect(ImU32 col = IM_COL32(255,0,0,255))    { ImGuiContext& g = *GImGui; ImGuiWindow* window = g.CurrentWindow; GetForegroundDrawList(window)->AddRect(window->DC.LastItemRect.Min, window->DC.LastItemRect.Max, col); }
     inline void             DebugStartItemPicker()                                  { ImGuiContext& g = *GImGui; g.DebugItemPickerActive = true; }
-
 } // namespace ImGui
 
 // ImFontAtlas internals

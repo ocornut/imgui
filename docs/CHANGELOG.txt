@@ -321,6 +321,7 @@ Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.76
 
 Other Changes:
 
+- Switched to use ImStr and ImWStr string span in public API.
 - Drag and Drop, Nav: Disabling navigation arrow keys when drag and drop is active. In the docking
   branch pressing arrow keys while dragging a window from a tab could trigger an assert. (#3025)
 - BeginMenu: Using same ID multiple times appends content to a menu. (#1207) [@rokups]
