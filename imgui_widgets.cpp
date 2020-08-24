@@ -4508,11 +4508,12 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     if (is_multiline)
     {
         Dummy(text_size + ImVec2(0.0f, g.FontSize)); // Always add room to scroll an extra line
+        PopFont();
         EndChild();
         EndGroup();
     }
 
-    if (is_password && !is_displaying_hint)
+    if (is_password && !is_displaying_hint &&!is_multiline)
         PopFont();
 
     // Log as text
