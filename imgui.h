@@ -268,9 +268,47 @@ struct ImVec4
     IM_VEC4_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImVec4.
 #endif
 };
-IM_MSVC_RUNTIME_CHECKS_RESTORE
 
-typedef const char* ImStrv;
+#define IM_IMSTR_LENGTH(s)          (s.Begin ? (s.End ? (size_t)(s.End - s.Begin) : strlen(s.Begin)) : 0)
+#define IM_IMSTR_ENSURE_HAS_END(s)  if (s.End == NULL) s.End = s.Begin + strlen(s.Begin)
+
+// String view class.
+#define IMGUI_HAS_IMSTR
+struct ImStrv
+{
+    const char* Begin;
+    const char* End;
+    ImStrv() { Begin = End = NULL; }
+    ImStrv(const char* b) { Begin = b; End = NULL; }
+    ImStrv(const char* b, const char* e) { Begin = b; End = e; }
+    ImStrv(const char* b, size_t size) { Begin = b; End = b + size; }
+    bool Empty() const { return Begin == NULL || Begin == End || Begin[0] == 0; }
+    // void EnsureHasEnd() { if (End == NULL) End = Begin + Length(); }
+    // size_t Length() const
+    // {
+    //     if (Begin == NULL)
+    //         return 0;
+    //     if (End == NULL)
+    //         return strlen(Begin);
+    //     return (size_t)(End - Begin);
+    // }
+    bool operator==(ImStrv other) const
+    {
+        if (Begin == other.Begin && End == other.End)
+            return true;
+        size_t len = IM_IMSTR_LENGTH((*this));
+        if (len == IM_IMSTR_LENGTH(other))
+            return memcmp(Begin, other.Begin, len) == 0;
+        return false;
+    }
+    operator bool() const { return Begin != NULL; }
+    char operator[](int index) const { return Begin[index]; }
+#ifdef IM_IMSTR_CLASS_EXTRA
+    IM_IMSTR_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImStrv.
+#endif
+};
+
+IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 //-----------------------------------------------------------------------------
 // [SECTION] Dear ImGui end-user API functions
@@ -465,16 +503,18 @@ namespace ImGui
     // - In this header file we use the "label"/"name" terminology to denote a string that will be displayed + used as an ID,
     //   whereas "str_id" denote a string that is only used as an ID and not normally displayed.
     IMGUI_API void          PushID(ImStrv str_id);                                          // push string into the ID stack (will hash string).
-    IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end);       // push string into the ID stack (will hash string).
+    IMGUI_API void          PushID(const char* str_id_begin, const char* str_id_end = NULL);// push string into the ID stack (will hash string).
     IMGUI_API void          PushID(const void* ptr_id);                                     // push pointer into the ID stack (will hash pointer).
     IMGUI_API void          PushID(int int_id);                                             // push integer into the ID stack (will hash integer).
     IMGUI_API void          PopID();                                                        // pop from the ID stack.
     IMGUI_API ImGuiID       GetID(ImStrv str_id);                                           // calculate unique ID (hash of whole ID stack + given parameter). e.g. if you want to query into ImGuiStorage yourself
-    IMGUI_API ImGuiID       GetID(const char* str_id_begin, const char* str_id_end);
+    IMGUI_API ImGuiID       GetID(const char* str_id_begin, const char* str_id_end = NULL);
     IMGUI_API ImGuiID       GetID(const void* ptr_id);
 
     // Widgets: Text
-    IMGUI_API void          TextUnformatted(const char* text, const char* text_end = NULL); // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
+    // FIXME-IMSTR: Functions taking format should use ImStrv. It breaks IM_FMTARGS() macro however.
+    IMGUI_API void          TextUnformatted(ImStrv text);                                   // raw text without formatting. Roughly equivalent to Text("%s", text) but: A) doesn't require null terminated string if 'text_end' is specified, B) it's faster, no memory copy is done, no buffer size limits, recommended for long chunks of text.
+    inline    void          TextUnformatted(const char* text, const char* text_end)         { TextUnformatted(ImStrv(text, text_end)); }
     IMGUI_API void          Text(const char* fmt, ...)                                      IM_FMTARGS(1); // formatted text
     IMGUI_API void          TextV(const char* fmt, va_list args)                            IM_FMTLIST(1);
     IMGUI_API void          TextColored(const ImVec4& col, const char* fmt, ...)            IM_FMTARGS(2); // shortcut for PushStyleColor(ImGuiCol_Text, col); Text(fmt, ...); PopStyleColor();
@@ -491,8 +531,8 @@ namespace ImGui
     // Widgets: Main
     // - Most widgets return true when the value has been changed or when pressed/selected
     // - You may also use one of the many IsItemXXX functions (e.g. IsItemActive, IsItemHovered, etc.) to query widget state.
-    IMGUI_API bool          Button(const ImStrv label, const ImVec2& size = ImVec2(0, 0));   // button
-    IMGUI_API bool          SmallButton(ImStrv label);                                       // button with FramePadding=(0,0) to easily embed within text
+    IMGUI_API bool          Button(ImStrv label, const ImVec2& size = ImVec2(0, 0));        // button
+    IMGUI_API bool          SmallButton(ImStrv label);                                      // button with FramePadding=(0,0) to easily embed within text
     IMGUI_API bool          InvisibleButton(ImStrv str_id, const ImVec2& size, ImGuiButtonFlags flags = 0); // flexible button behavior without the visuals, frequently useful to build custom behaviors using the public api (along with IsItemActive, IsItemHovered, etc.)
     IMGUI_API bool          ArrowButton(ImStrv str_id, ImGuiDir dir);                        // square button with an arrow shape
     IMGUI_API void          Image(ImTextureID user_texture_id, const ImVec2& size, const ImVec2& uv0 = ImVec2(0, 0), const ImVec2& uv1 = ImVec2(1,1), const ImVec4& tint_col = ImVec4(1,1,1,1), const ImVec4& border_col = ImVec4(0,0,0,0));
@@ -500,8 +540,8 @@ namespace ImGui
     IMGUI_API bool          Checkbox(ImStrv label, bool* v);
     IMGUI_API bool          CheckboxFlags(ImStrv label, int* flags, int flags_value);
     IMGUI_API bool          CheckboxFlags(ImStrv label, unsigned int* flags, unsigned int flags_value);
-    IMGUI_API bool          RadioButton(ImStrv label, bool active);                          // use with e.g. if (RadioButton("one", my_value==1)) { my_value = 1; }
-    IMGUI_API bool          RadioButton(ImStrv label, int* v, int v_button);                 // shortcut to handle the above pattern when value is an integer
+    IMGUI_API bool          RadioButton(ImStrv label, bool active);                         // use with e.g. if (RadioButton("one", my_value==1)) { my_value = 1; }
+    IMGUI_API bool          RadioButton(ImStrv label, int* v, int v_button);                // shortcut to handle the above pattern when value is an integer
     IMGUI_API void          ProgressBar(float fraction, const ImVec2& size_arg = ImVec2(-FLT_MIN, 0), ImStrv overlay = NULL);
     IMGUI_API void          Bullet();                                                       // draw a small circle + keep the cursor on the same line. advance cursor x position by GetTreeNodeToLabelSpacing(), same distance that TreeNode() uses
 
@@ -865,7 +905,8 @@ namespace ImGui
     IMGUI_API void          EndChildFrame();                                                    // always call EndChildFrame() regardless of BeginChildFrame() return values (which indicates a collapsed/clipped window)
 
     // Text Utilities
-    IMGUI_API ImVec2        CalcTextSize(const char* text, const char* text_end = NULL, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
+    IMGUI_API ImVec2        CalcTextSize(ImStrv text, bool hide_text_after_double_hash = false, float wrap_width = -1.0f);
+    inline    ImVec2        CalcTextSize(const char* text, const char* text_end, bool hide_text_after_double_hash = false, float wrap_width = -1.0f) { return CalcTextSize(ImStrv(text, text_end), hide_text_after_double_hash, wrap_width); }
 
     // Color Utilities
     IMGUI_API ImVec4        ColorConvertU32ToFloat4(ImU32 in);
@@ -2081,7 +2122,7 @@ struct ImGuiInputTextCallbackData
     ImWchar             EventChar;      // Character input                      // Read-write   // [CharFilter] Replace character with another one, or set to zero to drop. return 1 is equivalent to setting EventChar=0;
     ImGuiKey            EventKey;       // Key pressed (Up/Down/TAB)            // Read-only    // [Completion,History]
     char*               Buf;            // Text buffer                          // Read-write   // [Resize] Can replace pointer / [Completion,History,Always] Only write to pointed data, don't replace the actual pointer!
-    int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: string.length()
+    int                 BufTextLen;     // Text length (in bytes)               // Read-write   // [Resize,Completion,History,Always] Exclude zero-terminator storage. In C land: == strlen(some_text), in C++ land: IM_IMSTR_LENGTH(string)
     int                 BufSize;        // Buffer size (in bytes) = capacity+1  // Read-only    // [Resize,Completion,History,Always] Include zero-terminator storage. In C land == ARRAYSIZE(my_char_array), in C++ land: string.capacity()+1
     bool                BufDirty;       // Set if you modify Buf/BufTextLen!    // Write        // [Completion,History,Always]
     int                 CursorPos;      //                                      // Read-write   // [Completion,History,Always]
@@ -2092,7 +2133,8 @@ struct ImGuiInputTextCallbackData
     // Use those function to benefit from the CallbackResize behaviors. Calling those function reset the selection.
     IMGUI_API ImGuiInputTextCallbackData();
     IMGUI_API void      DeleteChars(int pos, int bytes_count);
-    IMGUI_API void      InsertChars(int pos, const char* text, const char* text_end = NULL);
+    IMGUI_API void      InsertChars(int pos, ImStrv text);
+    inline void         InsertChars(int pos, const char* text, const char* text_end) { InsertChars(pos, ImStrv(text, text_end)); }
     void                SelectAll()             { SelectionStart = 0; SelectionEnd = BufTextLen; }
     void                ClearSelection()        { SelectionStart = SelectionEnd = BufTextLen; }
     bool                HasSelection() const    { return SelectionStart != SelectionEnd; }
@@ -2125,7 +2167,7 @@ struct ImGuiPayload
 
     ImGuiPayload()  { Clear(); }
     void Clear()    { SourceId = SourceParentId = 0; Data = NULL; DataSize = 0; memset(DataType, 0, sizeof(DataType)); DataFrameCount = -1; Preview = Delivery = false; }
-    bool IsDataType(ImStrv type) const { return DataFrameCount != -1 && strcmp(type, DataType) == 0; }
+    bool IsDataType(ImStrv type) const      { return DataFrameCount != -1 && type == ImStrv(DataType); }
     bool IsPreview() const                  { return Preview; }
     bool IsDelivery() const                 { return Delivery; }
 };
@@ -2180,7 +2222,8 @@ struct ImGuiTextFilter
 {
     IMGUI_API           ImGuiTextFilter(ImStrv default_filter = "");
     IMGUI_API bool      Draw(ImStrv label = "Filter (inc,-exc)", float width = 0.0f);  // Helper calling InputText+Build
-    IMGUI_API bool      PassFilter(const char* text, const char* text_end = NULL) const;
+    IMGUI_API bool      PassFilter(ImStrv text) const;
+    inline    bool      PassFilter(const char* text, const char* text_end = NULL) const { return PassFilter(ImStrv(text, text_end)); }
     IMGUI_API void      Build();
     void                Clear()          { InputBuf[0] = 0; Build(); }
     bool                IsActive() const { return !Filters.empty(); }
@@ -2217,7 +2260,8 @@ struct ImGuiTextBuffer
     void                clear()                 { Buf.clear(); }
     void                reserve(int capacity)   { Buf.reserve(capacity); }
     const char*         c_str() const           { return Buf.Data ? Buf.Data : EmptyString; }
-    IMGUI_API void      append(const char* str, const char* str_end = NULL);
+    IMGUI_API void      append(ImStrv str);
+    inline    void      append(const char* str, const char* str_end) { append(ImStrv(str, str_end)); }
     IMGUI_API void      appendf(const char* fmt, ...) IM_FMTARGS(2);
     IMGUI_API void      appendfv(const char* fmt, va_list args) IM_FMTLIST(2);
 };
@@ -2550,8 +2594,10 @@ struct ImDrawList
     IMGUI_API void  AddCircleFilled(const ImVec2& center, float radius, ImU32 col, int num_segments = 0);
     IMGUI_API void  AddNgon(const ImVec2& center, float radius, ImU32 col, int num_segments, float thickness = 1.0f);
     IMGUI_API void  AddNgonFilled(const ImVec2& center, float radius, ImU32 col, int num_segments);
-    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL);
-    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end = NULL, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+    IMGUI_API void  AddText(const ImVec2& pos, ImU32 col, ImStrv text);
+    inline    void  AddText(const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end) { AddText(NULL, 0.0f, pos, col, ImStrv(text_begin, text_end)); }
+    IMGUI_API void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, ImStrv text, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL);
+    inline    void  AddText(const ImFont* font, float font_size, const ImVec2& pos, ImU32 col, const char* text_begin, const char* text_end, float wrap_width = 0.0f, const ImVec4* cpu_fine_clip_rect = NULL) { AddText(font, font_size, pos, col, ImStrv(text_begin, text_end), wrap_width, cpu_fine_clip_rect); }
     IMGUI_API void  AddPolyline(const ImVec2* points, int num_points, ImU32 col, ImDrawFlags flags, float thickness);
     IMGUI_API void  AddConvexPolyFilled(const ImVec2* points, int num_points, ImU32 col);
     IMGUI_API void  AddBezierCubic(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments = 0); // Cubic Bezier (4 control points)
@@ -2698,7 +2744,8 @@ struct ImFontGlyphRangesBuilder
     inline bool     GetBit(size_t n) const  { int off = (int)(n >> 5); ImU32 mask = 1u << (n & 31); return (UsedChars[off] & mask) != 0; }  // Get bit n in the array
     inline void     SetBit(size_t n)        { int off = (int)(n >> 5); ImU32 mask = 1u << (n & 31); UsedChars[off] |= mask; }               // Set bit n in the array
     inline void     AddChar(ImWchar c)      { SetBit(c); }                      // Add character
-    IMGUI_API void  AddText(const char* text, const char* text_end = NULL);     // Add string (each character of the UTF-8 string are added)
+    IMGUI_API void  AddText(ImStrv text);                                       // Add string (each character of the UTF-8 string are added)
+    inline    void  AddText(const char* text, const char* text_end = NULL)      { AddText(ImStrv(text, text_end)); }
     IMGUI_API void  AddRanges(const ImWchar* ranges);                           // Add ranges, e.g. builder.AddRanges(ImFontAtlas::GetGlyphRangesDefault()) to force add all of ASCII/Latin+Ext
     IMGUI_API void  BuildRanges(ImVector<ImWchar>* out_ranges);                 // Output new ranges
 };
@@ -2879,10 +2926,13 @@ struct ImFont
 
     // 'max_width' stops rendering after a certain width (could be turned into a 2d size). FLT_MAX to disable.
     // 'wrap_width' enable automatic word-wrapping across multiple lines to fit into given width. 0.0f to disable.
-    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end = NULL, const char** remaining = NULL) const; // utf8
-    IMGUI_API const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const;
+    IMGUI_API ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, ImStrv text, const char** remaining = NULL) const; // utf8
+    inline    ImVec2            CalcTextSizeA(float size, float max_width, float wrap_width, const char* text_begin, const char* text_end, const char** remaining = NULL) const { return CalcTextSizeA(size, max_width, wrap_width, ImStrv(text_begin, text_end), remaining); }
+    IMGUI_API const char*       CalcWordWrapPositionA(float scale, ImStrv text, float wrap_width) const;
+    inline    const char*       CalcWordWrapPositionA(float scale, const char* text, const char* text_end, float wrap_width) const { return CalcWordWrapPositionA(scale, ImStrv(text, text_end), wrap_width); }
     IMGUI_API void              RenderChar(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, ImWchar c) const;
-    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
+    IMGUI_API void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, ImStrv text, float wrap_width = 0.0f, bool cpu_fine_clip = false) const;
+    inline    void              RenderText(ImDrawList* draw_list, float size, const ImVec2& pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false) const { RenderText(draw_list, size, pos, col, clip_rect, ImStrv(text_begin, text_end), wrap_width, cpu_fine_clip); }
 
     // [Internal] Don't use!
     IMGUI_API void              BuildLookupTable();
