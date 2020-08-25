@@ -1290,6 +1290,8 @@ struct ImGuiContext
     // Platform support
     ImVec2                  PlatformImePos;                     // Cursor position request & last passed to the OS Input Method Editor
     ImVec2                  PlatformImeLastPos;
+    bool                    PlatformImeStatus;
+    bool                    PlatformImeLastStatus;
 
     // Settings
     bool                    SettingsLoaded;
@@ -1441,6 +1443,7 @@ struct ImGuiContext
         TooltipOverrideCount = 0;
 
         PlatformImePos = PlatformImeLastPos = ImVec2(FLT_MAX, FLT_MAX);
+        PlatformImeStatus = PlatformImeLastStatus = true;
 
         SettingsLoaded = false;
         SettingsDirtyTimer = 0.0f;
