@@ -1,10 +1,9 @@
-if ! test -d Debug; then
-    mkdir Debug
-fi
+#!/bin/bash
 
-if ! test -d Release; then
-    mkdir Release
-fi
+mkdir -p Debug
+mkdir -p Release
 
-cc -std=c++17 -g -I .. -I ../.. -o Debug/example_x11_vulkan main.cpp ../imgui_impl_x11.cpp ../imgui_impl_vulkan.cpp ../../imgui*.cpp -lm -lxcb -lxcb-keysyms -lxcb-xfixes -lxcb-xkb -lxcb-cursor -lstdc++ -lvulkan -lrt
-cc -std=c++17 -O3 -I .. -I ../.. -o Release/example_x11_vulkan main.cpp ../imgui_impl_x11.cpp ../imgui_impl_vulkan.cpp ../../imgui*.cpp -lm -lxcb -lxcb-keysyms -lxcb-xfixes -lxcb-xkb -lxcb-cursor -lstdc++ -lvulkan -lrt
+FILES=(main.cpp ../imgui_impl_x11.cpp ../imgui_impl_vulkan.cpp ../../imgui*.cpp)
+LIBS="xcb xcb-keysyms xcb-xfixes xcb-xkb xcb-cursor xcb-randr vulkan"
+cc -Wall -g -I .. -I ../.. -DHAS_VULKAN -o Debug/example_x11_vulkan "${FILES[@]}" -lm -lstdc++ -lrt $(pkg-config --libs $LIBS)
+cc -Wall -O3 -I .. -I ../.. -DHAS_VULKAN -o Release/example_x11_vulkan "${FILES[@]}" -lm -lstdc++ -lrt $(pkg-config --libs $LIBS)
