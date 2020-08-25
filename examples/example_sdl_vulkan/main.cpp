@@ -302,7 +302,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     }
 }
 
-static void FramePresent(ImGui_ImplVulkanH_Window* wd)
+static void FramePresent(ImGui_ImplVulkanH_Window* wd, SDL_Window* window)
 {
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     VkPresentInfoKHR info = {};
@@ -313,6 +313,12 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &wd->FrameIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        SDL_GetWindowSize(window, &g_SwapChainResizeWidth, &g_SwapChainResizeHeight);
+        g_SwapChainRebuild = true;
+        return;
+    }
     check_vk_result(err);
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
@@ -457,15 +463,6 @@ int main(int, char**)
             ImGui_ImplSDL2_ProcessEvent(&event);
             if (event.type == SDL_QUIT)
                 done = true;
-            if (event.type == SDL_WINDOWEVENT && event.window.event == SDL_WINDOWEVENT_RESIZED && event.window.windowID == SDL_GetWindowID(window))
-            {
-                // Note: your own application may rely on SDL_WINDOWEVENT_MINIMIZED/SDL_WINDOWEVENT_RESTORED to skip updating all-together.
-                // Here ImGui_ImplSDL2_NewFrame() will set io.DisplaySize to zero which will disable rendering but let application run.
-                // Please note that you can't Present into a minimized window.
-                g_SwapChainResizeWidth = (int)event.window.data1;
-                g_SwapChainResizeHeight = (int)event.window.data2;
-                g_SwapChainRebuild = true;
-            }
         }
 
         // Resize swap chain?

@@ -3789,17 +3789,18 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     // - Child windows can extend beyond the limit of their parent so we need to derive HoveredRootWindow from HoveredWindow.
     // - When moving a window we can skip the search, which also conveniently bypasses the fact that window->WindowRectClipped is lagging as this point of the frame.
     // - We also support the moved window toggling the NoInputs flag after moving has started in order to be able to detect windows below it, which is useful for e.g. docking mechanisms.
+    bool clear_hovered_windows = false;
     FindHoveredWindow();
     IM_ASSERT(g.HoveredWindow == NULL || g.HoveredWindow == g.MovingWindow || g.HoveredWindow->Viewport == g.MouseViewport);
 
     // Modal windows prevents mouse from hovering behind them.
     ImGuiWindow* modal_window = GetTopMostPopupModal();
     if (modal_window && g.HoveredRootWindow && !IsWindowChildOf(g.HoveredRootWindow, modal_window))
-        g.HoveredWindow = g.HoveredRootWindow = g.HoveredWindowUnderMovingWindow = NULL;
+        clear_hovered_windows = true;
 
     // Disabled mouse?
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NoMouse)
-        g.HoveredWindow = g.HoveredRootWindow = g.HoveredWindowUnderMovingWindow = NULL;
+        clear_hovered_windows = true;
 
     // We track click ownership. When clicked outside of a window the click is owned by the application and won't report hovering nor request capture even while dragging over our windows afterward.
     int mouse_earliest_button_down = -1;
@@ -3819,6 +3820,9 @@ void ImGui::UpdateHoveredWindowAndCaptureFlags()
     // FIXME: For patterns of drag and drop across OS windows, we may need to rework/remove this test (first committed 311c0ca9 on 2015/02)
     const bool mouse_dragging_extern_payload = g.DragDropActive && (g.DragDropSourceFlags & ImGuiDragDropFlags_SourceExtern) != 0;
     if (!mouse_avail_to_imgui && !mouse_dragging_extern_payload)
+        clear_hovered_windows = true;
+
+    if (clear_hovered_windows)
         g.HoveredWindow = g.HoveredRootWindow = g.HoveredWindowUnderMovingWindow = NULL;
 
     // Update io.WantCaptureMouse for the user application (true = dispatch mouse info to imgui, false = dispatch mouse info to Dear ImGui + app)
@@ -8108,7 +8112,7 @@ ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_
     if (!window_rect.Contains(item_rect))
     {
         if (window->ScrollbarX && item_rect.Min.x < window_rect.Min.x)
-            SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x + g.Style.ItemSpacing.x, 0.0f);
+            SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x - g.Style.ItemSpacing.x, 0.0f);
         else if (window->ScrollbarX && item_rect.Max.x >= window_rect.Max.x)
             SetScrollFromPosX(window, item_rect.Max.x - window->Pos.x + g.Style.ItemSpacing.x, 1.0f);
         if (item_rect.Min.y < window_rect.Min.y)
@@ -9859,10 +9863,11 @@ static void ImGui::NavUpdateWindowing()
         if (move_delta.x != 0.0f || move_delta.y != 0.0f)
         {
             const float NAV_MOVE_SPEED = 800.0f;
-            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y)); // FIXME: Doesn't code variable framerate very well
-            SetWindowPos(g.NavWindowingTarget->RootWindow, g.NavWindowingTarget->RootWindow->Pos + move_delta * move_speed, ImGuiCond_Always);
+            const float move_speed = ImFloor(NAV_MOVE_SPEED * g.IO.DeltaTime * ImMin(g.IO.DisplayFramebufferScale.x, g.IO.DisplayFramebufferScale.y)); // FIXME: Doesn't handle variable framerate very well
+            ImGuiWindow* moving_window = g.NavWindowingTarget->RootWindow;
+            SetWindowPos(moving_window, moving_window->Pos + move_delta * move_speed, ImGuiCond_Always);
+            MarkIniSettingsDirty(moving_window);
             g.NavDisableMouseHover = true;
-            MarkIniSettingsDirty(g.NavWindowingTarget);
         }
     }
 

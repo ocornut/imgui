@@ -310,7 +310,7 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     }
 }
 
-static void FramePresent(ImGui_ImplVulkanH_Window* wd)
+static void FramePresent(ImGui_ImplVulkanH_Window* wd, GLFWwindow* window)
 {
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     VkPresentInfoKHR info = {};
@@ -321,6 +321,12 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &wd->FrameIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        glfwGetFramebufferSize(window, &g_SwapChainResizeWidth, &g_SwapChainResizeHeight);
+        g_SwapChainRebuild = true;
+        return;
+    }
     check_vk_result(err);
     wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
 }
@@ -328,13 +334,6 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 static void glfw_error_callback(int error, const char* description)
 {
     fprintf(stderr, "Glfw Error %d: %s\n", error, description);
-}
-
-static void glfw_resize_callback(GLFWwindow*, int w, int h)
-{
-    g_SwapChainRebuild = true;
-    g_SwapChainResizeWidth = w;
-    g_SwapChainResizeHeight = h;
 }
 
 int main(int, char**)
@@ -365,7 +364,6 @@ int main(int, char**)
     // Create Framebuffers
     int w, h;
     glfwGetFramebufferSize(window, &w, &h);
-    glfwSetFramebufferSizeCallback(window, glfw_resize_callback);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
     SetupVulkanWindow(wd, surface, w, h);
 

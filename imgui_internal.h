@@ -654,12 +654,13 @@ enum ImGuiSliderFlagsPrivate_
 enum ImGuiSelectableFlagsPrivate_
 {
     // NB: need to be in sync with last value of ImGuiSelectableFlags_
-    ImGuiSelectableFlags_NoHoldingActiveID  = 1 << 20,
-    ImGuiSelectableFlags_SelectOnClick      = 1 << 21,  // Override button behavior to react on Click (default is Click+Release)
-    ImGuiSelectableFlags_SelectOnRelease    = 1 << 22,  // Override button behavior to react on Release (default is Click+Release)
-    ImGuiSelectableFlags_SpanAvailWidth     = 1 << 23,  // Span all avail width even if we declared less for layout purpose. FIXME: We may be able to remove this (added in 6251d379, 2bcafc86 for menus)
-    ImGuiSelectableFlags_DrawHoveredWhenHeld= 1 << 24,  // Always show active when held, even is not hovered. This concept could probably be renamed/formalized somehow.
-    ImGuiSelectableFlags_SetNavIdOnHover    = 1 << 25
+    ImGuiSelectableFlags_NoHoldingActiveID      = 1 << 20,
+    ImGuiSelectableFlags_SelectOnClick          = 1 << 21,  // Override button behavior to react on Click (default is Click+Release)
+    ImGuiSelectableFlags_SelectOnRelease        = 1 << 22,  // Override button behavior to react on Release (default is Click+Release)
+    ImGuiSelectableFlags_SpanAvailWidth         = 1 << 23,  // Span all avail width even if we declared less for layout purpose. FIXME: We may be able to remove this (added in 6251d379, 2bcafc86 for menus)
+    ImGuiSelectableFlags_DrawHoveredWhenHeld    = 1 << 24,  // Always show active when held, even is not hovered. This concept could probably be renamed/formalized somehow.
+    ImGuiSelectableFlags_SetNavIdOnHover        = 1 << 25,  // Set Nav/Focus ID on mouse hover (used by MenuItem)
+    ImGuiSelectableFlags_NoPadWithHalfSpacing   = 1 << 26   // Disable padding each side with ItemSpacing * 0.5f
 };
 
 // Extend ImGuiTreeNodeFlags_
@@ -1366,11 +1367,11 @@ struct ImGuiContext
     ImGuiKeyModFlags        NavJustMovedToKeyMods;
     ImGuiID                 NavNextActivateId;                  // Set by ActivateItem(), queued until next frame.
     ImGuiInputSource        NavInputSource;                     // Keyboard or Gamepad mode? THIS WILL ONLY BE None or NavGamepad or NavKeyboard.
-    ImRect                  NavScoringRect;                     // Rectangle used for scoring, in screen space. Based of window->DC.NavRefRectRel[], modified for directional navigation scoring.
+    ImRect                  NavScoringRect;                     // Rectangle used for scoring, in screen space. Based of window->NavRectRel[], modified for directional navigation scoring.
     int                     NavScoringCount;                    // Metrics for debugging
     ImGuiNavLayer           NavLayer;                           // Layer we are navigating on. For now the system is hard-coded for 0=main contents and 1=menu/title bar, may expose layers later.
     int                     NavIdTabCounter;                    // == NavWindow->DC.FocusIdxTabCounter at time of NavId processing
-    bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRefRectRel is valid
+    bool                    NavIdIsAlive;                       // Nav widget has been seen this frame ~~ NavRectRel is valid
     bool                    NavMousePosDirty;                   // When set we will update mouse position if (io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) if set (NB: this not enabled by default)
     bool                    NavDisableHighlight;                // When user starts using mouse, we hide gamepad/keyboard highlight (NB: but they are still available, which is why NavDisableHighlight isn't always != NavDisableMouseHover)
     bool                    NavDisableMouseHover;               // When user starts using gamepad/keyboard, we hide mouse hovering highlight until mouse is touched again.
