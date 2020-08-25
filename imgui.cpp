@@ -14890,18 +14890,26 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
     if (AcceptDragDropPayload(IMGUI_PAYLOAD_TYPE_WINDOW, ImGuiDragDropFlags_AcceptBeforeDelivery | ImGuiDragDropFlags_AcceptNoDrawDefaultRect))
     {
         // Select target node
-        // (we should not assume that g.HoveredDockNode is != NULL when window is a host dock node: it depends on padding/spacing handled by DockNodeTreeFindVisibleNodeByPos)
-        ImGuiDockNode* node = g.HoveredDockNode;
-        const bool allow_null_target_node = window->DockNode == NULL && window->DockNodeAsHost == NULL;
-
-        // There is an edge case when docking into a dockspace which only has inactive nodes (because none of the windows are active)
-        // In this case we need to fallback into any leaf mode, possibly the central node.
-        if (window->DockNodeAsHost && node && node->IsDockSpace() && node->IsRootNode())
+        // (Important: we cannot use g.HoveredDockNode here! Because each of our target node have filters based on payload, each candidate drop target will do its own evaluation)
+        bool dock_into_floating_window = false;
+        ImGuiDockNode* node = NULL;
+        if (window->DockNodeAsHost)
         {
-            if (node->CentralNode && node->IsLeafNode()) // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
-                node = node->CentralNode;
+            // Cannot assume that node will != NULL even though we passed the rectangle test: it depends on padding/spacing handled by DockNodeTreeFindVisibleNodeByPos().
+            node = DockNodeTreeFindVisibleNodeByPos(window->DockNodeAsHost, g.IO.MousePos);
+
+            // There is an edge case when docking into a dockspace which only has _inactive_ nodes (because none of the windows are active)
+            // In this case we need to fallback into any leaf mode, possibly the central node.
+            // FIXME-20181220: We should not have to test for IsLeafNode() here but we have another bug to fix first.
+            if (node && node->IsDockSpace() && node->IsRootNode())
+                node = (node->CentralNode && node->IsLeafNode()) ? node->CentralNode : DockNodeTreeFindFallbackLeafNode(node);
+        }
+        else
+        {
+            if (window->DockNode)
+                node = window->DockNode;
             else
-                node = DockNodeTreeFindFallbackLeafNode(node);
+                dock_into_floating_window = true; // Dock into a regular window
         }
 
         const ImRect explicit_target_rect = (node && node->TabBar && !node->IsHiddenTabBar() && !node->IsNoTabBar()) ? node->TabBar->BarRect : ImRect(window->Pos, window->Pos + ImVec2(window->Size.x, GetFrameHeight()));
@@ -14910,7 +14918,7 @@ void ImGui::BeginDockableDragDropTarget(ImGuiWindow* window)
         // Preview docking request and find out split direction/ratio
         //const bool do_preview = true;     // Ignore testing for payload->IsPreview() which removes one frame of delay, but breaks overlapping drop targets within the same window.
         const bool do_preview = payload->IsPreview() || payload->IsDelivery();
-        if (do_preview && (node != NULL || allow_null_target_node))
+        if (do_preview && (node != NULL || dock_into_floating_window))
         {
             ImGuiDockPreviewData split_inner;
             ImGuiDockPreviewData split_outer;
