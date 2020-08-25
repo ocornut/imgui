@@ -356,7 +356,7 @@ int main(int, char**)
     xcb_flush(connection);
 
     ImGui::CreateContext();
-    ImGui_ImplX11_Init(connection, &window);
+    ImGui_ImplX11_Init(window);
 
     // // Setup Vulkan
     const char* extensions[] = { "VK_KHR_surface", "VK_KHR_xcb_surface" };
