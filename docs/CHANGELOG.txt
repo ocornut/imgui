@@ -49,7 +49,7 @@ Other Changes:
   rather than the Mouse Down+Up sequence, even if the _OpenOnArrow flag isn't set. This is standard behavior 
   and amends the change done in 1.76 which only affected cases were _OpenOnArrow flag was set. 
   (This is also necessary to support full multi/range-select/drag and drop operations.)
-- Tab Bar: Hide tab item close button while dragging a tab.
+- Tab Bar: Keep tab item close button visible while dragging a tab (independent of hovering state).
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
 - Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]

@@ -7453,8 +7453,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         SetItemAllowOverlap();
 
     // Drag and drop: re-order tabs
-    const bool is_dragging = (held && !tab_appearing && IsMouseDragging(0));
-    if (is_dragging)
+    if (held && !tab_appearing && IsMouseDragging(0))
     {
         if (!g.DragDropActive && (tab_bar->Flags & ImGuiTabBarFlags_Reorderable))
         {
@@ -7497,7 +7496,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
 
     // Render tab label, process close button
-    const ImGuiID close_button_id = (p_open && !is_dragging) ? window->GetID((void*)((intptr_t)id + 1)) : 0;
+    const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
     bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, tab_bar->FramePadding, label, id, close_button_id, tab_contents_visible);
     if (just_closed && p_open != NULL)
     {
@@ -7609,7 +7608,7 @@ bool ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, 
     bool close_button_visible = false;
     if (close_button_id != 0)
         if (is_contents_visible || bb.GetWidth() >= g.Style.TabMinWidthForUnselectedCloseButton)
-            if (g.HoveredId == tab_id || g.HoveredId == close_button_id || g.ActiveId == close_button_id)
+            if (g.HoveredId == tab_id || g.HoveredId == close_button_id || g.ActiveId == tab_id || g.ActiveId == close_button_id)
                 close_button_visible = true;
     if (close_button_visible)
     {
