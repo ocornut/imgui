@@ -4279,7 +4279,7 @@ struct ExampleAppConsole
             ImGui::LogFinish();
 
         if (ScrollToBottom || (AutoScroll && ImGui::GetScrollY() >= ImGui::GetScrollMaxY()))
-            ImGui::SetScrollHereY(1.0f);
+            ImGui::SetScrollHereY(0.0f);
         ScrollToBottom = false;
 
         ImGui::PopStyleVar();
