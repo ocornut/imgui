@@ -7453,7 +7453,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         SetItemAllowOverlap();
 
     // Drag and drop: re-order tabs
-    if (held && !tab_appearing && IsMouseDragging(0))
+    const bool is_dragging = (held && !tab_appearing && IsMouseDragging(0));
+    if (is_dragging)
     {
         if (!g.DragDropActive && (tab_bar->Flags & ImGuiTabBarFlags_Reorderable))
         {
@@ -7496,7 +7497,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         flags |= ImGuiTabItemFlags_NoCloseWithMiddleMouseButton;
 
     // Render tab label, process close button
-    const ImGuiID close_button_id = p_open ? window->GetID((void*)((intptr_t)id + 1)) : 0;
+    const ImGuiID close_button_id = (p_open && !is_dragging) ? window->GetID((void*)((intptr_t)id + 1)) : 0;
     bool just_closed = TabItemLabelAndCloseButton(display_draw_list, bb, flags, tab_bar->FramePadding, label, id, close_button_id, tab_contents_visible);
     if (just_closed && p_open != NULL)
     {

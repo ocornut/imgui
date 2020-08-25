@@ -169,7 +169,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work
  - tabs: close button tends to overlap unsaved-document star 
  - tabs: consider showing the star at the same spot as the close button, like VS Code does.
- - tabs: while dragging/reordering a tab, close button decoration shouldn't appear on other tabs
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
  - tabs: TabItem could honor SetNextItemWidth()?
