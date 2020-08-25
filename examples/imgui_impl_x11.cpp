@@ -124,16 +124,6 @@ static const char* g_CursorMap[ImGuiMouseCursor_COUNT] = {
     "circle"               // ImGuiMouseCursor_NotAllowed
 };
 
-#if 0
-struct ImGuiViewportDataX11
-{
-    xcb_window_t window;
-#ifdef HAS_VULKAN
-    VkSurfaceKHR surface;
-#endif
-};
-#endif
-
 // Forward Declarations
 static void ImGui_ImplX11_SetClipboardText(void* user_data, const char* text);
 static void ImGui_ImplX11_InitPlatformInterface();
