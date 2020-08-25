@@ -7392,7 +7392,7 @@ ImVec2 ImGui::ScrollToBringRectIntoView(ImGuiWindow* window, const ImRect& item_
     if (!window_rect.Contains(item_rect))
     {
         if (window->ScrollbarX && item_rect.Min.x < window_rect.Min.x)
-            SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x + g.Style.ItemSpacing.x, 0.0f);
+            SetScrollFromPosX(window, item_rect.Min.x - window->Pos.x - g.Style.ItemSpacing.x, 0.0f);
         else if (window->ScrollbarX && item_rect.Max.x >= window_rect.Max.x)
             SetScrollFromPosX(window, item_rect.Max.x - window->Pos.x + g.Style.ItemSpacing.x, 1.0f);
         if (item_rect.Min.y < window_rect.Min.y)
