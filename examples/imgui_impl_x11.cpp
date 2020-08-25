@@ -5,15 +5,15 @@
 // of XLib and xcb using the X11/Xlib-xcb.h header. Use XLib to create the
 // GLX context, then use functions in Xlib-xcb.h to convert the XLib
 // structures to xcb, which you can then pass unmodified here.
-// Requires libxcb, libxcb-xfixes, libxcb-xkb1 libxcb-cursor0 and libxcb-keysyms1
+// Requires libxcb, libxcb-xfixes, libxcb-xkb1 libxcb-cursor0, libxcb-keysyms1 and libxcb-randr0
 
 // Implemented features:
 //  [X] Platform: Keyboard arrays indexed using XK symbols, e.g. ImGui::IsKeyPressed(XK_space).
-//  [X] Platform: Mouse cursor shape and visibility.
 //  [X] Platform: Clipboard support
+//  [X] Platform: Mouse cursor shape and visibility.
+//  [/] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 // Missing features:
 //  [ ] Platform: Gamepad support. Enabled with 'io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad'.
-//  [ ] Platform: Multi-viewport support (multiple windows). Enable with 'io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable'.
 
 #include <stdio.h>
 #include "imgui.h"
