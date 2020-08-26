@@ -37,6 +37,8 @@ HOW TO UPDATE?
 
 Other Changes:
 
+- Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
+- Nav: Fixed navigation resuming on first visible item when using gamepad. [@rokups]
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
 - InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
   (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
@@ -45,7 +47,6 @@ Other Changes:
   It is a rather unusual or useless combination of features but no reason it shouldn't work!
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
-- Nav: Fix navigation resuming on first visible item when using gamepad. [@rokups]
 - BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
   so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
 - TreeNode, CollapsingHeader: Made clicking on arrow toggle toggle the open state on the Mouse Down event
