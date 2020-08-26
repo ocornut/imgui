@@ -8746,15 +8746,9 @@ static void ImGui::NavUpdate()
         // Next movement request will clamp the NavId reference rectangle to the visible area, so navigation will resume within those bounds.
         ImVec2 scroll_dir = GetNavInputAmount2d(ImGuiNavDirSourceFlags_PadLStick, ImGuiInputReadMode_Down, 1.0f / 10.0f, 10.0f);
         if (scroll_dir.x != 0.0f && window->ScrollbarX)
-        {
             SetScrollX(window, ImFloor(window->Scroll.x + scroll_dir.x * scroll_speed));
-            g.NavMoveFromClampedRefRect = true;
-        }
         if (scroll_dir.y != 0.0f)
-        {
             SetScrollY(window, ImFloor(window->Scroll.y + scroll_dir.y * scroll_speed));
-            g.NavMoveFromClampedRefRect = true;
-        }
     }
 
     // Reset search results
@@ -8762,8 +8756,10 @@ static void ImGui::NavUpdate()
     g.NavMoveResultLocalVisibleSet.Clear();
     g.NavMoveResultOther.Clear();
 
-    // When we have manually scrolled (without using navigation) and NavId becomes out of bounds, we project its bounding box to the visible area to restart navigation within visible items
-    if (g.NavMoveRequest && g.NavMoveFromClampedRefRect && g.NavLayer == ImGuiNavLayer_Main)
+    // When using gamepad, we project the reference nav bounding box into window visible area.
+    // This is to allow resuming navigation inside the visible area after doing a large amount of scrolling, since with gamepad every movements are relative
+    // (can't focus a visible object like we can with the mouse).
+    if (g.NavMoveRequest && g.NavInputSource == ImGuiInputSource_NavGamepad && g.NavLayer == ImGuiNavLayer_Main)
     {
         ImGuiWindow* window = g.NavWindow;
         ImRect window_rect_rel(window->InnerRect.Min - window->Pos - ImVec2(1, 1), window->InnerRect.Max - window->Pos + ImVec2(1, 1));
@@ -8774,7 +8770,6 @@ static void ImGui::NavUpdate()
             window->NavRectRel[g.NavLayer].ClipWith(window_rect_rel);
             g.NavId = g.NavFocusScopeId = 0;
         }
-        g.NavMoveFromClampedRefRect = false;
     }
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
@@ -8856,7 +8851,6 @@ static void ImGui::NavUpdateMoveResult()
         g.NavJustMovedToKeyMods = g.NavMoveRequestKeyMods;
     }
     SetNavIDWithRectRel(result->ID, g.NavLayer, result->FocusScopeId, result->RectRel);
-    g.NavMoveFromClampedRefRect = false;
 }
 
 // Handle PageUp/PageDown/Home/End keys
