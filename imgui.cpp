@@ -8515,7 +8515,9 @@ ImVec2 ImGui::GetNavInputAmount2d(ImGuiNavDirSourceFlags dir_sources, ImGuiInput
 static void ImGui::NavUpdate()
 {
     ImGuiContext& g = *GImGui;
-    g.IO.WantSetMousePos = false;
+    ImGuiIO& io = g.IO;
+
+    io.WantSetMousePos = false;
     g.NavWrapRequestWindow = NULL;
     g.NavWrapRequestFlags = ImGuiNavMoveFlags_None;
 #if 0
@@ -8524,16 +8526,16 @@ static void ImGui::NavUpdate()
 
     // Set input source as Gamepad when buttons are pressed (as some features differs when used with Gamepad vs Keyboard)
     // (do it before we map Keyboard input!)
-    bool nav_keyboard_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
-    bool nav_gamepad_active = (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (g.IO.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
+    bool nav_keyboard_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard) != 0;
+    bool nav_gamepad_active = (io.ConfigFlags & ImGuiConfigFlags_NavEnableGamepad) != 0 && (io.BackendFlags & ImGuiBackendFlags_HasGamepad) != 0;
     if (nav_gamepad_active)
-        if (g.IO.NavInputs[ImGuiNavInput_Activate] > 0.0f || g.IO.NavInputs[ImGuiNavInput_Input] > 0.0f || g.IO.NavInputs[ImGuiNavInput_Cancel] > 0.0f || g.IO.NavInputs[ImGuiNavInput_Menu] > 0.0f)
+        if (io.NavInputs[ImGuiNavInput_Activate] > 0.0f || io.NavInputs[ImGuiNavInput_Input] > 0.0f || io.NavInputs[ImGuiNavInput_Cancel] > 0.0f || io.NavInputs[ImGuiNavInput_Menu] > 0.0f)
             g.NavInputSource = ImGuiInputSource_NavGamepad;
 
     // Update Keyboard->Nav inputs mapping
     if (nav_keyboard_active)
     {
-        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)  do { if (IsKeyDown(g.IO.KeyMap[_KEY])) { g.IO.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_NavKeyboard; } } while (0)
+        #define NAV_MAP_KEY(_KEY, _NAV_INPUT)  do { if (IsKeyDown(io.KeyMap[_KEY])) { io.NavInputs[_NAV_INPUT] = 1.0f; g.NavInputSource = ImGuiInputSource_NavKeyboard; } } while (0)
         NAV_MAP_KEY(ImGuiKey_Space,     ImGuiNavInput_Activate );
         NAV_MAP_KEY(ImGuiKey_Enter,     ImGuiNavInput_Input    );
         NAV_MAP_KEY(ImGuiKey_Escape,    ImGuiNavInput_Cancel   );
@@ -8541,17 +8543,17 @@ static void ImGui::NavUpdate()
         NAV_MAP_KEY(ImGuiKey_RightArrow,ImGuiNavInput_KeyRight_);
         NAV_MAP_KEY(ImGuiKey_UpArrow,   ImGuiNavInput_KeyUp_   );
         NAV_MAP_KEY(ImGuiKey_DownArrow, ImGuiNavInput_KeyDown_ );
-        if (g.IO.KeyCtrl)
-            g.IO.NavInputs[ImGuiNavInput_TweakSlow] = 1.0f;
-        if (g.IO.KeyShift)
-            g.IO.NavInputs[ImGuiNavInput_TweakFast] = 1.0f;
-        if (g.IO.KeyAlt && !g.IO.KeyCtrl) // AltGR is Alt+Ctrl, also even on keyboards without AltGR we don't want Alt+Ctrl to open menu.
-            g.IO.NavInputs[ImGuiNavInput_KeyMenu_]  = 1.0f;
+        if (io.KeyCtrl)
+            io.NavInputs[ImGuiNavInput_TweakSlow] = 1.0f;
+        if (io.KeyShift)
+            io.NavInputs[ImGuiNavInput_TweakFast] = 1.0f;
+        if (io.KeyAlt && !io.KeyCtrl) // AltGR is Alt+Ctrl, also even on keyboards without AltGR we don't want Alt+Ctrl to open menu.
+            io.NavInputs[ImGuiNavInput_KeyMenu_]  = 1.0f;
         #undef NAV_MAP_KEY
     }
-    memcpy(g.IO.NavInputsDownDurationPrev, g.IO.NavInputsDownDuration, sizeof(g.IO.NavInputsDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.NavInputs); i++)
-        g.IO.NavInputsDownDuration[i] = (g.IO.NavInputs[i] > 0.0f) ? (g.IO.NavInputsDownDuration[i] < 0.0f ? 0.0f : g.IO.NavInputsDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+    memcpy(io.NavInputsDownDurationPrev, io.NavInputsDownDuration, sizeof(io.NavInputsDownDuration));
+    for (int i = 0; i < IM_ARRAYSIZE(io.NavInputs); i++)
+        io.NavInputsDownDuration[i] = (io.NavInputs[i] > 0.0f) ? (io.NavInputsDownDuration[i] < 0.0f ? 0.0f : io.NavInputsDownDuration[i] + io.DeltaTime) : -1.0f;
 
     // Process navigation init request (select first/default focus)
     // In very rare cases g.NavWindow may be null (e.g. clearing focus after requesting an init request, which does happen when releasing Alt while clicking on void)
@@ -8587,12 +8589,12 @@ static void ImGui::NavUpdate()
     if (g.NavMousePosDirty && g.NavIdIsAlive)
     {
         // Set mouse position given our knowledge of the navigated item position from last frame
-        if ((g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (g.IO.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
+        if ((io.ConfigFlags & ImGuiConfigFlags_NavEnableSetMousePos) && (io.BackendFlags & ImGuiBackendFlags_HasSetMousePos))
         {
             if (!g.NavDisableHighlight && g.NavDisableMouseHover && g.NavWindow)
             {
-                g.IO.MousePos = g.IO.MousePosPrev = NavCalcPreferredRefPos();
-                g.IO.WantSetMousePos = true;
+                io.MousePos = io.MousePosPrev = NavCalcPreferredRefPos();
+                io.WantSetMousePos = true;
             }
         }
         g.NavMousePosDirty = false;
@@ -8611,8 +8613,8 @@ static void ImGui::NavUpdate()
     NavUpdateWindowing();
 
     // Set output flags for user application
-    g.IO.NavActive = (nav_keyboard_active || nav_gamepad_active) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
-    g.IO.NavVisible = (g.IO.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL);
+    io.NavActive = (nav_keyboard_active || nav_gamepad_active) && g.NavWindow && !(g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs);
+    io.NavVisible = (io.NavActive && g.NavId != 0 && !g.NavDisableHighlight) || (g.NavWindowingTarget != NULL);
 
     // Process NavCancel input (to close a popup, get back to parent, clear focus)
     if (IsNavInputTest(ImGuiNavInput_Cancel, ImGuiInputReadMode_Pressed))
@@ -8715,7 +8717,7 @@ static void ImGui::NavUpdate()
     if (g.NavMoveDir != ImGuiDir_None)
     {
         g.NavMoveRequest = true;
-        g.NavMoveRequestKeyMods = g.IO.KeyMods;
+        g.NavMoveRequestKeyMods = io.KeyMods;
         g.NavMoveDirLast = g.NavMoveDir;
     }
     if (g.NavMoveRequest && g.NavId == 0)
@@ -8733,7 +8735,7 @@ static void ImGui::NavUpdate()
     {
         // *Fallback* manual-scroll with Nav directional keys when window has no navigable item
         ImGuiWindow* window = g.NavWindow;
-        const float scroll_speed = IM_ROUND(window->CalcFontSize() * 100 * g.IO.DeltaTime); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
+        const float scroll_speed = IM_ROUND(window->CalcFontSize() * 100 * io.DeltaTime); // We need round the scrolling speed because sub-pixel scroll isn't reliably supported.
         if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll && g.NavMoveRequest)
         {
             if (g.NavMoveDir == ImGuiDir_Left || g.NavMoveDir == ImGuiDir_Right)
@@ -8857,24 +8859,26 @@ static void ImGui::NavUpdateMoveResult()
 static float ImGui::NavUpdatePageUpPageDown()
 {
     ImGuiContext& g = *GImGui;
+    ImGuiIO& io = g.IO;
+
     if (g.NavMoveDir != ImGuiDir_None || g.NavWindow == NULL)
         return 0.0f;
     if ((g.NavWindow->Flags & ImGuiWindowFlags_NoNavInputs) || g.NavWindowingTarget != NULL || g.NavLayer != ImGuiNavLayer_Main)
         return 0.0f;
 
     ImGuiWindow* window = g.NavWindow;
-    const bool page_up_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageUp]) && !IsActiveIdUsingKey(ImGuiKey_PageUp);
-    const bool page_down_held = IsKeyDown(g.IO.KeyMap[ImGuiKey_PageDown]) && !IsActiveIdUsingKey(ImGuiKey_PageDown);
-    const bool home_pressed = IsKeyPressed(g.IO.KeyMap[ImGuiKey_Home]) && !IsActiveIdUsingKey(ImGuiKey_Home);
-    const bool end_pressed = IsKeyPressed(g.IO.KeyMap[ImGuiKey_End]) && !IsActiveIdUsingKey(ImGuiKey_End);
+    const bool page_up_held = IsKeyDown(io.KeyMap[ImGuiKey_PageUp]) && !IsActiveIdUsingKey(ImGuiKey_PageUp);
+    const bool page_down_held = IsKeyDown(io.KeyMap[ImGuiKey_PageDown]) && !IsActiveIdUsingKey(ImGuiKey_PageDown);
+    const bool home_pressed = IsKeyPressed(io.KeyMap[ImGuiKey_Home]) && !IsActiveIdUsingKey(ImGuiKey_Home);
+    const bool end_pressed = IsKeyPressed(io.KeyMap[ImGuiKey_End]) && !IsActiveIdUsingKey(ImGuiKey_End);
     if (page_up_held != page_down_held || home_pressed != end_pressed) // If either (not both) are pressed
     {
         if (window->DC.NavLayerActiveMask == 0x00 && window->DC.NavHasScroll)
         {
             // Fallback manual-scroll when window has no navigable item
-            if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
+            if (IsKeyPressed(io.KeyMap[ImGuiKey_PageUp], true))
                 SetScrollY(window, window->Scroll.y - window->InnerRect.GetHeight());
-            else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
+            else if (IsKeyPressed(io.KeyMap[ImGuiKey_PageDown], true))
                 SetScrollY(window, window->Scroll.y + window->InnerRect.GetHeight());
             else if (home_pressed)
                 SetScrollY(window, 0.0f);
@@ -8886,14 +8890,14 @@ static float ImGui::NavUpdatePageUpPageDown()
             ImRect& nav_rect_rel = window->NavRectRel[g.NavLayer];
             const float page_offset_y = ImMax(0.0f, window->InnerRect.GetHeight() - window->CalcFontSize() * 1.0f + nav_rect_rel.GetHeight());
             float nav_scoring_rect_offset_y = 0.0f;
-            if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageUp], true))
+            if (IsKeyPressed(io.KeyMap[ImGuiKey_PageUp], true))
             {
                 nav_scoring_rect_offset_y = -page_offset_y;
                 g.NavMoveDir = ImGuiDir_Down; // Because our scoring rect is offset up, we request the down direction (so we can always land on the last item)
                 g.NavMoveClipDir = ImGuiDir_Up;
                 g.NavMoveRequestFlags = ImGuiNavMoveFlags_AllowCurrentNavId | ImGuiNavMoveFlags_AlsoScoreVisibleSet;
             }
-            else if (IsKeyPressed(g.IO.KeyMap[ImGuiKey_PageDown], true))
+            else if (IsKeyPressed(io.KeyMap[ImGuiKey_PageDown], true))
             {
                 nav_scoring_rect_offset_y = +page_offset_y;
                 g.NavMoveDir = ImGuiDir_Up; // Because our scoring rect is offset down, we request the up direction (so we can always land on the last item)
