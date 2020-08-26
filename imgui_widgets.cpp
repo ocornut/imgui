@@ -1687,21 +1687,21 @@ bool ImGui::Combo(const char* label, int* current_item, const char* items_separa
 
 static const ImGuiDataTypeInfo GDataTypeInfo[] =
 {
-    { sizeof(char),             "%d",   "%d"    },  // ImGuiDataType_S8
-    { sizeof(unsigned char),    "%u",   "%u"    },
-    { sizeof(short),            "%d",   "%d"    },  // ImGuiDataType_S16
-    { sizeof(unsigned short),   "%u",   "%u"    },
-    { sizeof(int),              "%d",   "%d"    },  // ImGuiDataType_S32
-    { sizeof(unsigned int),     "%u",   "%u"    },
+    { sizeof(char),             "S8",   "%d",   "%d"    },  // ImGuiDataType_S8
+    { sizeof(unsigned char),    "U8",   "%u",   "%u"    },
+    { sizeof(short),            "S16",  "%d",   "%d"    },  // ImGuiDataType_S16
+    { sizeof(unsigned short),   "U16",  "%u",   "%u"    },
+    { sizeof(int),              "S32",  "%d",   "%d"    },  // ImGuiDataType_S32
+    { sizeof(unsigned int),     "U32",  "%u",   "%u"    },
 #ifdef _MSC_VER
-    { sizeof(ImS64),            "%I64d","%I64d" },  // ImGuiDataType_S64
-    { sizeof(ImU64),            "%I64u","%I64u" },
+    { sizeof(ImS64),            "S64",  "%I64d","%I64d" },  // ImGuiDataType_S64
+    { sizeof(ImU64),            "U64",  "%I64u","%I64u" },
 #else
-    { sizeof(ImS64),            "%lld", "%lld"  },  // ImGuiDataType_S64
-    { sizeof(ImU64),            "%llu", "%llu"  },
+    { sizeof(ImS64),            "S64",  "%lld", "%lld"  },  // ImGuiDataType_S64
+    { sizeof(ImU64),            "U64",  "%llu", "%llu"  },
 #endif
-    { sizeof(float),            "%f",   "%f"    },  // ImGuiDataType_Float (float are promoted to double in va_arg)
-    { sizeof(double),           "%f",   "%lf"   },  // ImGuiDataType_Double
+    { sizeof(float),            "float", "%f",  "%f"    },  // ImGuiDataType_Float (float are promoted to double in va_arg)
+    { sizeof(double),           "double","%f",  "%lf"   },  // ImGuiDataType_Double
 };
 IM_STATIC_ASSERT(IM_ARRAYSIZE(GDataTypeInfo) == ImGuiDataType_COUNT);
 

@@ -7271,10 +7271,11 @@ float ImGui::GetWindowContentRegionWidth()
 }
 
 // Lock horizontal starting position + capture group bounding box into one "item" (so you can use IsItemHovered() or layout primitives such as SameLine() on whole group, etc.)
+// Groups are currently a mishmash of functionalities which should perhaps be clarified and separated.
 void ImGui::BeginGroup()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiWindow* window = g.CurrentWindow;
 
     window->DC.GroupStack.resize(window->DC.GroupStack.Size + 1);
     ImGuiGroupData& group_data = window->DC.GroupStack.back();
@@ -7299,8 +7300,8 @@ void ImGui::BeginGroup()
 void ImGui::EndGroup()
 {
     ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = GetCurrentWindow();
-    IM_ASSERT(!window->DC.GroupStack.empty());  // Mismatched BeginGroup()/EndGroup() calls
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(window->DC.GroupStack.Size > 0); // Mismatched BeginGroup()/EndGroup() calls
 
     ImGuiGroupData& group_data = window->DC.GroupStack.back();
 
@@ -7328,9 +7329,9 @@ void ImGui::EndGroup()
     // If the current ActiveId was declared within the boundary of our group, we copy it to LastItemId so IsItemActive(), IsItemDeactivated() etc. will be functional on the entire group.
     // It would be be neater if we replaced window.DC.LastItemId by e.g. 'bool LastItemIsActive', but would put a little more burden on individual widgets.
     // Also if you grep for LastItemId you'll notice it is only used in that context.
-    // (The tests not symmetrical because ActiveIdIsAlive is an ID itself, in order to be able to handle ActiveId being overwritten during the frame.)
+    // (The two tests not the same because ActiveIdIsAlive is an ID itself, in order to be able to handle ActiveId being overwritten during the frame.)
     const bool group_contains_curr_active_id = (group_data.BackupActiveIdIsAlive != g.ActiveId) && (g.ActiveIdIsAlive == g.ActiveId) && g.ActiveId;
-    const bool group_contains_prev_active_id = !group_data.BackupActiveIdPreviousFrameIsAlive && g.ActiveIdPreviousFrameIsAlive;
+    const bool group_contains_prev_active_id = (group_data.BackupActiveIdPreviousFrameIsAlive == false) && (g.ActiveIdPreviousFrameIsAlive == true);
     if (group_contains_curr_active_id)
         window->DC.LastItemId = g.ActiveId;
     else if (group_contains_prev_active_id)
