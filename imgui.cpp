@@ -8767,13 +8767,13 @@ static void ImGui::NavUpdate()
         {
             float pad = window->CalcFontSize() * 0.5f;
             window_rect_rel.Expand(ImVec2(-ImMin(window_rect_rel.GetWidth(), pad), -ImMin(window_rect_rel.GetHeight(), pad))); // Terrible approximation for the intent of starting navigation from first fully visible item
-            window->NavRectRel[g.NavLayer].ClipWith(window_rect_rel);
+            window->NavRectRel[g.NavLayer].ClipWithFull(window_rect_rel);
             g.NavId = g.NavFocusScopeId = 0;
         }
     }
 
     // For scoring we use a single segment on the left side our current item bounding box (not touching the edge to avoid box overlap with zero-spaced items)
-    ImRect nav_rect_rel = (g.NavWindow && !g.NavWindow->NavRectRel[g.NavLayer].IsInverted()) ? g.NavWindow->NavRectRel[g.NavLayer] : ImRect(0, 0, 0, 0);
+    ImRect nav_rect_rel = g.NavWindow ? g.NavWindow->NavRectRel[g.NavLayer] : ImRect(0, 0, 0, 0);
     g.NavScoringRect = g.NavWindow ? ImRect(g.NavWindow->Pos + nav_rect_rel.Min, g.NavWindow->Pos + nav_rect_rel.Max) : GetViewportRect();
     g.NavScoringRect.TranslateY(nav_scoring_rect_offset_y);
     g.NavScoringRect.Min.x = ImMin(g.NavScoringRect.Min.x + 1.0f, g.NavScoringRect.Max.x);
