@@ -10563,10 +10563,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 ImDrawList* draw_list = ImGui::GetForegroundDrawList();
                 draw_list->AddRect(tab_bar->BarRect.Min, tab_bar->BarRect.Max, IM_COL32(255, 255, 0, 255));
-                if (tab_bar->WidthLeading > 0.0f)
-                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Min.x + tab_bar->WidthLeading, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Min.x + tab_bar->WidthLeading, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
-                if (tab_bar->WidthTrailing > 0.0f)
-                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Max.x - tab_bar->WidthTrailing, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Max.x - tab_bar->WidthTrailing, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
+                if (tab_bar->LeadingSection.Width > 0.0f)
+                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Min.x + tab_bar->LeadingSection.Width, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Min.x + tab_bar->LeadingSection.Width, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
+                if (tab_bar->TrailingSection.Width > 0.0f)
+                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Max.x - tab_bar->TrailingSection.Width, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Max.x - tab_bar->TrailingSection.Width, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
             }
             if (open)
             {

@@ -1725,6 +1725,16 @@ struct ImGuiTabItem
     ImGuiTabItem()      { ID = 0; Flags = ImGuiTabItemFlags_None; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = ContentWidth = 0.0f; BeginOrder = -1; IndexDuringLayout = -1; WantClose = false; }
 };
 
+struct TabBarLayoutSection
+{
+    ImGuiTabItem* Tabs;     // Pointer to the first tab_bar->Tabs matching the section
+    int TabCount;
+    float Width;
+    float WidthIdeal;
+    float InnerSpacing;     // Horizontal ItemInnerSpacing, used by Leading/Trailing section, to correctly offset from Central section
+    TabBarLayoutSection()   { Tabs = NULL; TabCount = 0; Width = 0.0f; WidthIdeal = 0.0f; InnerSpacing = 0.0f; }
+};
+
 // Storage for a tab bar (sizeof() 92~96 bytes)
 struct ImGuiTabBar
 {
@@ -1739,8 +1749,6 @@ struct ImGuiTabBar
     float               LastTabContentHeight;   // Record the height of contents submitted below the tab bar
     float               WidthAllTabs;           // Actual width of all tabs (locked during layout)
     float               WidthAllTabsIdeal;      // Ideal width if all tabs were visible and not clipped
-    float               WidthLeading;           // Total width used by leading button
-    float               WidthTrailing;          // Total width used by trailing button
     float               ScrollingAnim;
     float               ScrollingTarget;
     float               ScrollingTargetDistToVisibility;
@@ -1749,6 +1757,9 @@ struct ImGuiTabBar
     ImGuiID             ReorderRequestTabId;
     ImS8                ReorderRequestDir;
     ImS8                TabsActiveCount;        // Number of tabs submitted this frame.
+    TabBarLayoutSection LeadingSection;
+    TabBarLayoutSection CentralSection;
+    TabBarLayoutSection TrailingSection;
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     short               LastTabItemIdx;         // Index of last BeginTabItem() tab for use by EndTabItem() 
