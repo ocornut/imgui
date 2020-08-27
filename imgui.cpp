@@ -10559,6 +10559,15 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
             bool open = ImGui::TreeNode(tab_bar, "%s", buf);
             if (!is_active) { PopStyleColor(); }
+            if (is_active && ImGui::IsItemHovered())
+            {
+                ImDrawList* draw_list = ImGui::GetForegroundDrawList();
+                draw_list->AddRect(tab_bar->BarRect.Min, tab_bar->BarRect.Max, IM_COL32(255, 255, 0, 255));
+                if (tab_bar->WidthLeading > 0.0f)
+                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Min.x + tab_bar->WidthLeading, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Min.x + tab_bar->WidthLeading, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
+                if (tab_bar->WidthTrailing > 0.0f)
+                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Max.x - tab_bar->WidthTrailing, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Max.x - tab_bar->WidthTrailing, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
+            }
             if (open)
             {
                 for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
@@ -10567,7 +10576,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::PushID(tab);
                     if (ImGui::SmallButton("<")) { TabBarQueueReorder(tab_bar, tab, -1); } ImGui::SameLine(0, 2);
                     if (ImGui::SmallButton(">")) { TabBarQueueReorder(tab_bar, tab, +1); } ImGui::SameLine();
-                    ImGui::Text("%02d%c Tab 0x%08X '%s'", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, (tab->NameOffset != -1) ? tab_bar->GetTabName(tab) : "");
+                    ImGui::Text("%02d%c Tab 0x%08X '%s' Offset: %.1f, Width: %.1f/%.1f", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, (tab->NameOffset != -1) ? tab_bar->GetTabName(tab) : "", tab->Offset, tab->Width, tab->ContentWidth);
                     ImGui::PopID();
                 }
                 ImGui::TreePop();

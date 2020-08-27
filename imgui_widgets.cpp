@@ -6815,7 +6815,7 @@ ImGuiTabBar::ImGuiTabBar()
     CurrFrameVisible = PrevFrameVisible = -1;
     LastTabContentHeight = 0.0f;
     WidthAllTabs = WidthAllTabsIdeal = 0.0f;
-    LeadingWidth = TrailingWidth = 0.0f;
+    WidthLeading = WidthTrailing = 0.0f;
     ScrollingAnim = ScrollingTarget = ScrollingTargetDistToVisibility = ScrollingSpeed = 0.0f;
     Flags = ImGuiTabBarFlags_None;
     ReorderRequestTabId = 0;
@@ -7015,11 +7015,15 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         if (ImGuiTabItem* tab_to_select = TabBarTabListPopupButton(tab_bar)) // NB: Will alter BarRect.Min.x!
             scroll_track_selected_tab_id = tab_bar->SelectedTabId = tab_to_select->ID;
 
+    // Reserve shrink buffer for maximum possible number of tabs (but tabs with Trailing/Leading won't shrink)
+    int tab_n_shrinkable = 0;
+    g.ShrinkWidthBuffer.resize(tab_bar->Tabs.Size);
+
     // Compute ideal widths
-    g.ShrinkWidthBuffer.resize(tab_bar->Tabs.Size); // Reserve for maximum possible number of tabs,
-    int tab_n_shrinkable = 0;                       // ..but buttons won't shrink
-    tab_bar->LeadingWidth = tab_bar->TrailingWidth = 0.0f;
-    float width_total_contents = 0.0f;
+    float width_central = 0.0f;
+    tab_bar->WidthLeading = tab_bar->WidthTrailing = 0.0f;
+    const float tab_max_width = TabBarCalcMaxTabWidth();
+
     ImGuiTabItem* most_recently_selected_tab = NULL;
     bool found_selected_tab_id = false;
     for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
@@ -7027,9 +7031,8 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
         IM_ASSERT(tab->LastFrameVisible >= tab_bar->PrevFrameVisible);
 
-        if (most_recently_selected_tab == NULL || most_recently_selected_tab->LastFrameSelected < tab->LastFrameSelected)
-            if (!(tab->Flags & ImGuiTabItemFlags_Button))
-                most_recently_selected_tab = tab;
+        if ((most_recently_selected_tab == NULL || most_recently_selected_tab->LastFrameSelected < tab->LastFrameSelected) && !(tab->Flags & ImGuiTabItemFlags_Button))
+            most_recently_selected_tab = tab;
         if (tab->ID == tab_bar->SelectedTabId)
             found_selected_tab_id = true;
 
@@ -7042,79 +7045,95 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
 
         float width = tab->ContentWidth;
         if (tab->Flags & ImGuiTabItemFlags_Leading)
-            tab_bar->LeadingWidth += width + g.Style.ItemInnerSpacing.x;
+        {
+            tab_bar->WidthLeading += width + g.Style.ItemInnerSpacing.x;
+        }
         else if (tab->Flags & ImGuiTabItemFlags_Trailing)
-            tab_bar->TrailingWidth += width + g.Style.ItemInnerSpacing.x;
+        {
+            tab_bar->WidthTrailing += width + g.Style.ItemInnerSpacing.x;
+        }
         else
         {
-            width_total_contents += width + (tab_n_shrinkable > 0 ? g.Style.ItemInnerSpacing.x : 0.0f);
-            // Store data so we can build an array sorted by width if we need to shrink tabs down
-            g.ShrinkWidthBuffer[tab_n_shrinkable].Index = tab_n;
+            width = ImMin(tab->ContentWidth, tab_max_width);
+            width_central += width + (tab_n_shrinkable > 0 ? g.Style.ItemInnerSpacing.x : 0.0f);
+            g.ShrinkWidthBuffer[tab_n_shrinkable].Index = tab_n; // Store data so we can build an array sorted by width if we need to shrink tabs down
             g.ShrinkWidthBuffer[tab_n_shrinkable].Width = tab->ContentWidth;
             tab_n_shrinkable++;
         }
+
+        IM_ASSERT(width > 0.0f);
+        tab->Width = width;
     }
 
     // Compute width
-    const float width_avail = ImMax(tab_bar->BarRect.GetWidth() - tab_bar->LeadingWidth - tab_bar->TrailingWidth, 0.0f);
-    float width_excess = (width_avail < width_total_contents) ? (width_total_contents - width_avail) : 0.0f;
+    const float width_avail = ImMax(tab_bar->BarRect.GetWidth() - tab_bar->WidthLeading - tab_bar->WidthTrailing, 0.0f);
+    float width_excess = (width_avail < width_central) ? (width_central - width_avail) : 0.0f;
     if (width_excess > 0.0f && !(tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll))
     {
         // If we don't have enough room, resize down the largest tabs first
         ShrinkWidths(g.ShrinkWidthBuffer.Data, tab_n_shrinkable, width_excess);
         for (int tab_n = 0; tab_n < tab_n_shrinkable; tab_n++)
             tab_bar->Tabs[g.ShrinkWidthBuffer[tab_n].Index].Width = IM_FLOOR(g.ShrinkWidthBuffer[tab_n].Width);
-    }
-    else
-    {
-        const float tab_max_width = TabBarCalcMaxTabWidth();
+        width_central -= width_excess;
+#if 0
+        width_central = (tab_bar->WidthLeading > 0.0f) ? -g.Style.ItemInnerSpacing.x : 0.0f;
         for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
         {
             ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
-            tab->Width = ImMin(tab->ContentWidth, tab_max_width);
-            IM_ASSERT(tab->Width > 0.0f);
+            if ((tab->Flags & (ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_Trailing)) == 0)
+                width_central += tab->Width + g.Style.ItemInnerSpacing.x;
         }
+#endif
     }
 
     // Layout all active tabs
-    float offset_x_button_leading = 0.0f;
-    float offset_x_button_trailing = tab_bar->BarRect.GetWidth() - tab_bar->TrailingWidth + g.Style.ItemInnerSpacing.x;
-    float offset_x_regular = tab_bar->LeadingWidth;
-    float offset_x_ideal = offset_x_regular;
+    float offset_x_pos_leading = 0.0f;
+    float offset_x_pos_central = tab_bar->WidthLeading;
+#if 0
+    float offset_x_pos_trailing = tab_bar->BarRect.GetWidth() - tab_bar->WidthTrailing + g.Style.ItemInnerSpacing.x; // Right-most layout
+#else
+    float offset_x_pos_trailing = tab_bar->WidthLeading + width_central; // Trailing layout
+    if (offset_x_pos_trailing > 0.0f)
+        offset_x_pos_trailing += g.Style.ItemInnerSpacing.x;
+#endif
+
+    float width_ideal = tab_bar->WidthLeading;
     for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
     {
         ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
         float width = tab->Width + g.Style.ItemInnerSpacing.x;
         if (tab->Flags & ImGuiTabItemFlags_Leading)
         {
-            tab->Offset = offset_x_button_leading;
-            offset_x_button_leading += width;
+            tab->Offset = offset_x_pos_leading;
+            offset_x_pos_leading += width;
         }
         else if (tab->Flags & ImGuiTabItemFlags_Trailing)
         {
-            tab->Offset = offset_x_button_trailing;
-            offset_x_button_trailing += width;
+            tab->Offset = offset_x_pos_trailing;
+            offset_x_pos_trailing += width;
         }
         else
         {
-            tab->Offset = offset_x_regular;
+            tab->Offset = offset_x_pos_central;
             if (scroll_track_selected_tab_id == 0 && g.NavJustMovedToId == tab->ID)
                 scroll_track_selected_tab_id = tab->ID;
-            offset_x_regular += width;
-            offset_x_ideal += tab->ContentWidth + g.Style.ItemInnerSpacing.x;
+            offset_x_pos_central += width;
+            width_ideal += tab->ContentWidth + g.Style.ItemInnerSpacing.x;
         }
     }
-    tab_bar->WidthAllTabs = ImMax(offset_x_regular - g.Style.ItemInnerSpacing.x + tab_bar->TrailingWidth, 0.0f);
-    tab_bar->WidthAllTabsIdeal = ImMax(offset_x_ideal - g.Style.ItemInnerSpacing.x + tab_bar->TrailingWidth, 0.0f);
+    tab_bar->WidthAllTabs = ImMax(offset_x_pos_central - g.Style.ItemInnerSpacing.x + tab_bar->WidthTrailing, 0.0f);
+    tab_bar->WidthAllTabsIdeal = ImMax(width_ideal - g.Style.ItemInnerSpacing.x + tab_bar->WidthTrailing, 0.0f);
 
     // Horizontal scrolling buttons
     const bool scrolling_buttons = (tab_bar->WidthAllTabs > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll);
     if (scrolling_buttons)
         if (ImGuiTabItem* scroll_track_selected_tab = TabBarScrollingButtons(tab_bar)) // NB: Will alter BarRect.Max.x and each trailing tab->Offset
+        {
             if (scroll_track_selected_tab->Flags & ImGuiTabItemFlags_Button)
                 scroll_track_selected_tab_id = scroll_track_selected_tab->ID;
             else
                 scroll_track_selected_tab_id = tab_bar->SelectedTabId = scroll_track_selected_tab->ID;
+        }
 
     // If we have lost the selected tab, select the next most recently active one
     if (found_selected_tab_id == false)
@@ -7154,9 +7173,6 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     ImGuiWindow* window = g.CurrentWindow;
     window->DC.CursorPos = tab_bar->BarRect.Min;
     ItemSize(ImVec2(tab_bar->WidthAllTabsIdeal, tab_bar->BarRect.GetHeight()), tab_bar->FramePadding.y);
-
-    window->DrawList->AddRect(tab_bar->BarRect.Min, tab_bar->BarRect.Min + ImVec2(tab_bar->LeadingWidth, tab_bar->BarRect.GetHeight()), IM_COL32(255, 0, 0, 255));
-    window->DrawList->AddRect(tab_bar->BarRect.Max - ImVec2(tab_bar->TrailingWidth, tab_bar->BarRect.GetHeight()), tab_bar->BarRect.Max, IM_COL32(0, 255, 0, 255));
 }
 
 // Dockables uses Name/ID in the global namespace. Non-dockable items use the ID stack.
@@ -7238,18 +7254,24 @@ static void ImGui::TabBarScrollToTab(ImGuiTabBar* tab_bar, ImGuiTabItem* tab)
     float margin = g.FontSize * 1.0f; // When to scroll to make Tab N+1 visible always make a bit of N visible to suggest more scrolling area (since we don't have a scrollbar)
     int order = tab_bar->GetTabOrder(tab);
 
-    float tab_x1 = tab->Offset + (order > 0 ? -margin : 0.0f);
-    float tab_x2 = tab->Offset + tab->Width + (order + 1 < tab_bar->Tabs.Size ? margin : 1.0f);
+    // Scrolling happens only in the central section (leading/trailing sections are not scrolling)
+    float scrollable_width = tab_bar->BarRect.GetWidth() - tab_bar->WidthLeading - tab_bar->WidthTrailing;
+
+    // We make all tabs positions all relative WidthLeading to make code simpler
+    float tab_x1 = tab->Offset - tab_bar->WidthLeading + (order > 0 ? -margin : 0.0f);
+    float tab_x2 = tab->Offset - tab_bar->WidthLeading + tab->Width + (order + 1 < tab_bar->Tabs.Size ? margin : 1.0f);
     tab_bar->ScrollingTargetDistToVisibility = 0.0f;
-    if (tab_bar->ScrollingTarget > tab_x1 || (tab_x2 - tab_x1 >= tab_bar->BarRect.GetWidth()))
+    if (tab_bar->ScrollingTarget > tab_x1 || (tab_x2 - tab_x1 >= scrollable_width))
     {
+        // Scroll to the left
         tab_bar->ScrollingTargetDistToVisibility = ImMax(tab_bar->ScrollingAnim - tab_x2, 0.0f);
         tab_bar->ScrollingTarget = tab_x1;
     }
-    else if (tab_bar->ScrollingTarget < tab_x2 - tab_bar->BarRect.GetWidth())
+    else if (tab_bar->ScrollingTarget < tab_x2 - scrollable_width)
     {
-        tab_bar->ScrollingTargetDistToVisibility = ImMax((tab_x1 - tab_bar->BarRect.GetWidth()) - tab_bar->ScrollingAnim, 0.0f);
-        tab_bar->ScrollingTarget = tab_x2 - tab_bar->BarRect.GetWidth();
+        // Scroll to the right
+        tab_bar->ScrollingTargetDistToVisibility = ImMax((tab_x1 - scrollable_width) - tab_bar->ScrollingAnim, 0.0f);
+        tab_bar->ScrollingTarget = tab_x2 - scrollable_width;
     }
 }
 
@@ -7420,7 +7442,7 @@ bool    ImGui::BeginTabItem(const char* label, bool* p_open, ImGuiTabItemFlags f
         IM_ASSERT_USER_ERROR(tab_bar, "Needs to be called between BeginTabBar() and EndTabBar()!");
         return false;
     }
-    IM_ASSERT_USER_ERROR(!(flags & ImGuiTabItemFlags_Button), "BeginTabItem() Can't be used with button flags, use TabItemButton() instead!");
+    IM_ASSERT(!(flags & ImGuiTabItemFlags_Button)); // BeginTabItem() Can't be used with button flags, use TabItemButton() instead!
 
     bool ret = TabItemEx(tab_bar, label, p_open, flags);
     if (ret && !(flags & ImGuiTabItemFlags_NoPushId))
@@ -7460,7 +7482,7 @@ bool    ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags)
     ImGuiTabBar* tab_bar = g.CurrentTabBar;
     if (tab_bar == NULL)
     {
-        IM_ASSERT_USER_ERROR(tab_bar, "TabItemButton() needs to be called between BeginTabBar() and EndTabBar()!");
+        IM_ASSERT_USER_ERROR(tab_bar != NULL, "Needs to be called between BeginTabBar() and EndTabBar()!");
         return false;
     }
     return TabItemEx(tab_bar, label, NULL, flags | ImGuiTabItemFlags_Button | ImGuiTabItemFlags_NoReorder);
@@ -7491,7 +7513,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         return false;
     }
 
-    IM_ASSERT(!p_open || (p_open && !(flags & ImGuiTabItemFlags_Button))); // TabItemButton should not have visible content
+    IM_ASSERT(!p_open || !(flags & ImGuiTabItemFlags_Button));
+    IM_ASSERT((flags & (ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_Trailing)) != (ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_Trailing)); // Can't use both Leading and Trailing
 
     // Store into ImGuiTabItemFlags_NoCloseButton, also honor ImGuiTabItemFlags_NoCloseButton passed by user (although not documented)
     if (flags & ImGuiTabItemFlags_NoCloseButton)
@@ -7568,7 +7591,6 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // Layout
     size.x = tab->Width;
-    //if (is_tab_button && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyResizeDown))
     if (tab->Flags & (ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_Trailing))
         window->DC.CursorPos = tab_bar->BarRect.Min + ImVec2(tab->Offset, 0.0f);
     else
@@ -7578,8 +7600,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
 
     // We don't have CPU clipping primitives to clip the CloseButton (until it becomes a texture), so need to add an extra draw call (temporary in the case of vertical animation)
     // If TabBar fitting policy is scroll, then just clip through the BarRect
-    float offset_leading = (flags & ImGuiTabItemFlags_Leading) ? 0.0f : tab_bar->LeadingWidth;
-    float offset_trailing = (flags & (ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_Leading)) ? 0.0f : tab_bar->TrailingWidth; // Leading buttons will be clipped by BarRect.Max.x, trailing buttons will be clipped at BarRect.Minx + LeadingsWidth
+    float offset_leading = (flags & ImGuiTabItemFlags_Leading) ? 0.0f : tab_bar->WidthLeading;
+    float offset_trailing = (flags & (ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_Leading)) ? 0.0f : tab_bar->WidthTrailing; // Leading buttons will be clipped by BarRect.Max.x, trailing buttons will be clipped at BarRect.Minx + LeadingsWidth
     bool want_clip_rect = (bb.Min.x < tab_bar->BarRect.Min.x + offset_leading) || (bb.Max.x + offset_trailing > tab_bar->BarRect.Max.x);
     if (want_clip_rect)
         PushClipRect(ImVec2(ImMax(bb.Min.x, tab_bar->BarRect.Min.x + offset_leading), bb.Min.y - 1), ImVec2(tab_bar->BarRect.Max.x - offset_trailing, bb.Max.y), true);

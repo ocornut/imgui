@@ -2355,16 +2355,15 @@ static void ShowDemoWindowLayout()
             ImGui::TreePop();
         }
 
-        if (ImGui::TreeNode("TabItem Button"))
+        if (ImGui::TreeNode("TabItemButton & Leading/Trailing flags"))
         {
-            static int next_id = 0;
-            static ImVector<int> tabs_list;
-            if (next_id == 0) // Initialize with a default tab
-                for (int i = 0; i < 9; i++)
-                    tabs_list.push_back(next_id++);
+            static ImVector<int> active_tabs;
+            static int next_tab_id = 0;
+            if (next_tab_id == 0) // Initialize with some default tabs
+                for (int i = 0; i < 3; i++)
+                    active_tabs.push_back(next_tab_id++);
 
             static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyResizeDown;
-            ImGui::CheckboxFlags("ImGuiTabBarFlags_Reorderable", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_Reorderable);
             ImGui::CheckboxFlags("ImGuiTabBarFlags_TabListPopupButton", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_TabListPopupButton);
             if (ImGui::CheckboxFlags("ImGuiTabBarFlags_FittingPolicyResizeDown", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_FittingPolicyResizeDown))
                 tab_bar_flags &= ~(ImGuiTabBarFlags_FittingPolicyMask_ ^ ImGuiTabBarFlags_FittingPolicyResizeDown);
@@ -2375,63 +2374,40 @@ static void ShowDemoWindowLayout()
             static bool show_trailing_button = true;
             ImGui::Checkbox("Show Leading TabItemButton()", &show_leading_button);
             ImGui::Checkbox("Show Trailing TabItemButton()", &show_trailing_button);
-            static bool enable_position = false;
-            ImGui::Checkbox("Enable Leading/Trailing TabItem()", &enable_position);
 
             if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
             {
-                if (show_leading_button)
+                // Demo Leading Tabs: click the "?" button to open a menu
+                // Note that it is possible to submit regular non-button tabs with Leading/Trailing flags,
+                // or Button without Leading/Trailing flags... but they tend to make more sense together.
+                if (show_leading_button && ImGui::TabItemButton("?", ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_NoTooltip))
+                    ImGui::OpenPopup("MyHelpMenu");
+                if (ImGui::BeginPopup("MyHelpMenu"))
                 {
-                    if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_NoTooltip))
-                        tabs_list.push_back(next_id++);
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("Add a new TabItem() in the tab bar");
-
-                    // Popup Context also works with TabItemButton
-                    if (ImGui::BeginPopupContextItem())
-                    {
-                        ImGui::Text("I'm a popup!");
-                        if (ImGui::Button("Close"))
-                            ImGui::CloseCurrentPopup();
-                        ImGui::EndPopup();
-                    }
+                    ImGui::Selectable("Hello!");
+                    ImGui::EndPopup();
                 }
 
-                bool close_current_tab = false;
-                if (show_trailing_button)
-                {
-                    if (ImGui::TabItemButton("X", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip))
-                        close_current_tab = true;
-                    if (ImGui::IsItemHovered())
-                        ImGui::SetTooltip("Close the currently selected TabItem()");
-                }
+                // Demo Trailing Tabs: click the "+" button to add a new tab (in your app you may want to use a font icon instead of the "+")
+                if (show_trailing_button && ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip))
+                    active_tabs.push_back(next_tab_id++);
 
-                for (int n = 0; n < tabs_list.Size; )
+                // Submit our regular tabs
+                for (int n = 0; n < active_tabs.Size; )
                 {
-                    int mod = tabs_list[n] % 3;
-                    ImGuiTabItemFlags flags = mod == 0 ? 0 : mod == 1 ? ImGuiTabItemFlags_Leading : ImGuiTabItemFlags_Trailing;
-                    if (!enable_position)
-                        flags = 0;
-
-                    char name[16];
-                    snprintf(name, IM_ARRAYSIZE(name), "%04d", tabs_list[n]);
                     bool open = true;
-                    if (ImGui::BeginTabItem(name, &open, flags))
+                    char name[16];
+                    snprintf(name, IM_ARRAYSIZE(name), "%04d", active_tabs[n]);
+                    if (ImGui::BeginTabItem(name, &open, ImGuiTabItemFlags_None))
                     {
                         ImGui::Text("This is the %s tab!", name);
                         ImGui::EndTabItem();
-
-                        if (close_current_tab)
-                        {
-                            open = false;
-                            ImGui::SetTabItemClosed(name);
-                        }
                     }
 
                     if (!open)
-                        tabs_list.erase(tabs_list.Data + n);
+                        active_tabs.erase(active_tabs.Data + n);
                     else
-                        ++n;
+                        n++;
                 }
 
                 ImGui::EndTabBar();

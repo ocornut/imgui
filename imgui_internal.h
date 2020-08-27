@@ -1719,9 +1719,10 @@ struct ImGuiTabItem
     float               ContentWidth;           // Width of actual contents, stored during BeginTabItem() call
     ImS16               NameOffset;             // When Window==NULL, offset to name within parent ImGuiTabBar::TabsNames
     ImS8                BeginOrder;             // BeginTabItem() order, used to re-order tabs after toggling ImGuiTabBarFlags_Reorderable
+    ImS8                IndexDuringLayout;      // Index only used during TabBarLayout()
     bool                WantClose;              // Marked as closed by SetTabItemClosed()
 
-    ImGuiTabItem()      { ID = 0; Flags = ImGuiTabItemFlags_None; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = ContentWidth = 0.0f; BeginOrder = -1; WantClose = false; }
+    ImGuiTabItem()      { ID = 0; Flags = ImGuiTabItemFlags_None; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = ContentWidth = 0.0f; BeginOrder = -1; IndexDuringLayout = -1; WantClose = false; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
@@ -1738,8 +1739,8 @@ struct ImGuiTabBar
     float               LastTabContentHeight;   // Record the height of contents submitted below the tab bar
     float               WidthAllTabs;           // Actual width of all tabs (locked during layout)
     float               WidthAllTabsIdeal;      // Ideal width if all tabs were visible and not clipped
-    float               LeadingWidth;           // Total width used by leading button
-    float               TrailingWidth;          // Total width used by trailing button
+    float               WidthLeading;           // Total width used by leading button
+    float               WidthTrailing;          // Total width used by trailing button
     float               ScrollingAnim;
     float               ScrollingTarget;
     float               ScrollingTargetDistToVisibility;
