@@ -39,6 +39,122 @@ static bool           g_MouseDown[ImGuiMouseButton_COUNT] = {};
 + (id)_windowResizeEastWestCursor;
 @end
 
+@interface ImGui_TextInputClient : NSObject <NSTextInputClient>
+
+@property (nonatomic, strong) NSString *characters;
+
+- (void)setImePosX:(float)posX imePosY:(float)posY;
+
+- (void)updateImePosWithView:(NSView *)view;
+
+@end
+
+@implementation ImGui_TextInputClient {
+    float _posX;
+    float _posY;
+    NSRect _imeRect;
+}
+
+#pragma mark - Public
+
+- (void)setImePosX:(float)posX imePosY:(float)posY
+{
+    _posX = posX;
+    _posY = posY;
+}
+
+- (void)updateImePosWithView:(NSView *)view
+{
+    NSWindow *window = view.window;
+    if (!window) {
+        return;
+    }
+    NSRect contentRect = [window contentRectForFrameRect:window.frame];
+    NSRect rect = NSMakeRect(_posX, contentRect.size.height - _posY, 0, 0);
+    _imeRect = [window convertRectToScreen:rect];
+}
+
+#pragma mark - NSTextInputClient
+
+- (BOOL)hasMarkedText
+{
+    return NO;
+}
+
+- (NSRange)markedRange
+{
+    return NSMakeRange(NSNotFound, 0);
+}
+
+- (NSRange)selectedRange
+{
+    return NSMakeRange(NSNotFound, 0);
+}
+
+- (void)setMarkedText:(id)string
+        selectedRange:(NSRange)selectedRange
+     replacementRange:(NSRange)replacementRange
+{
+}
+
+- (void)unmarkText
+{
+}
+
+- (NSArray<NSAttributedStringKey> *)validAttributesForMarkedText
+{
+    return nil;
+}
+
+- (NSAttributedString *)attributedSubstringForProposedRange:(NSRange)range
+                                                actualRange:(NSRangePointer)actualRange
+{
+    return nil;
+}
+
+- (void)insertText:(id)string
+  replacementRange:(NSRange)replacementRange
+{
+    if ([string isKindOfClass:[NSAttributedString class]]) {
+        string = [string string];
+    }
+    if (!_characters) {
+        _characters = [string copy];
+    } else {
+        _characters = [_characters stringByAppendingString:string];
+    }
+}
+
+- (NSUInteger)characterIndexForPoint:(NSPoint)point
+{
+    return 0;
+}
+
+- (NSRect)firstRectForCharacterRange:(NSRange)range
+                         actualRange:(NSRangePointer)actualRange
+{
+    return _imeRect;
+}
+
+- (void)doCommandBySelector:(SEL)selector
+{
+}
+
+@end
+
+static NSTextInputContext *textInputContext(void)
+{
+    static ImGui_TextInputClient *inputClient = [ImGui_TextInputClient new];
+    // It appears the NSTextInputContext holds a weak reference to the inputClient.
+    static NSTextInputContext *inputContext = [[NSTextInputContext alloc] initWithClient:inputClient];
+    return inputContext;
+}
+
+static ImGui_TextInputClient *textInputClient(void)
+{
+    return (ImGui_TextInputClient *)textInputContext().client;
+}
+
 // Functions
 bool ImGui_ImplOSX_Init()
 {
@@ -115,6 +231,10 @@ bool ImGui_ImplOSX_Init()
         s_clipboard.resize((int)string_len + 1);
         strcpy(s_clipboard.Data, string_c);
         return s_clipboard.Data;
+    };
+    io.ImeSetInputScreenPosFn = [](float x, float y, float line_height) -> void
+    {
+        [textInputClient() setImePosX:x imePosY:y + line_height];
     };
 
     return true;
@@ -201,6 +321,8 @@ static void resetKeys()
         io.KeysDown[n] = false;
 }
 
+static bool ImGui_TextInputContext_Activated;
+
 bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 {
     ImGuiIO& io = ImGui::GetIO();
@@ -259,6 +381,28 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         return io.WantCaptureMouse;
     }
 
+    if (io.WantTextInput) {
+        if (!ImGui_TextInputContext_Activated) {
+            [textInputContext() activate];
+            ImGui_TextInputContext_Activated = true;
+        }
+        if (event.type == NSEventTypeKeyDown) {
+            [textInputContext() handleEvent:event];
+        }
+        ImGui_TextInputClient *inputClient = textInputClient();
+        NSString *characters = inputClient.characters;
+        if (characters.UTF8String) {
+            io.AddInputCharactersUTF8(characters.UTF8String);
+            inputClient.characters = nil;
+        }
+        [inputClient updateImePosWithView:view];
+    } else if (ImGui_TextInputContext_Activated) {
+        NSTextInputContext *inputContext = textInputContext();
+        [inputContext discardMarkedText];
+        [inputContext invalidateCharacterCoordinates];
+        [inputContext deactivate];
+        ImGui_TextInputContext_Activated = false;
+    }
     // FIXME: All the key handling is wrong and broken. Refer to GLFW's cocoa_init.mm and cocoa_window.mm.
     if (event.type == NSEventTypeKeyDown)
     {
@@ -267,9 +411,6 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         for (int i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
-            if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
-                io.AddInputCharacter((unsigned int)c);
-
             // We must reset in case we're pressing a sequence of special keys while keeping the command pressed
             int key = mapCharacterToKey(c);
             if (key != -1 && key < 256 && !io.KeyCtrl)
