@@ -39,6 +39,7 @@ Other Changes:
 
 - Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
 - Nav: Fixed navigation resuming on first visible item when using gamepad. [@rokups]
+- Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
 - InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
   (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
