@@ -88,6 +88,7 @@ Breaking Changes:
     - You can replace the >1.0f value with ImGuiSliderFlags_Logarithmic to fix the warning/assert
       and get a _similar_ effect as previous uses of power >1.0f.
   See https://github.com/ocornut/imgui/issues/3361 for all details.
+  For shared code, you can version check at compile-time with `#if IMGUI_VERSION_NUM >= 17704`.
   Kept inline redirection functions (will obsolete) apart for: DragFloatRange2(), VSliderFloat(), VSliderScalar().
   For those three the 'float power=1.0f' version was removed directly as they were most unlikely ever used.
 - DragInt, DragFloat, DragScalar: Obsoleted use of v_min > v_max to lock edits (introduced in 1.73, this was not
