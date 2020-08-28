@@ -1357,6 +1357,11 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
         }
         {
             err = vkAcquireNextImageKHR(v->Device, wd->Swapchain, UINT64_MAX, fsd->ImageAcquiredSemaphore, VK_NULL_HANDLE, &wd->FrameIndex);
+            if (err == VK_ERROR_OUT_OF_DATE_KHR)
+            {
+                viewport->DrawData = NULL;
+                return;
+            }
             check_vk_result(err);
             fd = &wd->Frames[wd->FrameIndex];
         }
@@ -1417,6 +1422,9 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkanH_Window* wd = &data->Window;
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
 
+    if (!viewport->DrawData) // Frame data became invalid in the middle of rendering
+        return;
+
     VkResult err;
     uint32_t present_index = wd->FrameIndex;
 
@@ -1429,6 +1437,13 @@ static void ImGui_ImplVulkan_SwapBuffers(ImGuiViewport* viewport, void*)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &present_index;
     err = vkQueuePresentKHR(v->Queue, &info);
+    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    {
+        ImVec2 dim = ImGui::GetPlatformIO().Platform_GetWindowSize(viewport);
+        ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, dim.x, dim.y, v->MinImageCount);
+        return;
+    }
+
     check_vk_result(err);
 
     wd->FrameIndex = (wd->FrameIndex + 1) % wd->ImageCount;         // This is for the next vkWaitForFences()
