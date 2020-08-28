@@ -52,7 +52,27 @@ enum X11_Atom_
     X11_Atom_WM_Protocols,
     X11_Atom_Net_Workarea,
     X11_Atom_Net_Supported,
+    X11_Atom_Net_WM_Window_Type,
+    X11_Atom_Net_WM_Window_Type_Toolbar,
+    X11_Atom_Net_WM_Window_Type_Menu,
+    X11_Atom_Net_WM_Window_Type_Dialog,
+    X11_Atom_Motif_WM_Hints,
     X11_Atom_COUNT
+};
+
+static const char* g_X11AtomNames[X11_Atom_COUNT] = {
+    "CLIPBOARD",
+    "TARGETS",
+    "DEAR_IMGUI_SELECTION",
+    "WM_DELETE_WINDOW",
+    "WM_PROTOCOLS",
+    "_NET_WORKAREA",
+    "_NET_SUPPORTED",
+    "_NET_WM_WINDOW_TYPE",
+    "_NET_WM_WINDOW_TYPE_TOOLBAR",
+    "_NET_WM_WINDOW_TYPE_MENU",
+    "_NET_WM_WINDOW_TYPE_DIALOG",
+    "_MOTIF_WM_HINTS"
 };
 
 enum Known_Target_
@@ -75,42 +95,43 @@ static const char* g_KnownTargetNames[Known_Target_COUNT] = {
     "text/plain"
 };
 
-static const char* g_X11AtomNames[X11_Atom_COUNT] = {
-    "CLIPBOARD",
-    "TARGETS",
-    "DEAR_IMGUI_SELECTION",
-    "WM_DELETE_WINDOW",
-    "WM_PROTOCOLS",
-    "_NET_WORKAREA",
-    "_NET_SUPPORTED"
-};
-
 struct ImGuiViewportDataX11
 {
     // Avoid excess querying with X by caching the window geometry. We update these values when we receive window events.
-    ImVec2 pos;
-    ImVec2 size;
-    ImGuiViewportDataX11() { pos = ImVec2(0, 0); size = ImVec2(0, 0);}
+    ImVec2 Pos;
+    ImVec2 Size;
+    ImGuiViewportFlags Flags;
+
+    ImGuiViewportDataX11() { Pos = ImVec2(0, 0); Size = ImVec2(0, 0); Flags = 0; }
     ~ImGuiViewportDataX11() { }
 };
 
+struct MotifHints
+{
+    uint32_t   Flags;
+    uint32_t   Functions;
+    uint32_t   Decorations;
+    int32_t    InputMode;
+    uint32_t   Status;
+};
+
 // X11 Data
-static xcb_connection_t*     g_Connection;
-static xcb_connection_t*     g_ClipboardConnection;
-static xcb_window_t          g_MainWindow;
-static xcb_key_symbols_t*    g_KeySyms;
-static xcb_cursor_context_t* g_CursorContext;
-static xcb_screen_t*         g_Screen;
-static xcb_window_t          g_ClipboardHandler;
-static xcb_atom_t            g_X11Atoms[X11_Atom_COUNT];
-static xcb_atom_t            g_KnownTargetAtoms[Known_Target_COUNT];
+static xcb_connection_t*      g_Connection;
+static xcb_connection_t*      g_ClipboardConnection;
+static xcb_window_t           g_MainWindow;
+static xcb_key_symbols_t*     g_KeySyms;
+static xcb_cursor_context_t*  g_CursorContext;
+static xcb_screen_t*          g_Screen;
+static xcb_window_t           g_ClipboardHandler;
+static xcb_atom_t             g_X11Atoms[X11_Atom_COUNT];
+static xcb_atom_t             g_KnownTargetAtoms[Known_Target_COUNT];
 
-static timespec             g_LastTime;
-static timespec             g_CurrentTime;
+static timespec               g_LastTime;
+static timespec               g_CurrentTime;
 
-static bool                 g_HideXCursor = false;
-static ImGuiMouseCursor     g_CurrentCursor = ImGuiMouseCursor_Arrow;
-static char*                g_CurrentClipboardData;
+static bool                   g_HideXCursor = false;
+static ImGuiMouseCursor       g_CurrentCursor = ImGuiMouseCursor_Arrow;
+static char*                  g_CurrentClipboardData;
 
 static const char* g_CursorMap[ImGuiMouseCursor_COUNT] = {
     "arrow",               // ImGuiMouseCursor_Arrow
@@ -137,6 +158,7 @@ bool    ImGui_ImplX11_Init(xcb_window_t window)
     g_Connection = xcb_connect(nullptr, nullptr);
     g_Screen = xcb_setup_roots_iterator(xcb_get_setup(g_Connection)).data;
     g_MainWindow = window;
+    xcb_generic_error_t* x_Err = nullptr;
 
     // Set initial clock value
     clock_gettime(CLOCK_MONOTONIC_RAW, &g_LastTime);
@@ -145,7 +167,7 @@ bool    ImGui_ImplX11_Init(xcb_window_t window)
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;      // We can honor GetMouseCursor() values (optional)
     io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports; // We can create multi-viewports on the Platform side (optional)
-    io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
+    // io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport;
     io.BackendPlatformName = "imgui_impl_x11";
 
     // ~~~
@@ -155,8 +177,6 @@ bool    ImGui_ImplX11_Init(xcb_window_t window)
     ImGuiViewportDataX11* main_viewport_data = IM_NEW(ImGuiViewportDataX11);
     main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void *)(intptr_t)g_MainWindow;
     main_viewport->PlatformUserData = main_viewport_data;
-
-    xcb_generic_error_t* x_Err = nullptr;
 
     // Cache atoms we care about
     // Get the atoms for our known selection targets
@@ -189,10 +209,10 @@ bool    ImGui_ImplX11_Init(xcb_window_t window)
     xcb_get_geometry_reply_t* resp = xcb_get_geometry_reply(g_Connection, xcb_get_geometry(g_Connection, g_MainWindow), &x_Err);
     IM_ASSERT(!x_Err && "X error querying window geometry");
     io.DisplaySize = ImVec2(resp->width, resp->height);
-    main_viewport_data->pos.x = resp->x;
-    main_viewport_data->pos.y = resp->y;
-    main_viewport_data->size.x = resp->width;
-    main_viewport_data->size.y = resp->height;
+    main_viewport_data->Pos.x = resp->x;
+    main_viewport_data->Pos.y = resp->y;
+    main_viewport_data->Size.x = resp->width;
+    main_viewport_data->Size.y = resp->height;
     free(resp);
 
     // Get the current key map
@@ -481,9 +501,10 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
     {
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            xcb_enter_notify_event_t* e = (xcb_enter_notify_event_t*)event;
-            ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void *)(intptr_t)e->event);
-            io.MouseHoveredViewport = viewport->ID;
+            // xcb_enter_notify_event_t* e = (xcb_enter_notify_event_t*)event;
+            // ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void *)(intptr_t)e->event);
+            // if(viewport)
+            //     io.MouseHoveredViewport = viewport->ID;
         }
         if (g_HideXCursor)
         {
@@ -530,16 +551,16 @@ bool ImGui_ImplX11_ProcessEvent(xcb_generic_event_t* event)
         {
             ImGuiViewportDataX11 *data = (ImGuiViewportDataX11*)viewport->PlatformUserData;
             // As far as I can tell we don't actually know what changed with the window. Perhaps X coalesces them into one event.
-            if (data->pos.x != e->x || data->pos.y != e->y)
+            if (data->Pos.x != e->x || data->Pos.y != e->y)
             {
-                data->pos.x = e->x;
-                data->pos.y = e->y;
+                data->Pos.x = e->x;
+                data->Pos.y = e->y;
                 viewport->PlatformRequestMove = true;
             }
-            if (data->size.x != e->width || data->size.y != e-> height)
+            if (data->Size.x != e->width || data->Size.y != e->height)
             {
-                data->size.x = e->width;
-                data->size.y = e->height;
+                data->Size.x = e->width;
+                data->Size.y = e->height;
                 viewport->PlatformRequestResize = true;
             }
             return true;
@@ -559,11 +580,30 @@ void ImGui_ImplX11_ProcessViewportMessages()
     }
 }
 
+void ImGui_ImplX11_SetWindowDecoration(bool disabled, xcb_window_t window) // Disabled seems logically backwards, however we use the value of ImGuiViewportFlags_NoDecoration
+{
+    // There are two 'standards' for telling the WM what you want to do with a window, ICCCM and EWMH. Neither one of them has any specification for removing the window decorations.
+    // EWMH has specification for window types which the WM interprets however it wants. The only consistent way is setting a very, very old property on the window
+    // from the Motif window manager era. Every WM respects that property.
+    MotifHints hints;
+
+    hints.Flags = 2;
+    hints.Functions = 0;
+    hints.Decorations = !disabled;
+    hints.InputMode = 0;
+    hints.Status = 0;
+
+    xcb_change_property(g_Connection, XCB_PROP_MODE_REPLACE, window,
+                        g_X11Atoms[X11_Atom_Motif_WM_Hints], g_X11Atoms[X11_Atom_Motif_WM_Hints],
+                        32, 5, &hints );
+}
+
 static void ImGui_ImplX11_CreateWindow(ImGuiViewport* viewport)
 {
     xcb_window_t window = xcb_generate_id(g_Connection);
     viewport->PlatformHandle = viewport->PlatformHandleRaw = (void *)(intptr_t)window;
     viewport->PlatformUserData = IM_NEW(ImGuiViewportDataX11);
+    ((ImGuiViewportDataX11*)viewport->PlatformUserData)->Flags = viewport->Flags;
     uint32_t values[2];
 
     values[0] = g_Screen->black_pixel;
@@ -585,8 +625,24 @@ static void ImGui_ImplX11_CreateWindow(ImGuiViewport* viewport)
                       XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK,
                       values);
 
+    // Tell the WM we want notifications when the window closes
     xcb_change_property(g_Connection, XCB_PROP_MODE_REPLACE, window,
                         g_X11Atoms[X11_Atom_WM_Protocols], 4, 32, 1, &g_X11Atoms[X11_Atom_WM_Delete_Window]);
+
+    // Tell the WM this window is a child of the main window. The X11 concept of parent/child doesn't work as the WM frame becomes the parent of any window.
+    // EWMH has a specification for a window as 'transient' to another.
+    if (viewport->ParentViewportId != 0)
+    {
+        if (ImGuiViewport* parent_viewport = ImGui::FindViewportByID(viewport->ParentViewportId))
+        {
+            xcb_window_t parent_window = (xcb_window_t)(intptr_t)parent_viewport->PlatformHandle;
+            xcb_change_property(g_Connection, XCB_PROP_MODE_REPLACE, parent_window,
+                                XCB_ATOM_WM_TRANSIENT_FOR, XCB_ATOM_WINDOW, 32, 1, &g_MainWindow);
+
+        }
+    }
+
+    ImGui_ImplX11_SetWindowDecoration((viewport->Flags & ImGuiViewportFlags_NoDecoration), window);
 }
 
 static void Imgui_ImplX11_DestroyWindow(ImGuiViewport* viewport)
@@ -601,7 +657,7 @@ static void Imgui_ImplX11_DestroyWindow(ImGuiViewport* viewport)
 
 static ImVec2 Imgui_ImplX11_GetWindowPos(ImGuiViewport* viewport)
 {
-    return ((ImGuiViewportDataX11*)viewport->PlatformUserData)->pos;
+    return ((ImGuiViewportDataX11*)viewport->PlatformUserData)->Pos;
 }
 
 static void ImGui_ImplX11_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
@@ -610,7 +666,7 @@ static void ImGui_ImplX11_SetWindowPos(ImGuiViewport* viewport, ImVec2 pos)
     ImGuiViewportDataX11 *data = (ImGuiViewportDataX11*)viewport->PlatformUserData;
     uint32_t dim[] = { (uint32_t)pos.x, (uint32_t)pos.y };
     xcb_configure_window(g_Connection, window, XCB_CONFIG_WINDOW_X | XCB_CONFIG_WINDOW_Y, dim);
-    data->pos = pos;
+    data->Pos = pos;
 }
 
 static ImVec2 ImGui_ImplX11_GetWindowSize(ImGuiViewport* viewport)
@@ -659,6 +715,21 @@ static int ImGui_ImplX11_CreateVkSurface(ImGuiViewport* viewport, ImU64 vk_insta
 }
 #endif
 
+static void ImGui_ImplX11_UpdateWindow(ImGuiViewport* viewport)
+{
+    ImGuiViewportDataX11 *data = (ImGuiViewportDataX11*)viewport->PlatformUserData;
+    ImGuiViewportFlags changes = data->Flags ^ viewport->Flags;
+    if (changes)
+    {
+        xcb_window_t window = (xcb_window_t)(intptr_t)viewport->PlatformHandle;
+        if (changes & ImGuiViewportFlags_NoDecoration)
+        {
+            ImGui_ImplX11_SetWindowDecoration((viewport->Flags & ImGuiViewportFlags_NoDecoration), window);
+        }
+        data->Flags = viewport->Flags;
+    }
+}
+
 void ImGui_ImplX11_InitPlatformInterface()
 {
     ImGuiPlatformIO& platform_io = ImGui::GetPlatformIO();
@@ -670,6 +741,7 @@ void ImGui_ImplX11_InitPlatformInterface()
     platform_io.Platform_SetWindowSize   = ImGui_ImplX11_SetWindowSize;
     platform_io.Platform_SetWindowTitle  = ImGui_ImplX11_SetWindowTitle;
     platform_io.Platform_ShowWindow      = ImGui_ImplX11_ShowWindow;
+    platform_io.Platform_UpdateWindow    = ImGui_ImplX11_UpdateWindow;
 #ifdef HAS_VULKAN
     platform_io.Platform_CreateVkSurface = ImGui_ImplX11_CreateVkSurface;
 #endif
