@@ -15687,7 +15687,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 open = ImGui::TreeNode((void*)(intptr_t)node->ID, "%s 0x%04X%s: %s split (vis: '%s')", label, node->ID, node->IsVisible ? "" : " (hidden)", (node->SplitAxis == ImGuiAxis_X) ? "horizontal" : (node->SplitAxis == ImGuiAxis_Y) ? "vertical" : "n/a", node->VisibleWindow ? node->VisibleWindow->Name : "NULL");
             if (!is_alive) { PopStyleColor(); }
             if (is_active && ImGui::IsItemHovered())
-                GetForegroundDrawList(node->HostWindow ? node->HostWindow : node->VisibleWindow)->AddRect(node->Pos, node->Pos + node->Size, IM_COL32(255, 255, 0, 255));
+                if (ImGuiWindow* window = node->HostWindow ? node->HostWindow : node->VisibleWindow)
+                    GetForegroundDrawList(window)->AddRect(node->Pos, node->Pos + node->Size, IM_COL32(255, 255, 0, 255));
             if (open)
             {
                 IM_ASSERT(node->ChildNodes[0] == NULL || node->ChildNodes[0]->ParentNode == node);
