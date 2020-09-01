@@ -465,6 +465,8 @@ int main(int, char**)
                                     &x_Err)->atom;
     xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
                         wm_protocols, 4, 32, 1, &wm_delete_window);
+    memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
+
     while (!done)
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -541,7 +543,8 @@ int main(int, char**)
             ImGui::Checkbox("Another Window", &show_another_window);
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+            if (ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
+                memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
                 counter++;
@@ -564,14 +567,25 @@ int main(int, char**)
 
         // Rendering
         ImGui::Render();
-        ImDrawData* draw_data = ImGui::GetDrawData();
-        const bool is_minimized = (draw_data->DisplaySize.x <= 0.0f || draw_data->DisplaySize.y <= 0.0f);
-        if (!is_minimized)
+        ImDrawData* main_draw_data = ImGui::GetDrawData();
+        const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
+        if (!main_is_minimized)
+            FrameRender(wd, main_draw_data);
+
+        // Update and Render additional Platform Windows
+        if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
-            memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
-            FrameRender(wd, draw_data);
-            FramePresent(wd);
+            ImGui::UpdatePlatformWindows();
+            ImGui::RenderPlatformWindowsDefault();
         }
+
+        if (g_SwapChainRebuild) // Main viewport resized in the middle of this frame, go on to next frame.
+            continue;
+
+        // Present Main Platform Window
+        if (!main_is_minimized)
+            FramePresent(wd);
+
     }
 
     // Cleanup
