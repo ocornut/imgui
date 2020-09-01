@@ -5248,6 +5248,7 @@ void ImGui::RenderWindowDecorations(ImGuiWindow* window, const ImRect& title_bar
     ImGuiWindowFlags flags = window->Flags;
 
     // Ensure that ScrollBar doesn't read last frame's SkipItems
+    IM_ASSERT(window->BeginCount == 0);
     window->SkipItems = false;
 
     // Draw window + handle manual resize
@@ -6029,37 +6030,41 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     window->BeginCount++;
     g.NextWindowData.ClearFlags();
 
-    if (flags & ImGuiWindowFlags_ChildWindow)
+    // Update visibility
+    if (first_begin_of_the_frame)
     {
-        // Child window can be out of sight and have "negative" clip windows.
-        // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
-        IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
-        if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-            if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
-                window->HiddenFramesCanSkipItems = 1;
+        if (flags & ImGuiWindowFlags_ChildWindow)
+        {
+            // Child window can be out of sight and have "negative" clip windows.
+            // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
+            IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
+            if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
+                if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
+                    window->HiddenFramesCanSkipItems = 1;
 
-        // Hide along with parent or if parent is collapsed
-        if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
+            // Hide along with parent or if parent is collapsed
+            if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
+                window->HiddenFramesCanSkipItems = 1;
+            if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCannotSkipItems > 0))
+                window->HiddenFramesCannotSkipItems = 1;
+        }
+
+        // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)
+        if (style.Alpha <= 0.0f)
             window->HiddenFramesCanSkipItems = 1;
-        if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCannotSkipItems > 0))
-            window->HiddenFramesCannotSkipItems = 1;
+
+        // Update the Hidden flag
+        window->Hidden = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0);
+
+        // Update the SkipItems flag, used to early out of all items functions (no layout required)
+        bool skip_items = false;
+        if (window->Collapsed || !window->Active || window->Hidden)
+            if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesCannotSkipItems <= 0)
+                skip_items = true;
+        window->SkipItems = skip_items;
     }
 
-    // Don't render if style alpha is 0.0 at the time of Begin(). This is arbitrary and inconsistent but has been there for a long while (may remove at some point)
-    if (style.Alpha <= 0.0f)
-        window->HiddenFramesCanSkipItems = 1;
-
-    // Update the Hidden flag
-    window->Hidden = (window->HiddenFramesCanSkipItems > 0) || (window->HiddenFramesCannotSkipItems > 0);
-
-    // Update the SkipItems flag, used to early out of all items functions (no layout required)
-    bool skip_items = false;
-    if (window->Collapsed || !window->Active || window->Hidden)
-        if (window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0 && window->HiddenFramesCannotSkipItems <= 0)
-            skip_items = true;
-    window->SkipItems = skip_items;
-
-    return !skip_items;
+    return !window->SkipItems;
 }
 
 void ImGui::End()
