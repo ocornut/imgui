@@ -101,6 +101,37 @@ Other changes:
 
 
 -----------------------------------------------------------------------
+ VERSION 1.79 WIP (In Progress)
+-----------------------------------------------------------------------
+
+Other Changes:
+
+- Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
+- Nav: Fixed navigation resuming on first visible item when using gamepad. [@rokups]
+- Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
+- InputText: Added selection helpers in ImGuiInputTextCallbackData().
+- InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
+  (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
+  underlying buffer while focus is active).
+- InputText: Fixed using ImGuiInputTextFlags_Password with InputTextMultiline(). (#3427, #3428)
+  It is a rather unusual or useless combination of features but no reason it shouldn't work!
+- DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
+  where v_min == v_max. (#3361)
+- BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
+  so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
+- TreeNode, CollapsingHeader: Made clicking on arrow toggle toggle the open state on the Mouse Down event
+  rather than the Mouse Down+Up sequence, even if the _OpenOnArrow flag isn't set. This is standard behavior
+  and amends the change done in 1.76 which only affected cases were _OpenOnArrow flag was set.
+  (This is also necessary to support full multi/range-select/drag and drop operations.)
+- Tab Bar: Keep tab item close button visible while dragging a tab (independent of hovering state).
+- Tab Bar: Fixed a small bug where toggling a tab bar from Reorderable to not Reorderable would leave
+  tabs reordered in the tab list popup. [@Xipiryon]
+- Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
+- Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
+- Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]
+
+
+-----------------------------------------------------------------------
  VERSION 1.78 (Released 2020-08-18)
 -----------------------------------------------------------------------
 
@@ -126,6 +157,7 @@ Breaking Changes:
     - You can replace the >1.0f value with ImGuiSliderFlags_Logarithmic to fix the warning/assert
       and get a _similar_ effect as previous uses of power >1.0f.
   See https://github.com/ocornut/imgui/issues/3361 for all details.
+  For shared code, you can version check at compile-time with `#if IMGUI_VERSION_NUM >= 17704`.
   Kept inline redirection functions (will obsolete) apart for: DragFloatRange2(), VSliderFloat(), VSliderScalar().
   For those three the 'float power=1.0f' version was removed directly as they were most unlikely ever used.
 - DragInt, DragFloat, DragScalar: Obsoleted use of v_min > v_max to lock edits (introduced in 1.73, this was not

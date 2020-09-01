@@ -408,7 +408,8 @@ static void ImGui_ImplDX9_SwapBuffers(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataDx9* data = (ImGuiViewportDataDx9*)viewport->RendererUserData;
     HRESULT hr = data->SwapChain->Present(NULL, NULL, data->d3dpp.hDeviceWindow, NULL, NULL);
-    IM_ASSERT(hr == D3D_OK);
+    // Let main application handle D3DERR_DEVICELOST by resetting the device.
+    IM_ASSERT(hr == D3D_OK || hr == D3DERR_DEVICELOST);
 }
 
 static void ImGui_ImplDX9_InitPlatformInterface()
