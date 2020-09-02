@@ -173,7 +173,9 @@ namespace ImStb
 //#define IMGUI_DEBUG_LOG_POPUP         IMGUI_DEBUG_LOG // Enable log
 //#define IMGUI_DEBUG_LOG_VIEWPORT      IMGUI_DEBUG_LOG // Enable log
 //#define IMGUI_DEBUG_LOG_DOCKING       IMGUI_DEBUG_LOG // Enable log
+//#define IMGUI_DEBUG_LOG_NAV           IMGUI_DEBUG_LOG // Enable log
 #define IMGUI_DEBUG_LOG_POPUP(...)      ((void)0)       // Disable log
+#define IMGUI_DEBUG_LOG_NAV(...)        ((void)0)       // Disable log
 #define IMGUI_DEBUG_LOG_VIEWPORT(...)   ((void)0)       // Disable log
 #define IMGUI_DEBUG_LOG_DOCKING(...)    ((void)0)       // Disable log
 
