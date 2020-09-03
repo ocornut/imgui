@@ -1725,14 +1725,14 @@ struct ImGuiTabItem
     ImGuiTabItem()      { ID = 0; Flags = ImGuiTabItemFlags_None; LastFrameVisible = LastFrameSelected = -1; NameOffset = -1; Offset = Width = ContentWidth = 0.0f; BeginOrder = -1; IndexDuringLayout = -1; WantClose = false; }
 };
 
-struct TabBarLayoutSection
+struct ImGuiTabBarSection
 {
-    ImGuiTabItem* Tabs;     // Pointer to the first tab_bar->Tabs matching the section
-    int TabCount;
-    float Width;
-    float WidthIdeal;
-    float InnerSpacing;     // Horizontal ItemInnerSpacing, used by Leading/Trailing section, to correctly offset from Central section
-    TabBarLayoutSection()   { Tabs = NULL; TabCount = 0; Width = 0.0f; WidthIdeal = 0.0f; InnerSpacing = 0.0f; }
+    int                 TabStartIndex;
+    int                 TabCount;
+    float               Width;
+    float               WidthIdeal;
+    float               InnerSpacing;   // Horizontal ItemInnerSpacing, used by Leading/Trailing section, to correctly offset from Central section
+    ImGuiTabBarSection(){ memset(this, 0, sizeof(*this)); }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
@@ -1757,9 +1757,7 @@ struct ImGuiTabBar
     ImGuiID             ReorderRequestTabId;
     ImS8                ReorderRequestDir;
     ImS8                TabsActiveCount;        // Number of tabs submitted this frame.
-    TabBarLayoutSection LeadingSection;
-    TabBarLayoutSection CentralSection;
-    TabBarLayoutSection TrailingSection;
+    ImGuiTabBarSection  Sections[3];
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     short               LastTabItemIdx;         // Index of last BeginTabItem() tab for use by EndTabItem() 
