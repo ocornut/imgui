@@ -40,12 +40,15 @@ Other Changes:
 - Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
 - Nav: Fixed navigation resuming on first visible item when using gamepad. [@rokups]
 - Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
+- Scrolling: Fixed SetScrollHere functions edge snapping when called during a frame where ContentSize
+  is changing (issue introduced in 1.78). (#3452).
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
 - InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
   (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
   underlying buffer while focus is active).
 - InputText: Fixed using ImGuiInputTextFlags_Password with InputTextMultiline(). (#3427, #3428)
   It is a rather unusual or useless combination of features but no reason it shouldn't work!
+- InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454).
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
 - BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
