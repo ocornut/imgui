@@ -447,8 +447,16 @@ static void ImGui_ImplGlfw_UpdateMonitors()
         monitor.MainSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
         int w, h;
         glfwGetMonitorWorkarea(glfw_monitors[n], &x, &y, &w, &h);
-        monitor.WorkPos = ImVec2((float)x, (float)y);;
-        monitor.WorkSize = ImVec2((float)w, (float)h);
+        if (w > 0 && h > 0)
+        {
+            monitor.WorkPos = ImVec2((float)x, (float)y);
+            monitor.WorkSize = ImVec2((float)w, (float)h);
+        }
+        else
+        {
+            monitor.WorkPos  = monitor.MainPos;
+            monitor.WorkSize = monitor.MainSize;
+        }
 #else
         monitor.MainPos = monitor.WorkPos = ImVec2((float)x, (float)y);
         monitor.MainSize = monitor.WorkSize = ImVec2((float)vid_mode->width, (float)vid_mode->height);
