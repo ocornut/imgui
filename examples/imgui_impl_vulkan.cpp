@@ -1346,7 +1346,7 @@ static void ImGui_ImplVulkan_RenderWindow(ImGuiViewport* viewport, void*)
     ImGui_ImplVulkan_InitInfo* v = &g_VulkanInitInfo;
     VkResult err;
 
-    if(data->SwapChainOutOfDate)
+    if (data->SwapChainOutOfDate)
     {
         ImVec2 dim = ImGui::GetPlatformIO().Platform_GetWindowSize(viewport);
         ImGui_ImplVulkanH_CreateOrResizeWindow(v->Instance, v->PhysicalDevice, v->Device, wd, v->QueueFamily, v->Allocator, dim.x, dim.y, v->MinImageCount);
