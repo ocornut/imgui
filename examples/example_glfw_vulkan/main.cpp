@@ -459,6 +459,7 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
+    memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
     // Main loop
     while (!glfwWindowShouldClose(window))
@@ -505,7 +506,8 @@ int main(int, char**)
             ImGui::Checkbox("Another Window", &show_another_window);
 
             ImGui::SliderFloat("float", &f, 0.0f, 1.0f);            // Edit 1 float using a slider from 0.0f to 1.0f
-            ImGui::ColorEdit3("clear color", (float*)&clear_color); // Edit 3 floats representing a color
+            if (ImGui::ColorEdit3("clear color", (float*)&clear_color)) // Edit 3 floats representing a color
+                memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
             if (ImGui::Button("Button"))                            // Buttons return true when clicked (most widgets return true when edited/activated)
                 counter++;
@@ -530,7 +532,6 @@ int main(int, char**)
         ImGui::Render();
         ImDrawData* main_draw_data = ImGui::GetDrawData();
         const bool main_is_minimized = (main_draw_data->DisplaySize.x <= 0.0f || main_draw_data->DisplaySize.y <= 0.0f);
-        memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
         if (!main_is_minimized)
             FrameRender(wd, main_draw_data);
 
@@ -541,11 +542,14 @@ int main(int, char**)
             ImGui::RenderPlatformWindowsDefault();
         }
 
+        if (g_SwapChainRebuild) // Main viewport resized in the middle of this frame, go on to next frame.
+            continue;
+
         // Present Main Platform Window
         if (!main_is_minimized)
             FramePresent(wd);
-    }
 
+    }
     // Cleanup
     err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);

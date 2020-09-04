@@ -1,4 +1,4 @@
-// dear imgui: standalone example application for SDL2 + Vulkan
+// dear imgui: standalone example application for X11 + Vulkan
 // If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 
 // Important note to the reader who wish to integrate imgui_impl_vulkan.cpp/.h in their own engine/app.
@@ -8,13 +8,14 @@
 //   the back-end itself (imgui_impl_vulkan.cpp), but should PROBABLY NOT be used by your own engine/app code.
 // Read comments in imgui_impl_vulkan.h.
 
+#define VK_USE_PLATFORM_XCB_KHR
+
 #include "imgui.h"
-#include "imgui_impl_sdl.h"
+#include "imgui_impl_x11.h"
 #include "imgui_impl_vulkan.h"
 #include <stdio.h>          // printf, fprintf
 #include <stdlib.h>         // abort
-#include <SDL.h>
-#include <SDL_vulkan.h>
+#include <xcb/xcb.h>
 #include <vulkan/vulkan.h>
 
 //#define IMGUI_UNLIMITED_FRAME_RATE
@@ -35,6 +36,8 @@ static VkDescriptorPool         g_DescriptorPool = VK_NULL_HANDLE;
 static ImGui_ImplVulkanH_Window g_MainWindowData;
 static uint32_t                 g_MinImageCount = 2;
 static bool                     g_SwapChainRebuild = false;
+static int                      g_SwapChainResizeWidth = 0;
+static int                      g_SwapChainResizeHeight = 0;
 
 static void check_vk_result(VkResult err)
 {
@@ -53,7 +56,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debug_report(VkDebugReportFlagsEXT flags, 
     return VK_FALSE;
 }
 #endif // IMGUI_VULKAN_DEBUG_REPORT
-
+ 
 static void SetupVulkan(const char** extensions, uint32_t extensions_count)
 {
     VkResult err;
@@ -245,11 +248,6 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
     VkSemaphore image_acquired_semaphore  = wd->FrameSemaphores[wd->SemaphoreIndex].ImageAcquiredSemaphore;
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     err = vkAcquireNextImageKHR(g_Device, wd->Swapchain, UINT64_MAX, image_acquired_semaphore, VK_NULL_HANDLE, &wd->FrameIndex);
-    if (err == VK_ERROR_OUT_OF_DATE_KHR)
-    {
-        g_SwapChainRebuild = true;
-        return;
-    }
     check_vk_result(err);
 
     ImGui_ImplVulkanH_Frame* fd = &wd->Frames[wd->FrameIndex];
@@ -307,8 +305,6 @@ static void FrameRender(ImGui_ImplVulkanH_Window* wd, ImDrawData* draw_data)
 
 static void FramePresent(ImGui_ImplVulkanH_Window* wd)
 {
-    if (g_SwapChainRebuild)
-        return;
     VkSemaphore render_complete_semaphore = wd->FrameSemaphores[wd->SemaphoreIndex].RenderCompleteSemaphore;
     VkPresentInfoKHR info = {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
@@ -318,76 +314,84 @@ static void FramePresent(ImGui_ImplVulkanH_Window* wd)
     info.pSwapchains = &wd->Swapchain;
     info.pImageIndices = &wd->FrameIndex;
     VkResult err = vkQueuePresentKHR(g_Queue, &info);
-    if (err == VK_ERROR_OUT_OF_DATE_KHR)
+    if(err == VK_ERROR_OUT_OF_DATE_KHR)
     {
         g_SwapChainRebuild = true;
-        return;
+
     }
-    check_vk_result(err);
-    wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
+    else
+    {
+        check_vk_result(err);
+        wd->SemaphoreIndex = (wd->SemaphoreIndex + 1) % wd->ImageCount; // Now we can use the next set of semaphores
+    }
 }
 
 int main(int, char**)
 {
-    // Setup SDL
-    if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_GAMECONTROLLER) != 0)
-    {
-        printf("Error: %s\n", SDL_GetError());
-        return -1;
-    }
+    // Create application window
+    xcb_connection_t *connection = xcb_connect(NULL, NULL);
+    xcb_screen_t *screen = xcb_setup_roots_iterator(xcb_get_setup(connection)).data;
+    xcb_drawable_t window = xcb_generate_id(connection);
+    uint32_t values[2];
 
-    // Setup window
-    SDL_WindowFlags window_flags = (SDL_WindowFlags)(SDL_WINDOW_VULKAN | SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI);
-    SDL_Window* window = SDL_CreateWindow("Dear ImGui SDL2+Vulkan example", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, window_flags);
+    values[0] = screen->black_pixel;
+    values[1] = XCB_EVENT_MASK_EXPOSURE | XCB_EVENT_MASK_STRUCTURE_NOTIFY |
+        XCB_EVENT_MASK_KEY_PRESS | XCB_EVENT_MASK_KEY_RELEASE |
+        XCB_EVENT_MASK_BUTTON_PRESS | XCB_EVENT_MASK_BUTTON_RELEASE |
+        XCB_EVENT_MASK_POINTER_MOTION | XCB_EVENT_MASK_BUTTON_MOTION |
+        XCB_EVENT_MASK_ENTER_WINDOW | XCB_EVENT_MASK_LEAVE_WINDOW;
 
-    // Setup Vulkan
-    uint32_t extensions_count = 0;
-    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, NULL);
-    const char** extensions = new const char*[extensions_count];
-    SDL_Vulkan_GetInstanceExtensions(window, &extensions_count, extensions);
-    SetupVulkan(extensions, extensions_count);
-    delete[] extensions;
+    xcb_create_window(connection,
+                      XCB_COPY_FROM_PARENT,
+                      window,
+                      screen->root,
+                      0, 0,
+                      1920, 1080,
+                      10,
+                      XCB_WINDOW_CLASS_INPUT_OUTPUT,
+                      screen->root_visual,
+                      XCB_CW_BACK_PIXEL | XCB_CW_EVENT_MASK,
+                      values);
+    xcb_map_window(connection, window);
+    xcb_flush(connection);
+
+    ImGui::CreateContext();
+    ImGui_ImplX11_Init(window);
+
+    // // Setup Vulkan
+    const char* extensions[] = { "VK_KHR_surface", "VK_KHR_xcb_surface" };
+    SetupVulkan(extensions, 2);
 
     // Create Window Surface
     VkSurfaceKHR surface;
     VkResult err;
-    if (SDL_Vulkan_CreateSurface(window, g_Instance, &surface) == 0)
-    {
-        printf("Failed to create Vulkan surface.\n");
-        return 1;
-    }
+    VkXcbSurfaceCreateInfoKHR surface_create_info = {};
+    surface_create_info.sType = VK_STRUCTURE_TYPE_XCB_SURFACE_CREATE_INFO_KHR;
+    surface_create_info.connection = connection;
+    surface_create_info.window = window;
+    err = vkCreateXcbSurfaceKHR(g_Instance, &surface_create_info, nullptr, &surface);
+    check_vk_result(err);
 
     // Create Framebuffers
-    int w, h;
-    SDL_GetWindowSize(window, &w, &h);
+    xcb_generic_error_t *x_Err = nullptr;
+    xcb_get_geometry_reply_t *resp = xcb_get_geometry_reply(connection,
+                                                            xcb_get_geometry(connection, window),
+                                                            &x_Err);
     ImGui_ImplVulkanH_Window* wd = &g_MainWindowData;
-    SetupVulkanWindow(wd, surface, w, h);
+    SetupVulkanWindow(wd, surface, resp->width, resp->height);
 
-    // Setup Dear ImGui context
+    // // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;       // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
-    io.ConfigFlags |= ImGuiConfigFlags_DockingEnable;           // Enable Docking
-    io.ConfigFlags |= ImGuiConfigFlags_ViewportsEnable;         // Enable Multi-Viewport / Platform Windows
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoTaskBarIcons;
-    //io.ConfigFlags |= ImGuiConfigFlags_ViewportsNoMerge;
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
-    // Setup Dear ImGui style
+    // // Setup Dear ImGui style
     ImGui::StyleColorsDark();
-    //ImGui::StyleColorsClassic();
+    // //ImGui::StyleColorsClassic();
 
-    // When viewports are enabled we tweak WindowRounding/WindowBg so platform windows can look identical to regular ones.
-    ImGuiStyle& style = ImGui::GetStyle();
-    if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
-    {
-        style.WindowRounding = 0.0f;
-        style.Colors[ImGuiCol_WindowBg].w = 1.0f;
-    }
-
-    // Setup Platform/Renderer bindings
-    ImGui_ImplSDL2_InitForVulkan(window);
+    // // Setup Platform/Renderer bindings
     ImGui_ImplVulkan_InitInfo init_info = {};
     init_info.Instance = g_Instance;
     init_info.PhysicalDevice = g_PhysicalDevice;
@@ -410,7 +414,6 @@ int main(int, char**)
     // - Read 'docs/FONTS.md' for more instructions and details.
     // - Remember that in C/C++ if you want to include a backslash \ in a string literal you need to write a double backslash \\ !
     //io.Fonts->AddFontDefault();
-    //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Roboto-Medium.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/Cousine-Regular.ttf", 15.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/DroidSans.ttf", 16.0f);
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
@@ -451,10 +454,19 @@ int main(int, char**)
     bool show_demo_window = true;
     bool show_another_window = false;
     ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
-    memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
 
     // Main loop
     bool done = false;
+    xcb_atom_t wm_protocols = xcb_intern_atom_reply(connection,
+                                                    xcb_intern_atom(connection, 1, 12, "WM_PROTOCOLS"),
+                                                    &x_Err)->atom;
+    xcb_atom_t wm_delete_window = xcb_intern_atom_reply(connection,
+                                    xcb_intern_atom(connection, 0, 16, "WM_DELETE_WINDOW"),
+                                    &x_Err)->atom;
+    xcb_change_property(connection, XCB_PROP_MODE_REPLACE, window,
+                        wm_protocols, 4, 32, 1, &wm_delete_window);
+    memcpy(&wd->ClearValue.color.float32[0], &clear_color, 4 * sizeof(float));
+
     while (!done)
     {
         // Poll and handle events (inputs, window resize, etc.)
@@ -462,31 +474,57 @@ int main(int, char**)
         // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
         // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
         // Generally you may always pass all inputs to dear imgui, and hide them from your application based on those two flags.
-        SDL_Event event;
-        while (SDL_PollEvent(&event))
+        xcb_generic_event_t* event = xcb_poll_for_event(connection);
+        if (event)
         {
-            ImGui_ImplSDL2_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                done = true;
+            if (!ImGui_ImplX11_ProcessEvent(event))
+            {
+                switch (event->response_type & ~0x80)
+                {
+                case XCB_EXPOSE:
+                {
+                    xcb_flush(connection);
+                    break;
+                }
+                case XCB_CLIENT_MESSAGE:
+                {
+                    if (((xcb_client_message_event_t*)event)->data.data32[0] == wm_delete_window)
+                        done = true;
+                    break;
+                }
+                case XCB_CONFIGURE_NOTIFY:
+                {
+                    xcb_configure_notify_event_t* config = (xcb_configure_notify_event_t*)event;
+                    // Set DisplaySize here instead of checking in X11 NewFrame
+                    // Checking window size is request/response
+                    g_SwapChainResizeWidth = config->width;
+                    g_SwapChainResizeHeight = config->height;
+                    g_MainWindowData.FrameIndex = 0;
+                    ImGui::GetIO().DisplaySize = ImVec2(config->width, config->height); // FIXME: Why isn't this processed in ImGui_ImplX11_ProcessEvent?
+                    break;
+                }
+                default:
+                    break;
+                }
+            }
+
+            // xcb allocates the memory for the event and specifies the user to free it
+            free(event);
+            continue;
         }
 
         // Resize swap chain?
-        if (g_SwapChainRebuild)
+        if (g_SwapChainRebuild && g_SwapChainResizeWidth > 0 && g_SwapChainResizeHeight > 0)
         {
-            int width, height;
-            SDL_GetWindowSize(window, &width, &height);
-            if (width > 0 && height > 0)
-            {
-                ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
-                ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, width, height, g_MinImageCount);
-                g_MainWindowData.FrameIndex = 0;
-                g_SwapChainRebuild = false;
-            }
+            g_SwapChainRebuild = false;
+            ImGui_ImplVulkan_SetMinImageCount(g_MinImageCount);
+            ImGui_ImplVulkanH_CreateOrResizeWindow(g_Instance, g_PhysicalDevice, g_Device, &g_MainWindowData, g_QueueFamily, g_Allocator, g_SwapChainResizeWidth, g_SwapChainResizeHeight, g_MinImageCount);
+            g_MainWindowData.FrameIndex = 0;
         }
 
         // Start the Dear ImGui frame
         ImGui_ImplVulkan_NewFrame();
-        ImGui_ImplSDL2_NewFrame(window);
+        ImGui_ImplX11_NewFrame();
         ImGui::NewFrame();
 
         // 1. Show the big demo window (Most of the sample code is in ImGui::ShowDemoWindow()! You can browse its code to learn more about Dear ImGui!).
@@ -547,20 +585,20 @@ int main(int, char**)
         // Present Main Platform Window
         if (!main_is_minimized)
             FramePresent(wd);
+
     }
 
     // Cleanup
     err = vkDeviceWaitIdle(g_Device);
     check_vk_result(err);
     ImGui_ImplVulkan_Shutdown();
-    ImGui_ImplSDL2_Shutdown();
+    ImGui_ImplX11_Shutdown();
     ImGui::DestroyContext();
 
     CleanupVulkanWindow();
     CleanupVulkan();
 
-    SDL_DestroyWindow(window);
-    SDL_Quit();
+    xcb_disconnect(connection);
 
     return 0;
 }
