@@ -1704,7 +1704,7 @@ enum ImGuiTabBarFlagsPrivate_
 enum ImGuiTabItemFlagsPrivate_
 {
     ImGuiTabItemFlags_NoCloseButton             = 1 << 20,  // Track whether p_open was set or not (we'll need this info on the next frame to recompute ContentWidth during layout)
-    ImGuiTabItemFlags_Button                    = 1 << 21   // [Internal] Used by TabItemButton, change the tab item behavior to mimic a button
+    ImGuiTabItemFlags_Button                    = 1 << 21   // Used by TabItemButton, change the tab item behavior to mimic a button
 };
 
 // Storage for one active tab item (sizeof() 28~32 bytes)
@@ -1732,6 +1732,7 @@ struct ImGuiTabBarSection
     float               Width;
     float               WidthIdeal;
     float               InnerSpacing;   // Horizontal ItemInnerSpacing, used by Leading/Trailing section, to correctly offset from Central section
+    float               WidthWithSpacing() const { return Width + InnerSpacing; }
     ImGuiTabBarSection(){ memset(this, 0, sizeof(*this)); }
 };
 
@@ -1761,6 +1762,7 @@ struct ImGuiTabBar
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
     short               LastTabItemIdx;         // Index of last BeginTabItem() tab for use by EndTabItem() 
+    bool                TabsAddedNew;           // Set to true when a new tab item or button has been added to the tab bar during last frame
     ImVec2              FramePadding;           // style.FramePadding locked at the time of BeginTabBar()
     ImGuiTextBuffer     TabsNames;              // For non-docking tab bar we re-append names in a contiguous buffer.
 
