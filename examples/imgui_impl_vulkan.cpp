@@ -281,6 +281,68 @@ static void CreateOrResizeBuffer(VkBuffer& buffer, VkDeviceMemory& buffer_memory
     p_buffer_size = new_size;
 }
 
+static VkSampler getFontSampler(VkDevice device, const VkAllocationCallbacks *allocator)
+{
+    if (!g_FontSampler)
+    {
+        VkSamplerCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
+        info.magFilter = VK_FILTER_LINEAR;
+        info.minFilter = VK_FILTER_LINEAR;
+        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
+        info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
+        info.minLod = -1000;
+        info.maxLod = 1000;
+        info.maxAnisotropy = 1.0f;
+        VkResult err = vkCreateSampler(device, &info, allocator, &g_FontSampler);
+        check_vk_result(err);
+    }
+    return g_FontSampler;
+}
+
+static VkDescriptorSetLayout getDescriptorSetLayout(VkDevice device, const VkAllocationCallbacks *allocator) {
+    if (!g_DescriptorSetLayout) {
+        VkSampler sampler[1] = {getFontSampler(device, allocator)};
+        VkDescriptorSetLayoutBinding binding[1] = {};
+        binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+        binding[0].descriptorCount = 1;
+        binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
+        binding[0].pImmutableSamplers = sampler;
+        VkDescriptorSetLayoutCreateInfo info = {};
+        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+        info.bindingCount = 1;
+        info.pBindings = binding;
+        VkResult err = vkCreateDescriptorSetLayout(device, &info, allocator, &g_DescriptorSetLayout);
+        check_vk_result(err);
+    }
+    return g_DescriptorSetLayout;
+}
+
+static VkPipelineLayout getPipelineLayout(VkDevice device, const VkAllocationCallbacks *allocator)
+{
+
+    if (!g_PipelineLayout)
+    {
+        // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
+        VkPushConstantRange push_constants[1] = {};
+        push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
+        push_constants[0].offset = sizeof(float) * 0;
+        push_constants[0].size = sizeof(float) * 4;
+        VkDescriptorSetLayout set_layout[1] = { getDescriptorSetLayout(device,allocator) };
+        VkPipelineLayoutCreateInfo layout_info = {};
+        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+        layout_info.setLayoutCount = 1;
+        layout_info.pSetLayouts = set_layout;
+        layout_info.pushConstantRangeCount = 1;
+        layout_info.pPushConstantRanges = push_constants;
+        VkResult  err = vkCreatePipelineLayout(device, &layout_info, allocator, &g_PipelineLayout);
+        check_vk_result(err);
+    }
+    return g_PipelineLayout;
+}
+
 static void ImGui_ImplVulkan_SetupRenderState(ImDrawData* draw_data, VkPipeline pipeline, VkCommandBuffer command_buffer, ImGui_ImplVulkanH_FrameRenderBuffers* rb, int fb_width, int fb_height)
 {
     // Bind pipeline and descriptor sets:
@@ -610,7 +672,7 @@ struct ShaderModules {
     VkShaderModule frag_module;
 };
 
-static ShaderModules ImGui_ImplVulkan_MakeShaderModules(ImGui_ImplVulkan_InitInfo &v) {
+static ShaderModules ImGui_ImplVulkan_MakeShaderModules(VkDevice device, const VkAllocationCallbacks* allocator) {
     VkResult err;
     ShaderModules modules;
 
@@ -620,25 +682,26 @@ static ShaderModules ImGui_ImplVulkan_MakeShaderModules(ImGui_ImplVulkan_InitInf
         vert_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         vert_info.codeSize = sizeof(__glsl_shader_vert_spv);
         vert_info.pCode = (uint32_t*)__glsl_shader_vert_spv;
-        err = vkCreateShaderModule(v.Device, &vert_info, v.Allocator, &modules.vert_module);
+        err = vkCreateShaderModule(device, &vert_info, allocator, &modules.vert_module);
         check_vk_result(err);
         VkShaderModuleCreateInfo frag_info = {};
         frag_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
         frag_info.codeSize = sizeof(__glsl_shader_frag_spv);
         frag_info.pCode = (uint32_t*)__glsl_shader_frag_spv;
-        err = vkCreateShaderModule(v.Device, &frag_info, v.Allocator, &modules.frag_module);
+        err = vkCreateShaderModule(device, &frag_info, allocator, &modules.frag_module);
         check_vk_result(err);
     }
     return modules;
 }
 
-static ShaderModules ImGui_ImplVulkan_GetModules(ImGui_ImplVulkan_InitInfo &v) {
-    static ShaderModules modules = ImGui_ImplVulkan_MakeShaderModules(v);
+static ShaderModules ImGui_ImplVulkan_GetModules(VkDevice device, const VkAllocationCallbacks* allocator) {
+    static ShaderModules modules = ImGui_ImplVulkan_MakeShaderModules(device, allocator);
     return modules;
 }
-
-void CreatePipeline(ImGui_ImplVulkan_InitInfo &v, VkRenderPass renderPass, VkPipeline *pipeline) {
-    ShaderModules modules = ImGui_ImplVulkan_GetModules(v);
+void ImGui_ImplVulkan_CreatePipeline(VkDevice device, const VkAllocationCallbacks* allocator,
+                                     VkPipelineCache pipelineCache, VkRenderPass renderPass,
+                                     VkSampleCountFlagBits MSAASamples, VkPipeline *pipeline) {
+    ShaderModules modules = ImGui_ImplVulkan_GetModules(device, allocator);
     VkPipelineShaderStageCreateInfo stage[2] = {};
     stage[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
     stage[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
@@ -692,8 +755,8 @@ void CreatePipeline(ImGui_ImplVulkan_InitInfo &v, VkRenderPass renderPass, VkPip
 
     VkPipelineMultisampleStateCreateInfo ms_info = {};
     ms_info.sType = VK_STRUCTURE_TYPE_PIPELINE_MULTISAMPLE_STATE_CREATE_INFO;
-    if (v.MSAASamples != 0)
-        ms_info.rasterizationSamples = v.MSAASamples;
+    if (MSAASamples != 0)
+        ms_info.rasterizationSamples = MSAASamples;
     else
         ms_info.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
 
@@ -734,9 +797,9 @@ void CreatePipeline(ImGui_ImplVulkan_InitInfo &v, VkRenderPass renderPass, VkPip
     info.pDepthStencilState = &depth_info;
     info.pColorBlendState = &blend_info;
     info.pDynamicState = &dynamic_state;
-    info.layout = g_PipelineLayout;
+    info.layout = getPipelineLayout(device, allocator);
     info.renderPass = renderPass;
-    VkResult err = vkCreateGraphicsPipelines(v.Device, v.PipelineCache, 1, &info, v.Allocator, pipeline);
+    VkResult err = vkCreateGraphicsPipelines(device, pipelineCache, 1, &info, allocator, pipeline);
     check_vk_result(err);
 }
 
@@ -763,69 +826,25 @@ bool ImGui_ImplVulkan_CreateDeviceObjects()
         check_vk_result(err);
     }
 
-    if (!g_FontSampler)
-    {
-        VkSamplerCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-        info.magFilter = VK_FILTER_LINEAR;
-        info.minFilter = VK_FILTER_LINEAR;
-        info.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-        info.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-        info.minLod = -1000;
-        info.maxLod = 1000;
-        info.maxAnisotropy = 1.0f;
-        err = vkCreateSampler(v->Device, &info, v->Allocator, &g_FontSampler);
-        check_vk_result(err);
-    }
-
-    if (!g_DescriptorSetLayout)
-    {
-        VkSampler sampler[1] = {g_FontSampler};
-        VkDescriptorSetLayoutBinding binding[1] = {};
-        binding[0].descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-        binding[0].descriptorCount = 1;
-        binding[0].stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT;
-        binding[0].pImmutableSamplers = sampler;
-        VkDescriptorSetLayoutCreateInfo info = {};
-        info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-        info.bindingCount = 1;
-        info.pBindings = binding;
-        err = vkCreateDescriptorSetLayout(v->Device, &info, v->Allocator, &g_DescriptorSetLayout);
-        check_vk_result(err);
-    }
-
     // Create Descriptor Set:
     {
+        VkDescriptorSetLayout set_layout[1] = { getDescriptorSetLayout(v->Device, v->Allocator) };
         VkDescriptorSetAllocateInfo alloc_info = {};
         alloc_info.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
         alloc_info.descriptorPool = v->DescriptorPool;
         alloc_info.descriptorSetCount = 1;
-        alloc_info.pSetLayouts = &g_DescriptorSetLayout;
+        alloc_info.pSetLayouts = set_layout;
         err = vkAllocateDescriptorSets(v->Device, &alloc_info, &g_DescriptorSet);
         check_vk_result(err);
     }
 
     if (!g_PipelineLayout)
     {
-        // Constants: we are using 'vec2 offset' and 'vec2 scale' instead of a full 3d projection matrix
-        VkPushConstantRange push_constants[1] = {};
-        push_constants[0].stageFlags = VK_SHADER_STAGE_VERTEX_BIT;
-        push_constants[0].offset = sizeof(float) * 0;
-        push_constants[0].size = sizeof(float) * 4;
-        VkDescriptorSetLayout set_layout[1] = { g_DescriptorSetLayout };
-        VkPipelineLayoutCreateInfo layout_info = {};
-        layout_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layout_info.setLayoutCount = 1;
-        layout_info.pSetLayouts = set_layout;
-        layout_info.pushConstantRangeCount = 1;
-        layout_info.pPushConstantRanges = push_constants;
-        err = vkCreatePipelineLayout(v->Device, &layout_info, v->Allocator, &g_PipelineLayout);
-        check_vk_result(err);
+       getPipelineLayout(v->Device, v->Allocator);
     }
 
-    CreatePipeline(*v, g_RenderPass, &g_Pipeline);
+    ImGui_ImplVulkan_CreatePipeline(v->Device, v->Allocator, v->PipelineCache,
+                                    g_RenderPass, v->MSAASamples, &g_Pipeline);
 
     vkDestroyShaderModule(v->Device, vert_module, v->Allocator);
     vkDestroyShaderModule(v->Device, frag_module, v->Allocator);
@@ -1190,7 +1209,8 @@ void ImGui_ImplVulkanH_CreateWindowSwapChain(VkPhysicalDevice physical_device, V
         info.pDependencies = &dependency;
         err = vkCreateRenderPass(device, &info, allocator, &wd->RenderPass);
         check_vk_result(err);
-        CreatePipeline(g_VulkanInitInfo, wd->RenderPass, &wd->Pipeline);
+        ImGui_ImplVulkan_CreatePipeline(device, allocator, VK_NULL_HANDLE,
+                                        wd->RenderPass, VK_SAMPLE_COUNT_1_BIT, &wd->Pipeline);
     }
 
     // Create The Image Views
