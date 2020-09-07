@@ -51,6 +51,8 @@ Other Changes:
 - InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454).
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
+- SliderInt, SliderScalar: Fixed reaching of maximum value with inverted integer min/max ranges, both
+  with signed and unsigned types. Added reverse Sliders to Demo. (#3432, #3449) [@rokups]
 - BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
   so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
 - TreeNode, CollapsingHeader: Made clicking on arrow toggle toggle the open state on the Mouse Down event
