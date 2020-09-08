@@ -48,6 +48,8 @@ Other Changes:
   underlying buffer while focus is active).
 - InputText: Fixed using ImGuiInputTextFlags_Password with InputTextMultiline(). (#3427, #3428)
   It is a rather unusual or useless combination of features but no reason it shouldn't work!
+- InputText: Fixed minor scrolling glitch when erasing trailing lines in InputTextMultiline().
+- InputText: Fixed cursor being partially covered after using Ctrl+End key.
 - InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454).
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
