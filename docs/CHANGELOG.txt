@@ -68,9 +68,13 @@ Other Changes:
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
 - Backends: Vulkan: Some internal refactor aimed at allowing multi-viewport feature to create their
   own render pass. (#3455, #3459) [@FunMiles]
+- Backends: DX12: Clarified that imgui_impl_dx12 can be compiled on 32-bit systems by redefining
+  the ImTextureID to be 64-bit (e.g. '#define ImTextureID ImU64' in imconfig.h). (#301)
 - Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]
 - Examples: Vulkan: Switch validation layer to use "VK_LAYER_KHRONOS_validation" instead of
   "VK_LAYER_LUNARG_standard_validation" which is deprecated (#3459) [@FunMiles]
+- Examples: DX12: Added '#define ImTextureID ImU64' in project and build files to also allow building
+  on 32-bit systems. Added project to default Visual Studio solution file. (#301)
 
 
 -----------------------------------------------------------------------
