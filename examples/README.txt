@@ -177,6 +177,10 @@ example_allegro5/
     Allegro 5 example.
     = main.cpp + imgui_impl_allegro5.cpp
 
+example_win32_opengl3/
+    OpenGL3+ example (programmable pipeline, binding modern functions with GL3W), Windows only.
+    = main.cpp + imgui_impl_win32.cpp + imgui_impl_opengl3.cpp
+    
 example_apple_metal/
     OSX & iOS + Metal.
     = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm
