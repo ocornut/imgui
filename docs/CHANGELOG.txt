@@ -66,6 +66,8 @@ Other Changes:
   tabs reordered in the tab list popup. [@Xipiryon]
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
+- Backends: Vulkan: Some internal refactor aimed at allowing multi-viewport feature to create their
+  own render pass. (#3455, #3459) [@FunMiles]
 - Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]
 - Examples: Vulkan: Switch validation layer to use "VK_LAYER_KHRONOS_validation" instead of
   "VK_LAYER_LUNARG_standard_validation" which is deprecated (#3459) [@FunMiles]
