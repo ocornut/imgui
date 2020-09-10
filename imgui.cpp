@@ -3493,7 +3493,7 @@ void ImGui::UpdateMouseMovingWindowNewFrame()
                 g.MouseViewport = moving_window->Viewport;
 
             // Clear the NoInput window flag set by the Viewport system
-            moving_window->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs;
+            moving_window->Viewport->Flags &= ~ImGuiViewportFlags_NoInputs; // FIXME-VIEWPORT: Test engine managed to crash here because Viewport was NULL.
 
             ClearActiveID();
             g.MovingWindow = NULL;
@@ -11523,6 +11523,7 @@ void ImGui::UpdatePlatformWindows()
 
     // Update our implicit z-order knowledge of platform windows, which is used when the back-end cannot provide io.MouseHoveredViewport.
     // When setting Platform_GetWindowFocus, it is expected that the platform back-end can handle calls without crashing if it doesn't have data stored.
+    // FIXME-VIEWPORT: We should use this information to also set dear imgui-side focus, allowing us to handle os-level alt+tab.
     if (g.PlatformIO.Platform_GetWindowFocus != NULL)
     {
         ImGuiViewportP* focused_viewport = NULL;
@@ -11533,12 +11534,10 @@ void ImGui::UpdatePlatformWindows()
                 if (g.PlatformIO.Platform_GetWindowFocus(viewport))
                     focused_viewport = viewport;
         }
-        if (focused_viewport && g.PlatformLastFocusedViewport != focused_viewport->ID)
-        {
-            if (focused_viewport->LastFrontMostStampCount != g.ViewportFrontMostStampCount)
-                focused_viewport->LastFrontMostStampCount = ++g.ViewportFrontMostStampCount;
-            g.PlatformLastFocusedViewport = focused_viewport->ID;
-        }
+
+        // Store a tag so we can infer z-order easily from all our windows
+        if (focused_viewport && focused_viewport->LastFrontMostStampCount != g.ViewportFrontMostStampCount)
+            focused_viewport->LastFrontMostStampCount = ++g.ViewportFrontMostStampCount;
     }
 }
 
