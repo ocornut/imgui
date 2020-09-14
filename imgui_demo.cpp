@@ -1,4 +1,4 @@
-// dear imgui, v1.79 WIP
+﻿// dear imgui, v1.79 WIP
 // (demo code)
 
 // Help:
@@ -915,7 +915,20 @@ static void ShowDemoWindowWidgets()
         // - Consider using the lower-level ImDrawList::AddImage() API, via ImGui::GetWindowDrawList()->AddImage().
         // - Read https://github.com/ocornut/imgui/blob/master/docs/FAQ.md
         // - Read https://github.com/ocornut/imgui/wiki/Image-Loading-and-Displaying-Examples
-        ImTextureID my_tex_id = io.Fonts->TexID;
+        int num_font_textures = io.Fonts->FontTextures.Size;
+        static int selected_font_texture = 0;
+        char buf[32];
+        bool sameline = false;
+        for (int i = 0; i < num_font_textures; ++i) {
+            if (sameline) ImGui::SameLine();
+            sprintf(buf, "%d##FontTextureButton%d", i, i);
+            if (ImGui::Button(buf, ImVec2(32.f, 32.f))) {
+                selected_font_texture = i;
+            }
+            sameline = true;
+        }
+
+        ImTextureID my_tex_id = io.Fonts->FontTextures[selected_font_texture]->TexID;
         float my_tex_w = (float)io.Fonts->TexWidth;
         float my_tex_h = (float)io.Fonts->TexHeight;
         {
@@ -3698,9 +3711,9 @@ void ImGui::ShowFontSelector(const char* label)
 static void NodeFont(ImFont* font)
 {
     ImGuiIO& io = ImGui::GetIO();
-    ImGuiStyle& style = ImGui::GetStyle();
+    //ImGuiStyle& style = ImGui::GetStyle();
     bool font_details_opened = ImGui::TreeNode(font, "Font: \"%s\"\n%.2f px, %d glyphs, %d file(s)",
-        font->ConfigData ? font->ConfigData[0].Name : "", font->FontSize, font->Glyphs.Size, font->ConfigDataCount);
+        (font->ConfigDataIndex > -1) ? font->ContainerAtlas->ConfigData[font->ConfigDataIndex].Name : "", 13.f, font->Glyphs.Size, 1);
     ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) { io.FontDefault = font; }
     if (!font_details_opened)
         return;
@@ -3719,9 +3732,9 @@ static void NodeFont(ImFont* font)
     ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
     ImGui::Text("Fallback character: '%c' (U+%04X)", font->FallbackChar, font->FallbackChar);
     ImGui::Text("Ellipsis character: '%c' (U+%04X)", font->EllipsisChar, font->EllipsisChar);
-    const int surface_sqrt = (int)sqrtf((float)font->MetricsTotalSurface);
-    ImGui::Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
-    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
+//    const int surface_sqrt = (int)sqrtf((float)font->MetricsTotalSurface);
+//    ImGui::Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
+/*    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
         if (font->ConfigData)
             if (const ImFontConfig* cfg = &font->ConfigData[config_i])
                 ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d",
@@ -3779,7 +3792,7 @@ static void NodeFont(ImFont* font)
             ImGui::TreePop();
         }
         ImGui::TreePop();
-    }
+    }*/
     ImGui::TreePop();
 }
 
@@ -3950,7 +3963,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             {
                 ImVec4 tint_col = ImVec4(1.0f, 1.0f, 1.0f, 1.0f);
                 ImVec4 border_col = ImVec4(1.0f, 1.0f, 1.0f, 0.5f);
-                ImGui::Image(atlas->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
+                ImGui::Image(atlas->FontTextures.front()->TexID, ImVec2((float)atlas->TexWidth, (float)atlas->TexHeight), ImVec2(0, 0), ImVec2(1, 1), tint_col, border_col);
                 ImGui::TreePop();
             }
 

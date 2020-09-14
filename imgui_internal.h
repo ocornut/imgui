@@ -1331,7 +1331,7 @@ struct ImGuiContext
         FontAtlasOwnedByContext = shared_font_atlas ? false : true;
         Font = NULL;
         FontSize = FontBaseSize = 0.0f;
-        IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)();
+        IO.Fonts = shared_font_atlas ? shared_font_atlas : IM_NEW(ImFontAtlas)(512,512);
         Time = 0.0f;
         FrameCount = 0;
         FrameCountEnded = FrameCountRendered = -1;

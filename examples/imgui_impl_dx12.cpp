@@ -247,7 +247,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
 
 static void ImGui_ImplDX12_CreateFontsTexture()
 {
-    // Build texture atlas
+/*    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height;
@@ -391,7 +391,7 @@ static void ImGui_ImplDX12_CreateFontsTexture()
 
     // Store our identifier
     static_assert(sizeof(ImTextureID) >= sizeof(g_hFontSrvGpuDescHandle.ptr), "Can't pack descriptor handle into TexID, 32-bit not supported yet.");
-    io.Fonts->TexID = (ImTextureID)g_hFontSrvGpuDescHandle.ptr;
+    io.Fonts->TexID = (ImTextureID)g_hFontSrvGpuDescHandle.ptr;*/
 }
 
 bool    ImGui_ImplDX12_CreateDeviceObjects()
@@ -609,8 +609,8 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     SafeRelease(g_pPipelineState);
     SafeRelease(g_pFontTextureResource);
 
-    ImGuiIO& io = ImGui::GetIO();
-    io.Fonts->TexID = NULL; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+//    ImGuiIO& io = ImGui::GetIO();
+//    io.Fonts->TexID = NULL; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 
     for (UINT i = 0; i < g_numFramesInFlight; i++)
     {
