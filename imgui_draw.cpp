@@ -1804,7 +1804,6 @@ void    ImFontAtlas::Clear()
     ClearFonts();
 }
 
-static ImVector<stbtt_fontinfo*> font_stbtt_fontinfos;
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
@@ -1832,9 +1831,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     ImFont* fnt = new_font_cfg.DstFont;
 
-    font_stbtt_fontinfos.push_back(IM_NEW(stbtt_fontinfo));
-    fnt->PrivData = font_stbtt_fontinfos.back();
-    
+    fnt->PrivData = IM_NEW(stbtt_fontinfo);
         
     // Init stb_truetype
     if (!stbtt_InitFont((stbtt_fontinfo*)fnt->PrivData, (const unsigned char*) new_font_cfg.FontData, 0))
@@ -2235,6 +2232,7 @@ ImFont::ImFont()
     FallbackGlyph = NULL;
     ContainerAtlas = NULL;
     ConfigDataIndex = -1;
+    PrivData = NULL;
     //ConfigDataCount = 0;
     //DirtyLookupTables = false;
     Scale = 1.0f;
@@ -2264,6 +2262,10 @@ void    ImFont::ClearOutputData()
     //DirtyLookupTables = true;
     Ascent = Descent = 0.0f;
     //MetricsTotalSurface = 0;
+    if (PrivData) {
+        IM_FREE(PrivData);
+        PrivData = NULL;
+    }
 }
 
 void ImFont::SetFallbackChar(ImWchar c)
@@ -2322,8 +2324,6 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize)
     if (!g)
         return NULL; // Glyph not found
     stbtt_GetGlyphHMetrics((stbtt_fontinfo*)this->PrivData, g, &advance, &lsb);
-    ImFontConfig const& cfg = this->ContainerAtlas->ConfigData[this->ConfigDataIndex];
-    //stbtt_GetGlyphBitmapBoxSubpixel((stbtt_fontinfo*)this->PrivData, g, scale * cfg.OversampleH, scale * cfg.OversampleV, 0, 0, &x0, &y0, &x1, &y1);
     stbtt_GetGlyphBitmapBox((stbtt_fontinfo*)this->PrivData, g, scale, scale, &x0, &y0, &x1, &y1);
     gw = x1 - x0;
     gh = y1 - y0;
@@ -2414,7 +2414,6 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize)
     if (bmp)
     {
         //Render glyph
-        //stbtt_MakeGlyphBitmapSubpixel((stbtt_fontinfo*)this->PrivData, bmp, gw, gh, gw, scale, scale, 0.f, 0.f, g);
         stbtt_MakeGlyphBitmap((stbtt_fontinfo*)this->PrivData, bmp, gw, gh, gw, scale, scale, g);
         auto pixels = u8_to_rgba(bmp, gw, gh);
 
