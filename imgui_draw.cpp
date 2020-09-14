@@ -3074,11 +3074,11 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
         draw_list->PushTextureID(rlist_ref->TexID);
         draw_list->PrimReserve(rlist_ref->IdxBuffer.Size, rlist_ref->VtxBuffer.Size);
-        int i = draw_list->_VtxWritePtr - draw_list->VtxBuffer.Data;
+
         memcpy(draw_list->_VtxWritePtr, rlist_ref->VtxBuffer.Data, rlist_ref->VtxBuffer.size_in_bytes());
 
         for (auto current_index = 0; current_index < rlist_ref->IdxBuffer.Size; current_index++) {
-            draw_list->_IdxWritePtr[current_index] = rlist_ref->IdxBuffer[current_index] + draw_list->_VtxCurrentIdx;
+            draw_list->_IdxWritePtr[current_index] = static_cast<ImDrawIdx>(rlist_ref->IdxBuffer[current_index] + draw_list->_VtxCurrentIdx);
         }
 
         draw_list->_VtxWritePtr += rlist_ref->VtxBuffer.Size;
@@ -3112,8 +3112,10 @@ ImFontTexture::~ImFontTexture()
 
 void ImFontTexture::Update(int x, int y, int width, int height, unsigned char* src_pixels)
 {
-    IM_ASSERT(x >= 0 && x+width < TexWidth);
-    IM_ASSERT(y >= 0 && y+height < TexHeight);
+    IM_ASSERT(x >= 0);
+    IM_ASSERT(x+width <= TexWidth);
+    IM_ASSERT(y >= 0);
+    IM_ASSERT(y+height <= TexHeight);
     IM_ASSERT(width > 0);
     IM_ASSERT(height > 0);
 
