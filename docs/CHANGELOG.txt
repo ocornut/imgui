@@ -73,6 +73,7 @@ Other Changes:
 - Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]
 - Examples: Vulkan: Switch validation layer to use "VK_LAYER_KHRONOS_validation" instead of
   "VK_LAYER_LUNARG_standard_validation" which is deprecated (#3459) [@FunMiles]
+- Examples: DX12: Enable breaking on any warning/error when debug interface is enabled.
 - Examples: DX12: Added '#define ImTextureID ImU64' in project and build files to also allow building
   on 32-bit systems. Added project to default Visual Studio solution file. (#301)
 

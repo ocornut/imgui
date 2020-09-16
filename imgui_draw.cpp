@@ -339,7 +339,7 @@ void ImGui::StyleColorsLight(ImGuiStyle* dst)
 }
 
 //-----------------------------------------------------------------------------
-// ImDrawList
+// [SECTION] ImDrawList
 //-----------------------------------------------------------------------------
 
 ImDrawListSharedData::ImDrawListSharedData()
@@ -1405,7 +1405,7 @@ void ImDrawList::AddImageRounded(ImTextureID user_texture_id, const ImVec2& p_mi
 
 
 //-----------------------------------------------------------------------------
-// ImDrawListSplitter
+// [SECTION] ImDrawListSplitter
 //-----------------------------------------------------------------------------
 // FIXME: This may be a little confusing, trying to be a little too low-level/optimal instead of just doing vector swap..
 //-----------------------------------------------------------------------------

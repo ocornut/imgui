@@ -887,13 +887,15 @@ enum ImGuiTreeNodeFlags_
 //   small flags values as a mouse button index, so we encode the mouse button in the first few bits of the flags.
 //   It is therefore guaranteed to be legal to pass a mouse button index in ImGuiPopupFlags.
 // - For the same reason, we exceptionally default the ImGuiPopupFlags argument of BeginPopupContextXXX functions to 1 instead of 0.
+//   IMPORTANT: because the default parameter is 1 (==ImGuiPopupFlags_MouseButtonRight), if you rely on the default parameter
+//   and want to another another flag, you need to pass in the ImGuiPopupFlags_MouseButtonRight flag.
 // - Multiple buttons currently cannot be combined/or-ed in those functions (we could allow it later).
 enum ImGuiPopupFlags_
 {
     ImGuiPopupFlags_None                    = 0,
-    ImGuiPopupFlags_MouseButtonLeft         = 0,        // For BeginPopupContext*(): open on Left Mouse release. Guaranted to always be == 0 (same as ImGuiMouseButton_Left)
-    ImGuiPopupFlags_MouseButtonRight        = 1,        // For BeginPopupContext*(): open on Right Mouse release. Guaranted to always be == 1 (same as ImGuiMouseButton_Right)
-    ImGuiPopupFlags_MouseButtonMiddle       = 2,        // For BeginPopupContext*(): open on Middle Mouse release. Guaranted to always be == 2 (same as ImGuiMouseButton_Middle)
+    ImGuiPopupFlags_MouseButtonLeft         = 0,        // For BeginPopupContext*(): open on Left Mouse release. Guaranteed to always be == 0 (same as ImGuiMouseButton_Left)
+    ImGuiPopupFlags_MouseButtonRight        = 1,        // For BeginPopupContext*(): open on Right Mouse release. Guaranteed to always be == 1 (same as ImGuiMouseButton_Right)
+    ImGuiPopupFlags_MouseButtonMiddle       = 2,        // For BeginPopupContext*(): open on Middle Mouse release. Guaranteed to always be == 2 (same as ImGuiMouseButton_Middle)
     ImGuiPopupFlags_MouseButtonMask_        = 0x1F,
     ImGuiPopupFlags_MouseButtonDefault_     = 1,
     ImGuiPopupFlags_NoOpenOverExistingPopup = 1 << 5,   // For OpenPopup*(), BeginPopupContext*(): don't open if there's already a popup at the same level of the popup stack
