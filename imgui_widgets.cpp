@@ -274,7 +274,10 @@ void ImGui::TextColored(const ImVec4& col, const char* fmt, ...)
 void ImGui::TextColoredV(const ImVec4& col, const char* fmt, va_list args)
 {
     PushStyleColor(ImGuiCol_Text, col);
-    TextV(fmt, args);
+    if (fmt[0] == '%' && fmt[1] == 's' && fmt[2] == 0)
+        TextEx(va_arg(args, const char*), NULL, ImGuiTextFlags_NoWidthForLargeClippedText); // Skip formatting
+    else
+        TextV(fmt, args);
     PopStyleColor();
 }
 
@@ -288,8 +291,12 @@ void ImGui::TextDisabled(const char* fmt, ...)
 
 void ImGui::TextDisabledV(const char* fmt, va_list args)
 {
-    PushStyleColor(ImGuiCol_Text, GImGui->Style.Colors[ImGuiCol_TextDisabled]);
-    TextV(fmt, args);
+    ImGuiContext& g = *GImGui;
+    PushStyleColor(ImGuiCol_Text, g.Style.Colors[ImGuiCol_TextDisabled]);
+    if (fmt[0] == '%' && fmt[1] == 's' && fmt[2] == 0)
+        TextEx(va_arg(args, const char*), NULL, ImGuiTextFlags_NoWidthForLargeClippedText); // Skip formatting
+    else
+        TextV(fmt, args);
     PopStyleColor();
 }
 
@@ -303,11 +310,14 @@ void ImGui::TextWrapped(const char* fmt, ...)
 
 void ImGui::TextWrappedV(const char* fmt, va_list args)
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    bool need_backup = (window->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
+    ImGuiContext& g = *GImGui;
+    bool need_backup = (g.CurrentWindow->DC.TextWrapPos < 0.0f);  // Keep existing wrap position if one is already set
     if (need_backup)
         PushTextWrapPos(0.0f);
-    TextV(fmt, args);
+    if (fmt[0] == '%' && fmt[1] == 's' && fmt[2] == 0)
+        TextEx(va_arg(args, const char*), NULL, ImGuiTextFlags_NoWidthForLargeClippedText); // Skip formatting
+    else
+        TextV(fmt, args);
     if (need_backup)
         PopTextWrapPos();
 }
