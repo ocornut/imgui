@@ -35,6 +35,14 @@ HOW TO UPDATE?
  VERSION 1.79 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Fonts: Removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied
+  after scaling and not very meaningful/useful outside of being needed by the default ProggyClean font.
+  It was also getting in the way of better font scaling, so let's get rid of it now! 
+  If you used DisplayOffset it was probably in association to rasterizing a font at a specific size,
+  in which case the corresponding offset may be reported into GlyphOffset. (#1619)
+
 Other Changes:
 
 - Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
@@ -72,6 +80,7 @@ Other Changes:
   a fully clipped column. (#3475) [@szreder]
 - Popups, Tooltips: Fix edge cases issues with positionning popups and tooltips when they are larger than
   viewport on either or both axises. [@Rokups]
+- Fonts: AddFontDefault() adjust its vertical offset based on floor(size/13) instead of always +1.
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
 - Backends: OpenGL3: Fix to avoid compiling/calling glBindSampler() on ES or pre 3.3 contexts which have 
@@ -1481,7 +1490,7 @@ Breaking Changes:
   - removed the default global context and font atlas instance, which were confusing for users of DLL reloading and users of multiple contexts.
 - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
 - Fonts: Moved sample TTF files from extra_fonts/ to misc/fonts/. If you loaded files directly from the imgui repo you may need to update your paths.
-- Fonts: changed ImFont::DisplayOffset.y to defaults to 0 instead of +1. Fixed vertical rounding of Ascent/Descent to match TrueType renderer.
+- Fonts: Changed ImFont::DisplayOffset.y to defaults to 0 instead of +1. Fixed vertical rounding of Ascent/Descent to match TrueType renderer.
   If you were adding or subtracting (not assigning) to ImFont::DisplayOffset check if your fonts are correctly aligned vertically. (#1619)
 - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment.
 - Obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
