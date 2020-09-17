@@ -660,13 +660,19 @@ static void ImGui_ImplWin32_UpdateWindow(ImGuiViewport* viewport)
     // Only reapply the flags that have been changed from our point of view (as other flags are being modified by Windows)
     if (data->DwStyle != new_style || data->DwExStyle != new_ex_style)
     {
+        // (Optional) Update TopMost state if it changed _after_ creation
+        bool top_most_changed = (data->DwExStyle & WS_EX_TOPMOST) != (new_ex_style & WS_EX_TOPMOST);
+        HWND insert_after = top_most_changed ? ((viewport->Flags & ImGuiViewportFlags_TopMost) ? HWND_TOPMOST : HWND_NOTOPMOST) : 0;
+        UINT swp_flag = top_most_changed ? 0 : SWP_NOZORDER;
+
+        // Apply flags and position (since it is affected by flags)
         data->DwStyle = new_style;
         data->DwExStyle = new_ex_style;
         ::SetWindowLong(data->Hwnd, GWL_STYLE, data->DwStyle);
         ::SetWindowLong(data->Hwnd, GWL_EXSTYLE, data->DwExStyle);
         RECT rect = { (LONG)viewport->Pos.x, (LONG)viewport->Pos.y, (LONG)(viewport->Pos.x + viewport->Size.x), (LONG)(viewport->Pos.y + viewport->Size.y) };
         ::AdjustWindowRectEx(&rect, data->DwStyle, FALSE, data->DwExStyle); // Client to Screen
-        ::SetWindowPos(data->Hwnd, NULL, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, SWP_NOZORDER | SWP_NOACTIVATE | SWP_FRAMECHANGED);
+        ::SetWindowPos(data->Hwnd, insert_after, rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top, swp_flag | SWP_NOACTIVATE | SWP_FRAMECHANGED);
         ::ShowWindow(data->Hwnd, SW_SHOWNA); // This is necessary when we alter the style
         viewport->PlatformRequestMove = viewport->PlatformRequestResize = true;
     }
