@@ -70,6 +70,8 @@ Other Changes:
   a fully clipped column. (#3475) [@szreder]
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
+- Backends: OpenGL3: Fix to avoid compiling/calling glBindSampler() on ES or pre 3.3 contexts which have 
+  the defines set by a loader. (#3467, #1985) [@jjwebb]
 - Backends: Vulkan: Some internal refactor aimed at allowing multi-viewport feature to create their
   own render pass. (#3455, #3459) [@FunMiles]
 - Backends: DX12: Clarified that imgui_impl_dx12 can be compiled on 32-bit systems by redefining

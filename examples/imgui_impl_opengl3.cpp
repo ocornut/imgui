@@ -13,6 +13,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-09-17: OpenGL: Fix to avoid compiling/calling glBindSampler() on ES or pre 3.3 context which have the defines set by a loader.
 //  2020-07-10: OpenGL: Added support for glad2 OpenGL loader.
 //  2020-05-08: OpenGL: Made default GLSL version 150 (instead of 130) on OSX.
 //  2020-04-21: OpenGL: Fixed handling of glClipControl(GL_UPPER_LEFT) by inverting projection matrix.
@@ -81,7 +82,6 @@
 #include <stdint.h>     // intptr_t
 #endif
 
-
 // GL includes
 #if defined(IMGUI_IMPL_OPENGL_ES2)
 #include <GLES2/gl2.h>
@@ -124,10 +124,13 @@ using namespace gl;
 #endif
 
 // Desktop GL 3.2+ has glDrawElementsBaseVertex() which GL ES and WebGL don't have.
-#if defined(IMGUI_IMPL_OPENGL_ES2) || defined(IMGUI_IMPL_OPENGL_ES3) || !defined(GL_VERSION_3_2)
-#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   0
-#else
-#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET   1
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && defined(GL_VERSION_3_2)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+#endif
+
+// Desktop GL 3.3+ has glBindSampler()
+#if !defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3) && defined(GL_VERSION_3_3)
+#define IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
 #endif
 
 // OpenGL Data
@@ -155,7 +158,7 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
     // Setup back-end capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl3";
-#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
     if (g_GlVersion >= 320)
         io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset;  // We can honor the ImDrawCmd::VtxOffset field, allowing for large meshes.
 #endif
@@ -264,8 +267,8 @@ static void ImGui_ImplOpenGL3_SetupRenderState(ImDrawData* draw_data, int fb_wid
     glUniform1i(g_AttribLocationTex, 0);
     glUniformMatrix4fv(g_AttribLocationProjMtx, 1, GL_FALSE, &ortho_projection[0][0]);
     
-#if (!defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3))
-    if(g_GlVersion > 320)
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    if (g_GlVersion >= 330)
         glBindSampler(0, 0); // We use combined texture/sampler state. Applications using GL 3.3 may set that otherwise.
 #endif
     
@@ -301,10 +304,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     glActiveTexture(GL_TEXTURE0);
     GLuint last_program; glGetIntegerv(GL_CURRENT_PROGRAM, (GLint*)&last_program);
     GLuint last_texture; glGetIntegerv(GL_TEXTURE_BINDING_2D, (GLint*)&last_texture);
-#if (!defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3))
-    GLuint last_sampler; 
-    if(g_GlVersion > 320)
-        glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&last_sampler);
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    GLuint last_sampler; if (g_GlVersion >= 330) { glGetIntegerv(GL_SAMPLER_BINDING, (GLint*)&last_sampler); } else { last_sampler = 0; }
 #endif
     GLuint last_array_buffer; glGetIntegerv(GL_ARRAY_BUFFER_BINDING, (GLint*)&last_array_buffer);
 #ifndef IMGUI_IMPL_OPENGL_ES2
@@ -376,7 +377,7 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
 
                     // Bind texture, Draw
                     glBindTexture(GL_TEXTURE_2D, (GLuint)(intptr_t)pcmd->TextureId);
-#if IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_VTX_OFFSET
                     if (g_GlVersion >= 320)
                         glDrawElementsBaseVertex(GL_TRIANGLES, (GLsizei)pcmd->ElemCount, sizeof(ImDrawIdx) == 2 ? GL_UNSIGNED_SHORT : GL_UNSIGNED_INT, (void*)(intptr_t)(pcmd->IdxOffset * sizeof(ImDrawIdx)), (GLint)pcmd->VtxOffset);
                     else
@@ -395,8 +396,8 @@ void    ImGui_ImplOpenGL3_RenderDrawData(ImDrawData* draw_data)
     // Restore modified GL state
     glUseProgram(last_program);
     glBindTexture(GL_TEXTURE_2D, last_texture);
-#if (!defined(IMGUI_IMPL_OPENGL_ES2) && !defined(IMGUI_IMPL_OPENGL_ES3))
-    if(g_GlVersion > 320)
+#ifdef IMGUI_IMPL_OPENGL_MAY_HAVE_BIND_SAMPLER
+    if (g_GlVersion >= 330)
         glBindSampler(0, last_sampler);
 #endif
     glActiveTexture(last_active_texture);

@@ -15,6 +15,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-09-16: DirectX12: Avoid rendering calls with zero-sized scissor rectangle since it generates a validation layer warning.
 //  2020-09-08: DirectX12: Clarified support for building on 32-bit systems by redefining ImTextureID.
 //  2019-10-18: DirectX12: *BREAKING CHANGE* Added extra ID3D12DescriptorHeap parameter to ImGui_ImplDX12_Init() function.
 //  2019-05-29: DirectX12: Added support for large mesh (64K+ vertices), enable ImGuiBackendFlags_RendererHasVtxOffset flag.
