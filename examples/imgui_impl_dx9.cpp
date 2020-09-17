@@ -236,7 +236,7 @@ void ImGui_ImplDX9_Shutdown()
 
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
-    // Build texture atlas
+/*    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
     int width, height, bytes_per_pixel;
@@ -255,7 +255,7 @@ static bool ImGui_ImplDX9_CreateFontsTexture()
 
     // Store our identifier
     io.Fonts->TexID = (ImTextureID)g_FontTexture;
-
+*/
     return true;
 }
 
@@ -274,7 +274,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         return;
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
-    if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; ImGui::GetIO().Fonts->TexID = NULL; } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
+    if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; /*ImGui::GetIO().Fonts->TexID = NULL;*/ } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 }
 
 void ImGui_ImplDX9_NewFrame()
