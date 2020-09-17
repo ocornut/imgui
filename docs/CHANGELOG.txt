@@ -50,7 +50,9 @@ Other Changes:
   It is a rather unusual or useless combination of features but no reason it shouldn't work!
 - InputText: Fixed minor scrolling glitch when erasing trailing lines in InputTextMultiline().
 - InputText: Fixed cursor being partially covered after using Ctrl+End key.
-- InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454).
+- InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454)
+- InputText: Fixed minor inconsistency when pressing Down on the last line when it doesn't have a carriage 
+  return (it used to move to the end of the line). [@Xipiryon]
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
 - SliderInt, SliderScalar: Fixed reaching of maximum value with inverted integer min/max ranges, both
