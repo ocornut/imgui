@@ -50,6 +50,7 @@ Other Changes:
 - Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
 - Scrolling: Fixed SetScrollHere functions edge snapping when called during a frame where ContentSize
   is changing (issue introduced in 1.78). (#3452).
+- InputText: Added support for Page Up/Down in InputTextMultiline(). (#3430) [@Xipiryon]
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
 - InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
   (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
@@ -59,8 +60,9 @@ Other Changes:
 - InputText: Fixed minor scrolling glitch when erasing trailing lines in InputTextMultiline().
 - InputText: Fixed cursor being partially covered after using Ctrl+End key.
 - InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454)
-- InputText: Fixed minor inconsistency when pressing Down on the last line when it doesn't have a carriage 
-  return (it used to move to the end of the line). [@Xipiryon]
+- InputText: Made pressing Down arrow on the last line when it doesn't have a carriage return not move to the end
+  of the line (so it is consistent with Up arrow, and behave same as Notepad and Visual Studio. Note that some 
+  other text editors instead would move the crusor to the end of the line). [@Xipiryon]
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
 - SliderInt, SliderScalar: Fixed reaching of maximum value with inverted integer min/max ranges, both
