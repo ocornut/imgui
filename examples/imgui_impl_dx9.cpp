@@ -234,6 +234,7 @@ void ImGui_ImplDX9_Shutdown()
     if (g_pd3dDevice) { g_pd3dDevice->Release(); g_pd3dDevice = NULL; }
 }
 
+// FIXME-DYNAMICFONT: Should be renamed ImGui_ImplDX9_UpdateFontTextures and called every frame
 static bool ImGui_ImplDX9_CreateFontsTexture()
 {
 /*    // Build texture atlas
@@ -274,6 +275,7 @@ void ImGui_ImplDX9_InvalidateDeviceObjects()
         return;
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
+    // FIXME-DYNAMICFONT: After destroying a font the appropriate ImFontTexture->TexID should be updated
     if (g_FontTexture) { g_FontTexture->Release(); g_FontTexture = NULL; /*ImGui::GetIO().Fonts->TexID = NULL;*/ } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 }
 

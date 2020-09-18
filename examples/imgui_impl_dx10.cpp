@@ -265,8 +265,10 @@ void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
+//FIXME-DYNAMICFONT: Should be renamed ImGui_ImplDX10_UpdateFontsTextures
 static void ImGui_ImplDX10_CreateFontsTexture()
 {
+    // FIXME-DYNAMICFONT: Dynamic font texture update code similar to imgui_impl_opengl3.cpp should be implemented for DirectX 10
 /*    // Build texture atlas
     ImGuiIO& io = ImGui::GetIO();
     unsigned char* pixels;
@@ -473,6 +475,7 @@ bool    ImGui_ImplDX10_CreateDeviceObjects()
         g_pd3dDevice->CreateDepthStencilState(&desc, &g_pDepthStencilState);
     }
 
+    // FIXME-DYNAMICFONT: ImGui_ImplDX10_UpdateFontsTexture should replace this function and be called every frame
     ImGui_ImplDX10_CreateFontsTexture();
 
     return true;
@@ -484,6 +487,7 @@ void    ImGui_ImplDX10_InvalidateDeviceObjects()
         return;
 
     if (g_pFontSampler) { g_pFontSampler->Release(); g_pFontSampler = NULL; }
+    // FIXME-DYNAMICFONT: After destroying a font texture the appropriate ImFontTexture->TexID should be updated
     if (g_pFontTextureView) { g_pFontTextureView->Release(); g_pFontTextureView = NULL; /*ImGui::GetIO().Fonts->TexID = NULL;*/ } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }

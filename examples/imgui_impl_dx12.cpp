@@ -245,6 +245,7 @@ void ImGui_ImplDX12_RenderDrawData(ImDrawData* draw_data, ID3D12GraphicsCommandL
     }
 }
 
+// FIXME-DYNAMICFONT: Should be replaced by ImGui_ImplDX12_UpdateFontTextures and called every frame
 static void ImGui_ImplDX12_CreateFontsTexture()
 {
 /*    // Build texture atlas
@@ -609,6 +610,7 @@ void    ImGui_ImplDX12_InvalidateDeviceObjects()
     SafeRelease(g_pPipelineState);
     SafeRelease(g_pFontTextureResource);
 
+    // FIXME-DYNAMICFONT: When destroying the font textures the corresponding ImFontTexture->TexID should be updated
 //    ImGuiIO& io = ImGui::GetIO();
 //    io.Fonts->TexID = NULL; // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
 

@@ -52,8 +52,6 @@
 #include <GL/gl.h>
 #endif
 
-// OpenGL Data
-static GLuint       g_FontTexture = 0;
 
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
@@ -200,7 +198,6 @@ void ImGui_ImplOpenGL2_RenderDrawData(ImDrawData* draw_data)
 
 static ImVector<ImTextureID> g_FontTextures;
 
-
 static ImTextureID CreateOpenGL2Texture(int width, int height, unsigned char* pixels) {
     GLint last_texture;
     GLuint new_texture;
@@ -238,7 +235,7 @@ bool ImGui_ImplOpenGL2_UpdateFontsTexture()
     if (io.Fonts->Fonts.Size == 0) //Load a font if there is none
         io.Fonts->AddFontDefault();
 
-
+    // FIXME-DYNAMICFONT: Add support for resizing textures
     for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
         ImFontTexture* font_texture_ptr = *font_texture;
         if (font_texture_ptr->TexID == NULL) {
@@ -261,7 +258,7 @@ bool ImGui_ImplOpenGL2_UpdateFontsTexture()
     return true;
 }
 
-void ImGui_ImplOpenGL2_DestroyFontsTextures()
+void ImGui_ImplOpenGL2_DestroyFontTextures()
 {
     if (g_FontTextures.Size)
     {
@@ -278,5 +275,5 @@ void ImGui_ImplOpenGL2_DestroyFontsTextures()
 
 void    ImGui_ImplOpenGL2_DestroyDeviceObjects()
 {
-    ImGui_ImplOpenGL2_DestroyFontsTextures();
+    ImGui_ImplOpenGL2_DestroyFontTextures();
 }

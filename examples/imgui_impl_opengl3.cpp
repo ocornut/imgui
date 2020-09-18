@@ -133,7 +133,6 @@ using namespace gl;
 // OpenGL Data
 static GLuint       g_GlVersion = 0;                // Extracted at runtime using GL_MAJOR_VERSION, GL_MINOR_VERSION queries (e.g. 320 for GL 3.2)
 static char         g_GlslVersionString[32] = "";   // Specified by user or detected based on compile time GL settings.
-//static GLuint       g_FontTexture = 0;
 static GLuint       g_ShaderHandle = 0, g_VertHandle = 0, g_FragHandle = 0;
 static GLint        g_AttribLocationTex = 0, g_AttribLocationProjMtx = 0;                                // Uniforms location
 static GLuint       g_AttribLocationVtxPos = 0, g_AttribLocationVtxUV = 0, g_AttribLocationVtxColor = 0; // Vertex attributes location
@@ -452,7 +451,7 @@ bool ImGui_ImplOpenGL3_UpdateFontsTexture()
     if (io.Fonts->Fonts.Size == 0) //Load a font if there is none
         io.Fonts->AddFontDefault();
 
-
+    // FIXME-DYNAMICFONT: Support resizing textures
     for (ImFontTexture** font_texture = io.Fonts->FontTextures.begin(); font_texture != io.Fonts->FontTextures.end(); ++font_texture) {
         ImFontTexture* font_texture_ptr = *font_texture;
         if (font_texture_ptr->TexID == NULL) {

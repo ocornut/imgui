@@ -2334,19 +2334,7 @@ struct ImFontAtlas
     IMGUI_API void              ClearTexData();             // Clear output texture data (CPU side). Saves RAM once the texture has been copied to graphics memory.
     IMGUI_API void              ClearFonts();               // Clear output font data (glyphs storage, UV coordinates).
     IMGUI_API void              Clear();                    // Clear all input and output.
-
-    // Build atlas, retrieve pixel data.
-    // User is in charge of copying the pixels into graphics memory (e.g. create a texture with your engine). Then store your texture handle with SetTexID().
-    // The pitch is always = Width * BytesPerPixels (1 or 4)
-    // Building in RGBA32 format is provided for convenience and compatibility, but note that unless you manually manipulate or copy color data into
-    // the texture (e.g. when using the AddCustomRect*** api), then the RGB pixels emitted will always be white (~75% of memory/bandwidth waste.
-    //IMGUI_API bool              Build();                    // Build pixels data. This is called automatically for you by the GetTexData*** functions.
-    //IMGUI_API void              GetTexDataAsAlpha8(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 1 byte per-pixel
-    //IMGUI_API void              GetTexDataAsRGBA32(unsigned char** out_pixels, int* out_width, int* out_height, int* out_bytes_per_pixel = NULL);  // 4 bytes-per-pixel
-    //bool                        IsBuilt() const             { return Fonts.Size > 0 && (TexPixelsAlpha8 != NULL || TexPixelsRGBA32 != NULL); }
-    //void                        SetTexID(ImTextureID id)    { TexID = id; }
-
-    
+   
     //-------------------------------------------
     // [BETA] Custom Rectangles/Glyphs API
     //-------------------------------------------
@@ -2357,13 +2345,15 @@ struct ImFontAtlas
     // so you can render e.g. custom colorful icons and use them as regular glyphs.
     // Read docs/FONTS.md for more details about using colorful icons.
     // Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
+    // FIXME-DYNAMICFONT: Add support for CustomRects
     //IMGUI_API int               AddCustomRectRegular(int width, int height);
     //IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
     //ImFontAtlasCustomRect*      GetCustomRectByIndex(int index) { IM_ASSERT(index >= 0); return &CustomRects[index]; }
 
+    // FIXME-DYNAMICFONT: Add support for CustomRects and software mouse cursor
     // [Internal]
-    IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
-    IMGUI_API bool              GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
+    //IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
+    //IMGUI_API bool              GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
 
     //-------------------------------------------
     // Members
@@ -2371,32 +2361,33 @@ struct ImFontAtlas
 
     bool                        Locked;             // Marked as Locked by ImGui::NewFrame() so attempt to modify the atlas will assert.
     ImFontAtlasFlags            Flags;              // Build flags (see ImFontAtlasFlags_)
-    //ImTextureID                 TexID;              // User data to refer to the texture once it has been uploaded to user's graphic systems. It is passed back to you during rendering via the ImDrawCmd structure.
-    //int                         TexDesiredWidth;    // Texture width desired by user before Build(). Must be a power-of-two. If have many glyphs your graphics API have texture size restrictions you may want to increase texture width to decrease height.
+    // FIXME-DYNAMICFONT: Add support for glyph padding
     //int                         TexGlyphPadding;    // Padding between glyphs within texture in pixels. Defaults to 1. If your rendering method doesn't rely on bilinear filtering you may set this to 0.
-    float                       FontSize;
+    float                       FontSize;           //Default font size for all fonts when rendering FIXME-DYNAMICFONT: Add support for PushFontSize/PopFontSize
 
     // [Internal]
-    // NB: Access texture data via GetTexData*() calls! Which will setup a default font for you.
-    //unsigned char*              TexPixelsAlpha8;    // 1 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight
-    //unsigned int*               TexPixelsRGBA32;    // 4 component per pixel, each component is unsigned 8-bit. Total size = TexWidth * TexHeight * 4
-    int                         TexWidth;           // Texture width calculated during Build().
-    int                         TexHeight;          // Texture height calculated during Build().
+    // FIXME-DYNAMICFONT: Add support for changing font texture during runtime
+    int                         TexWidth;           // Texture width used when creating a new font texture.
+    int                         TexHeight;          // Texture height used when creating a new font texture.
     ImVec2                      TexUvScale;         // = (1.0f/TexWidth, 1.0f/TexHeight)
     ImVec2                      TexUvWhitePixel;    // Texture coordinates to a white pixel on all the font textures
     ImVector<unsigned char>     EmptyFontTexturePixelData; //Pixel data for an empty font texture with a white pixel
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontTexture*>    FontTextures;
-                                                    //ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
+                                                    
+    // FIXME-DYNAMICFONT: Add support for CustomRects
+    //ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Configuration data
+    // FIXME-DYNAMICFONT: Add support for anti-aliased lines
     //ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
 
     // [Internal] Packing data
+    // FIXME-DYNAMICFONT: Add support for software mouse cursor
     //int                         PackIdMouseCursors; // Custom texture rectangle ID for white pixel and mouse cursors
     //int                         PackIdLines;        // Custom texture rectangle ID for baked anti-aliased lines
 
 //#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
- //   typedef ImFontAtlasCustomRect    CustomRect;         // OBSOLETED in 1.72+
+//   typedef ImFontAtlasCustomRect    CustomRect;         // OBSOLETED in 1.72+
 //    typedef ImFontGlyphRangesBuilder GlyphRangesBuilder; // OBSOLETED in 1.67+
 //#endif
 };
@@ -2406,35 +2397,33 @@ struct ImFontAtlas
 #define IM_HASH_LUT_SIZE 256
 struct ImFont
 {
-    // Members: Hot ~20/24 bytes (for CalcTextSize)
-    //ImVector<float>             IndexAdvanceX;      // 12-16 // out //            // Sparse. Glyphs->AdvanceX in a directly indexable way (cache-friendly for CalcTextSize functions which only this this info, and are often bottleneck in large UI).
     float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
-    //float                       FontSize;           // 4     // in  //            // Height of characters/line, set during loading (don't change after loading)
-
-    // Members: Hot ~36/48 bytes (for CalcTextSize + render loop)
-    //ImVector<ImWchar>           IndexLookup;        // 12-16 // out //            // Sparse. Index glyphs by Unicode code-point.
     ImVector<ImFontGlyph>       Glyphs;             // 12-16 // out //            // All glyphs.
     const ImFontGlyph*          FallbackGlyph;      // 4-8   // out // = FindGlyph(FontFallbackChar)
     ImVec2                      DisplayOffset;      // 8     // in  // = (0,0)    // Offset font rendering by xx pixels
 
     // Members: Cold ~32/40 bytes
     ImFontAtlas*                ContainerAtlas;     // 4-8   // out //            // What we has been loaded into
-    int                         ConfigDataIndex;    // 4-8   // in  //            // I don't think it is safe to keep a pointer to an item in ImVector<ImFontConfig>
-    //short                       ConfigDataCount;    // 2     // in  // ~ 1        // Number of ImFontConfig involved in creating this font. Bigger than 1 when merging multiple font sources into one ImFont.
+    int                         ConfigDataIndex;    // index to configdata in  ImFontAtlas::ConfigData vector
+    
     ImWchar                     FallbackChar;       // 2     // in  // = '?'      // Replacement character if a glyph isn't found. Only set via SetFallbackChar()
     ImWchar                     EllipsisChar;       // 2     // out // = -1       // Character used for ellipsis rendering.
-    //bool                        DirtyLookupTables;  // 1     // out //
+    
+    // FIXME-DYNAMICFONT: Add support for base font scale
     float                       Scale;              // 4     // in  // = 1.f      // Base font scale, multiplied by the per-window font scale which you can adjust with SetWindowFontScale()
     float                       Ascent, Descent;    // 4+4   // out //            // Ascent: distance from top to bottom of e.g. 'A' [0..FontSize]
+    // FIXME-DYNAMICFONT: Add supprot for surface metrics
     //int                         MetricsTotalSurface;// 4     // out //            // Total surface in pixels to get an idea of the font rasterization/texture cost (not exact, we approximate the cost of padding between glyphs)
     //ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
-    int                         lut[IM_HASH_LUT_SIZE];
-    void*                       PrivData;
+    
+    int                         lut[IM_HASH_LUT_SIZE]; //Lookup table
+    void*                       PrivData;           //Private data to underlying font engine
 
     // Methods
     IMGUI_API ImFont();
     IMGUI_API ~ImFont();
     IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c, float size);
+    // FIXME-DYNAMICFONT: Add support for findglyphnofallback
     //IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c) const;
     float                       GetCharAdvance(ImWchar c, float size);
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
@@ -2448,14 +2437,8 @@ struct ImFont
     IMGUI_API void              RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, const char* text_begin, const char* text_end, float wrap_width = 0.0f, bool cpu_fine_clip = false);
 
     // [Internal] Don't use!
-    //IMGUI_API void              BuildLookupTable();
     IMGUI_API void              ClearOutputData();
-    //IMGUI_API void              GrowIndex(int new_size);
-    //IMGUI_API void              AddGlyph(const ImFontConfig* src_cfg, ImWchar c, float x0, float y0, float x1, float y1, float u0, float v0, float u1, float v1, float advance_x);
-    //IMGUI_API void              AddRemapChar(ImWchar dst, ImWchar src, bool overwrite_dst = true); // Makes 'dst' character/glyph points to 'src' character/glyph. Currently needs to be called AFTER fonts have been built.
-    //IMGUI_API void              SetGlyphVisible(ImWchar c, bool visible);
     IMGUI_API void              SetFallbackChar(ImWchar c);
-    //IMGUI_API bool              IsGlyphRangeUnused(unsigned int c_begin, unsigned int c_last);
 };
 
 #if defined(__clang__)

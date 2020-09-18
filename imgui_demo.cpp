@@ -3718,10 +3718,13 @@ static void NodeFont(ImFont* font)
     if (!font_details_opened)
         return;
 
+    
     ImGui::PushFont(font);
     ImGui::Text("The quick brown fox jumps over the lazy dog");
     ImGui::PopFont();
-    ImGui::DragFloat("Font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");   // Scale only this font
+    // FIXME-DYNAMICFONT: Add support for font scale
+    static float temp_f = 1.f;
+    ImGui::DragFloat("Font scale", /* &font->Scale */ &temp_f, 0.005f, 0.3f, 2.0f, "%.1f");   // Scale only this font
     ImGui::SameLine(); HelpMarker(
         "Note than the default embedded font is NOT meant to be scaled.\n\n"
         "Font are currently rendered into bitmaps at a given size at the time of building the atlas. "
@@ -3732,6 +3735,7 @@ static void NodeFont(ImFont* font)
     ImGui::Text("Ascent: %f, Descent: %f, Height: %f", font->Ascent, font->Descent, font->Ascent - font->Descent);
     ImGui::Text("Fallback character: '%c' (U+%04X)", font->FallbackChar, font->FallbackChar);
     ImGui::Text("Ellipsis character: '%c' (U+%04X)", font->EllipsisChar, font->EllipsisChar);
+    // FIXME-DYNAMICFONT: Add support for font metrics 
 //    const int surface_sqrt = (int)sqrtf((float)font->MetricsTotalSurface);
 //    ImGui::Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
 /*    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)

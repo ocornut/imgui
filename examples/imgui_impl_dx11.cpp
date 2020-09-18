@@ -277,6 +277,7 @@ void ImGui_ImplDX11_RenderDrawData(ImDrawData* draw_data)
     ctx->IASetInputLayout(old.InputLayout); if (old.InputLayout) old.InputLayout->Release();
 }
 
+//FIXME-DYNAMICFONT: Should be replaced by ImGui_ImplDX11_UpdateFontTextures called every frame similiar to ImGui_OpenGL3_UpdateFontTextures
 static void ImGui_ImplDX11_CreateFontsTexture()
 {
 /*    // Build texture atlas
@@ -495,6 +496,7 @@ void    ImGui_ImplDX11_InvalidateDeviceObjects()
         return;
 
     if (g_pFontSampler) { g_pFontSampler->Release(); g_pFontSampler = NULL; }
+    // FIXME-DYNAMICFONT: When destroying the font textures the corresponding ImFontTexture->TexID should be set to NULL
     if (g_pFontTextureView) { g_pFontTextureView->Release(); g_pFontTextureView = NULL; /*ImGui::GetIO().Fonts->TexID = NULL;*/ } // We copied g_pFontTextureView to io.Fonts->TexID so let's clear that as well.
     if (g_pIB) { g_pIB->Release(); g_pIB = NULL; }
     if (g_pVB) { g_pVB->Release(); g_pVB = NULL; }

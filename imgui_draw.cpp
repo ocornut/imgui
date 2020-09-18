@@ -1322,14 +1322,14 @@ void ImDrawList::AddText(ImFont* font, float font_size, const ImVec2& pos, ImU32
     if (text_begin == text_end)
         return;
 
+    
     // Pull default font/size from the shared ImDrawListSharedData instance
     if (font == NULL)
         font = _Data->Font;
+
     if (font_size == 0.0f)
         font_size = _Data->FontSize;
-
-//    IM_ASSERT(font->ContainerAtlas->TexID == _CmdHeader.TextureId);  // Use high-level ImGui::PushFont() or low-level ImDrawList::PushTextureId() to change font.
-
+    
     ImVec4 clip_rect = _CmdHeader.ClipRect;
     if (cpu_fine_clip_rect)
     {
@@ -1672,9 +1672,10 @@ ImFontConfig::ImFontConfig()
 // [SECTION] ImFontAtlas
 //-----------------------------------------------------------------------------
 
+// FIXME-DYNAMICFONT: Add support for software mouse cursor
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
 // The 2x2 white texels on the top left are the ones we'll use everywhere in Dear ImGui to render filled shapes.
-const int FONT_ATLAS_DEFAULT_TEX_DATA_W = 108; // Actual texture will be 2 times that + 1 spacing.
+/*const int FONT_ATLAS_DEFAULT_TEX_DATA_W = 108; // Actual texture will be 2 times that + 1 spacing.
 const int FONT_ATLAS_DEFAULT_TEX_DATA_H = 27;
 static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
 {
@@ -1706,7 +1707,7 @@ static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA
     "                                                      -   X.X           X.X   -                             "
     "                                                      -    XX           XX    -                             "
 };
-
+*/
 static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3] =
 {
     // Pos ........ Size ......... Offset ......
@@ -1724,17 +1725,15 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
 {
     Locked = false;
     Flags = ImFontAtlasFlags_NoBakedLines;
-    //TexID = (ImTextureID)NULL;
-    //TexDesiredWidth = 0;
+    // FIXME-DYNAMICFONT: Add support for glyph padding
     //TexGlyphPadding = 1;
     FontSize = 13.f;
 
-    //TexPixelsAlpha8 = NULL;
-    //TexPixelsRGBA32 = NULL;
     TexWidth = tex_width;
     TexHeight = tex_height;
     TexUvScale = ImVec2(1.f/static_cast<float>(TexWidth), 1.f/static_cast<float>(TexHeight));
     TexUvWhitePixel = ImVec2(0.5f * TexUvScale.x, 0.5f * TexUvScale.y); //The white pixel is always in the top left corner
+    // FIXME-DYNAMICFONT: Add support for softwarte mouse cursor and baked antialiased lines
     //PackIdMouseCursors = PackIdLines = -1;
 
     //Create data for an empty font texture
@@ -1770,6 +1769,7 @@ void    ImFontAtlas::ClearInputData()
             //Fonts[i]->ConfigDataCount = 0;
         }
     ConfigData.clear();
+    // FIXME-DYNAMICFONT: Add support for CustomRects, software mouse cursor and baked antialiased lines
     //CustomRects.clear();
     //PackIdMouseCursors = PackIdLines = -1;
 }
@@ -1777,12 +1777,7 @@ void    ImFontAtlas::ClearInputData()
 void    ImFontAtlas::ClearTexData()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
-    //if (TexPixelsAlpha8)
-    //    IM_FREE(TexPixelsAlpha8);
-    //if (TexPixelsRGBA32)
-    //    IM_FREE(TexPixelsRGBA32);
-    //TexPixelsAlpha8 = NULL;
-    //TexPixelsRGBA32 = NULL;
+    
     for (int i = 0; i < FontTextures.Size; i++)
         IM_DELETE(FontTextures[i]);
 
@@ -1808,8 +1803,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     IM_ASSERT(font_cfg->FontData != NULL && font_cfg->FontDataSize > 0);
-    //IM_ASSERT(font_cfg->SizePixels > 0.0f);
-
+    
     // Create new font
     Fonts.push_back(IM_NEW(ImFont));
     
@@ -1846,7 +1840,6 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     int fh = ascent - descent;
     fnt->Ascent = (float)ascent / (float)fh;
     fnt->Descent = (float)descent / (float)fh;
-    //fnt->lineh = (float)(fh + lineGap) / (float)fh;
     fnt->ContainerAtlas = this;
     fnt->ConfigDataIndex = config_data_index;
     return new_font_cfg.DstFont;
@@ -1943,6 +1936,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
     return font;
 }
 
+// FIXME-DYNAMICFONT: Add support for CustomRects
 /*
 int ImFontAtlas::AddCustomRectRegular(int width, int height)
 {
@@ -1955,7 +1949,7 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     return CustomRects.Size - 1; // Return index
 }
 */
-
+// FIXME-DYNAMICFONT: Add support for CustomRects
 /*
 int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset)
 {
@@ -1976,7 +1970,7 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int
     return CustomRects.Size - 1; // Return index
 }
 */
-
+// FIXME-DYNAMICFONT: Add support for CustomRects
 /*
 void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
 {
@@ -1986,7 +1980,7 @@ void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* ou
     *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
 }
 */
-
+// FIXME-DYNAMICFONT: Add support for software mouse cursor
 /*
 bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
 {
@@ -2010,31 +2004,7 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
 }
 */
 
-// Temporary data for one source font (multiple source fonts can be merged into one destination ImFont)
-// (C++03 doesn't allow instancing ImVector<> with function-local types so we declare the type here.)
-struct ImFontBuildSrcData
-{
-    stbtt_fontinfo      FontInfo;
-    stbtt_pack_range    PackRange;          // Hold the list of codepoints to pack (essentially points to Codepoints.Data)
-    stbrp_rect*         Rects;              // Rectangle to pack. We first fill in their size and the packer will give us their position.
-    stbtt_packedchar*   PackedChars;        // Output glyphs
-    const ImWchar*      SrcRanges;          // Ranges as requested by user (user is allowed to request too much, e.g. 0x0020..0xFFFF)
-    int                 DstIndex;           // Index into atlas->Fonts[] and dst_tmp_array[]
-    int                 GlyphsHighest;      // Highest requested codepoint
-    int                 GlyphsCount;        // Glyph count (excluding missing glyphs and glyphs already set by an earlier source font)
-    ImBitVector         GlyphsSet;          // Glyph bit map (random access, 1-bit per codepoint. This will be a maximum of 8KB)
-    ImVector<int>       GlyphsList;         // Glyph codepoints list (flattened version of GlyphsMap)
-};
-
-// Temporary data for one destination ImFont* (multiple source fonts can be merged into one destination ImFont)
-struct ImFontBuildDstData
-{
-    int                 SrcCount;           // Number of source fonts targeting this destination font.
-    int                 GlyphsHighest;
-    int                 GlyphsCount;
-    ImBitVector         GlyphsSet;          // This is used to resolve collision when multiple sources are merged into a same destination font.
-};
-
+/*
 static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>* out)
 {
     IM_ASSERT(sizeof(in->Storage.Data[0]) == sizeof(int));
@@ -2046,6 +2016,9 @@ static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>*
                 if (entries_32 & ((ImU32)1 << bit_n))
                     out->push_back((int)(((it - it_begin) << 5) + bit_n));
 }
+*/
+
+// FIXME-DYNAMICFONT: Add Support for CustomRects
 /*
 
 void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
@@ -2110,6 +2083,7 @@ static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
     atlas->TexUvWhitePixel = ImVec2((r->X + 0.5f) * atlas->TexUvScale.x, (r->Y + 0.5f) * atlas->TexUvScale.y);
 }
 
+// FIXME-DYNAMICFONT: Add support for baked anti-aliased lines
 static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
 {
     if (atlas->Flags & ImFontAtlasFlags_NoBakedLines)
@@ -2162,52 +2136,8 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
     }
 }
 
-// This is called/shared by both the stb_truetype and the FreeType builder.
-void ImFontAtlasBuildFinish(ImFontAtlas* atlas)
-{
-    // Render into our custom data blocks
-    IM_ASSERT(atlas->TexPixelsAlpha8 != NULL);
-    ImFontAtlasBuildRenderDefaultTexData(atlas);
-    ImFontAtlasBuildRenderLinesTexData(atlas);
-
-    // Register custom rectangle glyphs
-    for (int i = 0; i < atlas->CustomRects.Size; i++)
-    {
-        const ImFontAtlasCustomRect* r = &atlas->CustomRects[i];
-        if (r->Font == NULL || r->GlyphID == 0)
-            continue;
-
-        // Will ignore ImFontConfig settings: GlyphMinAdvanceX, GlyphMinAdvanceY, GlyphExtraSpacing, PixelSnapH
-        IM_ASSERT(r->Font->ContainerAtlas == atlas);
-        ImVec2 uv0, uv1;
-        atlas->CalcCustomRectUV(r, &uv0, &uv1);
-        r->Font->AddGlyph(NULL, (ImWchar)r->GlyphID, r->GlyphOffset.x, r->GlyphOffset.y, r->GlyphOffset.x + r->Width, r->GlyphOffset.y + r->Height, uv0.x, uv0.y, uv1.x, uv1.y, r->GlyphAdvanceX);
-    }
-
-    // Build all fonts lookup tables
-    for (int i = 0; i < atlas->Fonts.Size; i++)
-        if (atlas->Fonts[i]->DirtyLookupTables)
-            atlas->Fonts[i]->BuildLookupTable();
-
-    // Ellipsis character is required for rendering elided text. We prefer using U+2026 (horizontal ellipsis).
-    // However some old fonts may contain ellipsis at U+0085. Here we auto-detect most suitable ellipsis character.
-    // FIXME: Also note that 0x2026 is currently seldom included in our font ranges. Because of this we are more likely to use three individual dots.
-    for (int i = 0; i < atlas->Fonts.size(); i++)
-    {
-        ImFont* font = atlas->Fonts[i];
-        if (font->EllipsisChar != (ImWchar)-1)
-            continue;
-        const ImWchar ellipsis_variants[] = { (ImWchar)0x2026, (ImWchar)0x0085 };
-        for (int j = 0; j < IM_ARRAYSIZE(ellipsis_variants); j++)
-            if (font->FindGlyphNoFallback(ellipsis_variants[j]) != NULL) // Verify glyph exists
-            {
-                font->EllipsisChar = ellipsis_variants[j];
-                break;
-            }
-    }
-}
 */
-
+/*
 static void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short* accumulative_offsets, int accumulative_offsets_count, ImWchar* out_ranges)
 {
     for (int n = 0; n < accumulative_offsets_count; n++, out_ranges += 2)
@@ -2217,14 +2147,13 @@ static void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short*
     }
     out_ranges[0] = 0;
 }
-
+*/
 //-----------------------------------------------------------------------------
 // [SECTION] ImFont
 //-----------------------------------------------------------------------------
 
 ImFont::ImFont()
 {
-    //FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
     FallbackChar = (ImWchar)'?';
     EllipsisChar = (ImWchar)-1;
@@ -2233,16 +2162,17 @@ ImFont::ImFont()
     ContainerAtlas = NULL;
     ConfigDataIndex = -1;
     PrivData = NULL;
-    //ConfigDataCount = 0;
-    //DirtyLookupTables = false;
+    
+    // FIXME-DYNAMICFONT: Add support for font scale
     Scale = 1.0f;
     Ascent = Descent = 0.0f;
+
+    // FIXME-DYNAMICFONT: Add support for font surface metrics
     //MetricsTotalSurface = 0;
     //memset(Used4kPagesMap, 0, sizeof(Used4kPagesMap));
 
     // Init hash lookup.
     for (int i = 0; i < IM_HASH_LUT_SIZE; ++i) lut[i] = -1;
-
 }
 
 ImFont::~ImFont()
@@ -2252,15 +2182,12 @@ ImFont::~ImFont()
 
 void    ImFont::ClearOutputData()
 {
-     //FontSize = 0.0f;
     FallbackAdvanceX = 0.0f;
     Glyphs.clear();
-    //IndexAdvanceX.clear();
-    //IndexLookup.clear();
     FallbackGlyph = NULL;
     ContainerAtlas = NULL;
-    //DirtyLookupTables = true;
     Ascent = Descent = 0.0f;
+    // FIXME-DYNAMICFONT: Add support for font surface metrics
     //MetricsTotalSurface = 0;
     if (PrivData) {
         IM_FREE(PrivData);
@@ -2271,10 +2198,9 @@ void    ImFont::ClearOutputData()
 void ImFont::SetFallbackChar(ImWchar c)
 {
     FallbackChar = c;
-//    BuildLookupTable();
 }
 
-
+// FIXME-DYNAMICFONT: Change hash algorithm? This is the algorithm used by fontstash
 static unsigned int hashint(unsigned int a)
 {
     a += ~(a << 15);
@@ -2285,6 +2211,7 @@ static unsigned int hashint(unsigned int a)
     a ^= (a >> 16);
     return a;
 }
+
 static ImVector<unsigned char> u8_to_rgba(unsigned char* pixels, int width, int height) {
     ImVector<unsigned char> TexPixelsRGBA32;
     TexPixelsRGBA32.resize(width*height * 4, 0);
@@ -2297,18 +2224,16 @@ static ImVector<unsigned char> u8_to_rgba(unsigned char* pixels, int width, int 
     return TexPixelsRGBA32;
 }
 
-const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize) 
+const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size) 
 {
 
     int i, g, advance, lsb, x0, y0, x1, y1;
     int gw, gh;
-    float scale;
     unsigned char* bmp = NULL;
     unsigned int h;
-    float size = isize;
     int rh;
 
-    // Find code point and size.
+    // Find code point and size using lookup table.
     h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
     i = this->lut[h];
     while (i != -1)
@@ -2318,12 +2243,13 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize)
         i = this->Glyphs[i].NextGlyph;
     }
 
-    // For truetype fonts: create this glyph.
-    scale = stbtt_ScaleForPixelHeight((stbtt_fontinfo*)this->PrivData, size);
+    // Create this glyph.
+    float scale = stbtt_ScaleForPixelHeight((stbtt_fontinfo*)this->PrivData, size);
     g = stbtt_FindGlyphIndex((stbtt_fontinfo*)this->PrivData, codepoint);
     if (!g)
         return NULL; // Glyph not found
     stbtt_GetGlyphHMetrics((stbtt_fontinfo*)this->PrivData, g, &advance, &lsb);
+    // FIXME-DYNAMICFONT: Should use the subpixel version?
     stbtt_GetGlyphBitmapBox((stbtt_fontinfo*)this->PrivData, g, scale, scale, &x0, &y0, &x1, &y1);
     gw = x1 - x0;
     gh = y1 - y0;
@@ -2386,7 +2312,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize)
     // Init glyph.
     ImFontGlyph glyph;
     glyph.Codepoint = codepoint;
-    glyph.GlyphSize = static_cast<short>(isize);
+    glyph.GlyphSize = static_cast<short>(size);
     glyph.FontTexture = *texture;
     glyph.X0 = static_cast<float>(br->x);
     glyph.Y0 = static_cast<float>(br->y);
@@ -2407,15 +2333,16 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize)
 
     this->lut[h] = static_cast<int>(this->Glyphs.size()) - 1;
 
-    // Rasterize
+    // Rasterize 
     ImVector<unsigned char> bmp_vec;
     bmp_vec.resize(gw*gh, 0);
     bmp = bmp_vec.Data;
     if (bmp)
     {
         //Render glyph
+        // FIXME-DYNAMICFONT: Should use the subpixel version?
         stbtt_MakeGlyphBitmap((stbtt_fontinfo*)this->PrivData, bmp, gw, gh, gw, scale, scale, g);
-        auto pixels = u8_to_rgba(bmp, gw, gh);
+        ImVector<unsigned char> pixels = u8_to_rgba(bmp, gw, gh);
 
         // Update texture
         (*texture)->Update(static_cast<int>(glyph_ptr->X0), static_cast<int>(glyph_ptr->Y0), gw, gh, pixels.Data);
@@ -2423,6 +2350,8 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float isize)
 
     return glyph_ptr;
 }
+
+// FIXME-DYNAMICFONT: Add support for FindGlyphNoFallback
 /*
 const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
 {
@@ -2635,7 +2564,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, cons
 }
 
 
-ImFontQuad GetQuad(ImFontGlyph const& glyph, /*float isize,*/ float x, float y)
+ImFontQuad GetQuad(ImFontGlyph const& glyph, float x, float y)
 {
     int rx, ry;
     float scale = 1.0f;
@@ -2674,9 +2603,9 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         float ascender = Ascent * size;
         pos.x = (float)(int)pos.x + DisplayOffset.x;
         pos.y = (float)(int)pos.y + DisplayOffset.y;
-        auto texture_width = glyph->FontTexture->TexWidth;
-        auto texture_height = glyph->FontTexture->TexHeight;
-        auto q = GetQuad(*glyph, /*size,*/ pos.x, pos.y);
+        int texture_width = glyph->FontTexture->TexWidth;
+        int texture_height = glyph->FontTexture->TexHeight;
+        ImFontQuad q = GetQuad(*glyph, pos.x, pos.y);
 
         float x1 = q.x0;
         float x2 = q.x1;
@@ -2690,6 +2619,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         u2 /= texture_width;
         v1 /= texture_height;
         v2 /= texture_height;
+
+        // FIXME-DYNAMICFONT: Shouldn't use AddImageQuad
         draw_list->AddImageQuad(
             glyph->FontTexture->TexID,
             ImVec2(x1, y1),
@@ -2705,6 +2636,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     }
 }
 
+//Structure used by ImFont::RenderText to cache glyph render data for other font textures than the primary font texture
 struct FontRenderList {
     ImTextureID             TexID;
     ImVector<ImDrawIdx>     IdxBuffer;          
@@ -2770,7 +2702,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     bool reserved_primitives = false;
     
     bool texture_selected = false;
-    int push_texture = 0;
+    bool pushed_texture = false;
     ImTextureID selected_texture = 0;
 
     ImVector<FontRenderList*> font_render_list;
@@ -2832,14 +2764,12 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 continue;
         }
 
-
-
         float char_width = 0.0f;
         float ascender = ImFloor(Ascent * size);
         if (const ImFontGlyph* glyph = FindGlyph((ImWchar)c, size))
         {
-            auto texture_width = glyph->FontTexture->TexWidth;
-            auto texture_height = glyph->FontTexture->TexHeight;
+            int texture_width = glyph->FontTexture->TexWidth;
+            int texture_height = glyph->FontTexture->TexHeight;
 
             char_width = IM_ROUND(glyph->AdvanceX);/* scale*/
 
@@ -2850,9 +2780,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     selected_texture = glyph->FontTexture->TexID;
                     if (draw_list->_CmdHeader.TextureId != selected_texture) {
                         draw_list->PushTextureID(selected_texture);
-                        push_texture++;
-
-                        
+                        pushed_texture = true; // We need to pop later
                     }
 
                     idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
@@ -2869,8 +2797,8 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     FontRenderList* render_list = NULL;
 
                     // Find the render list for this texture
-                    for (auto rlist = font_render_list.begin(); rlist != font_render_list.end(); rlist++) {
-                        auto& rlist_ref = *rlist;
+                    for (FontRenderList** rlist = font_render_list.begin(); rlist != font_render_list.end(); rlist++) {
+                        FontRenderList* rlist_ref = *rlist;
                         if (rlist_ref->TexID == glyph->FontTexture->TexID) {
                             render_list = rlist_ref;
                             break;
@@ -2889,7 +2817,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                         font_render_list.push_back(render_list);
                     }
 
-                    auto q = GetQuad(*glyph, /*size,*/ x, y);
+                    ImFontQuad q = GetQuad(*glyph, /*size,*/ x, y);
 
                     // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
                     float x1 = q.x0 /* scale*/;
@@ -2977,7 +2905,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                 }
                 else { //Immediately render the glyph if we are on the selected font texture
                     
-                    auto q = GetQuad(*glyph, /*size,*/ x, y);
+                    ImFontQuad q = GetQuad(*glyph, /*size,*/ x, y);
 
                     // We don't do a second finer clipping test on the Y axis as we've already skipped anything before clip_rect.y and exit once we pass clip_rect.w
                     float x1 = q.x0 /* scale*/;
@@ -3047,10 +2975,9 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         x += char_width;
     }
 
-    
-    
-
     if (reserved_primitives) {
+        // FIXME-DYNAMICFONT: We shouldn't shrink the vertex and index buffer until the glyphs from the other
+        //                    font textures have been added!
         // Give back unused vertices (clipped ones, blanks) ~ this is essentially a PrimUnreserve() action.
         draw_list->VtxBuffer.Size = (int)(vtx_write - draw_list->VtxBuffer.Data); // Same as calling shrink()
         draw_list->IdxBuffer.Size = (int)(idx_write - draw_list->IdxBuffer.Data);
@@ -3060,24 +2987,24 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         draw_list->_VtxCurrentIdx = vtx_current_idx;
     }
 
-    while (push_texture) {
+    if (pushed_texture) {
         draw_list->PopTextureID();
-        push_texture--;
     }
 
     //Glyphs living on another texture are added to the draw list here
-    for (auto rlist = font_render_list.begin(); rlist != font_render_list.end(); rlist++) {
-        auto& rlist_ref = *rlist;
+    for (FontRenderList** rlist = font_render_list.begin(); rlist != font_render_list.end(); rlist++) {
+        FontRenderList* rlist_ref = *rlist;
         rlist_ref->VtxBuffer.Size = (int)(rlist_ref->vtx_write - rlist_ref->VtxBuffer.Data);
         rlist_ref->IdxBuffer.Size = (int)(rlist_ref->idx_write - rlist_ref->IdxBuffer.Data);
 
 
         draw_list->PushTextureID(rlist_ref->TexID);
+        // FIXME-DYNAMICFONT: Shouldn't be needed if we don't shrink the buffers before
         draw_list->PrimReserve(rlist_ref->IdxBuffer.Size, rlist_ref->VtxBuffer.Size);
 
         memcpy(draw_list->_VtxWritePtr, rlist_ref->VtxBuffer.Data, rlist_ref->VtxBuffer.size_in_bytes());
 
-        for (auto current_index = 0; current_index < rlist_ref->IdxBuffer.Size; current_index++) {
+        for (int current_index = 0; current_index < rlist_ref->IdxBuffer.Size; current_index++) {
             draw_list->_IdxWritePtr[current_index] = static_cast<ImDrawIdx>(rlist_ref->IdxBuffer[current_index] + draw_list->_VtxCurrentIdx);
         }
 
@@ -3210,6 +3137,7 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathStroke(col, false, thickness);
 }
 
+// FIXME-DYNAMICFONT: Add support for software mouse cursor
 void ImGui::RenderMouseCursor(ImDrawList* /*draw_list*/, ImVec2 /*pos*/, float /*scale*/, ImGuiMouseCursor /*mouse_cursor*/, ImU32 /*col_fill*/, ImU32 /*col_border*/, ImU32 /*col_shadow*/)
 {/*
     if (mouse_cursor == ImGuiMouseCursor_None)
