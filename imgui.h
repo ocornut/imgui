@@ -2263,6 +2263,7 @@ struct ImFontAtlasCustomRect
 {
     unsigned short  Width, Height;  // Input    // Desired rectangle dimension
     unsigned short  X, Y;           // Output   // Packed position in Atlas
+    ImFontTexture*  FontTexture;    
     unsigned int    GlyphID;        // Input    // For custom font glyphs only (ID < 0x110000)
     float           GlyphAdvanceX;  // Input    // For custom font glyphs only: glyph xadvance
     ImVec2          GlyphOffset;    // Input    // For custom font glyphs only: glyph display offset
@@ -2292,7 +2293,8 @@ struct ImFontTexture
     IMGUI_API               ImFontTexture(int width, int height, unsigned char* pixels);
     IMGUI_API               ~ImFontTexture();
     IMGUI_API void          Update(int x, int y, int width, int height, unsigned char* pixels);
-
+    IMGUI_API void          MarkAsDirty(int x, int y, int width, int height);
+     
     ImTextureID             TexID;
     int                     TexWidth;
     int                     TexHeight;
@@ -2346,14 +2348,15 @@ struct ImFontAtlas
     // Read docs/FONTS.md for more details about using colorful icons.
     // Note: this API may be redesigned later in order to support multi-monitor varying DPI settings.
     // FIXME-DYNAMICFONT: Add support for CustomRects
-    //IMGUI_API int               AddCustomRectRegular(int width, int height);
+    IMGUI_API int               AddCustomRectRegular(int width, int height);
     //IMGUI_API int               AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset = ImVec2(0, 0));
-    //ImFontAtlasCustomRect*      GetCustomRectByIndex(int index) { IM_ASSERT(index >= 0); return &CustomRects[index]; }
+    void                        FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTexRow** resulting_row, int gw, int gh, bool extra_height = false);
+    ImFontAtlasCustomRect*      GetCustomRectByIndex(int index) { IM_ASSERT(index >= 0); return &CustomRects[index]; }
 
     // FIXME-DYNAMICFONT: Add support for CustomRects and software mouse cursor
     // [Internal]
     //IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
-    //IMGUI_API bool              GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
+    IMGUI_API bool              GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
 
     //-------------------------------------------
     // Members
@@ -2376,15 +2379,15 @@ struct ImFontAtlas
     ImVector<ImFontTexture*>    FontTextures;
                                                     
     // FIXME-DYNAMICFONT: Add support for CustomRects
-    //ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
+    ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Configuration data
     // FIXME-DYNAMICFONT: Add support for anti-aliased lines
     //ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
 
     // [Internal] Packing data
     // FIXME-DYNAMICFONT: Add support for software mouse cursor
-    //int                         PackIdMouseCursors; // Custom texture rectangle ID for white pixel and mouse cursors
-    //int                         PackIdLines;        // Custom texture rectangle ID for baked anti-aliased lines
+    int                         PackIdMouseCursors; // Custom texture rectangle ID for white pixel and mouse cursors
+    int                         PackIdLines;        // Custom texture rectangle ID for baked anti-aliased lines
 
 //#ifndef IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 //   typedef ImFontAtlasCustomRect    CustomRect;         // OBSOLETED in 1.72+

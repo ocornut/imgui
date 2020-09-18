@@ -1675,7 +1675,7 @@ ImFontConfig::ImFontConfig()
 // FIXME-DYNAMICFONT: Add support for software mouse cursor
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
 // The 2x2 white texels on the top left are the ones we'll use everywhere in Dear ImGui to render filled shapes.
-/*const int FONT_ATLAS_DEFAULT_TEX_DATA_W = 108; // Actual texture will be 2 times that + 1 spacing.
+const int FONT_ATLAS_DEFAULT_TEX_DATA_W = 108; // Actual texture will be 2 times that + 1 spacing.
 const int FONT_ATLAS_DEFAULT_TEX_DATA_H = 27;
 static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA_W * FONT_ATLAS_DEFAULT_TEX_DATA_H + 1] =
 {
@@ -1707,7 +1707,7 @@ static const char FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS[FONT_ATLAS_DEFAULT_TEX_DATA
     "                                                      -   X.X           X.X   -                             "
     "                                                      -    XX           XX    -                             "
 };
-*/
+
 static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3] =
 {
     // Pos ........ Size ......... Offset ......
@@ -1734,15 +1734,28 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
     TexUvScale = ImVec2(1.f/static_cast<float>(TexWidth), 1.f/static_cast<float>(TexHeight));
     TexUvWhitePixel = ImVec2(0.5f * TexUvScale.x, 0.5f * TexUvScale.y); //The white pixel is always in the top left corner
     // FIXME-DYNAMICFONT: Add support for softwarte mouse cursor and baked antialiased lines
-    //PackIdMouseCursors = PackIdLines = -1;
+    PackIdMouseCursors = PackIdLines = -1;
 
     //Create data for an empty font texture
     EmptyFontTexturePixelData.resize(TexWidth*TexHeight * 4, 0);
     unsigned char* pixel = EmptyFontTexturePixelData.Data;
-    pixel[0] = pixel[1] = pixel[2] = pixel[3] = 255; //Create the with pixel in the top left corner
+    pixel[0] = pixel[1] = pixel[2] = pixel[3] = 255; //Create the white pixel in the top left corner
 
     //Create first font texture
     FontTextures.push_back(IM_NEW(ImFontTexture(TexWidth, TexHeight, EmptyFontTexturePixelData.Data)));
+
+    //Render mouse cursors
+    if (!(this->Flags & ImFontAtlasFlags_NoMouseCursors)) {
+        PackIdMouseCursors = AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+        ImFontAtlasCustomRect* r = this->GetCustomRectByIndex(this->PackIdMouseCursors);
+        // Render/copy pixels
+        IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
+        const int x_for_white = r->X;
+        const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
+        ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
+        ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
+        r->FontTexture->MarkAsDirty(r->X, r->Y, r->Width, r->Height);
+    }
 }
 
 ImFontAtlas::~ImFontAtlas()
@@ -1769,9 +1782,10 @@ void    ImFontAtlas::ClearInputData()
             //Fonts[i]->ConfigDataCount = 0;
         }
     ConfigData.clear();
+    
     // FIXME-DYNAMICFONT: Add support for CustomRects, software mouse cursor and baked antialiased lines
-    //CustomRects.clear();
-    //PackIdMouseCursors = PackIdLines = -1;
+    CustomRects.clear();
+    PackIdMouseCursors = PackIdLines = -1;
 }
 
 void    ImFontAtlas::ClearTexData()
@@ -1806,8 +1820,7 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
     
     // Create new font
     Fonts.push_back(IM_NEW(ImFont));
-    
-   
+       
     ConfigData.push_back(*font_cfg);
     ImFontConfig& new_font_cfg = ConfigData.back();
     int config_data_index = ConfigData.Size - 1;
@@ -1937,7 +1950,6 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
 }
 
 // FIXME-DYNAMICFONT: Add support for CustomRects
-/*
 int ImFontAtlas::AddCustomRectRegular(int width, int height)
 {
     IM_ASSERT(width > 0 && width <= 0xFFFF);
@@ -1945,10 +1957,18 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     ImFontAtlasCustomRect r;
     r.Width = (unsigned short)width;
     r.Height = (unsigned short)height;
+
+    ImFontTexRow* row;
+    FindTextureAndRow(&r.FontTexture, &row, width, height);
+    r.X = row->x;
+    r.Y = row->y;
+    row->x+= width;
+    
+
     CustomRects.push_back(r);
     return CustomRects.Size - 1; // Return index
 }
-*/
+
 // FIXME-DYNAMICFONT: Add support for CustomRects
 /*
 int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset)
@@ -1980,8 +2000,8 @@ void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* ou
     *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
 }
 */
+
 // FIXME-DYNAMICFONT: Add support for software mouse cursor
-/*
 bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
 {
     if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_COUNT)
@@ -2002,7 +2022,7 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
     out_uv_fill[1] = (pos + size) * TexUvScale;
     return true;
 }
-*/
+
 
 /*
 static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>* out)
@@ -2047,17 +2067,23 @@ void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opa
             atlas->TexHeight = ImMax(atlas->TexHeight, pack_rects[i].y + pack_rects[i].h);
         }
 }
-
-void ImFontAtlasBuildRender1bppRectFromString(ImFontAtlas* atlas, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned char in_marker_pixel_value)
+*/
+void ImFontAtlasBuildRender1bppRectFromString(ImFontTexture* texture, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned char in_marker_pixel_value)
 {
-    IM_ASSERT(x >= 0 && x + w <= atlas->TexWidth);
-    IM_ASSERT(y >= 0 && y + h <= atlas->TexHeight);
-    unsigned char* out_pixel = atlas->TexPixelsAlpha8 + x + (y * atlas->TexWidth);
-    for (int off_y = 0; off_y < h; off_y++, out_pixel += atlas->TexWidth, in_str += w)
-        for (int off_x = 0; off_x < w; off_x++)
-            out_pixel[off_x] = (in_str[off_x] == in_marker_char) ? in_marker_pixel_value : 0x00;
-}
+    IM_ASSERT(x >= 0 && x + w <= texture->TexWidth);
+    IM_ASSERT(y >= 0 && y + h <= texture->TexHeight);
+    IM_ASSERT(texture);
 
+    unsigned char* out_pixel = &texture->TexData.Data[(y*texture->TexWidth + x) * 4]; //All textures are 4 bytes for each pixel(RGBA)
+    for (int off_y = 0; off_y < h; off_y++, out_pixel += texture->TexWidth*4, in_str += w)
+        for (int off_x = 0; off_x < w; off_x++) {
+            int off_pixel_x = off_x*4;
+            out_pixel[off_pixel_x] = out_pixel[off_pixel_x + 1] = out_pixel[off_pixel_x + 2] = 0xFF;
+            out_pixel[off_pixel_x + 3] = (in_str[off_x] == in_marker_char) ? in_marker_pixel_value : 0x00;
+        }
+        
+}
+/*
 static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
 {
     ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdMouseCursors);
@@ -2114,7 +2140,8 @@ static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
         atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
     }
 }
-
+*/
+/*
 // Note: this is called / shared by both the stb_truetype and the FreeType builder
 void ImFontAtlasBuildInit(ImFontAtlas* atlas)
 {
@@ -2135,8 +2162,8 @@ void ImFontAtlasBuildInit(ImFontAtlas* atlas)
             atlas->PackIdLines = atlas->AddCustomRectRegular(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
     }
 }
-
 */
+
 /*
 static void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short* accumulative_offsets, int accumulative_offsets_count, ImWchar* out_ranges)
 {
@@ -2224,6 +2251,62 @@ static ImVector<unsigned char> u8_to_rgba(unsigned char* pixels, int width, int 
     return TexPixelsRGBA32;
 }
 
+void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTexRow** resulting_row, int gw, int gh, bool extra_height)  {
+    ImFontTexRow* br = NULL;
+    int rh = extra_height ? (gh + 7) & ~7 : gh;
+    ImFontTexture** texture = FontTextures.begin();
+    while (br == NULL)
+    {
+        for (int i = 0; i < (*texture)->FontTexRows.Size; ++i)
+        {
+            if ((*texture)->FontTexRows[i].h == rh && (*texture)->FontTexRows[i].x + gw + 1 <= (*texture)->TexWidth)
+                br = &(*texture)->FontTexRows[i];
+        }
+
+        // If no row is found, there are 3 possibilities:
+        //   - add new row
+        //   - try next texture
+        //   - create new texture
+        if (br == NULL)
+        {
+            int py = 0;
+            // Check that there is enough space.
+            if ((*texture)->FontTexRows.Size)
+            {
+                py = (*texture)->FontTexRows.back().y + (*texture)->FontTexRows.back().h + 1;
+                if (py + rh > (*texture)->TexHeight)
+                {
+                    if (texture+1 != this->FontTextures.end())
+                    {
+                        texture++;
+                    }
+                    else
+                    {
+                        // Create new texture
+                        this->FontTextures.push_back(IM_NEW(ImFontTexture(this->TexWidth
+                            , this->TexHeight
+                            , this->EmptyFontTexturePixelData.Data)));
+                        texture = &this->FontTextures.back();
+
+                    }
+                    continue;
+                }
+            }
+            // Init and add row
+            (*texture)->FontTexRows.push_back(ImFontTexRow());
+            br = &(*texture)->FontTexRows.back();
+            // The first pixel on the first row should remain white for geometry without text
+            br->x = ((*texture)->FontTexRows.Size == 1) ? 1 : 0;
+            br->y = py;
+            br->h = rh;
+        }
+    }
+
+    //Return results to calling function
+    *resulting_row = br;
+    *resulting_texture = (*texture);
+}
+
 const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size) 
 {
 
@@ -2231,8 +2314,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     int gw, gh;
     unsigned char* bmp = NULL;
     unsigned int h;
-    int rh;
-
+    
     // Find code point and size using lookup table.
     h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
     i = this->lut[h];
@@ -2259,61 +2341,15 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
         return 0;
 
     // Find texture and row where the glyph can be fit.
-    ImFontTexRow* br = NULL;
-    rh = (gh + 7) & ~7;
-    ImFontTexture** texture = ContainerAtlas->FontTextures.begin();
-    while (br == NULL)
-    {
-        for (i = 0; i < (*texture)->FontTexRows.Size; ++i)
-        {
-            if ((*texture)->FontTexRows[i].h == rh && (*texture)->FontTexRows[i].x + gw + 1 <= ContainerAtlas->TexWidth)
-                br = &(*texture)->FontTexRows[i];
-        }
-
-        // If no row is found, there are 3 possibilities:
-        //   - add new row
-        //   - try next texture
-        //   - create new texture
-        if (br == NULL)
-        {
-            int py = 0;
-            // Check that there is enough space.
-            if ((*texture)->FontTexRows.Size)
-            {
-                py = (*texture)->FontTexRows.back().y + (*texture)->FontTexRows.back().h + 1;
-                if (py + rh > ContainerAtlas->TexHeight)
-                {
-                    if (texture+1 != ContainerAtlas->FontTextures.end())
-                    {
-                        texture++;
-                    }
-                    else
-                    {
-                        // Create new texture
-                        ContainerAtlas->FontTextures.push_back(IM_NEW(ImFontTexture(ContainerAtlas->TexWidth
-                            , ContainerAtlas->TexHeight
-                            , ContainerAtlas->EmptyFontTexturePixelData.Data)));
-                        texture = &ContainerAtlas->FontTextures.back();
-
-                    }
-                    continue;
-                }
-            }
-            // Init and add row
-            (*texture)->FontTexRows.push_back(ImFontTexRow());
-            br = &(*texture)->FontTexRows.back();
-            // The first pixel on the first row should remain white for geometry without text
-            br->x = ((*texture)->FontTexRows.Size == 1) ? 1 : 0;
-            br->y = py;
-            br->h = rh;
-        }
-    }
+    ImFontTexture* texture;
+    ImFontTexRow* br;
+    ContainerAtlas->FindTextureAndRow(&texture, &br, gw, gh, true);
 
     // Init glyph.
     ImFontGlyph glyph;
     glyph.Codepoint = codepoint;
     glyph.GlyphSize = static_cast<short>(size);
-    glyph.FontTexture = *texture;
+    glyph.FontTexture = texture;
     glyph.X0 = static_cast<float>(br->x);
     glyph.Y0 = static_cast<float>(br->y);
     glyph.X1 = glyph.X0 + gw;
@@ -2345,7 +2381,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
         ImVector<unsigned char> pixels = u8_to_rgba(bmp, gw, gh);
 
         // Update texture
-        (*texture)->Update(static_cast<int>(glyph_ptr->X0), static_cast<int>(glyph_ptr->Y0), gw, gh, pixels.Data);
+        texture->Update(static_cast<int>(glyph_ptr->X0), static_cast<int>(glyph_ptr->Y0), gw, gh, pixels.Data);
     }
 
     return glyph_ptr;
@@ -3037,6 +3073,21 @@ ImFontTexture::~ImFontTexture()
 
 }
 
+void ImFontTexture::MarkAsDirty(int x, int y, int width, int height) {
+    float bot_right_x = x + width - 1.f;
+    float bot_right_y = y + height - 1.f;
+
+    if (!IsDirty) {
+        DirtyTopLeft = ImVec2((float) x, (float) y);
+        DirtyBotRight = ImVec2(bot_right_x, bot_right_y);
+    }
+    else {
+        DirtyTopLeft = ImVec2(ImMin((float) x, DirtyTopLeft.x), ImMin((float) y, DirtyTopLeft.y));
+        DirtyBotRight = ImVec2(ImMax(bot_right_x, DirtyBotRight.x), ImMax(bot_right_y, DirtyBotRight.y));
+    }
+    IsDirty = true;
+}
+
 void ImFontTexture::Update(int x, int y, int width, int height, unsigned char* src_pixels)
 {
     IM_ASSERT(x >= 0);
@@ -3046,8 +3097,7 @@ void ImFontTexture::Update(int x, int y, int width, int height, unsigned char* s
     IM_ASSERT(width > 0);
     IM_ASSERT(height > 0);
 
-    float bot_right_x = x + width - 1.f;
-    float bot_right_y = y + height - 1.f;
+    
 
     //Copy pixel data row by row
     unsigned char* dest_pixel = &TexData.Data[(y*TexWidth + x) * 4];
@@ -3057,16 +3107,7 @@ void ImFontTexture::Update(int x, int y, int width, int height, unsigned char* s
         src_pixels = src_pixels + width * 4;
     }
 
-    if (!IsDirty) {
-        DirtyTopLeft = ImVec2(static_cast<float>(x), static_cast<float>(y));
-        DirtyBotRight = ImVec2(bot_right_x, bot_right_y);
-    }
-    else {
-        DirtyTopLeft = ImVec2(ImMin(static_cast<float>(x), DirtyTopLeft.x), ImMin(static_cast<float>(y), DirtyTopLeft.y));
-        DirtyBotRight = ImVec2(ImMax(bot_right_x, DirtyBotRight.x), ImMax(bot_right_y, DirtyBotRight.y));
-    }
-    IsDirty = true;
-    
+    MarkAsDirty(x, y, width, height);   
 }
 
 
@@ -3138,8 +3179,8 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
 }
 
 // FIXME-DYNAMICFONT: Add support for software mouse cursor
-void ImGui::RenderMouseCursor(ImDrawList* /*draw_list*/, ImVec2 /*pos*/, float /*scale*/, ImGuiMouseCursor /*mouse_cursor*/, ImU32 /*col_fill*/, ImU32 /*col_border*/, ImU32 /*col_shadow*/)
-{/*
+void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
+{
     if (mouse_cursor == ImGuiMouseCursor_None)
         return;
     IM_ASSERT(mouse_cursor > ImGuiMouseCursor_None && mouse_cursor < ImGuiMouseCursor_COUNT);
@@ -3149,14 +3190,14 @@ void ImGui::RenderMouseCursor(ImDrawList* /*draw_list*/, ImVec2 /*pos*/, float /
     if (font_atlas->GetMouseCursorTexData(mouse_cursor, &offset, &size, &uv[0], &uv[2]))
     {
         pos -= offset;
-        const ImTextureID tex_id = font_atlas->TexID;
+        const ImTextureID tex_id = font_atlas->FontTextures.front()->TexID;
         draw_list->PushTextureID(tex_id);
         draw_list->AddImage(tex_id, pos + ImVec2(1, 0) * scale, pos + (ImVec2(1, 0) + size) * scale,    uv[2], uv[3], col_shadow);
         draw_list->AddImage(tex_id, pos + ImVec2(2, 0) * scale, pos + (ImVec2(2, 0) + size) * scale,    uv[2], uv[3], col_shadow);
         draw_list->AddImage(tex_id, pos,                        pos + size * scale,                     uv[2], uv[3], col_border);
         draw_list->AddImage(tex_id, pos,                        pos + size * scale,                     uv[0], uv[1], col_fill);
         draw_list->PopTextureID();
-    }*/
+    }
 }
 
 // Render an arrow. 'pos' is position of the arrow tip. half_sz.x is length from base to tip. half_sz.y is length on each side.
