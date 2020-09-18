@@ -69,18 +69,20 @@
 //    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
 //    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
 // - TableSetupColumn()                         user submit columns details (optional)
+// - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or Table*Header(): lock all widths, columns positions, clipping rectangles
+//    | TableUpdateDrawChannels()               - setup ImDrawList channels
+//    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
+//    | TableDrawContextMenu()                  - draw right-click context menu
+//-----------------------------------------------------------------------------
 // - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
 //    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
 //    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
 // - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
 // - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableAutoHeaders()
-//    | TableUpdateLayout()                     - lock all widths, columns positions, clipping rectangles. called by the FIRST call to TableNextRow()!
-//    | - TableUpdateDrawChannels()               - setup ImDrawList channels
-//    | - TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
-//    | - TableDrawContextMenu()                  - draw right-click context menu
 //    | TableEndCell()                          - close existing cell if not the first time
 //    | TableBeginCell()                        - enter into current cell
 // - [...]                                      user emit contents
+//-----------------------------------------------------------------------------
 // - EndTable()                                 user ends the table
 //    | TableDrawBorders()                      - draw outer borders, inner vertical borders
 //    | TableReorderDrawChannelsForMerge()      - merge draw channels if clipping isn't required
@@ -1375,7 +1377,6 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
     int merge_group_mask = 0x00;
     MergeGroup merge_groups[4];
     memset(merge_groups, 0, sizeof(merge_groups));
-    bool merge_groups_all_fit_within_inner_rect = (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0;
 
     // 1. Scan channels and take note of those which can be merged
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -1396,7 +1397,8 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
             if (src_channel->_CmdBuffer.Size != 1)
                 continue;
 
-            // Find out the width of this merge group and check if it will fit in our column.
+            // Find out the width of this merge group and check if it will fit in our column
+            // (note that we assume that rendering didn't stray on the left direction. we should need a CursorMinPos to detect it)
             if (!(column->Flags & ImGuiTableColumnFlags_NoClipX))
             {
                 float width_contents;
@@ -1410,28 +1412,15 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
                     continue;
             }
 
-            const int merge_group_dst_n = (is_frozen_h && column_n < table->FreezeColumnsCount ? 0 : 2) + (is_frozen_v ? merge_group_sub_n : 1);
+            const int merge_group_n = (is_frozen_h && column_n < table->FreezeColumnsCount ? 0 : 2) + (is_frozen_v ? merge_group_sub_n : 1);
             IM_ASSERT(channel_no < IMGUI_TABLE_MAX_DRAW_CHANNELS);
-            MergeGroup* merge_group = &merge_groups[merge_group_dst_n];
+            MergeGroup* merge_group = &merge_groups[merge_group_n];
             if (merge_group->ChannelsCount == 0)
                 merge_group->ClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
             merge_group->ChannelsMask.SetBit(channel_no);
             merge_group->ChannelsCount++;
             merge_group->ClipRect.Add(src_channel->_CmdBuffer[0].ClipRect);
-            merge_group_mask |= (1 << merge_group_dst_n);
-
-            // If we end with a single group and hosted by the outer window, we'll attempt to merge our draw command
-            // with the existing outer window command. But we can only do so if our columns all fit within the expected
-            // clip rect, otherwise clipping will be incorrect when ScrollX is disabled.
-            // FIXME-TABLE FIXME-WORKRECT: We are wasting a merge opportunity on tables without scrolling if column don't fit within host clip rect, solely because of the half-padding difference between window->WorkRect and window->InnerClipRect
-
-            // 2019/10/22: (1) This is breaking table_2_draw_calls but I cannot seem to repro what it is attempting to
-            // fix... cf git fce2e8dc "Fixed issue with clipping when outerwindow==innerwindow / support ScrollH without ScrollV."
-            // 2019/10/22: (2) Clamping code in TableUpdateLayout() seemingly made this not necessary...
-#if 0
-            if (column->MinX < table->InnerClipRect.Min.x || column->MaxX > table->InnerClipRect.Max.x)
-                merge_groups_all_fit_within_inner_rect = false;
-#endif
+            merge_group_mask |= (1 << merge_group_n);
         }
 
         // Invalidate current draw channel
@@ -1460,10 +1449,6 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
     // 2. Rewrite channel list in our preferred order
     if (merge_group_mask != 0)
     {
-        // Conceptually we want to test if only 1 bit of merge_group_mask is set, but with no freezing we know it's always going to be group 3.
-        // We need to test for !is_frozen because any unfitting column will not be part of a merge group, so testing for merge_group_mask isn't enough.
-        const bool may_extend_clip_rect_to_host_rect = (merge_group_mask == (1 << 3)) && !is_frozen_v && !is_frozen_h;
-
         // Use shared temporary storage so the allocation gets amortized
         g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - 1);
         ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
@@ -1475,16 +1460,28 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
             if (int merge_channels_count = merge_groups[merge_group_n].ChannelsCount)
             {
                 MergeGroup* merge_group = &merge_groups[merge_group_n];
-                ImRect merge_clip_rect = merge_groups[merge_group_n].ClipRect;
-                if (may_extend_clip_rect_to_host_rect)
-                {
-                    IM_ASSERT(merge_group_n == 3);
-                    //GetOverlayDrawList()->AddRect(table->HostClipRect.Min, table->HostClipRect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 3.0f);
-                    //GetOverlayDrawList()->AddRect(table->InnerClipRect.Min, table->InnerClipRect.Max, IM_COL32(0, 255, 0, 200), 0.0f, ~0, 1.0f);
-                    //GetOverlayDrawList()->AddRect(merge_clip_rect.Min, merge_clip_rect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 2.0f);
-                    merge_clip_rect.Add(merge_groups_all_fit_within_inner_rect ? table->HostClipRect : table->InnerClipRect);
-                    //GetOverlayDrawList()->AddRect(merge_clip_rect.Min, merge_clip_rect.Max, IM_COL32(0, 255, 0, 200));
-                }
+                ImRect merge_clip_rect = merge_group->ClipRect;
+
+                // Extend outer-most clip limits to match those of host, so draw calls can be merged even if
+                // outer-most columns have some outer padding offsetting them from their parent ClipRect.
+                // The principal cases this is dealing with are:
+                // - On a same-window table (not scrolling = single group), all fitting columns ClipRect -> will extend and match host ClipRect -> will merge
+                // - Columns can use padding and have left-most ClipRect.Min.x and right-most ClipRect.Max.x != from host ClipRect -> will extend and match host ClipRect -> will merge
+                // FIXME-TABLE FIXME-WORKRECT: We are wasting a merge opportunity on tables without scrolling if column doesn't fit
+                // within host clip rect, solely because of the half-padding difference between window->WorkRect and window->InnerClipRect.
+                if ((merge_group_n & 2) == 0 || !is_frozen_h)
+                    merge_clip_rect.Min.x = ImMin(merge_clip_rect.Min.x, table->HostClipRect.Min.x);
+                if ((merge_group_n & 1) == 0 || !is_frozen_v)
+                    merge_clip_rect.Min.y = ImMin(merge_clip_rect.Min.y, table->HostClipRect.Min.y);
+                if ((merge_group_n & 2) != 0)
+                    merge_clip_rect.Max.x = ImMax(merge_clip_rect.Max.x, table->HostClipRect.Max.x);
+                if ((merge_group_n & 1) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
+                    merge_clip_rect.Max.y = ImMax(merge_clip_rect.Max.y, table->HostClipRect.Max.y);
+#if 0
+                GetOverlayDrawList()->AddRect(merge_group->ClipRect.Min, merge_group->ClipRect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 1.0f);
+                GetOverlayDrawList()->AddLine(merge_group->ClipRect.Min, merge_clip_rect.Min, IM_COL32(255, 100, 0, 200));
+                GetOverlayDrawList()->AddLine(merge_group->ClipRect.Max, merge_clip_rect.Max, IM_COL32(255, 100, 0, 200));
+#endif
                 remaining_count -= merge_group->ChannelsCount;
                 for (int n = 0; n < IM_ARRAYSIZE(remaining_mask.Storage); n++)
                     remaining_mask.Storage[n] &= ~merge_group->ChannelsMask.Storage[n];
