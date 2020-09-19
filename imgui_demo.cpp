@@ -3711,7 +3711,7 @@ void ImGui::ShowFontSelector(const char* label)
 static void NodeFont(ImFont* font)
 {
     ImGuiIO& io = ImGui::GetIO();
-    //ImGuiStyle& style = ImGui::GetStyle();
+    ImGuiStyle& style = ImGui::GetStyle();
     bool font_details_opened = ImGui::TreeNode(font, "Font: \"%s\"\n%.2f px, %d glyphs, %d file(s)",
         (font->ConfigDataIndex > -1) ? font->ContainerAtlas->ConfigData[font->ConfigDataIndex].Name : "", 13.f, font->Glyphs.Size, 1);
     ImGui::SameLine(); if (ImGui::SmallButton("Set as default")) { io.FontDefault = font; }
@@ -3722,9 +3722,8 @@ static void NodeFont(ImFont* font)
     ImGui::PushFont(font);
     ImGui::Text("The quick brown fox jumps over the lazy dog");
     ImGui::PopFont();
-    // FIXME-DYNAMICFONT: Add support for font scale
-    static float temp_f = 1.f;
-    ImGui::DragFloat("Font scale", /* &font->Scale */ &temp_f, 0.005f, 0.3f, 2.0f, "%.1f");   // Scale only this font
+
+    ImGui::DragFloat("Font scale", &font->Scale, 0.005f, 0.3f, 2.0f, "%.1f");   // Scale only this font
     ImGui::SameLine(); HelpMarker(
         "Note than the default embedded font is NOT meant to be scaled.\n\n"
         "Font are currently rendered into bitmaps at a given size at the time of building the atlas. "
@@ -3738,13 +3737,14 @@ static void NodeFont(ImFont* font)
     // FIXME-DYNAMICFONT: Add support for font metrics 
 //    const int surface_sqrt = (int)sqrtf((float)font->MetricsTotalSurface);
 //    ImGui::Text("Texture Area: about %d px ~%dx%d px", font->MetricsTotalSurface, surface_sqrt, surface_sqrt);
-/*    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
-        if (font->ConfigData)
-            if (const ImFontConfig* cfg = &font->ConfigData[config_i])
-                ImGui::BulletText("Input %d: \'%s\', Oversample: (%d,%d), PixelSnapH: %d",
-                    config_i, cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
+//    for (int config_i = 0; config_i < font->ConfigDataCount; config_i++)
+    if (font->ConfigDataIndex != -1)
+        if (const ImFontConfig* cfg = &font->ContainerAtlas->ConfigData[font->ConfigDataIndex])
+            ImGui::BulletText("Input: \'%s\', Oversample: (%d,%d), PixelSnapH: %d",
+                /*config_i,*/ cfg->Name, cfg->OversampleH, cfg->OversampleV, cfg->PixelSnapH);
     if (ImGui::TreeNode("Glyphs", "Glyphs (%d)", font->Glyphs.Size))
     {
+        float font_size = ImGui::GetFontSize();
         // Display all glyphs of the fonts in separate pages of 256 characters
         const ImU32 glyph_col = ImGui::GetColorU32(ImGuiCol_Text);
         for (unsigned int base = 0; base <= IM_UNICODE_CODEPOINT_MAX; base += 256)
@@ -3752,21 +3752,22 @@ static void NodeFont(ImFont* font)
             // Skip ahead if a large bunch of glyphs are not present in the font (test in chunks of 4k)
             // This is only a small optimization to reduce the number of iterations when IM_UNICODE_MAX_CODEPOINT
             // is large // (if ImWchar==ImWchar32 we will do at least about 272 queries here)
-            if (!(base & 4095) && font->IsGlyphRangeUnused(base, base + 4095))
+            /*if (!(base & 4095) && font->IsGlyphRangeUnused(base, base + 4095))
             {
                 base += 4096 - 256;
                 continue;
-            }
+            }*/
 
             int count = 0;
+            printf("crash?\n");
             for (unsigned int n = 0; n < 256; n++)
-                if (font->FindGlyphNoFallback((ImWchar)(base + n)))
+                if (font->FindGlyphNoFallback((ImWchar)(base + n), font_size))
                     count++;
             if (count <= 0)
                 continue;
             if (!ImGui::TreeNode((void*)(intptr_t)base, "U+%04X..U+%04X (%d %s)", base, base + 255, count, count > 1 ? "glyphs" : "glyph"))
                 continue;
-            float cell_size = font->FontSize * 1;
+            float cell_size = font_size * 1;
             float cell_spacing = style.ItemSpacing.y;
             ImVec2 base_pos = ImGui::GetCursorScreenPos();
             ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -3776,7 +3777,7 @@ static void NodeFont(ImFont* font)
                 // available here and thus cannot easily generate a zero-terminated UTF-8 encoded string.
                 ImVec2 cell_p1(base_pos.x + (n % 16) * (cell_size + cell_spacing), base_pos.y + (n / 16) * (cell_size + cell_spacing));
                 ImVec2 cell_p2(cell_p1.x + cell_size, cell_p1.y + cell_size);
-                const ImFontGlyph* glyph = font->FindGlyphNoFallback((ImWchar)(base + n));
+                const ImFontGlyph* glyph = font->FindGlyphNoFallback((ImWchar)(base + n), font_size);
                 draw_list->AddRect(cell_p1, cell_p2, glyph ? IM_COL32(255, 255, 255, 100) : IM_COL32(255, 255, 255, 50));
                 if (glyph)
                     font->RenderChar(draw_list, cell_size, cell_p1, glyph_col, (ImWchar)(base + n));
@@ -3785,10 +3786,10 @@ static void NodeFont(ImFont* font)
                     ImGui::BeginTooltip();
                     ImGui::Text("Codepoint: U+%04X", base + n);
                     ImGui::Separator();
-                    ImGui::Text("Visible: %d", glyph->Visible);
+                    //ImGui::Text("Visible: %d", glyph->Visible);
                     ImGui::Text("AdvanceX: %.1f", glyph->AdvanceX);
                     ImGui::Text("Pos: (%.2f,%.2f)->(%.2f,%.2f)", glyph->X0, glyph->Y0, glyph->X1, glyph->Y1);
-                    ImGui::Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
+                    //ImGui::Text("UV: (%.3f,%.3f)->(%.3f,%.3f)", glyph->U0, glyph->V0, glyph->U1, glyph->V1);
                     ImGui::EndTooltip();
                 }
             }
@@ -3796,7 +3797,7 @@ static void NodeFont(ImFont* font)
             ImGui::TreePop();
         }
         ImGui::TreePop();
-    }*/
+    }
     ImGui::TreePop();
 }
 

@@ -6225,7 +6225,7 @@ void ImGui::SetCurrentFont(ImFont* font)
 
     ImFontAtlas* atlas = g.Font->ContainerAtlas;
     g.DrawListSharedData.TexUvWhitePixel = atlas->TexUvWhitePixel;
-//    g.DrawListSharedData.TexUvLines = atlas->TexUvLines;
+    g.DrawListSharedData.TexUvLines = atlas->TexUvLines;
     g.DrawListSharedData.Font = g.Font;
     g.DrawListSharedData.FontSize = g.FontSize;
 }
@@ -6237,7 +6237,6 @@ void ImGui::PushFont(ImFont* font)
         font = GetDefaultFont();
     SetCurrentFont(font);
     g.FontStack.push_back(font);
-//    g.CurrentWindow->DrawList->PushTextureID(font->ContainerAtlas->TexID);
 }
 
 void  ImGui::PopFont()

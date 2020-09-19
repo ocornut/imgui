@@ -1672,7 +1672,6 @@ ImFontConfig::ImFontConfig()
 // [SECTION] ImFontAtlas
 //-----------------------------------------------------------------------------
 
-// FIXME-DYNAMICFONT: Add support for software mouse cursor
 // A work of art lies ahead! (. = white layer, X = black layer, others are blank)
 // The 2x2 white texels on the top left are the ones we'll use everywhere in Dear ImGui to render filled shapes.
 const int FONT_ATLAS_DEFAULT_TEX_DATA_W = 108; // Actual texture will be 2 times that + 1 spacing.
@@ -1724,37 +1723,86 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
 ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
 {
     Locked = false;
-    Flags = ImFontAtlasFlags_NoBakedLines;
+    Flags = 0;
     // FIXME-DYNAMICFONT: Add support for glyph padding
     //TexGlyphPadding = 1;
     FontSize = 13.f;
 
     TexWidth = tex_width;
     TexHeight = tex_height;
-    TexUvScale = ImVec2(1.f/static_cast<float>(TexWidth), 1.f/static_cast<float>(TexHeight));
-    TexUvWhitePixel = ImVec2(0.5f * TexUvScale.x, 0.5f * TexUvScale.y); //The white pixel is always in the top left corner
-    // FIXME-DYNAMICFONT: Add support for softwarte mouse cursor and baked antialiased lines
+    TexUvScale = ImVec2(1.f/ (float) TexWidth, 1.f/ (float) (TexHeight));
     PackIdMouseCursors = PackIdLines = -1;
 
-    //Create data for an empty font texture
+    //Create data for an empty font texture. This will be used every time a new texture is spawned.
     EmptyFontTexturePixelData.resize(TexWidth*TexHeight * 4, 0);
-    unsigned char* pixel = EmptyFontTexturePixelData.Data;
-    pixel[0] = pixel[1] = pixel[2] = pixel[3] = 255; //Create the white pixel in the top left corner
-
+    
     //Create first font texture
     FontTextures.push_back(IM_NEW(ImFontTexture(TexWidth, TexHeight, EmptyFontTexturePixelData.Data)));
 
+    //If we bake lines the mouse cursor rect should have the same height as the pyramid to make sure the pyramid is not on a separate line
+    if (!(this->Flags & ImFontAtlasFlags_NoMouseCursors))
+        PackIdMouseCursors = AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, ImMax(FONT_ATLAS_DEFAULT_TEX_DATA_H, (this->Flags & ImFontAtlasFlags_NoBakedLines) ? 0 : IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1));
+    else
+        PackIdMouseCursors = AddCustomRectRegular(2, ImMax(FONT_ATLAS_DEFAULT_TEX_DATA_H, (this->Flags & ImFontAtlasFlags_NoBakedLines) ? 0 : IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1));    
+        
     //Render mouse cursors
-    if (!(this->Flags & ImFontAtlasFlags_NoMouseCursors)) {
-        PackIdMouseCursors = AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
+    {
         ImFontAtlasCustomRect* r = this->GetCustomRectByIndex(this->PackIdMouseCursors);
-        // Render/copy pixels
-        IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
-        const int x_for_white = r->X;
-        const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
-        ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
-        ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
+
+        //The mouse cursors must be on the first font texture for this to work
+        IM_ASSERT(r->FontTexture->TexID == FontTextures.front()->TexID);
+
+        if (!(this->Flags & ImFontAtlasFlags_NoMouseCursors)) {
+            // Render/copy pixels
+            const int x_for_white = r->X;
+            const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
+            ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
+            ImFontAtlasBuildRender1bppRectFromString(r->FontTexture, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
+            
+        }
+        else {
+            //Render four white pixels
+            unsigned char* pixel = r->FontTexture->TexData.Data;
+            pixel[0] = pixel[1] = pixel[2] = pixel[3] = pixel[4] = pixel[5] = pixel[6] = pixel[7] = 255; // Top two white pixels
+            pixel+= r->FontTexture->TexWidth * 4;
+            pixel[0] = pixel[1] = pixel[2] = pixel[3] = pixel[4] = pixel[5] = pixel[6] = pixel[7] = 255; // Bottom two white pixels
+        }
         r->FontTexture->MarkAsDirty(r->X, r->Y, r->Width, r->Height);
+        this->TexUvWhitePixel = ImVec2((r->X + 0.5f) * this->TexUvScale.x, (r->Y + 0.5f) * this->TexUvScale.y);
+    }
+
+    //Create baked lines
+    if (!(this->Flags & ImFontAtlasFlags_NoBakedLines)) {
+        this->PackIdLines = this->AddCustomRectRegular(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
+        
+        // This generates a triangular shape in the texture, with the various line widths stacked on top of each other to allow interpolation between them
+        ImFontAtlasCustomRect* r = this->GetCustomRectByIndex(this->PackIdLines);
+        
+        //The lines must be on the first font texture for this to work
+        IM_ASSERT(r->FontTexture->TexID == FontTextures.front()->TexID);
+
+        for (unsigned int n = 0; n < IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1; n++) // +1 because of the zero-width row
+        {
+            // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
+            unsigned int y = n;
+            unsigned int line_width = n;
+            unsigned int pad_left = (r->Width - line_width) / 2;
+            unsigned int pad_right = r->Width - (pad_left + line_width);
+
+            // Write each slice
+            IM_ASSERT(pad_left + line_width + pad_right == r->Width && y < r->Height); // Make sure we're inside the texture bounds before we start writing pixels
+            unsigned char* write_ptr = &r->FontTexture->TexData[(r->X + ((r->Y + y) * r->FontTexture->TexWidth)) * 4]; //Each pixel is 4 bytes (RGBA)
+            memset(write_ptr, 0x00, pad_left*4);
+            memset(write_ptr + (pad_left * 4), 0xFF, line_width * 4);
+            memset(write_ptr + (pad_left + line_width) * 4, 0x00, pad_right * 4);
+
+            // Calculate UVs for this line
+            ImVec2 uv0 = ImVec2((float)(r->X + pad_left - 1), (float)(r->Y + y)) * this->TexUvScale;
+            ImVec2 uv1 = ImVec2((float)(r->X + pad_left + line_width + 1), (float)(r->Y + y + 1)) * this->TexUvScale;
+            float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
+            this->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
+        }
+        
     }
 }
 
@@ -1783,7 +1831,6 @@ void    ImFontAtlas::ClearInputData()
         }
     ConfigData.clear();
     
-    // FIXME-DYNAMICFONT: Add support for CustomRects, software mouse cursor and baked antialiased lines
     CustomRects.clear();
     PackIdMouseCursors = PackIdLines = -1;
 }
@@ -1949,7 +1996,6 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(const char* compressed
     return font;
 }
 
-// FIXME-DYNAMICFONT: Add support for CustomRects
 int ImFontAtlas::AddCustomRectRegular(int width, int height)
 {
     IM_ASSERT(width > 0 && width <= 0xFFFF);
@@ -1969,7 +2015,7 @@ int ImFontAtlas::AddCustomRectRegular(int width, int height)
     return CustomRects.Size - 1; // Return index
 }
 
-// FIXME-DYNAMICFONT: Add support for CustomRects
+// FIXME-DYNAMICFONT: Add support for CustomRectFontGlyphs?
 /*
 int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int height, float advance_x, const ImVec2& offset)
 {
@@ -1990,18 +2036,14 @@ int ImFontAtlas::AddCustomRectFontGlyph(ImFont* font, ImWchar id, int width, int
     return CustomRects.Size - 1; // Return index
 }
 */
-// FIXME-DYNAMICFONT: Add support for CustomRects
-/*
 void ImFontAtlas::CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const
 {
     IM_ASSERT(TexWidth > 0 && TexHeight > 0);   // Font atlas needs to be built before we can calculate UV coordinates
     IM_ASSERT(rect->IsPacked());                // Make sure the rectangle has been packed
-    *out_uv_min = ImVec2((float)rect->X * TexUvScale.x, (float)rect->Y * TexUvScale.y);
-    *out_uv_max = ImVec2((float)(rect->X + rect->Width) * TexUvScale.x, (float)(rect->Y + rect->Height) * TexUvScale.y);
+    *out_uv_min = ImVec2((float)rect->X * rect->FontTexture->TexUvScale.x, (float)rect->Y * rect->FontTexture->TexUvScale.y);
+    *out_uv_max = ImVec2((float)(rect->X + rect->Width) * rect->FontTexture->TexUvScale.x, (float)(rect->Y + rect->Height) * rect->FontTexture->TexUvScale.y);
 }
-*/
 
-// FIXME-DYNAMICFONT: Add support for software mouse cursor
 bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2])
 {
     if (cursor_type <= ImGuiMouseCursor_None || cursor_type >= ImGuiMouseCursor_COUNT)
@@ -2023,51 +2065,6 @@ bool ImFontAtlas::GetMouseCursorTexData(ImGuiMouseCursor cursor_type, ImVec2* ou
     return true;
 }
 
-
-/*
-static void UnpackBitVectorToFlatIndexList(const ImBitVector* in, ImVector<int>* out)
-{
-    IM_ASSERT(sizeof(in->Storage.Data[0]) == sizeof(int));
-    const ImU32* it_begin = in->Storage.begin();
-    const ImU32* it_end = in->Storage.end();
-    for (const ImU32* it = it_begin; it < it_end; it++)
-        if (ImU32 entries_32 = *it)
-            for (ImU32 bit_n = 0; bit_n < 32; bit_n++)
-                if (entries_32 & ((ImU32)1 << bit_n))
-                    out->push_back((int)(((it - it_begin) << 5) + bit_n));
-}
-*/
-
-// FIXME-DYNAMICFONT: Add Support for CustomRects
-/*
-
-void ImFontAtlasBuildPackCustomRects(ImFontAtlas* atlas, void* stbrp_context_opaque)
-{
-    stbrp_context* pack_context = (stbrp_context*)stbrp_context_opaque;
-    IM_ASSERT(pack_context != NULL);
-
-    ImVector<ImFontAtlasCustomRect>& user_rects = atlas->CustomRects;
-    IM_ASSERT(user_rects.Size >= 1); // We expect at least the default custom rects to be registered, else something went wrong.
-
-    ImVector<stbrp_rect> pack_rects;
-    pack_rects.resize(user_rects.Size);
-    memset(pack_rects.Data, 0, (size_t)pack_rects.size_in_bytes());
-    for (int i = 0; i < user_rects.Size; i++)
-    {
-        pack_rects[i].w = user_rects[i].Width;
-        pack_rects[i].h = user_rects[i].Height;
-    }
-    stbrp_pack_rects(pack_context, &pack_rects[0], pack_rects.Size);
-    for (int i = 0; i < pack_rects.Size; i++)
-        if (pack_rects[i].was_packed)
-        {
-            user_rects[i].X = pack_rects[i].x;
-            user_rects[i].Y = pack_rects[i].y;
-            IM_ASSERT(pack_rects[i].w == user_rects[i].Width && pack_rects[i].h == user_rects[i].Height);
-            atlas->TexHeight = ImMax(atlas->TexHeight, pack_rects[i].y + pack_rects[i].h);
-        }
-}
-*/
 void ImFontAtlasBuildRender1bppRectFromString(ImFontTexture* texture, int x, int y, int w, int h, const char* in_str, char in_marker_char, unsigned char in_marker_pixel_value)
 {
     IM_ASSERT(x >= 0 && x + w <= texture->TexWidth);
@@ -2083,98 +2080,7 @@ void ImFontAtlasBuildRender1bppRectFromString(ImFontTexture* texture, int x, int
         }
         
 }
-/*
-static void ImFontAtlasBuildRenderDefaultTexData(ImFontAtlas* atlas)
-{
-    ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdMouseCursors);
-    IM_ASSERT(r->IsPacked());
 
-    const int w = atlas->TexWidth;
-    if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
-    {
-        // Render/copy pixels
-        IM_ASSERT(r->Width == FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1 && r->Height == FONT_ATLAS_DEFAULT_TEX_DATA_H);
-        const int x_for_white = r->X;
-        const int x_for_black = r->X + FONT_ATLAS_DEFAULT_TEX_DATA_W + 1;
-        ImFontAtlasBuildRender1bppRectFromString(atlas, x_for_white, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, '.', 0xFF);
-        ImFontAtlasBuildRender1bppRectFromString(atlas, x_for_black, r->Y, FONT_ATLAS_DEFAULT_TEX_DATA_W, FONT_ATLAS_DEFAULT_TEX_DATA_H, FONT_ATLAS_DEFAULT_TEX_DATA_PIXELS, 'X', 0xFF);
-    }
-    else
-    {
-        // Render 4 white pixels
-        IM_ASSERT(r->Width == 2 && r->Height == 2);
-        const int offset = (int)r->X + (int)r->Y * w;
-        atlas->TexPixelsAlpha8[offset] = atlas->TexPixelsAlpha8[offset + 1] = atlas->TexPixelsAlpha8[offset + w] = atlas->TexPixelsAlpha8[offset + w + 1] = 0xFF;
-    }
-    atlas->TexUvWhitePixel = ImVec2((r->X + 0.5f) * atlas->TexUvScale.x, (r->Y + 0.5f) * atlas->TexUvScale.y);
-}
-
-// FIXME-DYNAMICFONT: Add support for baked anti-aliased lines
-static void ImFontAtlasBuildRenderLinesTexData(ImFontAtlas* atlas)
-{
-    if (atlas->Flags & ImFontAtlasFlags_NoBakedLines)
-        return;
-
-    // This generates a triangular shape in the texture, with the various line widths stacked on top of each other to allow interpolation between them
-    ImFontAtlasCustomRect* r = atlas->GetCustomRectByIndex(atlas->PackIdLines);
-    IM_ASSERT(r->IsPacked());
-    for (unsigned int n = 0; n < IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1; n++) // +1 because of the zero-width row
-    {
-        // Each line consists of at least two empty pixels at the ends, with a line of solid pixels in the middle
-        unsigned int y = n;
-        unsigned int line_width = n;
-        unsigned int pad_left = (r->Width - line_width) / 2;
-        unsigned int pad_right = r->Width - (pad_left + line_width);
-
-        // Write each slice
-        IM_ASSERT(pad_left + line_width + pad_right == r->Width && y < r->Height); // Make sure we're inside the texture bounds before we start writing pixels
-        unsigned char* write_ptr = &atlas->TexPixelsAlpha8[r->X + ((r->Y + y) * atlas->TexWidth)];
-        memset(write_ptr, 0x00, pad_left);
-        memset(write_ptr + pad_left, 0xFF, line_width);
-        memset(write_ptr + pad_left + line_width, 0x00, pad_right);
-
-        // Calculate UVs for this line
-        ImVec2 uv0 = ImVec2((float)(r->X + pad_left - 1), (float)(r->Y + y)) * atlas->TexUvScale;
-        ImVec2 uv1 = ImVec2((float)(r->X + pad_left + line_width + 1), (float)(r->Y + y + 1)) * atlas->TexUvScale;
-        float half_v = (uv0.y + uv1.y) * 0.5f; // Calculate a constant V in the middle of the row to avoid sampling artifacts
-        atlas->TexUvLines[n] = ImVec4(uv0.x, half_v, uv1.x, half_v);
-    }
-}
-*/
-/*
-// Note: this is called / shared by both the stb_truetype and the FreeType builder
-void ImFontAtlasBuildInit(ImFontAtlas* atlas)
-{
-    // Register texture region for mouse cursors or standard white pixels
-    if (atlas->PackIdMouseCursors < 0)
-    {
-        if (!(atlas->Flags & ImFontAtlasFlags_NoMouseCursors))
-            atlas->PackIdMouseCursors = atlas->AddCustomRectRegular(FONT_ATLAS_DEFAULT_TEX_DATA_W * 2 + 1, FONT_ATLAS_DEFAULT_TEX_DATA_H);
-        else
-            atlas->PackIdMouseCursors = atlas->AddCustomRectRegular(2, 2);
-    }
-
-    // Register texture region for thick lines
-    // The +2 here is to give space for the end caps, whilst height +1 is to accommodate the fact we have a zero-width row
-    if (atlas->PackIdLines < 0)
-    {
-        if (!(atlas->Flags & ImFontAtlasFlags_NoBakedLines))
-            atlas->PackIdLines = atlas->AddCustomRectRegular(IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 2, IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1);
-    }
-}
-*/
-
-/*
-static void UnpackAccumulativeOffsetsIntoRanges(int base_codepoint, const short* accumulative_offsets, int accumulative_offsets_count, ImWchar* out_ranges)
-{
-    for (int n = 0; n < accumulative_offsets_count; n++, out_ranges += 2)
-    {
-        out_ranges[0] = out_ranges[1] = (ImWchar)(base_codepoint + accumulative_offsets[n]);
-        base_codepoint += accumulative_offsets[n];
-    }
-    out_ranges[0] = 0;
-}
-*/
 //-----------------------------------------------------------------------------
 // [SECTION] ImFont
 //-----------------------------------------------------------------------------
@@ -2313,14 +2219,13 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     int i, g, advance, lsb, x0, y0, x1, y1;
     int gw, gh;
     unsigned char* bmp = NULL;
-    unsigned int h;
     
     // Find code point and size using lookup table.
-    h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
+    unsigned int h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
     i = this->lut[h];
     while (i != -1)
     {
-        if (this->Glyphs[i].Codepoint == codepoint && this->Glyphs[i].GlyphSize == static_cast<short>(size))
+        if (this->Glyphs[i].Codepoint == codepoint && this->Glyphs[i].GlyphSize == (short) size)
             return &this->Glyphs[i];
         i = this->Glyphs[i].NextGlyph;
     }
@@ -2348,10 +2253,10 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     // Init glyph.
     ImFontGlyph glyph;
     glyph.Codepoint = codepoint;
-    glyph.GlyphSize = static_cast<short>(size);
+    glyph.GlyphSize = (short) size;
     glyph.FontTexture = texture;
-    glyph.X0 = static_cast<float>(br->x);
-    glyph.Y0 = static_cast<float>(br->y);
+    glyph.X0 = (float) (br->x);
+    glyph.Y0 = (float) (br->y);
     glyph.X1 = glyph.X0 + gw;
     glyph.Y1 = glyph.Y0 + gh;
     glyph.AdvanceX = scale * advance;
@@ -2367,7 +2272,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
 
     ImFontGlyph* glyph_ptr = &this->Glyphs.back();
 
-    this->lut[h] = static_cast<int>(this->Glyphs.size()) - 1;
+    this->lut[h] = this->Glyphs.size() - 1;
 
     // Rasterize 
     ImVector<unsigned char> bmp_vec;
@@ -2381,24 +2286,28 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
         ImVector<unsigned char> pixels = u8_to_rgba(bmp, gw, gh);
 
         // Update texture
-        texture->Update(static_cast<int>(glyph_ptr->X0), static_cast<int>(glyph_ptr->Y0), gw, gh, pixels.Data);
+        texture->Update((int) glyph_ptr->X0, (int) glyph_ptr->Y0, gw, gh, pixels.Data);
     }
 
     return glyph_ptr;
 }
 
-// FIXME-DYNAMICFONT: Add support for FindGlyphNoFallback
-/*
-const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar c) const
+
+const ImFontGlyph* ImFont::FindGlyphNoFallback(ImWchar codepoint, float size) const
 {
-    if (c >= (size_t)IndexLookup.Size)
-        return NULL;
-    const ImWchar i = IndexLookup.Data[c];
-    if (i == (ImWchar)-1)
-        return NULL;
-    return &Glyphs.Data[i];
+    // Find code point and size using lookup table.
+    unsigned int h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
+    int i = this->lut[h];
+    while (i != -1)
+    {
+        if (this->Glyphs[i].Codepoint == codepoint && this->Glyphs[i].GlyphSize == (short) size)
+            return &this->Glyphs[i];
+        i = this->Glyphs[i].NextGlyph;
+    }
+
+    return NULL;
 }
-*/
+
 const char* ImFont::CalcWordWrapPositionA(float size, const char* text, const char* text_end, float wrap_width) 
 {
     // Simple word-wrapping for English, not full-featured. Please submit failing cases!
@@ -2605,19 +2514,19 @@ ImFontQuad GetQuad(ImFontGlyph const& glyph, float x, float y)
     int rx, ry;
     float scale = 1.0f;
 
-    rx = static_cast<int>(floorf(x + scale * glyph.Xoff));
-    ry = static_cast<int>(floorf(y + scale * glyph.Yoff));
+    rx = (int) floorf(x + scale * glyph.Xoff);
+    ry = (int) floorf(y + scale * glyph.Yoff);
 
     ImFontQuad result;
-    result.x0 = static_cast<float>(rx);
-    result.y0 = static_cast<float>(ry);
-    result.x1 = static_cast<float>(rx) + scale * (glyph.X1 - glyph.X0);
-    result.y1 = static_cast<float>(ry) + scale * (glyph.Y1 - glyph.Y0);
+    result.x0 = (float) (rx);
+    result.y0 = (float) (ry);
+    result.x1 = (float) (rx) + scale * (glyph.X1 - glyph.X0);
+    result.y1 = (float) (ry) + scale * (glyph.Y1 - glyph.Y0);
 
-    result.u0 = static_cast<float>(glyph.X0);
-    result.v0 = static_cast<float>(glyph.Y0);
-    result.u1 = static_cast<float>(glyph.X1);
-    result.v1 = static_cast<float>(glyph.Y1);
+    result.u0 = (float) (glyph.X0);
+    result.v0 = (float) (glyph.Y0);
+    result.u1 = (float) (glyph.X1);
+    result.v1 = (float) (glyph.Y1);
     return result;
 }
 
@@ -2636,7 +2545,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         return;
     if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size))
     {
-        float ascender = Ascent * size;
+        float ascender = IM_FLOOR(Ascent * size);
         pos.x = (float)(int)pos.x + DisplayOffset.x;
         pos.y = (float)(int)pos.y + DisplayOffset.y;
         int texture_width = glyph->FontTexture->TexWidth;
@@ -3041,7 +2950,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
         memcpy(draw_list->_VtxWritePtr, rlist_ref->VtxBuffer.Data, rlist_ref->VtxBuffer.size_in_bytes());
 
         for (int current_index = 0; current_index < rlist_ref->IdxBuffer.Size; current_index++) {
-            draw_list->_IdxWritePtr[current_index] = static_cast<ImDrawIdx>(rlist_ref->IdxBuffer[current_index] + draw_list->_VtxCurrentIdx);
+            draw_list->_IdxWritePtr[current_index] = (ImDrawIdx) (rlist_ref->IdxBuffer[current_index] + draw_list->_VtxCurrentIdx);
         }
 
         draw_list->_VtxWritePtr += rlist_ref->VtxBuffer.Size;
@@ -3064,7 +2973,8 @@ ImFontTexture::ImFontTexture(int width, int height, unsigned char* pixels)
     memcpy(TexData.Data, pixels, TexWidth*TexHeight * 4);
     IsDirty = true;
     DirtyTopLeft = ImVec2(0.f, 0.f);
-    DirtyBotRight = ImVec2(static_cast<float>(TexWidth) - 1.f, static_cast<float>(TexHeight) - 1.f);
+    DirtyBotRight = ImVec2((float) (TexWidth) - 1.f, (float) (TexHeight) - 1.f);
+    TexUvScale = ImVec2(1.f/(float) (TexWidth), 1.f/(float) (TexHeight));
 }
 
 
@@ -3178,7 +3088,6 @@ void ImGui::RenderCheckMark(ImDrawList* draw_list, ImVec2 pos, ImU32 col, float 
     draw_list->PathStroke(col, false, thickness);
 }
 
-// FIXME-DYNAMICFONT: Add support for software mouse cursor
 void ImGui::RenderMouseCursor(ImDrawList* draw_list, ImVec2 pos, float scale, ImGuiMouseCursor mouse_cursor, ImU32 col_fill, ImU32 col_border, ImU32 col_shadow)
 {
     if (mouse_cursor == ImGuiMouseCursor_None)

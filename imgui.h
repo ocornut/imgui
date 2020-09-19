@@ -2303,6 +2303,7 @@ struct ImFontTexture
     ImVec2                  DirtyTopLeft;
     ImVec2                  DirtyBotRight;
     ImVector<unsigned char> TexData;
+    ImVec2                  TexUvScale;
 };
 
 // Load and rasterize multiple TTF/OTF fonts into a same texture. The font atlas will build a single texture holding:
@@ -2355,7 +2356,7 @@ struct ImFontAtlas
 
     // FIXME-DYNAMICFONT: Add support for CustomRects and software mouse cursor
     // [Internal]
-    //IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
+    IMGUI_API void              CalcCustomRectUV(const ImFontAtlasCustomRect* rect, ImVec2* out_uv_min, ImVec2* out_uv_max) const;
     IMGUI_API bool              GetMouseCursorTexData(ImGuiMouseCursor cursor, ImVec2* out_offset, ImVec2* out_size, ImVec2 out_uv_border[2], ImVec2 out_uv_fill[2]);
 
     //-------------------------------------------
@@ -2378,14 +2379,11 @@ struct ImFontAtlas
     ImVector<ImFont*>           Fonts;              // Hold all the fonts returned by AddFont*. Fonts[0] is the default font upon calling ImGui::NewFrame(), use ImGui::PushFont()/PopFont() to change the current font.
     ImVector<ImFontTexture*>    FontTextures;
                                                     
-    // FIXME-DYNAMICFONT: Add support for CustomRects
     ImVector<ImFontAtlasCustomRect> CustomRects;    // Rectangles for packing custom texture data into the atlas.
     ImVector<ImFontConfig>      ConfigData;         // Configuration data
-    // FIXME-DYNAMICFONT: Add support for anti-aliased lines
-    //ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
+    ImVec4                      TexUvLines[IM_DRAWLIST_TEX_LINES_WIDTH_MAX + 1];  // UVs for baked anti-aliased lines
 
     // [Internal] Packing data
-    // FIXME-DYNAMICFONT: Add support for software mouse cursor
     int                         PackIdMouseCursors; // Custom texture rectangle ID for white pixel and mouse cursors
     int                         PackIdLines;        // Custom texture rectangle ID for baked anti-aliased lines
 
@@ -2427,7 +2425,7 @@ struct ImFont
     IMGUI_API ~ImFont();
     IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c, float size);
     // FIXME-DYNAMICFONT: Add support for findglyphnofallback
-    //IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c) const;
+    IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c, float size) const;
     float                       GetCharAdvance(ImWchar c, float size);
     bool                        IsLoaded() const                    { return ContainerAtlas != NULL; }
     const char*                 GetDebugName() const                { return (ContainerAtlas && ConfigDataIndex > -1) ? ContainerAtlas->ConfigData[ConfigDataIndex].Name : "<unknown>"; }
