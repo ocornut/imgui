@@ -82,6 +82,8 @@ Other Changes:
   (This is also necessary to support full multi/range-select/drag and drop operations.)
 - Tab Bar: Keep tab item close button visible while dragging a tab (independent of hovering state).
 - Tab Bar: Fixed a small bug where closing a tab that is not selected would leave a tab hole for a frame.
+- Tab Bar: Fixed a small bug where scrolling buttons (with ImGuiTabBarFlags_FittingPolicyScroll) would
+  generate an unnecessary extra draw call.
 - Tab Bar: Fixed a small bug where toggling a tab bar from Reorderable to not Reorderable would leave
   tabs reordered in the tab list popup. [@Xipiryon]
 - Columns: Fix inverted ClipRect being passed to renderer when using certain primitives inside of
