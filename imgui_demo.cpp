@@ -2977,11 +2977,11 @@ static void ShowDemoWindowPopups()
             ImGui::EndPopup();
         }
 
-        // We can also use OpenPopupContextItem() which is the same as BeginPopupContextItem() but without the
+        // We can also use OpenPopupOnItemClick() which is the same as BeginPopupContextItem() but without the
         // Begin() call. So here we will make it that clicking on the text field with the right mouse button (1)
         // will toggle the visibility of the popup above.
         ImGui::Text("(You can also right-click me to open the same popup as above.)");
-        ImGui::OpenPopupContextItem("item context menu", 1);
+        ImGui::OpenPopupOnItemClick("item context menu", 1);
 
         // When used after an item that has an ID (e.g.Button), we can skip providing an ID to BeginPopupContextItem().
         // BeginPopupContextItem() will use the last item ID as the popup ID.
@@ -5178,7 +5178,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             // Context menu (under default mouse threshold)
             ImVec2 drag_delta = ImGui::GetMouseDragDelta(ImGuiMouseButton_Right);
             if (opt_enable_context_menu && ImGui::IsMouseReleased(ImGuiMouseButton_Right) && drag_delta.x == 0.0f && drag_delta.y == 0.0f)
-                ImGui::OpenPopupContextItem("context");
+                ImGui::OpenPopupOnItemClick("context");
             if (ImGui::BeginPopup("context"))
             {
                 if (adding_line)

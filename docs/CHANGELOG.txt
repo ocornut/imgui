@@ -42,6 +42,8 @@ Breaking Changes:
   It was also getting in the way of better font scaling, so let's get rid of it now! 
   If you used DisplayOffset it was probably in association to rasterizing a font at a specific size,
   in which case the corresponding offset may be reported into GlyphOffset. (#1619)
+- Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
+  For variety of reason this is more self-explanatory.
 
 Other Changes:
 
@@ -210,6 +212,7 @@ Breaking Changes:
   note that this is a Beta api and will likely be reworked in order to support multi-DPI across
   multiple monitors.
 - Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
+  [NOTE: THIS WAS REVERTED IN 1.79]
 - Removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor
   of BeginPopupContextWindow(const char*, ImGuiPopupFlags flags) with ImGuiPopupFlags_NoOverItems.
   Kept inline redirection function (will obsolete).
