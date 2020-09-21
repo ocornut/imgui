@@ -1716,7 +1716,7 @@ struct ImGuiTabItem
     int                 LastFrameSelected;      // This allows us to infer an ordered list of the last activated tabs with little maintenance
     float               Offset;                 // Position relative to beginning of tab
     float               Width;                  // Width currently displayed
-    float               ContentWidth;           // Width of actual contents, stored during BeginTabItem() call
+    float               ContentWidth;           // Width of label, stored during BeginTabItem() call
     ImS16               NameOffset;             // When Window==NULL, offset to name within parent ImGuiTabBar::TabsNames
     ImS8                BeginOrder;             // BeginTabItem() order, used to re-order tabs after toggling ImGuiTabBarFlags_Reorderable
     ImS8                IndexDuringLayout;      // Index only used during TabBarLayout()
@@ -1727,13 +1727,13 @@ struct ImGuiTabItem
 
 struct ImGuiTabBarSection
 {
-    int                 TabStartIndex;
-    int                 TabCount;
-    float               Width;
-    float               WidthIdeal;
-    float               InnerSpacing;   // Horizontal ItemInnerSpacing, used by Leading/Trailing section, to correctly offset from Central section
-    float               WidthWithSpacing() const { return Width + InnerSpacing; }
+    int                 TabStartIndex;          // Index of first tab in this section.
+    int                 TabCount;               // Number of tabs in this section.
+    float               Width;                  // Width of this section (after shrinking down)
+    float               Spacing;                // Horizontal spacing at the end of the section.
+
     ImGuiTabBarSection(){ memset(this, 0, sizeof(*this)); }
+    float               WidthWithSpacing() const { return Width + Spacing; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
@@ -1758,12 +1758,12 @@ struct ImGuiTabBar
     ImGuiID             ReorderRequestTabId;
     ImS8                ReorderRequestDir;
     ImS8                TabsActiveCount;        // Number of tabs submitted this frame.
-    ImGuiTabBarSection  Sections[3];
     bool                WantLayout;
     bool                VisibleTabWasSubmitted;
-    short               LastTabItemIdx;         // Index of last BeginTabItem() tab for use by EndTabItem() 
     bool                TabsAddedNew;           // Set to true when a new tab item or button has been added to the tab bar during last frame
+    short               LastTabItemIdx;         // Index of last BeginTabItem() tab for use by EndTabItem() 
     ImVec2              FramePadding;           // style.FramePadding locked at the time of BeginTabBar()
+    ImGuiTabBarSection  Sections[3];            // Layout sections: Leading, Central, Trailing
     ImGuiTextBuffer     TabsNames;              // For non-docking tab bar we re-append names in a contiguous buffer.
 
     ImGuiTabBar();

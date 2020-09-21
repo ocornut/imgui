@@ -2363,6 +2363,15 @@ static void ShowDemoWindowLayout()
                 for (int i = 0; i < 3; i++)
                     active_tabs.push_back(next_tab_id++);
 
+            // TabItemButton() and Leading/Trailing flags are distinct features which we will demo together.
+            // (It is possible to submit regular tabs with Leading/Trailing flags, or TabItemButton tabs without Leading/Trailing flags...
+            // but they tend to make more sense together)
+            static bool show_leading_button = true;
+            static bool show_trailing_button = true;
+            ImGui::Checkbox("Show Leading TabItemButton()", &show_leading_button);
+            ImGui::Checkbox("Show Trailing TabItemButton()", &show_trailing_button);
+
+            // Expose some other flags which are useful to showcase how they interact with Leading/Trailing tabs
             static ImGuiTabBarFlags tab_bar_flags = ImGuiTabBarFlags_AutoSelectNewTabs | ImGuiTabBarFlags_Reorderable | ImGuiTabBarFlags_FittingPolicyResizeDown;
             ImGui::CheckboxFlags("ImGuiTabBarFlags_TabListPopupButton", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_TabListPopupButton);
             if (ImGui::CheckboxFlags("ImGuiTabBarFlags_FittingPolicyResizeDown", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_FittingPolicyResizeDown))
@@ -2370,18 +2379,12 @@ static void ShowDemoWindowLayout()
             if (ImGui::CheckboxFlags("ImGuiTabBarFlags_FittingPolicyScroll", (unsigned int*)&tab_bar_flags, ImGuiTabBarFlags_FittingPolicyScroll))
                 tab_bar_flags &= ~(ImGuiTabBarFlags_FittingPolicyMask_ ^ ImGuiTabBarFlags_FittingPolicyScroll);
 
-            static bool show_leading_button = true;
-            static bool show_trailing_button = true;
-            ImGui::Checkbox("Show Leading TabItemButton()", &show_leading_button);
-            ImGui::Checkbox("Show Trailing TabItemButton()", &show_trailing_button);
-
             if (ImGui::BeginTabBar("MyTabBar", tab_bar_flags))
             {
-                // Demo Leading Tabs: click the "?" button to open a menu
-                // Note that it is possible to submit regular non-button tabs with Leading/Trailing flags,
-                // or Button without Leading/Trailing flags... but they tend to make more sense together.
-                if (show_leading_button && ImGui::TabItemButton("?", ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_NoTooltip))
-                    ImGui::OpenPopup("MyHelpMenu");
+                // Demo a Leading TabItemButton(): click the "?" button to open a menu
+                if (show_leading_button)
+                    if (ImGui::TabItemButton("?", ImGuiTabItemFlags_Leading | ImGuiTabItemFlags_NoTooltip))
+                        ImGui::OpenPopup("MyHelpMenu");
                 if (ImGui::BeginPopup("MyHelpMenu"))
                 {
                     ImGui::Selectable("Hello!");
@@ -2389,8 +2392,10 @@ static void ShowDemoWindowLayout()
                 }
 
                 // Demo Trailing Tabs: click the "+" button to add a new tab (in your app you may want to use a font icon instead of the "+")
-                if (show_trailing_button && ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip))
-                    active_tabs.push_back(next_tab_id++);
+                // Note that we submit it before the regular tabs, but because of the ImGuiTabItemFlags_Trailing flag it will always appear at the end.
+                if (show_trailing_button)
+                    if (ImGui::TabItemButton("+", ImGuiTabItemFlags_Trailing | ImGuiTabItemFlags_NoTooltip))
+                        active_tabs.push_back(next_tab_id++); // Add new tab
 
                 // Submit our regular tabs
                 for (int n = 0; n < active_tabs.Size; )
@@ -2411,7 +2416,7 @@ static void ShowDemoWindowLayout()
                 }
 
                 ImGui::EndTabBar();
-           }
+            }
             ImGui::Separator();
             ImGui::TreePop();
         }
