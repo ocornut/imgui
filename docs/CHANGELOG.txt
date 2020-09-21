@@ -44,6 +44,9 @@ Breaking Changes:
   in which case the corresponding offset may be reported into GlyphOffset. (#1619)
 - Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
   For variety of reason this is more self-explanatory.
+- Removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it
+  is inconsistent with other popups API and makes others misleading. It's also and unnecessary: you can
+  use IsWindowAppearing() after BeginPopup() for a similar result.
 
 Other Changes:
 

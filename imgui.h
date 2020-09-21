@@ -620,7 +620,7 @@ namespace ImGui
     //  - CloseCurrentPopup() is called by default by Selectable()/MenuItem() when activated (FIXME: need some options).
     //  - Use ImGuiPopupFlags_NoOpenOverExistingPopup to avoid opening a popup if there's already one at the same level. This is equivalent to e.g. testing for !IsAnyPopupOpen() prior to OpenPopup().
     IMGUI_API void          OpenPopup(const char* str_id, ImGuiPopupFlags popup_flags = 0);                     // call to mark popup as open (don't call every frame!).
-    IMGUI_API bool          OpenPopupOnItemClick(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1);   // helper to open popup when clicked on last item. return true when just opened. (note: actually triggers on the mouse _released_ event to be consistent with popup behaviors)
+    IMGUI_API void          OpenPopupOnItemClick(const char* str_id = NULL, ImGuiPopupFlags popup_flags = 1);   // helper to open popup when clicked on last item. return true when just opened. (note: actually triggers on the mouse _released_ event to be consistent with popup behaviors)
     IMGUI_API void          CloseCurrentPopup();                                                                // manually close the popup we have begin-ed into.
     // Popups: open+begin combined functions helpers
     //  - Helpers to do OpenPopup+BeginPopup where the Open action is triggered by e.g. hovering an item and right-clicking.
@@ -1714,7 +1714,7 @@ struct ImGuiPayload
 namespace ImGui
 {
     // OBSOLETED in 1.79 (from August 2020)
-    static inline bool  OpenPopupContextItem(const char* str_id = NULL, ImGuiMouseButton mb = 1) { return OpenPopupOnItemClick(str_id, mb); } // Renamed in 1.77, renamed back in 1.79. Sorry!
+    static inline void  OpenPopupContextItem(const char* str_id = NULL, ImGuiMouseButton mb = 1) { OpenPopupOnItemClick(str_id, mb); } // Bool return value removed. Use IsWindowAppearing() in BeginPopup() instead. Renamed in 1.77, renamed back in 1.79. Sorry!
     // OBSOLETED in 1.78 (from June 2020)
     // Old drag/sliders functions that took a 'float power = 1.0' argument instead of flags.
     // For shared code, you can version check at compile-time with `#if IMGUI_VERSION_NUM >= 17704`.
