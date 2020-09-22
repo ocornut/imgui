@@ -1729,11 +1729,10 @@ struct ImGuiTabBarSection
 {
     int                 TabStartIndex;          // Index of first tab in this section.
     int                 TabCount;               // Number of tabs in this section.
-    float               Width;                  // Width of this section (after shrinking down)
+    float               Width;                  // Sum of width of tabs in this section (after shrinking down)
     float               Spacing;                // Horizontal spacing at the end of the section.
 
     ImGuiTabBarSection(){ memset(this, 0, sizeof(*this)); }
-    float               WidthWithSpacing() const { return Width + Spacing; }
 };
 
 // Storage for a tab bar (sizeof() 92~96 bytes)
