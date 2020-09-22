@@ -10563,10 +10563,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             {
                 ImDrawList* draw_list = ImGui::GetForegroundDrawList();
                 draw_list->AddRect(tab_bar->BarRect.Min, tab_bar->BarRect.Max, IM_COL32(255, 255, 0, 255));
-                if (tab_bar->Sections[0].Width > 0.0f)
-                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Min.x + tab_bar->Sections[0].Width, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Min.x + tab_bar->Sections[0].Width, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
-                if (tab_bar->Sections[2].Width > 0.0f)
-                    draw_list->AddLine(ImVec2(tab_bar->BarRect.Max.x - tab_bar->Sections[2].Width, tab_bar->BarRect.Min.y), ImVec2(tab_bar->BarRect.Max.x - tab_bar->Sections[2].Width, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
+                draw_list->AddLine(ImVec2(tab_bar->ScrollingRectMinX, tab_bar->BarRect.Min.y), ImVec2(tab_bar->ScrollingRectMinX, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
+                draw_list->AddLine(ImVec2(tab_bar->ScrollingRectMaxX, tab_bar->BarRect.Min.y), ImVec2(tab_bar->ScrollingRectMaxX, tab_bar->BarRect.Max.y), IM_COL32(0, 255, 0, 255));
             }
             if (open)
             {
