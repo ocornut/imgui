@@ -104,6 +104,19 @@ Other changes:
  VERSION 1.79 WIP (In Progress)
 -----------------------------------------------------------------------
 
+Breaking Changes:
+
+- Fonts: Removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied
+  after scaling and not very meaningful/useful outside of being needed by the default ProggyClean font.
+  It was also getting in the way of better font scaling, so let's get rid of it now! 
+  If you used DisplayOffset it was probably in association to rasterizing a font at a specific size,
+  in which case the corresponding offset may be reported into GlyphOffset. (#1619)
+- Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
+  For variety of reason this is more self-explanatory.
+- Removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it
+  is inconsistent with other popups API and makes others misleading. It's also and unnecessary: you can
+  use IsWindowAppearing() after BeginPopup() for a similar result.
+
 Other Changes:
 
 - Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
@@ -111,6 +124,7 @@ Other Changes:
 - Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
 - Scrolling: Fixed SetScrollHere functions edge snapping when called during a frame where ContentSize
   is changing (issue introduced in 1.78). (#3452).
+- InputText: Added support for Page Up/Down in InputTextMultiline(). (#3430) [@Xipiryon]
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
 - InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
   (note that InputText() already returns true on edit, the callback is useful mainly to manipulate the
@@ -119,27 +133,53 @@ Other Changes:
   It is a rather unusual or useless combination of features but no reason it shouldn't work!
 - InputText: Fixed minor scrolling glitch when erasing trailing lines in InputTextMultiline().
 - InputText: Fixed cursor being partially covered after using Ctrl+End key.
-- InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454).
+- InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454)
+- InputText: Made pressing Down arrow on the last line when it doesn't have a carriage return not move to
+  the end of the line (so it is consistent with Up arrow, and behave same as Notepad and Visual Studio. 
+  Note that some other text editors instead would move the crusor to the end of the line). [@Xipiryon]
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
 - SliderInt, SliderScalar: Fixed reaching of maximum value with inverted integer min/max ranges, both
   with signed and unsigned types. Added reverse Sliders to Demo. (#3432, #3449) [@rokups]
+- Text: Bypass unnecessary formatting when using the TextColored()/TextWrapped()/TextDisabled() helpers
+  with a "%s" format string. (#3466)
 - BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
   so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
 - TreeNode, CollapsingHeader: Made clicking on arrow toggle toggle the open state on the Mouse Down event
   rather than the Mouse Down+Up sequence, even if the _OpenOnArrow flag isn't set. This is standard behavior
   and amends the change done in 1.76 which only affected cases were _OpenOnArrow flag was set.
   (This is also necessary to support full multi/range-select/drag and drop operations.)
+- Tab Bar: Added TabItemButton() to submit tab that behave like a button. (#3291) [@Xipiryon]
+- Tab Bar: Added ImGuiTabItemFlags_Leading and ImGuiTabItemFlags_Trailing flags to position tabs or button 
+  at either end of the tab bar. Those tabs won't be part of the scrolling region, and when reordering cannot
+  be moving outside of their section. Most often used with TabItemButton(). (#3291) [@Xipiryon]
+- Tab Bar: Added ImGuiTabItemFlags_NoReorder flag to disable reordering a given tab.
 - Tab Bar: Keep tab item close button visible while dragging a tab (independent of hovering state).
+- Tab Bar: Fixed a small bug where closing a tab that is not selected would leave a tab hole for a frame.
+- Tab Bar: Fixed a small bug where scrolling buttons (with ImGuiTabBarFlags_FittingPolicyScroll) would
+  generate an unnecessary extra draw call.
 - Tab Bar: Fixed a small bug where toggling a tab bar from Reorderable to not Reorderable would leave
   tabs reordered in the tab list popup. [@Xipiryon]
+- Columns: Fix inverted ClipRect being passed to renderer when using certain primitives inside of
+  a fully clipped column. (#3475) [@szreder]
+- Popups, Tooltips: Fix edge cases issues with positionning popups and tooltips when they are larger than
+  viewport on either or both axises. [@Rokups]
+- Fonts: AddFontDefault() adjust its vertical offset based on floor(size/13) instead of always +1.
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
+- Backends: OpenGL3: Fix to avoid compiling/calling glBindSampler() on ES or pre 3.3 contexts which have 
+  the defines set by a loader. (#3467, #1985) [@jjwebb]
 - Backends: Vulkan: Some internal refactor aimed at allowing multi-viewport feature to create their
   own render pass. (#3455, #3459) [@FunMiles]
+- Backends: DX12: Clarified that imgui_impl_dx12 can be compiled on 32-bit systems by redefining
+  the ImTextureID to be 64-bit (e.g. '#define ImTextureID ImU64' in imconfig.h). (#301)
+- Backends: DX12: Fix debug layer warning when scissor rect is zero-sized. (#3472, #3462) [@StoneWolf]
 - Examples: Vulkan: Reworked buffer resize handling, fix for Linux/X11. (#3390, #2626) [@RoryO]
 - Examples: Vulkan: Switch validation layer to use "VK_LAYER_KHRONOS_validation" instead of
   "VK_LAYER_LUNARG_standard_validation" which is deprecated (#3459) [@FunMiles]
+- Examples: DX12: Enable breaking on any warning/error when debug interface is enabled.
+- Examples: DX12: Added '#define ImTextureID ImU64' in project and build files to also allow building
+  on 32-bit systems. Added project to default Visual Studio solution file. (#301)
 
 
 -----------------------------------------------------------------------
@@ -252,6 +292,7 @@ Breaking Changes:
   note that this is a Beta api and will likely be reworked in order to support multi-DPI across
   multiple monitors.
 - Renamed OpenPopupOnItemClick() to OpenPopupContextItem(). Kept inline redirection function (will obsolete).
+  [NOTE: THIS WAS REVERTED IN 1.79]
 - Removed BeginPopupContextWindow(const char*, int mouse_button, bool also_over_items) in favor
   of BeginPopupContextWindow(const char*, ImGuiPopupFlags flags) with ImGuiPopupFlags_NoOverItems.
   Kept inline redirection function (will obsolete).
@@ -1535,7 +1576,7 @@ Breaking Changes:
   - removed the default global context and font atlas instance, which were confusing for users of DLL reloading and users of multiple contexts.
 - Renamed ImGuiStyleVar_Count_ to ImGuiStyleVar_COUNT and ImGuiMouseCursor_Count_ to ImGuiMouseCursor_COUNT for consistency with other public enums.
 - Fonts: Moved sample TTF files from extra_fonts/ to misc/fonts/. If you loaded files directly from the imgui repo you may need to update your paths.
-- Fonts: changed ImFont::DisplayOffset.y to defaults to 0 instead of +1. Fixed vertical rounding of Ascent/Descent to match TrueType renderer.
+- Fonts: Changed ImFont::DisplayOffset.y to defaults to 0 instead of +1. Fixed vertical rounding of Ascent/Descent to match TrueType renderer.
   If you were adding or subtracting (not assigning) to ImFont::DisplayOffset check if your fonts are correctly aligned vertically. (#1619)
 - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment.
 - Obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).

@@ -142,13 +142,6 @@ ImGui::SliderFloat("float", &f, 0.0f, 1.0f);
 ![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_02_jp.png)
 <br>_(settings: Dark style (left), Light style (right) / Font: NotoSansCJKjp-Medium, 20px / Rounding: 5)_
 
-
-**Offset font vertically by altering the `io.Font->DisplayOffset` value:**
-```cpp
-ImFont* font = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
-font->DisplayOffset.y = 1;   // Render 1 pixel down
-```
-
 **Font Atlas too large?**
 
 - If you have very large number of glyphs or multiple fonts, the texture may become too big for your graphics API. The typical result of failing to upload a texture is if every glyphs appears as white rectangles.
@@ -337,13 +330,13 @@ DroidSans.ttf
 ProggyClean.ttf
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting: Size = 13.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 13.0, GlyphOffset.y = +1
   http://www.proggyfonts.net/
 
 ProggyTiny.ttf
   Copyright (c) 2004, 2005 Tristan Grimmer
   MIT License
-  recommended loading setting: Size = 10.0, DisplayOffset.Y = +1
+  recommended loading setting: Size = 10.0, GlyphOffset.y = +1
   http://www.proggyfonts.net/
 
 Karla-Regular.ttf
