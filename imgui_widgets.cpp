@@ -7082,16 +7082,22 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
     for (int section_n = 0; section_n < 3; section_n++)
         tab_bar->WidthAllTabsIdeal += sections[section_n].Width + sections[section_n].Spacing;
 
-    // We want to know here if we'll need the scrolling buttons, to adjust available width with resizable leading/trailing
-    bool scrolling_buttons = (tab_bar->WidthAllTabsIdeal > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll);
-    float scrolling_buttons_width = scrolling_buttons ? GetTabBarScrollingButtonSize().x * 2.0f : 0.0f;
+    // Horizontal scrolling buttons
+    // (Note that TabBarScrollButtons() will alter BarRect.Max.x)
+    if ((tab_bar->WidthAllTabsIdeal > tab_bar->BarRect.GetWidth() && tab_bar->Tabs.Size > 1) && !(tab_bar->Flags & ImGuiTabBarFlags_NoTabListScrollingButtons) && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyScroll))
+        if (ImGuiTabItem* scroll_track_selected_tab = TabBarScrollingButtons(tab_bar))
+        {
+            scroll_track_selected_tab_id = scroll_track_selected_tab->ID;
+            if (!(scroll_track_selected_tab->Flags & ImGuiTabItemFlags_Button))
+                tab_bar->SelectedTabId = scroll_track_selected_tab_id;
+        }
 
     // Compute width
-    // FIXME: This is a mess, couldn't TabBarScrollingButtons() just be called earlier?
-    bool central_section_is_visible = (sections[0].WidthWithSpacing() + sections[2].WidthWithSpacing()) < (tab_bar->BarRect.GetWidth() - scrolling_buttons_width);
+    // FIXME: This is a mess
+    bool central_section_is_visible = (sections[0].WidthWithSpacing() + sections[2].WidthWithSpacing()) < tab_bar->BarRect.GetWidth();
     float width_excess = central_section_is_visible
         ? ImMax(sections[1].WidthWithSpacing() - (tab_bar->BarRect.GetWidth() - sections[0].WidthWithSpacing() - sections[2].WidthWithSpacing()), 0.0f)
-        : (sections[0].WidthWithSpacing() + sections[2].WidthWithSpacing()) - (tab_bar->BarRect.GetWidth() - scrolling_buttons_width);
+        : (sections[0].WidthWithSpacing() + sections[2].WidthWithSpacing()) - tab_bar->BarRect.GetWidth();
 
     if (width_excess > 0.0f && (tab_bar->Flags & ImGuiTabBarFlags_FittingPolicyResizeDown || !central_section_is_visible))
     {
@@ -7126,7 +7132,7 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         // FIXME: The +1.0f is in TabBarScrollingButtons()
         ImGuiTabBarSection* section = &sections[section_n];
         if (section_n == 2)
-            next_tab_offset = ImMin(tab_bar->BarRect.GetWidth() - section->Width - (scrolling_buttons ? scrolling_buttons_width + 1.0f : 0.0f), next_tab_offset);
+            next_tab_offset = ImMin(tab_bar->BarRect.GetWidth() - section->Width, next_tab_offset);
 
         for (int tab_n = 0; tab_n < section->TabCount; tab_n++)
         {
@@ -7137,15 +7143,6 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         tab_bar->WidthAllTabs += ImMax(section->WidthWithSpacing(), 0.0f);
         next_tab_offset += section->Spacing;
     }
-
-    // Horizontal scrolling buttons
-    if (scrolling_buttons)
-        if (ImGuiTabItem* scroll_track_selected_tab = TabBarScrollingButtons(tab_bar)) // NB: Will alter BarRect.Max.x
-        {
-            scroll_track_selected_tab_id = scroll_track_selected_tab->ID;
-            if (!(scroll_track_selected_tab->Flags & ImGuiTabItemFlags_Button))
-                tab_bar->SelectedTabId = scroll_track_selected_tab_id;
-        }
 
     // If we have lost the selected tab, select the next most recently active one
     if (found_selected_tab_id == false)
