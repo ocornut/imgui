@@ -124,10 +124,10 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
     if ((flags & ImGuiTableFlags_NoHostExtendY) && (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0)
         flags &= ~ImGuiTableFlags_NoHostExtendY;
 
-    // Adjust flags: we don't support NoClipX with (FreezeColumns > 0)
+    // Adjust flags: we don't support NoClip with (FreezeColumns > 0)
     // We could with some work but it doesn't appear to be worth the effort.
-    if (flags & ImGuiTableFlags_ScrollFreezeColumnsMask_)
-        flags &= ~ImGuiTableFlags_NoClipX;
+    //if (flags & ImGuiTableFlags_ScrollFreezeColumnsMask_)
+    //    flags &= ~ImGuiTableFlags_NoClip;
 
     return flags;
 }
@@ -503,7 +503,7 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
     // - FreezeRows || FreezeColumns  --> 1+N*2 (unless scrolling value is zero)
     // - FreezeRows && FreezeColunns  --> 2+N*2 (unless scrolling value is zero)
     const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
-    const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClipX) ? 1 : table->ColumnsVisibleCount;
+    const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClip) ? 1 : table->ColumnsVisibleCount;
     const int channels_for_background = 1;
     const int channels_for_dummy = (table->ColumnsVisibleCount < table->ColumnsCount || table->VisibleUnclippedMaskByIndex != table->VisibleMaskByIndex) ? +1 : 0;
     const int channels_total = channels_for_background + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
@@ -518,7 +518,7 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
         {
             column->DrawChannelRowsBeforeFreeze = (ImS8)(draw_channel_current);
             column->DrawChannelRowsAfterFreeze = (ImS8)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row : 0));
-            if (!(table->Flags & ImGuiTableFlags_NoClipX))
+            if (!(table->Flags & ImGuiTableFlags_NoClip))
                 draw_channel_current++;
         }
         else
@@ -910,7 +910,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
     // Initial state
     ImGuiWindow* inner_window = table->InnerWindow;
-    if (table->Flags & ImGuiTableFlags_NoClipX)
+    if (table->Flags & ImGuiTableFlags_NoClip)
         table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 1);
     else
         inner_window->DrawList->PushClipRect(inner_window->ClipRect.Min, inner_window->ClipRect.Max, false);
@@ -1017,7 +1017,7 @@ void    ImGui::EndTable()
     table->WorkRect.Max.y = ImMax(table->WorkRect.Max.y, table->OuterRect.Max.y);
     table->LastOuterHeight = table->OuterRect.GetHeight();
 
-    if (!(flags & ImGuiTableFlags_NoClipX))
+    if (!(flags & ImGuiTableFlags_NoClip))
         inner_window->DrawList->PopClipRect();
     inner_window->ClipRect = inner_window->DrawList->_ClipRectStack.back();
 
@@ -1050,7 +1050,7 @@ void    ImGui::EndTable()
 
     // Flatten channels and merge draw calls
     table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 0);
-    if ((table->Flags & ImGuiTableFlags_NoClipX) == 0)
+    if ((table->Flags & ImGuiTableFlags_NoClip) == 0)
         TableReorderDrawChannelsForMerge(table);
     table->DrawSplitter.Merge(inner_window->DrawList);
 
@@ -1808,7 +1808,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         window->DC.CursorPos.y = ImMax(window->DC.CursorPos.y, table->RowPosY2);
 
     window->SkipItems = column->SkipItems;
-    if (table->Flags & ImGuiTableFlags_NoClipX)
+    if (table->Flags & ImGuiTableFlags_NoClip)
     {
         table->DrawSplitter.SetCurrentChannel(window->DrawList, 1);
     }
