@@ -69,6 +69,7 @@
 //    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
 //    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
 // - TableSetupColumn()                         user submit columns details (optional)
+// - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
 // - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or Table*Header(): lock all widths, columns positions, clipping rectangles
 //    | TableUpdateDrawChannels()               - setup ImDrawList channels
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
@@ -113,21 +114,9 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
     if (flags & ImGuiTableFlags_Resizable)
         flags |= ImGuiTableFlags_BordersInnerV;
 
-    // Adjust flags: disable top rows freezing if there's no scrolling.
-    // We could want to assert if ScrollFreeze was set without the corresponding scroll flag, but that would hinder demos.
-    if ((flags & ImGuiTableFlags_ScrollX) == 0)
-        flags &= ~ImGuiTableFlags_ScrollFreezeColumnsMask_;
-    if ((flags & ImGuiTableFlags_ScrollY) == 0)
-        flags &= ~ImGuiTableFlags_ScrollFreezeRowsMask_;
-
     // Adjust flags: disable NoHostExtendY if we have any scrolling going on
     if ((flags & ImGuiTableFlags_NoHostExtendY) && (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0)
         flags &= ~ImGuiTableFlags_NoHostExtendY;
-
-    // Adjust flags: we don't support NoClip with (FreezeColumns > 0)
-    // We could with some work but it doesn't appear to be worth the effort.
-    //if (flags & ImGuiTableFlags_ScrollFreezeColumnsMask_)
-    //    flags &= ~ImGuiTableFlags_NoClip;
 
     return flags;
 }
@@ -290,11 +279,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->BackgroundClipRect = table->InnerClipRect;
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
-    table->FreezeRowsRequest = (ImS8)((flags & ImGuiTableFlags_ScrollFreezeRowsMask_) >> ImGuiTableFlags_ScrollFreezeRowsShift_);
-    table->FreezeRowsCount = (inner_window->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
-    table->FreezeColumnsRequest = (ImS8)((flags & ImGuiTableFlags_ScrollFreezeColumnsMask_) >> ImGuiTableFlags_ScrollFreezeColumnsShift_);
-    table->FreezeColumnsCount = (inner_window->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
-    table->IsFreezeRowsPassed = (table->FreezeRowsCount == 0);
+    table->FreezeRowsRequest = table->FreezeRowsCount = 0; // This will be setup by TableSetupScrollFreeze(), if any
+    table->FreezeColumnsRequest = table->FreezeColumnsCount = 0;
+    table->IsFreezeRowsPassed = true;
     table->DeclColumnsCount = 0;
     table->RightMostVisibleColumn = -1;
 
@@ -485,6 +472,22 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     // the column fitting to wait until the first visible frame of the child container (may or not be a good thing).
     if (want_column_auto_fit && table->OuterWindow != table->InnerWindow)
         table->InnerWindow->SkipItems = false;
+}
+
+void ImGui::TableSetupScrollFreeze(int columns, int rows)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL && "Need to call TableSetupColumn() after BeginTable()!");
+    IM_ASSERT(table->IsLayoutLocked == false && "Need to call call TableSetupColumn() before first row!");
+    IM_ASSERT(columns >= 0 && columns < IMGUI_TABLE_MAX_COLUMNS);
+    IM_ASSERT(rows >= 0 && rows < 128); // Arbitrary limit
+
+    table->FreezeColumnsRequest = (table->Flags & ImGuiTableFlags_ScrollX) ? (ImS8)columns : 0;
+    table->FreezeColumnsCount = (table->InnerWindow->Scroll.x != 0.0f) ? table->FreezeColumnsRequest : 0;
+    table->FreezeRowsRequest = (table->Flags & ImGuiTableFlags_ScrollY) ? (ImS8)rows : 0;
+    table->FreezeRowsCount = (table->InnerWindow->Scroll.y != 0.0f) ? table->FreezeRowsRequest : 0;
+    table->IsFreezeRowsPassed = (table->FreezeRowsCount == 0);
 }
 
 void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
@@ -1527,7 +1530,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableSetupColumn() after BeginTable()!");
-    IM_ASSERT(!table->IsLayoutLocked && "Need to call call TableSetupColumn() before first row!");
+    IM_ASSERT(table->IsLayoutLocked == false && "Need to call call TableSetupColumn() before first row!");
     IM_ASSERT(table->DeclColumnsCount >= 0 && table->DeclColumnsCount < table->ColumnsCount && "Called TableSetupColumn() too many times!");
 
     ImGuiTableColumn* column = &table->Columns[table->DeclColumnsCount];

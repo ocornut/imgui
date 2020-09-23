@@ -3630,12 +3630,12 @@ static void ShowDemoWindowTables()
     {
         HelpMarker("Here we activate ScrollY, which will create a child window container to allow hosting scrollable contents.\n\nWe also demonstrate using ImGuiListClipper to virtualize the submission of many items.");
         ImVec2 size = ImVec2(0, ImGui::GetTextLineHeightWithSpacing() * 7);
-        static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollFreezeTopRow | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+        static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeTopRow", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeTopRow);
 
         if (ImGui::BeginTable("##table1", 3, flags, size))
         {
+            ImGui::TableSetupScrollFreeze(0, 1); // Make top row always visible
             ImGui::TableSetupColumn("One", ImGuiTableColumnFlags_None);
             ImGui::TableSetupColumn("Two", ImGuiTableColumnFlags_None);
             ImGui::TableSetupColumn("Three", ImGuiTableColumnFlags_None);
@@ -3665,14 +3665,19 @@ static void ShowDemoWindowTables()
     {
         HelpMarker("When ScrollX is enabled, the default sizing policy becomes ImGuiTableFlags_SizingPolicyFixedX, as automatically stretching columns doesn't make much sense with horizontal scrolling.\n\nAlso note that as of the current version, you will almost always want to enable ScrollY along with ScrollX, because the container window won't automatically extend vertically to fix contents (this may be improved in future versions).");
         ImVec2 size = ImVec2(0, ImGui::GetTextLineHeightWithSpacing() * 10);
-        static ImGuiTableFlags flags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollFreezeTopRow | ImGuiTableFlags_ScrollFreezeLeftColumn | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+        static ImGuiTableFlags flags = ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
+        static int freeze_cols = 1;
+        static int freeze_rows = 1;
         ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeTopRow", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeTopRow);
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeLeftColumn", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeLeftColumn);
+        ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
+        ImGui::DragInt("freeze_cols", &freeze_cols, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);
+        ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
+        ImGui::DragInt("freeze_rows", &freeze_rows, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);
 
         if (ImGui::BeginTable("##table1", 7, flags, size))
         {
-            ImGui::TableSetupColumn("Line #", ImGuiTableColumnFlags_NoHide); // Make the first column not hideable to match our use of ImGuiTableFlags_ScrollFreezeLeftColumn
+            ImGui::TableSetupScrollFreeze(freeze_cols, freeze_rows);
+            ImGui::TableSetupColumn("Line #", ImGuiTableColumnFlags_NoHide); // Make the first column not hideable to match our use of TableSetupScrollFreeze()
             ImGui::TableSetupColumn("One", ImGuiTableColumnFlags_None);
             ImGui::TableSetupColumn("Two", ImGuiTableColumnFlags_None);
             ImGui::TableSetupColumn("Three", ImGuiTableColumnFlags_None);
@@ -3978,7 +3983,6 @@ static void ShowDemoWindowTables()
     {
         static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg;
         //ImGui::CheckboxFlags("ImGuiTableFlags_Scroll", (unsigned int*)&flags, ImGuiTableFlags_Scroll);
-        //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeLeftColumn", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeLeftColumn);
 
         if (ImGui::BeginTable("##3ways", 3, flags))
         {
@@ -4187,7 +4191,7 @@ static void ShowDemoWindowTables()
         static ImGuiTableFlags flags =
             ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_MultiSortable
             | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV
-            | ImGuiTableFlags_ScrollY | ImGuiTableFlags_ScrollFreezeTopRow;
+            | ImGuiTableFlags_ScrollY;
         if (ImGui::BeginTable("##table", 4, flags, ImVec2(0, 250), 0.0f))
         {
             // Declare columns
@@ -4201,6 +4205,7 @@ static void ShowDemoWindowTables()
             ImGui::TableSetupColumn("Name",                                                  ImGuiTableColumnFlags_WidthFixed,   -1.0f, MyItemColumnID_Name);
             ImGui::TableSetupColumn("Action",   ImGuiTableColumnFlags_NoSort               | ImGuiTableColumnFlags_WidthFixed,   -1.0f, MyItemColumnID_Action);
             ImGui::TableSetupColumn("Quantity", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthStretch, -1.0f, MyItemColumnID_Quantity);
+            ImGui::TableSetupScrollFreeze(0, 1); // Make row always visible
 
             // Sort our data if sort specs have been changed!
             if (ImGuiTableSortSpecs* sorts_specs = ImGui::TableGetSortSpecs())
@@ -4246,14 +4251,14 @@ static void ShowDemoWindowTables()
             ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_MultiSortable
             | ImGuiTableFlags_RowBg | ImGuiTableFlags_Borders
             | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY
-            | ImGuiTableFlags_ScrollFreezeTopRow | ImGuiTableFlags_ScrollFreezeLeftColumn
             | ImGuiTableFlags_SizingPolicyFixedX
             ;
 
         enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_FillButton, CT_Selectable };
         static int contents_type = CT_FillButton;
         const char* contents_type_names[] = { "Text", "Button", "SmallButton", "FillButton", "Selectable" };
-
+        static int freeze_cols = 1;
+        static int freeze_rows = 1;
         static int items_count = IM_ARRAYSIZE(template_items_names);
         static ImVec2 outer_size_value = ImVec2(0, 250);
         static float row_min_height = 0.0f; // Auto
@@ -4314,20 +4319,10 @@ static void ShowDemoWindowTables()
             ImGui::Indent();
             ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX);
             ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
-
-            // For the purpose of our "advanced" demo, we expose the 3 freezing variants on both axises instead of only exposing the most common flag.
-            //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeTopRow", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeTopRow);
-            //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollFreezeLeftColumn", (unsigned int*)&flags, ImGuiTableFlags_ScrollFreezeLeftColumn);
-            int freeze_row_count = (flags & ImGuiTableFlags_ScrollFreezeRowsMask_) >> ImGuiTableFlags_ScrollFreezeRowsShift_;
-            int freeze_col_count = (flags & ImGuiTableFlags_ScrollFreezeColumnsMask_) >> ImGuiTableFlags_ScrollFreezeColumnsShift_;
             ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
-            if (ImGui::DragInt("ImGuiTableFlags_ScrollFreezeTopRow/2Rows/3Rows", &freeze_row_count, 0.2f, 0, 3))
-                if (freeze_row_count >= 0 && freeze_row_count <= 3)
-                    flags = (flags & ~ImGuiTableFlags_ScrollFreezeRowsMask_) | (freeze_row_count << ImGuiTableFlags_ScrollFreezeRowsShift_);
+            ImGui::DragInt("freeze_cols", &freeze_cols, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);
             ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
-            if (ImGui::DragInt("ImGuiTableFlags_ScrollFreezeLeftColumn/2Columns/3Columns", &freeze_col_count, 0.2f, 0, 3))
-                if (freeze_col_count >= 0 && freeze_col_count <= 3)
-                    flags = (flags & ~ImGuiTableFlags_ScrollFreezeColumnsMask_) | (freeze_col_count << ImGuiTableFlags_ScrollFreezeColumnsShift_);
+            ImGui::DragInt("freeze_rows", &freeze_rows, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);
 
             ImGui::Unindent();
 
@@ -4386,6 +4381,7 @@ static void ShowDemoWindowTables()
             // Declare columns
             // We use the "user_id" parameter of TableSetupColumn() to specify a user id that will be stored in the sort specifications.
             // This is so our sort function can identify a column given our own identifier. We could also identify them based on their index!
+            ImGui::TableSetupScrollFreeze(freeze_cols, freeze_rows);
             ImGui::TableSetupColumn("ID",          ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed | (lock_first_column_visibility ? ImGuiTableColumnFlags_NoHide : 0), -1.0f, MyItemColumnID_ID);
             ImGui::TableSetupColumn("Name",        ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Name);
             ImGui::TableSetupColumn("Action",      ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Action);
