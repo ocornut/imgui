@@ -305,11 +305,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
 
     // Make table current
-    g.CurrentTableStack.push_back(ImGuiPtrOrIndex(g.Tables.GetIndex(table)));
+    const int table_idx = g.Tables.GetIndex(table);
+    g.CurrentTableStack.push_back(ImGuiPtrOrIndex(table_idx));
     g.CurrentTable = table;
-    outer_window->DC.CurrentTable = table;
+    outer_window->DC.CurrentTableIdx = table_idx;
     if (inner_window != outer_window) // So EndChild() within the inner window can restore the table properly.
-        inner_window->DC.CurrentTable = table;
+        inner_window->DC.CurrentTableIdx = table_idx;
     if ((table_last_flags & ImGuiTableFlags_Reorderable) && !(flags & ImGuiTableFlags_Reorderable))
         table->IsResetDisplayOrderRequest = true;
 
@@ -1116,7 +1117,8 @@ void    ImGui::EndTable()
     IM_ASSERT(g.CurrentWindow == outer_window);
     IM_ASSERT(g.CurrentTable == table);
     g.CurrentTableStack.pop_back();
-    outer_window->DC.CurrentTable = g.CurrentTable = g.CurrentTableStack.Size ? g.Tables.GetByIndex(g.CurrentTableStack.back().Index) : NULL;
+    g.CurrentTable = g.CurrentTableStack.Size ? g.Tables.GetByIndex(g.CurrentTableStack.back().Index) : NULL;
+    outer_window->DC.CurrentTableIdx = g.CurrentTable ? g.Tables.GetIndex(g.CurrentTable) : -1;
 }
 
 // FIXME-TABLE: This is a mess, need to redesign how we render borders.
