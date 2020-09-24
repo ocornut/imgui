@@ -1998,25 +1998,26 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table)
         return;
 
     bool want_separator = false;
-    const int selected_column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
+    const int column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
+    ImGuiTableColumn* column = (column_n != -1) ? &table->Columns[column_n] : NULL;
 
     // Sizing
     if (table->Flags & ImGuiTableFlags_Resizable)
     {
-        if (ImGuiTableColumn* selected_column = (selected_column_n != -1) ? &table->Columns[selected_column_n] : NULL)
+        if (column != NULL)
         {
-            const bool can_resize = !(selected_column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_WidthStretch)) && selected_column->IsVisible;
+            const bool can_resize = !(column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_WidthStretch)) && column->IsVisible;
             if (MenuItem("Size column to fit", NULL, false, can_resize))
-                TableSetColumnAutofit(table, selected_column_n);
+                TableSetColumnAutofit(table, column_n);
         }
 
         if (MenuItem("Size all columns to fit", NULL))
         {
-            for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+            for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
             {
-                ImGuiTableColumn* column = &table->Columns[column_n];
-                if (column->IsVisible)
-                    TableSetColumnAutofit(table, column_n);
+                ImGuiTableColumn* other_column = &table->Columns[other_column_n];
+                if (other_column->IsVisible)
+                    TableSetColumnAutofit(table, other_column_n);
             }
         }
         want_separator = true;
@@ -2030,27 +2031,43 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table)
         want_separator = true;
     }
 
+    // Sorting
+#if 0
+    if ((table->Flags & ImGuiTableFlags_Sortable) && column != NULL && (column->Flags & ImGuiTableColumnFlags_NoSort) == 0)
+    {
+        if (want_separator)
+            Separator();
+        want_separator = true;
+
+        bool append_to_sort_specs = g.IO.KeyShift;
+        if (MenuItem("Sort in Ascending Order", NULL, column->SortOrder != -1 && column->SortDirection == ImGuiSortDirection_Ascending, (column->Flags & ImGuiTableColumnFlags_NoSortAscending) == 0))
+            TableSetColumnSortDirection(table, column_n, ImGuiSortDirection_Ascending, append_to_sort_specs);
+        if (MenuItem("Sort in Descending Order", NULL, column->SortOrder != -1 && column->SortDirection == ImGuiSortDirection_Descending, (column->Flags & ImGuiTableColumnFlags_NoSortDescending) == 0))
+            TableSetColumnSortDirection(table, column_n, ImGuiSortDirection_Descending, append_to_sort_specs);
+    }
+#endif
+
     // Hiding / Visibility
     if (table->Flags & ImGuiTableFlags_Hideable)
     {
         if (want_separator)
             Separator();
-        want_separator = false;
+        want_separator = true;
 
         PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
         {
-            ImGuiTableColumn* column = &table->Columns[column_n];
-            const char* name = TableGetColumnName(table, column_n);
+            ImGuiTableColumn* other_column = &table->Columns[other_column_n];
+            const char* name = TableGetColumnName(table, other_column_n);
             if (name == NULL)
                 name = "<Unknown>";
 
             // Make sure we can't hide the last active column
-            bool menu_item_active = (column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
-            if (column->IsVisible && table->ColumnsVisibleCount <= 1)
+            bool menu_item_active = (other_column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
+            if (other_column->IsVisible && table->ColumnsVisibleCount <= 1)
                 menu_item_active = false;
-            if (MenuItem(name, NULL, column->IsVisible, menu_item_active))
-                column->IsVisibleNextFrame = !column->IsVisible;
+            if (MenuItem(name, NULL, other_column->IsVisible, menu_item_active))
+                other_column->IsVisibleNextFrame = !other_column->IsVisible;
         }
         PopItemFlag();
     }
@@ -2245,7 +2262,17 @@ void    ImGui::TableHeader(const char* label)
 
         // Handle clicking on column header to adjust Sort Order
         if (pressed && table->ReorderColumn != column_n)
-            TableSortSpecsClickColumn(table, column, g.IO.KeyShift);
+        {
+            // Set new sort direction
+            // - If the PreferSortDescending flag is set, we will default to a Descending direction on the first click.
+            // - Note that the PreferSortAscending flag is never checked, it is essentially the default and therefore a no-op.
+            ImGuiSortDirection sort_direction;
+            if (column->SortOrder == -1)
+                sort_direction = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending;
+            else
+                sort_direction = (column->SortDirection == ImGuiSortDirection_Ascending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending;
+            TableSetColumnSortDirection(table, column_n, sort_direction, g.IO.KeyShift);
+        }
     }
 
     // Render clipped label. Clipping here ensure that in the majority of situations, all our header cells will
@@ -2265,38 +2292,29 @@ void    ImGui::TableHeader(const char* label)
         TableOpenContextMenu(table, column_n);
 }
 
-void ImGui::TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* clicked_column, bool add_to_existing_sort_orders)
+// Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
+// the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
+void ImGui::TableSetColumnSortDirection(ImGuiTable* table, int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
 {
     if (!(table->Flags & ImGuiTableFlags_MultiSortable))
-        add_to_existing_sort_orders = false;
+        append_to_sort_specs = false;
 
     ImS8 sort_order_max = 0;
-    if (add_to_existing_sort_orders)
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-            sort_order_max = ImMax(sort_order_max, table->Columns[column_n].SortOrder);
+    if (append_to_sort_specs)
+        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
+            sort_order_max = ImMax(sort_order_max, table->Columns[other_column_n].SortOrder);
 
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    ImGuiTableColumn* column = &table->Columns[column_n];
+    column->SortDirection = (ImS8)sort_direction;
+    if (column->SortOrder == -1 || !append_to_sort_specs)
+        column->SortOrder = append_to_sort_specs ? sort_order_max + 1 : 0;
+
+    for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
     {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (column == clicked_column)
-        {
-            // Set new sort direction and sort order
-            // - If the PreferSortDescending flag is set, we will default to a Descending direction on the first click.
-            // - Note that the PreferSortAscending flag is never checked, it is essentially the default and therefore a no-op.
-            // - Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
-            //   the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
-            if (column->SortOrder == -1)
-                column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
-            else
-                column->SortDirection = (ImU8)((column->SortDirection == ImGuiSortDirection_Ascending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending);
-            if (column->SortOrder == -1 || !add_to_existing_sort_orders)
-                column->SortOrder = add_to_existing_sort_orders ? sort_order_max + 1 : 0;
-        }
-        else if (!add_to_existing_sort_orders)
-        {
-            column->SortOrder = -1;
-        }
-        TableFixColumnSortDirection(column);
+        ImGuiTableColumn* other_column = &table->Columns[other_column_n];
+        if (other_column != column && !append_to_sort_specs)
+            other_column->SortOrder = -1;
+        TableFixColumnSortDirection(other_column);
     }
     table->IsSettingsDirty = true;
     table->IsSortSpecsDirty = true;

@@ -2278,7 +2278,7 @@ namespace ImGui
     IMGUI_API void          TableDrawContextMenu(ImGuiTable* table);
     IMGUI_API void          TableOpenContextMenu(ImGuiTable* table, int column_n);
     IMGUI_API void          TableReorderDrawChannelsForMerge(ImGuiTable* table);
-    IMGUI_API void          TableSortSpecsClickColumn(ImGuiTable* table, ImGuiTableColumn* column, bool add_to_existing_sort_orders);
+    IMGUI_API void          TableSetColumnSortDirection(ImGuiTable* table, int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsBuild(ImGuiTable* table);
     IMGUI_API void          TableBeginRow(ImGuiTable* table);
@@ -2292,7 +2292,7 @@ namespace ImGui
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
 
-    // Tables - Settings
+    // Tables: Settings
     IMGUI_API void                  TableLoadSettings(ImGuiTable* table);
     IMGUI_API void                  TableSaveSettings(ImGuiTable* table);
     IMGUI_API ImGuiTableSettings*   TableGetBoundSettings(ImGuiTable* table);
