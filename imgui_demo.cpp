@@ -3340,7 +3340,8 @@ static void ShowDemoWindowColumns()
         ImGui::BeginChild("##ScrollingRegion", child_size, false, ImGuiWindowFlags_HorizontalScrollbar);
         ImGui::Columns(10);
         int ITEMS_COUNT = 2000;
-        ImGuiListClipper clipper(ITEMS_COUNT);  // Also demonstrate using the clipper for large list
+        ImGuiListClipper clipper; // Also demonstrate using the clipper for large list
+        clipper.Begin(ITEMS_COUNT);
         while (clipper.Step())
         {
             for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
@@ -4330,7 +4331,8 @@ struct ExampleAppConsole
         // To use the clipper we can replace your standard loop:
         //      for (int i = 0; i < Items.Size; i++)
         //   With:
-        //      ImGuiListClipper clipper(Items.Size);
+        //      ImGuiListClipper clipper;
+        //      clipper.Begin(Items.Size);
         //      while (clipper.Step())
         //         for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
         // - That your items are evenly spaced (same height)
@@ -4897,7 +4899,8 @@ static void ShowExampleAppLongText(bool* p_open)
         {
             // Multiple calls to Text(), manually coarsely clipped - demonstrate how to use the ImGuiListClipper helper.
             ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(0, 0));
-            ImGuiListClipper clipper(lines);
+            ImGuiListClipper clipper;
+            clipper.Begin(lines);
             while (clipper.Step())
                 for (int i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
                     ImGui::Text("%i The quick brown fox jumps over the lazy dog", i);
