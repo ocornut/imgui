@@ -75,11 +75,11 @@
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | TableDrawContextMenu()                  - draw right-click context menu
 //-----------------------------------------------------------------------------
-// - TableAutoHeaders() or TableHeader()        user submit a headers row (optional)
+// - TableHeadersRow() or TableHeader()         user submit a headers row (optional)
 //    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
 //    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
 // - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
-// - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableAutoHeaders()
+// - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableHeadersRow()
 //    | TableEndCell()                          - close existing cell if not the first time
 //    | TableBeginCell()                        - enter into current cell
 // - [...]                                      user emit contents
@@ -1867,6 +1867,13 @@ bool    ImGui::TableNextCell()
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
+int ImGui::TableGetColumnCount()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    return table ? table->ColumnsCount : 0;
+}
+
 const char*   ImGui::TableGetColumnName(int column_n)
 {
     ImGuiContext& g = *GImGui;
@@ -2066,18 +2073,20 @@ void    ImGui::TableOpenContextMenu(ImGuiTable* table, int column_n)
 // This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
 // The intent is that advanced users willing to create customized headers would not need to use this helper
 // and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
-void    ImGui::TableAutoHeaders()
+// See 'Demo->Tables->Custom headers' for a demonstration of implementing a custom version of this.
+void    ImGui::TableHeadersRow()
 {
     ImGuiStyle& style = ImGui::GetStyle();
 
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
-    const int columns_count = table->ColumnsCount;
+    IM_ASSERT(table != NULL && "Need to call TableHeadersRow() after BeginTable()!");
 
     // Calculate row height (for the unlikely case that labels may be are multi-line)
-    float row_y1 = GetCursorScreenPos().y;
+    // If we didn't do that, uneven header height would work but their highlight won't cover the full row height.
     float row_height = GetTextLineHeight();
+    const float row_y1 = GetCursorScreenPos().y;
+    const int columns_count = TableGetColumnCount();
     for (int column_n = 0; column_n < columns_count; column_n++)
         if (TableGetColumnIsVisible(column_n))
             row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
@@ -2095,8 +2104,6 @@ void    ImGui::TableAutoHeaders()
         if (!TableSetColumnIndex(column_n))
             continue;
 
-        const char* name = TableGetColumnName(column_n);
-
         // [DEBUG] Test custom user elements
 #if 0
         if (column_n < 2)
@@ -2112,23 +2119,19 @@ void    ImGui::TableAutoHeaders()
 #endif
 
         // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
-        // - in your own code you may omit the PushID/PopID all-together, provided you know you know they won't collide
+        // - in your own code you may omit the PushID/PopID all-together, provided you know they won't collide
         // - table->InstanceCurrent is only >0 when we use multiple BeginTable/EndTable calls with same identifier.
+        const char* name = TableGetColumnName(column_n);
         PushID(table->InstanceCurrent * table->ColumnsCount + column_n);
         TableHeader(name);
         PopID();
     }
 
-    // FIXME-TABLE: This is not user-land code any more + need to explain WHY this is here! (added in fa88f023)
-    //window->SkipItems = table->HostSkipItems;
-
     // Allow opening popup from the right-most section after the last column.
-    // (We don't actually need to use ImGuiHoveredFlags_AllowWhenBlockedByPopup because in reality this is generally
-    // not required anymore.. because popup opening code tends to be reacting on IsMouseReleased() and the click would
-    // already have closed any other popups!)
     // FIXME-TABLE: TableOpenContextMenu() is not public yet.
+    ImVec2 mouse_pos = ImGui::GetMousePos();
     if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
-        if (g.IO.MousePos.y >= row_y1 && g.IO.MousePos.y < row_y1 + row_height)
+        if (mouse_pos.y >= row_y1 && mouse_pos.y < row_y1 + row_height)
             TableOpenContextMenu(table, -1); // Will open a non-column-specific popup.
 }
 
@@ -2145,7 +2148,7 @@ void    ImGui::TableHeader(const char* label)
         return;
 
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && "Need to call TableAutoHeaders() after BeginTable()!");
+    IM_ASSERT(table != NULL && "Need to call TableHeader() after BeginTable()!");
     IM_ASSERT(table->CurrentColumn != -1);
     const int column_n = table->CurrentColumn;
     ImGuiTableColumn* column = &table->Columns[column_n];

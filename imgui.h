@@ -661,7 +661,7 @@ namespace ImGui
     // - 1. Call BeginTable()
     // - 2. Optionally call TableSetupColumn() to submit column name/flags/defaults
     // - 3. Optionally call TableSetupScrollFreeze() to request scroll freezing of columns/rows
-    // - 4. Optionally call TableAutoHeaders() to submit a header row (names will be pulled from data submitted to TableSetupColumns)
+    // - 4. Optionally call TableHeadersRow() to submit a header row (names will be pulled from data submitted to TableSetupColumns)
     // - 4. Populate contents
     //     - In most situations you can use TableNextRow() + TableSetColumnIndex() to start appending into a column.
     //     - If you are using tables as a sort of grid, where every columns is holding the same type of contents,
@@ -678,13 +678,13 @@ namespace ImGui
     // Tables: Headers & Columns declaration
     // - Use TableSetupScrollFreeze() to lock columns (from the right) or rows (from the top) so they stay visible when scrolled.
     // - Use TableSetupColumn() to specify label, resizing policy, default width, id, various other flags etc.
-    //   Important: this will not display anything! The name passed to TableSetupColumn() is used by TableAutoHeaders() and context-menus.
-    // - Use TableAutoHeaders() to create a row and automatically submit a TableHeader() for each column.
+    //   Important: this will not display anything! The name passed to TableSetupColumn() is used by TableHeadersRow() and context-menus.
+    // - Use TableHeadersRow() to create a row and automatically submit a TableHeader() for each column.
     //   Headers are required to perform some interactions: reordering, sorting, context menu (FIXME-TABLE: context menu should work without!)
     // - You may manually submit headers using TableNextRow() + TableHeader() calls, but this is only useful in some advanced cases (e.g. adding custom widgets in header row).
     IMGUI_API void          TableSetupScrollFreeze(int columns, int rows);
     IMGUI_API void          TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = -1.0f, ImU32 user_id = 0);
-    IMGUI_API void          TableAutoHeaders();                         // submit all headers cells based on data provided to TableSetupColumn() + submit context menu
+    IMGUI_API void          TableHeadersRow();                          // submit all headers cells based on data provided to TableSetupColumn() + submit context menu
     IMGUI_API void          TableHeader(const char* label);             // submit one header cell manually (rarely used)
     // Tables: Miscellaneous functions
     // - Most functions taking 'int column_n' treat the default value of -1 as the same as passing the current column index
@@ -692,6 +692,7 @@ namespace ImGui
     //   When 'SpecsDirty == true' you should sort your data. It will be true when sorting specs have changed since last call, or the first time.
     //   Make sure to set 'SpecsDirty = false' after sorting, else you may wastefully sort your data every frame!
     //   Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable().
+    IMGUI_API int           TableGetColumnCount();                      // return number of columns (value passed to BeginTable)
     IMGUI_API const char*   TableGetColumnName(int column_n = -1);      // return NULL if column didn't have a name declared by TableSetupColumn(). Pass -1 to use current column.
     IMGUI_API bool          TableGetColumnIsVisible(int column_n = -1); // return true if column is visible. Same value is also returned by TableNextCell() and TableSetColumnIndex(). Pass -1 to use current column.
     IMGUI_API bool          TableGetColumnIsSorted(int column_n = -1);  // return true if column is included in the sort specs. Rarely used, can be useful to tell if a data change should trigger resort. Equivalent to test ImGuiTableSortSpecs's ->ColumnsMask & (1 << column_n). Pass -1 to use current column.
@@ -1042,7 +1043,7 @@ enum ImGuiTableFlags_
     // Features
     ImGuiTableFlags_None                            = 0,
     ImGuiTableFlags_Resizable                       = 1 << 0,   // Allow resizing columns.
-    ImGuiTableFlags_Reorderable                     = 1 << 1,   // Allow reordering columns (need calling TableSetupColumn() + TableAutoHeaders() or TableHeaders() to display headers)
+    ImGuiTableFlags_Reorderable                     = 1 << 1,   // Allow reordering columns (need calling TableSetupColumn() + TableHeadersRow() to display headers)
     ImGuiTableFlags_Hideable                        = 1 << 2,   // Allow hiding columns (with right-click on header) (FIXME-TABLE: allow without headers).
     ImGuiTableFlags_Sortable                        = 1 << 3,   // Allow sorting on one column (sort_specs_count will always be == 1). Call TableGetSortSpecs() to obtain sort specs.
     ImGuiTableFlags_MultiSortable                   = 1 << 4,   // Allow sorting on multiple columns by holding Shift (sort_specs_count may be > 1). Call TableGetSortSpecs() to obtain sort specs.
