@@ -1949,7 +1949,7 @@ int FONT_InitFont(FontBackEnd *backend, const unsigned char *data, unsigned int 
     req.height = (u_int32_t)13 * 64;
     req.horiResolution = 0;
     req.vertResolution = 0;
-    FT_Request_Size(backend->Face, &req)); 
+    FT_Request_Size(backend->Face, &req); 
     backend->RequestedSize = 13;
 
     // Update font info
@@ -2071,7 +2071,7 @@ void FONT_GetGlyphHMetrics(FontBackEnd *backend, int glyph_index, float scale, i
         req.height = (u_int32_t) target_size * 64;
         req.horiResolution = 0;
         req.vertResolution = 0;
-        FT_Request_Size(backend->Face, &req)) 
+        FT_Request_Size(backend->Face, &req); 
         backend->RequestedSize = target_size;
         changed_size = true;
     }
@@ -2471,8 +2471,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
 
     int i, g, advance, lsb, x0, y0, x1, y1;
     int gw, gh;
-    unsigned char* bmp = NULL;
-    
+     
     // Find code point and size using lookup table.
     unsigned int h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
     i = this->lut[h];
