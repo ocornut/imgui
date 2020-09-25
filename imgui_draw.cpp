@@ -1720,6 +1720,9 @@ static const ImVec2 FONT_ATLAS_DEFAULT_TEX_CURSOR_DATA[ImGuiMouseCursor_COUNT][3
     { ImVec2(91,0), ImVec2(17,22), ImVec2( 5, 0) }, // ImGuiMouseCursor_Hand
 };
 
+void FONT_BackEndInit();
+void FONT_BackEndShutdown();
+
 ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
 {
     Locked = false;
@@ -1804,12 +1807,16 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
         }
         
     }
+
+    FONT_BackEndInit();
 }
 
 ImFontAtlas::~ImFontAtlas()
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
     Clear();
+
+    FONT_BackEndShutdown();
 }
 
 void    ImFontAtlas::ClearInputData()
@@ -1860,6 +1867,265 @@ void    ImFontAtlas::Clear()
     ClearFonts();
 }
 
+//#define IMGUI_ENABLE_FREETYPE
+#ifdef IMGUI_ENABLE_FREETYPE
+#include <ft2build.h>
+#include FT_FREETYPE_H          // <freetype/freetype.h>
+
+// From SDL_ttf: Handy routines for converting from fixed point
+#define FT_CEIL(X)  (((X + 63) & -64) / 64)
+
+static FT_Library g_freetype_library;
+// Font parameters and metrics.
+struct FreeTypeFontInfo
+{
+    u_int32_t    PixelHeight;        // Size this font was generated with.
+    float       Ascender;           // The pixel extents above the baseline in pixels (typically positive).
+    float       Descender;          // The extents below the baseline in pixels (typically negative).
+    float       LineSpacing;        // The baseline-to-baseline distance. Note that it usually is larger than the sum of the ascender and descender taken as absolute values. There is also no guarantee that no glyphs extend above or below subsequent baselines when using this distance. Think of it as a value the designer of the font finds appropriate.
+    float       LineGap;            // The spacing in pixels between one row's descent and the next row's ascent.
+    float       MaxAdvanceWidth;    // This field gives the maximum horizontal cursor advance for all glyphs in the font.
+};
+#endif
+
+struct FontBackEnd {
+    FontBackEnd() {
+#ifdef IMGUI_ENABLE_FREETYPE
+        LoadedGlyph = -1;
+        RequestedSize = -1;
+#else
+        stbtt_backend = IM_NEW(stbtt_fontinfo);
+#endif
+    }
+    ~FontBackEnd() {
+#ifdef IMGUI_ENABLE_FREETYPE
+        FT_Done_Face(Face);
+        Face = NULL;
+#else
+        IM_FREE(stbtt_backend);
+#endif
+    }
+
+#ifdef IMGUI_ENABLE_FREETYPE
+    FT_Face             Face;
+    FreeTypeFontInfo    Info;
+    int                 LoadedGlyph;
+    int                 RequestedSize;
+#else
+    stbtt_fontinfo* stbtt_backend;
+#endif
+};
+
+void FONT_BackEndInit() {
+#ifdef IMGUI_ENABLE_FREETYPE
+    FT_Init_FreeType(&g_freetype_library);
+#endif
+}
+
+void FONT_BackEndShutdown() {
+#ifdef IMGUI_ENABLE_FREETYPE
+    FT_Done_FreeType(g_freetype_library);
+#endif
+}
+
+int FONT_InitFont(FontBackEnd *backend, const unsigned char *data, unsigned int data_size, int offset)
+{
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    FT_Error error = FT_New_Memory_Face(g_freetype_library, (u_int8_t*)data, data_size, 0, &backend->Face);
+    if (error != 0)
+        return 0;
+    error = FT_Select_Charmap(backend->Face, FT_ENCODING_UNICODE);
+    if (error != 0)
+        return 0;
+
+    memset(&backend->Info, 0, sizeof(backend->Info));
+    // Vuhdo: I'm not sure how to deal with font sizes properly. As far as I understand, currently ImGui assumes that the 'pixel_height'
+    // is a maximum height of an any given glyph, i.e. it's the sum of font's ascender and descender. Seems strange to me.
+    // NB: FT_Set_Pixel_Sizes() doesn't seem to get us the same result.
+    FT_Size_RequestRec req;
+    req.type = FT_SIZE_REQUEST_TYPE_REAL_DIM;
+    req.width = 0;
+    req.height = (u_int32_t)13 * 64;
+    req.horiResolution = 0;
+    req.vertResolution = 0;
+    FT_Request_Size(backend->Face, &req)); 
+    backend->RequestedSize = 13;
+
+    // Update font info
+    FT_Size_Metrics metrics = backend->Face->size->metrics;
+    backend->Info.PixelHeight = (u_int32_t)13;
+    backend->Info.Ascender = (float)FT_CEIL(metrics.ascender);
+    backend->Info.Descender = (float)FT_CEIL(metrics.descender);
+    backend->Info.LineSpacing = (float)FT_CEIL(metrics.height);
+    backend->Info.LineGap = (float)FT_CEIL(metrics.height - metrics.ascender + metrics.descender);
+    backend->Info.MaxAdvanceWidth = (float)FT_CEIL(metrics.max_advance);
+    return 1;
+#else
+    return stbtt_InitFont(backend->stbtt_backend, data, offset);
+#endif
+}
+
+
+static ImVector<unsigned char> u8_to_rgba(const unsigned char* pixels, int width, int height, int pitch) {
+    ImVector<unsigned char> TexPixelsRGBA32;
+    TexPixelsRGBA32.resize(width*height * 4, 0);
+
+    const unsigned char* src = pixels;
+    unsigned int* dst = (unsigned int*)(TexPixelsRGBA32.Data);
+    for (int row = 0; row < height; ++row) {
+        for(int col = 0; col < width; ++col) {
+            *dst++ = IM_COL32(255, 255, 255, (unsigned int)(src[col]));
+        }
+        src+= pitch;
+    }
+    return TexPixelsRGBA32;
+}
+
+void FONT_MakeGlyphBitmap(FontBackEnd *backend, ImVector<unsigned char> *final_output, int out_w, int out_h, int out_stride, float scale_x, float scale_y, int glyph_index)
+{
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    bool changed_size = false;
+    int target_size = (int)((float)backend->Info.PixelHeight * scale_y);
+    if(target_size != backend->RequestedSize) {
+        FT_Size_RequestRec req;
+        req.type = FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (u_int32_t) target_size * 64;
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(backend->Face, &req);
+        backend->RequestedSize = target_size;
+        changed_size = true;
+    }
+    
+    if(glyph_index != backend->LoadedGlyph || changed_size)  {
+        FT_Error error = FT_Load_Glyph(backend->Face, glyph_index, FT_LOAD_DEFAULT);
+        if (error) {
+            return;
+        }
+        backend->LoadedGlyph = glyph_index;
+    }
+
+    FT_Error error = FT_Render_Glyph(backend->Face->glyph, FT_RENDER_MODE_NORMAL);
+    if (error != 0) {
+        return;
+    }
+
+    FT_Bitmap* ft_bitmap = &backend->Face->glyph->bitmap;
+    const u_int32_t w = ft_bitmap->width;
+    const u_int32_t h = ft_bitmap->rows;
+    const u_int8_t* src = ft_bitmap->buffer;
+    const u_int32_t src_pitch = ft_bitmap->pitch;
+
+    *final_output = u8_to_rgba(src, w, h, src_pitch);
+#else
+    ImVector<unsigned char> output;
+    output.resize(out_w * out_h, 0);
+    stbtt_MakeGlyphBitmap(backend->stbtt_backend, output.Data, out_w, out_h, out_stride, scale_x, scale_y, glyph_index);
+    *final_output = u8_to_rgba(output.Data, out_w, out_h, out_w);
+#endif
+}
+
+void FONT_GetFontVMetrics(const FontBackEnd *backend, int *ascent, int *descent, int *lineGap)
+{
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    *ascent = backend->Info.Ascender;
+    *descent = backend->Info.Descender;
+    *lineGap = backend->Info.LineGap;
+#else
+    stbtt_GetFontVMetrics(backend->stbtt_backend, ascent, descent, lineGap);
+#endif
+}
+
+
+float FONT_ScaleForPixelHeight(const FontBackEnd *backend, float height) {
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    return height / backend->Info.PixelHeight;
+#else
+    return stbtt_ScaleForPixelHeight(backend->stbtt_backend, height);
+#endif
+}
+
+int FONT_FindGlyphIndex(const FontBackEnd *backend, int codepoint) {
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    return FT_Get_Char_Index(backend->Face, codepoint);
+#else
+    return stbtt_FindGlyphIndex(backend->stbtt_backend, codepoint);
+#endif
+}
+
+void FONT_GetGlyphHMetrics(FontBackEnd *backend, int glyph_index, float scale, int *advanceWidth, int *leftSideBearing) {
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    bool changed_size = false;
+    int target_size = (int)((float)backend->Info.PixelHeight * scale);
+    if(target_size != backend->RequestedSize) {
+        FT_Size_RequestRec req;
+        req.type = FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (u_int32_t) target_size * 64;
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(backend->Face, &req)) 
+        backend->RequestedSize = target_size;
+        changed_size = true;
+    }
+
+    if(glyph_index != backend->LoadedGlyph || changed_size) {
+        FT_Error error = FT_Load_Glyph(backend->Face, glyph_index, FT_LOAD_DEFAULT);
+        if (error)
+            return;
+        backend->LoadedGlyph = glyph_index;
+    }
+
+    FT_GlyphSlot slot = backend->Face->glyph;
+    *advanceWidth = (float)FT_CEIL(slot->advance.x);
+    *leftSideBearing = backend->Face->glyph->bitmap_left;
+#else
+    stbtt_GetGlyphHMetrics(backend->stbtt_backend, glyph_index, advanceWidth, leftSideBearing);
+    *advanceWidth*= scale;
+#endif
+}
+
+void FONT_GetGlyphBitmapBox(FontBackEnd *backend, int glyph_index, float scale_x, float scale_y, int *ix0, int *iy0, int *ix1, int *iy1) {
+    IM_ASSERT(backend); 
+#ifdef IMGUI_ENABLE_FREETYPE
+    bool changed_size = false;
+    int target_size = (int)((float)backend->Info.PixelHeight * scale_y);
+    if(target_size != backend->RequestedSize) {
+        FT_Size_RequestRec req;
+        req.type = FT_SIZE_REQUEST_TYPE_REAL_DIM;
+        req.width = 0;
+        req.height = (u_int32_t) target_size * 64;
+        req.horiResolution = 0;
+        req.vertResolution = 0;
+        FT_Request_Size(backend->Face, &req);
+        backend->RequestedSize = target_size;
+        changed_size = true;
+    }
+
+    if(backend->LoadedGlyph != glyph_index || changed_size) {
+        FT_Error error = FT_Load_Glyph(backend->Face, glyph_index, FT_LOAD_DEFAULT);
+        if (error)
+            return;
+        backend->LoadedGlyph = glyph_index;
+    }
+
+    FT_Bitmap* ft_bitmap = &backend->Face->glyph->bitmap;
+    *ix0 = backend->Face->glyph->bitmap_left;
+    *iy0 = -backend->Face->glyph->bitmap_top;
+    *ix1 = *ix0 + (int)ft_bitmap->width;
+    *iy1 = *iy0 + (int)ft_bitmap->rows;
+#else
+    stbtt_GetGlyphBitmapBox(backend->stbtt_backend, glyph_index, scale_x, scale_y, ix0, iy0, ix1, iy1);
+#endif
+}
+
 ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 {
     IM_ASSERT(!Locked && "Cannot modify a locked ImFontAtlas between NewFrame() and EndFrame/Render()!");
@@ -1885,18 +2151,16 @@ ImFont* ImFontAtlas::AddFont(const ImFontConfig* font_cfg)
 
     ImFont* fnt = new_font_cfg.DstFont;
 
-    fnt->PrivData = IM_NEW(stbtt_fontinfo);
+    fnt->PrivData = IM_NEW(FontBackEnd);
         
     // Init stb_truetype
-    if (!stbtt_InitFont((stbtt_fontinfo*)fnt->PrivData, (const unsigned char*) new_font_cfg.FontData, 0))
+    if (!FONT_InitFont(fnt->PrivData, (const unsigned char*) new_font_cfg.FontData, new_font_cfg.FontDataSize, 0))
     {
         return nullptr;
     }
 
-    // Store normalized line height. The real line height is got
-    // by multiplying the lineh by font size.
     int lineGap, ascent, descent;
-    stbtt_GetFontVMetrics((stbtt_fontinfo*)fnt->PrivData, &ascent, &descent, &lineGap);
+    FONT_GetFontVMetrics(fnt->PrivData, &ascent, &descent, &lineGap);
     int fh = ascent - descent;
     fnt->Ascent = (float)ascent / (float)fh;
     fnt->Descent = (float)descent / (float)fh;
@@ -2123,7 +2387,7 @@ void    ImFont::ClearOutputData()
     // FIXME-DYNAMICFONT: Add support for font surface metrics
     //MetricsTotalSurface = 0;
     if (PrivData) {
-        IM_FREE(PrivData);
+        IM_DELETE(PrivData);
         PrivData = NULL;
     }
 }
@@ -2145,17 +2409,6 @@ static unsigned int hashint(unsigned int a)
     return a;
 }
 
-static ImVector<unsigned char> u8_to_rgba(unsigned char* pixels, int width, int height) {
-    ImVector<unsigned char> TexPixelsRGBA32;
-    TexPixelsRGBA32.resize(width*height * 4, 0);
-
-    const unsigned char* src = pixels;
-    unsigned int* dst = (unsigned int*)(TexPixelsRGBA32.Data);
-    for (int n = width * height; n > 0; n--)
-        *dst++ = IM_COL32(255, 255, 255, (unsigned int)(*src++));
-
-    return TexPixelsRGBA32;
-}
 
 void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTexRow** resulting_row, int gw, int gh, bool extra_height)  {
     ImFontTexRow* br = NULL;
@@ -2231,13 +2484,14 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     }
 
     // Create this glyph.
-    float scale = stbtt_ScaleForPixelHeight((stbtt_fontinfo*)this->PrivData, size);
-    g = stbtt_FindGlyphIndex((stbtt_fontinfo*)this->PrivData, codepoint);
+    float scale = FONT_ScaleForPixelHeight(this->PrivData, size);
+    
+    g = FONT_FindGlyphIndex(this->PrivData, codepoint);
     if (!g)
         return NULL; // Glyph not found
-    stbtt_GetGlyphHMetrics((stbtt_fontinfo*)this->PrivData, g, &advance, &lsb);
-    // FIXME-DYNAMICFONT: Should use the subpixel version?
-    stbtt_GetGlyphBitmapBox((stbtt_fontinfo*)this->PrivData, g, scale, scale, &x0, &y0, &x1, &y1);
+
+    FONT_GetGlyphHMetrics(this->PrivData, g, scale, &advance, &lsb);
+    FONT_GetGlyphBitmapBox(this->PrivData, g, scale, scale, &x0, &y0, &x1, &y1);
     gw = x1 - x0;
     gh = y1 - y0;
 
@@ -2259,7 +2513,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     glyph.Y0 = (float) (br->y);
     glyph.X1 = glyph.X0 + gw;
     glyph.Y1 = glyph.Y0 + gh;
-    glyph.AdvanceX = scale * advance;
+    glyph.AdvanceX = advance;
     glyph.Xoff = (float)x0;
     glyph.Yoff = (float)y0;
     glyph.NextGlyph = this->lut[h];
@@ -2274,20 +2528,15 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
 
     this->lut[h] = this->Glyphs.size() - 1;
 
-    // Rasterize 
-    ImVector<unsigned char> bmp_vec;
-    bmp_vec.resize(gw*gh, 0);
-    bmp = bmp_vec.Data;
-    if (bmp)
-    {
-        //Render glyph
-        // FIXME-DYNAMICFONT: Should use the subpixel version?
-        stbtt_MakeGlyphBitmap((stbtt_fontinfo*)this->PrivData, bmp, gw, gh, gw, scale, scale, g);
-        ImVector<unsigned char> pixels = u8_to_rgba(bmp, gw, gh);
+    if(gw == 0 || gh == 0) return glyph_ptr;
 
-        // Update texture
-        texture->Update((int) glyph_ptr->X0, (int) glyph_ptr->Y0, gw, gh, pixels.Data);
-    }
+    // Render glyph
+    ImVector<unsigned char> pixels;
+    FONT_MakeGlyphBitmap((FontBackEnd*)this->PrivData, &pixels, gw, gh, gw, scale, scale, g);
+
+    // Update texture
+    texture->Update((int) glyph_ptr->X0, (int) glyph_ptr->Y0, gw, gh, pixels.Data);
+    
 
     return glyph_ptr;
 }
@@ -2546,8 +2795,8 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
     if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size))
     {
         float ascender = IM_FLOOR(Ascent * size);
-        pos.x = (float)(int)pos.x + DisplayOffset.x;
-        pos.y = (float)(int)pos.y + DisplayOffset.y;
+        pos.x = IM_FLOOR(pos.x + DisplayOffset.x);
+        pos.y = IM_FLOOR(pos.y + DisplayOffset.y);
         int texture_width = glyph->FontTexture->TexWidth;
         int texture_height = glyph->FontTexture->TexHeight;
         ImFontQuad q = GetQuad(*glyph, pos.x, pos.y);

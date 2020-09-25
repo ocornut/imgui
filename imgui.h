@@ -2396,6 +2396,7 @@ struct ImFontAtlas
 // Font runtime data and rendering
 // ImFontAtlas automatically loads a default embedded font for you when you call GetTexDataAsAlpha8() or GetTexDataAsRGBA32().
 #define IM_HASH_LUT_SIZE 256
+struct FontBackEnd;
 struct ImFont
 {
     float                       FallbackAdvanceX;   // 4     // out // = FallbackGlyph->AdvanceX
@@ -2418,7 +2419,7 @@ struct ImFont
     //ImU8                        Used4kPagesMap[(IM_UNICODE_CODEPOINT_MAX+1)/4096/8]; // 2 bytes if ImWchar=ImWchar16, 34 bytes if ImWchar==ImWchar32. Store 1-bit for each block of 4K codepoints that has one active glyph. This is mainly used to facilitate iterations across all used codepoints.
     
     int                         lut[IM_HASH_LUT_SIZE]; //Lookup table
-    void*                       PrivData;           //Private data to underlying font engine
+    FontBackEnd*                PrivData;           //Private data to underlying font engine
 
     // Methods
     IMGUI_API ImFont();
