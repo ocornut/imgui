@@ -978,7 +978,8 @@ ImGuiStyle::ImGuiStyle()
     CurveTessellationTol    = 1.25f;            // Tessellation tolerance when using PathBezierCurveTo() without a specific number of segments. Decrease for highly tessellated curves (higher quality, more polygons), increase to reduce quality.
     CircleSegmentMaxError   = 1.60f;            // Maximum error (in pixels) allowed when using AddCircle()/AddCircleFilled() or drawing rounded corner rectangles with no explicit segment count specified. Decrease for higher quality but more geometry.
 
-    DockingSplitterSize     = 2.0f;             // Thickness of border/padding between docked windows
+    DockingOuterSplitterSize     = 2.0f;             // Thickness of border/padding between docked windows
+    DockingInnerSplitterSize     = 2.0f;             // Thickness of border/padding between docked windows
 
     // Default theme
     ImGui::StyleColorsDark(this);
@@ -13793,7 +13794,7 @@ void ImGui::DockNodeTreeSplit(ImGuiContext* ctx, ImGuiDockNode* parent_node, ImG
     parent_node->VisibleWindow = NULL;
     parent_node->AuthorityForPos = parent_node->AuthorityForSize = ImGuiDataAuthority_DockNode;
 
-    float size_avail = (parent_node->Size[split_axis] - g.Style.DockingSplitterSize);
+    float size_avail = parent_node->Size[split_axis] - g.Style.DockingInnerSplitterSize;
     size_avail = ImMax(size_avail, g.Style.WindowMinSize[split_axis] * 2.0f);
     IM_ASSERT(size_avail > 0.0f); // If you created a node manually with DockBuilderAddNode(), you need to also call DockBuilderSetNodeSize() before splitting.
     child_0->SizeRef = child_1->SizeRef = parent_node->Size;
@@ -13882,7 +13883,7 @@ void ImGui::DockNodeTreeUpdatePosSize(ImGuiDockNode* node, ImVec2 pos, ImVec2 si
     if (child_0->IsVisible && child_1->IsVisible)
     {
         ImGuiContext& g = *GImGui;
-        const float spacing = g.Style.DockingSplitterSize;
+        const float spacing = g.Style.DockingInnerSplitterSize;
         const ImGuiAxis axis = (ImGuiAxis)node->SplitAxis;
         const float size_avail = ImMax(size[axis] - spacing, 0.0f);
 
@@ -14198,6 +14199,8 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
 
     const ImVec2 content_avail = GetContentRegionAvail();
     ImVec2 size = ImFloor(size_arg);
+    // reduce size due to extra outer padding (2 'sets' of padding on each side)
+    size -= ImVec2(g.Style.DockingOuterSplitterSize, g.Style.DockingOuterSplitterSize) * 2.0f;
     if (size.x <= 0.0f)
         size.x = ImMax(content_avail.x + size.x, 4.0f); // Arbitrary minimum child size (0.0f causing too much issues)
     if (size.y <= 0.0f)
@@ -14205,6 +14208,8 @@ void ImGui::DockSpace(ImGuiID id, const ImVec2& size_arg, ImGuiDockNodeFlags fla
     IM_ASSERT(size.x > 0.0f && size.y > 0.0f);
 
     node->Pos = window->DC.CursorPos;
+    // offset windows by padding amount
+    node->Pos += ImVec2(g.Style.DockingOuterSplitterSize, g.Style.DockingOuterSplitterSize);
     node->Size = node->SizeRef = size;
     SetNextWindowPos(node->Pos);
     SetNextWindowSize(node->Size);
