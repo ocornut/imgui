@@ -2250,6 +2250,7 @@ struct ImFontGlyph
     int             NextGlyph;
     short           GlyphSize;
     ImFontTexture*  FontTexture;
+    int             FrameCountCreation;     //Frame count when this glyph was rendered
 };
 
 struct ImFontQuad
@@ -2424,7 +2425,7 @@ struct ImFont
     // Methods
     IMGUI_API ImFont();
     IMGUI_API ~ImFont();
-    IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c, float size);
+    IMGUI_API const ImFontGlyph*FindGlyph(ImWchar c, float size, ImFontGlyph** backup_glyph = NULL);
     // FIXME-DYNAMICFONT: Add support for findglyphnofallback
     IMGUI_API const ImFontGlyph*FindGlyphNoFallback(ImWchar c, float size) const;
     float                       GetCharAdvance(ImWchar c, float size);

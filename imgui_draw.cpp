@@ -1739,6 +1739,17 @@ ImFontAtlas::ImFontAtlas(int tex_width, int tex_height)
     //Create data for an empty font texture. This will be used every time a new texture is spawned.
     EmptyFontTexturePixelData.resize(TexWidth*TexHeight * 4, 0);
     
+    //This turns the font texture green for debugging purposes
+    /*for(auto x = 0; x < TexWidth; ++x) {
+        for(auto y = 0; y < TexHeight; ++y) {
+            auto* pixel = &EmptyFontTexturePixelData[((y*TexWidth) + x) * 4];
+            pixel[0] = 0;
+            pixel[1] = 255;
+            pixel[2] = 0;
+            pixel[3] = 255;
+        }
+    }*/
+    
     //Create first font texture
     FontTextures.push_back(IM_NEW(ImFontTexture(TexWidth, TexHeight, EmptyFontTexturePixelData.Data)));
 
@@ -2466,7 +2477,7 @@ void ImFontAtlas::FindTextureAndRow(ImFontTexture** resulting_texture, ImFontTex
     *resulting_texture = (*texture);
 }
 
-const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size) 
+const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size, ImFontGlyph** backup_glyph) 
 {
 
     int i, g, advance, lsb, x0, y0, x1, y1;
@@ -2475,12 +2486,33 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     // Find code point and size using lookup table.
     unsigned int h = hashint(codepoint) & (IM_HASH_LUT_SIZE - 1);
     i = this->lut[h];
+    ImFontGlyph* result = NULL;
+    if(backup_glyph) *backup_glyph = NULL;
     while (i != -1)
     {
-        if (this->Glyphs[i].Codepoint == codepoint && this->Glyphs[i].GlyphSize == (short) size)
-            return &this->Glyphs[i];
+        if (this->Glyphs[i].Codepoint == codepoint) {
+            if(this->Glyphs[i].GlyphSize == (short) size && !result) {
+                result = &this->Glyphs[i]; // Save the result
+                if(!backup_glyph) break; //Caller didn't want a backup glyph
+                if((this->Glyphs[i].FontTexture && this->Glyphs[i].FontTexture->TexID != NULL) && this->Glyphs[i].FrameCountCreation != ImGui::GetFrameCount()) {
+                    *backup_glyph = NULL; // This glyph has already been rendered and uploeaded to the graphics card. No backup glyph needed.
+                    break;
+                }
+                if(*backup_glyph)
+                    break; //We have already found a backup glyph
+                //We have found the glyph but we still need a backup glyph
+            }
+            else if(backup_glyph && *backup_glyph == NULL) {
+                if(this->Glyphs[i].FontTexture && this->Glyphs[i].FontTexture->TexID && this->Glyphs[i].FrameCountCreation != ImGui::GetFrameCount()) { //Make sure the backup glyph has been rendered and uploaded
+                    *backup_glyph = &this->Glyphs[i]; // Save this as a backup
+                    if(result) break; //Both primary glyph and backup has been found
+                }
+            }
+        }
         i = this->Glyphs[i].NextGlyph;
     }
+
+    if(result) return result;
 
     // Create this glyph.
     float scale = FONT_ScaleForPixelHeight(this->PrivData, size);
@@ -2516,6 +2548,7 @@ const ImFontGlyph* ImFont::FindGlyph(ImWchar codepoint, float size)
     glyph.Xoff = (float)x0;
     glyph.Yoff = (float)y0;
     glyph.NextGlyph = this->lut[h];
+    glyph.FrameCountCreation = ImGui::GetFrameCount();
 
     // Advance row location.
     br->x += gw + 1;
@@ -2791,23 +2824,37 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 {
     if (c == ' ' || c == '\t' || c == '\n' || c == '\r') // Match behavior of RenderText(), those 4 codepoints are hard-coded.
         return;
-    if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size))
+    ImFontGlyph* backup_glyph = NULL;
+    if (const ImFontGlyph* glyph = FindGlyph((unsigned int)c, size, &backup_glyph))
     {
         float ascender = IM_FLOOR(Ascent * size);
         pos.x = IM_FLOOR(pos.x + DisplayOffset.x);
         pos.y = IM_FLOOR(pos.y + DisplayOffset.y);
-        int texture_width = glyph->FontTexture->TexWidth;
-        int texture_height = glyph->FontTexture->TexHeight;
+
+        ImFontTexture* glyph_texture = glyph->FontTexture;
+        
         ImFontQuad q = GetQuad(*glyph, pos.x, pos.y);
 
         float x1 = q.x0;
         float x2 = q.x1;
         float y1 = ascender + q.y0;
         float y2 = ascender + q.y1;
+        
+        //If this glyph has not yet been rendered and uploaded to the video card
+        //render a stretched backup glyph instead
+        if(backup_glyph && (glyph_texture->TexID == NULL || glyph->FrameCountCreation == ImGui::GetFrameCount())) { // It takes a frame for the glyph to be uploaded
+            glyph_texture = backup_glyph->FontTexture;
+            q = GetQuad(*backup_glyph, pos.x, pos.y);
+        }
+
         float u1 = q.u0;
         float v1 = q.v0;
         float u2 = q.u1;
         float v2 = q.v1;
+
+        int texture_width = glyph_texture->TexWidth;
+        int texture_height = glyph_texture->TexHeight;
+        
         u1 /= texture_width;
         u2 /= texture_width;
         v1 /= texture_height;
@@ -2815,7 +2862,7 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
         // FIXME-DYNAMICFONT: Shouldn't use AddImageQuad
         draw_list->AddImageQuad(
-            glyph->FontTexture->TexID,
+            glyph_texture->TexID,
             ImVec2(x1, y1),
             ImVec2(x2, y1),
             ImVec2(x2, y2),
@@ -2959,18 +3006,29 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
         float char_width = 0.0f;
         float ascender = ImFloor(Ascent * size);
-        if (const ImFontGlyph* glyph = FindGlyph((ImWchar)c, size))
+        ImFontGlyph* backup_glyph = NULL; //If the correct glyph has not yet been rendered
+        if (const ImFontGlyph* glyph = FindGlyph((ImWchar)c, size, &backup_glyph))
         {
-            int texture_width = glyph->FontTexture->TexWidth;
-            int texture_height = glyph->FontTexture->TexHeight;
+            ImFontTexture* glyph_texture = glyph->FontTexture;
+
+            //If this glyph has not yet been rendered and uploaded to the video card
+            //render a stretched backup glyph instead
+            bool using_backup_glyph = false;
+            if(backup_glyph && (glyph_texture->TexID == NULL || glyph->FrameCountCreation == ImGui::GetFrameCount())) { // It takes a frame for the glyph to be uploaded
+                glyph_texture = backup_glyph->FontTexture;
+                using_backup_glyph = true;
+            }
+            
+            int texture_width = glyph_texture->TexWidth;
+            int texture_height = glyph_texture->TexHeight;
 
             char_width = IM_ROUND(glyph->AdvanceX);/* scale*/
 
             // Arbitrarily assume that both space and tabs are empty glyphs as an optimization
-            if (c != ' ' && c != '\t' && glyph->FontTexture->TexID)
+            if (c != ' ' && c != '\t' && glyph_texture->TexID)
             {
                 if (!texture_selected) { //When rendering the first char we select our default texture
-                    selected_texture = glyph->FontTexture->TexID;
+                    selected_texture = glyph_texture->TexID;
                     if (draw_list->_CmdHeader.TextureId != selected_texture) {
                         draw_list->PushTextureID(selected_texture);
                         pushed_texture = true; // We need to pop later
@@ -2986,13 +3044,13 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     texture_selected = true;
                 }
 
-                if (glyph->FontTexture->TexID != selected_texture) {//Save the glyph for later rendering
+                if (glyph_texture->TexID != selected_texture) {//Save the glyph for later rendering
                     FontRenderList* render_list = NULL;
 
                     // Find the render list for this texture
                     for (FontRenderList** rlist = font_render_list.begin(); rlist != font_render_list.end(); rlist++) {
                         FontRenderList* rlist_ref = *rlist;
-                        if (rlist_ref->TexID == glyph->FontTexture->TexID) {
+                        if (rlist_ref->TexID == glyph_texture->TexID) {
                             render_list = rlist_ref;
                             break;
                         }
@@ -3001,7 +3059,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     if (!render_list) { // Render list for this texture not found
                         //Create render list for this texture
                         render_list = IM_NEW(FontRenderList);
-                        render_list->TexID = glyph->FontTexture->TexID;
+                        render_list->TexID = glyph_texture->TexID;
                         render_list->VtxBuffer.resize(vtx_count_max);
                         render_list->IdxBuffer.resize(idx_count_max);
                         render_list->vtx_write = render_list->VtxBuffer.Data;
@@ -3019,6 +3077,10 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     float y2 = ascender + q.y1 /* scale*/;
                     if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                     {
+                        //If using a backup glyph we need to change the texture UV's
+                        if(using_backup_glyph) {
+                            q = GetQuad(*backup_glyph, x, y);
+                        }
                         // Render a character
                         float u1 = q.u0;
                         float v1 = q.v0;
@@ -3107,6 +3169,11 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
                     float y2 = ascender + q.y1 /* scale*/;
                     if (x1 <= clip_rect.z && x2 >= clip_rect.x)
                     {
+                        //If using a backup glyph we need to change the texture UV's
+                        if(using_backup_glyph) {
+                            q = GetQuad(*backup_glyph, x, y);
+                        }
+
                         // Render a character
                         float u1 = q.u0;
                         float v1 = q.v0;

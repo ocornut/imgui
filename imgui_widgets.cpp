@@ -3944,7 +3944,7 @@ bool ImGui::InputTextEx(const char* label, const char* hint, char* buf, int buf_
     // Password pushes a temporary font with only a fallback glyph
     if (is_password && !is_displaying_hint)
     {
-        const ImFontGlyph* glyph = g.Font->FindGlyph('*', g.FontSize);
+        const ImFontGlyph* glyph = g.Font->FindGlyph('*', g.FontSize); 
         ImFont* password_font = &g.InputTextPasswordFont;
         //password_font->FontSize = g.Font->FontSize;
         password_font->Scale = g.Font->Scale;
