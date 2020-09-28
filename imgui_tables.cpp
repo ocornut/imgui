@@ -1774,6 +1774,10 @@ void    ImGui::TableEndRow(ImGuiTable* table)
             column->DrawChannelCurrent = column->DrawChannelRowsAfterFreeze;
             column->ClipRect.Min.y = r.Min.y;
         }
+
+        // Update cliprect ahead of TableBeginCell() so clipper can access to new ClipRect->Min.y
+        SetWindowClipRectBeforeSetChannel(window, table->Columns[0].ClipRect);
+        table->DrawSplitter.SetCurrentChannel(window->DrawList, table->Columns[0].DrawChannelCurrent);
     }
 
     if (!(table->RowFlags & ImGuiTableRowFlags_Headers))
