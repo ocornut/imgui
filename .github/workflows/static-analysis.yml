@@ -41,3 +41,11 @@ jobs:
           pvs-studio-analyzer trace -- make WITH_EXTRA_WARNINGS=1
           pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
           plog-converter -a 'GA:1,2;OP:1' -t errorfile -w pvs-studio.log
+
+      - uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+          username: GitHub Actions
+          color: 0xFF0000
+          title: ${{ github.job }}

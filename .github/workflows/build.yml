@@ -179,6 +179,14 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
+      - uses: sarisia/actions-status-discord@v1
+        if: failure()
+        with:
+          webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+          username: GitHub Actions
+          color: 0xFF0000
+          title: ${{ github.job }}
+
   Linux:
     runs-on: ubuntu-20.04
     steps:
@@ -310,6 +318,14 @@ jobs:
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
 
+    - uses: sarisia/actions-status-discord@v1
+      if: failure()
+      with:
+        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        username: GitHub Actions
+        color: 0xFF0000
+        title: ${{ github.job }}
+
   MacOS:
     runs-on: macOS-latest
     steps:
@@ -365,6 +381,14 @@ jobs:
     - name: Build example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
+    - uses: sarisia/actions-status-discord@v1
+      if: failure()
+      with:
+        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        username: GitHub Actions
+        color: 0xFF0000
+        title: ${{ github.job }}
+
   iOS:
     runs-on: macOS-latest
     steps:
@@ -376,6 +400,14 @@ jobs:
       run: |
         # Code signing is required, but we disable it because it is irrelevant for CI builds.
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
+
+    - uses: sarisia/actions-status-discord@v1
+      if: failure()
+      with:
+        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        username: GitHub Actions
+        color: 0xFF0000
+        title: ${{ github.job }}
 
   Emscripten:
     runs-on: ubuntu-18.04
@@ -398,3 +430,11 @@ jobs:
         source ./emsdk_env.sh
         popd
         make -C examples/example_emscripten
+
+    - uses: sarisia/actions-status-discord@v1
+      if: failure()
+      with:
+        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        username: GitHub Actions
+        color: 0xFF0000
+        title: ${{ github.job }}

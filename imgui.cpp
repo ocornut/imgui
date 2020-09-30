@@ -372,6 +372,8 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2020/09/25 (1.79) - renamed ImGuiSliderFlags_ClampOnInput to ImGuiSliderFlags_AlwaysClamp. Kept redirection enum (will obsolete sooner because previous name was added recently).
+ - 2020/09/25 (1.79) - renamed style.TabMinWidthForUnselectedCloseButton to style.TabMinWidthForCloseButton.
  - 2020/09/21 (1.79) - renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), reverting the change from 1.77. For varieties of reason this is more self-explanatory.
  - 2020/09/21 (1.79) - removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it is inconsistent with other popup APIs and makes others misleading. It's also and unnecessary: you can use IsWindowAppearing() after BeginPopup() for a similar result.
  - 2020/09/17 (1.79) - removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied after scaling and not very meaningful/useful outside of being needed by the default ProggyClean font. It was also getting in the way of better font scaling, so let's get rid of it now!
@@ -942,7 +944,7 @@ ImGuiStyle::ImGuiStyle()
     LogSliderDeadzone       = 4.0f;             // The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
     TabRounding             = 4.0f;             // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
     TabBorderSize           = 0.0f;             // Thickness of border around tabs.
-    TabMinWidthForUnselectedCloseButton = 0.0f; // Minimum width for close button to appears on an unselected tab when hovered. Set to 0.0f to always show when hovering, set to FLT_MAX to never show close button unless selected.
+    TabMinWidthForCloseButton = 0.0f;           // Minimum width for close button to appears on an unselected tab when hovered. Set to 0.0f to always show when hovering, set to FLT_MAX to never show close button unless selected.
     ColorButtonPosition     = ImGuiDir_Right;   // Side of the color button in the ColorEdit4 widget (left/right). Defaults to ImGuiDir_Right.
     ButtonTextAlign         = ImVec2(0.5f,0.5f);// Alignment of button text when button is larger than text.
     SelectableTextAlign     = ImVec2(0.0f,0.0f);// Alignment of selectable text. Defaults to (0.0f, 0.0f) (top-left aligned). It's generally important to keep this left-aligned if you want to lay multiple items on a same line.
@@ -981,8 +983,7 @@ void ImGuiStyle::ScaleAllSizes(float scale_factor)
     GrabRounding = ImFloor(GrabRounding * scale_factor);
     LogSliderDeadzone = ImFloor(LogSliderDeadzone * scale_factor);
     TabRounding = ImFloor(TabRounding * scale_factor);
-    if (TabMinWidthForUnselectedCloseButton != FLT_MAX)
-        TabMinWidthForUnselectedCloseButton = ImFloor(TabMinWidthForUnselectedCloseButton * scale_factor);
+    TabMinWidthForCloseButton = (TabMinWidthForCloseButton != FLT_MAX) ? ImFloor(TabMinWidthForCloseButton * scale_factor) : FLT_MAX;
     DisplayWindowPadding = ImFloor(DisplayWindowPadding * scale_factor);
     DisplaySafeAreaPadding = ImFloor(DisplaySafeAreaPadding * scale_factor);
     MouseCursorScale = ImFloor(MouseCursorScale * scale_factor);
@@ -2191,35 +2192,44 @@ static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height)
         columns->LineMinY = window->DC.CursorPos.y;                         // Setting this so that cell Y position are set properly
 }
 
-// Use case A: Begin() called from constructor with items_height<0, then called again from Sync() in StepNo 1
+ImGuiListClipper::ImGuiListClipper(int items_count, float items_height)
+{
+    DisplayStart = DisplayEnd = 0;
+    ItemsCount = -1;
+    StepNo = 0;
+    ItemsHeight = StartPosY = 0.0f;
+    Begin(items_count, items_height);
+}
+
+ImGuiListClipper::~ImGuiListClipper()
+{
+    IM_ASSERT(ItemsCount == -1 && "Forgot to call End(), or to Step() until false?");
+}
+
+// Use case A: Begin() called from constructor with items_height<0, then called again from Step() in StepNo 1
 // Use case B: Begin() called from constructor with items_height>0
 // FIXME-LEGACY: Ideally we should remove the Begin/End functions but they are part of the legacy API we still support. This is why some of the code in Step() calling Begin() and reassign some fields, spaghetti style.
-void ImGuiListClipper::Begin(int count, float items_height)
+void ImGuiListClipper::Begin(int items_count, float items_height)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
     StartPosY = window->DC.CursorPos.y;
     ItemsHeight = items_height;
-    ItemsCount = count;
+    ItemsCount = items_count;
     StepNo = 0;
-    DisplayEnd = DisplayStart = -1;
-    if (ItemsHeight > 0.0f)
-    {
-        ImGui::CalcListClipping(ItemsCount, ItemsHeight, &DisplayStart, &DisplayEnd); // calculate how many to clip/display
-        if (DisplayStart > 0)
-            SetCursorPosYAndSetupForPrevLine(StartPosY + DisplayStart * ItemsHeight, ItemsHeight); // advance cursor
-        StepNo = 2;
-    }
+    DisplayStart = -1;
+    DisplayEnd = 0;
 }
 
 void ImGuiListClipper::End()
 {
-    if (ItemsCount < 0)
+    if (ItemsCount < 0) // Already ended
         return;
+
     // In theory here we should assert that ImGui::GetCursorPosY() == StartPosY + DisplayEnd * ItemsHeight, but it feels saner to just seek at the end and not assert/crash the user.
-    if (ItemsCount < INT_MAX)
-        SetCursorPosYAndSetupForPrevLine(StartPosY + ItemsCount * ItemsHeight, ItemsHeight); // advance cursor
+    if (ItemsCount < INT_MAX && DisplayStart >= 0)
+        SetCursorPosYAndSetupForPrevLine(StartPosY + ItemsCount * ItemsHeight, ItemsHeight);
     ItemsCount = -1;
     StepNo = 3;
 }
@@ -2229,38 +2239,70 @@ bool ImGuiListClipper::Step()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    if (ItemsCount == 0 || window->SkipItems)
+    // Reached end of list
+    if (DisplayEnd >= ItemsCount || window->SkipItems)
     {
+        End();
+        return false;
+    }
+
+    // Step 0: Let you process the first element (regardless of it being visible or not, so we can measure the element height)
+    if (StepNo == 0)
+    {
+        StartPosY = window->DC.CursorPos.y;
+        if (ItemsHeight <= 0.0f)
+        {
+            // Submit the first item so we can measure its height (generally it is 0..1)
+            DisplayStart = 0;
+            DisplayEnd = 1;
+            StepNo = 1;
+            return true;
+        }
+
+        // Already has item height (given by user in Begin): skip to calculating step
+        DisplayStart = DisplayEnd;
+        StepNo = 2;
+    }
+
+    // Step 1: the clipper infer height from first element
+    if (StepNo == 1)
+    {
+        IM_ASSERT(ItemsHeight <= 0.0f);
+        ItemsHeight = window->DC.CursorPos.y - StartPosY;
+        IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
+        StepNo = 2;
+    }
+
+    // Step 2: calculate the actual range of elements to display, and position the cursor before the first element
+    if (StepNo == 2)
+    {
+        IM_ASSERT(ItemsHeight > 0.0f);
+
+        int already_submitted = DisplayEnd;
+        ImGui::CalcListClipping(ItemsCount - already_submitted, ItemsHeight, &DisplayStart, &DisplayEnd);
+        DisplayStart += already_submitted;
+        DisplayEnd += already_submitted;
+
+        // Seek cursor
+        if (DisplayStart > already_submitted)
+            SetCursorPosYAndSetupForPrevLine(StartPosY + DisplayStart * ItemsHeight, ItemsHeight);
+
+        StepNo = 3;
+        return true;
+    }
+
+    // Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd),
+    // Advance the cursor to the end of the list and then returns 'false' to end the loop.
+    if (StepNo == 3)
+    {
+        // Seek cursor
+        if (ItemsCount < INT_MAX)
+            SetCursorPosYAndSetupForPrevLine(StartPosY + ItemsCount * ItemsHeight, ItemsHeight); // advance cursor
         ItemsCount = -1;
         return false;
     }
-    if (StepNo == 0) // Step 0: the clipper let you process the first element, regardless of it being visible or not, so we can measure the element height.
-    {
-        DisplayStart = 0;
-        DisplayEnd = 1;
-        StartPosY = window->DC.CursorPos.y;
-        StepNo = 1;
-        return true;
-    }
-    if (StepNo == 1) // Step 1: the clipper infer height from first element, calculate the actual range of elements to display, and position the cursor before the first element.
-    {
-        if (ItemsCount == 1) { ItemsCount = -1; return false; }
-        float items_height = window->DC.CursorPos.y - StartPosY;
-        IM_ASSERT(items_height > 0.0f);   // If this triggers, it means Item 0 hasn't moved the cursor vertically
-        Begin(ItemsCount - 1, items_height);
-        DisplayStart++;
-        DisplayEnd++;
-        StepNo = 3;
-        return true;
-    }
-    if (StepNo == 2) // Step 2: empty step only required if an explicit items_height was passed to constructor or Begin() and user still call Step(). Does nothing and switch to Step 3.
-    {
-        IM_ASSERT(DisplayStart >= 0 && DisplayEnd >= 0);
-        StepNo = 3;
-        return true;
-    }
-    if (StepNo == 3) // Step 3: the clipper validate that we have reached the expected Y position (corresponding to element DisplayEnd), advance the cursor to the end of the list and then returns 'false' to end the loop.
-        End();
+
+    IM_ASSERT(0);
     return false;
 }
 
@@ -8061,7 +8103,7 @@ ImVec2 ImGui::FindBestWindowPosForPopupEx(const ImVec2& ref_pos, const ImVec2& s
 
     // For tooltip we prefer avoiding the cursor at all cost even if it means that part of the tooltip won't be visible.
     if (policy == ImGuiPopupPositionPolicy_Tooltip)
-        return ref_pos + ImVec2(2, 2); 
+        return ref_pos + ImVec2(2, 2);
 
     // Otherwise try to keep within display
     ImVec2 pos = ref_pos;
@@ -10438,7 +10480,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     NodeDrawCmdShowMeshAndBoundingBox(window, draw_list, pcmd, elem_offset, true, false);
 
                 // Display individual triangles/vertices. Hover on to get the corresponding triangle highlighted.
-                ImGuiListClipper clipper(pcmd->ElemCount / 3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
+                ImGuiListClipper clipper;
+                clipper.Begin(pcmd->ElemCount / 3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
                 while (clipper.Step())
                     for (int prim = clipper.DisplayStart, idx_i = elem_offset + clipper.DisplayStart * 3; prim < clipper.DisplayEnd; prim++)
                     {

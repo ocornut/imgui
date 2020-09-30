@@ -45,7 +45,7 @@
 	ImGui_ImplOSX_NewFrame(self);
     ImGui::NewFrame();
 
-    // Global data for the demo
+    // Our state (make them static = more or less global) as a convenience to keep the example terse.
     static bool show_demo_window = true;
     static bool show_another_window = false;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -243,10 +243,12 @@
         NSLog(@"No OpenGL Context!");
 
     // Setup Dear ImGui context
+    // FIXME: This example doesn't have proper cleanup...
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
