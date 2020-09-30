@@ -646,21 +646,19 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthAlwaysAutoResize | ImGuiTableColumnFlags_WidthFixed))
         {
-            // Latch initial size for fixed columns
+            // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
             count_fixed += 1;
-            const bool auto_fit = (column->AutoFitQueue != 0x00) || (column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize);
-            if (auto_fit)
-            {
+            if ((column->AutoFitQueue != 0x00) || ((column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize) && !column->IsClipped))
                 column->WidthRequest = column_width_ideal;
 
-                // FIXME-TABLE: Increase minimum size during init frame to avoid biasing auto-fitting widgets
-                // (e.g. TextWrapped) too much. Otherwise what tends to happen is that TextWrapped would output a very
-                // large height (= first frame scrollbar display very off + clipper would skip lots of items).
-                // This is merely making the side-effect less extreme, but doesn't properly fixes it.
-                // FIXME: Move this to ->WidthGiven to avoid temporary lossyless?
-                if (column->AutoFitQueue > 0x01 && table->IsInitializing)
-                    column->WidthRequest = ImMax(column->WidthRequest, min_column_width * 4.0f);
-            }
+            // FIXME-TABLE: Increase minimum size during init frame to avoid biasing auto-fitting widgets
+            // (e.g. TextWrapped) too much. Otherwise what tends to happen is that TextWrapped would output a very
+            // large height (= first frame scrollbar display very off + clipper would skip lots of items).
+            // This is merely making the side-effect less extreme, but doesn't properly fixes it.
+            // FIXME: Move this to ->WidthGiven to avoid temporary lossyless?
+            if (column->AutoFitQueue > 0x01 && table->IsInitializing)
+                column->WidthRequest = ImMax(column->WidthRequest, min_column_width * 4.0f);
+
             sum_width_fixed_requests += column->WidthRequest;
         }
         else
@@ -2159,7 +2157,7 @@ void    ImGui::TableHeadersRow()
 // Emit a column header (text + optional sort order)
 // We cpu-clip text here so that all columns headers can be merged into a same draw call.
 // Note that because of how we cpu-clip and display sorting indicators, you _cannot_ use SameLine() after a TableHeader()
-// FIXME-TABLE: Should hold a selection state.
+// FIXME-TABLE: Could hold a selection state.
 // FIXME-TABLE: Style confusion between CellPadding.y and FramePadding.y
 void    ImGui::TableHeader(const char* label)
 {
