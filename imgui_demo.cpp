@@ -3348,31 +3348,30 @@ static void ShowDemoWindowTables()
 
         // This essentially the same as above, except instead of using a for loop we call TableSetColumnIndex() manually.
         // Sometimes this makes more sense.
-        HelpMarker("Using TableNextRow() + calling TableSetColumnIndex() _before_ each cell, manually.");
+        HelpMarker("Using TableNextRow() + calling TableNextColumn() _before_ each cell, manually.");
         if (ImGui::BeginTable("##table2", 3))
         {
             for (int row = 0; row < 4; row++)
             {
                 ImGui::TableNextRow();
-                ImGui::TableSetColumnIndex(0);
+                ImGui::TableNextColumn();
                 ImGui::Text("Row %d", row);
-                ImGui::TableSetColumnIndex(1);
+                ImGui::TableNextColumn();
                 ImGui::Text("Some contents");
-                ImGui::TableSetColumnIndex(2);
+                ImGui::TableNextColumn();
                 ImGui::Text("123.456");
             }
             ImGui::EndTable();
         }
 
-        // Another subtle variant, we call TableNextCell() _before_ each cell. At the end of a row, TableNextCell() will create a new row.
-        // Note that we don't call TableNextRow() here!
-        // If we want to call TableNextRow(), then we don't need to call TableNextCell() for the first cell.
-        HelpMarker("Only using TableNextCell(), which tends to be convenient for tables where every cells contains the same type of contents.\nThis is also more similar to the old NextColumn() function of the Columns API, and provided to facilitate the Columns->Tables API transition.");
+        // Another subtle variant, we call TableNextColumn() _before_ each cell. At the end of a row, TableNextColumn() will create a new row.
+        // Note that we never TableNextRow() here!
+        HelpMarker("Only using TableNextColumn(), which tends to be convenient for tables where every cells contains the same type of contents.\nThis is also more similar to the old NextColumn() function of the Columns API, and provided to facilitate the Columns->Tables API transition.");
         if (ImGui::BeginTable("##table4", 3))
         {
             for (int item = 0; item < 14; item++)
             {
-                ImGui::TableNextCell();
+                ImGui::TableNextColumn();
                 ImGui::Text("Item %d", item);
             }
             ImGui::EndTable();
@@ -3690,7 +3689,7 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextRow();
                 for (int column = 0; column < 7; column++)
                 {
-                    // Both TableNextCell() and TableSetColumnIndex() return false when a column is not visible, which can be used for clipping.
+                    // Both TableNextColumn() and TableSetColumnIndex() return false when a column is not visible, which can be used for clipping.
                     if (!ImGui::TableSetColumnIndex(column))
                         continue;
                     if (column == 0)
@@ -3718,7 +3717,7 @@ static void ShowDemoWindowTables()
             for (int column = 0; column < column_count; column++)
             {
                 // Make the UI compact because there are so many fields
-                ImGui::TableNextCell();
+                ImGui::TableNextColumn();
                 ImGuiStyle& style = ImGui::GetStyle();
                 ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(style.FramePadding.x, 2));
                 ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(style.ItemSpacing.x, 2));
@@ -3780,7 +3779,8 @@ static void ShowDemoWindowTables()
             ImGui::TableSetupColumn("A1");
             ImGui::TableHeadersRow();
 
-            ImGui::TableNextRow();  ImGui::Text("A0 Cell 0");
+            ImGui::TableNextColumn();
+            ImGui::Text("A0 Cell 0");
             {
                 float rows_height = ImGui::GetTextLineHeightWithSpacing() * 2;
                 if (ImGui::BeginTable("recurse2", 2, ImGuiTableFlags_Borders | ImGuiTableFlags_BordersFullHeightV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable))
@@ -3790,20 +3790,22 @@ static void ShowDemoWindowTables()
                     ImGui::TableHeadersRow();
 
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, rows_height);
+                    ImGui::TableNextColumn();
                     ImGui::Text("B0 Cell 0");
-                    ImGui::TableNextCell();
+                    ImGui::TableNextColumn();
                     ImGui::Text("B0 Cell 1");
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, rows_height);
+                    ImGui::TableNextColumn();
                     ImGui::Text("B1 Cell 0");
-                    ImGui::TableNextCell();
+                    ImGui::TableNextColumn();
                     ImGui::Text("B1 Cell 1");
 
                     ImGui::EndTable();
                 }
             }
-            ImGui::TableNextCell(); ImGui::Text("A0 Cell 1");
-            ImGui::TableNextRow();  ImGui::Text("A1 Cell 0");
-            ImGui::TableNextCell(); ImGui::Text("A1 Cell 1");
+            ImGui::TableNextColumn(); ImGui::Text("A0 Cell 1");
+            ImGui::TableNextColumn(); ImGui::Text("A1 Cell 0");
+            ImGui::TableNextColumn(); ImGui::Text("A1 Cell 1");
             ImGui::EndTable();
         }
         ImGui::TreePop();
@@ -3915,6 +3917,7 @@ static void ShowDemoWindowTables()
             {
                 float min_row_height = (float)(int)(ImGui::GetFontSize() * 0.30f * row);
                 ImGui::TableNextRow(ImGuiTableRowFlags_None, min_row_height);
+                ImGui::TableNextColumn();
                 ImGui::Text("min_row_height = %.2f", min_row_height);
             }
             ImGui::EndTable();
@@ -4003,13 +4006,14 @@ static void ShowDemoWindowTables()
                 static void DisplayNode(const MyTreeNode* node, const MyTreeNode* all_nodes)
                 {
                     ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
                     const bool is_folder = (node->ChildCount > 0);
                     if (is_folder)
                     {
                         bool open = ImGui::TreeNodeEx(node->Name, ImGuiTreeNodeFlags_SpanFullWidth);
-                        ImGui::TableNextCell();
+                        ImGui::TableNextColumn();
                         ImGui::TextDisabled("--");
-                        ImGui::TableNextCell();
+                        ImGui::TableNextColumn();
                         ImGui::TextUnformatted(node->Type);
                         if (open)
                         {
@@ -4021,9 +4025,9 @@ static void ShowDemoWindowTables()
                     else
                     {
                         ImGui::TreeNodeEx(node->Name, ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_Bullet | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_SpanFullWidth);
-                        ImGui::TableNextCell();
+                        ImGui::TableNextColumn();
                         ImGui::Text("%d", node->Size);
-                        ImGui::TableNextCell();
+                        ImGui::TableNextColumn();
                         ImGui::TextUnformatted(node->Type);
                     }
                 }
@@ -4228,13 +4232,13 @@ static void ShowDemoWindowTables()
                     MyItem* item = &items[row_n];
                     ImGui::PushID(item->ID);
                     ImGui::TableNextRow();
-                    ImGui::TableSetColumnIndex(0);
+                    ImGui::TableNextColumn();
                     ImGui::Text("%04d", item->ID);
-                    ImGui::TableSetColumnIndex(1);
+                    ImGui::TableNextColumn();
                     ImGui::TextUnformatted(item->Name);
-                    ImGui::TableSetColumnIndex(2);
+                    ImGui::TableNextColumn();
                     ImGui::SmallButton("None");
-                    ImGui::TableSetColumnIndex(3);
+                    ImGui::TableNextColumn();
                     ImGui::Text("%d", item->Quantity);
                     ImGui::PopID();
                 }
@@ -4431,6 +4435,7 @@ static void ShowDemoWindowTables()
                     const bool item_is_selected = selection.contains(item->ID);
                     ImGui::PushID(item->ID);
                     ImGui::TableNextRow(ImGuiTableRowFlags_None, row_min_height);
+                    ImGui::TableNextColumn();
 
                     // For the demo purpose we can select among different type of items submitted in the first column
                     char label[32];
@@ -4462,14 +4467,14 @@ static void ShowDemoWindowTables()
                         }
                     }
 
-                    ImGui::TableNextCell();
+                    ImGui::TableNextColumn();
                     ImGui::TextUnformatted(item->Name);
 
                     // Here we demonstrate marking our data set as needing to be sorted again if we modified a quantity,
                     // and we are currently sorting on the column showing the Quantity.
                     // To avoid triggering a sort while holding the button, we only trigger it when the button has been released.
                     // You will probably need a more advanced system in your code if you want to automatically sort when a specific entry changes.
-                    if (ImGui::TableNextCell())
+                    if (ImGui::TableNextColumn())
                     {
                         if (ImGui::SmallButton("Chop")) { item->Quantity += 1; }
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
@@ -4478,16 +4483,16 @@ static void ShowDemoWindowTables()
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
                     }
 
-                    ImGui::TableNextCell();
+                    ImGui::TableNextColumn();
                     ImGui::Text("%d", item->Quantity);
 
-                    ImGui::TableNextCell();
+                    ImGui::TableNextColumn();
                     if (show_wrapped_text)
                         ImGui::TextWrapped("Lorem ipsum dolor sit amet");
                     else
                         ImGui::Text("Lorem ipsum dolor sit amet");
 
-                    ImGui::TableNextCell();
+                    ImGui::TableNextColumn();
                     ImGui::Text("1234");
 
                     ImGui::PopID();

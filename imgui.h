@@ -653,7 +653,7 @@ namespace ImGui
     IMGUI_API bool          IsPopupOpen(const char* str_id, ImGuiPopupFlags flags = 0);                         // return true if the popup is open.
 
     // Tables
-    // [ALPHA API] API will evolve! (see: FIXME-TABLE)
+    // [ALPHA API] API may evolve!
     // - Full-featured replacement for old Columns API
     // - See Demo->Tables for details.
     // - See ImGuiTableFlags_ and ImGuiTableColumnsFlags_ enums for a description of available flags.
@@ -662,28 +662,36 @@ namespace ImGui
     // - 2. Optionally call TableSetupColumn() to submit column name/flags/defaults
     // - 3. Optionally call TableSetupScrollFreeze() to request scroll freezing of columns/rows
     // - 4. Optionally call TableHeadersRow() to submit a header row (names will be pulled from data submitted to TableSetupColumns)
-    // - 4. Populate contents
-    //     - In most situations you can use TableNextRow() + TableSetColumnIndex() to start appending into a column.
-    //     - If you are using tables as a sort of grid, where every columns is holding the same type of contents,
-    //       you may prefer using TableNextCell() instead of TableNextRow() + TableSetColumnIndex().
-    //     - Submit your content with regular ImGui function.
+    // - 5. Populate contents
+    //    - In most situations you can use TableNextRow() + TableSetColumnIndex(xx) to start appending into a column.
+    //    - If you are using tables as a sort of grid, where every columns is holding the same type of contents,
+    //      you may prefer using TableNextColumn() instead of TableNextRow() + TableSetColumnIndex().
+    //      TableNextColumn() will automatically wrap-around into the next row if needed.
+    //    - IMPORTANT: Comparatively to the old Columns() API, we need to call TableNextColumn() for the first column!
+    //    - Summary of possible call flow:
+    //      ----------------------------------------------------------------------------------------------------------
+    //       TableNextRow() -> TableSetColumnIndex(0) -> Text("Hello 0") -> TableSetColumnIndex(1) -> Text("Hello 1")  // OK
+    //       TableNextRow() -> TableNextColumn()         Text("Hello 0") -> TableNextColumn()      -> Text("Hello 1")  // OK
+    //                         TableNextColumn()         Text("Hello 0") -> TableNextColumn()      -> Text("Hello 1")  // OK: TableNextColumn() automatically gets to next row!
+    //       TableNextRow()                              Text("Hello 0")                                               // Not OK! Missing TableSetColumnIndex() or TableNextColumn()! Text will not appear!
+    //      ----------------------------------------------------------------------------------------------------------
     // - 5. Call EndTable()
     #define IMGUI_HAS_TABLE 1
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
     IMGUI_API void          TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f); // append into the first cell of a new row.
-    IMGUI_API bool          TableNextCell();                            // append into the next column (next column, or next row if currently in last column). Return true if column is visible.
+    IMGUI_API bool          TableNextColumn();                          // append into the next column (or first column of next row if currently in last column). Return true if column is visible.
     IMGUI_API bool          TableSetColumnIndex(int column_n);          // append into the specified column. Return true if column is visible.
     IMGUI_API int           TableGetColumnIndex();                      // return current column index.
     // Tables: Headers & Columns declaration
-    // - Use TableSetupScrollFreeze() to lock columns (from the right) or rows (from the top) so they stay visible when scrolled.
     // - Use TableSetupColumn() to specify label, resizing policy, default width, id, various other flags etc.
     //   Important: this will not display anything! The name passed to TableSetupColumn() is used by TableHeadersRow() and context-menus.
     // - Use TableHeadersRow() to create a row and automatically submit a TableHeader() for each column.
     //   Headers are required to perform some interactions: reordering, sorting, context menu (FIXME-TABLE: context menu should work without!)
     // - You may manually submit headers using TableNextRow() + TableHeader() calls, but this is only useful in some advanced cases (e.g. adding custom widgets in header row).
-    IMGUI_API void          TableSetupScrollFreeze(int columns, int rows);
+    // - Use TableSetupScrollFreeze() to lock columns (from the right) or rows (from the top) so they stay visible when scrolled.
     IMGUI_API void          TableSetupColumn(const char* label, ImGuiTableColumnFlags flags = 0, float init_width_or_weight = -1.0f, ImU32 user_id = 0);
+    IMGUI_API void          TableSetupScrollFreeze(int cols, int rows); // lock columns/rows so they stay visible when scrolled.
     IMGUI_API void          TableHeadersRow();                          // submit all headers cells based on data provided to TableSetupColumn() + submit context menu
     IMGUI_API void          TableHeader(const char* label);             // submit one header cell manually (rarely used)
     // Tables: Miscellaneous functions
@@ -694,13 +702,13 @@ namespace ImGui
     //   Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable().
     IMGUI_API int           TableGetColumnCount();                      // return number of columns (value passed to BeginTable)
     IMGUI_API const char*   TableGetColumnName(int column_n = -1);      // return NULL if column didn't have a name declared by TableSetupColumn(). Pass -1 to use current column.
-    IMGUI_API bool          TableGetColumnIsVisible(int column_n = -1); // return true if column is visible. Same value is also returned by TableNextCell() and TableSetColumnIndex(). Pass -1 to use current column.
+    IMGUI_API bool          TableGetColumnIsVisible(int column_n = -1); // return true if column is visible. Same value is also returned by TableNextColumn() and TableSetColumnIndex(). Pass -1 to use current column.
     IMGUI_API bool          TableGetColumnIsSorted(int column_n = -1);  // return true if column is included in the sort specs. Rarely used, can be useful to tell if a data change should trigger resort. Equivalent to test ImGuiTableSortSpecs's ->ColumnsMask & (1 << column_n). Pass -1 to use current column.
     IMGUI_API int           TableGetHoveredColumn();                    // return hovered column. return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
     IMGUI_API ImGuiTableSortSpecs* TableGetSortSpecs();                 // get latest sort specs for the table (NULL if not sorting).
     IMGUI_API void          TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n = -1);  // change the color of a cell, row, or column. See ImGuiTableBgTarget_ flags for details.
 
-    // Columns (Legacy API, prefer using Tables)
+    // Legacy Columns API (2020: prefer using Tables!)
     // - You can also use SameLine(pos_x) to mimic simplified columns.
     IMGUI_API void          Columns(int count = 1, const char* id = NULL, bool border = true);
     IMGUI_API void          NextColumn();                                                       // next column, defaults to current row or next row if the current row is finished

@@ -79,7 +79,7 @@
 //    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
 //    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
 // - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
-// - TableNextRow() / TableNextCell()           user begin into the first row, also automatically called by TableHeadersRow()
+// - TableNextRow() / TableNextColumn()         user begin into the first row, also automatically called by TableHeadersRow()
 //    | TableEndCell()                          - close existing cell if not the first time
 //    | TableBeginCell()                        - enter into current cell
 // - [...]                                      user emit contents
@@ -345,7 +345,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     }
     table->RefScale = new_ref_scale_unit;
 
-    // Disable output until user calls TableNextRow() or TableNextCell() leading to the TableUpdateLayout() call..
+    // Disable output until user calls TableNextRow() or TableNextColumn() leading to the TableUpdateLayout() call..
     // This is not strictly necessary but will reduce cases were "out of table" output will be misleading to the user.
     // Because we cannot safely assert in EndTable() when no rows have been created, this seems like our best option.
     inner_window->SkipItems = true;
@@ -988,7 +988,7 @@ void    ImGui::EndTable()
     // cases, and for consistency user may sometimes output empty tables (and still benefit from e.g. outer border)
     //IM_ASSERT(table->IsLayoutLocked && "Table unused: never called TableNextRow(), is that the intent?");
 
-    // If the user never got to call TableNextRow() or TableNextCell(), we call layout ourselves to ensure all our
+    // If the user never got to call TableNextRow() or TableNextColumn(), we call layout ourselves to ensure all our
     // code paths are consistent (instead of just hoping that TableBegin/TableEnd will work), get borders drawn, etc.
     if (!table->IsLayoutLocked)
         TableUpdateLayout(table);
@@ -1610,7 +1610,8 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
     table->RowPosY2 += table->CellPaddingY * 2.0f;
     table->RowPosY2 = ImMax(table->RowPosY2, table->RowPosY1 + row_min_height);
 
-    TableBeginCell(table, 0);
+    // Disable output until user calls TableNextColumn()
+    table->InnerWindow->SkipItems = true;
 }
 
 // [Internal]
@@ -1654,7 +1655,8 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     IM_ASSERT(window == table->InnerWindow);
     IM_ASSERT(table->IsInsideRow);
 
-    TableEndCell(table);
+    if (table->CurrentColumn != -1)
+        TableEndCell(table);
 
     // Position cursor at the bottom of our row so it can be used for e.g. clipping calculation. However it is
     // likely that the next call to TableBeginCell() will reposition the cursor to take account of vertical padding.
@@ -1783,7 +1785,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     table->IsInsideRow = false;
 }
 
-// [Internal] Called by TableNextCell()!
+// [Internal] Called by TableNextColumn()!
 // This is called very frequently, so we need to be mindful of unnecessary overhead.
 // FIXME-TABLE FIXME-OPT: Could probably shortcut some things for non-active or clipped columns.
 void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
@@ -1824,7 +1826,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     }
 }
 
-// [Internal] Called by TableNextRow()/TableNextCell()!
+// [Internal] Called by TableNextRow()/TableNextColumn()!
 void    ImGui::TableEndCell(ImGuiTable* table)
 {
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
@@ -1846,28 +1848,30 @@ void    ImGui::TableEndCell(ImGuiTable* table)
 
 // Append into the next cell
 // FIXME-TABLE: Wrapping to next row should be optional?
-bool    ImGui::TableNextCell()
+bool    ImGui::TableNextColumn()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     if (!table)
         return false;
 
-    if (table->CurrentColumn != -1 && table->CurrentColumn + 1 < table->ColumnsCount)
+    if (table->IsInsideRow && table->CurrentColumn + 1 < table->ColumnsCount)
     {
-        TableEndCell(table);
+        if (table->CurrentColumn != -1)
+            TableEndCell(table);
         TableBeginCell(table, table->CurrentColumn + 1);
     }
     else
     {
         TableNextRow();
+        TableBeginCell(table, 0);
     }
-    int column_n = table->CurrentColumn;
 
     // FIXME-TABLE: Need to clarify if we want to allow IsItemHovered() here
     //g.CurrentWindow->DC.LastItemStatusFlags = (column_n == table->HoveredColumn) ? ImGuiItemStatusFlags_HoveredRect : ImGuiItemStatusFlags_None;
 
     // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
+    int column_n = table->CurrentColumn;
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
