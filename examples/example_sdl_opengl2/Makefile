@@ -31,27 +31,27 @@ LIBS =
 
 ifeq ($(UNAME_S), Linux) #LINUX
 	ECHO_MESSAGE = "Linux"
-	LIBS += -lGL -ldl `sdl2-config --libs`
+	LIBS += -lGL -ldl $(shell sdl2-config --libs)
 
-	CXXFLAGS += `sdl2-config --cflags`
+	CXXFLAGS += $(shell sdl2-config --cflags)
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(UNAME_S), Darwin) #APPLE
 	ECHO_MESSAGE = "Mac OS X"
-	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo `sdl2-config --libs`
+	LIBS += -framework OpenGL -framework Cocoa -framework IOKit -framework CoreVideo $(shell sdl2-config --libs)
 	LIBS += -L/usr/local/lib -L/opt/local/lib
 
-	CXXFLAGS += `sdl2-config --cflags`
+	CXXFLAGS += $(shell sdl2-config --cflags)
 	CXXFLAGS += -I/usr/local/include -I/opt/local/include
 	CFLAGS = $(CXXFLAGS)
 endif
 
 ifeq ($(findstring MINGW,$(UNAME_S)),MINGW)
 	ECHO_MESSAGE = "MinGW"
-	LIBS += -lgdi32 -lopengl32 -limm32 `pkg-config --static --libs sdl2`
+	LIBS += -lgdi32 -lopengl32 -limm32 $(shell pkg-config --static --libs sdl2)
 
-	CXXFLAGS += `pkg-config --cflags sdl2`
+	CXXFLAGS += $(shell pkg-config --cflags sdl2)
 	CFLAGS = $(CXXFLAGS)
 endif
 
