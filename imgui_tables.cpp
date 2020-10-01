@@ -1002,6 +1002,11 @@ void    ImGui::EndTable()
     if (table->IsInsideRow)
         TableEndRow(table);
 
+    // Context menu in columns body
+    if (flags & ImGuiTableFlags_ContextMenuInBody)
+        if (table->HoveredColumnBody != -1 && !ImGui::IsAnyItemHovered() && ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+            TableOpenContextMenu((int)table->HoveredColumnBody);
+
     // Finalize table height
     inner_window->SkipItems = table->HostSkipItems;
     inner_window->DC.CursorMaxPos = table->HostCursorMaxPos;
@@ -2040,6 +2045,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table)
     }
 
     // Sorting
+    // (modify TableOpenContextMenu() to add _Sortable flag if enabling this)
 #if 0
     if ((table->Flags & ImGuiTableFlags_Sortable) && column != NULL && (column->Flags & ImGuiTableColumnFlags_NoSort) == 0)
     {
@@ -2082,8 +2088,14 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table)
 }
 
 // Use -1 to open menu not specific to a given column.
-void    ImGui::TableOpenContextMenu(ImGuiTable* table, int column_n)
+void    ImGui::TableOpenContextMenu(int column_n)
 {
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (column_n == -1 && table->CurrentColumn != -1)   // When called within a column automatically use this one (for consistency)
+        column_n = table->CurrentColumn;
+    if (column_n == table->ColumnsCount)                // To facilitate using with TableGetHoveredColumn()
+        column_n = -1;
     IM_ASSERT(column_n >= -1 && column_n < table->ColumnsCount);
     if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
     {
@@ -2157,7 +2169,7 @@ void    ImGui::TableHeadersRow()
     ImVec2 mouse_pos = ImGui::GetMousePos();
     if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
         if (mouse_pos.y >= row_y1 && mouse_pos.y < row_y1 + row_height)
-            TableOpenContextMenu(table, -1); // Will open a non-column-specific popup.
+            TableOpenContextMenu(-1); // Will open a non-column-specific popup.
 }
 
 // Emit a column header (text + optional sort order)
@@ -2297,7 +2309,7 @@ void    ImGui::TableHeader(const char* label)
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())
-        TableOpenContextMenu(table, column_n);
+        TableOpenContextMenu(column_n);
 }
 
 // Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
@@ -2359,6 +2371,7 @@ bool ImGui::TableGetColumnIsSorted(int column_n)
     return (column->SortOrder != -1);
 }
 
+// Return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
 int ImGui::TableGetHoveredColumn()
 {
     ImGuiContext& g = *GImGui;
