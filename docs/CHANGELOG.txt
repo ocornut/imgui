@@ -111,6 +111,8 @@ Breaking Changes:
   It was also getting in the way of better font scaling, so let's get rid of it now! 
   If you used DisplayOffset it was probably in association to rasterizing a font at a specific size,
   in which case the corresponding offset may be reported into GlyphOffset. (#1619)
+- Style: Renamed style.TabMinWidthForUnselectedCloseButton to style.TabMinWidthForCloseButton.
+- Renamed ImGuiSliderFlags_ClampOnInput to ImGuiSliderFlags_AlwaysClamp. Kept redirection enum (will obsolete).
 - Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
   For variety of reason this is more self-explanatory.
 - Removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it
@@ -229,6 +231,7 @@ Other Changes:
     which was obsoleted. (#1823, #1316, #642) [@Shironekoben, @AndrewBelt]
   - Added ImGuiSliderFlags_ClampOnInput flag to force clamping value when using
     CTRL+Click to type in a value manually. (#1829, #3209, #946, #413).
+    [note: RENAMED to ImGuiSliderFlags_AlwaysClamp in 1.79].
   - Added ImGuiSliderFlags_NoRoundToFormat flag to disable rounding underlying
     value to match precision of the display format string. (#642)
   - Added ImGuiSliderFlags_NoInput flag to disable turning widget into a text input
