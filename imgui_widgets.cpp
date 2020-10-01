@@ -6999,13 +6999,16 @@ static void ImGui::TabBarLayout(ImGuiTabBar* tab_bar)
         tab->IndexDuringLayout = (ImS8)tab_dst_n;
 
         // We will need sorting if tabs have changed section (e.g. moved from one of Leading/Central/Trailing to another)
-        ImGuiTabItem* prev_tab = &tab_bar->Tabs[tab_dst_n - 1];
         int curr_tab_section_n = (tab->Flags & ImGuiTabItemFlags_Leading) ? 0 : (tab->Flags & ImGuiTabItemFlags_Trailing) ? 2 : 1;
-        int prev_tab_section_n = (prev_tab->Flags & ImGuiTabItemFlags_Leading) ? 0 : (prev_tab->Flags & ImGuiTabItemFlags_Trailing) ? 2 : 1;
-        if (tab_dst_n > 0 && curr_tab_section_n == 0 && prev_tab_section_n != 0)
-            need_sort_by_section = true;
-        if (tab_dst_n > 0 && prev_tab_section_n == 2 && curr_tab_section_n != 2)
-            need_sort_by_section = true;
+        if (tab_dst_n > 0)
+        {
+            ImGuiTabItem* prev_tab = &tab_bar->Tabs[tab_dst_n - 1];
+            int prev_tab_section_n = (prev_tab->Flags & ImGuiTabItemFlags_Leading) ? 0 : (prev_tab->Flags & ImGuiTabItemFlags_Trailing) ? 2 : 1;
+            if (curr_tab_section_n == 0 && prev_tab_section_n != 0)
+                need_sort_by_section = true;
+            if (prev_tab_section_n == 2 && curr_tab_section_n != 2)
+                need_sort_by_section = true;
+        }
 
         sections[curr_tab_section_n].TabCount++;
         tab_dst_n++;
