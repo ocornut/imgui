@@ -283,15 +283,17 @@ namespace
             }
         case FT_PIXEL_MODE_BGRA:
             {
+                #define DE_MULTIPLY(color, alpha) (ImU32)(255.0f * (float)color / (float)alpha + 0.5f)
+
                 if (multiply_table == NULL)
                 {
                     for (uint32_t y = 0; y < h; y++, src += src_pitch, dst += dst_pitch)
                     {
                         for (uint32_t x = 0; x < w; x++)
                             dst[x] = IM_COL32(
-                                src[x * 4 + 2],
-                                src[x * 4 + 1],
-                                src[x * 4],
+                                DE_MULTIPLY(src[x * 4 + 2], src[x * 4 + 3]),
+                                DE_MULTIPLY(src[x * 4 + 1], src[x * 4 + 3]),
+                                DE_MULTIPLY(src[x * 4],     src[x * 4 + 3]),
                                 src[x * 4 + 3]);
                     }
                 }
@@ -301,12 +303,14 @@ namespace
                     {
                         for (uint32_t x = 0; x < w; x++)
                             dst[x] = IM_COL32(
-                                multiply_table[src[x * 4 + 2]],
-                                multiply_table[src[x * 4 + 1]],
-                                multiply_table[src[x * 4]],
+                                multiply_table[DE_MULTIPLY(src[x * 4 + 2], src[x * 4 + 3])],
+                                multiply_table[DE_MULTIPLY(src[x * 4 + 1], src[x * 4 + 3])],
+                                multiply_table[DE_MULTIPLY(src[x * 4],     src[x * 4 + 3])],
                                 multiply_table[src[x * 4 + 3]]);
                     }
                 }
+
+                #undef DE_MULTIPLY
                 break;
             }
         default:
