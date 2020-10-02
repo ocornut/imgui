@@ -315,13 +315,15 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         return 0;
     case WM_KEYDOWN:
     case WM_SYSKEYDOWN:
-        if (wParam < 256)
-            io.KeysDown[wParam] = 1;
+        // Win32 sets bit 30 if the key is repeating. We handle that internally so we
+        // only want the first down.
+        if ((wParam < 256) && !(lParam & (1 << 30)))
+            io.KeysDown[wParam]++;
         return 0;
     case WM_KEYUP:
     case WM_SYSKEYUP:
         if (wParam < 256)
-            io.KeysDown[wParam] = 0;
+            io.KeysUp[wParam]++;
         return 0;
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.

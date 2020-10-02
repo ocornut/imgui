@@ -3841,8 +3841,18 @@ void ImGui::NewFrame()
     // Synchronize io.KeyMods with individual modifiers io.KeyXXX bools
     g.IO.KeyMods = GetMergedKeyModFlags();
     memcpy(g.IO.KeysDownDurationPrev, g.IO.KeysDownDuration, sizeof(g.IO.KeysDownDuration));
-    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++)
-        g.IO.KeysDownDuration[i] = g.IO.KeysDown[i] ? (g.IO.KeysDownDuration[i] < 0.0f ? 0.0f : g.IO.KeysDownDuration[i] + g.IO.DeltaTime) : -1.0f;
+    for (int i = 0; i < IM_ARRAYSIZE(g.IO.KeysDown); i++) {
+        g.IO.KeysDown[i] -= g.IO.KeysUpPrev[i];
+        if(g.IO.KeysDown[i])
+            if(g.IO.KeysDownDuration[i] < 0.0f)
+                g.IO.KeysDownDuration[i] = 0.0f;
+            else
+                g.IO.KeysDownDuration[i] += g.IO.DeltaTime;
+        else
+            g.IO.KeysDownDuration[i] = -1.0f;
+    }
+    memcpy(g.IO.KeysUpPrev, g.IO.KeysUp, sizeof(g.IO.KeysUp));
+    memset(g.IO.KeysUp, 0, sizeof(g.IO.KeysUp));
 
     // Update gamepad/keyboard navigation
     NavUpdate();
