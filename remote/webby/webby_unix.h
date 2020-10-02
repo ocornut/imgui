@@ -19,7 +19,7 @@ static int wb_socket_error(void)
 
 static int wb_valid_socket(webby_socket_t socket)
 {
-  return socket > 0;
+  return socket >= 0;
 }
 
 static void wb_close_socket(webby_socket_t socket)
