@@ -42,10 +42,14 @@ Breaking Changes:
   It was also getting in the way of better font scaling, so let's get rid of it now! 
   If you used DisplayOffset it was probably in association to rasterizing a font at a specific size,
   in which case the corresponding offset may be reported into GlyphOffset. (#1619)
+- ImGuiListClipper: Renamed constructor parameters which created an ambiguous alternative to using 
+  the ImGuiListClipper::Begin() function, with misleading edge cases. Always use ImGuiListClipper::Begin()!
+  Kept inline redirection function (will obsolete). 
+  (note: imgui_memory_editor <0.40 from imgui_club/ used this old clipper API. Update your copy if needed).
 - Style: Renamed style.TabMinWidthForUnselectedCloseButton to style.TabMinWidthForCloseButton.
 - Renamed ImGuiSliderFlags_ClampOnInput to ImGuiSliderFlags_AlwaysClamp. Kept redirection enum (will obsolete).
 - Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
-  For variety of reason this is more self-explanatory.
+  For variety of reason this is more self-explanatory. Kept inline redirection function.
 - Removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it
   is inconsistent with other popups API and makes others misleading. It's also and unnecessary: you can
   use IsWindowAppearing() after BeginPopup() for a similar result.
