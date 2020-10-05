@@ -1916,6 +1916,7 @@ struct ImGuiTableColumn
     bool                    IsVisibleNextFrame;
     bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle.
     bool                    SkipItems;
+    ImGuiNavLayer           NavLayerCurrent;
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
@@ -2039,7 +2040,7 @@ struct ImGuiTable
     bool                        IsSettingsDirty;            // Set when table settings have changed and needs to be reported into ImGuiTableSetttings data.
     bool                        IsDefaultDisplayOrder;      // Set when display order is unchanged from default (DisplayOrder contains 0...Count-1)
     bool                        IsResetDisplayOrderRequest;
-    bool                        IsFreezeRowsPassed;         // Set when we got past the frozen row (the first one).
+    bool                        IsFreezeRowsPassed;         // Set when we got past the frozen row.
     bool                        HostSkipItems;              // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
 
     ImGuiTable()
