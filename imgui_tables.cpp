@@ -118,6 +118,10 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
     if ((flags & ImGuiTableFlags_NoHostExtendY) && (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0)
         flags &= ~ImGuiTableFlags_NoHostExtendY;
 
+    // Adjust flags: NoBordersInBodyUntilResize takes priority over NoBordersInBody
+    if (flags & ImGuiTableFlags_NoBordersInBodyUntilResize)
+        flags &= ~ImGuiTableFlags_NoBordersInBody;
+
     return flags;
 }
 
@@ -938,11 +942,10 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
     // use the final height from last frame. Because this is only affecting _interaction_ with columns, it is not
     // really problematic (whereas the actual visual will be displayed in EndTable() and using the current frame height).
     // Actual columns highlight/render will be performed in EndTable() and not be affected.
-    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersFullHeightV);
     const float hit_half_width = TABLE_RESIZE_SEPARATOR_HALF_THICKNESS;
     const float hit_y1 = table->OuterRect.Min.y;
-    const float hit_y2_full = ImMax(table->OuterRect.Max.y, hit_y1 + table->LastOuterHeight);
-    const float hit_y2 = borders_full_height ? hit_y2_full : (hit_y1 + table->LastFirstRowHeight);
+    const float hit_y2_body = ImMax(table->OuterRect.Max.y, hit_y1 + table->LastOuterHeight);
+    const float hit_y2_head = hit_y1 + table->LastFirstRowHeight;
 
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
@@ -954,8 +957,13 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         if (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_))
             continue;
 
+        // ImGuiTableFlags_NoBordersInBodyUntilResize will be honored in TableDrawBorders() 
+        const float border_y2_hit = (table->Flags & ImGuiTableFlags_NoBordersInBody) ? hit_y2_head : hit_y2_body;
+        if ((table->Flags & ImGuiTableFlags_NoBordersInBody) && table->IsUsingHeaders == false)
+            continue;
+
         ImGuiID column_id = TableGetColumnResizeID(table, column_n, table->InstanceCurrent);
-        ImRect hit_rect(column->MaxX - hit_half_width, hit_y1, column->MaxX + hit_half_width, hit_y2);
+        ImRect hit_rect(column->MaxX - hit_half_width, hit_y1, column->MaxX + hit_half_width, border_y2_hit);
         //GetForegroundDrawList()->AddRect(hit_rect.Min, hit_rect.Max, IM_COL32(255, 0, 0, 100));
         KeepAliveID(column_id);
 
@@ -1144,19 +1152,8 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     // Draw inner border and resizing feedback
     const float border_size = TABLE_BORDER_SIZE;
     const float draw_y1 = table->OuterRect.Min.y;
-    float draw_y2_base = (table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight;
-    float draw_y2_full = table->OuterRect.Max.y;
-    ImU32 border_base_col;
-    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersFullHeightV);
-    if (borders_full_height)
-    {
-        draw_y2_base = draw_y2_full;
-        border_base_col = table->BorderColorLight;
-    }
-    else
-    {
-        border_base_col = table->BorderColorStrong;
-    }
+    const float draw_y2_body = table->OuterRect.Max.y;
+    const float draw_y2_head = table->IsUsingHeaders ? ((table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight) : draw_y1;
 
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
     {
@@ -1170,23 +1167,31 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
             const bool is_hovered = (table->HoveredColumnBorder == column_n);
             const bool is_resized = (table->ResizedColumn == column_n) && (table->InstanceInteracted == table->InstanceCurrent);
             const bool is_resizable = (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_)) == 0;
-            bool draw_right_border = (column->MaxX <= table->InnerClipRect.Max.x) || (is_resized || is_hovered);
+
+            if (column->MaxX > table->InnerClipRect.Max.x && !is_resized && is_hovered)
+                continue;
             if (column->NextVisibleColumn == -1 && !is_resizable)
-                draw_right_border = false;
-            if (draw_right_border && column->MaxX > column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
+                continue;
+            if (column->MaxX <= column->ClipRect.Min.x) // FIXME-TABLE FIXME-STYLE: Assume BorderSize==1, this is problematic if we want to increase the border size..
+                continue;
+
+            // Draw in outer window so right-most column won't be clipped
+            // Always draw full height border when being resized/hovered, or on the delimitation of frozen column scrolling.
+            ImU32 col;
+            float draw_y2;
+            if (is_hovered || is_resized || (table->FreezeColumnsCount != -1 && table->FreezeColumnsCount == order_n + 1))
             {
-                // Draw in outer window so right-most column won't be clipped
-                // Always draw full height border when:
-                // - not using headers
-                // - user specify ImGuiTableFlags_BordersFullHeight
-                // - being interacted with
-                // - on the delimitation of frozen column scrolling
-                const ImU32 col = is_resized ? GetColorU32(ImGuiCol_SeparatorActive) : is_hovered ? GetColorU32(ImGuiCol_SeparatorHovered) : border_base_col;
-                float draw_y2 = draw_y2_base;
-                if (is_hovered || is_resized || (table->FreezeColumnsCount != -1 && table->FreezeColumnsCount == order_n + 1))
-                    draw_y2 = draw_y2_full;
-                inner_drawlist->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), col, border_size);
+                draw_y2 = draw_y2_body;
+                col = is_resized ? GetColorU32(ImGuiCol_SeparatorActive) : is_hovered ? GetColorU32(ImGuiCol_SeparatorHovered) : table->BorderColorStrong;
             }
+            else
+            {
+                draw_y2 = (table->Flags & (ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_NoBordersInBodyUntilResize)) ? draw_y2_head : draw_y2_body;
+                col = (table->Flags & (ImGuiTableFlags_NoBordersInBody | ImGuiTableFlags_NoBordersInBodyUntilResize)) ? table->BorderColorStrong : table->BorderColorLight;
+            }
+
+            if (draw_y2 > draw_y1)
+                inner_drawlist->AddLine(ImVec2(column->MaxX, draw_y1), ImVec2(column->MaxX, draw_y2), col, border_size);
         }
     }
 
