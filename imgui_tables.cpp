@@ -1147,7 +1147,8 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     float draw_y2_base = (table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight;
     float draw_y2_full = table->OuterRect.Max.y;
     ImU32 border_base_col;
-    if (!table->IsUsingHeaders || (table->Flags & ImGuiTableFlags_BordersFullHeightV))
+    const bool borders_full_height = (table->IsUsingHeaders == false) || (table->Flags & ImGuiTableFlags_BordersFullHeightV);
+    if (borders_full_height)
     {
         draw_y2_base = draw_y2_full;
         border_base_col = table->BorderColorLight;
@@ -1156,9 +1157,6 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     {
         border_base_col = table->BorderColorStrong;
     }
-
-    if ((table->Flags & ImGuiTableFlags_BordersOuterV) && (table->InnerWindow == table->OuterWindow))
-        inner_drawlist->AddLine(ImVec2(table->OuterRect.Min.x, draw_y1), ImVec2(table->OuterRect.Min.x, draw_y2_base), border_base_col, border_size);
 
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
     {
@@ -1696,24 +1694,12 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         ImU32 border_col = 0;
         const float border_size = TABLE_BORDER_SIZE;
         if (table->CurrentRow != 0 || table->InnerWindow == table->OuterWindow)
-        {
             if (table->Flags & ImGuiTableFlags_BordersInnerH)
-            {
-                //if (table->CurrentRow == 0 && table->InnerWindow == table->OuterWindow)
-                //    border_col = table->BorderOuterColor;
-                //else
-                if (table->CurrentRow > 0)// && !(table->LastRowFlags & ImGuiTableRowFlags_Headers))
+                if (table->CurrentRow > 0)
                     border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
-            }
-            else
-            {
-                //if (table->RowFlags & ImGuiTableRowFlags_Headers)
-                //    border_col = table->BorderOuterColor;
-            }
-        }
 
         const bool draw_cell_bg_color = table->RowCellDataCurrent >= 0;
-        const bool draw_strong_bottom_border = unfreeze_rows_actual;// || (table->RowFlags & ImGuiTableRowFlags_Headers);
+        const bool draw_strong_bottom_border = unfreeze_rows_actual;
         if ((bg_col0 | bg_col1 | border_col) != 0 || draw_strong_bottom_border || draw_cell_bg_color)
         {
             // In theory we could call SetWindowClipRectBeforeChannelChange() but since we know TableEndRow() is

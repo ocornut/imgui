@@ -1069,7 +1069,7 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_BordersOuter                    = ImGuiTableFlags_BordersOuterV | ImGuiTableFlags_BordersOuterH, // Draw outer borders.
     ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,   // Draw all borders.
     ImGuiTableFlags_BordersFullHeightV              = 1 << 12,  // Borders covers all rows even when Headers are being used. Allow resizing from any rows.
-    // Padding, Sizing
+    // Sizing, Padding
     ImGuiTableFlags_SizingPolicyFixedX              = 1 << 13,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAlwaysAutoResize policy. Read description above for more details.
     ImGuiTableFlags_SizingPolicyStretchX            = 1 << 14,  // Default if ScrollX is off. Columns will default to use _WidthStretch policy. Read description above for more details.
     ImGuiTableFlags_NoHeadersWidth                  = 1 << 15,  // Disable header width contribution to automatic width calculation.

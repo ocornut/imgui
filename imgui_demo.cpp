@@ -3385,8 +3385,12 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Borders, background"))
     {
         // Expose a few Borders related flags interactively
+        enum ContentsType { CT_Text, CT_FillButton };
         static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
+        static bool display_headers = false;
         static bool display_width = false;
+        static int contents_type = CT_Text;
+
         ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
         ImGui::CheckboxFlags("ImGuiTableFlags_Borders", (unsigned int*)&flags, ImGuiTableFlags_Borders);
         ImGui::SameLine(); HelpMarker("ImGuiTableFlags_Borders\n = ImGuiTableFlags_BordersInnerV\n | ImGuiTableFlags_BordersOuterV\n | ImGuiTableFlags_BordersInnerV\n | ImGuiTableFlags_BordersOuterH");
@@ -3402,15 +3406,30 @@ static void ShowDemoWindowTables()
         ImGui::Indent();
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersFullHeightV", (unsigned int*)&flags, ImGuiTableFlags_BordersFullHeightV); ImGui::SameLine(); HelpMarker("Makes a difference when headers are enabled");
         ImGui::Unindent();
 
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersInner", (unsigned int*)&flags, ImGuiTableFlags_BordersInner);
         ImGui::Unindent();
-        ImGui::Checkbox("Debug Display width", &display_width);
+        ImGui::AlignTextToFramePadding(); ImGui::Text("Cell contents:");
+        ImGui::SameLine(); ImGui::RadioButton("Text", &contents_type, CT_Text);
+        ImGui::SameLine(); ImGui::RadioButton("FillButton", &contents_type, CT_FillButton);
+        ImGui::Checkbox("Display headers", &display_headers);
+        ImGui::Checkbox("Display debug width", &display_width);
 
         if (ImGui::BeginTable("##table1", 3, flags))
         {
+            // Display headers so we can inspect their interaction with borders.
+            // (Headers are not the main purpose of this section of the demo, so we are not elaborating on them too much. See other sections for details)
+            if (display_headers)
+            {
+                ImGui::TableSetupColumn("One");
+                ImGui::TableSetupColumn("Two");
+                ImGui::TableSetupColumn("Three");
+                ImGui::TableHeadersRow();
+            }
+
             for (int row = 0; row < 5; row++)
             {
                 ImGui::TableNextRow();
@@ -3420,7 +3439,7 @@ static void ShowDemoWindowTables()
                     char buf[32];
                     if (display_width)
                     {
-                        // [DEBUG] Draw limits
+                        // [DEBUG] Draw limits FIXME-TABLE: Move to Advanced section
                         ImVec2 p = ImGui::GetCursorScreenPos();
                         float contents_x1 = p.x;
                         float contents_x2 = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
@@ -3437,7 +3456,11 @@ static void ShowDemoWindowTables()
                     {
                         sprintf(buf, "Hello %d,%d", row, column);
                     }
-                    ImGui::TextUnformatted(buf);
+
+                    if (contents_type == CT_Text)
+                        ImGui::TextUnformatted(buf);
+                    else if (contents_type)
+                        ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
                 }
             }
             ImGui::EndTable();
@@ -4305,7 +4328,6 @@ static void ShowDemoWindowTables()
         static float row_min_height = 0.0f; // Auto
         static float inner_width_with_scroll = 0.0f; // Auto-extend
         static bool outer_size_enabled = true;
-        static bool lock_first_column_visibility = false;
         static bool show_headers = true;
         static bool show_wrapped_text = false;
         //static ImGuiTextFilter filter;
@@ -4370,6 +4392,8 @@ static void ShowDemoWindowTables()
 
             ImGui::BulletText("Other:");
             ImGui::Indent();
+            ImGui::Checkbox("show_headers", &show_headers);
+            ImGui::Checkbox("show_wrapped_text", &show_wrapped_text);
             ImGui::DragFloat2("##OuterSize", &outer_size_value.x);
             ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
             ImGui::Checkbox("outer_size", &outer_size_enabled);
@@ -4384,9 +4408,6 @@ static void ShowDemoWindowTables()
             ImGui::DragInt("items_count", &items_count, 0.1f, 0, 5000);
             ImGui::Combo("contents_type (first column)", &contents_type, contents_type_names, IM_ARRAYSIZE(contents_type_names));
             //filter.Draw("filter");
-            ImGui::Checkbox("show_headers", &show_headers);
-            ImGui::Checkbox("show_wrapped_text", &show_wrapped_text);
-            ImGui::Checkbox("lock_first_column_visibility", &lock_first_column_visibility);
             ImGui::Unindent();
 
             ImGui::PopItemWidth();
@@ -4424,7 +4445,7 @@ static void ShowDemoWindowTables()
             // We use the "user_id" parameter of TableSetupColumn() to specify a user id that will be stored in the sort specifications.
             // This is so our sort function can identify a column given our own identifier. We could also identify them based on their index!
             ImGui::TableSetupScrollFreeze(freeze_cols, freeze_rows);
-            ImGui::TableSetupColumn("ID",          ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed | (lock_first_column_visibility ? ImGuiTableColumnFlags_NoHide : 0), -1.0f, MyItemColumnID_ID);
+            ImGui::TableSetupColumn("ID",          ImGuiTableColumnFlags_DefaultSort | ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_NoHide, -1.0f, MyItemColumnID_ID);
             ImGui::TableSetupColumn("Name",        ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Name);
             ImGui::TableSetupColumn("Action",      ImGuiTableColumnFlags_NoSort | ImGuiTableColumnFlags_WidthFixed, -1.0f, MyItemColumnID_Action);
             ImGui::TableSetupColumn("Quantity Long Label", ImGuiTableColumnFlags_PreferSortDescending | ImGuiTableColumnFlags_WidthStretch, 1.0f, MyItemColumnID_Quantity);// , ImGuiTableColumnFlags_None | ImGuiTableColumnFlags_WidthAlwaysAutoResize);
