@@ -1887,7 +1887,7 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (2 + 64 * 2)        // See TableUpdateDrawChannels()
 
-// [Internal] sizeof() ~ 104
+// [Internal] sizeof() ~ 108
 // We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
 struct ImGuiTableColumn
 {
@@ -1897,10 +1897,11 @@ struct ImGuiTableColumn
     ImGuiTableColumnFlags   Flags;                          // Effective flags. See ImGuiTableColumnFlags_
     float                   MinX;                           // Absolute positions
     float                   MaxX;
-    float                   WidthOrWeightInitValue;         // Value passed to TableSetupColumn()
-    float                   WidthStretchWeight;             // Master width weight when (Flags & _WidthStretch). Often around ~1.0f initially.
-    float                   WidthRequest;                   // Master width absolute value when !(Flags & _WidthStretch). When Stretch this is derived every frame from WidthStretchWeight in TableUpdateLayout()
-    float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be >WidthRequest to honor minimum width, may be <WidthRequest to honor shrinking columns down in tight space.
+    float                   InitStretchWeightOrWidth;       // Value passed to TableSetupColumn(). For Width it is a content width (_without padding_).
+    float                   StretchWeight;                  // Master width weight when (Flags & _WidthStretch). Often around ~1.0f initially.
+    float                   WidthAuto;                      // Automatic width
+    float                   WidthRequest;                   // Master width absolute value when !(Flags & _WidthStretch). When Stretch this is derived every frame from StretchWeight in TableUpdateLayout()
+    float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be > WidthRequest to honor minimum width, may be < WidthRequest to honor shrinking columns down in tight space.
     float                   StartX;                         // Start position for the frame, currently ~(MinX + CellPaddingX)
     float                   ContentMaxPosFrozen;            // Submitted contents absolute maximum position, from which we can infer width. Kept as float because we need to manipulate those between each cell change.
     float                   ContentMaxPosUnfrozen;
@@ -1931,7 +1932,7 @@ struct ImGuiTableColumn
     ImGuiTableColumn()
     {
         memset(this, 0, sizeof(*this));
-        WidthStretchWeight = WidthRequest = WidthGiven = -1.0f;
+        StretchWeight = WidthRequest = -1.0f;
         NameOffset = -1;
         IsVisible = IsVisibleNextFrame = true;
         DisplayOrder = IndexWithinVisibleSet = -1;
@@ -1985,10 +1986,11 @@ struct ImGuiTable
     float                       BorderX1;
     float                       BorderX2;
     float                       HostIndentX;
-    float                       CellPaddingX1;              // Padding from each borders
-    float                       CellPaddingX2;
+    float                       OuterPaddingX;
+    float                       CellPaddingX;               // Padding from each borders
     float                       CellPaddingY;
-    float                       CellSpacingX;               // Spacing between non-bordered cells
+    float                       CellSpacingX1;              // Spacing between non-bordered cells
+    float                       CellSpacingX2;
     float                       LastOuterHeight;            // Outer height from last frame
     float                       LastFirstRowHeight;         // Height of first row from last frame
     float                       InnerWidth;                 // User value passed to BeginTable(), see comments at the top of BeginTable() for details.
@@ -2285,7 +2287,7 @@ namespace ImGui
     IMGUI_API void          TableEndRow(ImGuiTable* table);
     IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_n);
     IMGUI_API void          TableEndCell(ImGuiTable* table);
-    IMGUI_API ImRect        TableGetCellBgRect();
+    IMGUI_API ImRect        TableGetCellBgRect(const ImGuiTable* table, int column_n);
     IMGUI_API const char*   TableGetColumnName(const ImGuiTable* table, int column_n);
     IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);

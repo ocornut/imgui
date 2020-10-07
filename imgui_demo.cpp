@@ -3405,9 +3405,8 @@ static void ShowDemoWindowTables()
     {
         // Expose a few Borders related flags interactively
         enum ContentsType { CT_Text, CT_FillButton };
-        static ImGuiTableFlags flags = ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
+        static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         static bool display_headers = false;
-        static bool display_width = false;
         static int contents_type = CT_Text;
 
         PushStyleCompact();
@@ -3438,7 +3437,6 @@ static void ShowDemoWindowTables()
         ImGui::SameLine(); ImGui::RadioButton("Text", &contents_type, CT_Text);
         ImGui::SameLine(); ImGui::RadioButton("FillButton", &contents_type, CT_FillButton);
         ImGui::Checkbox("Display headers", &display_headers);
-        ImGui::Checkbox("Display debug width", &display_width);
         PopStyleCompact();
 
         if (ImGui::BeginTable("##table1", 3, flags))
@@ -3458,28 +3456,11 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextRow();
                 for (int column = 0; column < 3; column++)
                 {
-                    ImGui::TableSetColumnIndex(column);
-                    char buf[32];
-                    if (display_width)
-                    {
-                        // [DEBUG] Draw limits FIXME-TABLE: Move to Advanced section
-                        ImVec2 p = ImGui::GetCursorScreenPos();
-                        float contents_x1 = p.x;
-                        float contents_x2 = ImGui::GetWindowPos().x + ImGui::GetContentRegionMax().x;
-                        float cliprect_x1 = ImGui::GetWindowDrawList()->GetClipRectMin().x;
-                        float cliprect_x2 = ImGui::GetWindowDrawList()->GetClipRectMax().x;
-                        float y1 = p.y;
-                        float y2 = p.y + ImGui::GetTextLineHeight() + 2.0f;
-                        ImDrawList* fg_draw_list = ImGui::GetForegroundDrawList();
-                        fg_draw_list->AddRect(ImVec2(contents_x1, y1 + 0.0f), ImVec2(contents_x2, y2 + 0.0f), IM_COL32(255, 0, 0, 255));   // Contents limit (e.g. Cell + Padding)
-                        fg_draw_list->AddLine(ImVec2(cliprect_x1, y2 + 1.0f), ImVec2(cliprect_x2, y2 + 1.0f), IM_COL32(255, 255, 0, 255)); // Hard clipping limit
-                        sprintf(buf, "w=%.2f", contents_x2 - contents_x1);
-                    }
-                    else
-                    {
-                        sprintf(buf, "Hello %d,%d", row, column);
-                    }
+                    if (!ImGui::TableSetColumnIndex(column))
+                        continue;
 
+                    char buf[32];
+                    sprintf(buf, "Hello %d,%d", row, column);
                     if (contents_type == CT_Text)
                         ImGui::TextUnformatted(buf);
                     else if (contents_type)
@@ -3650,25 +3631,82 @@ static void ShowDemoWindowTables()
 
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode("Explicit widths"))
+    if (ImGui::TreeNode("Padding"))
     {
-        static ImGuiTableFlags flags = ImGuiTableFlags_None;
+        static ImGuiTableFlags flags = ImGuiTableFlags_BordersV;
+
+        HelpMarker(
+            "We often want outer padding activated when any using features which makes the edges of a column visible:\n"
+            "e.g.:\n"
+            "- BorderOuterV\n"
+            "- any form of row selection\n"
+            "Because of this, activating BorderOuterV sets the default to PadOuterX. Using PadOuterX or NoPadOuterX you can override the default.\n");
+
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", (unsigned int*)&flags, ImGuiTableFlags_NoKeepColumnsVisible);
+        ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", (unsigned int*)&flags, ImGuiTableFlags_PadOuterX);
+        ImGui::SameLine(); HelpMarker("Enable outer-most padding (default if ImGuiTableFlags_BordersOuterV is set)");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", (unsigned int*)&flags, ImGuiTableFlags_NoPadOuterX);
+        ImGui::SameLine(); HelpMarker("Disable outer-most padding (default if ImGuiTableFlags_BordersOuterV is not set)");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", (unsigned int*)&flags, ImGuiTableFlags_NoPadInnerX);
+        ImGui::SameLine(); HelpMarker("Disable inner padding between columns (double inner padding if BordersOuterV is on, single inner padding if BordersOuterV is off)");
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
         PopStyleCompact();
 
         if (ImGui::BeginTable("##table1", 3, flags))
         {
-            // We could also set ImGuiTableFlags_SizingPolicyFixedX on the table and all columns will default to ImGuiTableColumnFlags_WidthFixed.
-            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 15.0f);
-            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 30.0f);
-            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 15.0f);
             for (int row = 0; row < 5; row++)
             {
                 ImGui::TableNextRow();
                 for (int column = 0; column < 3; column++)
                 {
                     ImGui::TableSetColumnIndex(column);
+                    if (row == 0)
+                    {
+                        ImGui::Text("Avail %.2f", ImGui::GetContentRegionAvail().x);
+                    }
+                    else
+                    {
+                        char buf[32];
+                        sprintf(buf, "Hello %d,%d", row, column);
+                        ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+                    }
+                    if (ImGui::TableGetHoveredColumn() == column)
+                        ImGui::TableSetBgColor(ImGuiTableBgTarget_CellBg, IM_COL32(0, 100, 0, 255));
+                }
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::TreePop();
+    }
+
+    if (open_action != -1)
+        ImGui::SetNextItemOpen(open_action != 0);
+    if (ImGui::TreeNode("Explicit widths"))
+    {
+        static ImGuiTableFlags flags = ImGuiTableFlags_None;
+        PushStyleCompact();
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", (unsigned int*)&flags, ImGuiTableFlags_NoKeepColumnsVisible);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
+        PopStyleCompact();
+
+        if (ImGui::BeginTable("##table1", 4, flags))
+        {
+            // We could also set ImGuiTableFlags_SizingPolicyFixedX on the table and all columns will default to ImGuiTableColumnFlags_WidthFixed.
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, 100.0f);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 15.0f);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 30.0f);
+            ImGui::TableSetupColumn("", ImGuiTableColumnFlags_WidthFixed, TEXT_BASE_WIDTH * 15.0f);
+            for (int row = 0; row < 5; row++)
+            {
+                ImGui::TableNextRow();
+                for (int column = 0; column < 4; column++)
+                {
+                    ImGui::TableSetColumnIndex(column);
+                    if (row == 0)
+                        ImGui::Text("(%.2f)", ImGui::GetContentRegionAvail().x);
                     ImGui::Text("Hello %d,%d", row, column);
                 }
             }
@@ -3679,7 +3717,7 @@ static void ShowDemoWindowTables()
 
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
-    if (ImGui::TreeNode("Vertical scrolling, with clipping"))
+    if (ImGui::TreeNode("Vertical scrolling"))
     {
         HelpMarker("Here we activate ScrollY, which will create a child window container to allow hosting scrollable contents.\n\nWe also demonstrate using ImGuiListClipper to virtualize the submission of many items.");
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
@@ -4356,6 +4394,7 @@ static void ShowDemoWindowTables()
         ImGui::TreePop();
     }
 
+    //ImGui::SetNextItemOpen(true, ImGuiCond_Once); // [DEBUG]
     if (open_action != -1)
         ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Advanced"))
@@ -4415,6 +4454,9 @@ static void ShowDemoWindowTables()
 
             if (ImGui::TreeNodeEx("Sizing, Padding:", ImGuiTreeNodeFlags_DefaultOpen))
             {
+                ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", (unsigned int*)&flags, ImGuiTableFlags_PadOuterX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", (unsigned int*)&flags, ImGuiTableFlags_NoPadOuterX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", (unsigned int*)&flags, ImGuiTableFlags_NoPadInnerX);
                 if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyStretchX))
                     flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyStretchX);  // Can't specify both sizing polices so we clear the other
                 ImGui::SameLine(); HelpMarker("[Default if ScrollX is off]\nFit all columns within available width (or specified inner_width). Fixed and Stretch columns allowed.");
