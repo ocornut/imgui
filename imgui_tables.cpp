@@ -312,6 +312,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         table->RawData.resize(0);
     if (table->RawData.Size == 0)
     {
+        // For reference, the total _allocation count_ for a table is:
+        // + 0 (for ImGuiTable instance, we sharing allocation in g.Tables pool)
+        // + 1 (for table->RawData allocated below)
+        // + 1 (for table->Splitter._Channels)
+        // + 2 * active_channels_count (for ImDrawCmd and ImDrawIdx buffers inside channels)
+        // Where active_channels_count is variable but often == columns_count or columns_count + 1, see TableUpdateDrawChannels() for details.
+        // Unused channels don't perform their +2 allocations.
+
         // Allocate single buffer for our arrays
         ImSpanAllocator<3> span_allocator;
         span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
@@ -957,7 +965,7 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
         if (column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_NoDirectResize_))
             continue;
 
-        // ImGuiTableFlags_NoBordersInBodyUntilResize will be honored in TableDrawBorders() 
+        // ImGuiTableFlags_NoBordersInBodyUntilResize will be honored in TableDrawBorders()
         const float border_y2_hit = (table->Flags & ImGuiTableFlags_NoBordersInBody) ? hit_y2_head : hit_y2_body;
         if ((table->Flags & ImGuiTableFlags_NoBordersInBody) && table->IsUsingHeaders == false)
             continue;
