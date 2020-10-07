@@ -37,6 +37,7 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Added imgui_tables.cpp file! Manually constructed project files will need the new file added!
 - Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
 - Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2017):
   - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your backend
