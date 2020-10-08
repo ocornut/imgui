@@ -1,4 +1,4 @@
-// dear imgui, v1.79 WIP
+// dear imgui, v1.79
 // (main code and documentation)
 
 // Help:
@@ -92,14 +92,13 @@ CODE
  - Easy to use to create code-driven and data-driven tools.
  - Easy to use to create ad hoc short-lived tools and long-lived, more elaborate tools.
  - Easy to hack and improve.
- - Minimize screen real-estate usage.
  - Minimize setup and maintenance.
  - Minimize state storage on user side.
  - Portable, minimize dependencies, run on target (consoles, phones, etc.).
- - Efficient runtime and memory consumption (NB- we do allocate when "growing" content e.g. creating a window,.
-   opening a tree node for the first time, etc. but a typical frame should not allocate anything).
+ - Efficient runtime and memory consumption.
 
- Designed for developers and content-creators, not the typical end-user! Some of the weaknesses includes:
+ Designed for developers and content-creators, not the typical end-user! Some of the current weaknesses includes:
+
  - Doesn't look fancy, doesn't animate.
  - Limited layout features, intricate layouts are typically crafted in code.
 
@@ -377,7 +376,7 @@ CODE
  - 2020/09/25 (1.79) - renamed style.TabMinWidthForUnselectedCloseButton to style.TabMinWidthForCloseButton.
  - 2020/09/21 (1.79) - renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), reverting the change from 1.77. For varieties of reason this is more self-explanatory.
  - 2020/09/21 (1.79) - removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it is inconsistent with other popup APIs and makes others misleading. It's also and unnecessary: you can use IsWindowAppearing() after BeginPopup() for a similar result.
- - 2020/09/17 (1.79) - removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied after scaling and not very meaningful/useful outside of being needed by the default ProggyClean font. It was also getting in the way of better font scaling, so let's get rid of it now!
+ - 2020/09/17 (1.79) - removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied after scaling and not very meaningful/useful outside of being needed by the default ProggyClean font. If you scaled this value after calling AddFontDefault(), this is now done automatically. It was also getting in the way of better font scaling, so let's get rid of it now!
  - 2020/08/17 (1.78) - obsoleted use of the trailing 'float power=1.0f' parameter for DragFloat(), DragFloat2(), DragFloat3(), DragFloat4(), DragFloatRange2(), DragScalar(), DragScalarN(), SliderFloat(), SliderFloat2(), SliderFloat3(), SliderFloat4(), SliderScalar(), SliderScalarN(), VSliderFloat() and VSliderScalar().
                        replaced the 'float power=1.0f' argument with integer-based flags defaulting to 0 (as with all our flags).
                        worked out a backward-compatibility scheme so hopefully most C++ codebase should not be affected. in short, when calling those functions:

@@ -67,7 +67,7 @@ jobs:
         discord-job-fixed-failure-embed: |
           {
             "title": "`{{ github.branch }}` branch is no longer failing!",
-            "description": "Staic analysis failures were fixed on [{{ github.branch }}]({{ github.branch_url }}) branch.",
+            "description": "Static analysis failures were fixed on [{{ github.branch }}]({{ github.branch_url }}) branch.",
             "color": "0x00FF00",
             "url": "{{ github.context.payload.head_commit.url }}",
             "timestamp": "{{ run.completed_at }}"
