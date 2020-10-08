@@ -179,14 +179,6 @@ jobs:
         shell: cmd
         run: '"%MSBUILD_PATH%\MSBuild.exe" examples/example_win32_directx12/example_win32_directx12.vcxproj /p:Platform=x64 /p:Configuration=Release'
 
-      - uses: sarisia/actions-status-discord@v1
-        if: failure()
-        with:
-          webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-          username: GitHub Actions
-          color: 0xFF0000
-          title: ${{ github.job }}
-
   Linux:
     runs-on: ubuntu-20.04
     steps:
@@ -318,15 +310,6 @@ jobs:
     - name: Build example_sdl_opengl3
       run: make -C examples/example_sdl_opengl3
 
-    # Use https://github.com/marketplace/actions/actions-status-discord to send status to Discord
-    - uses: sarisia/actions-status-discord@v1
-      if: failure()
-      with:
-        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-        username: GitHub Actions
-        color: 0xFF0000
-        title: ${{ github.job }}
-
   MacOS:
     runs-on: macOS-latest
     steps:
@@ -382,15 +365,6 @@ jobs:
     - name: Build example_apple_opengl2
       run: xcodebuild -project examples/example_apple_opengl2/example_apple_opengl2.xcodeproj -target example_osx_opengl2
 
-    # Use https://github.com/marketplace/actions/actions-status-discord to send status to Discord
-    - uses: sarisia/actions-status-discord@v1
-      if: failure()
-      with:
-        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-        username: GitHub Actions
-        color: 0xFF0000
-        title: ${{ github.job }}
-
   iOS:
     runs-on: macOS-latest
     steps:
@@ -402,15 +376,6 @@ jobs:
       run: |
         # Code signing is required, but we disable it because it is irrelevant for CI builds.
         xcodebuild -project examples/example_apple_metal/example_apple_metal.xcodeproj -target example_apple_metal_ios CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO CODE_SIGNING_ALLOWED=NO
-
-    # Use https://github.com/marketplace/actions/actions-status-discord to send status to Discord
-    - uses: sarisia/actions-status-discord@v1
-      if: failure()
-      with:
-        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-        username: GitHub Actions
-        color: 0xFF0000
-        title: ${{ github.job }}
 
   Emscripten:
     runs-on: ubuntu-18.04
@@ -434,11 +399,33 @@ jobs:
         popd
         make -C examples/example_emscripten
 
-    # Use https://github.com/marketplace/actions/actions-status-discord to send status to Discord
-    - uses: sarisia/actions-status-discord@v1
-      if: failure()
+  Discord-CI:
+    runs-on: ubuntu-18.04
+    if: always()
+    needs: [Windows, Linux, MacOS, iOS, Emscripten]
+    steps:
+    - uses: dearimgui/github_discord_notifier@latest
       with:
-        webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
-        username: GitHub Actions
-        color: 0xFF0000
-        title: ${{ github.job }}
+        discord-webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        github-token: ${{ github.token }}
+        action-task: discord-jobs
+        discord-filter: "'{{ github.branch }}'.match(/master|docking|tables/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
+        discord-username: GitHub Actions
+        discord-job-new-failure-message: ''
+        discord-job-fixed-failure-message: ''
+        discord-job-new-failure-embed: |
+          {
+            "title": "`{{ job.name }}` job is failing on `{{ github.branch }}`!",
+            "description": "Commit [{{ github.context.payload.head_commit.title }}]({{ github.context.payload.head_commit.url }}) pushed to [{{ github.branch }}]({{ github.branch_url }}) broke [{{ job.name }}]({{ job.url }}) build job.\nFailing steps: {{ failing_steps }}",
+            "url": "{{ job.url }}",
+            "color": "0xFF0000",
+            "timestamp": "{{ run.updated_at }}"
+          }
+        discord-job-fixed-failure-embed: |
+          {
+            "title": "`{{ github.branch }}` branch is no longer failing!",
+            "description": "Build failures were fixed on [{{ github.branch }}]({{ github.branch_url }}) branch.",
+            "color": "0x00FF00",
+            "url": "{{ github.context.payload.head_commit.url }}",
+            "timestamp": "{{ run.completed_at }}"
+          }
