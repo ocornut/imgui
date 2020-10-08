@@ -101,20 +101,25 @@ Other changes:
 
 
 -----------------------------------------------------------------------
- VERSION 1.79 WIP (In Progress)
+ VERSION 1.79 (Released 2020-10-08)
 -----------------------------------------------------------------------
 
 Breaking Changes:
 
 - Fonts: Removed ImFont::DisplayOffset in favor of ImFontConfig::GlyphOffset. DisplayOffset was applied
   after scaling and not very meaningful/useful outside of being needed by the default ProggyClean font.
-  It was also getting in the way of better font scaling, so let's get rid of it now! 
+  It was also getting in the way of better font scaling, so let's get rid of it now!
   If you used DisplayOffset it was probably in association to rasterizing a font at a specific size,
   in which case the corresponding offset may be reported into GlyphOffset. (#1619)
+  If you scaled this value after calling AddFontDefault(), this is now done automatically.
+- ImGuiListClipper: Renamed constructor parameters which created an ambiguous alternative to using
+  the ImGuiListClipper::Begin() function, with misleading edge cases. Always use ImGuiListClipper::Begin()!
+  Kept inline redirection function (will obsolete).
+  (note: imgui_memory_editor <0.40 from imgui_club/ used this old clipper API. Update your copy if needed).
 - Style: Renamed style.TabMinWidthForUnselectedCloseButton to style.TabMinWidthForCloseButton.
 - Renamed ImGuiSliderFlags_ClampOnInput to ImGuiSliderFlags_AlwaysClamp. Kept redirection enum (will obsolete).
 - Renamed OpenPopupContextItem() back to OpenPopupOnItemClick(), REVERTED CHANGE FROM 1.77.
-  For variety of reason this is more self-explanatory.
+  For variety of reason this is more self-explanatory and less error-prone. Kept inline redirection function.
 - Removed return value from OpenPopupOnItemClick() - returned true on mouse release on item - because it
   is inconsistent with other popups API and makes others misleading. It's also and unnecessary: you can
   use IsWindowAppearing() after BeginPopup() for a similar result.
@@ -124,8 +129,8 @@ Other Changes:
 - Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
 - Nav: Fixed navigation resuming on first visible item when using gamepad. [@rokups]
 - Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
-- Scrolling: Fixed SetScrollHere functions edge snapping when called during a frame where ContentSize
-  is changing (issue introduced in 1.78). (#3452).
+- Scrolling: Fixed SetScrollHere(0) functions edge snapping when called during a frame where 
+  ContentSize is changing (issue introduced in 1.78). (#3452).
 - InputText: Added support for Page Up/Down in InputTextMultiline(). (#3430) [@Xipiryon]
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
 - InputText: Added ImGuiInputTextFlags_CallbackEdit to modify internally owned buffer after an edit.
@@ -137,7 +142,7 @@ Other Changes:
 - InputText: Fixed cursor being partially covered after using Ctrl+End key.
 - InputText: Fixed callback's helper DeleteChars() function when cursor is inside the deleted block. (#3454)
 - InputText: Made pressing Down arrow on the last line when it doesn't have a carriage return not move to
-  the end of the line (so it is consistent with Up arrow, and behave same as Notepad and Visual Studio. 
+  the end of the line (so it is consistent with Up arrow, and behave same as Notepad and Visual Studio.
   Note that some other text editors instead would move the crusor to the end of the line). [@Xipiryon]
 - DragFloat, DragScalar: Fixed ImGuiSliderFlags_ClampOnInput not being honored in the special case
   where v_min == v_max. (#3361)
@@ -145,6 +150,8 @@ Other Changes:
   with signed and unsigned types. Added reverse Sliders to Demo. (#3432, #3449) [@rokups]
 - Text: Bypass unnecessary formatting when using the TextColored()/TextWrapped()/TextDisabled() helpers
   with a "%s" format string. (#3466)
+- CheckboxFlags: Display mixed-value/tristate marker when passed flags that have multiple bits set and
+  stored value matches neither zero neither the full set.
 - BeginMenuBar: Fixed minor bug where CursorPosMax gets pushed to CursorPos prior to calling BeginMenuBar(),
   so e.g. calling the function at the end of a window would often add +ItemSpacing.y to scrolling range.
 - TreeNode, CollapsingHeader: Made clicking on arrow toggle toggle the open state on the Mouse Down event
@@ -152,7 +159,7 @@ Other Changes:
   and amends the change done in 1.76 which only affected cases were _OpenOnArrow flag was set.
   (This is also necessary to support full multi/range-select/drag and drop operations.)
 - Tab Bar: Added TabItemButton() to submit tab that behave like a button. (#3291) [@Xipiryon]
-- Tab Bar: Added ImGuiTabItemFlags_Leading and ImGuiTabItemFlags_Trailing flags to position tabs or button 
+- Tab Bar: Added ImGuiTabItemFlags_Leading and ImGuiTabItemFlags_Trailing flags to position tabs or button
   at either end of the tab bar. Those tabs won't be part of the scrolling region, and when reordering cannot
   be moving outside of their section. Most often used with TabItemButton(). (#3291) [@Xipiryon]
 - Tab Bar: Added ImGuiTabItemFlags_NoReorder flag to disable reordering a given tab.
@@ -167,9 +174,10 @@ Other Changes:
 - Popups, Tooltips: Fix edge cases issues with positionning popups and tooltips when they are larger than
   viewport on either or both axises. [@Rokups]
 - Fonts: AddFontDefault() adjust its vertical offset based on floor(size/13) instead of always +1.
+  Was previously done by altering DisplayOffset.y but wouldn't work for DPI scaled font.
 - Metrics: Various tweaks, listing windows front-to-back, greying inactive items when possible.
 - Demo: Add simple InputText() callbacks demo (aside from the more elaborate ones in 'Examples->Console').
-- Backends: OpenGL3: Fix to avoid compiling/calling glBindSampler() on ES or pre 3.3 contexts which have 
+- Backends: OpenGL3: Fix to avoid compiling/calling glBindSampler() on ES or pre 3.3 contexts which have
   the defines set by a loader. (#3467, #1985) [@jjwebb]
 - Backends: Vulkan: Some internal refactor aimed at allowing multi-viewport feature to create their
   own render pass. (#3455, #3459) [@FunMiles]
