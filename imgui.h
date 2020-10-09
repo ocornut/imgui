@@ -1636,6 +1636,7 @@ struct ImGuiIO
     float       PenPressure;                    // Touch/Pen pressure (0.0f to 1.0f, should be >0.0f only when MouseDown[0] == true). Helper storage currently unused by Dear ImGui.
     ImWchar16   InputQueueSurrogate;            // For AddInputCharacterUTF16
     ImVector<ImWchar> InputQueueCharacters;     // Queue of _characters_ input (obtained by platform back-end). Fill using AddInputCharacter() helper.
+    bool        MacOSXInCtrlRightClick;         // Set to true when the current click was a ctrl-click that spawned a simulated right click
 
     IMGUI_API   ImGuiIO();
 };
