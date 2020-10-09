@@ -180,40 +180,44 @@ static void ImGui_ImplWin32_UpdateMousePos()
     POINT mouse_screen_pos;
     if (!::GetCursorPos(&mouse_screen_pos))
         return;
-    if (HWND focused_hwnd = ::GetForegroundWindow())
+
+    if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
     {
-        if (::IsChild(focused_hwnd, g_hWnd))
-            focused_hwnd = g_hWnd;
         if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         {
+            bool hovered = false;
+
+            // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
+            // Important: this information is not easy to provide and many high-level windowing library won't be able to provide it correctly, because
+            // - This is _ignoring_ viewports with the ImGuiViewportFlags_NoInputs flag (pass-through windows).
+            // - This is _regardless_ of whether another viewport is focused or being dragged from.
+            // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the back-end, imgui will ignore this field and infer the information by relying on the
+            // rectangles and last focused time of every viewports it knows about. It will be unaware of foreign windows that may be sitting between or over your windows.
+            if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
+            {
+                if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
+                    io.MouseHoveredViewport = viewport->ID;
+
+                hovered = true;
+            }
+
             // Multi-viewport mode: mouse position in OS absolute coordinates (io.MousePos is (0,0) when the mouse is on the upper-left of the primary monitor)
             // This is the position you can get with GetCursorPos(). In theory adding viewport->Pos is also the reverse operation of doing ScreenToClient().
-            if (ImGui::FindViewportByPlatformHandle((void*)focused_hwnd) != NULL)
+            // We check foreground window in addition to hovered window because the hovered window may fall through while draging a viewport window.
+            if (hovered || ImGui::FindViewportByPlatformHandle((void*)::GetForegroundWindow()))
+            {
                 io.MousePos = ImVec2((float)mouse_screen_pos.x, (float)mouse_screen_pos.y);
+            }
         }
-        else
+        else if (hovered_hwnd == g_hWnd)
         {
             // Single viewport mode: mouse position in client window coordinates (io.MousePos is (0,0) when the mouse is on the upper-left corner of the app window.)
             // This is the position you can get with GetCursorPos() + ScreenToClient() or from WM_MOUSEMOVE.
-            if (focused_hwnd == g_hWnd)
-            {
-                POINT mouse_client_pos = mouse_screen_pos;
-                ::ScreenToClient(focused_hwnd, &mouse_client_pos);
-                io.MousePos = ImVec2((float)mouse_client_pos.x, (float)mouse_client_pos.y);
-            }
+            POINT mouse_client_pos = mouse_screen_pos;
+            ::ScreenToClient(g_hWnd, &mouse_client_pos);
+            io.MousePos = ImVec2((float)mouse_client_pos.x, (float)mouse_client_pos.y);
         }
     }
-
-    // (Optional) When using multiple viewports: set io.MouseHoveredViewport to the viewport the OS mouse cursor is hovering.
-    // Important: this information is not easy to provide and many high-level windowing library won't be able to provide it correctly, because
-    // - This is _ignoring_ viewports with the ImGuiViewportFlags_NoInputs flag (pass-through windows).
-    // - This is _regardless_ of whether another viewport is focused or being dragged from.
-    // If ImGuiBackendFlags_HasMouseHoveredViewport is not set by the back-end, imgui will ignore this field and infer the information by relying on the
-    // rectangles and last focused time of every viewports it knows about. It will be unaware of foreign windows that may be sitting between or over your windows.
-    if (HWND hovered_hwnd = ::WindowFromPoint(mouse_screen_pos))
-        if (ImGuiViewport* viewport = ImGui::FindViewportByPlatformHandle((void*)hovered_hwnd))
-            if ((viewport->Flags & ImGuiViewportFlags_NoInputs) == 0) // FIXME: We still get our NoInputs window with WM_NCHITTEST/HTTRANSPARENT code when decorated?
-                io.MouseHoveredViewport = viewport->ID;
 }
 
 // Gamepad navigation mapping
