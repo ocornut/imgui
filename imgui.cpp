@@ -9584,7 +9584,7 @@ const ImGuiPayload* ImGui::AcceptDragDropPayload(const char* type, ImGuiDragDrop
     const bool was_accepted_previously = (g.DragDropAcceptIdPrev == g.DragDropTargetId);
     ImRect r = g.DragDropTargetRect;
     float r_surface = r.GetWidth() * r.GetHeight();
-    if (r_surface < g.DragDropAcceptIdCurrRectSurface)
+    if (r_surface <= g.DragDropAcceptIdCurrRectSurface)
     {
         g.DragDropAcceptFlags = flags;
         g.DragDropAcceptIdCurr = g.DragDropTargetId;

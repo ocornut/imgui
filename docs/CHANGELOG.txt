@@ -55,6 +55,8 @@ Breaking Changes:
 Other Changes:
 
 - Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
+- Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
+  into a full-window-sized dockspace inside a zero-padded window. (#3519, #2717) [@Black-Cat]
 - Backends: OpenGL: use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...) 
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
