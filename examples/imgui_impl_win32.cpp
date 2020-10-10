@@ -62,6 +62,7 @@ static ImGuiMouseCursor     g_LastMouseCursor = ImGuiMouseCursor_COUNT;
 static bool                 g_HasGamepad = false;
 static bool                 g_WantUpdateHasGamepad = true;
 static bool                 g_WantUpdateMonitors = true;
+static HGLRC                g_MainGlContext = 0;
 
 // Forward Declarations
 static void ImGui_ImplWin32_InitPlatformInterface();
@@ -84,12 +85,17 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_win32";
 
-    // Our mouse update function expect PlatformHandle to be filled for the main viewport
     g_hWnd = (HWND)hwnd;
-    ImGuiViewport* main_viewport = ImGui::GetMainViewport();
-    main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)g_hWnd;
+    g_MainGlContext = wglGetCurrentContext();
+
+    // Our mouse update function expect PlatformHandle to be filled for the main viewport
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
         ImGui_ImplWin32_InitPlatformInterface();
+    else
+    {
+        ImGuiViewport* main_viewport = ImGui::GetMainViewport();
+        main_viewport->PlatformHandle = main_viewport->PlatformHandleRaw = (void*)g_hWnd;
+    }
 
     // Keyboard mapping. ImGui will use those indices to peek into the io.KeysDown[] array that we will update during the application lifetime.
     io.KeyMap[ImGuiKey_Tab] = VK_TAB;
@@ -617,6 +623,18 @@ static void ImGui_ImplWin32_CreateWindow(ImGuiViewport* viewport)
     data->HwndOwned = true;
     viewport->PlatformRequestResize = false;
     viewport->PlatformHandle = viewport->PlatformHandleRaw = data->Hwnd;
+
+    //Set the childs window to the same GL Context of the main along with its parents PixelFormat
+    HDC mainHDC = GetDC(g_hWnd);
+    HDC childHDC = GetDC(data->Hwnd);
+
+    PIXELFORMATDESCRIPTOR pfd = {};
+    int pixelFormat = GetPixelFormat(mainHDC);
+    DescribePixelFormat(mainHDC, pixelFormat, sizeof(PIXELFORMATDESCRIPTOR), &pfd);
+    SetPixelFormat(childHDC, pixelFormat, &pfd);
+
+    //Set it to current so we can render to it.
+    wglMakeCurrent(childHDC, g_MainGlContext);
 }
 
 static void ImGui_ImplWin32_DestroyWindow(ImGuiViewport* viewport)
@@ -774,6 +792,24 @@ static float ImGui_ImplWin32_GetWindowDpiScale(ImGuiViewport* viewport)
     return ImGui_ImplWin32_GetDpiScaleForHwnd(data->Hwnd);
 }
 
+
+static void ImGui_ImplWin32_RenderWindow(ImGuiViewport* viewport, void*)
+{
+    ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
+    HDC hdc = GetDC(data->Hwnd);
+
+    //Make this window's context current.
+    wglMakeCurrent(hdc, g_MainGlContext);
+}
+
+static void ImGui_ImplWin32_SwapBuffers(ImGuiViewport* viewport, void*)
+{
+    ImGuiViewportDataWin32* data = (ImGuiViewportDataWin32*)viewport->PlatformUserData;
+    HDC hdc = GetDC(data->Hwnd);
+    SwapBuffers(hdc);
+}
+
+
 // FIXME-DPI: Testing DPI related ideas
 static void ImGui_ImplWin32_OnChangedViewport(ImGuiViewport* viewport)
 {
@@ -862,6 +898,8 @@ static void ImGui_ImplWin32_InitPlatformInterface()
     platform_io.Platform_UpdateWindow = ImGui_ImplWin32_UpdateWindow;
     platform_io.Platform_GetWindowDpiScale = ImGui_ImplWin32_GetWindowDpiScale; // FIXME-DPI
     platform_io.Platform_OnChangedViewport = ImGui_ImplWin32_OnChangedViewport; // FIXME-DPI
+    platform_io.Platform_RenderWindow = ImGui_ImplWin32_RenderWindow;
+    platform_io.Platform_SwapBuffers = ImGui_ImplWin32_SwapBuffers;
 #if HAS_WIN32_IME
     platform_io.Platform_SetImeInputPos = ImGui_ImplWin32_SetImeInputPos;
 #endif
