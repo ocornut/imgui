@@ -1,5 +1,5 @@
-// dear imgui: Renderer for OpenGL2 (legacy OpenGL, fixed pipeline)
-// This needs to be used along with a Platform Binding (e.g. GLFW, SDL, Win32, custom..)
+// dear imgui: Renderer Backend for OpenGL2 (legacy OpenGL, fixed pipeline)
+// This needs to be used along with a Platform Backend (e.g. GLFW, SDL, Win32, custom..)
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'GLuint' OpenGL texture identifier as void*/ImTextureID. Read the FAQ about ImTextureID!
@@ -58,7 +58,7 @@ static GLuint       g_FontTexture = 0;
 // Functions
 bool    ImGui_ImplOpenGL2_Init()
 {
-    // Setup back-end capabilities flags
+    // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendRendererName = "imgui_impl_opengl2";
     return true;

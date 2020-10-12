@@ -115,7 +115,7 @@ int main(int argc, char** argv)
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-    // Setup Platform/Renderer bindings
+    // Setup Platform/Renderer backends
     ImGui_ImplGLUT_Init();
     ImGui_ImplGLUT_InstallFuncs();
     ImGui_ImplOpenGL2_Init();

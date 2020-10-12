@@ -22,7 +22,7 @@ static void glfw_error_callback(int error, const char* description)
 
 int main(int, char**)
 {
-    // Setup Dear ImGui binding
+    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -62,6 +62,7 @@ int main(int, char**)
     id <MTLDevice> device = MTLCreateSystemDefaultDevice();;
     id <MTLCommandQueue> commandQueue = [device newCommandQueue];
 
+    // Setup Platform/Renderer backends
     ImGui_ImplGlfw_InitForOpenGL(window, true);
     ImGui_ImplMetal_Init(device);
 

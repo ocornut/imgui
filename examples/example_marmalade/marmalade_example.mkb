@@ -38,7 +38,7 @@ files
     ../../imgui.h
     ../../imgui_internal.h
 
-    ["imgui","Marmalade binding"]
+    ["imgui", "Marmalade backend"]
     ../imgui_impl_marmalade.h
     ../imgui_impl_marmalade.cpp
     main.cpp

@@ -1,4 +1,4 @@
-// dear imgui: Renderer + Platform Binding for Marmalade + IwGx
+// dear imgui: Renderer + Platform Backend for Marmalade + IwGx
 // Marmalade code: Copyright (C) 2015 by Giovanni Zito (this file is part of Dear ImGui)
 
 // Implemented features:

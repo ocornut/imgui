@@ -126,7 +126,7 @@ e.g. `if (ImGui::GetIO().WantCaptureMouse) { ... }`
 ### Q: How can I enable keyboard or gamepad controls?
 - The gamepad/keyboard navigation is fairly functional and keeps being improved. The initial focus was to support game controllers, but keyboard is becoming increasingly and decently usable. Gamepad support is particularly useful to use Dear ImGui on a game console (e.g. PS4, Switch, XB1) without a mouse connected!
 - Keyboard: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard` to enable.
-- Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting back-end).
+- Gamepad: set `io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad` to enable (with a supporting backend).
 - See [Control Sheets for Gamepads](http://www.dearimgui.org/controls_sheets) (reference PNG/PSD for for PS4, XB1, Switch gamepads).
 - See `USING GAMEPAD/KEYBOARD NAVIGATION CONTROLS` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) for more details.
 
@@ -151,7 +151,7 @@ Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-lik
 
 ### Q: I integrated Dear ImGui in my engine and little squares are showing instead of text..
 This usually means that: your font texture wasn't uploaded into GPU, or your shader or other rendering state are not reading from the right texture (e.g. texture wasn't bound).
-If this happens using the standard back-ends it is probably that the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
+If this happens using the standard backends it is probably that the texture failed to upload, which could happens if for some reason your texture is too big. Also see [docs/FONTS.md](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 
 ##### [Return to Index](#index)
 
@@ -165,7 +165,7 @@ Rectangles provided by Dear ImGui are defined as
 `(x1=left,y1=top,x2=right,y2=bottom)`
 and **NOT** as
 `(x1,y1,width,height)`
-Refer to rendering back-ends in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder for references of how to handle the `ClipRect` field.
+Refer to rendering backends in the [examples/](https://github.com/ocornut/imgui/tree/master/examples) folder for references of how to handle the `ClipRect` field.
 
 ##### [Return to Index](#index)
 
@@ -325,7 +325,7 @@ Long explanation:
  We carry the information to identify a "texture" in the ImTextureID type.
 ImTextureID is nothing more that a void*, aka 4/8 bytes worth of data: just enough to store 1 pointer or 1 integer of your choice.
 Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely pass ImTextureID values until they reach your rendering function.
-- In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) bindings, for each graphics API binding we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
+- In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) backends, for each graphics API we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
 ```
 OpenGL:
 - ImTextureID = GLuint
@@ -346,11 +346,11 @@ DirectX12:
 - ImTextureID = D3D12_GPU_DESCRIPTOR_HANDLE
 - See ImGui_ImplDX12_RenderDrawData() function in imgui_impl_dx12.cpp
 ```
-For example, in the OpenGL example binding we store raw OpenGL texture identifier (GLuint) inside ImTextureID.
-Whereas in the DirectX11 example binding we store a pointer to ID3D11ShaderResourceView inside ImTextureID, which is a higher-level structure tying together both the texture and information about its format and how to read it.
+For example, in the OpenGL example backend we store raw OpenGL texture identifier (GLuint) inside ImTextureID.
+Whereas in the DirectX11 example backend we store a pointer to ID3D11ShaderResourceView inside ImTextureID, which is a higher-level structure tying together both the texture and information about its format and how to read it.
 
 - If you have a custom engine built over e.g. OpenGL, instead of passing GLuint around you may decide to use a high-level data type to carry information about the texture as well as how to display it (shaders, etc.). The decision of what to use as ImTextureID can always be made better knowing how your codebase is designed. If your engine has high-level data types for "textures" and "material" then you may want to use them.
-If you are starting with OpenGL or DirectX or Vulkan and haven't built much of a rendering engine over them, keeping the default ImTextureID representation suggested by the example bindings is probably the best choice.
+If you are starting with OpenGL or DirectX or Vulkan and haven't built much of a rendering engine over them, keeping the default ImTextureID representation suggested by the example backends is probably the best choice.
 (Advanced users may also decide to keep a low-level type in ImTextureID, and use ImDrawList callback and pass information to their renderer)
 
 User code may do:
@@ -401,7 +401,7 @@ This way you'll be able to use your own types everywhere, e.g. passing `MyVector
 ---
 
 ### Q: How can I interact with standard C++ types (such as std::string and std::vector)?
-- Being highly portable (bindings for several languages, frameworks, programming style, obscure or older platforms/compilers), and aiming for compatibility & performance suitable for every modern real-time game engines, dear imgui does not use any of std C++ types. We use raw types (e.g. char* instead of std::string) because they adapt to more use cases.
+- Being highly portable (backends/bindings for several languages, frameworks, programming style, obscure or older platforms/compilers), and aiming for compatibility & performance suitable for every modern real-time game engines, dear imgui does not use any of std C++ types. We use raw types (e.g. char* instead of std::string) because they adapt to more use cases.
 - To use ImGui::InputText() with a std::string or any resizable string class, see [misc/cpp/imgui_stdlib.h](https://github.com/ocornut/imgui/blob/master/misc/cpp/imgui_stdlib.h).
 - To use combo boxes and list boxes with `std::vector` or any other data structure: the `BeginCombo()/EndCombo()` API
 lets you iterate and submit items yourself, so does the `ListBoxHeader()/ListBoxFooter()` API.
@@ -633,7 +633,7 @@ A reasonably skinned application may look like (screenshot from [#2529](https://
 
 Dear ImGui takes advantage of a few C++ languages features for convenience but nothing anywhere Boost insanity/quagmire. Dear ImGui does NOT require C++11 so it can be used with most old C++ compilers. Dear ImGui doesn't use any C++ header file. Language-wise, function overloading and default parameters are used to make the API easier to use and code more terse. Doing so I believe the API is sitting on a sweet spot and giving up on those features would make the API more cumbersome. Other features such as namespace, constructors and templates (in the case of the ImVector<> class) are also relied on as a convenience.
 
-There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. It is designed for creating binding to other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for various third-party bindings.
+There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/cimgui/cimgui) by Sonoro1234 and Stephan Dilly. It is designed for creating bindings to other languages. If possible, I would suggest using your target language functionalities to try replicating the function overloading and default parameters used in C++ else the API may be harder to use. Also see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings) for various third-party bindings.
 
 ##### [Return to Index](#index)
 

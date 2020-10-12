@@ -1,4 +1,4 @@
-// dear imgui: Renderer + Platform Binding for Allegro 5
+// dear imgui: Renderer + Platform Backend for Allegro 5
 // (Info: Allegro 5 is a cross-platform general purpose library for handling windows, inputs, graphics, etc.)
 
 // Implemented features:
@@ -252,7 +252,7 @@ bool ImGui_ImplAllegro5_Init(ALLEGRO_DISPLAY* display)
 {
     g_Display = display;
 
-    // Setup back-end capabilities flags
+    // Setup backend capabilities flags
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;       // We can honor GetMouseCursor() values (optional)
     io.BackendPlatformName = io.BackendRendererName = "imgui_impl_allegro5";

@@ -1,4 +1,4 @@
-// dear imgui: Platform Binding for Windows (standard windows API for 32 and 64 bits applications)
+// dear imgui: Platform Backend for Windows (standard windows API for 32 and 64 bits applications)
 // This needs to be used along with a Renderer (e.g. DirectX11, OpenGL3, Vulkan..)
 
 // Implemented features:
@@ -68,7 +68,7 @@ bool    ImGui_ImplWin32_Init(void* hwnd)
     if (!::QueryPerformanceCounter((LARGE_INTEGER*)&g_Time))
         return false;
 
-    // Setup back-end capabilities flags
+    // Setup backend capabilities flags
     g_hWnd = (HWND)hwnd;
     ImGuiIO& io = ImGui::GetIO();
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;         // We can honor GetMouseCursor() values (optional)
@@ -214,7 +214,7 @@ static void ImGui_ImplWin32_UpdateGamepads()
 void    ImGui_ImplWin32_NewFrame()
 {
     ImGuiIO& io = ImGui::GetIO();
-    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer back-end. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
+    IM_ASSERT(io.Fonts->IsBuilt() && "Font atlas not built! It is generally built by the renderer backend. Missing call to renderer _NewFrame() function? e.g. ImGui_ImplOpenGL3_NewFrame().");
 
     // Setup display size (every frame to accommodate for window resizing)
     RECT rect;
@@ -259,7 +259,7 @@ void    ImGui_ImplWin32_NewFrame()
 
 // Win32 message handler (process Win32 mouse/keyboard inputs, etc.)
 // Call from your application's message handler.
-// When implementing your own back-end, you can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if Dear ImGui wants to use your inputs.
+// When implementing your own backend, you can read the io.WantCaptureMouse, io.WantCaptureKeyboard flags to tell if Dear ImGui wants to use your inputs.
 // - When io.WantCaptureMouse is true, do not dispatch mouse input data to your main application.
 // - When io.WantCaptureKeyboard is true, do not dispatch keyboard input data to your main application.
 // Generally you may always pass all inputs to Dear ImGui, and hide them from your application based on those two flags.
@@ -352,7 +352,7 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
 //---------------------------------------------------------------------------------------------------------
 // This is the scheme successfully used by GLFW (from which we borrowed some of the code) and other apps aiming to be highly portable.
 // ImGui_ImplWin32_EnableDpiAwareness() is just a helper called by main.cpp, we don't call it automatically.
-// If you are trying to implement your own back-end for your own engine, you may ignore that noise.
+// If you are trying to implement your own backend for your own engine, you may ignore that noise.
 //---------------------------------------------------------------------------------------------------------
 
 // Implement some of the functions and types normally declared in recent Windows SDK.

@@ -6,7 +6,7 @@ The list below consist mostly of ideas noted down before they are requested/disc
 It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
 
  - doc/test: add a proper documentation+regression testing system (#435)
- - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
+ - doc/test: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
  - doc/wiki: work on the wiki https://github.com/ocornut/imgui/wiki
 
@@ -370,7 +370,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
  - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
- - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
+ - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for backend to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
  - misc: idle: if cursor blink if the _only_ visible animation, could even expose a dirty rectangle that optionally can be leverage by some app to render in a smaller viewport, getting rid of much pixel shading cost.
  - misc: no way to run a root-most GetID() with ImGui:: api since there's always a Debug window in the stack. (mentioned in #2960)

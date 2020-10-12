@@ -138,7 +138,7 @@
     animationTimer = nil;
 }
 
-// Forward Mouse/Keyboard events to dear imgui OSX back-end. It returns true when imgui is expecting to use the event.
+// Forward Mouse/Keyboard events to dear imgui OSX backend. It returns true when imgui is expecting to use the event.
 -(void)keyUp:(NSEvent *)event               { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)keyDown:(NSEvent *)event             { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)flagsChanged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self); }
@@ -254,7 +254,7 @@
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-    // Setup Platform/Renderer bindings
+    // Setup Platform/Renderer backends
     ImGui_ImplOSX_Init();
     ImGui_ImplOpenGL2_Init();
 

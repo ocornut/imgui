@@ -35,7 +35,7 @@
         ImGui::StyleColorsDark();
         //ImGui::StyleColorsClassic();
 
-        // Setup Renderer bindings
+        // Setup Renderer backend
         ImGui_ImplMetal_Init(_device);
 
         // Load Fonts

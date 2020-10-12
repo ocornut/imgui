@@ -226,7 +226,7 @@ io.Fonts->Build();                                     // Build the atlas while 
 
 ## Using Custom Colorful Icons
 
-**(This is a BETA api, use if you are familiar with dear imgui and with your rendering back-end)**
+**(This is a BETA api, use if you are familiar with dear imgui and with your rendering backend)**
 
 - You can use the `ImFontAtlas::AddCustomRect()` and `ImFontAtlas::AddCustomRectFontGlyph()` api to register rectangles that will be packed into the font atlas texture. Register them before building the atlas, then call Build()`.
 - You can then use `ImFontAtlas::GetCustomRectByIndex(int)` to query the position/size of your rectangle within the texture, and blit/copy any graphics data of your choice into those rectangles.

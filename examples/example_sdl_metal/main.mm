@@ -13,7 +13,7 @@
 
 int main(int, char**)
 {
-    // Setup Dear ImGui binding
+    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -65,6 +65,7 @@ int main(int, char**)
         return -3;
     }
 
+    // Setup Platform/Renderer backends
     CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_RenderGetMetalLayer(renderer);
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     ImGui_ImplMetal_Init(layer.device);

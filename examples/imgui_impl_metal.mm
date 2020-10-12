@@ -1,5 +1,5 @@
-// dear imgui: Renderer for Metal
-// This needs to be used along with a Platform Binding (e.g. OSX)
+// dear imgui: Renderer Backend for Metal
+// This needs to be used along with a Platform Backend (e.g. OSX)
 
 // Implemented features:
 //  [X] Renderer: User texture binding. Use 'MTLTexture' as ImTextureID. Read the FAQ about ImTextureID!
