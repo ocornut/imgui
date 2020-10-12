@@ -86,7 +86,6 @@ static void ImGui_ImplAllegro5_SetupRenderState(ImDrawData* draw_data)
 }
 
 // Render function.
-// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplAllegro5_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized

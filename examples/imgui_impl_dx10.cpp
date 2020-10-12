@@ -90,7 +90,6 @@ static void ImGui_ImplDX10_SetupRenderState(ImDrawData* draw_data, ID3D10Device*
 }
 
 // Render function
-// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_ImplDX10_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized

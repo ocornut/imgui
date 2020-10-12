@@ -39,7 +39,6 @@ static bool         g_osdKeyboardEnabled = false;
 static ImVec2       g_RenderScale = ImVec2(1.0f, 1.0f);
 
 // Render function.
-// (this used to be set in io.RenderDrawListsFn and called by ImGui::Render(), but you can now call this directly from your main loop)
 void ImGui_Marmalade_RenderDrawData(ImDrawData* draw_data)
 {
     // Avoid rendering when minimized
