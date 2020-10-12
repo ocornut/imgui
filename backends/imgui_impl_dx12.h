@@ -9,7 +9,8 @@
 // This is because we need ImTextureID to carry a 64-bit value and by default ImTextureID is defined as void*.
 // This define is done in the example .vcxproj file and need to be replicated in your app (by e.g. editing imconfig.h)
 
-// You can copy and use unmodified imgui_impl_* files in your project. See main.cpp for an example of using this.
+// You can copy and use unmodified backends (imgui_impl_* files) in your project.
+// See matching application in examples/ for an example of using this.
 // If you are new to dear imgui, read examples/README.txt and read the documentation at the top of imgui.cpp.
 // https://github.com/ocornut/imgui
 
