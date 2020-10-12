@@ -181,7 +181,7 @@ CODE
 
  HOW A SIMPLE APPLICATION MAY LOOK LIKE
  --------------------------------------
- EXHIBIT 1: USING THE EXAMPLE BACKENDS (= imgui_impl_XXX.cpp files from the examples/ folder).
+ EXHIBIT 1: USING THE EXAMPLE BACKENDS (= imgui_impl_XXX.cpp files from the backends/ folder).
  The sub-folders in examples/ contains examples applications following this structure.
 
      // Application init: create a dear imgui context, setup some options, load fonts
@@ -462,7 +462,7 @@ CODE
  - 2018/08/01 (1.63) - renamed io.OptCursorBlink to io.ConfigCursorBlink [-> io.ConfigInputTextCursorBlink in 1.65], io.OptMacOSXBehaviors to ConfigMacOSXBehaviors for consistency.
  - 2018/07/22 (1.63) - changed ImGui::GetTime() return value from float to double to avoid accumulating floating point imprecisions over time.
  - 2018/07/08 (1.63) - style: renamed ImGuiCol_ModalWindowDarkening to ImGuiCol_ModalWindowDimBg for consistency with other features. Kept redirection enum (will obsolete).
- - 2018/06/08 (1.62) - examples: the imgui_impl_xxx files have been split to separate platform (Win32, GLFW, SDL2, etc.) from renderer (DX11, OpenGL, Vulkan,  etc.).
+ - 2018/06/08 (1.62) - examples: the imgui_impl_XXX files have been split to separate platform (Win32, GLFW, SDL2, etc.) from renderer (DX11, OpenGL, Vulkan,  etc.).
                        old backends will still work as is, however prefer using the separated backends as they will be updated to support multi-viewports.
                        when adopting new backends follow the main.cpp code of your preferred examples/ folder to know which functions to call.
                        in particular, note that old backends called ImGui::NewFrame() at the end of their ImGui_ImplXXXX_NewFrame() function.
@@ -566,7 +566,7 @@ CODE
                        you need to render your textured triangles with bilinear filtering to benefit from sub-pixel positioning of text.
  - 2015/07/08 (1.43) - switched rendering data to use indexed rendering. this is saving a fair amount of CPU/GPU and enables us to get anti-aliasing for a marginal cost.
                        this necessary change will break your rendering function! the fix should be very easy. sorry for that :(
-                     - if you are using a vanilla copy of one of the imgui_impl_XXXX.cpp provided in the example, you just need to update your copy and you can ignore the rest.
+                     - if you are using a vanilla copy of one of the imgui_impl_XXX.cpp provided in the example, you just need to update your copy and you can ignore the rest.
                      - the signature of the io.RenderDrawListsFn handler has changed!
                        old: ImGui_XXXX_RenderDrawLists(ImDrawList** const cmd_lists, int cmd_lists_count)
                        new: ImGui_XXXX_RenderDrawLists(ImDrawData* draw_data).
