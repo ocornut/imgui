@@ -53,6 +53,7 @@ Breaking Changes:
 
 Other Changes:
 
+- Docs: Split Backends and Examples README and improved them.
 - Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
 
 
