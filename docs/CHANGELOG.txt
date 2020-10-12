@@ -38,12 +38,15 @@ HOW TO UPDATE?
 Breaking Changes:
 
 - Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2017):
-  - io.RenderDrawListsFn pointer        -> use ImGui::GetDrawData() value and call the render function of your back-end
-  - ImGui::IsAnyWindowFocused()         -> use ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)
-  - ImGui::IsAnyWindowHovered()         -> use ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)
-  - ImGuiStyleVar_Count_                -> use ImGuiStyleVar_COUNT
-  - ImGuiMouseCursor_Count_             -> use ImGuiMouseCursor_COUNT
-  If you were still using the old names, while you are cleaning up, considering enabling
+  - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your back-end
+  - ImGui::IsAnyWindowFocused()                 -> use ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)
+  - ImGui::IsAnyWindowHovered()                 -> use ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)
+  - ImGuiStyleVar_Count_                        -> use ImGuiStyleVar_COUNT
+  - ImGuiMouseCursor_Count_                     -> use ImGuiMouseCursor_COUNT
+- Removed redirecting functions/enums names that were marked obsolete in 1.61 (May 2018):
+  - InputFloat (... int decimal_precision ...)  -> use InputFloat (... const char* format ...) with format = "%.Xf" where X was value for decimal_precision.
+  - same for InputFloat2()/InputFloat3()/InputFloat4() variants taking a `int decimal_precision` parameter.
+- If you were still using the old names, while you are cleaning up, considering enabling
   IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
   and removing up old API calls, if any remaining.
 
