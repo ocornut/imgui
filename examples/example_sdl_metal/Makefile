@@ -13,11 +13,11 @@ SOURCES += ../../imgui.cpp ../../imgui_widgets.cpp ../../imgui_demo.cpp ../../im
 OBJS = $(addsuffix .o, $(basename $(notdir $(SOURCES))))
 
 LIBS = -framework Metal -framework MetalKit -framework Cocoa -framework IOKit -framework CoreVideo -framework QuartzCore
-LIBS += `sdl2-config --libs`
+LIBS += $(shell sdl2-config --libs)
 LIBS += -L/usr/local/lib
 
 CXXFLAGS = -I../ -I../../ -I/usr/local/include
-CXXFLAGS += `sdl2-config --cflags`
+CXXFLAGS += $(shell sdl2-config --cflags)
 CXXFLAGS += -Wall -Wformat
 CFLAGS = $(CXXFLAGS)
 
