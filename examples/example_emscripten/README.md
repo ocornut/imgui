@@ -16,5 +16,5 @@ _"Unfortunately several browsers (including Chrome, Safari, and Internet Explore
 
 ## Obsolete features:
 
-- Emscripten 2.0 (August 2020) obsoleted the fastcomp back-end, only llvm is supported.
+- Emscripten 2.0 (August 2020) obsoleted the fastcomp backend, only llvm is supported.
 - Emscripten 1.39.0 (October 2019) obsoleted the `BINARYEN_TRAP_MODE=clamp` compilation flag which was required with version older than 1.39.0 to avoid rendering artefacts. See [#2877](https://github.com/ocornut/imgui/issues/2877) for details. If you use an older version, uncomment this line in the Makefile: `#EMS += -s BINARYEN_TRAP_MODE=clamp`

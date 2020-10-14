@@ -3,7 +3,7 @@ CHANGELOG
 
 This document holds the user-facing changelog that we also use in release notes.
 We generally fold multiple commits pertaining to the same topic as a single entry.
-Changes to the examples/bindings are included within the individual .cpp files in the examples/ folder.
+Changes to backends are also included within the individual .cpp files of each backend.
 
 RELEASE NOTES:                  https://github.com/ocornut/imgui/releases
 REPORT ISSUES, ASK QUESTIONS:   https://github.com/ocornut/imgui/issues
@@ -76,7 +76,7 @@ Other changes:
 (FIXME: This need a fuller explanation!)
 
 - Added ImGuiPlatformIO structure and GetPlatformIO().
-  Similarly to ImGuiIO and GetIO(), this structure is the main point of communication for back-ends supporting multi-viewports.
+  Similarly to ImGuiIO and GetIO(), this structure is the main point of communication for backends supporting multi-viewports.
 - Added ImGuiPlatformMonitor to feed OS monitor information in the ImGuiPlatformIO::Monitors.
 - Added GetMainViewport().
 - Added GetWindowViewport(), SetNextWindowViewport().
@@ -84,7 +84,7 @@ Other changes:
 - Added GetOverlayDrawList(ImGuiViewport* viewport).
   The no-parameter version of GetOverlayDrawList() return the overlay for the current window's viewport.
 - Added UpdatePlatformWindows(), RenderPlatformWindows(), DestroyPlatformWindows() for usage for application core.
-- Added FindViewportByID(), FindViewportByPlatformHandle() for usage by back-ends.
+- Added FindViewportByID(), FindViewportByPlatformHandle() for usage by backends.
 - Added ImGuiConfigFlags_ViewportsEnable configuration flag and other viewport options.
 - Added io.ConfigViewportsNoAutoMerge, io.ConfigViewportsNoTaskBarIcon, io.ConfigViewportsNoDecoration, io.ConfigViewportsNoDefaultParent options.
 - Added ImGuiBackendFlags_PlatformHasViewports, ImGuiBackendFlags_RendererHasViewports, ImGuiBackendFlags_HasMouseHoveredViewport backend flags.
@@ -98,6 +98,34 @@ Other changes:
   and without requiring Windows 10 at runtime.
 - Examples: Vulkan: Added various optional helpers in imgui_impl_vulkan.h (they are used for multi-viewport support)
   to make the examples main.cpp easier to read.
+
+
+-----------------------------------------------------------------------
+ VERSION 1.80 (In Progress)
+-----------------------------------------------------------------------
+
+Breaking Changes:
+
+- Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
+- Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2017):
+  - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your backend
+  - ImGui::IsAnyWindowFocused()                 -> use ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)
+  - ImGui::IsAnyWindowHovered()                 -> use ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)
+  - ImGuiStyleVar_Count_                        -> use ImGuiStyleVar_COUNT
+  - ImGuiMouseCursor_Count_                     -> use ImGuiMouseCursor_COUNT
+- Removed redirecting functions/enums names that were marked obsolete in 1.61 (May 2018):
+  - InputFloat (... int decimal_precision ...)  -> use InputFloat (... const char* format ...) with format = "%.Xf" where X was value for decimal_precision.
+  - same for InputFloat2()/InputFloat3()/InputFloat4() variants taking a `int decimal_precision` parameter.
+- If you were still using the old names, while you are cleaning up, considering enabling
+  IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
+  and removing up old API calls, if any remaining.
+
+
+Other Changes:
+
+- Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
+- Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
+>>>>>>> master
 
 
 -----------------------------------------------------------------------
@@ -765,7 +793,7 @@ Other Changes:
 - Style: Attenuated default opacity of ImGuiCol_Separator in Classic and Light styles.
 - Style: Added style.ColorButtonPosition (left/right, defaults to ImGuiDir_Right) to move the color button
   of ColorEdit3/ColorEdit4 functions to either side of the inputs.
-- IO: Added ImGuiKey_KeyPadEnter and support in various back-ends (previously back-ends would need to
+- IO: Added ImGuiKey_KeyPadEnter and support in various backends (previously backends would need to
   specifically redirect key-pad keys to their regular counterpart). This is a temporary attenuating measure
   until we actually refactor and add whole sets of keys into the ImGuiKey enum. (#2677, #2005) [@amc522]
 - Misc: Made Button(), ColorButton() not trigger an "edited" event leading to IsItemDeactivatedAfterEdit()
@@ -789,7 +817,7 @@ Other Changes:
 - Backends: OSX: Disabled default native Mac clipboard copy/paste implementation in core library (added in 1.71),
   because it needs application to be linked with '-framework ApplicationServices'. It can be explicitly
   enabled back by using '#define IMGUI_ENABLE_OSX_DEFAULT_CLIPBOARD_FUNCTIONS' in imconfig.h. Re-added
-  equivalent using NSPasteboard api in the imgui_impl_osx.mm experimental back-end. (#2546)
+  equivalent using NSPasteboard api in the imgui_impl_osx.mm experimental backend. (#2546)
 - Backends: SDL2: Added ImGui_ImplSDL2_InitForD3D() function to make D3D support more visible.
   (#2482, #2632) [@josiahmanson]
 - Examples: Added SDL2+DirectX11 example application. (#2632, #2612, #2482) [@vincenthamm]
@@ -840,7 +868,7 @@ Other Changes:
 - Nav: Fixed gamepad/keyboard moving of window affecting contents size incorrectly, sometimes leading
   to scrollbars appearing during the movement.
 - Nav: Fixed rare crash when e.g. releasing Alt-key while focusing a window with a menu at the same
-  frame as clearing the focus. This was in most noticeable in back-ends such as Glfw and SDL which
+  frame as clearing the focus. This was in most noticeable in backends such as Glfw and SDL which
   emits key release events when focusing another viewport, leading to Alt+clicking on void on another
   viewport triggering the issue. (#2609)
 - TreeNode, CollapsingHeader: Fixed highlight frame not covering horizontal area fully when using
@@ -856,14 +884,14 @@ Other Changes:
 - Style: Made window close button cross slightly smaller.
 - Log/Capture: Fixed BeginTabItem() label not being included in a text log/capture.
 - ImDrawList: Added ImDrawCmd::VtxOffset value to support large meshes (64k+ vertices) using 16-bit indices.
-  The renderer back-end needs to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' to enable
+  The renderer backend needs to set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset' to enable
   this, and honor the ImDrawCmd::VtxOffset field. Otherwise the value will always be zero. (#2591)
   This has the advantage of preserving smaller index buffers and allowing to execute on hardware that do not
-  support 32-bit indices. Most examples back-ends have been modified to support the VtxOffset field.
+  support 32-bit indices. Most examples backends have been modified to support the VtxOffset field.
 - ImDrawList: Added ImDrawCmd::IdxOffset value, equivalent to summing element count for each draw command.
   This is provided for convenience and consistency with VtxOffset. (#2591)
 - ImDrawCallback: Allow to override the signature of ImDrawCallback by #define-ing it. This is meant to
-  facilitate custom rendering back-ends passing local render-specific data to the draw callback.
+  facilitate custom rendering backends passing local render-specific data to the draw callback.
 - ImFontAtlas: FreeType: Added RasterizerFlags::Monochrome flag to disable font anti-aliasing. Combine
   with RasterizerFlags::MonoHinting for best results. (#2545) [@HolyBlackCat]
 - ImFontGlyphRangesBuilder: Fixed unnecessarily over-sized buffer, which incidentally was also not
@@ -873,7 +901,7 @@ Other Changes:
   dealing with Win32, and to facilitate integration in custom engines. (#2546) [@andrewwillmott]
 - Backends: OSX: imgui_impl_osx: Added mouse cursor support. (#2585, #1873) [@actboy168]
 - Examples/Backends: DirectX9/10/11/12, Metal, Vulkan, OpenGL3 (Desktop GL only): Added support for large meshes
-  (64k+ vertices) with 16-bit indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those back-ends. (#2591)
+  (64k+ vertices) with 16-bit indices, enable 'ImGuiBackendFlags_RendererHasVtxOffset' in those backends. (#2591)
 - Examples/Backends: Don't filter characters under 0x10000 before calling io.AddInputCharacter(),
   the filtering is done in io.AddInputCharacter() itself. This is in prevision for fuller Unicode
   support. (#2538, #2541)
@@ -901,15 +929,15 @@ Breaking Changes:
 Other Changes:
 
 - ImDrawList: Added ImDrawCallback_ResetRenderState, a special ImDrawList::AddCallback() value
-  to request the renderer back-end to reset its render state. (#2037, #1639, #2452)
-  Examples: Added support for ImDrawCallback_ResetRenderState in all renderer back-ends. Each
+  to request the renderer backend to reset its render state. (#2037, #1639, #2452)
+  Examples: Added support for ImDrawCallback_ResetRenderState in all renderer backends. Each
   renderer code setting up initial render state has been moved to a function so it could be
   called at the start of rendering and when a ResetRenderState is requested. [@ocornut, @bear24rw]
 - InputText: Fixed selection background rendering one frame after the cursor movement when
   first transitioning from no-selection to has-selection. (Bug in 1.69) (#2436) [@Nazg-Gul]
 - InputText: Work-around for buggy standard libraries where isprint('\t') returns true. (#2467, #1336)
 - InputText: Fixed ImGuiInputTextFlags_AllowTabInput leading to two tabs characters being inserted
-  if the back-end provided both Key and Character input. (#2467, #1336)
+  if the backend provided both Key and Character input. (#2467, #1336)
 - Layout: Added SetNextItemWidth() helper to avoid using PushItemWidth/PopItemWidth() for single items.
   Note that SetNextItemWidth() currently only affect the same subset of items as PushItemWidth(),
   generally referred to as the large framed+labeled items. Because the new SetNextItemWidth()
@@ -1066,7 +1094,7 @@ Other Changes:
 - ImDrawData: Added FramebufferScale field (currently a copy of the value from io.DisplayFramebufferScale).
   This is to allow render functions being written without pulling any data from ImGuiIO, allowing incoming
   multi-viewport feature to behave on Retina display and with multiple displays.
-  If you are not using a custom binding, please update your render function code ahead of time,
+  If you are not using a custom backend, please update your render function code ahead of time,
   and use draw_data->FramebufferScale instead of io.DisplayFramebufferScale. (#2306, #1676)
 - Added IsItemActivated() as an extension to the IsItemDeactivated/IsItemDeactivatedAfterEdit functions
   which are useful to implement variety of undo patterns. (#820, #956, #1875)
@@ -1150,7 +1178,7 @@ Other Changes:
 - Window: Contents size is preserved while a window collapsed. Fix auto-resizing window losing their size for one frame when uncollapsed.
 - Window: Contents size is preserved while a window contents is hidden (unless it is hidden for resizing purpose).
 - Window: Resizing windows from edge is now enabled by default (io.ConfigWindowsResizeFromEdges=true). Note that
-  it only works _if_ the back-end sets ImGuiBackendFlags_HasMouseCursors, which the standard back-ends do.
+  it only works _if_ the backend sets ImGuiBackendFlags_HasMouseCursors, which the standard backends do.
 - Window: Added io.ConfigWindowsMoveFromTitleBarOnly option. This is ignored by window with no title bars (often popups).
   This affects clamping window within the visible area: with this option enabled title bars need to be visible. (#899)
 - Window: Fixed using SetNextWindowPos() on a child window (which wasn't really documented) position the cursor as expected
@@ -1172,7 +1200,7 @@ Other Changes:
 - ImFontAtlas: FreeType: Fixed support for any values of TexGlyphPadding (not just only 1).
 - ImDrawList: Optimized some of the functions for performance of debug builds where non-inline function call cost are non-negligible.
   (Our test UI scene on VS2015 Debug Win64 with /RTC1 went ~5.9 ms -> ~4.9 ms. In Release same scene stays at ~0.3 ms.)
-- IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by back-ends.
+- IO: Added BackendPlatformUserData, BackendRendererUserData, BackendLanguageUserData void* for storage use by backends.
 - IO: Renamed InputCharacters[], marked internal as was always intended. Please don't access directly, and use AddInputCharacter() instead!
 - IO: AddInputCharacter() goes into a queue which can receive as many characters as needed during the frame. This is useful
   for automation to not have an upper limit on typing speed. Will later transition key/mouse to use the event queue later.
@@ -1199,7 +1227,7 @@ Other Changes:
 - Demo: Added ShowAboutWindow() call, previously was only accessible from the demo window.
 - Demo: ShowAboutWindow() now display various Build/Config Information (compiler, os, etc.) that can easily be copied into bug reports.
 - Fixed build issue with osxcross and macOS. (#2218) [@dos1]
-- Examples: Setting up 'io.BackendPlatformName'/'io.BackendRendererName' fields to the current back-end can be displayed in the About window.
+- Examples: Setting up 'io.BackendPlatformName'/'io.BackendRendererName' fields to the current backend can be displayed in the About window.
 - Examples: SDL: changed the signature of ImGui_ImplSDL2_ProcessEvent() to use a const SDL_Event*. (#2187)
 
 
@@ -1427,23 +1455,23 @@ Breaking Changes:
 
 Other Changes:
 
-- Examples back-ends have been refactored to separate the platform code (e.g. Win32, Glfw, SDL2) from the renderer code (e.g. DirectX11, OpenGL3, Vulkan).
-  The "Platform" bindings are in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, etc.
-  The "Renderer" bindings are in charge of: creating the main font texture, rendering imgui draw data.
+- Examples backends have been refactored to separate the platform code (e.g. Win32, Glfw, SDL2) from the renderer code (e.g. DirectX11, OpenGL3, Vulkan).
+  The "Platform" backends are in charge of: mouse/keyboard/gamepad inputs, cursor shape, timing, etc.
+  The "Renderer" backends are in charge of: creating the main font texture, rendering imgui draw data.
       before: imgui_impl_dx11.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx11.cpp
       before: imgui_impl_dx12.cpp        --> after: imgui_impl_win32.cpp + imgui_impl_dx12.cpp
       before: imgui_impl_glfw_gl3.cpp    --> after: imgui_impl_glfw.cpp + imgui_impl_opengl2.cpp
       before: imgui_impl_glfw_vulkan.cpp --> after: imgui_impl_glfw.cpp + imgui_impl_vulkan.cpp
       before: imgui_impl_sdl_gl3.cpp     --> after: imgui_impl_sdl2.cpp + imgui_impl_opengl2.cpp
       before: imgui_impl_sdl_gl3.cpp     --> after: imgui_impl_sdl2.cpp + imgui_impl_opengl3.cpp etc.
-  - The idea is what we can now easily combine and maintain back-ends and reduce code redundancy. Individual files are
+  - The idea is what we can now easily combine and maintain backends and reduce code redundancy. Individual files are
     smaller and more reusable. Integration of imgui into a new/custom engine may also be easier as there is less overlap
     between "windowing / inputs" and "rendering" code, so you may study or grab one half of the code and not the other.
   - This change was motivated by the fact that adding support for the upcoming multi-viewport feature requires more work
-    from the Platform and Renderer back-ends, and the amount of redundancy across files was becoming too difficult to
-    maintain. If you use default back-ends, you'll benefit from an easy update path to support multi-viewports later
+    from the Platform and Renderer backends, and the amount of redundancy across files was becoming too difficult to
+    maintain. If you use default backends, you'll benefit from an easy update path to support multi-viewports later
     (for future ImGui 1.7x).
-  - This is not strictly a breaking change if you keep your old bindings, but when you'll want to fully update your bindings,
+  - This is not strictly a breaking change if you keep your old backends, but when you'll want to fully update your backends,
     expect to have to reshuffle a few things.
   - Each example still has its own main.cpp which you may refer you to understand how to initialize and glue everything together.
   - Some frameworks (such as the Allegro, Marmalade) handle both the "platform" and "rendering" part, and your custom engine may as well.
@@ -1470,20 +1498,20 @@ Other Changes:
   for icon fonts. (#1869)
 - ImFontAtlas: Added GetGlyphRangesChineseSimplifiedCommon() helper that returns a list of ~2500 most common Simplified Chinese
   characters. (#1859) [@JX-Master, @ocornut]
-- Examples: OSX: Added imgui_impl_osx.mm binding to be used along with e.g. imgui_impl_opengl2.cpp. (#281, #1870) [@pagghiu, @itamago, @ocornut]
+- Examples: OSX: Added imgui_impl_osx.mm backend to be used along with e.g. imgui_impl_opengl2.cpp. (#281, #1870) [@pagghiu, @itamago, @ocornut]
 - Examples: GLFW: Made it possible to Shutdown/Init the backend again (by reseting the time storage properly). (#1827) [@ice1000]
 - Examples: Win32: Fixed handling of mouse wheel messages to support sub-unit scrolling messages (typically sent by track-pads). (#1874) [@zx64]
 - Examples: SDL+Vulkan: Added SDL+Vulkan example.
 - Examples: Allegro5: Added support for ImGuiConfigFlags_NoMouseCursorChange flag. Added clipboard support.
-- Examples: Allegro5: Unindexing buffers ourselves as Allegro indexed drawing primitives are buggy in the DirectX9 back-end
+- Examples: Allegro5: Unindexing buffers ourselves as Allegro indexed drawing primitives are buggy in the DirectX9 backend
   (will be fixed in Allegro 5.2.5+).
 - Examples: DirectX12: Moved the ID3D12GraphicsCommandList* parameter from ImGui_ImplDX12_NewFrame() to ImGui_ImplDX12_RenderDrawData() which makes a lots more sense. (#301)
-- Examples: Vulkan: Reordered parameters ImGui_ImplVulkan_RenderDrawData() to be consistent with other bindings,
+- Examples: Vulkan: Reordered parameters ImGui_ImplVulkan_RenderDrawData() to be consistent with other backends,
   a good occasion since we refactored the code.
-- Examples: FreeGLUT: Added FreeGLUT bindings. Added FreeGLUT+OpenGL2 example. (#801)
+- Examples: FreeGLUT: Added FreeGLUT backends. Added FreeGLUT+OpenGL2 example. (#801)
 - Examples: The functions in imgui_impl_xxx.cpp are prefixed with IMGUI_IMPL_API (which defaults to IMGUI_API) to facilitate
   some uses. (#1888)
-- Examples: Fixed bindings to use ImGuiMouseCursor_COUNT instead of old name ImGuiMouseCursor_Count_ so they can compile
+- Examples: Fixed backends to use ImGuiMouseCursor_COUNT instead of old name ImGuiMouseCursor_Count_ so they can compile
   with IMGUI_DISABLE_OBSOLETE_FUNCTIONS. (#1887)
 - Misc: Updated stb_textedit from 1.09 + patches to 1.12 + minor patches.
 - Internals: PushItemFlag() flags are inherited by BeginChild().
@@ -1559,9 +1587,9 @@ Other Changes:
 - Demo: Added demo for DragScalar(), InputScalar(), SliderScalar(). (#643)
 - Examples: Calling IMGUI_CHECKVERSION() in the main.cpp of every example application.
 - Examples: Allegro 5: Added support for 32-bit indices setup via defining ImDrawIdx, to avoid an unnecessary conversion (Allegro 5 doesn't support 16-bit indices).
-- Examples: Allegro 5: Renamed bindings from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
+- Examples: Allegro 5: Renamed backend from imgui_impl_a5.cpp to imgui_impl_allegro5.cpp.
 - Examples: DirectX 9: Saving/restoring Transform because they don't seem to be included in the StateBlock. Setting shading mode to Gouraud. (#1790, #1687) [@sr-tream]
-- Examples: SDL: Fixed clipboard paste memory leak in the SDL binding code. (#1803) [@eliasdaler]
+- Examples: SDL: Fixed clipboard paste memory leak in the SDL backend code. (#1803) [@eliasdaler]
 - Various minor fixes, tweaks, refactoring, comments.
 
 
@@ -1592,7 +1620,7 @@ Breaking Changes:
 - BeginDragDropSource(): temporarily removed the optional mouse_button=0 parameter because it is not really usable in many situations at the moment.
 - Obsoleted IsAnyWindowHovered() in favor of IsWindowHovered(ImGuiHoveredFlags_AnyWindow). Kept redirection function (will obsolete).
 - Obsoleted IsAnyWindowFocused() in favor of IsWindowFocused(ImGuiFocusedFlags_AnyWindow). Kept redirection function (will obsolete).
-- Renamed io.WantMoveMouse to io.WantSetMousePos for consistency and ease of understanding (was added in 1.52, not used by core, and honored by some binding ahead of merging the Nav branch).
+- Renamed io.WantMoveMouse to io.WantSetMousePos for consistency and ease of understanding (was added in 1.52, not used by core, and honored by some backend ahead of merging the Nav branch).
 - Removed ImGuiCol_CloseButton, ImGuiCol_CloseButtonActive, ImGuiCol_CloseButtonHovered style colors as the closing cross uses regular button colors now.
 - Renamed ImGuiSizeConstraintCallback to ImGuiSizeCallback, ImGuiSizeConstraintCallbackData to ImGuiSizeCallbackData.
 - Removed CalcItemRectClosestPoint() which was weird and not really used by anyone except demo code. If you need it should be easy to replicate on your side (you can find the code in 1.53).
@@ -1634,9 +1662,9 @@ Other Changes:
   - ImGuiConfigFlags_NoMouse: Instruct imgui to clear mouse position/buttons in NewFrame(). This allows ignoring the mouse information passed by the backend.
   - ImGuiConfigFlags_IsSRGB, ImGuiConfigFlags_IsTouchScreen: Flags for general application use.
 - IO: Added io.BackendFlags for backend to store its capabilities (currently: _HasGamepad, _HasMouseCursors, _HasSetMousePos). This will be used more in the next version.
-- IO: Added ImGuiKey_Insert, ImGuiKey_Space keys. Setup in all example bindings. (#1541)
+- IO: Added ImGuiKey_Insert, ImGuiKey_Space keys. Setup in all example backends. (#1541)
 - IO: Added Horizontal Mouse Wheel support for horizontal scrolling. (#1463) [@tseeker]
-- IO: Added IsAnyMouseDown() helper which is helpful for bindings to handle mouse capturing.
+- IO: Added IsAnyMouseDown() helper which is helpful for backends to handle mouse capturing.
 - Window: Clicking on a window with the ImGuiWIndowFlags_NoMove flags takes an ActiveId so we can't hover something else when dragging afterwards. (#1381, #1337)
 - Window: IsWindowHovered(): Added ImGuiHoveredFlags_AnyWindow, ImGuiFocusedFlags_AnyWindow flags (See Breaking Changes). Added to demo. (#1382)
 - Window: Added SetNextWindowBgAlpha() helper. Particularly helpful since the legacy 5-parameters version of Begin() has been marked as obsolete in 1.53. (#1567)
@@ -1702,7 +1730,7 @@ Other Changes:
 - Demo: Tweaked the Child demos, added a menu bar to the second child to test some navigation functions.
 - Demo: Console: Using ImGuiCol_Text to be more friendly to color changes.
 - Demo: Using IM_COL32() instead of ImColor() in ImDrawList centric contexts. Trying to phase out use of the ImColor helper whenever possible.
-- Examples: Files in examples/ now include their own changelog so it is easier to occasionally update your bindings if needed.
+- Examples: Files in examples/ now include their own changelog so it is easier to occasionally update your backends if needed.
 - Examples: Using Dark theme by default. (#707). Tweaked demo code.
 - Examples: Added support for horizontal mouse wheel for API that allows it. (#1463) [@tseeker]
 - Examples: All examples now setup the io.BackendFlags to signify they can honor mouse cursors, gamepad, etc.
@@ -1713,7 +1741,7 @@ Other Changes:
 - Examples: OpenGL3+GLFW,SDL: Creating VAO in the render function so it can be more easily used by multiple shared OpenGL contexts. (#1217)
 - Examples: OpenGL3+GLFW: Using 3.2 context instead of 3.3. (#1466)
 - Examples: OpenGL: Setting up glPixelStorei() explicitly before uploading texture.
-- Examples: OpenGL: Calls to glPolygonMode() are casting parameters as GLEnum to not fail with more strict bindings. (#1628) [@ilia-glushchenko]
+- Examples: OpenGL: Calls to glPolygonMode() are casting parameters as GLEnum to not fail with more strict backends. (#1628) [@ilia-glushchenko]
 - Examples: Win32 (DirectX9,10,11,12): Added support for mouse cursor shapes. (#1495)
 - Examples: Win32 (DirectX9,10,11,12: Support for windows using the CS_DBLCLKS class flag by handling the double-click messages (WM_LBUTTONDBLCLK etc.). (#1538, #754) [@ndandoulakis]
 - Examples: Win32 (DirectX9,10,11,12): Made the Win32 proc handlers not assert if there is no active context yet, to be more flexible with creation order. (#1565)
@@ -2108,7 +2136,7 @@ Other Changes:
 - Context: Support for #define-ing GImGui and IMGUI_SET_CURRENT_CONTEXT_FUNC to enable custom thread-based hackery (#586)
 - Updated stb_truetype.h to 1.14 (added OTF support, removed warnings). (#883, #976)
 - Updated stb_rect_pack.h to 0.10 (removed warnings). (#883)
-- Added ImGuiMouseCursor_None enum value for convenient usage by app/binding.
+- Added ImGuiMouseCursor_None enum value for convenient usage by app/backends.
 - Clipboard: Added a void* user_data parameter to Clipboard function handlers. (#875) (BREAKING API)
 - Internals: Refactor internal text alignment options to use ImVec2, removed ImGuiAlign. (#842, #222)
 - Internals: Renamed ImLoadFileToMemory to ImFileLoadToMemory to be consistent with ImFileOpen + fix mismatching .h name. (#917)

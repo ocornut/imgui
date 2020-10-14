@@ -22,7 +22,7 @@
     <ClCompile Include="main.cpp">
       <Filter>sources</Filter>
     </ClCompile>
-    <ClCompile Include="..\imgui_impl_allegro5.cpp">
+    <ClCompile Include="..\..\backends\imgui_impl_allegro5.cpp">
       <Filter>sources</Filter>
     </ClCompile>
     <ClCompile Include="imconfig_allegro5.h">
@@ -42,7 +42,7 @@
     <ClInclude Include="..\..\imgui_internal.h">
       <Filter>imgui</Filter>
     </ClInclude>
-    <ClInclude Include="..\imgui_impl_allegro5.h">
+    <ClInclude Include="..\..\backends\imgui_impl_allegro5.h">
       <Filter>sources</Filter>
     </ClInclude>
   </ItemGroup>

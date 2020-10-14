@@ -1,9 +1,10 @@
-// dear imgui: standalone example application for OSX + OpenGL2, using legacy fixed pipeline
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
+// Dear ImGui: standalone example application for OSX + OpenGL2, using legacy fixed pipeline
+// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
+// Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #include "imgui.h"
-#include "../imgui_impl_osx.h"
-#include "../imgui_impl_opengl2.h"
+#include "../../backends/imgui_impl_osx.h"
+#include "../../backends/imgui_impl_opengl2.h"
 #include <stdio.h>
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl.h>
@@ -138,7 +139,7 @@
     animationTimer = nil;
 }
 
-// Forward Mouse/Keyboard events to dear imgui OSX back-end. It returns true when imgui is expecting to use the event.
+// Forward Mouse/Keyboard events to dear imgui OSX backend. It returns true when imgui is expecting to use the event.
 -(void)keyUp:(NSEvent *)event               { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)keyDown:(NSEvent *)event             { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)flagsChanged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self); }
@@ -255,7 +256,7 @@
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-    // Setup Platform/Renderer bindings
+    // Setup Platform/Renderer backends
     ImGui_ImplOSX_Init();
     ImGui_ImplOpenGL2_Init();
 
