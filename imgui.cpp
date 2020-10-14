@@ -12510,6 +12510,8 @@ bool ImGui::DockContextCalcDropPosForDocking(ImGuiWindow* target, ImGuiDockNode*
 // - DockNodeStartMouseMovingWindow()
 // - DockNodeUpdate()
 // - DockNodeUpdateWindowMenu()
+// - DockNodeBeginAmendTabBar()
+// - DockNodeEndAmendTabBar()
 // - DockNodeUpdateTabBar()
 // - DockNodeAddTabBar()
 // - DockNodeRemoveTabBar()
@@ -13231,7 +13233,8 @@ static ImGuiID ImGui::DockNodeUpdateWindowMenu(ImGuiDockNode* node, ImGuiTabBar*
             for (int tab_n = 0; tab_n < tab_bar->Tabs.Size; tab_n++)
             {
                 ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
-                IM_ASSERT(tab->Window != NULL);
+                if (tab->Window == NULL)
+                    continue;
                 if (Selectable(tab->Window->Name, tab->ID == tab_bar->SelectedTabId))
                     ret_tab_id = tab->ID;
                 SameLine();
@@ -13243,6 +13246,26 @@ static ImGuiID ImGui::DockNodeUpdateWindowMenu(ImGuiDockNode* node, ImGuiTabBar*
     return ret_tab_id;
 }
 
+// User helper to append/amend into a dock node tab bar. Most commonly used to add e.g. a "+" button.
+bool ImGui::DockNodeBeginAmendTabBar(ImGuiDockNode* node)
+{
+    if (node->TabBar == NULL || node->HostWindow == NULL)
+        return false;
+    Begin(node->HostWindow->Name);
+    PushOverrideID(node->ID);
+    bool ret = BeginTabBarEx(node->TabBar, node->TabBar->BarRect, node->TabBar->Flags, node);
+    IM_ASSERT(ret);
+    return true;
+}
+
+void ImGui::DockNodeEndAmendTabBar()
+{
+    EndTabBar();
+    PopID();
+    End();
+}
+
+// Submit the tab bar corresponding to a dock node and various housekeeping details.
 static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_window)
 {
     ImGuiContext& g = *GImGui;
@@ -13446,7 +13469,14 @@ static void ImGui::DockNodeUpdateTabBar(ImGuiDockNode* node, ImGuiWindow* host_w
     if (g.HoveredId == 0 || g.HoveredId == title_bar_id || g.ActiveId == title_bar_id)
     {
         bool held;
-        ButtonBehavior(title_bar_rect, title_bar_id, NULL, &held);
+        ButtonBehavior(title_bar_rect, title_bar_id, NULL, &held, ImGuiButtonFlags_AllowItemOverlap);
+        if (g.HoveredId == title_bar_id)
+        {
+            // ImGuiButtonFlags_AllowItemOverlap + SetItemAllowOverlap() required for appending into dock node tab bar,
+            // otherwise dragging window will steal HoveredId and amended tabs cannot get them.
+            host_window->DC.LastItemId = title_bar_id;
+            SetItemAllowOverlap();
+        }
         if (held)
         {
             if (IsMouseClicked(0))
@@ -15847,13 +15877,13 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             const char* buf_end = buf + IM_ARRAYSIZE(buf);
             const bool is_active = (tab_bar->PrevFrameVisible >= ImGui::GetFrameCount() - 2);
             p += ImFormatString(p, buf_end - p, "Tab Bar 0x%08X (%d tabs)%s", tab_bar->ID, tab_bar->Tabs.Size, is_active ? "" : " *Inactive*");
-            if (tab_bar->Flags & ImGuiTabBarFlags_DockNode)
+            p += ImFormatString(p, buf_end - p, "  { ");
+            for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
             {
-                p += ImFormatString(p, buf_end - p, "  { ");
-                for (int tab_n = 0; tab_n < ImMin(tab_bar->Tabs.Size, 3); tab_n++)
-                    p += ImFormatString(p, buf_end - p, "%s'%s'", tab_n > 0 ? ", " : "", tab_bar->Tabs[tab_n].Window->Name);
-                p += ImFormatString(p, buf_end - p, (tab_bar->Tabs.Size > 3) ? " ... }" : " } ");
+                ImGuiTabItem* tab = &tab_bar->Tabs[tab_n];
+                p += ImFormatString(p, buf_end - p, "%s'%s'", tab_n > 0 ? ", " : "", (tab->Window || tab->NameOffset != -1) ? tab_bar->GetTabName(tab) : "???");
             }
+            p += ImFormatString(p, buf_end - p, (tab_bar->Tabs.Size > 3) ? " ... }" : " } ");
             if (!is_active) { PushStyleColor(ImGuiCol_Text, GetStyleColorVec4(ImGuiCol_TextDisabled)); }
             bool open = ImGui::TreeNode(tab_bar, "%s", buf);
             if (!is_active) { PopStyleColor(); }
@@ -15872,7 +15902,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                     ImGui::PushID(tab);
                     if (ImGui::SmallButton("<")) { TabBarQueueReorder(tab_bar, tab, -1); } ImGui::SameLine(0, 2);
                     if (ImGui::SmallButton(">")) { TabBarQueueReorder(tab_bar, tab, +1); } ImGui::SameLine();
-                    ImGui::Text("%02d%c Tab 0x%08X '%s' Offset: %.1f, Width: %.1f/%.1f", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, (tab->Window || tab->NameOffset != -1) ? tab_bar->GetTabName(tab) : "", tab->Offset, tab->Width, tab->ContentWidth);
+                    ImGui::Text("%02d%c Tab 0x%08X '%s' Offset: %.1f, Width: %.1f/%.1f", tab_n, (tab->ID == tab_bar->SelectedTabId) ? '*' : ' ', tab->ID, (tab->Window || tab->NameOffset != -1) ? tab_bar->GetTabName(tab) : "???", tab->Offset, tab->Width, tab->ContentWidth);
                     ImGui::PopID();
                 }
                 ImGui::TreePop();
