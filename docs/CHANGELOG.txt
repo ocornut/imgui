@@ -37,6 +37,7 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
 - Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2017):
   - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your backend
   - ImGui::IsAnyWindowFocused()                 -> use ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)
@@ -53,7 +54,7 @@ Breaking Changes:
 
 Other Changes:
 
-- Docs: Split Backends and Examples README and improved them.
+- Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
 - Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
 
 

@@ -50,6 +50,7 @@ or view this file with any Markdown viewer.
 **This library is poorly documented at the moment and expects of the user to be acquainted with C/C++.**
 - Dozens of standalone example applications using e.g. OpenGL/DirectX are provided in the [examples/](https://github.com/ocornut/imgui/blob/master/examples/) folder to explain how to integrate Dear ImGui with your own engine/application. You can run those applications and explore them.
 - See demo code in [imgui_demo.cpp](https://github.com/ocornut/imgui/blob/master/imgui_demo.cpp) and particularly the `ImGui::ShowDemoWindow()` function. The demo covers most features of Dear ImGui, so you can read the code and see its output.
+- See documentation: [Backends](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md), [Examples](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md), [Fonts](https://github.com/ocornut/imgui/blob/master/docs/FONTS.md).
 - See documentation and comments at the top of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp) + general API comments in [imgui.h](https://github.com/ocornut/imgui/blob/master/imgui.h).
 - The [Wiki](https://github.com/ocornut/imgui/wiki) has many resources and links.
 - The [Glossary](https://github.com/ocornut/imgui/wiki/Glossary) page may be useful.
@@ -91,8 +92,9 @@ You may merge in the [tables](https://github.com/ocornut/imgui/tree/tables) bran
 
 ### Q: How to get started?
 
+Read [EXAMPLES.md](https://github.com/ocornut/imgui/blob/master/docs/EXAMPLES.md). <BR>
+Read [BACKENDS.md](https://github.com/ocornut/imgui/blob/master/docs/BACKENDS.md). <BR>
 Read `PROGRAMMER GUIDE` section of [imgui.cpp](https://github.com/ocornut/imgui/blob/master/imgui.cpp).
-Read [examples/README.txt](https://github.com/ocornut/imgui/tree/master/examples/README.txt).
 
 ##### [Return to Index](#index)
 
@@ -142,7 +144,7 @@ and portable source code (uSynergy.c/.h) for a small embeddable client that you 
 to your host computer, based on the Synergy 1.x protocol. Make sure you download the Synergy 1 server on your computer.
 Console SDK also sometimes provide equivalent tooling or wrapper for Synergy-like protocols.
 - Game console users: consider emulating a mouse cursor with DualShock4 touch pad or a spare analog stick as a mouse-emulation fallback.
-- You may also use a third party solution such as [Remote ImGui](https://github.com/JordiRos/remoteimgui) or [imgui-ws](https://github.com/ggerganov/imgui-ws) which sends the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine. See [Wiki](https://github.com/ocornut/imgui/wiki) index for most details.
+- You may also use a third party solution such as [netImgui](https://github.com/sammyfreg/netImgui), [Remote ImGui](https://github.com/JordiRos/remoteimgui) or [imgui-ws](https://github.com/ggerganov/imgui-ws) which sends the vertices to render over the local network, allowing you to use Dear ImGui even on a screen-less machine. See [Wiki](https://github.com/ocornut/imgui/wiki) index for most details.
 - For touch inputs, you can increase the hit box of widgets (via the `style.TouchPadding` setting) to accommodate for the lack of precision of touch inputs, but it is recommended you use a mouse or gamepad to allow optimizing for screen real-estate and precision.
 
 ##### [Return to Index](#index)

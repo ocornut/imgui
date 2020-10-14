@@ -1,6 +1,6 @@
-## Dear ImGui: Using Fonts
+_(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/FONTS.md or view this file with any Markdown viewer)_
 
-(You may browse this document at https://github.com/ocornut/imgui/blob/master/docs/FONTS.md or view this file with any Markdown viewer.)
+## Dear ImGui: Using Fonts
 
 The code in imgui.cpp embeds a copy of 'ProggyClean.ttf' (by Tristan Grimmer),
 a 13 pixels high, pixel-perfect font used by default. We embed it in the source code so you can use Dear ImGui without any file system access. ProggyClean does not scale smoothly, therefore it is recommended that you load your own file when using Dear ImGui in an application aiming to look nice and wanting to support multiple resolutions.
