@@ -120,12 +120,11 @@ Breaking Changes:
   IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
   and removing up old API calls, if any remaining.
 
-
 Other Changes:
 
+- Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
 - Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
->>>>>>> master
 
 
 -----------------------------------------------------------------------
