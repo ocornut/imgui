@@ -147,9 +147,16 @@ bool    ImGui_ImplOpenGL3_Init(const char* glsl_version)
 {
     // Query for GL version (e.g. 320 for GL 3.2)
 #if !defined(IMGUI_IMPL_OPENGL_ES2)
-    GLint major, minor;
+    GLint major = 0, minor = 0;
     glGetIntegerv(GL_MAJOR_VERSION, &major);
     glGetIntegerv(GL_MINOR_VERSION, &minor);
+    if (major == 0 && minor == 0)
+    {
+        // Query GL_VERSION in desktop GL 2.x, the string will start with "<major>.<minor>"
+        const GLubyte* version = glGetString(GL_VERSION);
+        major = version[0] - '0';
+        minor = version[2] - '0';
+    }
     g_GlVersion = (GLuint)(major * 100 + minor * 10);
 #else
     g_GlVersion = 200; // GLES 2
