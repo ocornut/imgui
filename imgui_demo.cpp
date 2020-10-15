@@ -652,9 +652,9 @@ static void ShowDemoWindowWidgets()
             static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
             ImGui::ColorEdit3("color 1", col1);
             ImGui::SameLine(); HelpMarker(
-                "Click on the colored square to open a color picker.\n"
+                "Click on the color square to open a color picker.\n"
                 "Click and hold to use drag and drop.\n"
-                "Right-click on the colored square to show options.\n"
+                "Right-click on the color square to show options.\n"
                 "CTRL+click on individual component to input value.\n");
 
             ImGui::ColorEdit4("color 2", col2);
@@ -823,7 +823,7 @@ static void ShowDemoWindowWidgets()
 
     if (ImGui::TreeNode("Text"))
     {
-        if (ImGui::TreeNode("Colored Text"))
+        if (ImGui::TreeNode("Colorful Text"))
         {
             // Using shortcut. You can use PushStyleColor()/PopStyleColor() for more flexibility.
             ImGui::TextColored(ImVec4(1.0f, 0.0f, 1.0f, 1.0f), "Pink");
@@ -1405,7 +1405,7 @@ static void ShowDemoWindowWidgets()
 
         ImGui::Text("Color widget:");
         ImGui::SameLine(); HelpMarker(
-            "Click on the colored square to open a color picker.\n"
+            "Click on the color square to open a color picker.\n"
             "CTRL+click on individual component to input value.\n");
         ImGui::ColorEdit3("MyColor##1", (float*)&color, misc_flags);
 
@@ -1825,7 +1825,7 @@ static void ShowDemoWindowWidgets()
             // They are using standardized payload strings IMGUI_PAYLOAD_TYPE_COLOR_3F and IMGUI_PAYLOAD_TYPE_COLOR_4F
             // to allow your own widgets to use colors in their drag and drop interaction.
             // Also see 'Demo->Widgets->Color/Picker Widgets->Palette' demo.
-            HelpMarker("You can drag from the colored squares.");
+            HelpMarker("You can drag from the color squares.");
             static float col1[3] = { 1.0f, 0.0f, 0.2f };
             static float col2[4] = { 0.4f, 0.7f, 0.0f, 0.5f };
             ImGui::ColorEdit3("color 1", col1);
@@ -3976,7 +3976,7 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             if (ImGui::RadioButton("Both",   alpha_flags == ImGuiColorEditFlags_AlphaPreviewHalf)) { alpha_flags = ImGuiColorEditFlags_AlphaPreviewHalf; } ImGui::SameLine();
             HelpMarker(
                 "In the color list:\n"
-                "Left-click on colored square to open color picker,\n"
+                "Left-click on color square to open color picker,\n"
                 "Right-click to open edit options menu.");
 
             ImGui::BeginChild("##colors", ImVec2(0, 0), true, ImGuiWindowFlags_AlwaysVerticalScrollbar | ImGuiWindowFlags_AlwaysHorizontalScrollbar | ImGuiWindowFlags_NavFlattened);
