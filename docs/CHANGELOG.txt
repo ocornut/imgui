@@ -62,6 +62,7 @@ Other Changes:
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...) 
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
+- Examples: Apple+Metal: Consolidated/simplified to get closer to other examples. (#3543) [@warrenm]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
 - Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
 
