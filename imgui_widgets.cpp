@@ -6802,6 +6802,7 @@ namespace ImGui
 
 ImGuiTabBar::ImGuiTabBar()
 {
+    Flags = ImGuiTabBarFlags_None;
     ID = 0;
     SelectedTabId = NextSelectedTabId = VisibleTabId = 0;
     CurrFrameVisible = PrevFrameVisible = -1;
@@ -6809,12 +6810,12 @@ ImGuiTabBar::ImGuiTabBar()
     WidthAllTabs = WidthAllTabsIdeal = 0.0f;
     ScrollingAnim = ScrollingTarget = ScrollingTargetDistToVisibility = ScrollingSpeed = 0.0f;
     ScrollingRectMinX = ScrollingRectMaxX = 0.0f;
-    Flags = ImGuiTabBarFlags_None;
     ReorderRequestTabId = 0;
     ReorderRequestDir = 0;
     TabsActiveCount = 0;
-    WantLayout = VisibleTabWasSubmitted = TabsAddedNew = false;
     LastTabItemIdx = -1;
+    BeginCount = 0;
+    WantLayout = VisibleTabWasSubmitted = TabsAddedNew = false;
 }
 
 static int IMGUI_CDECL TabItemComparerBySection(const void* lhs, const void* rhs)
@@ -6878,9 +6879,11 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     g.CurrentTabBar = tab_bar;
 
     // Append with multiple BeginTabBar()/EndTabBar() pairs.
+    tab_bar->BackupCursorPos = window->DC.CursorPos;
     if (tab_bar->CurrFrameVisible == g.FrameCount)
     {
         window->DC.CursorPos = tab_bar->TabsContentsMin;
+        tab_bar->BeginCount++;
         return true;
     }
 
@@ -6903,6 +6906,7 @@ bool    ImGui::BeginTabBarEx(ImGuiTabBar* tab_bar, const ImRect& tab_bar_bb, ImG
     tab_bar->CurrTabsContentsHeight = 0.0f;
     tab_bar->FramePadding = g.Style.FramePadding;
     tab_bar->TabsActiveCount = 0;
+    tab_bar->BeginCount = 1;
 
     // Set cursor pos in a way which only be used in the off-chance the user erroneously submits item before BeginTabItem(): items will overlap
     tab_bar->TabsContentsMin.x = tab_bar->BarRect.Min.x;
@@ -6949,6 +6953,8 @@ void    ImGui::EndTabBar()
     {
         window->DC.CursorPos.y = tab_bar->BarRect.Max.y + tab_bar->PrevTabsContentsHeight;
     }
+    if (tab_bar->BeginCount > 1)
+        window->DC.CursorPos = tab_bar->BackupCursorPos;
 
     if ((tab_bar->Flags & ImGuiTabBarFlags_DockNode) == 0)
         PopID();
@@ -7543,7 +7549,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         tab_bar->TabsAddedNew = true;
         tab_is_new = true;
     }
-    tab_bar->LastTabItemIdx = (short)tab_bar->Tabs.index_from_ptr(tab);
+    tab_bar->LastTabItemIdx = (ImS8)tab_bar->Tabs.index_from_ptr(tab);
     tab->ContentWidth = size.x;
     tab->BeginOrder = tab_bar->TabsActiveCount++;
 
