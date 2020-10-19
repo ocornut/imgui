@@ -6802,20 +6802,9 @@ namespace ImGui
 
 ImGuiTabBar::ImGuiTabBar()
 {
-    Flags = ImGuiTabBarFlags_None;
-    ID = 0;
-    SelectedTabId = NextSelectedTabId = VisibleTabId = 0;
+    memset(this, 0, sizeof(*this));
     CurrFrameVisible = PrevFrameVisible = -1;
-    CurrTabsContentsHeight = PrevTabsContentsHeight = 0.0f;
-    WidthAllTabs = WidthAllTabsIdeal = 0.0f;
-    ScrollingAnim = ScrollingTarget = ScrollingTargetDistToVisibility = ScrollingSpeed = 0.0f;
-    ScrollingRectMinX = ScrollingRectMaxX = 0.0f;
-    ReorderRequestTabId = 0;
-    ReorderRequestDir = 0;
-    TabsActiveCount = 0;
     LastTabItemIdx = -1;
-    BeginCount = 0;
-    WantLayout = VisibleTabWasSubmitted = TabsAddedNew = false;
 }
 
 static int IMGUI_CDECL TabItemComparerBySection(const void* lhs, const void* rhs)
