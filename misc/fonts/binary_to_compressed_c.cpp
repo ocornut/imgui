@@ -10,7 +10,8 @@
 
 // Build with, e.g:
 //   # cl.exe binary_to_compressed_c.cpp
-//   # gcc binary_to_compressed_c.cpp
+//   # g++ binary_to_compressed_c.cpp
+//   # clang++ binary_to_compressed_c.cpp
 // You can also find a precompiled Windows binary in the binary/demo package available from https://github.com/ocornut/imgui
 
 // Usage:
