@@ -654,9 +654,9 @@ namespace ImGui
 
     // Tables
     // [ALPHA API] API may evolve!
-    // - Full-featured replacement for old Columns API
+    // - Full-featured replacement for old Columns API.
     // - See Demo->Tables for details.
-    // - See ImGuiTableFlags_ and ImGuiTableColumnsFlags_ enums for a description of available flags.
+    // - See ImGuiTableFlags_ and ImGuiTableColumnFlags_ enums for a description of available flags.
     // The typical call flow is:
     // - 1. Call BeginTable()
     // - 2. Optionally call TableSetupColumn() to submit column name/flags/defaults
@@ -684,7 +684,7 @@ namespace ImGui
     IMGUI_API bool          TableSetColumnIndex(int column_n);          // append into the specified column. Return true if column is visible.
     IMGUI_API int           TableGetColumnIndex();                      // return current column index.
     // Tables: Headers & Columns declaration
-    // - Use TableSetupColumn() to specify label, resizing policy, default width, id, various other flags etc.
+    // - Use TableSetupColumn() to specify label, resizing policy, default width/weight, id, various other flags etc.
     //   Important: this will not display anything! The name passed to TableSetupColumn() is used by TableHeadersRow() and context-menus.
     // - Use TableHeadersRow() to create a row and automatically submit a TableHeader() for each column.
     //   Headers are required to perform some interactions: reordering, sorting, context menu (FIXME-TABLE: context menu should work without!)
@@ -1070,13 +1070,13 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,   // Draw all borders.
     ImGuiTableFlags_NoBordersInBody                 = 1 << 12,  // Disable vertical borders in columns Body (borders will always appears in Headers).
     ImGuiTableFlags_NoBordersInBodyUntilResize      = 1 << 13,  // Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers).
-    // Sizing, Padding
+    // Sizing
     ImGuiTableFlags_SizingPolicyFixedX              = 1 << 14,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAlwaysAutoResize policy. Read description above for more details.
     ImGuiTableFlags_SizingPolicyStretchX            = 1 << 15,  // Default if ScrollX is off. Columns will default to use _WidthStretch policy. Read description above for more details.
     ImGuiTableFlags_NoHeadersWidth                  = 1 << 16,  // Disable header width contribution to automatic width calculation.
     ImGuiTableFlags_NoHostExtendY                   = 1 << 17,  // (FIXME-TABLE: Reword as SizingPolicy?) Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
     ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 18,  // (FIXME-TABLE) Disable code that keeps column always minimally visible when table width gets too small and horizontal scrolling is off.
-    ImGuiTableFlags_NoClip                          = 1 << 19,  // Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with ScrollFreeze options.
+    ImGuiTableFlags_NoClip                          = 1 << 19,  // Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with TableSetupScrollFreeze().
     // Scrolling
     ImGuiTableFlags_ScrollX                         = 1 << 20,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
     ImGuiTableFlags_ScrollY                         = 1 << 21,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.

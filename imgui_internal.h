@@ -1901,15 +1901,14 @@ struct ImGuiTableColumn
     float                   WidthStretchWeight;             // Master width weight when (Flags & _WidthStretch). Often around ~1.0f initially.
     float                   WidthRequest;                   // Master width absolute value when !(Flags & _WidthStretch). When Stretch this is derived every frame from WidthStretchWeight in TableUpdateLayout()
     float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be >WidthRequest to honor minimum width, may be <WidthRequest to honor shrinking columns down in tight space.
-    float                   StartXRows;                     // Start position for the frame, currently ~(MinX + CellPaddingX)
-    float                   StartXHeaders;
-    float                   ContentMaxPosRowsFrozen;        // Submitted contents absolute maximum position, from which we can infer width.
-    float                   ContentMaxPosRowsUnfrozen;      // (kept as float because we need to manipulate those between each cell change)
+    float                   StartX;                         // Start position for the frame, currently ~(MinX + CellPaddingX)
+    float                   ContentMaxPosFrozen;            // Submitted contents absolute maximum position, from which we can infer width. Kept as float because we need to manipulate those between each cell change.
+    float                   ContentMaxPosUnfrozen;
     float                   ContentMaxPosHeadersUsed;
     float                   ContentMaxPosHeadersIdeal;
-    ImS16                   ContentWidthRowsFrozen;         // Contents width. Because row freezing is not correlated with headers/not-headers we need all 4 variants (ImDrawCmd merging uses different data than alignment code).
-    ImS16                   ContentWidthRowsUnfrozen;       // (encoded as ImS16 because we actually rarely use those width)
-    ImS16                   ContentWidthHeadersUsed;        // TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
+    ImS16                   ContentWidthFrozen;             // Contents width for frozen rows (apart from headers). Encoded as ImS16 because we actually rarely use those width.
+    ImS16                   ContentWidthUnfrozen;
+    ImS16                   ContentWidthHeadersUsed;        // Contents width for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
     ImS16                   ContentWidthHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
     bool                    IsVisible;                      // Is the column not marked Hidden by the user? (could be clipped by scrolling, etc).
@@ -1920,8 +1919,8 @@ struct ImGuiTableColumn
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
     ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
-    ImS8                    DrawChannelRowsBeforeFreeze;
-    ImS8                    DrawChannelRowsAfterFreeze;
+    ImS8                    DrawChannelFrozen;
+    ImS8                    DrawChannelUnfrozen;
     ImS8                    PrevVisibleColumn;              // Index of prev visible column within Columns[], -1 if first visible column
     ImS8                    NextVisibleColumn;              // Index of next visible column within Columns[], -1 if last visible column
     ImS8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
@@ -1936,7 +1935,7 @@ struct ImGuiTableColumn
         NameOffset = -1;
         IsVisible = IsVisibleNextFrame = true;
         DisplayOrder = IndexWithinVisibleSet = -1;
-        DrawChannelCurrent = DrawChannelRowsBeforeFreeze = DrawChannelRowsAfterFreeze = -1;
+        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = -1;
         PrevVisibleColumn = NextVisibleColumn = -1;
         AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
         SortOrder = -1;
@@ -2286,7 +2285,7 @@ namespace ImGui
     IMGUI_API void          TableEndRow(ImGuiTable* table);
     IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_n);
     IMGUI_API void          TableEndCell(ImGuiTable* table);
-    IMGUI_API ImRect        TableGetCellRect();
+    IMGUI_API ImRect        TableGetCellBgRect();
     IMGUI_API const char*   TableGetColumnName(const ImGuiTable* table, int column_n);
     IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
