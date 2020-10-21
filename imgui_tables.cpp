@@ -96,7 +96,7 @@ static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend ou
 static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
 
 // Helper
-inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
+inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
 {
     // Adjust flags: set default sizing policy
     if ((flags & ImGuiTableFlags_SizingPolicyMaskX_) == 0)
@@ -121,6 +121,15 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags)
     // Adjust flags: NoBordersInBodyUntilResize takes priority over NoBordersInBody
     if (flags & ImGuiTableFlags_NoBordersInBodyUntilResize)
         flags &= ~ImGuiTableFlags_NoBordersInBody;
+
+    // Inherit _NoSavedSettings from top-level window (child windows always have _NoSavedSettings set)
+#ifdef IMGUI_HAS_DOCK
+    ImGuiWindow* window_for_settings = outer_window->RootWindowDockStop;
+#else
+    ImGuiWindow* window_for_settings = outer_window->RootWindow;
+#endif
+    if (window_for_settings->Flags & ImGuiWindowFlags_NoSavedSettings)
+        flags |= ImGuiTableFlags_NoSavedSettings;
 
     return flags;
 }
@@ -163,6 +172,34 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
 }
 
+// For reference, the total _allocation count_ for a table is:
+// + 0 (for ImGuiTable instance, we sharing allocation in g.Tables pool)
+// + 1 (for table->RawData allocated below)
+// + 1 (for table->Splitter._Channels)
+// + 2 * active_channels_count (for ImDrawCmd and ImDrawIdx buffers inside channels)
+// Where active_channels_count is variable but often == columns_count or columns_count + 1, see TableUpdateDrawChannels() for details.
+// Unused channels don't perform their +2 allocations.
+static void TableBeginInitMemory(ImGuiTable* table, int columns_count)
+{
+    // Allocate single buffer for our arrays
+    ImSpanAllocator<3> span_allocator;
+    span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
+    span_allocator.ReserveBytes(1, columns_count * sizeof(ImS8));
+    span_allocator.ReserveBytes(2, columns_count * sizeof(ImGuiTableCellData));
+    table->RawData.resize(span_allocator.GetArenaSizeInBytes());
+    span_allocator.SetArenaBasePtr(table->RawData.Data);
+    span_allocator.GetSpan(0, &table->Columns);
+    span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
+    span_allocator.GetSpan(2, &table->RowCellData);
+
+    for (int n = 0; n < columns_count; n++)
+    {
+        table->Columns[n] = ImGuiTableColumn();
+        table->Columns[n].DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
+    }
+    table->IsInitializing = table->IsSettingsRequestLoad = table->IsSortSpecsDirty = true;
+}
+
 bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
     ImGuiContext& g = *GImGui;
@@ -175,36 +212,27 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (flags & ImGuiTableFlags_ScrollX)
         IM_ASSERT(inner_width >= 0.0f);
 
+    // If an outer size is specified ahead we will be able to early out when not visible. Exact clipping rules may evolve.
     const bool use_child_window = (flags & (ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY)) != 0;
     const ImVec2 avail_size = GetContentRegionAvail();
     ImVec2 actual_outer_size = CalcItemSize(outer_size, ImMax(avail_size.x, 1.0f), use_child_window ? ImMax(avail_size.y, 1.0f) : 0.0f);
     ImRect outer_rect(outer_window->DC.CursorPos, outer_window->DC.CursorPos + actual_outer_size);
-
-    // If an outer size is specified ahead we will be able to early out when not visible. Exact clipping rules may evolve.
     if (use_child_window && IsClippedEx(outer_rect, 0, false))
     {
         ItemSize(outer_rect);
         return false;
     }
 
-    flags = TableFixFlags(flags);
-
-    // Inherit _NoSavedSettings from top-level window (child windows always have _NoSavedSettings set)
-#ifdef IMGUI_HAS_DOCK
-    ImGuiWindow* window_for_settings = outer_window->RootWindowDockStop;
-#else
-    ImGuiWindow* window_for_settings = outer_window->RootWindow;
-#endif
-    if (window_for_settings->Flags & ImGuiWindowFlags_NoSavedSettings)
-        flags |= ImGuiTableFlags_NoSavedSettings;
-
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
-    const ImGuiTableFlags table_last_flags = table->Flags;
     const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     const ImGuiID instance_id = id + instance_no;
+    const ImGuiTableFlags table_last_flags = table->Flags;
     if (instance_no > 0)
         IM_ASSERT(table->ColumnsCount == columns_count && "BeginTable(): Cannot change columns count mid-frame while preserving same ID");
+
+    // Fix flags
+    flags = TableFixFlags(flags, outer_window);
 
     // Initialize
     table->ID = id;
@@ -248,7 +276,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         IM_ASSERT(table->InnerWindow->WindowPadding.x == 0.0f && table->InnerWindow->WindowPadding.y == 0.0f && table->InnerWindow->WindowBorderSize == 0.0f);
     }
 
-    // Push a standardized ID for both child and not-child using tables, equivalent to BeginTable() doing PushID(label) matching
+    // Push a standardized ID for both child-using and not-child-using tables
     PushOverrideID(instance_id);
 
     // Backup a copy of host window members we will modify
@@ -306,38 +334,12 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if ((table_last_flags & ImGuiTableFlags_Reorderable) && !(flags & ImGuiTableFlags_Reorderable))
         table->IsResetDisplayOrderRequest = true;
 
-    // Setup default columns state. Clear data if columns count changed
+    // Setup memory buffer (clear data if columns count changed)
     const int stored_size = table->Columns.size();
     if (stored_size != 0 && stored_size != columns_count)
         table->RawData.resize(0);
     if (table->RawData.Size == 0)
-    {
-        // For reference, the total _allocation count_ for a table is:
-        // + 0 (for ImGuiTable instance, we sharing allocation in g.Tables pool)
-        // + 1 (for table->RawData allocated below)
-        // + 1 (for table->Splitter._Channels)
-        // + 2 * active_channels_count (for ImDrawCmd and ImDrawIdx buffers inside channels)
-        // Where active_channels_count is variable but often == columns_count or columns_count + 1, see TableUpdateDrawChannels() for details.
-        // Unused channels don't perform their +2 allocations.
-
-        // Allocate single buffer for our arrays
-        ImSpanAllocator<3> span_allocator;
-        span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
-        span_allocator.ReserveBytes(1, columns_count * sizeof(ImS8));
-        span_allocator.ReserveBytes(2, columns_count * sizeof(ImGuiTableCellData));
-        table->RawData.resize(span_allocator.GetArenaSizeInBytes());
-        span_allocator.SetArenaBasePtr(table->RawData.Data);
-        span_allocator.GetSpan(0, &table->Columns);
-        span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
-        span_allocator.GetSpan(2, &table->RowCellData);
-
-        for (int n = 0; n < columns_count; n++)
-        {
-            table->Columns[n] = ImGuiTableColumn();
-            table->Columns[n].DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
-        }
-        table->IsInitializing = table->IsSettingsRequestLoad = table->IsSortSpecsDirty = true;
-    }
+        TableBeginInitMemory(table, columns_count);
 
     // Load settings
     if (table->IsSettingsRequestLoad)
