@@ -25,7 +25,7 @@ include_directories(${GLFW_DIR}/include)
 
 # Dear ImGui
 set(IMGUI_DIR ../../)
-include_directories(${IMGUI_DIR} ..)
+include_directories(${IMGUI_DIR} ${IMGUI_DIR}/backends ..)
 
 # Libraries
 find_package(Vulkan REQUIRED)
