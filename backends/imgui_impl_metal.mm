@@ -234,8 +234,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     int width, height;
     io.Fonts->GetTexDataAsRGBA32(&pixels, &width, &height);
     MTLTextureDescriptor *textureDescriptor = [MTLTextureDescriptor texture2DDescriptorWithPixelFormat:MTLPixelFormatRGBA8Unorm
-                                                                                                 width:width
-                                                                                                height:height
+                                                                                                 width:(NSUInteger)width
+                                                                                                height:(NSUInteger)height
                                                                                              mipmapped:NO];
     textureDescriptor.usage = MTLTextureUsageShaderRead;
 #if TARGET_OS_OSX
@@ -244,7 +244,7 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     textureDescriptor.storageMode = MTLStorageModeShared;
 #endif
     id <MTLTexture> texture = [device newTextureWithDescriptor:textureDescriptor];
-    [texture replaceRegion:MTLRegionMake2D(0, 0, width, height) mipmapLevel:0 withBytes:pixels bytesPerRow:width * 4];
+    [texture replaceRegion:MTLRegionMake2D(0, 0, (NSUInteger)width, (NSUInteger)height) mipmapLevel:0 withBytes:pixels bytesPerRow:(NSUInteger)width * 4];
     self.fontTexture = texture;
 }
 
@@ -435,8 +435,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     float R = drawData->DisplayPos.x + drawData->DisplaySize.x;
     float T = drawData->DisplayPos.y;
     float B = drawData->DisplayPos.y + drawData->DisplaySize.y;
-    float N = viewport.znear;
-    float F = viewport.zfar;
+    float N = (float)viewport.znear;
+    float F = (float)viewport.zfar;
     const float ortho_projection[4][4] =
     {
         { 2.0f/(R-L),   0.0f,           0.0f,   0.0f },
@@ -464,8 +464,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
 
     id<MTLRenderPipelineState> renderPipelineState = [self renderPipelineStateForFrameAndDevice:commandBuffer.device];
 
-    size_t vertexBufferLength = drawData->TotalVtxCount * sizeof(ImDrawVert);
-    size_t indexBufferLength = drawData->TotalIdxCount * sizeof(ImDrawIdx);
+    size_t vertexBufferLength = (size_t)drawData->TotalVtxCount * sizeof(ImDrawVert);
+    size_t indexBufferLength = (size_t)drawData->TotalIdxCount * sizeof(ImDrawIdx);
     MetalBuffer* vertexBuffer = [self dequeueReusableBufferOfLength:vertexBufferLength device:commandBuffer.device];
     MetalBuffer* indexBuffer = [self dequeueReusableBufferOfLength:indexBufferLength device:commandBuffer.device];
 
@@ -482,8 +482,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
     {
         const ImDrawList* cmd_list = drawData->CmdLists[n];
 
-        memcpy((char *)vertexBuffer.buffer.contents + vertexBufferOffset, cmd_list->VtxBuffer.Data, cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
-        memcpy((char *)indexBuffer.buffer.contents + indexBufferOffset, cmd_list->IdxBuffer.Data, cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
+        memcpy((char *)vertexBuffer.buffer.contents + vertexBufferOffset, cmd_list->VtxBuffer.Data, (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert));
+        memcpy((char *)indexBuffer.buffer.contents + indexBufferOffset, cmd_list->IdxBuffer.Data, (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx));
 
         for (int cmd_i = 0; cmd_i < cmd_list->CmdBuffer.Size; cmd_i++)
         {
@@ -533,8 +533,8 @@ void ImGui_ImplMetal_DestroyDeviceObjects()
             }
         }
 
-        vertexBufferOffset += cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
-        indexBufferOffset += cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
+        vertexBufferOffset += (size_t)cmd_list->VtxBuffer.Size * sizeof(ImDrawVert);
+        indexBufferOffset += (size_t)cmd_list->IdxBuffer.Size * sizeof(ImDrawIdx);
     }
 
     __weak id weakSelf = self;

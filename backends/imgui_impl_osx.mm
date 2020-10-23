@@ -170,7 +170,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGuiIO& io = ImGui::GetIO();
     if (view)
     {
-        const float dpi = [view.window backingScaleFactor];
+        const float dpi = (float)[view.window backingScaleFactor];
         io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
         io.DisplayFramebufferScale = ImVec2(dpi, dpi);
     }
@@ -179,7 +179,7 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     if (g_Time == 0.0)
         g_Time = CFAbsoluteTimeGetCurrent();
     CFAbsoluteTime current_time = CFAbsoluteTimeGetCurrent();
-    io.DeltaTime = current_time - g_Time;
+    io.DeltaTime = (float)(current_time - g_Time);
     g_Time = current_time;
 
     ImGui_ImplOSX_UpdateMouseCursorAndButtons();
@@ -230,7 +230,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         NSPoint mousePoint = event.locationInWindow;
         mousePoint = [view convertPoint:mousePoint fromView:nil];
         mousePoint = NSMakePoint(mousePoint.x, view.bounds.size.height - mousePoint.y);
-        io.MousePos = ImVec2(mousePoint.x, mousePoint.y);
+        io.MousePos = ImVec2((float)mousePoint.x, (float)mousePoint.y);
     }
 
     if (event.type == NSEventTypeScrollWheel)
@@ -257,9 +257,9 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
         }
 
         if (fabs(wheel_dx) > 0.0)
-            io.MouseWheelH += wheel_dx * 0.1f;
+            io.MouseWheelH += (float)wheel_dx * 0.1f;
         if (fabs(wheel_dy) > 0.0)
-            io.MouseWheel += wheel_dy * 0.1f;
+            io.MouseWheel += (float)wheel_dy * 0.1f;
         return io.WantCaptureMouse;
     }
 
@@ -267,8 +267,8 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeKeyDown)
     {
         NSString* str = [event characters];
-        int len = (int)[str length];
-        for (int i = 0; i < len; i++)
+        NSUInteger len = [str length];
+        for (NSUInteger i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
             if (!io.KeyCtrl && !(c >= 0xF700 && c <= 0xFFFF) && c != 127)
@@ -287,8 +287,8 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     if (event.type == NSEventTypeKeyUp)
     {
         NSString* str = [event characters];
-        int len = (int)[str length];
-        for (int i = 0; i < len; i++)
+        NSUInteger len = [str length];
+        for (NSUInteger i = 0; i < len; i++)
         {
             int c = [str characterAtIndex:i];
             int key = mapCharacterToKey(c);
@@ -300,7 +300,6 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
 
     if (event.type == NSEventTypeFlagsChanged)
     {
-        ImGuiIO& io = ImGui::GetIO();
         unsigned int flags = [event modifierFlags] & NSEventModifierFlagDeviceIndependentFlagsMask;
 
         bool oldKeyCtrl = io.KeyCtrl;
