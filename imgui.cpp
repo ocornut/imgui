@@ -1553,59 +1553,66 @@ void*   ImFileLoadToMemory(const char* filename, const char* mode, size_t* out_f
 //-----------------------------------------------------------------------------
 
 // Convert UTF-8 to 32-bit character, process single character input.
-// Based on work of Christopher Wellons (https://github.com/skeeto/branchless-utf8)
+// Based on stb_from_utf8() from github.com/nothings/stb/
 // We handle UTF-8 decoding error by skipping forward.
 int ImTextCharFromUtf8(unsigned int* out_char, const char* in_text, const char* in_text_end)
 {
-    static const char lengths[] = { 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 2, 2, 2, 2, 3, 3, 4, 0 };
-    static const int masks[]  = { 0x00, 0x7f, 0x1f, 0x0f, 0x07 };
-    static const uint32_t mins[] = { 4194304, 0, 128, 2048, 65536 };
-    static const int shiftc[] = { 0, 18, 12, 6, 0 };
-    static const int shifte[] = { 0, 6, 4, 2, 0 };
-    unsigned char s[4];
-    int len = lengths[*(const unsigned char*)in_text >> 3];
-
-    if (in_text_end == NULL)
-        in_text_end = in_text + len + !len; // Max length, nulls will be taken into account.
-
-    // Copy at most 'len' bytes, stop copying at 0 or past in_text_end.
-    s[0] =         in_text + 0 < in_text_end ? in_text[0] : 0;
-    s[1] = s[0] && in_text + 1 < in_text_end ? in_text[1] : 0;
-    s[2] = s[1] && in_text + 2 < in_text_end ? in_text[2] : 0;
-    s[3] = s[2] && in_text + 3 < in_text_end ? in_text[3] : 0;
-
-    // Compute the pointer to the next character early so that the next
-    // iteration can start working on the next character. Neither Clang
-    // nor GCC figure out this reordering on their own.
-    //const unsigned char *next = s + len + !len;
-
-    // No bytes are consumed when *in_text == 0 || in_text == in_text_end.
-    // One byte is consumed in case of invalid first byte of in_text.
-    // All available bytes (at most `len` bytes) are consumed on incomplete/invalid second to last bytes.
-    int consumed = !!s[0] + !!s[1] + !!s[2] + !!s[3];
-
-    // Assume a four-byte character and load four bytes. Unused bits are shifted out.
-    *out_char  = (uint32_t)(s[0] & masks[len]) << 18;
-    *out_char |= (uint32_t)(s[1] & 0x3f) << 12;
-    *out_char |= (uint32_t)(s[2] & 0x3f) <<  6;
-    *out_char |= (uint32_t)(s[3] & 0x3f) <<  0;
-    *out_char >>= shiftc[len];
-
-    // Accumulate the various error conditions.
-    int e = 0;
-    e  = (*out_char < mins[len]) << 6; // non-canonical encoding
-    e |= ((*out_char >> 11) == 0x1b) << 7;  // surrogate half?
-    e |= (*out_char > IM_UNICODE_CODEPOINT_MAX) << 8;  // out of range?
-    e |= (s[1] & 0xc0) >> 2;
-    e |= (s[2] & 0xc0) >> 4;
-    e |= (s[3]       ) >> 6;
-    e ^= 0x2a; // top two bits of each tail byte correct?
-    e >>= shifte[len];
-
-    if (e)
-        *out_char = IM_UNICODE_CODEPOINT_INVALID;
-
-    return consumed;
+    unsigned int c = (unsigned int)-1;
+    const unsigned char* str = (const unsigned char*)in_text;
+    if (!(*str & 0x80))
+    {
+        c = (unsigned int)(*str++);
+        *out_char = c;
+        return 1;
+    }
+    if ((*str & 0xe0) == 0xc0)
+    {
+        *out_char = IM_UNICODE_CODEPOINT_INVALID; // will be invalid but not end of string
+        if (in_text_end && in_text_end - (const char*)str < 2) return 1;
+        if (*str < 0xc2) return 2;
+        c = (unsigned int)((*str++ & 0x1f) << 6);
+        if ((*str & 0xc0) != 0x80) return 2;
+        c += (*str++ & 0x3f);
+        *out_char = c;
+        return 2;
+    }
+    if ((*str & 0xf0) == 0xe0)
+    {
+        *out_char = IM_UNICODE_CODEPOINT_INVALID; // will be invalid but not end of string
+        if (in_text_end && in_text_end - (const char*)str < 3) return 1;
+        if (*str == 0xe0 && (str[1] < 0xa0 || str[1] > 0xbf)) return 3;
+        if (*str == 0xed && str[1] > 0x9f) return 3; // str[1] < 0x80 is checked below
+        c = (unsigned int)((*str++ & 0x0f) << 12);
+        if ((*str & 0xc0) != 0x80) return 3;
+        c += (unsigned int)((*str++ & 0x3f) << 6);
+        if ((*str & 0xc0) != 0x80) return 3;
+        c += (*str++ & 0x3f);
+        *out_char = c;
+        return 3;
+    }
+    if ((*str & 0xf8) == 0xf0)
+    {
+        *out_char = IM_UNICODE_CODEPOINT_INVALID; // will be invalid but not end of string
+        if (in_text_end && in_text_end - (const char*)str < 4) return 1;
+        if (*str > 0xf4) return 4;
+        if (*str == 0xf0 && (str[1] < 0x90 || str[1] > 0xbf)) return 4;
+        if (*str == 0xf4 && str[1] > 0x8f) return 4; // str[1] < 0x80 is checked below
+        c = (unsigned int)((*str++ & 0x07) << 18);
+        if ((*str & 0xc0) != 0x80) return 4;
+        c += (unsigned int)((*str++ & 0x3f) << 12);
+        if ((*str & 0xc0) != 0x80) return 4;
+        c += (unsigned int)((*str++ & 0x3f) << 6);
+        if ((*str & 0xc0) != 0x80) return 4;
+        c += (*str++ & 0x3f);
+        // utf-8 encodings of values used in surrogate pairs are invalid
+        if ((c & 0xFFFFF800) == 0xD800) return 4;
+        // If codepoint does not fit in ImWchar, use replacement character U+FFFD instead
+        if (c > IM_UNICODE_CODEPOINT_MAX) c = IM_UNICODE_CODEPOINT_INVALID;
+        *out_char = c;
+        return 4;
+    }
+    *out_char = 0;
+    return 0;
 }
 
 int ImTextStrFromUtf8(ImWchar* buf, int buf_size, const char* in_text, const char* in_text_end, const char** in_text_remaining)
