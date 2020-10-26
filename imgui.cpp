@@ -9425,6 +9425,8 @@ bool ImGui::BeginDragDropSource(ImGuiDragDropFlags flags)
             g.DragDropActive = true;
             g.DragDropSourceFlags = flags;
             g.DragDropMouseButton = mouse_button;
+            if (payload.SourceId == g.ActiveId)
+                g.ActiveIdNoClearOnFocusLoss = true;
         }
         g.DragDropSourceFrameCount = g.FrameCount;
         g.DragDropWithinSource = true;
