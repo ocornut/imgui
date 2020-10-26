@@ -1887,7 +1887,7 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (2 + 64 * 2)        // See TableUpdateDrawChannels()
 
-// [Internal] sizeof() ~ 108
+// [Internal] sizeof() ~ 100
 // We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
 struct ImGuiTableColumn
 {
@@ -1902,15 +1902,11 @@ struct ImGuiTableColumn
     float                   WidthAuto;                      // Automatic width
     float                   WidthRequest;                   // Master width absolute value when !(Flags & _WidthStretch). When Stretch this is derived every frame from StretchWeight in TableUpdateLayout()
     float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be > WidthRequest to honor minimum width, may be < WidthRequest to honor shrinking columns down in tight space.
-    float                   StartX;                         // Start position for the frame, currently ~(MinX + CellPaddingX)
-    float                   ContentMaxPosFrozen;            // Submitted contents absolute maximum position, from which we can infer width. Kept as float because we need to manipulate those between each cell change.
-    float                   ContentMaxPosUnfrozen;
-    float                   ContentMaxPosHeadersUsed;
-    float                   ContentMaxPosHeadersIdeal;
-    ImS16                   ContentWidthFrozen;             // Contents width for frozen rows (apart from headers). Encoded as ImS16 because we actually rarely use those width.
-    ImS16                   ContentWidthUnfrozen;
-    ImS16                   ContentWidthHeadersUsed;        // Contents width for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
-    ImS16                   ContentWidthHeadersIdeal;
+    float                   ContentMinX;                    // Start position for the frame, currently ~(MinX + CellPaddingX)
+    float                   ContentMaxXFrozen;              // Contents maximum position for frozen rows (apart from headers), from which we can infer content width.
+    float                   ContentMaxXUnfrozen;
+    float                   ContentMaxXHeadersUsed;         // Contents maximum position for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
+    float                   ContentMaxXHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
     bool                    IsVisible;                      // Is the column not marked Hidden by the user? (could be clipped by scrolling, etc).
     bool                    IsVisibleNextFrame;
