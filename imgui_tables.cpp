@@ -173,8 +173,9 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
 }
 
 // For reference, the total _allocation count_ for a table is:
-// + 0 (for ImGuiTable instance, we sharing allocation in g.Tables pool)
+// + 0 (for ImGuiTable instance, we are pooling allocations in g.Tables)
 // + 1 (for table->RawData allocated below)
+// + 1 (for table->ColumnsNames, if names are used)
 // + 1 (for table->Splitter._Channels)
 // + 2 * active_channels_count (for ImDrawCmd and ImDrawIdx buffers inside channels)
 // Where active_channels_count is variable but often == columns_count or columns_count + 1, see TableUpdateDrawChannels() for details.
@@ -1601,7 +1602,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
 
     // Store name (append with zero-terminator in contiguous buffer)
     IM_ASSERT(column->NameOffset == -1);
-    if (label != NULL)
+    if (label != NULL && label[0] != 0)
     {
         column->NameOffset = (ImS16)table->ColumnsNames.size();
         table->ColumnsNames.append(label, label + strlen(label) + 1);
@@ -1963,7 +1964,7 @@ const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
 {
     const ImGuiTableColumn* column = &table->Columns[column_n];
     if (column->NameOffset == -1)
-        return NULL;
+        return "";
     return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
@@ -2080,7 +2081,7 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table)
         {
             ImGuiTableColumn* other_column = &table->Columns[other_column_n];
             const char* name = TableGetColumnName(table, other_column_n);
-            if (name == NULL)
+            if (name == NULL || name[0] == 0)
                 name = "<Unknown>";
 
             // Make sure we can't hide the last active column
@@ -2850,7 +2851,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
             "ContentWidth: Frozen %d, Unfrozen %d, HeadersUsed/Ideal %d/%d\n"
             "SortOrder: %d, SortDir: %s\n"
             "UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
-            n, column->DisplayOrder, name ? name : "NULL", column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
+            n, column->DisplayOrder, name, column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
             column->IsVisible, column->IsClipped, column->DrawChannelFrozen, column->DrawChannelUnfrozen,
             column->WidthGiven, column->WidthRequest, column->WidthStretchWeight,
             column->ContentWidthFrozen, column->ContentWidthUnfrozen, column->ContentWidthHeadersUsed, column->ContentWidthHeadersIdeal,
