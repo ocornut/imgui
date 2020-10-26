@@ -272,13 +272,8 @@
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-<<<<<<< HEAD
-    // Setup Platform/Renderer bindings
-    ImGui_ImplOSX_Init(view);
-=======
     // Setup Platform/Renderer backends
-    ImGui_ImplOSX_Init();
->>>>>>> 455c21df7100a4727dd6e4c8e69249b7de21d24c
+    ImGui_ImplOSX_Init(view);
     ImGui_ImplOpenGL2_Init();
 
     // Load Fonts

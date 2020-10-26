@@ -45,13 +45,11 @@
             style.Colors[ImGuiCol_WindowBg].w = 1.0f;
         }
 
-        // Setup Renderer backend
-        ImGui_ImplMetal_Init(_device);
-
+        // Setup Platform/Renderer backends
 #if TARGET_OS_OSX
-        // Setup Platform backend
         ImGui_ImplOSX_Init(view);
 #endif
+        ImGui_ImplMetal_Init(_device);
 
         // Load Fonts
         // - If no fonts are loaded, dear imgui will use the default font. You can also load multiple fonts and use ImGui::PushFont()/PopFont() to select them.
