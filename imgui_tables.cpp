@@ -603,7 +603,7 @@ static void TableFixColumnSortDirection(ImGuiTableColumn* column)
 static float TableGetMinColumnWidth()
 {
     ImGuiContext& g = *GImGui;
-    // return g.Style.ColumnsMinSpacing; // FIXME-TABLE
+    //return g.Style.ColumnsMinSpacing; // FIXME-TABLE
     return g.Style.FramePadding.x * 1.0f;
 }
 
@@ -667,7 +667,6 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column->Flags & (ImGuiTableColumnFlags_WidthAlwaysAutoResize | ImGuiTableColumnFlags_WidthFixed))
         {
             // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
-            count_fixed += 1;
             if ((column->AutoFitQueue != 0x00) || ((column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize) && !column->IsClipped))
                 column->WidthRequest = width_auto;
 
@@ -679,6 +678,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             if (column->AutoFitQueue > 0x01 && table->IsInitializing)
                 column->WidthRequest = ImMax(column->WidthRequest, min_column_width * 4.0f);
 
+            count_fixed += 1;
             sum_width_fixed_requests += column->WidthRequest;
         }
         else
@@ -773,8 +773,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // Redistribute remainder width due to rounding (remainder width is < 1.0f * number of Stretch column).
     // Using right-to-left distribution (more likely to match resizing cursor), could be adjusted depending
     // on where the mouse cursor is and/or relative weights.
-    // FIXME-TABLE: May be simpler to store floating width and floor final positions only
-    // FIXME-TABLE: Make it optional? User might prefer to preserve pixel perfect same size?
+    // FIXME: Make it optional? User might prefer to preserve pixel perfect same size?
     if (width_remaining_for_stretched_columns >= 1.0f)
         for (int order_n = table->ColumnsCount - 1; sum_weights_stretched > 0.0f && width_remaining_for_stretched_columns >= 1.0f && order_n >= 0; order_n--)
         {
@@ -829,15 +828,14 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             if (order_n < table->FreezeColumnsRequest)
                 max_x = table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - order_n) * min_column_width_padded - table->OuterPaddingX;
         }
-        else
+        else if ((table->Flags & ImGuiTableFlags_NoKeepColumnsVisible) == 0)
         {
             // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make
             // sure they are all visible. Because of this we also know that all of the columns will always fit in
             // table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
-            if (!(table->Flags & ImGuiTableFlags_NoKeepColumnsVisible))
-                max_x = table->WorkRect.Max.x - (table->ColumnsVisibleCount - (column->IndexWithinVisibleSet + 1)) * min_column_width_padded - table->OuterPaddingX;
+            max_x = table->WorkRect.Max.x - (table->ColumnsVisibleCount - (column->IndexWithinVisibleSet + 1)) * min_column_width_padded - table->OuterPaddingX;
         }
-        if (offset_x + column->WidthGiven + table->CellPaddingX * 2.0f > max_x) // FIXME-TABLE: CHECK
+        if (offset_x + column->WidthGiven + table->CellPaddingX * 2.0f > max_x)
             column->WidthGiven = ImMax(max_x - offset_x - table->CellPaddingX * 2.0f, min_column_width);
 
         // Min, Max + starting positions
@@ -1080,13 +1078,8 @@ void    ImGui::EndTable()
     const float backup_outer_max_pos_x = outer_window->DC.CursorMaxPos.x;
     const float backup_inner_max_pos_x = inner_window->DC.CursorMaxPos.x;
     float max_pos_x = backup_inner_max_pos_x;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        // Add an extra 1 pixel so we can see the last column vertical line if it lies on the right-most edge.
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (table->VisibleMaskByIndex & ((ImU64)1 << column_n))
-            max_pos_x = ImMax(max_pos_x, column->MaxX);
-    }
+    if (table->RightMostVisibleColumn != -1)
+        max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostVisibleColumn].MaxX);
 
     // Flatten channels and merge draw calls
     table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 0);
@@ -1094,13 +1087,13 @@ void    ImGui::EndTable()
         TableReorderDrawChannelsForMerge(table);
     table->DrawSplitter.Merge(inner_window->DrawList);
 
-    // When releasing a column being resized, scroll to keep the resulting column in sight
     if (!(table->Flags & ImGuiTableFlags_ScrollX) && inner_window != outer_window)
     {
         inner_window->Scroll.x = 0.0f;
     }
     else if (table->LastResizedColumn != -1 && table->ResizedColumn == -1 && inner_window->ScrollbarX && table->InstanceInteracted == table->InstanceCurrent)
     {
+        // When releasing a column being resized, scroll to keep the resulting column in sight
         const float min_column_width_padded = TableGetMinColumnWidth() + table->CellPaddingX * 2.0f;
         ImGuiTableColumn* column = &table->Columns[table->LastResizedColumn];
         if (column->MaxX < table->InnerClipRect.Min.x)
@@ -1154,8 +1147,7 @@ void    ImGui::EndTable()
         TableSaveSettings(table);
 
     // Clear or restore current table, if any
-    IM_ASSERT(g.CurrentWindow == outer_window);
-    IM_ASSERT(g.CurrentTable == table);
+    IM_ASSERT(g.CurrentWindow == outer_window && g.CurrentTable == table);
     g.CurrentTableStack.pop_back();
     g.CurrentTable = g.CurrentTableStack.Size ? g.Tables.GetByIndex(g.CurrentTableStack.back().Index) : NULL;
     outer_window->DC.CurrentTableIdx = g.CurrentTable ? g.Tables.GetIndex(g.CurrentTable) : -1;
@@ -1876,8 +1868,8 @@ void    ImGui::TableEndCell(ImGuiTable* table)
     table->RowTextBaseline = ImMax(table->RowTextBaseline, window->DC.PrevLineTextBaseOffset);
 }
 
-// Append into the next cell
-// FIXME-TABLE: Wrapping to next row should be optional?
+// Append into the next column/cell
+// FIXME-TABLE: Wrapping to next row could be optional?
 bool    ImGui::TableNextColumn()
 {
     ImGuiContext& g = *GImGui;
@@ -1896,9 +1888,6 @@ bool    ImGui::TableNextColumn()
         TableNextRow();
         TableBeginCell(table, 0);
     }
-
-    // FIXME-TABLE: Need to clarify if we want to allow IsItemHovered() here
-    //g.CurrentWindow->DC.LastItemStatusFlags = (column_n == table->HoveredColumn) ? ImGuiItemStatusFlags_HoveredRect : ImGuiItemStatusFlags_None;
 
     // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
     int column_n = table->CurrentColumn;
@@ -1919,9 +1908,6 @@ bool    ImGui::TableSetColumnIndex(int column_n)
         IM_ASSERT(column_n >= 0 && table->ColumnsCount);
         TableBeginCell(table, column_n);
     }
-
-    // FIXME-TABLE: Need to clarify if we want to allow IsItemHovered() here
-    //g.CurrentWindow->DC.LastItemStatusFlags = (column_n == table->HoveredColumn) ? ImGuiItemStatusFlags_HoveredRect : ImGuiItemStatusFlags_None;
 
     // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
     return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
@@ -2231,10 +2217,9 @@ void    ImGui::TableHeader(const char* label)
     // If we already got a row height, there's use that.
     // FIXME-TABLE-PADDING: Problem if the correct outer-padding CellBgRect strays off our ClipRect
     ImRect cell_r = TableGetCellBgRect(table, column_n);
-    float label_height = ImMax(label_size.y, table->RowMinHeight - g.Style.CellPadding.y * 2.0f);
+    float label_height = ImMax(label_size.y, table->RowMinHeight - table->CellPaddingY * 2.0f);
 
     // Keep header highlighted when context menu is open.
-    // (FIXME-TABLE: however we cannot assume the ID of said popup if it has been created by the user...)
     const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceCurrent);
     ImGuiID id = window->GetID(label);
     ImRect bb(cell_r.Min.x, cell_r.Min.y, cell_r.Max.x, ImMax(cell_r.Max.y, cell_r.Min.y + label_height + g.Style.CellPadding.y * 2.0f));
@@ -2333,9 +2318,7 @@ void    ImGui::TableHeader(const char* label)
     //window->DrawList->AddCircleFilled(ImVec2(ellipsis_max, label_pos.y), 40, IM_COL32_WHITE);
     RenderTextEllipsis(window->DrawList, label_pos, ImVec2(ellipsis_max, label_pos.y + label_height + g.Style.FramePadding.y), ellipsis_max, ellipsis_max, label, label_end, &label_size);
 
-    // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering
-    // for merging.
-    // FIXME-TABLE: Clarify policies of how label width and potential decorations (arrows) fit into auto-resize of the column
+    // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering for merging.
     float max_pos_x = label_pos.x + label_size.x + w_sort_text + w_arrow;
     column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, cell_r.Max.x);// ImMin(max_pos_x, cell_r.Max.x));
     column->ContentMaxXHeadersIdeal = ImMax(column->ContentMaxXHeadersIdeal, max_pos_x);

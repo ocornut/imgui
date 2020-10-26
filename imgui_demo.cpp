@@ -1087,15 +1087,36 @@ static void ShowDemoWindowWidgets()
         }
         if (ImGui::TreeNode("In columns"))
         {
-            ImGui::Columns(3, NULL, false);
-            static bool selected[16] = {};
-            for (int i = 0; i < 16; i++)
+            static bool selected[10] = {};
+
+            if (ImGui::BeginTable("split1", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings))
             {
-                char label[32]; sprintf(label, "Item %d", i);
-                if (ImGui::Selectable(label, &selected[i])) {}
-                ImGui::NextColumn();
+                for (int i = 0; i < 10; i++)
+                {
+                    char label[32];
+                    sprintf(label, "Item %d", i);
+                    ImGui::TableNextColumn();
+                    ImGui::Selectable(label, &selected[i]); // FIXME-TABLE: Selection overlap
+                }
+            ImGui::EndTable();
             }
-            ImGui::Columns(1);
+            ImGui::Separator();
+            if (ImGui::BeginTable("split2", 3, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings))
+            {
+                for (int i = 0; i < 10; i++)
+                {
+                    char label[32];
+                    sprintf(label, "Item %d", i);
+                    ImGui::TableNextRow();
+                    ImGui::TableNextColumn();
+                    ImGui::Selectable(label, &selected[i], ImGuiSelectableFlags_SpanAllColumns);
+                    ImGui::TableNextColumn();
+                    ImGui::Text("Some other contents");
+                    ImGui::TableNextColumn();
+                    ImGui::Text("123456");
+                }
+                ImGui::EndTable();
+            }
             ImGui::TreePop();
         }
         if (ImGui::TreeNode("Grid"))
@@ -2131,13 +2152,16 @@ static void ShowDemoWindowLayout()
                 }
                 ImGui::EndMenuBar();
             }
-            ImGui::Columns(2);
-            for (int i = 0; i < 100; i++)
+            if (ImGui::BeginTable("split", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_NoSavedSettings))
             {
-                char buf[32];
-                sprintf(buf, "%03d", i);
-                ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
-                ImGui::NextColumn();
+                for (int i = 0; i < 100; i++)
+                {
+                    char buf[32];
+                    sprintf(buf, "%03d", i);
+                    ImGui::TableNextColumn();
+                    ImGui::Button(buf, ImVec2(-FLT_MIN, 0.0f));
+                }
+                ImGui::EndTable();
             }
             ImGui::EndChild();
             ImGui::PopStyleVar();
@@ -2883,6 +2907,17 @@ static void ShowDemoWindowLayout()
             }
             if (show_columns)
             {
+                ImGui::Text("Tables:");
+                if (ImGui::BeginTable("table", 4, ImGuiTableFlags_Borders))
+                {
+                    for (int n = 0; n < 4; n++)
+                    {
+                        ImGui::TableNextColumn();
+                        ImGui::Text("Width %.2f", ImGui::GetContentRegionAvail().x);
+                    }
+                    ImGui::EndTable();
+                }
+                ImGui::Text("Columns:");
                 ImGui::Columns(4);
                 for (int n = 0; n < 4; n++)
                 {
@@ -3509,7 +3544,10 @@ static void ShowDemoWindowTables()
         // So columns will adopt the "Fixed" policy and will maintain a fixed width regardless of the whole available width (unless table is small)
         // If there is not enough available width to fit all columns, they will however be resized down.
         // FIXME-TABLE: Providing a stretch-on-init would make sense especially for tables which don't have saved settings
-        HelpMarker("Using _Resizable + _SizingPolicyFixedX flags.\nFixed-width columns generally makes more sense if you want to use horizontal scrolling.");
+        HelpMarker(
+            "Using _Resizable + _SizingPolicyFixedX flags.\n"
+            "Fixed-width columns generally makes more sense if you want to use horizontal scrolling.\n\n"
+            "Double-click a column border to auto-fit the column to its contents.");
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingPolicyFixedX | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
         //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX); // FIXME-TABLE: Explain or fix the effect of enable Scroll on outer_size
         if (ImGui::BeginTable("##table1", 3, flags))
@@ -3918,7 +3956,7 @@ static void ShowDemoWindowTables()
         HelpMarker("This section allows you to interact and see the effect of StretchX vs FixedX sizing policies depending on whether Scroll is enabled and the contents of your columns.");
         enum ContentsType { CT_ShortText, CT_LongText, CT_Button, CT_FillButton, CT_InputText };
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
-        static int contents_type = CT_FillButton;
+        static int contents_type = CT_Button;
 
         PushStyleCompact();
         ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 22);
@@ -3969,7 +4007,7 @@ static void ShowDemoWindowTables()
         ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Compact table"))
     {
-        // FIXME-TABLE: Vertical border not overridden the same way as horizontal one
+        // FIXME-TABLE: Vertical border not displayed the same way as horizontal one...
         HelpMarker("Setting style.CellPadding to (0,0).");
         static ImGuiTableFlags flags = ImGuiTableFlags_Borders | ImGuiTableFlags_RowBg;
         static bool no_widget_frame = false;
@@ -4090,9 +4128,6 @@ static void ShowDemoWindowTables()
     if (ImGui::TreeNode("Tree view"))
     {
         static ImGuiTableFlags flags = ImGuiTableFlags_BordersV | ImGuiTableFlags_BordersOuterH | ImGuiTableFlags_Resizable | ImGuiTableFlags_RowBg | ImGuiTableFlags_NoBordersInBody;
-        //PushStyleCompact();
-        //ImGui::CheckboxFlags("ImGuiTableFlags_Scroll", (unsigned int*)&flags, ImGuiTableFlags_Scroll);
-        //PopStyleCompact();
 
         if (ImGui::BeginTable("##3ways", 3, flags))
         {
@@ -4407,7 +4442,7 @@ static void ShowDemoWindowTables()
             ;
 
         enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_FillButton, CT_Selectable };
-        static int contents_type = CT_FillButton;
+        static int contents_type = CT_Button;
         const char* contents_type_names[] = { "Text", "Button", "SmallButton", "FillButton", "Selectable" };
         static int freeze_cols = 1;
         static int freeze_rows = 1;
@@ -4817,32 +4852,6 @@ static void ShowDemoWindowColumns()
         ImGui::Separator();
         ImGui::TreePop();
     }
-
-    // Scrolling columns
-    /*
-    if (ImGui::TreeNode("Vertical Scrolling"))
-    {
-        ImGui::BeginChild("##header", ImVec2(0, ImGui::GetTextLineHeightWithSpacing()+ImGui::GetStyle().ItemSpacing.y));
-        ImGui::Columns(3);
-        ImGui::Text("ID"); ImGui::NextColumn();
-        ImGui::Text("Name"); ImGui::NextColumn();
-        ImGui::Text("Path"); ImGui::NextColumn();
-        ImGui::Columns(1);
-        ImGui::Separator();
-        ImGui::EndChild();
-        ImGui::BeginChild("##scrollingregion", ImVec2(0, 60));
-        ImGui::Columns(3);
-        for (int i = 0; i < 10; i++)
-        {
-            ImGui::Text("%04d", i); ImGui::NextColumn();
-            ImGui::Text("Foobar"); ImGui::NextColumn();
-            ImGui::Text("/path/foobar/%04d/", i); ImGui::NextColumn();
-        }
-        ImGui::Columns(1);
-        ImGui::EndChild();
-        ImGui::TreePop();
-    }
-    */
 
     if (ImGui::TreeNode("Horizontal Scrolling"))
     {
@@ -6300,12 +6309,13 @@ static void ShowPlaceholderObject(const char* prefix, int uid)
     ImGui::PushID(uid);
 
     // Text and Tree nodes are less high than framed widgets, using AlignTextToFramePadding() we add vertical spacing to make the tree lines equal high.
+    ImGui::TableNextRow();
+    ImGui::TableSetColumnIndex(0);
     ImGui::AlignTextToFramePadding();
     bool node_open = ImGui::TreeNode("Object", "%s_%u", prefix, uid);
-    ImGui::NextColumn();
-    ImGui::AlignTextToFramePadding();
+    ImGui::TableSetColumnIndex(1);
     ImGui::Text("my sailor is rich");
-    ImGui::NextColumn();
+
     if (node_open)
     {
         static float placeholder_members[8] = { 0.0f, 0.0f, 1.0f, 3.1416f, 100.0f, 999.0f };
@@ -6319,11 +6329,14 @@ static void ShowPlaceholderObject(const char* prefix, int uid)
             else
             {
                 // Here we use a TreeNode to highlight on hover (we could use e.g. Selectable as well)
+                ImGui::TableNextRow();
+                ImGui::TableSetColumnIndex(0);
                 ImGui::AlignTextToFramePadding();
                 ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags_Leaf | ImGuiTreeNodeFlags_NoTreePushOnOpen | ImGuiTreeNodeFlags_Bullet;
                 ImGui::TreeNodeEx("Field", flags, "Field_%d", i);
-                ImGui::NextColumn();
-                ImGui::SetNextItemWidth(-1);
+
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SetNextItemWidth(-FLT_MIN);
                 if (i >= 5)
                     ImGui::InputFloat("##value", &placeholder_members[i], 1.0f);
                 else
@@ -6354,15 +6367,16 @@ static void ShowExampleAppPropertyEditor(bool* p_open)
         "your cursor horizontally instead of using the Columns() API.");
 
     ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(2, 2));
-    ImGui::Columns(2);
-    ImGui::Separator();
-
-    // Iterate placeholder objects (all the same data)
-    for (int obj_i = 0; obj_i < 3; obj_i++)
-        ShowPlaceholderObject("Object", obj_i);
-
-    ImGui::Columns(1);
-    ImGui::Separator();
+    if (ImGui::BeginTable("split", 2, ImGuiTableFlags_BordersOuter | ImGuiTableFlags_Resizable))
+    {
+        // Iterate placeholder objects (all the same data)
+        for (int obj_i = 0; obj_i < 4; obj_i++)
+        {
+            ShowPlaceholderObject("Object", obj_i);
+            //ImGui::Separator();
+        }
+        ImGui::EndTable();
+    }
     ImGui::PopStyleVar();
     ImGui::End();
 }
