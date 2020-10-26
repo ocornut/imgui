@@ -1,4 +1,4 @@
-// Wrapper to use FreeType (instead of stb_truetype) for Dear ImGui
+// dear imgui: wrapper to use FreeType (instead of stb_truetype)
 // Get latest version at https://github.com/ocornut/imgui/tree/master/misc/freetype
 // Original code by @vuhdo (Aleksei Skriabin). Improvements by @mikesart. Maintained and v0.60+ by @ocornut.
 
@@ -13,6 +13,7 @@
 // - v0.60: (2019/01/10) re-factored to match big update in STB builder. fixed texture height waste. fixed redundant glyphs when merging. support for glyph padding.
 // - v0.61: (2019/01/15) added support for imgui allocators + added FreeType only override function SetAllocatorFunctions().
 // - v0.62: (2019/02/09) added RasterizerFlags::Monochrome flag to disable font anti-aliasing (combine with ::MonoHinting for best results!)
+// - v0.63: (2020/06/04) fix for rare case where FT_Get_Char_Index() succeed but FT_Load_Glyph() fails.
 
 // Gamma Correct Blending:
 //  FreeType assumes blending in linear space rather than gamma space.
@@ -280,7 +281,7 @@ namespace
 
 #ifndef STB_RECT_PACK_IMPLEMENTATION                        // in case the user already have an implementation in the _same_ compilation unit (e.g. unity builds)
 #ifndef IMGUI_DISABLE_STB_RECT_PACK_IMPLEMENTATION
-#define STBRP_ASSERT(x)     IM_ASSERT(x)
+#define STBRP_ASSERT(x)     do { IM_ASSERT(x); } while (0)
 #define STBRP_STATIC
 #define STB_RECT_PACK_IMPLEMENTATION
 #endif
@@ -337,8 +338,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     ImVector<ImFontBuildDstDataFT> dst_tmp_array;
     src_tmp_array.resize(atlas->ConfigData.Size);
     dst_tmp_array.resize(atlas->Fonts.Size);
-    memset(src_tmp_array.Data, 0, (size_t)src_tmp_array.size_in_bytes());
-    memset(dst_tmp_array.Data, 0, (size_t)dst_tmp_array.size_in_bytes());
+    memset((void*)src_tmp_array.Data, 0, (size_t)src_tmp_array.size_in_bytes());
+    memset((void*)dst_tmp_array.Data, 0, (size_t)dst_tmp_array.size_in_bytes());
 
     // 1. Initialize font loading structure, check font data validity
     for (int src_i = 0; src_i < atlas->ConfigData.Size; src_i++)
@@ -381,7 +382,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             dst_tmp.GlyphsSet.Create(dst_tmp.GlyphsHighest + 1);
 
         for (const ImWchar* src_range = src_tmp.SrcRanges; src_range[0] && src_range[1]; src_range += 2)
-            for (int codepoint = src_range[0]; codepoint <= src_range[1]; codepoint++)
+            for (int codepoint = src_range[0]; codepoint <= (int)src_range[1]; codepoint++)
             {
                 if (dst_tmp.GlyphsSet.TestBit(codepoint))    // Don't overwrite existing glyphs. We could make this an option (e.g. MergeOverwrite)
                     continue;
@@ -467,7 +468,6 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             ImFontBuildSrcGlyphFT& src_glyph = src_tmp.GlyphsList[glyph_i];
 
             const FT_Glyph_Metrics* metrics = src_tmp.Font.LoadGlyph(src_glyph.Codepoint);
-            IM_ASSERT(metrics != NULL);
             if (metrics == NULL)
                 continue;
 
@@ -502,7 +502,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
     if (atlas->TexDesiredWidth > 0)
         atlas->TexWidth = atlas->TexDesiredWidth;
     else
-        atlas->TexWidth = (surface_sqrt >= 4096*0.7f) ? 4096 : (surface_sqrt >= 2048*0.7f) ? 2048 : (surface_sqrt >= 1024*0.7f) ? 1024 : 512;
+        atlas->TexWidth = (surface_sqrt >= 4096 * 0.7f) ? 4096 : (surface_sqrt >= 2048 * 0.7f) ? 2048 : (surface_sqrt >= 1024 * 0.7f) ? 1024 : 512;
 
     // 5. Start packing
     // Pack our extra data rectangles first, so it will be on the upper-left corner of our texture (UV will have small values).
@@ -544,8 +544,11 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
         if (src_tmp.GlyphsCount == 0)
             continue;
 
+        // When merging fonts with MergeMode=true:
+        // - We can have multiple input fonts writing into a same destination font.
+        // - dst_font->ConfigData is != from cfg which is our source configuration.
         ImFontConfig& cfg = atlas->ConfigData[src_i];
-        ImFont* dst_font = cfg.DstFont; // We can have multiple input fonts writing into a same destination font (when using MergeMode=true)
+        ImFont* dst_font = cfg.DstFont;
 
         const float ascent = src_tmp.Font.Info.Ascender;
         const float descent = src_tmp.Font.Info.Descender;
@@ -559,6 +562,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             ImFontBuildSrcGlyphFT& src_glyph = src_tmp.GlyphsList[glyph_i];
             stbrp_rect& pack_rect = src_tmp.Rects[glyph_i];
             IM_ASSERT(pack_rect.was_packed);
+            if (pack_rect.w == 0 && pack_rect.h == 0)
+                continue;
 
             GlyphInfo& info = src_glyph.Info;
             IM_ASSERT(info.Width + padding <= pack_rect.w);
@@ -574,14 +579,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             for (int y = info.Height; y > 0; y--, blit_dst += blit_dst_stride, blit_src += blit_src_stride)
                 memcpy(blit_dst, blit_src, blit_src_stride);
 
-            float char_advance_x_org = info.AdvanceX;
-            float char_advance_x_mod = ImClamp(char_advance_x_org, cfg.GlyphMinAdvanceX, cfg.GlyphMaxAdvanceX);
-            float char_off_x = font_off_x;
-            if (char_advance_x_org != char_advance_x_mod)
-                char_off_x += cfg.PixelSnapH ? IM_FLOOR((char_advance_x_mod - char_advance_x_org) * 0.5f) : (char_advance_x_mod - char_advance_x_org) * 0.5f;
-
             // Register glyph
-            float x0 = info.OffsetX + char_off_x;
+            float x0 = info.OffsetX + font_off_x;
             float y0 = info.OffsetY + font_off_y;
             float x1 = x0 + info.Width;
             float y1 = y0 + info.Height;
@@ -589,7 +588,7 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
             float v0 = (ty) / (float)atlas->TexHeight;
             float u1 = (tx + info.Width) / (float)atlas->TexWidth;
             float v1 = (ty + info.Height) / (float)atlas->TexHeight;
-            dst_font->AddGlyph((ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, char_advance_x_mod);
+            dst_font->AddGlyph(&cfg, (ImWchar)src_glyph.Codepoint, x0, y0, x1, y1, u0, v0, u1, v1, info.AdvanceX);
         }
 
         src_tmp.Rects = NULL;
@@ -607,8 +606,8 @@ bool ImFontAtlasBuildWithFreeType(FT_Library ft_library, ImFontAtlas* atlas, uns
 }
 
 // Default memory allocators
-static void* ImFreeTypeDefaultAllocFunc(size_t size, void* user_data)	{ IM_UNUSED(user_data); return IM_ALLOC(size); }
-static void  ImFreeTypeDefaultFreeFunc(void* ptr, void* user_data)	    { IM_UNUSED(user_data); IM_FREE(ptr); }
+static void* ImFreeTypeDefaultAllocFunc(size_t size, void* user_data)   { IM_UNUSED(user_data); return IM_ALLOC(size); }
+static void  ImFreeTypeDefaultFreeFunc(void* ptr, void* user_data)      { IM_UNUSED(user_data); IM_FREE(ptr); }
 
 // Current memory allocators
 static void* (*GImFreeTypeAllocFunc)(size_t size, void* user_data) = ImFreeTypeDefaultAllocFunc;

@@ -6,7 +6,7 @@ The list below consist mostly of ideas noted down before they are requested/disc
 It's mostly a bunch of personal notes, probably incomplete. Feel free to query if you have any questions.
 
  - doc/test: add a proper documentation+regression testing system (#435)
- - doc/test: checklist app to verify binding/integration of imgui (test inputs, rendering, callback, etc.).
+ - doc/test: checklist app to verify backends/integration of imgui (test inputs, rendering, callback, etc.).
  - doc/tips: tips of the day: website? applet in imgui_club?
  - doc/wiki: work on the wiki https://github.com/ocornut/imgui/wiki
 
@@ -26,8 +26,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window: GetWindowSize() returns (0,0) when not calculated? (#1045)
  - window: investigate better auto-positioning for new windows.
  - window: top most window flag? (#2574)
- - window: the size_on_first_use path of Begin() can probably be removed
  - window/size: manually triggered auto-fit (double-click on grip) shouldn't resize window down to viewport size?
+ - window/size: how to allow to e.g. auto-size vertically to fit contents, but be horizontally resizable? Assuming SetNextWindowSize() is modified to treat -1.0f on each axis as "keep as-is" (would be good but might break erroneous code): Problem is UpdateWindowManualResize() and lots of code treat (window->AutoFitFramesX > 0 || window->AutoFitFramesY > 0) together.
  - window/opt: freeze window flag: if not focused/hovered, return false, render with previous ImDrawList. and/or reduce refresh rate. -> this may require enforcing that it is illegal to submit contents if Begin returns false.
  - window/child: background options for child windows, border option (disable rounding).
  - window/child: allow resizing of child windows (possibly given min/max for each axis?.)
@@ -35,7 +35,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - window/child: border could be emitted in parent as well.
  - window/child: allow SetNextWindowContentSize() to work on child windows.
  - window/clipping: some form of clipping when DisplaySize (or corresponding viewport) is zero.
- - window/tab: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ - window/tabbing: add a way to signify that a window or docked window requires attention (e.g. blinking title bar).
+ - window/id_stack: add e.g. window->GetIDFromPath() with support for leading / and ../ (#1390, #331)
  ! scrolling: exposing horizontal scrolling with Shift+Wheel even when scrollbar is disabled expose lots of issues (#2424, #1463)
  - scrolling: while holding down a scrollbar, try to keep the same contents visible (at least while not moving mouse)
  - scrolling: allow immediately effective change of scroll after Begin() if we haven't appended items yet.
@@ -55,6 +56,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - drawlist: callback: add an extra void* in ImDrawCallback to allow passing render-local data to the callback (would break API).
  - drawlist: AddRect vs AddLine position confusing (#2441)
  - drawlist: channel splitter should be external helper and not stored in ImDrawList.
+ - drawlist: Add quadratic bezier curves? (#3127)
  - drawlist/opt: store rounded corners in texture to use 1 quad per corner (filled and wireframe) to lower the cost of rounding. (#1962)
  - drawlist/opt: AddRect() axis aligned pixel aligned (no-aa) could use 8 triangles instead of 16 and no normal calculation.
  - drawlist/opt: thick AA line could be doable in same number of triangles as 1.0 AA line by storing gradient+full color in atlas.
@@ -71,13 +73,15 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - widgets: alignment options in style (e.g. center Selectable, Right-Align within Button, etc.) #1260
  - widgets: activate by identifier (trigger button, focus given id)
  - widgets: a way to represent "mixed" values, so e.g. all values replaced with *, including check-boxes, colors, etc. with support for multi-components widgets (e.g. SliderFloat3, make only "Y" mixed) (#2644)
- - widgets: selectable: generic BeginSelectable()/EndSelectable() mechanism.
- - widgets: selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
  - widgets: checkbox: checkbox with custom glyph inside frame.
  - widgets: coloredit: keep reporting as active when picker is on?
  - widgets: group/scalarn functions: expose more per-component information. e.g. store NextItemData.ComponentIdx set by scalarn function, groups can expose them back somehow.
+ - selectable: using (size.x == 0.0f) and (SelectableTextAlign.x > 0.0f) followed by SameLine() is currently not supported.
+ - selectable: generic BeginSelectable()/EndSelectable() mechanism.
+ - selectable: a way to visualize partial/mixed selection (e.g. parent tree node has children with mixed selection)
 
  - input text: clean up the mess caused by converting UTF-8 <> wchar. the code is rather inefficient right now and super fragile.
+ - input text: preserve scrolling when unfocused?
  - input text: reorganize event handling, allow CharFilter to modify buffers, allow multiple events? (#541)
  - input text: expose CursorPos in char filter event (#816)
  - input text: try usage idiom of using InputText with data only exposed through get/set accessors, without extraneous copy/alloc. (#3009)
@@ -111,7 +115,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - input number: applying arithmetics ops (+,-,*,/) messes up with text edit undo stack.
 
  - layout: helper or a way to express ImGui::SameLine(ImGui::GetCursorStartPos().x + ImGui::CalcItemWidth() + ImGui::GetStyle().ItemInnerSpacing.x); in a simpler manner.
- - layout: generalization of the above: a concept equivalent to word processor ruler tab stop ~ mini columns (position in X, no clipping implied) (vaguely relate to #267, #395, also what is used internally for menu items)
+ - layout, font: horizontal tab support, A) text mode: forward only tabs (e.g. every 4 characters/N pixels from pos x1), B) manual mode: explicit tab stops acting as mini columns, no clipping (for menu items, many kind of uses, also vaguely relate to #267, #395)
  - layout: horizontal layout helper (#97)
  - layout: horizontal flow until no space left (#404)
  - layout: more generic alignment state (left/right/centered) for single items?
@@ -134,7 +138,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
  - columns: sizing is lossy when columns width is very small (default width may turn negative etc.)
  - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: flag to add horizontal separator above/below?
+ - columns: flag to add horizontal separator above/below)
  - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
 
 !- color: the color conversion helpers/types are a mess and needs sorting out.
@@ -155,6 +159,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - clipper: horizontal clipping support. (#2580)
 
  - separator: expose flags (#759)
+ - separator: take indent into consideration (optional)
  - separator: width, thickness, centering (#1643)
  - splitter: formalize the splitter idiom into an official api (we want to handle n-way split) (#319)
 
@@ -189,12 +194,14 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - docking: C- nav: CTRL+TAB highlighting tabs shows the mismatch between focus-stack and tab-order (not visible in VS because it doesn't highlight the tabs)
  - docking: C- after a dock/undock, the Scrollbar Status update in Begin() should use an updated e.g. size_y_for_scrollbars to avoid a 1 frame scrollbar flicker.
 
+ - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work
+ - tabs: close button tends to overlap unsaved-document star 
+ - tabs: consider showing the star at the same spot as the close button, like VS Code does.
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
  - tabs: TabItem could honor SetNextItemWidth()?
  - tabs: explicit api (even if internal) to cleanly manipulate tab order.
  - tabs: Mouse wheel over tab bar could scroll? (#2702)
-
 
  - image/image button: misalignment on padded/bordered button?
  - image/image button: parameters are confusing, image() has tint_col,border_col whereas imagebutton() has bg_col/tint_col. Even thou they are different parameters ordering could be more consistent. can we fix that?
@@ -207,9 +214,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - slider: tint background based on value (e.g. v_min -> v_max, or use 0.0f either side of the sign)
  - slider: relative dragging? + precision dragging
  - slider: step option (#1183)
- - slider style: fill % of the bar instead of positioning a drag.
+ - slider: style: fill % of the bar instead of positioning a drag.
  - knob: rotating knob widget (#942)
- - drag float: power/logarithmic slider and drags are weird. (#1316)
+ - drag float: support for reversed drags (min > max) (removed is_locked, also see fdc526e)
  - drag float: up/down axis
  - drag float: power != 0.0f with current value being outside the range keeps the value stuck.
  - drag float: added leeway on edge (e.g. a few invisible steps past the clamp limits)
@@ -230,15 +237,16 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - listbox: future api should allow to enable horizontal scrolling (#2510)
 
 !- popups/menus: clarify usage of popups id, how MenuItem/Selectable closing parent popups affects the ID, etc. this is quite fishy needs improvement! (#331, #402)
- - popups/modal: make modal title bar blink when trying to click outside the modal
- - popups: reopening context menu at new position should be the behavior by default? (equivalent to internal OpenPopupEx() with reopen_existing=true) (~#1497)
+ - modals: make modal title bar blink when trying to click outside the modal
+ - modals: technically speaking, we could make Begin() with ImGuiWindowFlags_Modal work without involving popup. May help untangle a few things, as modals are more like regular windows than popups.
  - popups: if the popup functions took explicit ImGuiID it would allow the user to manage the scope of those ID. (#331)
  - popups: clicking outside (to close popup) and holding shouldn't drag window below.
  - popups: add variant using global identifier similar to Begin/End (#402)
  - popups: border options. richer api like BeginChild() perhaps? (#197)
+ - popups: flags could be reworked to allow both mouse buttons as index (0..5 and as flags using higher-bit) allowing to or them.
+ - popups/modals: although it is sometimes convenient that popups/modals lifetime is owned by imgui, we could also a bool-owned-by-user api as long as Begin() return value testing is enforced.
 
  - tooltip: drag and drop with tooltip near monitor edges lose/changes its last direction instead of locking one. The drag and drop tooltip should always follow without changing direction.
- - tooltip: tooltip that doesn't fit in entire screen seems to lose their "last preferred direction" and may teleport when moving mouse.
  - tooltip: allow to set the width of a tooltip to allow TextWrapped() etc. while keeping the height automatic.
  - tooltip: tooltips with delay timers? or general timer policy? (instantaneous vs timed): IsItemHovered() with timer + implicit aabb-id for items with no ID. (#1485)
  - tooltip: drag tooltip hovering over source widget with IsItemHovered/SetTooltip flickers.
@@ -251,19 +259,22 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - menus: menu-bar: main menu-bar could affect clamping of windows position (~ akin to modifying DisplayMin)
  - menus: hovering from menu to menu on a menu-bar has 1 frame without any menu, which is a little annoying. ideally either 0 either longer.
  - menus: could merge draw call in most cases (how about storing an optional aabb in ImDrawCmd to move the burden of merging in a single spot).
+ - menus: would be nice if the Selectable() supported horizontal alignment (must be given the equivalent of WorkRect.Max.x matching the position of the shortcut column)
 
  - tree node: add treenode/treepush int variants? not there because (void*) cast from int warns on some platforms/settings?
  - tree node: try to apply scrolling at time of TreePop() if node was just opened and end of node is past scrolling limits?
  - tree node / selectable render mismatch which is visible if you use them both next to each other (e.g. cf. property viewer)
  - tree node: tweak color scheme to distinguish headers from selected tree node (#581)
  - tree node: leaf/non-leaf highlight mismatch.
- - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height?)
+ - tree node: flag to disable formatting and/or detect "%s"
+ - tree node/opt: could avoid formatting when clipped (flag assuming we don't care about width/height, assume single line height? format only %s/%c to be able to count height?)
 
  - settings: write more decent code to allow saving/loading new fields: columns, selected tree nodes?
  - settings: api for per-tool simple persistent data (bool,int,float,columns sizes,etc.) in .ini file (#437)
  - settings/persistence: helpers to make TreeNodeBehavior persist (even during dev!) - may need to store some semantic and/or data type in ImGuiStoragePair
 
  - style: better default styles. (#707)
+ - style: PushStyleVar: allow direct access to individual float X/Y elements.
  - style: add a highlighted text color (for headers, etc.)
  - style: border types: out-screen, in-screen, etc. (#447)
  - style: add window shadow (fading away from the window. Paint-style calculation of vertices alpha after drawlist would be easier)
@@ -310,6 +321,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - text: it's currently impossible to have a window title with "##". perhaps an official workaround would be nice. \ style inhibitor? non-visible ascii code to insert between #?
  - text: provided a framed text helper, e.g. https://pastebin.com/1Laxy8bT
  - text: refactor TextUnformatted (or underlying function) to more explicitly request if we need width measurement or not
+ - text/layout/tabs: \t pulling position from base pos + step, or offset array (e.g. could be used in text edit, menus for simple icon+text alignment, etc.)
  - text link/url button: underlined. should api expose an ID or use text contents as ID? which colors enum to use?
  - text/wrapped: should be a more first-class citizen, e.g. wrapped text within a Selectable with known width.
  - text/wrapped: custom separator for text wrapping. (#3002)
@@ -335,7 +347,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/atlas: dynamic font atlas to avoid baking huge ranges into bitmap and make scaling easier.
  - font/draw: vertical and/or rotated text renderer (#705) - vertical is easier clipping wise
  - font/draw: need to be able to specify wrap start position.
- - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines)
+ - font/draw: better reserve policy for large horizontal block of text (shouldn't reserve for all clipped lines). also see #3349.
+ - font/draw: fix for drawing 16k+ visible characters in same call.
  - font/draw: underline, squiggle line rendering helpers.
  - font: optimization: for monospace font (like the default one) we can trim IndexXAdvance as long as trailing value is == FallbackXAdvance (need to make sure TAB is still correct), would save on cache line.
  - font: add support for kerning, probably optional. A) perhaps default to (32..128)^2 matrix ~ 9K entries = 36KB, then hash for non-ascii?. B) or sparse lookup into per-char list?
@@ -347,20 +360,24 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - font/opt: Glyph currently 40 bytes (2+9*4). Consider storing UV as 16 bits integer? (->32 bytes). X0/Y0/X1/Y1 as 16 fixed-point integers? Or X0/Y0 as float and X1/Y1 as fixed8_8?
 
  - nav: some features such as PageUp/Down/Home/End should probably work without ImGuiConfigFlags_NavEnableKeyboard? (where do we draw the line?)
- ! nav: never clear NavId on some setup (e.g. gamepad centric)
- - nav: code to focus child-window on restoring NavId appears to have issue: e.g. when focus change is implicit because of window closure.
  - nav: configuration flag to disable global shortcuts (currently only CTRL-Tab) ?
+ ! nav: never clear NavId on some setup (e.g. gamepad centric)
+ - nav: there's currently no way to completely clear focus with the keyboard. depending on patterns used by the application to dispatch inputs, it may be desirable.
+ - nav: code to focus child-window on restoring NavId appears to have issue: e.g. when focus change is implicit because of window closure.
  - nav: Home/End behavior when navigable item is not fully visible at the edge of scrolling? should be backtrack to keep item into view?
  - nav: NavScrollToBringItemIntoView() with item bigger than view should focus top-right? Repro: using Nav in "About Window"
  - nav: wrap around logic to allow e.g. grid based layout (pressing NavRight on the right-most element would go to the next row, etc.). see internal's NavMoveRequestTryWrapping().
- - nav: patterns to make it possible for arrows key to update selection
+ - nav: patterns to make it possible for arrows key to update selection (see JustMovedTo in range_select branch)
  - nav: restore/find nearest NavId when current one disappear (e.g. pressed a button that disappear, or perhaps auto restoring when current button change name)
  - nav: SetItemDefaultFocus() level of priority, so widget like Selectable when inside a popup could claim a low-priority default focus on the first selected iem
  - nav: NavFlattened: ESC on a flattened child should select something.
  - nav: NavFlattened: broken: in typical usage scenario, the items of a fully clipped child are currently not considered to enter into a NavFlattened child.
  - nav: NavFlattened: init request doesn't select items that are part of a NavFlattened child
  - nav: NavFlattened: cannot access menu-bar of a flattened child window with Alt/menu key (not a very common use case..).
- - nav/treenode: Left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
+ - nav: simulate right-click or context activation? (SHIFT+F10)
+ - nav/tabbing: refactor old tabbing system and turn into navigation, should pass through all widgets (in submission order?).
+ - nav/popup: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys, default validation button, etc.
+ - nav/treenode: left within a tree node block as a fallback (ImGuiTreeNodeFlags_NavLeftJumpsBackHere by default?)
  - nav/menus: pressing left-right on a vertically clipped menu bar tends to jump to the collapse/close buttons.
  - nav/menus: allow pressing Menu to leave a sub-menu.
  - nav/menus: a way to access the main menu bar with Alt? (currently needs CTRL+TAB) or last focused window menu bar?
@@ -369,11 +386,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - nav/menus: Alt,Up could open the first menu (e.g. "File") currently it tends to nav into the window/collapse menu. Do do that we would need custom transition?
  - nav/windowing: configure fade-in/fade-out delay on Ctrl+Tab?
  - nav/windowing: when CTRL-Tab/windowing is active, the HoveredWindow detection doesn't take account of the window display re-ordering.
- - nav: simulate right-click or context activation? (SHIFT+F10)
- - nav: tabs should go through most/all widgets (in submission order?).
- - nav: esc/enter default behavior for popups, e.g. be able to mark an "ok" or "cancel" button that would get triggered by those keys.
- - nav: when activating a button that changes label (without a static ID) or disappear, can we somehow automatically recover into a nearest highlight item?
- - nav: there's currently no way to completely clear focus with the keyboard. depending on patterns used by the application to dispatch inputs, it may be desirable.
+ - nav/windowing: Resizing window will currently fail with certain types of resizing constraints/callback applied
  - focus: preserve ActiveId/focus stack state, e.g. when opening a menu and close it, previously selected InputText() focus gets restored (#622)
  - focus: SetKeyboardFocusHere() on with >= 0 offset could be done on same frame (else latch and modulate on beginning of next frame)
  - focus: unable to use SetKeyboardFocusHere() on clipped widgets. (#787)
@@ -399,12 +412,11 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - inputs/io: clarify/standardize/expose repeat rate and repeat delays (#1808)
  - inputs/scrolling: support for smooth scrolling (#2462, #2569)
 
- - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for back-end to be able stop refreshing easily.
+ - misc: idle: expose "woken up" boolean (set by inputs) and/or animation time (for cursor blink) for backend to be able stop refreshing easily.
  - misc: idle: if cursor blink if the _only_ visible animation, core imgui could rewrite vertex alpha to avoid CPU pass on ImGui:: calls.
  - misc: idle: if cursor blink if the _only_ visible animation, could even expose a dirty rectangle that optionally can be leverage by some app to render in a smaller viewport, getting rid of much pixel shading cost.
  - misc: no way to run a root-most GetID() with ImGui:: api since there's always a Debug window in the stack. (mentioned in #2960)
  - misc: make the ImGuiCond values linear (non-power-of-two). internal storage for ImGuiWindow can use integers to combine into flags (Why?)
- - misc: provide a way to compile out the entire implementation while providing a dummy API (e.g. #define IMGUI_DUMMY_IMPL)
  - misc: PushItemFlag(): add a flag to disable keyboard capture when used with mouse? (#1682)
  - misc: use more size_t in public api?
  - misc: possible compile-time support for string view/range instead of char* would e.g. facilitate usage with Rust (#683)
@@ -422,6 +434,8 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - examples: window minimize, maximize (#583)
  - examples: provide a zero frame-rate/idle example.
  - examples: dx11/dx12: try to use new swapchain blit models (#2970)
+ - backends: move to backends/ folder?
+ - backends: report it better when not able to create texture?
  - backends: apple: example_apple should be using modern GL3.
  - backends: glfw: could go idle when minimized? if (glfwGetWindowAttrib(window, GLFW_ICONIFIED)) { glfwWaitEvents(); continue; } // issue: DeltaTime will be super high on resume, perhaps provide a way to let impl know (#440)
  - backends: opengl: rename imgui_impl_opengl2 to impl_opengl_legacy and imgui_impl_opengl3 to imgui_impl_opengl? (#1900)
@@ -432,7 +446,9 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - backends: bgfx: https://gist.github.com/RichardGale/6e2b74bc42b3005e08397236e4be0fd0
  - backends: mscriptem: with refactored examples, we could provide a direct imgui_impl_emscripten platform layer (see eg. https://github.com/floooh/sokol-samples/blob/master/html5/imgui-emsc.cc#L42)
 
- - optimization: replace vsnprintf with stb_printf? or enable the defines/infrastructure to allow it (#1038)
+ - bindings: ways to use clang ast dump to generate bindings or helpers for bindings? (e.g. clang++ -Xclang -ast-dump=json imgui.h)
+
+ - optimization: replace vsnprintf with stb_printf? using IMGUI_USE_STB_SPRINTF.(#1038)
  - optimization: add clipping for multi-component widgets (SliderFloatX, ColorEditX, etc.). one problem is that nav branch can't easily clip parent group when there is a move request.
  - optimization: add a flag to disable most of rendering, for the case where the user expect to skip it (#335)
  - optimization: fully covered window (covered by another with non-translucent bg + WindowRounding worth of padding) may want to clip rendering.
