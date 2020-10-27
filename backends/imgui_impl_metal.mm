@@ -253,6 +253,23 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 {
     ImGuiViewportDataMetal* data = (ImGuiViewportDataMetal*)viewport->RendererUserData;
 
+#if TARGET_OS_OSX
+    void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
+    NSWindow* window = (__bridge NSWindow*)handle;
+    if (data->MetalLayer.contentsScale != [window backingScaleFactor])
+    {
+        ImVec2 size;
+        size.x = data->MetalLayer.drawableSize.width / data->MetalLayer.contentsScale;
+        size.y = data->MetalLayer.drawableSize.height / data->MetalLayer.contentsScale;
+
+        data->MetalLayer.contentsScale = [window backingScaleFactor];
+
+        size.x *= data->MetalLayer.contentsScale;
+        size.y *= data->MetalLayer.contentsScale;
+        data->MetalLayer.drawableSize = CGSizeMake(size.x, size.y);
+    }
+#endif
+
     id <CAMetalDrawable> drawable = [data->MetalLayer nextDrawable];
 
     MTLRenderPassDescriptor* renderPassDescriptor = data->RenderPassDescriptor;
@@ -675,7 +692,6 @@ static void ImGui_ImplMetal_InvalidateDeviceObjectsForPlatformWindows()
                         .height = NSUInteger(clip_rect.w - clip_rect.y)
                     };
                     [commandEncoder setScissorRect:scissorRect];
-
 
                     // Bind texture, Draw
                     if (pcmd->TextureId != NULL)
