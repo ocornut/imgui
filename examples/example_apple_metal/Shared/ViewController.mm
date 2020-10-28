@@ -3,6 +3,7 @@
 #include "imgui.h"
 
 #if TARGET_OS_OSX
+#include "imgui_impl_metal.h"
 #include "imgui_impl_osx.h"
 #endif
 
@@ -40,6 +41,16 @@
 }
 
 #if TARGET_OS_OSX
+
+- (void)viewWillAppear {
+    [super viewWillAppear];
+    self.view.window.delegate = self;
+}
+
+- (void)windowWillClose:(NSNotification *)notification {
+    ImGui_ImplMetal_Shutdown();
+    ImGui_ImplOSX_Shutdown();
+}
 
 - (void)mouseMoved:(NSEvent *)event {
     ImGui_ImplOSX_HandleEvent(event, self.view);
