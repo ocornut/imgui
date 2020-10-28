@@ -41,6 +41,16 @@
 
 -(void)updateAndDrawDemoView
 {
+    ImGuiIO &io = ImGui::GetIO();
+    io.DisplaySize.x = self.bounds.size.width;
+    io.DisplaySize.y = self.bounds.size.height;
+
+#if TARGET_OS_OSX
+    CGFloat framebufferScale = self.window.screen.backingScaleFactor ?: NSScreen.mainScreen.backingScaleFactor;
+#else
+    CGFloat framebufferScale = self.window.screen.scale ?: UIScreen.mainScreen.scale;
+#endif
+
     // Start the Dear ImGui frame
 	ImGui_ImplOpenGL2_NewFrame();
 	ImGui_ImplOSX_NewFrame(self);
@@ -93,6 +103,7 @@
 	[[self openGLContext] makeCurrentContext];
 
     ImDrawData* draw_data = ImGui::GetDrawData();
+    draw_data->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
     GLsizei width  = (GLsizei)(draw_data->DisplaySize.x * draw_data->FramebufferScale.x);
     GLsizei height = (GLsizei)(draw_data->DisplaySize.y * draw_data->FramebufferScale.y);
     glViewport(0, 0, width, height);
@@ -105,7 +116,6 @@
     [[self openGLContext] flushBuffer];
 
     // Update and Render additional Platform Windows
-    ImGuiIO& io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         ImGui::UpdatePlatformWindows();

@@ -149,6 +149,7 @@
         // Rendering
         ImGui::Render();
         ImDrawData* drawData = ImGui::GetDrawData();
+        drawData->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
         ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
 
         [renderEncoder popDebugGroup];
