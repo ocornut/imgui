@@ -77,6 +77,7 @@ Other Changes:
 - Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]
 - Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
 - Examples: Apple+Metal: Consolidated/simplified to get closer to other examples. (#3543) [@warrenm]
+- Examples: Apple+Metal: Forward events down so OS key combination like Cmd+Q can work. (#3554) [@rokups]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
 - Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
 
