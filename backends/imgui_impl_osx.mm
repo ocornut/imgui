@@ -5,9 +5,9 @@
 // Implemented features:
 //  [X] Platform: Mouse cursor shape and visibility. Disable with 'io.ConfigFlags |= ImGuiConfigFlags_NoMouseCursorChange'.
 //  [X] Platform: OSX clipboard is supported within core Dear ImGui (no specific code in this backend).
+//  [X] Platform: Multi-viewport / platform windows.
 // Issues:
 //  [ ] Platform: Keys are all generally very broken. Best using [event keycode] and not [event characters]..
-//  [X] Platform: Multi-viewport / platform windows.
 
 // You can copy and use unmodified imgui_impl_* files in your project. See examples/ folder for examples of using this.
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
@@ -60,7 +60,7 @@ bool ImGui_ImplOSX_Init(NSView* view)
     // Setup backend capabilities flags
     io.BackendFlags |= ImGuiBackendFlags_HasMouseCursors;           // We can honor GetMouseCursor() values (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasSetMousePos;          // We can honor io.WantSetMousePos requests (optional, rarely used)
-    io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;    // We can create multi-viewports on the Platform side (optional)
+    io.BackendFlags |= ImGuiBackendFlags_PlatformHasViewports;      // We can create multi-viewports on the Platform side (optional)
     //io.BackendFlags |= ImGuiBackendFlags_HasMouseHoveredViewport; // We can set io.MouseHoveredViewport correctly (optional, not easy)
     io.BackendPlatformName = "imgui_impl_osx";
 
@@ -192,8 +192,9 @@ void ImGui_ImplOSX_NewFrame(NSView* view)
     ImGuiIO& io = ImGui::GetIO();
     if (view)
     {
+        NSSize size = [view bounds].size;
         const float dpi = [view.window backingScaleFactor];
-        io.DisplaySize = ImVec2((float)view.bounds.size.width, (float)view.bounds.size.height);
+        io.DisplaySize = ImVec2(size.width, size.height);
         io.DisplayFramebufferScale = ImVec2(dpi, dpi);
     }
     if (g_WantUpdateMonitors)
@@ -356,6 +357,31 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     return false;
 }
 
+void ImGui_ImplOSX_TrackingArea(NSViewController* _Nonnull controller)
+{
+    // Add a tracking area in order to receive mouse events whenever the mouse is within the bounds of our view
+    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
+                                                                options:NSTrackingMouseMoved | NSTrackingInVisibleRect | NSTrackingActiveAlways
+                                                                  owner:controller
+                                                               userInfo:nil];
+    [controller.view addTrackingArea:trackingArea];
+
+    // If we want to receive key events, we either need to be in the responder chain of the key view,
+    // or else we can install a local monitor. The consequence of this heavy-handed approach is that
+    // we receive events for all controls, not just Dear ImGui widgets. If we had native controls in our
+    // window, we'd want to be much more careful than just ingesting the complete event stream, though we
+    // do make an effort to be good citizens by passing along events when Dear ImGui doesn't want to capture.
+    NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged | NSEventTypeScrollWheel;
+    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event) {
+        BOOL wantsCapture = ImGui_ImplOSX_HandleEvent(event, controller.view);
+        if (event.type == NSEventTypeKeyDown && wantsCapture) {
+            return nil;
+        } else {
+            return event;
+        }
+    }];
+}
+
 //--------------------------------------------------------------------------------------------------------
 // MULTI-VIEWPORT / PLATFORM INTERFACE SUPPORT
 // This is an _advanced_ and _optional_ feature, allowing the back-end to create and handle multiple viewports simultaneously.
@@ -371,18 +397,25 @@ struct ImGuiViewportDataOSX
     ~ImGuiViewportDataOSX() { IM_ASSERT(Window == nil); }
 };
 
-@interface ImGui_ImplOSX_View : NSOpenGLView
+@interface ImGui_ImplOSX_View : NSView
 @end
 
 @implementation ImGui_ImplOSX_View
--(void)keyUp:(NSEvent *)event           { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)keyDown:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)flagsChanged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)mouseDown:(NSEvent *)event       { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)mouseUp:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)mouseMoved:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)mouseDragged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self); }
--(void)scrollWheel:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self); }
+@end
+
+@interface ImGui_ImplOSX_ViewController : NSViewController
+@end
+
+@implementation ImGui_ImplOSX_ViewController
+-(void)loadView                         { self.view = [NSView new]; }
+-(void)keyUp:(NSEvent *)event           { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)keyDown:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)flagsChanged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)mouseDown:(NSEvent *)event       { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)mouseUp:(NSEvent *)event         { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)mouseMoved:(NSEvent *)event      { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)mouseDragged:(NSEvent *)event    { ImGui_ImplOSX_HandleEvent(event, self.view); }
+-(void)scrollWheel:(NSEvent *)event     { ImGui_ImplOSX_HandleEvent(event, self.view); }
 @end
 
 static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
@@ -401,12 +434,16 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window orderFront:NSApp];
     [window setLevel:NSFloatingWindowLevel];
 
-    ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:window.frame];
+    ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
     if (floor(NSAppKitVersionNumber) > NSAppKitVersionNumber10_6)
         [view setWantsBestResolutionOpenGLSurface:YES];
 #endif // MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
-    [window setContentView:view];
+
+    ImGui_ImplOSX_ViewController* viewController = [ImGui_ImplOSX_ViewController new];
+    window.contentViewController = viewController;
+    window.contentViewController.view = view;
+    ImGui_ImplOSX_TrackingArea(viewController);
 
     data->Window = window;
     data->WindowOwned = true;
@@ -425,6 +462,7 @@ static void ImGui_ImplOSX_DestroyWindow(ImGuiViewport* viewport)
         if (window != nil && data->WindowOwned)
         {
             [window setContentView:nil];
+            [window setContentViewController:nil];
             [window orderOut:nil];
         }
         data->Window = nil;

@@ -35,28 +35,7 @@
     self.mtkView.delegate = self.renderer;
 
 #if TARGET_OS_OSX
-    // Add a tracking area in order to receive mouse events whenever the mouse is within the bounds of our view
-    NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
-                                                                options:NSTrackingMouseMoved | NSTrackingInVisibleRect | NSTrackingActiveAlways
-                                                                  owner:self
-                                                               userInfo:nil];
-    [self.view addTrackingArea:trackingArea];
-
-    // If we want to receive key events, we either need to be in the responder chain of the key view,
-    // or else we can install a local monitor. The consequence of this heavy-handed approach is that
-    // we receive events for all controls, not just Dear ImGui widgets. If we had native controls in our
-    // window, we'd want to be much more careful than just ingesting the complete event stream, though we
-    // do make an effort to be good citizens by passing along events when Dear ImGui doesn't want to capture.
-    NSEventMask eventMask = NSEventMaskKeyDown | NSEventMaskKeyUp | NSEventMaskFlagsChanged | NSEventTypeScrollWheel;
-    [NSEvent addLocalMonitorForEventsMatchingMask:eventMask handler:^NSEvent * _Nullable(NSEvent *event) {
-        BOOL wantsCapture = ImGui_ImplOSX_HandleEvent(event, self.view);
-        if (event.type == NSEventTypeKeyDown && wantsCapture) {
-            return nil;
-        } else {
-            return event;
-        }
-
-    }];
+    ImGui_ImplOSX_TrackingArea(self);
 #endif
 }
 
