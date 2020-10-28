@@ -47,9 +47,10 @@
     self.view.window.delegate = self;
 }
 
-- (void)windowWillClose:(NSNotification *)notification {
+- (void)applicationWillTerminate:(NSNotification *)notification {
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplOSX_Shutdown();
+    ImGui::DestroyContext();
 }
 
 - (void)mouseMoved:(NSEvent *)event {

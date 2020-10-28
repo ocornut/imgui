@@ -206,14 +206,8 @@
     [_window setOpaque:YES];
     [_window makeKeyAndOrderFront:NSApp];
     [_window setDelegate:self];
-    [_window setAcceptsMouseMovedEvents:YES];
 
     return (_window);
-}
-
--(void)windowWillClose:(NSNotification *)notification
-{
-    [NSApp terminate:self];
 }
 
 -(void)setupMenu
