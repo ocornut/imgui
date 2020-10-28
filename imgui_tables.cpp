@@ -1162,7 +1162,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         // Either solution currently won't allow us to use a larger border size: the border would clipped.
         ImRect outer_border = table->OuterRect;
         const ImU32 outer_col = table->BorderColorStrong;
-        if (inner_window != outer_window)
+        if (inner_window != outer_window) // FIXME-TABLE
             outer_border.Expand(1.0f);
         if ((table->Flags & ImGuiTableFlags_BordersOuter) == ImGuiTableFlags_BordersOuter)
         {
@@ -1356,8 +1356,8 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
 // We reorder draw commands by arranging them into a maximum of 4 distinct groups:
 //
 //   1 group:               2 groups:              2 groups:              4 groups:
-//   [ 0. ] no freeze       [ 0. ] row freeze      [ 01 ] col freeze      [ 02 ] row+col freeze
-//   [ .. ]  or no scroll   [ 1. ]  and v-scroll   [ .. ]  and h-scroll   [ 13 ]  and v+h-scroll
+//   [ 0. ] no freeze       [ 0. ] row freeze      [ 01 ] col freeze      [ 01 ] row+col freeze
+//   [ .. ]  or no scroll   [ 2. ]  and v-scroll   [ .. ]  and h-scroll   [ 23 ]  and v+h-scroll
 //
 // Each column itself can use 1 channel (row freeze disabled) or 2 channels (row freeze enabled).
 // When the contents of a column didn't stray off its limit, we move its channels into the corresponding group
@@ -1380,8 +1380,8 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     ImDrawListSplitter* splitter = &table->DrawSplitter;
-    const bool is_frozen_v = (table->FreezeRowsCount > 0);
-    const bool is_frozen_h = (table->FreezeColumnsCount > 0);
+    const bool has_freeze_v = (table->FreezeRowsCount > 0);
+    const bool has_freeze_h = (table->FreezeColumnsCount > 0);
 
     // Track which groups we are going to attempt to merge, and which channels goes into each group.
     struct MergeGroup
@@ -1401,7 +1401,7 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
-        const int merge_group_sub_count = is_frozen_v ? 2 : 1;
+        const int merge_group_sub_count = has_freeze_v ? 2 : 1;
         for (int merge_group_sub_n = 0; merge_group_sub_n < merge_group_sub_count; merge_group_sub_n++)
         {
             const int channel_no = (merge_group_sub_n == 0) ? column->DrawChannelFrozen : column->DrawChannelUnfrozen;
@@ -1418,18 +1418,18 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
             if (!(column->Flags & ImGuiTableColumnFlags_NoClipX))
             {
                 float content_max_x;
-                if (merge_group_sub_count == 1)     // No row freeze (same as testing !is_frozen_v)
-                    content_max_x = ImMax(column->ContentMaxXUnfrozen, column->ContentMaxXHeadersUsed);
-                else if (merge_group_sub_n == 0)    // Row freeze: use width before freeze
-                    content_max_x = ImMax(column->ContentMaxXFrozen, column->ContentMaxXHeadersUsed);
-                else                                // Row freeze: use width after freeze
-                    content_max_x = column->ContentMaxXUnfrozen;
+                if (!has_freeze_v)
+                    content_max_x = ImMax(column->ContentMaxXUnfrozen, column->ContentMaxXHeadersUsed); // No row freeze
+                else if (merge_group_sub_n == 0)
+                    content_max_x = ImMax(column->ContentMaxXFrozen, column->ContentMaxXHeadersUsed);   // Row freeze: use width before freeze
+                else
+                    content_max_x = column->ContentMaxXUnfrozen;                                        // Row freeze: use width after freeze
                 float content_width = content_max_x - column->ContentMinX;
                 if (content_width > column->WidthGiven + table->CellPaddingX * 1.0f)
                     continue;
             }
 
-            const int merge_group_n = (is_frozen_h && column_n < table->FreezeColumnsCount ? 0 : 2) + (is_frozen_v ? merge_group_sub_n : 1);
+            const int merge_group_n = (has_freeze_h && column_n < table->FreezeColumnsCount ? 0 : 1) + (has_freeze_v && merge_group_sub_n == 0 ? 0 : 2);
             IM_ASSERT(channel_no < IMGUI_TABLE_MAX_DRAW_CHANNELS);
             MergeGroup* merge_group = &merge_groups[merge_group_n];
             if (merge_group->ChannelsCount == 0)
@@ -1486,13 +1486,13 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
                 // - Columns can use padding and have left-most ClipRect.Min.x and right-most ClipRect.Max.x != from host ClipRect -> will extend and match host ClipRect -> will merge
                 // FIXME-TABLE FIXME-WORKRECT: We are wasting a merge opportunity on tables without scrolling if column doesn't fit
                 // within host clip rect, solely because of the half-padding difference between window->WorkRect and window->InnerClipRect.
-                if ((merge_group_n & 2) == 0 || !is_frozen_h)
+                if ((merge_group_n & 1) == 0 || !has_freeze_h)
                     merge_clip_rect.Min.x = ImMin(merge_clip_rect.Min.x, table->HostClipRect.Min.x);
-                if ((merge_group_n & 1) == 0 || !is_frozen_v)
+                if ((merge_group_n & 2) == 0 || !has_freeze_v)
                     merge_clip_rect.Min.y = ImMin(merge_clip_rect.Min.y, table->HostClipRect.Min.y);
-                if ((merge_group_n & 2) != 0)
+                if ((merge_group_n & 1) != 0)
                     merge_clip_rect.Max.x = ImMax(merge_clip_rect.Max.x, table->HostClipRect.Max.x);
-                if ((merge_group_n & 1) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
+                if ((merge_group_n & 2) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
                     merge_clip_rect.Max.y = ImMax(merge_clip_rect.Max.y, table->HostClipRect.Max.y);
 #if 0
                 GetOverlayDrawList()->AddRect(merge_group->ClipRect.Min, merge_group->ClipRect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 1.0f);
@@ -1627,7 +1627,7 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 
     if (table->CurrentRow == -1)
         TableUpdateLayout(table);
-    else if (table->IsInsideRow)
+    if (table->IsInsideRow)
         TableEndRow(table);
 
     table->LastRowFlags = table->RowFlags;
@@ -1726,7 +1726,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         const bool draw_strong_bottom_border = unfreeze_rows_actual;
         if ((bg_col0 | bg_col1 | border_col) != 0 || draw_strong_bottom_border || draw_cell_bg_color)
         {
-            // In theory we could call SetWindowClipRectBeforeChannelChange() but since we know TableEndRow() is
+            // In theory we could call SetWindowClipRectBeforeSetChannel() but since we know TableEndRow() is
             // always followed by a change of clipping rectangle we perform the smallest overwrite possible here.
             window->DrawList->_CmdHeader.ClipRect = table->HostClipRect.ToVec4();
             table->DrawSplitter.SetCurrentChannel(window->DrawList, 0);
