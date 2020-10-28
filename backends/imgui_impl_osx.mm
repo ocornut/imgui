@@ -357,7 +357,7 @@ bool ImGui_ImplOSX_HandleEvent(NSEvent* event, NSView* view)
     return false;
 }
 
-void ImGui_ImplOSX_TrackingArea(NSViewController* _Nonnull controller)
+void ImGui_ImplOSX_AddTrackingArea(NSViewController* _Nonnull controller)
 {
     // Add a tracking area in order to receive mouse events whenever the mouse is within the bounds of our view
     NSTrackingArea *trackingArea = [[NSTrackingArea alloc] initWithRect:NSZeroRect
@@ -443,7 +443,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     ImGui_ImplOSX_ViewController* viewController = [ImGui_ImplOSX_ViewController new];
     window.contentViewController = viewController;
     window.contentViewController.view = view;
-    ImGui_ImplOSX_TrackingArea(viewController);
+    ImGui_ImplOSX_AddTrackingArea(viewController);
 
     data->Window = window;
     data->WindowOwned = true;

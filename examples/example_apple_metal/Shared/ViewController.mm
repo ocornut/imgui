@@ -36,7 +36,7 @@
     self.mtkView.delegate = self.renderer;
 
 #if TARGET_OS_OSX
-    ImGui_ImplOSX_TrackingArea(self);
+    ImGui_ImplOSX_AddTrackingArea(self);
 #endif
 }
 
