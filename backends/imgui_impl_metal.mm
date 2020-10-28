@@ -205,13 +205,14 @@ static void ImGui_ImplMetal_CreateWindow(ImGuiViewport* viewport)
 
     id<MTLDevice> device = g_sharedMetalContext.device;
 
-    float contentsScale = 1.0f;
+    float dpiScale = 1.0f;
 #if TARGET_OS_OSX
     NSWindow* window = (__bridge NSWindow*)handle;
-    contentsScale = [window backingScaleFactor];
+    dpiScale = [window backingScaleFactor];
+    viewport->DpiScale = dpiScale;
 #endif
     CAMetalLayer* layer = [CAMetalLayer layer];
-    layer.contentsScale = contentsScale;
+    layer.contentsScale = dpiScale;
     layer.device = device;
     layer.framebufferOnly = YES;
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
@@ -256,17 +257,20 @@ static void ImGui_ImplMetal_RenderWindow(ImGuiViewport* viewport, void*)
 #if TARGET_OS_OSX
     void* handle = viewport->PlatformHandleRaw ? viewport->PlatformHandleRaw : viewport->PlatformHandle;
     NSWindow* window = (__bridge NSWindow*)handle;
-    if (data->MetalLayer.contentsScale != [window backingScaleFactor])
+    float dpiScale = viewport->DpiScale = [window backingScaleFactor];
+    if (data->MetalLayer.contentsScale != dpiScale)
     {
         ImVec2 size;
         size.x = data->MetalLayer.drawableSize.width / data->MetalLayer.contentsScale;
         size.y = data->MetalLayer.drawableSize.height / data->MetalLayer.contentsScale;
 
-        data->MetalLayer.contentsScale = [window backingScaleFactor];
+        data->MetalLayer.contentsScale = dpiScale;
 
         size.x *= data->MetalLayer.contentsScale;
         size.y *= data->MetalLayer.contentsScale;
         data->MetalLayer.drawableSize = CGSizeMake(size.x, size.y);
+
+        viewport->DrawData->FramebufferScale = ImVec2(dpiScale, dpiScale);
     }
 #endif
 
