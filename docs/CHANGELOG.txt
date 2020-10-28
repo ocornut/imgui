@@ -61,9 +61,10 @@ Other Changes:
   or CollapsingHeader() while dragging. (#1738)
 - Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
   into a full-window-sized dockspace inside a zero-padded window. (#3519, #2717) [@Black-Cat]
-- Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...) 
+- Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
+- Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
 - Examples: Apple+Metal: Consolidated/simplified to get closer to other examples. (#3543) [@warrenm]
 - Docs: Split examples/README.txt into docs/BACKENDS.md and docs/EXAMPLES.md improved them.
 - Docs: Consistently renamed all occurences of "binding" and "back-end" to "backend" in comments and docs.
@@ -98,7 +99,7 @@ Other Changes:
 - Window: Fixed using non-zero pivot in SetNextWindowPos() when the window is collapsed. (#3433)
 - Nav: Fixed navigation resuming on first visible item when using gamepad. [@rokups]
 - Nav: Fixed using Alt to toggle the Menu layer when inside a Modal window. (#787)
-- Scrolling: Fixed SetScrollHere(0) functions edge snapping when called during a frame where 
+- Scrolling: Fixed SetScrollHere(0) functions edge snapping when called during a frame where
   ContentSize is changing (issue introduced in 1.78). (#3452).
 - InputText: Added support for Page Up/Down in InputTextMultiline(). (#3430) [@Xipiryon]
 - InputText: Added selection helpers in ImGuiInputTextCallbackData().
