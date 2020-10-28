@@ -296,7 +296,7 @@
     //IM_ASSERT(font != NULL);
 }
 
--(void)applicationWillTerminate:(NSNotification *)notification;
+-(void)windowWillClose:(NSNotification *)notification
 {
     ImGui_ImplOpenGL2_Shutdown();
     ImGui_ImplOSX_Shutdown();

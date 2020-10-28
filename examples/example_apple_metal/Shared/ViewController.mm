@@ -47,7 +47,7 @@
     self.view.window.delegate = self;
 }
 
-- (void)applicationWillTerminate:(NSNotification *)notification {
+- (void)windowWillClose:(NSNotification *)notification {
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplOSX_Shutdown();
     ImGui::DestroyContext();
