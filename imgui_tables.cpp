@@ -285,10 +285,11 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostIndentX = inner_window->DC.Indent.x;
     table->HostClipRect = inner_window->ClipRect;
     table->HostSkipItems = inner_window->SkipItems;
+    table->HostBackupWorkRect = inner_window->WorkRect;
     table->HostBackupParentWorkRect = inner_window->ParentWorkRect;
     table->HostBackupColumnsOffset = outer_window->DC.ColumnsOffset;
     table->HostCursorMaxPos = inner_window->DC.CursorMaxPos;
-    inner_window->ParentWorkRect = inner_window->WorkRect;
+    inner_window->ParentWorkRect = table->WorkRect;
 
     // Padding and Spacing
     // - None               ........Content..... Pad .....Content........
@@ -316,9 +317,10 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->LastRowFlags = ImGuiTableRowFlags_None;
     table->InnerClipRect = (inner_window == outer_window) ? table->WorkRect : inner_window->ClipRect;
     table->InnerClipRect.ClipWith(table->WorkRect);     // We need this to honor inner_width
-    table->InnerClipRect.ClipWith(table->HostClipRect);
+    table->InnerClipRect.ClipWithFull(table->HostClipRect);
     table->InnerClipRect.Max.y = (flags & ImGuiTableFlags_NoHostExtendY) ? ImMin(table->InnerClipRect.Max.y, inner_window->WorkRect.Max.y) : inner_window->ClipRect.Max.y;
     table->BackgroundClipRect = table->InnerClipRect;
+    IM_ASSERT(table->BackgroundClipRect.Min.y <= table->BackgroundClipRect.Max.y);
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
     table->FreezeRowsRequest = table->FreezeRowsCount = 0; // This will be setup by TableSetupScrollFreeze(), if any
@@ -1059,7 +1061,7 @@ void    ImGui::EndTable()
     // Layout in outer window
     IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table->ID + table->InstanceCurrent, "Mismatching PushID/PopID!");
     PopID();
-    inner_window->WorkRect = inner_window->ParentWorkRect;
+    inner_window->WorkRect = table->HostBackupWorkRect;
     inner_window->ParentWorkRect = table->HostBackupParentWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
@@ -1799,8 +1801,9 @@ void    ImGui::TableEndRow(ImGuiTable* table)
 
         // BackgroundClipRect starts as table->InnerClipRect, reduce it now
         float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
-        table->BackgroundClipRect.Min.y = y0;
+        table->BackgroundClipRect.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
         table->BackgroundClipRect.Max.y = window->InnerClipRect.Max.y;
+        IM_ASSERT(table->BackgroundClipRect.Min.y <= table->BackgroundClipRect.Max.y);
 
         float row_height = table->RowPosY2 - table->RowPosY1;
         table->RowPosY2 = window->DC.CursorPos.y = table->WorkRect.Min.y + table->RowPosY2 - table->OuterRect.Min.y;
