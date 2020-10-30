@@ -76,7 +76,7 @@ CODE
 // [SECTION] LOGGING/CAPTURING
 // [SECTION] SETTINGS
 // [SECTION] PLATFORM DEPENDENT HELPERS
-// [SECTION] METRICS/DEBUG WINDOW
+// [SECTION] METRICS/DEBUGGER WINDOW
 
 */
 
@@ -10328,10 +10328,11 @@ static void ImeSetInputScreenPosFn_DefaultImpl(int, int) {}
 #endif
 
 //-----------------------------------------------------------------------------
-// [SECTION] METRICS/DEBUG WINDOW
+// [SECTION] METRICS/DEBUGGER WINDOW
 //-----------------------------------------------------------------------------
 
 #ifndef IMGUI_DISABLE_METRICS_WINDOW
+
 // Avoid naming collision with imgui_demo.cpp's HelpMarker() for unity builds.
 static void MetricsHelpMarker(const char* desc)
 {
@@ -10401,26 +10402,23 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             return ImRect();
         }
 
-        static void NodeDrawCmdShowMeshAndBoundingBox(ImGuiWindow* window, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, int elem_offset, bool show_mesh, bool show_aabb)
+        static void NodeDrawCmdShowMeshAndBoundingBox(ImGuiWindow* window, const ImDrawList* draw_list, const ImDrawCmd* draw_cmd, bool show_mesh, bool show_aabb)
         {
             IM_ASSERT(show_mesh || show_aabb);
             ImDrawList* fg_draw_list = GetForegroundDrawList(window); // Render additional visuals into the top-most draw list
             ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
+            ImDrawVert* vtx_buffer = draw_list->VtxBuffer.Data + draw_cmd->VtxOffset;
 
             // Draw wire-frame version of all triangles
             ImRect clip_rect = draw_cmd->ClipRect;
             ImRect vtxs_rect(FLT_MAX, FLT_MAX, -FLT_MAX, -FLT_MAX);
             ImDrawListFlags backup_flags = fg_draw_list->Flags;
             fg_draw_list->Flags &= ~ImDrawListFlags_AntiAliasedLines; // Disable AA on triangle outlines is more readable for very large and thin triangles.
-            for (unsigned int base_idx = elem_offset; base_idx < (elem_offset + draw_cmd->ElemCount); base_idx += 3)
+            for (unsigned int idx_n = draw_cmd->IdxOffset; idx_n < draw_cmd->IdxOffset + draw_cmd->ElemCount; )
             {
                 ImVec2 triangle[3];
-                for (int n = 0; n < 3; n++)
-                {
-                    ImVec2 p = draw_list->VtxBuffer[idx_buffer ? idx_buffer[base_idx + n] : (base_idx + n)].pos;
-                    triangle[n] = p;
-                    vtxs_rect.Add(p);
-                }
+                for (int n = 0; n < 3; n++, idx_n++)
+                    vtxs_rect.Add((triangle[n] = vtx_buffer[idx_buffer ? idx_buffer[idx_n] : idx_n].pos));
                 if (show_mesh)
                     fg_draw_list->AddPolyline(triangle, 3, IM_COL32(255, 255, 0, 255), true, 1.0f); // In yellow: mesh triangles
             }
@@ -10435,7 +10433,10 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         static void NodeDrawList(ImGuiWindow* window, ImDrawList* draw_list, const char* label)
         {
-            bool node_open = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->_OwnerName ? draw_list->_OwnerName : "", draw_list->VtxBuffer.Size, draw_list->IdxBuffer.Size, draw_list->CmdBuffer.Size);
+            int cmd_count = draw_list->CmdBuffer.Size;
+            if (cmd_count > 0 && draw_list->CmdBuffer.back().ElemCount == 0 && draw_list->CmdBuffer.back().UserCallback == NULL)
+                cmd_count--;
+            bool node_open = ImGui::TreeNode(draw_list, "%s: '%s' %d vtx, %d indices, %d cmds", label, draw_list->_OwnerName ? draw_list->_OwnerName : "", draw_list->VtxBuffer.Size, draw_list->IdxBuffer.Size, cmd_count);
             if (draw_list == ImGui::GetWindowDrawList())
             {
                 ImGui::SameLine();
@@ -10453,36 +10454,34 @@ void ImGui::ShowMetricsWindow(bool* p_open)
             if (window && !window->WasActive)
                 ImGui::TextDisabled("Warning: owning Window is inactive. This DrawList is not being rendered!");
 
-            unsigned int elem_offset = 0;
-            for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.begin(); pcmd < draw_list->CmdBuffer.end(); elem_offset += pcmd->ElemCount, pcmd++)
+            for (const ImDrawCmd* pcmd = draw_list->CmdBuffer.Data; pcmd < draw_list->CmdBuffer.Data + cmd_count; pcmd++)
             {
-                if (pcmd->UserCallback == NULL && pcmd->ElemCount == 0)
-                    continue;
                 if (pcmd->UserCallback)
                 {
                     ImGui::BulletText("Callback %p, user_data %p", pcmd->UserCallback, pcmd->UserCallbackData);
                     continue;
                 }
 
-                ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
                 char buf[300];
-                ImFormatString(buf, IM_ARRAYSIZE(buf), "DrawCmd:%5d triangles, Tex 0x%p, ClipRect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
+                ImFormatString(buf, IM_ARRAYSIZE(buf), "DrawCmd:%5d tris, Tex 0x%p, ClipRect (%4.0f,%4.0f)-(%4.0f,%4.0f)",
                     pcmd->ElemCount / 3, (void*)(intptr_t)pcmd->TextureId,
                     pcmd->ClipRect.x, pcmd->ClipRect.y, pcmd->ClipRect.z, pcmd->ClipRect.w);
                 bool pcmd_node_open = ImGui::TreeNode((void*)(pcmd - draw_list->CmdBuffer.begin()), "%s", buf);
                 if (ImGui::IsItemHovered() && (show_drawcmd_mesh || show_drawcmd_aabb) && fg_draw_list)
-                    NodeDrawCmdShowMeshAndBoundingBox(window, draw_list, pcmd, elem_offset, show_drawcmd_mesh, show_drawcmd_aabb);
+                    NodeDrawCmdShowMeshAndBoundingBox(window, draw_list, pcmd, show_drawcmd_mesh, show_drawcmd_aabb);
                 if (!pcmd_node_open)
                     continue;
 
                 // Calculate approximate coverage area (touched pixel count)
                 // This will be in pixels squared as long there's no post-scaling happening to the renderer output.
+                const ImDrawIdx* idx_buffer = (draw_list->IdxBuffer.Size > 0) ? draw_list->IdxBuffer.Data : NULL;
+                const ImDrawVert* vtx_buffer = draw_list->VtxBuffer.Data + pcmd->VtxOffset;
                 float total_area = 0.0f;
-                for (unsigned int base_idx = elem_offset; base_idx < (elem_offset + pcmd->ElemCount); base_idx += 3)
+                for (unsigned int idx_n = pcmd->IdxOffset; idx_n < pcmd->IdxOffset + pcmd->ElemCount; )
                 {
                     ImVec2 triangle[3];
-                    for (int n = 0; n < 3; n++)
-                        triangle[n] = draw_list->VtxBuffer[idx_buffer ? idx_buffer[base_idx + n] : (base_idx + n)].pos;
+                    for (int n = 0; n < 3; n++, idx_n++)
+                        triangle[n] = vtx_buffer[idx_buffer ? idx_buffer[idx_n] : idx_n].pos;
                     total_area += ImTriangleArea(triangle[0], triangle[1], triangle[2]);
                 }
 
@@ -10490,19 +10489,19 @@ void ImGui::ShowMetricsWindow(bool* p_open)
                 ImFormatString(buf, IM_ARRAYSIZE(buf), "Mesh: ElemCount: %d, VtxOffset: +%d, IdxOffset: +%d, Area: ~%0.f px", pcmd->ElemCount, pcmd->VtxOffset, pcmd->IdxOffset, total_area);
                 ImGui::Selectable(buf);
                 if (ImGui::IsItemHovered() && fg_draw_list)
-                    NodeDrawCmdShowMeshAndBoundingBox(window, draw_list, pcmd, elem_offset, true, false);
+                    NodeDrawCmdShowMeshAndBoundingBox(window, draw_list, pcmd, true, false);
 
                 // Display individual triangles/vertices. Hover on to get the corresponding triangle highlighted.
                 ImGuiListClipper clipper;
                 clipper.Begin(pcmd->ElemCount / 3); // Manually coarse clip our print out of individual vertices to save CPU, only items that may be visible.
                 while (clipper.Step())
-                    for (int prim = clipper.DisplayStart, idx_i = elem_offset + clipper.DisplayStart * 3; prim < clipper.DisplayEnd; prim++)
+                    for (int prim = clipper.DisplayStart, idx_i = pcmd->IdxOffset + clipper.DisplayStart * 3; prim < clipper.DisplayEnd; prim++)
                     {
                         char* buf_p = buf, *buf_end = buf + IM_ARRAYSIZE(buf);
                         ImVec2 triangle[3];
                         for (int n = 0; n < 3; n++, idx_i++)
                         {
-                            ImDrawVert& v = draw_list->VtxBuffer[idx_buffer ? idx_buffer[idx_i] : idx_i];
+                            const ImDrawVert& v = vtx_buffer[idx_buffer ? idx_buffer[idx_i] : idx_i];
                             triangle[n] = v.pos;
                             buf_p += ImFormatString(buf_p, buf_end - buf_p, "%s %04d: pos (%8.2f,%8.2f), uv (%.6f,%.6f), col %08X\n",
                                 (n == 0) ? "Vert:" : "     ", idx_i, v.pos.x, v.pos.y, v.uv.x, v.uv.y, v.col);
@@ -10774,7 +10773,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
 
         if (ImGui::TreeNode("SettingsIniData", "Settings unpacked data (.ini): %d bytes", g.SettingsIniData.size()))
         {
-            ImGui::InputTextMultiline("##Ini", (char*)(void*)g.SettingsIniData.c_str(), g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, 0.0f), ImGuiInputTextFlags_ReadOnly);
+            ImGui::InputTextMultiline("##Ini", (char*)(void*)g.SettingsIniData.c_str(), g.SettingsIniData.Buf.Size, ImVec2(-FLT_MIN, ImGui::GetTextLineHeight() * 20), ImGuiInputTextFlags_ReadOnly);
             ImGui::TreePop();
         }
         ImGui::TreePop();
