@@ -19,6 +19,7 @@
 
 // CHANGELOG
 // (minor and older changes stripped away, please see git history for details)
+//  2020-10-28: Inputs: Added a fix for handling keypad-enter key.
 //  2020-05-25: Inputs: Added a fix for missing trackpad clicks when done with "soft tap".
 //  2019-12-05: Inputs: Added support for ImGuiMouseCursor_NotAllowed mouse cursor.
 //  2019-10-11: Inputs:  Fix using Backspace key.
@@ -73,7 +74,7 @@ bool ImGui_ImplOSX_Init()
     io.KeyMap[ImGuiKey_Space]           = 32;
     io.KeyMap[ImGuiKey_Enter]           = 13;
     io.KeyMap[ImGuiKey_Escape]          = 27;
-    io.KeyMap[ImGuiKey_KeyPadEnter]     = 13;
+    io.KeyMap[ImGuiKey_KeyPadEnter]     = 3;
     io.KeyMap[ImGuiKey_A]               = 'A';
     io.KeyMap[ImGuiKey_C]               = 'C';
     io.KeyMap[ImGuiKey_V]               = 'V';
