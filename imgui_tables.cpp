@@ -496,6 +496,9 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     // the column fitting to wait until the first visible frame of the child container (may or not be a good thing).
     if (want_column_auto_fit && table->OuterWindow != table->InnerWindow)
         table->InnerWindow->SkipItems = false;
+
+    if (want_column_auto_fit)
+        table->IsSettingsDirty = true;
 }
 
 // Adjust flags: default width mode + stretch columns are not allowed when auto extending
@@ -1752,6 +1755,8 @@ void    ImGui::TableEndRow(ImGuiTable* table)
             {
                 ImRect cell_bg_rect = TableGetCellBgRect(table, cell_data->Column);
                 cell_bg_rect.ClipWith(table->BackgroundClipRect);
+                cell_bg_rect.Min.x = ImMax(cell_bg_rect.Min.x, table->Columns[cell_data->Column].ClipRect.Min.x);
+                cell_bg_rect.Max.x = ImMin(cell_bg_rect.Max.x, table->Columns[cell_data->Column].ClipRect.Max.x);
                 window->DrawList->AddRectFilled(cell_bg_rect.Min, cell_bg_rect.Max, cell_data->BgColor);
             }
         }
