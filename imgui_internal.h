@@ -2022,6 +2022,7 @@ struct ImGuiTable
     ImS8                        LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
     ImS8                        ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
     ImS8                        DummyDrawChannel;           // Redirect non-visible columns here.
+    ImS8                        BgDrawChannelUnfrozen;      // Index within DrawSplitter.Channels[]
     ImS8                        FreezeRowsRequest;          // Requested frozen rows count
     ImS8                        FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
     ImS8                        FreezeColumnsRequest;       // Requested frozen columns count
