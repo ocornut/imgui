@@ -157,6 +157,7 @@ Some solutions:
 3. Set `io.Fonts.TexDesiredWidth` to specify a texture width to minimize texture height (see comment in `ImFontAtlas::Build()` function).
 4. Set `io.Fonts.Flags |= ImFontAtlasFlags_NoPowerOfTwoHeight;` to disable rounding the texture height to the next power of two.
 5. Read about oversampling [here](https://github.com/nothings/stb/blob/master/tests/oversample).
+6. To support the extended range of unicode beyond 0xFFFF (e.g. emoticons, dingbats, symbols, shapes, ancient languages, etc...) add `#define IMGUI_USE_WCHAR32`in your `imconfig.h`
 
 ##### [Return to Index](#index)
 
