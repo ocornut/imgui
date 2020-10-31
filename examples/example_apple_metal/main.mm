@@ -66,7 +66,7 @@
 
     // Setup Platform/Renderer backends
 #if TARGET_OS_OSX
-    ImGui_ImplOSX_Init(view);
+    ImGui_ImplOSX_Init(self.view);
 #endif
     ImGui_ImplMetal_Init(_device);
 
@@ -105,7 +105,7 @@
     
 #if TARGET_OS_OSX
     ImGui_ImplOSX_AddTrackingArea(self);
-    ImGui_ImplOSX_Init(self.mtkView);
+    ImGui_ImplOSX_Init(self.view);
 #endif
 }
 
