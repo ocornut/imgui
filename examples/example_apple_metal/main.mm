@@ -105,7 +105,7 @@
     
 #if TARGET_OS_OSX
     ImGui_ImplOSX_AddTrackingArea(self);
-    ImGui_ImplOSX_Init();
+    ImGui_ImplOSX_Init(self.mtkView);
 #endif
 }
 
