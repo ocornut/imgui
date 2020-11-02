@@ -1,9 +1,10 @@
-// dear imgui: standalone example application for OSX + OpenGL2, using legacy fixed pipeline
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
+// Dear ImGui: standalone example application for OSX + OpenGL2, using legacy fixed pipeline
+// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
+// Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #include "imgui.h"
-#include "../imgui_impl_osx.h"
-#include "../imgui_impl_opengl2.h"
+#include "../../backends/imgui_impl_osx.h"
+#include "../../backends/imgui_impl_opengl2.h"
 #include <stdio.h>
 #import <Cocoa/Cocoa.h>
 #import <OpenGL/gl.h>
@@ -45,7 +46,7 @@
 	ImGui_ImplOSX_NewFrame(self);
     ImGui::NewFrame();
 
-    // Global data for the demo
+    // Our state (make them static = more or less global) as a convenience to keep the example terse.
     static bool show_demo_window = true;
     static bool show_another_window = false;
     static ImVec4 clear_color = ImVec4(0.45f, 0.55f, 0.60f, 1.00f);
@@ -138,7 +139,7 @@
     animationTimer = nil;
 }
 
-// Forward Mouse/Keyboard events to dear imgui OSX back-end. It returns true when imgui is expecting to use the event.
+// Forward Mouse/Keyboard events to dear imgui OSX backend. It returns true when imgui is expecting to use the event.
 -(void)keyUp:(NSEvent *)event               { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)keyDown:(NSEvent *)event             { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)flagsChanged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self); }
@@ -243,16 +244,18 @@
         NSLog(@"No OpenGL Context!");
 
     // Setup Dear ImGui context
+    // FIXME: This example doesn't have proper cleanup...
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;     // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;      // Enable Gamepad Controls
 
     // Setup Dear ImGui style
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-    // Setup Platform/Renderer bindings
+    // Setup Platform/Renderer backends
     ImGui_ImplOSX_Init();
     ImGui_ImplOpenGL2_Init();
 

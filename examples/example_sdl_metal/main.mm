@@ -1,6 +1,7 @@
 // Dear ImGui: standalone example application for SDL2 + Metal
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
 // (SDL is a cross-platform general purpose library for handling windows, inputs, OpenGL/Vulkan/Metal graphics context creation, etc.)
+// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
+// Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #include "imgui.h"
 #include "imgui_impl_sdl.h"
@@ -13,7 +14,7 @@
 
 int main(int, char**)
 {
-    // Setup Dear ImGui binding
+    // Setup Dear ImGui context
     IMGUI_CHECKVERSION();
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
@@ -65,6 +66,7 @@ int main(int, char**)
         return -3;
     }
 
+    // Setup Platform/Renderer backends
     CAMetalLayer* layer = (__bridge CAMetalLayer*)SDL_RenderGetMetalLayer(renderer);
     layer.pixelFormat = MTLPixelFormatBGRA8Unorm;
     ImGui_ImplMetal_Init(layer.device);
