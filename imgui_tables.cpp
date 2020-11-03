@@ -544,7 +544,7 @@ static void TableFixColumnSortDirection(ImGuiTableColumn* column)
 {
     // Initial sort state
     if (column->SortDirection == ImGuiSortDirection_None)
-        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
+        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImS8)(ImGuiSortDirection_Ascending);
 
     // Handle NoSortAscending/NoSortDescending
     if (column->SortDirection == ImGuiSortDirection_Ascending && (column->Flags & ImGuiTableColumnFlags_NoSortAscending))
@@ -1340,8 +1340,8 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
     const int channels_for_dummy = (table->ColumnsVisibleCount < table->ColumnsCount || table->VisibleUnclippedMaskByIndex != table->VisibleMaskByIndex) ? +1 : 0;
     const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
-    table->DummyDrawChannel = (channels_for_dummy > 0) ? (ImS8)(channels_total - 1) : -1;
-    table->BgDrawChannelUnfrozen = (ImS8)((table->FreezeRowsCount > 0) ? channels_for_row + 1 : 0);
+    table->DummyDrawChannel = (channels_for_dummy > 0) ? (ImU8)(channels_total - 1) : -1;
+    table->BgDrawChannelUnfrozen = (ImU8)((table->FreezeRowsCount > 0) ? channels_for_row + 1 : 0);
 
     int draw_channel_current = 1;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -1349,8 +1349,8 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
         ImGuiTableColumn* column = &table->Columns[column_n];
         if (!column->IsClipped)
         {
-            column->DrawChannelFrozen = (ImS8)(draw_channel_current);
-            column->DrawChannelUnfrozen = (ImS8)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
+            column->DrawChannelFrozen = (ImU8)(draw_channel_current);
+            column->DrawChannelUnfrozen = (ImU8)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
             if (!(table->Flags & ImGuiTableFlags_NoClip))
                 draw_channel_current++;
         }
@@ -1456,8 +1456,8 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
         }
 
         // Invalidate current draw channel
-        // (we don't clear DrawChannelBeforeRowFreeze/DrawChannelAfterRowFreeze solely to facilitate debugging/later inspection of data)
-        column->DrawChannelCurrent = -1;
+        // (we don't clear DrawChannelFrozen/DrawChannelUnfrozen solely to facilitate debugging/later inspection of data)
+        column->DrawChannelCurrent = (ImU8)-1;
     }
 
     // [DEBUG] Display merge groups

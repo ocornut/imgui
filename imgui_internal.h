@@ -1888,7 +1888,7 @@ struct ImGuiTabBar
 
 #define IM_COL32_DISABLE                IM_COL32(0,0,0,1)   // Special sentinel code which cannot be used as a regular color.
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
-#define IMGUI_TABLE_MAX_DRAW_CHANNELS   (2 + 64 * 2)        // See TableUpdateDrawChannels()
+#define IMGUI_TABLE_MAX_DRAW_CHANNELS   (1 + 2 + 64 * 2)    // See TableUpdateDrawChannels()
 
 // [Internal] sizeof() ~ 100
 // We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
@@ -1918,15 +1918,15 @@ struct ImGuiTableColumn
     ImGuiNavLayer           NavLayerCurrent;
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
-    ImS8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
-    ImS8                    DrawChannelFrozen;
-    ImS8                    DrawChannelUnfrozen;
     ImS8                    PrevVisibleColumn;              // Index of prev visible column within Columns[], -1 if first visible column
     ImS8                    NextVisibleColumn;              // Index of next visible column within Columns[], -1 if last visible column
-    ImS8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
-    ImS8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
     ImS8                    SortOrder;                      // -1: Not sorting on this column
     ImS8                    SortDirection;                  // enum ImGuiSortDirection_
+    ImU8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
+    ImU8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
+    ImU8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
+    ImU8                    DrawChannelFrozen;
+    ImU8                    DrawChannelUnfrozen;
 
     ImGuiTableColumn()
     {
@@ -1935,11 +1935,11 @@ struct ImGuiTableColumn
         NameOffset = -1;
         IsVisible = IsVisibleNextFrame = true;
         DisplayOrder = IndexWithinVisibleSet = -1;
-        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = -1;
         PrevVisibleColumn = NextVisibleColumn = -1;
-        AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
+        AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
+        DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = (ImU8)-1;
     }
 };
 
@@ -2025,13 +2025,13 @@ struct ImGuiTable
     ImS8                        RightMostVisibleColumn;     // Index of right-most non-hidden column.
     ImS8                        LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
     ImS8                        ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
-    ImS8                        DummyDrawChannel;           // Redirect non-visible columns here.
-    ImS8                        BgDrawChannelUnfrozen;      // Index within DrawSplitter.Channels[]
     ImS8                        FreezeRowsRequest;          // Requested frozen rows count
     ImS8                        FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
     ImS8                        FreezeColumnsRequest;       // Requested frozen columns count
     ImS8                        FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
     ImS8                        RowCellDataCurrent;         // Index of current RowCellData[] entry in current row
+    ImU8                        DummyDrawChannel;           // Redirect non-visible columns here.
+    ImU8                        BgDrawChannelUnfrozen;      // Index within DrawSplitter.Channels[]
     bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
     bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
     bool                        IsInitializing;
