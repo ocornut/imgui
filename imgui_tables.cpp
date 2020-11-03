@@ -198,7 +198,6 @@ static void TableBeginInitMemory(ImGuiTable* table, int columns_count)
         table->Columns[n] = ImGuiTableColumn();
         table->Columns[n].DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
     }
-    table->IsInitializing = table->IsSettingsRequestLoad = table->IsSortSpecsDirty = true;
 }
 
 bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
@@ -226,6 +225,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
+    const bool table_is_new = (table->ID == 0);
     const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     const ImGuiID instance_id = id + instance_no;
     const ImGuiTableFlags table_last_flags = table->Flags;
@@ -357,7 +357,13 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (stored_size != 0 && stored_size != columns_count)
         table->RawData.resize(0);
     if (table->RawData.Size == 0)
+    {
         TableBeginInitMemory(table, columns_count);
+        if (table_is_new)
+            table->IsInitializing = true;
+        table->IsSortSpecsDirty = table->IsSettingsRequestLoad = true;
+        table->SettingsOffset = -1;
+    }
 
     // Load settings
     if (table->IsSettingsRequestLoad)
@@ -2978,10 +2984,10 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
     {
         ImGuiTableColumnSettings* column_settings = &settings->GetColumnSettings()[n];
         ImGuiSortDirection sort_dir = (column_settings->SortOrder != -1) ? (ImGuiSortDirection)column_settings->SortDirection : ImGuiSortDirection_None;
-        BulletText("Column %d Order %d SortOrder %d %s Visible %d UserID 0x%08X WidthOrWeight %.3f",
+        BulletText("Column %d Order %d SortOrder %d %s Vis %d %s %7.3f UserID 0x%08X",
             n, column_settings->DisplayOrder, column_settings->SortOrder,
             (sort_dir == ImGuiSortDirection_Ascending) ? "Asc" : (sort_dir == ImGuiSortDirection_Descending) ? "Des" : "---",
-            column_settings->IsVisible, column_settings->UserID, column_settings->WidthOrWeight);
+            column_settings->IsVisible, column_settings->IsStretch ? "Weight" : "Width ", column_settings->WidthOrWeight, column_settings->UserID);
     }
     TreePop();
 }
