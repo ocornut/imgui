@@ -597,6 +597,8 @@ struct IMGUI_API ImChunkStream
     T*      end()                       { return (T*)(void*)(Buf.Data + Buf.Size); }
     int     offset_from_ptr(const T* p) { IM_ASSERT(p >= begin() && p < end()); const ptrdiff_t off = (const char*)p - Buf.Data; return (int)off; }
     T*      ptr_from_offset(int off)    { IM_ASSERT(off >= 4 && off < Buf.Size); return (T*)(void*)(Buf.Data + off); }
+    void    swap(ImChunkStream<T>& rhs) { rhs.Buf.swap(Buf); }
+
 };
 
 //-----------------------------------------------------------------------------
@@ -1401,6 +1403,7 @@ struct ImGuiContext
     ImGuiTable*                     CurrentTable;
     ImPool<ImGuiTable>              Tables;
     ImVector<ImGuiPtrOrIndex>       CurrentTableStack;
+    ImVector<float>                 TablesLastTimeActive;       // Last used timestamp of each tables (SOA, for efficient GC)
     ImVector<ImDrawChannel>         DrawChannelsTempMergeBuffer;
 
     // Tab bars
@@ -2040,6 +2043,7 @@ struct ImGuiTable
     bool                        IsDefaultDisplayOrder;      // Set when display order is unchanged from default (DisplayOrder contains 0...Count-1)
     bool                        IsResetDisplayOrderRequest;
     bool                        IsUnfrozen;                 // Set when we got past the frozen row.
+    bool                        MemoryCompacted;
     bool                        HostSkipItems;              // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
 
     ImGuiTable()
@@ -2266,7 +2270,7 @@ namespace ImGui
     IMGUI_API float         GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offset);
 
     // Tables
-    IMGUI_API ImGuiTable*   FindTableByID(ImGuiID id);
+    IMGUI_API ImGuiTable*   TableFindByID(ImGuiID id);
     IMGUI_API bool          BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          TableBeginUpdateColumns(ImGuiTable* table);
     IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);
@@ -2291,6 +2295,9 @@ namespace ImGui
     IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
+    IMGUI_API void          TableRemove(ImGuiTable* table);
+    IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTable* table);
+    IMGUI_API void          TableGcCompactSettings();
 
     // Tables: Settings
     IMGUI_API void                  TableLoadSettings(ImGuiTable* table);

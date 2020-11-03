@@ -134,7 +134,7 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_w
     return flags;
 }
 
-ImGuiTable* ImGui::FindTableByID(ImGuiID id)
+ImGuiTable* ImGui::TableFindByID(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     return g.Tables.GetByKey(id);
@@ -342,8 +342,15 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     outer_window->DC.CurrentTableIdx = table_idx;
     if (inner_window != outer_window) // So EndChild() within the inner window can restore the table properly.
         inner_window->DC.CurrentTableIdx = table_idx;
+
     if ((table_last_flags & ImGuiTableFlags_Reorderable) && (flags & ImGuiTableFlags_Reorderable) == 0)
         table->IsResetDisplayOrderRequest = true;
+
+    // Mark as used
+    if (table_idx >= g.TablesLastTimeActive.Size)
+        g.TablesLastTimeActive.resize(table_idx + 1, -1.0f);
+    g.TablesLastTimeActive[table_idx] = (float)g.Time;
+    table->MemoryCompacted = false;
 
     // Setup memory buffer (clear data if columns count changed)
     const int stored_size = table->Columns.size();
@@ -2573,10 +2580,15 @@ static void InitTableSettings(ImGuiTableSettings* settings, ImGuiID id, int colu
     settings->WantApply = true;
 }
 
+static size_t TableSettingsCalcChunkSize(int columns_count)
+{
+    return sizeof(ImGuiTableSettings) + (size_t)columns_count * sizeof(ImGuiTableColumnSettings);
+}
+
 ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
-    ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(sizeof(ImGuiTableSettings) + (size_t)columns_count * sizeof(ImGuiTableColumnSettings));
+    ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(TableSettingsCalcChunkSize(columns_count));
     InitTableSettings(settings, id, columns_count, columns_count);
     return settings;
 }
@@ -2759,7 +2771,7 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
             InitTableSettings(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
             return settings;
         }
-        settings->ID = 0; // Invalidate storage if we won't fit because of a count change
+        settings->ID = 0; // Invalidate storage, we won't fit because of a count change
     }
     return ImGui::TableSettingsCreate(id, columns_count);
 }
@@ -2840,6 +2852,57 @@ void    ImGui::TableSettingsInstallHandler(ImGuiContext* context)
     ini_handler.ApplyAllFn = TableSettingsHandler_ApplyAll;
     ini_handler.WriteAllFn = TableSettingsHandler_WriteAll;
     g.SettingsHandlers.push_back(ini_handler);
+}
+
+//-------------------------------------------------------------------------
+// TABLE - Garbage Collection
+//-------------------------------------------------------------------------
+
+// Remove Table (currently only used by TestEngine)
+void    ImGui::TableRemove(ImGuiTable* table)
+{
+    //IMGUI_DEBUG_LOG("TableRemove() id=0x%08X\n", table->ID);
+    ImGuiContext& g = *GImGui;
+    int table_idx = g.Tables.GetIndex(table);
+    //memset(table->RawData.Data, 0, table->RawData.size_in_bytes());
+    //memset(table, 0, sizeof(ImGuiTable));
+    g.Tables.Remove(table->ID, table);
+    g.TablesLastTimeActive[table_idx] = -1.0f;
+}
+
+// Free up/compact internal Table buffers for when it gets unused
+void    ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
+{
+    //IMGUI_DEBUG_LOG("TableGcCompactTransientBuffers() id=0x%08X\n", table->ID);
+    ImGuiContext& g = *GImGui;
+    IM_ASSERT(table->MemoryCompacted == false);
+    table->DrawSplitter.ClearFreeMemory();
+    table->SortSpecsData.clear();
+    table->SortSpecs.Specs = NULL;
+    table->IsSortSpecsDirty = true;
+    table->ColumnsNames.clear();
+    table->MemoryCompacted = true;
+    for (int n = 0; n < table->ColumnsCount; n++)
+        table->Columns[n].NameOffset = -1;
+    g.TablesLastTimeActive[g.Tables.GetIndex(table)] = -1.0f;
+}
+
+// Compact and remove unused settings data (currently only used by TestEngine)
+void ImGui::TableGcCompactSettings()
+{
+    ImGuiContext& g = *GImGui;
+    int required_memory = 0;
+    for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
+        if (settings->ID != 0)
+            required_memory += (int)TableSettingsCalcChunkSize(settings->ColumnsCount);
+    if (required_memory == g.SettingsTables.Buf.Size)
+        return;
+    ImChunkStream<ImGuiTableSettings> new_chunk_stream;
+    new_chunk_stream.Buf.reserve(required_memory);
+    for (ImGuiTableSettings* settings = g.SettingsTables.begin(); settings != NULL; settings = g.SettingsTables.next_chunk(settings))
+        if (settings->ID != 0)
+            memcpy(new_chunk_stream.alloc_chunk(TableSettingsCalcChunkSize(settings->ColumnsCount)), settings, TableSettingsCalcChunkSize(settings->ColumnsCount));
+    g.SettingsTables.swap(new_chunk_stream);
 }
 
 //-------------------------------------------------------------------------

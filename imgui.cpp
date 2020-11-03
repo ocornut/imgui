@@ -2952,6 +2952,7 @@ void ImGui::GcCompactTransientMiscBuffers()
     ImGuiContext& g = *GImGui;
     g.ItemFlagsStack.clear();
     g.GroupStack.clear();
+    TableGcCompactSettings();
 }
 
 // Free up/compact internal window buffers, we can use this when a window becomes unused.
@@ -3906,6 +3907,11 @@ void ImGui::NewFrame()
         if (!window->WasActive && !window->MemoryCompacted && window->LastTimeActive < memory_compact_start_time)
             GcCompactTransientWindowBuffers(window);
     }
+
+    // Garbage collect transient buffers of recently unused tables
+    for (int i = 0; i < g.TablesLastTimeActive.Size; i++)
+        if (g.TablesLastTimeActive[i] >= 0.0f && g.TablesLastTimeActive[i] < memory_compact_start_time)
+            TableGcCompactTransientBuffers(g.Tables.GetByIndex(i));
     if (g.GcCompactAll)
         GcCompactTransientMiscBuffers();
     g.GcCompactAll = false;
