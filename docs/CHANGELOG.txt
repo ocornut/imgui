@@ -50,6 +50,8 @@ Breaking Changes:
 - If you were still using the old names, while you are cleaning up, considering enabling
   IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
   and removing up old API calls, if any remaining.
+- Renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature will apply
+  to other data structures. (#2636)
 
 
 Other Changes:
