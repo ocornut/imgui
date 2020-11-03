@@ -761,7 +761,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         const int column_n = table->DisplayOrderToIndex[order_n];
         ImGuiTableColumn* column = &table->Columns[column_n];
 
-        column->NavLayerCurrent = (table->FreezeRowsCount > 0 || column_n < table->FreezeColumnsCount) ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main;
+        column->NavLayerCurrent = (ImS8)((table->FreezeRowsCount > 0 || column_n < table->FreezeColumnsCount) ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main);
 
         if (table->FreezeColumnsCount > 0 && table->FreezeColumnsCount == visible_n)
             offset_x += work_rect.Min.x - table->OuterRect.Min.x;
@@ -777,7 +777,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             column->ClipRect.Max.x = offset_x;
             column->ClipRect.Max.y = FLT_MAX;
             column->ClipRect.ClipWithFull(host_clip_rect);
-            column->IsClipped = column->SkipItems = true;
+            column->IsClipped = column->IsSkipItems = true;
             continue;
         }
 
@@ -813,7 +813,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column->IsClipped)
             table->VisibleUnclippedMaskByIndex &= ~((ImU64)1 << column_n);  // Columns with the _WidthAlwaysAutoResize sizing policy will never be updated then.
 
-        column->SkipItems = !column->IsVisible || table->HostSkipItems;
+        column->IsSkipItems = !column->IsVisible || table->HostSkipItems;
 
         // Detect hovered column
         if (is_hovering_table && g.IO.MousePos.x >= column->ClipRect.Min.x && g.IO.MousePos.x < column->ClipRect.Max.x)
@@ -1346,7 +1346,7 @@ void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
     const int channels_for_dummy = (table->ColumnsVisibleCount < table->ColumnsCount || table->VisibleUnclippedMaskByIndex != table->VisibleMaskByIndex) ? +1 : 0;
     const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
-    table->DummyDrawChannel = (channels_for_dummy > 0) ? (ImU8)(channels_total - 1) : -1;
+    table->DummyDrawChannel = (ImU8)((channels_for_dummy > 0) ? channels_total - 1 : -1);
     table->BgDrawChannelUnfrozen = (ImU8)((table->FreezeRowsCount > 0) ? channels_for_row + 1 : 0);
 
     int draw_channel_current = 1;
@@ -1804,7 +1804,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
-            column->NavLayerCurrent = (column_n < table->FreezeColumnsCount) ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main;
+            column->NavLayerCurrent = (ImS8)((column_n < table->FreezeColumnsCount) ? ImGuiNavLayer_Menu : ImGuiNavLayer_Main);
         }
     if (unfreeze_rows_actual)
     {
@@ -1858,7 +1858,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
     window->DC.LastItemId = 0;
-    window->DC.NavLayerCurrent = column->NavLayerCurrent;
+    window->DC.NavLayerCurrent = (ImGuiNavLayer)column->NavLayerCurrent;
 
     window->WorkRect.Min.y = window->DC.CursorPos.y;
     window->WorkRect.Min.x = column->MinX + table->CellPaddingX + table->CellSpacingX1;
@@ -1868,7 +1868,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     if (!column->IsVisible)
         window->DC.CursorPos.y = ImMax(window->DC.CursorPos.y, table->RowPosY2);
 
-    window->SkipItems = column->SkipItems;
+    window->SkipItems = column->IsSkipItems;
     if (table->Flags & ImGuiTableFlags_NoClip)
     {
         table->DrawSplitter.SetCurrentChannel(window->DrawList, 1);

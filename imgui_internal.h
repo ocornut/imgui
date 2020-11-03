@@ -1914,8 +1914,8 @@ struct ImGuiTableColumn
     bool                    IsVisible;                      // Is the column not marked Hidden by the user? (could be clipped by scrolling, etc).
     bool                    IsVisibleNextFrame;
     bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle.
-    bool                    SkipItems;
-    ImGuiNavLayer           NavLayerCurrent;
+    bool                    IsSkipItems;
+    ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
     ImS8                    PrevVisibleColumn;              // Index of prev visible column within Columns[], -1 if first visible column

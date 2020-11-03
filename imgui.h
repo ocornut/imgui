@@ -2246,8 +2246,9 @@ struct ImDrawChannel
     ImVector<ImDrawIdx>         _IdxBuffer;
 };
 
+
 // Split/Merge functions are used to split the draw list into different layers which can be drawn into out of order.
-// This is used by the Columns api, so items of each column can be batched together in a same draw call.
+// This is used by the Columns/Tables API, so items of each column can be batched together in a same draw call.
 struct ImDrawListSplitter
 {
     int                         _Current;    // Current channel number (0)
