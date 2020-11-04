@@ -2000,7 +2000,8 @@ struct ImGuiTable
     ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
     ImRect                      WorkRect;
     ImRect                      InnerClipRect;
-    ImRect                      BackgroundClipRect;         // We use this to cpu-clip cell background color fill
+    ImRect                      BgClipRect;                 // We use this to cpu-clip cell background color fill
+    ImRect                      BgClipRectForDrawCmd;
     ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
     ImRect                      HostBackupWorkRect;         // Backup of InnerWindow->WorkRect at the end of BeginTable()
     ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
