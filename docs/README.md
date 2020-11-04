@@ -81,7 +81,7 @@ ImGui::EndChild();
 ImGui::End();
 ```
 Result:
-<br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v160/code_sample_03_color.gif)
+<br>![sample code output](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v180/code_sample_04_color.gif)
 
 Dear ImGui allows you to **create elaborate tools** as well as very short-lived ones. On the extreme side of short-livedness: using the Edit&Continue (hot code reload) feature of modern compilers you can add a few widgets to tweaks variables while your application is running, and remove the code a minute later! Dear ImGui is not just for tweaking values. You can use it to trace a running algorithm by just emitting text commands. You can use it along with your own reflection data to browse your dataset live. You can use it to expose the internals of a subsystem in your engine, to create a logger, an inspection tool, a profiler, a debugger, an entire game making editor/framework, etc.
 
@@ -119,10 +119,13 @@ Officially maintained backends/bindings (in repository):
 - Platforms: GLFW, SDL2, Win32, Glut, OSX.
 - Frameworks: Emscripten, Allegro5, Marmalade.
 
-Third-party backends/bindings (see [Bindings](https://github.com/ocornut/imgui/wiki/Bindings/) page):
+[Third-party backends/bindings](https://github.com/ocornut/imgui/wiki/Bindings) wiki page:
 - Languages: C, C# and: Beef, ChaiScript, Crystal, D, Go, Haskell, Haxe/hxcpp, Java, JavaScript, Julia, Kotlin, Lua, Odin, Pascal, PureBasic, Python, Ruby, Rust, Swift...
 - Frameworks: AGS/Adventure Game Studio, Amethyst, bsf, Cinder, Cocos2d-x, Diligent Engine, Flexium, GML/Game Maker Studio2, Godot, GTK3+OpenGL3, Irrlicht Engine, LÖVE+LUA, Magnum, NanoRT, nCine, Nim Game Lib, Ogre, openFrameworks, OSG/OpenSceneGraph, Orx, Photoshop, px_render, Qt/QtDirect3D, SFML, Sokol, Unity, Unreal Engine 4, vtk, Win32 GDI, WxWidgets.
 - Note that C bindings ([cimgui](https://github.com/cimgui/cimgui)) are auto-generated, you can use its json/lua output to generate bindings for other languages.
+
+[Useful widgets and extensions](https://github.com/ocornut/imgui/wiki/Useful-Widgets) wiki page:
+- Text editors, node editors, timeline editors, plotting, software renderers, remote network access, memory editors, gizmos etc.
 
 Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 
@@ -139,6 +142,8 @@ Some of the goals for 2020 are:
 ### Gallery
 
 For more user-submitted screenshots of projects using Dear ImGui, check out the [Gallery Threads](https://github.com/ocornut/imgui/issues/3488)!
+
+For a list of third-party widgets and extensions, check out the [Useful Widgets](https://github.com/ocornut/imgui/wiki/Useful-Widgets) wiki page.
 
 Custom engine
 [![screenshot game](https://raw.githubusercontent.com/wiki/ocornut/imgui/web/v149/gallery_TheDragonsTrap-01-thumb.jpg)](https://cloud.githubusercontent.com/assets/8225057/20628927/33e14cac-b329-11e6-80f6-9524e93b048a.png)
