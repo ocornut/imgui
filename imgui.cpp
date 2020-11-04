@@ -9633,9 +9633,10 @@ const ImGuiPayload* ImGui::GetDragDropPayload()
 const ImGuiPayload* ImGui::AcceptReorderDropPayload(const char* type, ImGuiDragDropFlags flags)
 {
     ImGuiContext& g = *GImGui;
-    const ImGuiPayload* payload = NULL;
-    ImRect bb(GetCursorScreenPos(), GetCursorScreenPos());
+    if (!g.DragDropActive)
+        return false;
 
+    ImRect bb(g.CurrentWindow->DC.CursorPos, g.CurrentWindow->DC.CursorPos);
     if (flags & ImGuiDragDropFlags_ReorderHorizontal)
     {
         bb.Max.y += g.FontSize;
@@ -9649,11 +9650,11 @@ const ImGuiPayload* ImGui::AcceptReorderDropPayload(const char* type, ImGuiDragD
         bb.Max.y += g.Style.ItemSpacing.y;
     }
 
-    if (BeginDragDropTargetCustom(bb, GetID(type)))
-    {
-        payload = AcceptDragDropPayload(type, flags | ImGuiDragDropFlags_AcceptDrawLine);
-        EndDragDropTarget();
-    }
+    if (!BeginDragDropTargetCustom(bb, GetID(type)))
+        return NULL;
+
+    const ImGuiPayload* payload = AcceptDragDropPayload(type, flags | ImGuiDragDropFlags_AcceptDrawLine);
+    EndDragDropTarget();
     return payload;
 }
 
