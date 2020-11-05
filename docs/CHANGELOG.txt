@@ -63,6 +63,7 @@ Other Changes:
   or CollapsingHeader() while dragging. (#1738)
 - Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
   into a full-window-sized dockspace inside a zero-padded window. (#3519, #2717) [@Black-Cat]
+- Checkbox: Added CheckboxFlags() helper with int* type.
 - Metrics: Fixed mishandling of ImDrawCmd::VtxOffset in wireframe mesh renderer.
 - Misc: Replaced UTF-8 decoder by branchless one by Christopher Wellons (30~40% faster). [@rokups]
   Super minor fix handling incomplete UTF-8 contents: if input does not contain enough bytes, decoder 

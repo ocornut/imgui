@@ -408,6 +408,7 @@ void ImGui::BulletTextV(const char* fmt, va_list args)
 // - Image()
 // - ImageButton()
 // - Checkbox()
+// - CheckboxFlagsT() [Internal]
 // - CheckboxFlags()
 // - RadioButton()
 // - ProgressBar()
@@ -1075,6 +1076,7 @@ bool ImGui::Checkbox(const char* label, bool* v)
     if (mixed_value)
     {
         // Undocumented tristate/mixed/indeterminate checkbox (#2644)
+        // This may seem awkwardly designed because the aim is to make ImGuiItemFlags_MixedValue supported by all widgets (not just checkbox)
         ImVec2 pad(ImMax(1.0f, IM_FLOOR(square_sz / 3.6f)), ImMax(1.0f, IM_FLOOR(square_sz / 3.6f)));
         window->DrawList->AddRectFilled(check_bb.Min + pad, check_bb.Max - pad, check_col, style.FrameRounding);
     }
@@ -1093,33 +1095,43 @@ bool ImGui::Checkbox(const char* label, bool* v)
     return pressed;
 }
 
-bool ImGui::CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
+template<typename T>
+bool ImGui::CheckboxFlagsT(const char* label, T* flags, T flags_value)
 {
-    bool v = ((*flags & flags_value) == flags_value);
+    bool all_on = (*flags & flags_value) == flags_value;
+    bool any_on = (*flags & flags_value) != 0;
     bool pressed;
-    if (v == false && (*flags & flags_value) != 0)
+    if (!all_on && any_on)
     {
-        // Mixed value (FIXME: find a way to expose neatly to Checkbox?)
         ImGuiWindow* window = GetCurrentWindow();
-        const ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
+        ImGuiItemFlags backup_item_flags = window->DC.ItemFlags;
         window->DC.ItemFlags |= ImGuiItemFlags_MixedValue;
-        pressed = Checkbox(label, &v);
+        pressed = Checkbox(label, &all_on);
         window->DC.ItemFlags = backup_item_flags;
     }
     else
     {
-        // Regular checkbox
-        pressed = Checkbox(label, &v);
+        pressed = Checkbox(label, &all_on);
+
     }
     if (pressed)
     {
-        if (v)
+        if (all_on)
             *flags |= flags_value;
         else
             *flags &= ~flags_value;
     }
-
     return pressed;
+}
+
+bool ImGui::CheckboxFlags(const char* label, int* flags, int flags_value)
+{
+    return CheckboxFlagsT(label, flags, flags_value);
+}
+
+bool ImGui::CheckboxFlags(const char* label, unsigned int* flags, unsigned int flags_value)
+{
+    return CheckboxFlagsT(label, flags, flags_value);
 }
 
 bool ImGui::RadioButton(const char* label, bool active)
@@ -5434,7 +5446,7 @@ void ImGui::ColorPickerOptionsPopup(const float* ref_col, ImGuiColorEditFlags fl
     if (allow_opt_alpha_bar)
     {
         if (allow_opt_picker) Separator();
-        CheckboxFlags("Alpha Bar", (unsigned int*)&g.ColorEditOptions, ImGuiColorEditFlags_AlphaBar);
+        CheckboxFlags("Alpha Bar", &g.ColorEditOptions, ImGuiColorEditFlags_AlphaBar);
     }
     EndPopup();
 }
