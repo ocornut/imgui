@@ -6388,13 +6388,6 @@ void ImGui::Value(const char* prefix, float v, const char* float_format)
 //-------------------------------------------------------------------------
 
 // Helpers for internal use
-ImGuiMenuColumns::ImGuiMenuColumns()
-{
-    Spacing = Width = NextWidth = 0.0f;
-    memset(Pos, 0, sizeof(Pos));
-    memset(NextWidths, 0, sizeof(NextWidths));
-}
-
 void ImGuiMenuColumns::Update(int count, float spacing, bool clear)
 {
     IM_ASSERT(count == IM_ARRAYSIZE(Pos));

@@ -844,7 +844,7 @@ struct IMGUI_API ImGuiMenuColumns
     float       Width, NextWidth;
     float       Pos[3], NextWidths[3];
 
-    ImGuiMenuColumns();
+    ImGuiMenuColumns() { memset(this, 0, sizeof(*this)); }
     void        Update(int count, float spacing, bool clear);
     float       DeclColumns(float w0, float w1, float w2);
     float       CalcExtraSpace(float avail_w) const;
@@ -897,7 +897,7 @@ struct ImGuiPopupData
     ImVec2              OpenPopupPos;   // Set on OpenPopup(), preferred popup position (typically == OpenMousePos when using mouse)
     ImVec2              OpenMousePos;   // Set on OpenPopup(), copy of mouse position at the time of opening popup
 
-    ImGuiPopupData() { PopupId = 0; Window = SourceWindow = NULL; OpenFrameCount = -1; OpenParentId = 0; }
+    ImGuiPopupData()    { memset(this, 0, sizeof(*this)); OpenFrameCount = -1; }
 };
 
 struct ImGuiNavMoveResult
@@ -1006,7 +1006,7 @@ struct ImGuiColumnData
     ImGuiColumnsFlags   Flags;              // Not exposed
     ImRect              ClipRect;
 
-    ImGuiColumnData()   { OffsetNorm = OffsetNormBeforeResize = 0.0f; Flags = ImGuiColumnsFlags_None; }
+    ImGuiColumnData()   { memset(this, 0, sizeof(*this)); }
 };
 
 struct ImGuiColumns
@@ -1027,21 +1027,7 @@ struct ImGuiColumns
     ImVector<ImGuiColumnData> Columns;
     ImDrawListSplitter  Splitter;
 
-    ImGuiColumns()      { Clear(); }
-    void Clear()
-    {
-        ID = 0;
-        Flags = ImGuiColumnsFlags_None;
-        IsFirstFrame = false;
-        IsBeingResized = false;
-        Current = 0;
-        Count = 1;
-        OffMinX = OffMaxX = 0.0f;
-        LineMinY = LineMaxY = 0.0f;
-        HostCursorPosY = 0.0f;
-        HostCursorMaxPosX = 0.0f;
-        Columns.clear();
-    }
+    ImGuiColumns()      { memset(this, 0, sizeof(*this)); }
 };
 
 //-----------------------------------------------------------------------------
@@ -1083,7 +1069,7 @@ struct ImGuiWindowSettings
     bool        Collapsed;
     bool        WantApply;      // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
-    ImGuiWindowSettings()       { ID = 0; Pos = Size = ImVec2ih(0, 0); Collapsed = WantApply = false; }
+    ImGuiWindowSettings()       { memset(this, 0, sizeof(*this)); }
     char* GetName()             { return (char*)(this + 1); }
 };
 

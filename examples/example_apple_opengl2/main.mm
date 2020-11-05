@@ -139,7 +139,7 @@
     animationTimer = nil;
 }
 
-// Forward Mouse/Keyboard events to dear imgui OSX backend. It returns true when imgui is expecting to use the event.
+// Forward Mouse/Keyboard events to Dear ImGui OSX backend.
 -(void)keyUp:(NSEvent *)event               { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)keyDown:(NSEvent *)event             { ImGui_ImplOSX_HandleEvent(event, self); }
 -(void)flagsChanged:(NSEvent *)event        { ImGui_ImplOSX_HandleEvent(event, self); }
