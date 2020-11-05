@@ -1892,7 +1892,7 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (1 + 2 + 64 * 2)    // See TableUpdateDrawChannels()
 
-// [Internal] sizeof() ~ 100
+// [Internal] sizeof() ~ 96
 // We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
 struct ImGuiTableColumn
 {
@@ -1907,23 +1907,23 @@ struct ImGuiTableColumn
     float                   WidthAuto;                      // Automatic width
     float                   WidthRequest;                   // Master width absolute value when !(Flags & _WidthStretch). When Stretch this is derived every frame from StretchWeight in TableUpdateLayout()
     float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be > WidthRequest to honor minimum width, may be < WidthRequest to honor shrinking columns down in tight space.
-    float                   ContentMinX;                    // Start position for the frame, currently ~(MinX + CellPaddingX)
+    float                   WorkMinX;                       // Start position for the frame, currently ~(MinX + CellPaddingX)
     float                   ContentMaxXFrozen;              // Contents maximum position for frozen rows (apart from headers), from which we can infer content width.
     float                   ContentMaxXUnfrozen;
     float                   ContentMaxXHeadersUsed;         // Contents maximum position for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
     float                   ContentMaxXHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
-    bool                    IsVisible;                      // Is the column not marked Hidden by the user? (could be clipped by scrolling, etc).
+    bool                    IsVisible;                      // Is the column not marked Hidden by the user? (even if off view, e.g. clipped by scrolling).
     bool                    IsVisibleNextFrame;
-    bool                    IsClipped;                      // Set when not overlapping the host window clipping rectangle.
-    bool                    IsSkipItems;
+    bool                    IsClipped;                      // Is not actually in view (e.g. not overlapping the host window clipping rectangle).
+    bool                    IsSkipItems;                    // Do we want item submissions to this column to be ignored early on.
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
     ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
     ImS8                    PrevVisibleColumn;              // Index of prev visible column within Columns[], -1 if first visible column
     ImS8                    NextVisibleColumn;              // Index of next visible column within Columns[], -1 if last visible column
-    ImS8                    SortOrder;                      // -1: Not sorting on this column
-    ImS8                    SortDirection;                  // enum ImGuiSortDirection_
+    ImS8                    SortOrder;                      // Index of this column within sort specs, -1 if not sorting on this column, 0 for single-sort, may be >0 on multi-sort
+    ImS8                    SortDirection;                  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending
     ImU8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
     ImU8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
     ImU8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
@@ -1956,8 +1956,8 @@ struct ImGuiTableCellData
 struct ImGuiTable
 {
     ImGuiID                     ID;
-    ImGuiTableFlags             Flags;
-    ImVector<char>              RawData;
+    ImGuiTableFlags             Flags;                      
+    void*                       RawData;                    // Single allocation to hold Columns[], DisplayOrderToIndex[] and RowCellData[]
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImS8>                DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
@@ -1969,8 +1969,8 @@ struct ImGuiTable
     int                         LastFrameActive;
     int                         ColumnsCount;               // Number of columns declared in BeginTable()
     int                         ColumnsVisibleCount;        // Number of non-hidden columns (<= ColumnsCount)
-    int                         CurrentColumn;
     int                         CurrentRow;
+    int                         CurrentColumn;
     ImS16                       InstanceCurrent;            // Count of BeginTable() calls with same ID in the same frame (generally 0). This is a little bit similar to BeginCount for a window, but multiple table with same ID look are multiple tables, they are just synched.
     ImS16                       InstanceInteracted;         // Mark which instance (generally 0) of the same ID is being interacted with
     float                       RowPosY1;
@@ -1980,7 +1980,7 @@ struct ImGuiTable
     float                       RowIndentOffsetX;
     ImGuiTableRowFlags          RowFlags : 16;              // Current row flags, see ImGuiTableRowFlags_
     ImGuiTableRowFlags          LastRowFlags : 16;
-    int                         RowBgColorCounter;          // Counter for alternating background colors (can be fast-forwarded by e.g clipper)
+    int                         RowBgColorCounter;          // Counter for alternating background colors (can be fast-forwarded by e.g clipper), not same as CurrentRow because header rows typically don't increase this.
     ImU32                       RowBgColor[2];              // Background color override for current row.
     ImU32                       BorderColorStrong;
     ImU32                       BorderColorLight;
@@ -2008,7 +2008,7 @@ struct ImGuiTable
     ImRect                      HostBackupWorkRect;         // Backup of InnerWindow->WorkRect at the end of BeginTable()
     ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
     ImRect                      HostBackupClipRect;         // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
-    ImVec2                      HostCursorMaxPos;           // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
+    ImVec2                      HostBackupCursorMaxPos;     // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
     ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->ColumnsOffset at the end of BeginTable()
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
@@ -2049,18 +2049,8 @@ struct ImGuiTable
     bool                        MemoryCompacted;
     bool                        HostSkipItems;              // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
 
-    ImGuiTable()
-    {
-        memset(this, 0, sizeof(*this));
-        SettingsOffset = -1;
-        InstanceInteracted = -1;
-        LastFrameActive = -1;
-        LastResizedColumn = -1;
-        ContextPopupColumn = -1;
-        ReorderColumn = -1;
-        ResizedColumn = -1;
-        HoveredColumnBody = HoveredColumnBorder = -1;
-    }
+    IMGUI_API ImGuiTable();
+    IMGUI_API ~ImGuiTable();
 };
 
 // sizeof() ~ 12

@@ -3379,9 +3379,10 @@ static void ShowDemoWindowTables()
         ImGui::SetNextItemOpen(open_action != 0);
     if (ImGui::TreeNode("Basic"))
     {
-        // Here we will showcase three different ways to output a table. They are very simple variations of a same thing!
+        // Here we will showcase three different ways to output a table.
+        // They are very simple variations of a same thing!
 
-        // Basic use of tables using TableNextRow() to create a new row, and TableSetColumnIndex() to select the column.
+        // [Method 1] Using TableNextRow() to create a new row, and TableSetColumnIndex() to select the column.
         // In many situations, this is the most flexible and easy to use pattern.
         HelpMarker("Using TableNextRow() + calling TableSetColumnIndex() _before_ each cell, in a loop.");
         if (ImGui::BeginTable("##table1", 3))
@@ -3398,8 +3399,8 @@ static void ShowDemoWindowTables()
             ImGui::EndTable();
         }
 
-        // This essentially the same as above, except instead of using a for loop we call TableSetColumnIndex() manually.
-        // Sometimes this makes more sense.
+        // [Method 2] Using TableNextColumn() called multiple times, instead of using a for loop + TableSetColumnIndex().
+        // This is generally more convenient when you have code manually submitting the contents of each columns.
         HelpMarker("Using TableNextRow() + calling TableNextColumn() _before_ each cell, manually.");
         if (ImGui::BeginTable("##table2", 3))
         {
@@ -3416,12 +3417,13 @@ static void ShowDemoWindowTables()
             ImGui::EndTable();
         }
 
-        // Another subtle variant, we call TableNextColumn() _before_ each cell. At the end of a row, TableNextColumn() will create a new row.
-        // Note that we never TableNextRow() here!
+        // [Method 3] We call TableNextColumn() _before_ each cell. We never call TableNextRow(),
+        // as TableNextColumn() will automatically wrap around and create new roes as needed.
+        // This is generally more convenient when your cells all contains the same type of data.
         HelpMarker(
             "Only using TableNextColumn(), which tends to be convenient for tables where every cells contains the same type of contents.\n"
             "This is also more similar to the old NextColumn() function of the Columns API, and provided to facilitate the Columns->Tables API transition.");
-        if (ImGui::BeginTable("##table4", 3))
+        if (ImGui::BeginTable("##table3", 3))
         {
             for (int item = 0; item < 14; item++)
             {
@@ -3445,28 +3447,27 @@ static void ShowDemoWindowTables()
         static int contents_type = CT_Text;
 
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
-        ImGui::CheckboxFlags("ImGuiTableFlags_Borders", (unsigned int*)&flags, ImGuiTableFlags_Borders);
+        ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", &flags, ImGuiTableFlags_RowBg);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Borders", &flags, ImGuiTableFlags_Borders);
         ImGui::SameLine(); HelpMarker("ImGuiTableFlags_Borders\n = ImGuiTableFlags_BordersInnerV\n | ImGuiTableFlags_BordersOuterV\n | ImGuiTableFlags_BordersInnerV\n | ImGuiTableFlags_BordersOuterH");
         ImGui::Indent();
 
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", &flags, ImGuiTableFlags_BordersH);
         ImGui::Indent();
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterH);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", &flags, ImGuiTableFlags_BordersOuterH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", &flags, ImGuiTableFlags_BordersInnerH);
         ImGui::Unindent();
 
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", &flags, ImGuiTableFlags_BordersV);
         ImGui::Indent();
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags, ImGuiTableFlags_BordersInnerV);
         ImGui::Unindent();
 
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInner", (unsigned int*)&flags, ImGuiTableFlags_BordersInner);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", &flags, ImGuiTableFlags_BordersOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInner", &flags, ImGuiTableFlags_BordersInner);
         ImGui::Unindent();
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", (unsigned int*)&flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", (unsigned int*)&flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
 
         ImGui::AlignTextToFramePadding(); ImGui::Text("Cell contents:");
         ImGui::SameLine(); ImGui::RadioButton("Text", &contents_type, CT_Text);
@@ -3515,8 +3516,8 @@ static void ShowDemoWindowTables()
         // Each columns maintain a sizing weight, and they will occupy all available width.
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", &flags, ImGuiTableFlags_BordersV);
         ImGui::SameLine(); HelpMarker("Using the _Resizable flag automatically enables the _BordersV flag as well.");
         PopStyleCompact();
 
@@ -3549,7 +3550,7 @@ static void ShowDemoWindowTables()
             "Fixed-width columns generally makes more sense if you want to use horizontal scrolling.\n\n"
             "Double-click a column border to auto-fit the column to its contents.");
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_SizingPolicyFixedX | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV;
-        //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX); // FIXME-TABLE: Explain or fix the effect of enable Scroll on outer_size
+        //ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", &flags, ImGuiTableFlags_ScrollX); // FIXME-TABLE: Explain or fix the effect of enable Scroll on outer_size
         if (ImGui::BeginTable("##table1", 3, flags))
         {
             for (int row = 0; row < 5; row++)
@@ -3620,11 +3621,11 @@ static void ShowDemoWindowTables()
         HelpMarker("Click and drag column headers to reorder columns.\n\nYou can also right-click on a header to open a context menu.");
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_NoBordersInBody;
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
-        ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", (unsigned int*)&flags, ImGuiTableFlags_Reorderable);
-        ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", (unsigned int*)&flags, ImGuiTableFlags_Hideable);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", (unsigned int*)&flags, ImGuiTableFlags_NoBordersInBody);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", (unsigned int*)&flags, ImGuiTableFlags_NoBordersInBodyUntilResize);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", &flags, ImGuiTableFlags_Reorderable);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", &flags, ImGuiTableFlags_Hideable);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
         PopStyleCompact();
 
         if (ImGui::BeginTable("##table1", 3, flags))
@@ -3681,14 +3682,14 @@ static void ShowDemoWindowTables()
             "Because of this, activating BorderOuterV sets the default to PadOuterX. Using PadOuterX or NoPadOuterX you can override the default.\n");
 
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", (unsigned int*)&flags, ImGuiTableFlags_PadOuterX);
+        ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags, ImGuiTableFlags_PadOuterX);
         ImGui::SameLine(); HelpMarker("Enable outer-most padding (default if ImGuiTableFlags_BordersOuterV is set)");
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", (unsigned int*)&flags, ImGuiTableFlags_NoPadOuterX);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", &flags, ImGuiTableFlags_NoPadOuterX);
         ImGui::SameLine(); HelpMarker("Disable outer-most padding (default if ImGuiTableFlags_BordersOuterV is not set)");
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", (unsigned int*)&flags, ImGuiTableFlags_NoPadInnerX);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", &flags, ImGuiTableFlags_NoPadInnerX);
         ImGui::SameLine(); HelpMarker("Disable inner padding between columns (double inner padding if BordersOuterV is on, single inner padding if BordersOuterV is off)");
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags, ImGuiTableFlags_BordersInnerV);
         PopStyleCompact();
 
         if (ImGui::BeginTable("##table1", 3, flags))
@@ -3725,9 +3726,9 @@ static void ShowDemoWindowTables()
     {
         static ImGuiTableFlags flags = ImGuiTableFlags_None;
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", (unsigned int*)&flags, ImGuiTableFlags_NoKeepColumnsVisible);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", &flags, ImGuiTableFlags_NoKeepColumnsVisible);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags, ImGuiTableFlags_BordersOuterV);
         PopStyleCompact();
 
         if (ImGui::BeginTable("##table1", 4, flags))
@@ -3761,7 +3762,7 @@ static void ShowDemoWindowTables()
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable;
 
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
+        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", &flags, ImGuiTableFlags_ScrollY);
         PopStyleCompact();
 
         // When using ScrollX or ScrollY we need to specify a size for our table container!
@@ -3805,8 +3806,8 @@ static void ShowDemoWindowTables()
         static int freeze_rows = 1;
 
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX);
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
+        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", &flags, ImGuiTableFlags_ScrollX);
+        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", &flags, ImGuiTableFlags_ScrollY);
         ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
         ImGui::DragInt("freeze_cols", &freeze_cols, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);
         ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
@@ -3864,19 +3865,19 @@ static void ShowDemoWindowTables()
                 ImGui::PushID(column);
                 ImGui::AlignTextToFramePadding(); // FIXME-TABLE: Workaround for wrong text baseline propagation
                 ImGui::Text("Flags for '%s'", column_names[column]);
-                ImGui::CheckboxFlags("_NoResize", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoResize);
-                ImGui::CheckboxFlags("_NoClipX", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoClipX);
-                ImGui::CheckboxFlags("_NoHide", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoHide);
-                ImGui::CheckboxFlags("_NoReorder", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoReorder);
-                ImGui::CheckboxFlags("_DefaultSort", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_DefaultSort);
-                ImGui::CheckboxFlags("_DefaultHide", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_DefaultHide);
-                ImGui::CheckboxFlags("_NoSort", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoSort);
-                ImGui::CheckboxFlags("_NoSortAscending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoSortAscending);
-                ImGui::CheckboxFlags("_NoSortDescending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_NoSortDescending);
-                ImGui::CheckboxFlags("_PreferSortAscending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_PreferSortAscending);
-                ImGui::CheckboxFlags("_PreferSortDescending", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_PreferSortDescending);
-                ImGui::CheckboxFlags("_IndentEnable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentEnable); ImGui::SameLine(); HelpMarker("Default for column 0");
-                ImGui::CheckboxFlags("_IndentDisable", (unsigned int*)&column_flags[column], ImGuiTableColumnFlags_IndentDisable); ImGui::SameLine(); HelpMarker("Default for column >0");
+                ImGui::CheckboxFlags("_NoResize", &column_flags[column], ImGuiTableColumnFlags_NoResize);
+                ImGui::CheckboxFlags("_NoClipX", &column_flags[column], ImGuiTableColumnFlags_NoClipX);
+                ImGui::CheckboxFlags("_NoHide", &column_flags[column], ImGuiTableColumnFlags_NoHide);
+                ImGui::CheckboxFlags("_NoReorder", &column_flags[column], ImGuiTableColumnFlags_NoReorder);
+                ImGui::CheckboxFlags("_DefaultSort", &column_flags[column], ImGuiTableColumnFlags_DefaultSort);
+                ImGui::CheckboxFlags("_DefaultHide", &column_flags[column], ImGuiTableColumnFlags_DefaultHide);
+                ImGui::CheckboxFlags("_NoSort", &column_flags[column], ImGuiTableColumnFlags_NoSort);
+                ImGui::CheckboxFlags("_NoSortAscending", &column_flags[column], ImGuiTableColumnFlags_NoSortAscending);
+                ImGui::CheckboxFlags("_NoSortDescending", &column_flags[column], ImGuiTableColumnFlags_NoSortDescending);
+                ImGui::CheckboxFlags("_PreferSortAscending", &column_flags[column], ImGuiTableColumnFlags_PreferSortAscending);
+                ImGui::CheckboxFlags("_PreferSortDescending", &column_flags[column], ImGuiTableColumnFlags_PreferSortDescending);
+                ImGui::CheckboxFlags("_IndentEnable", &column_flags[column], ImGuiTableColumnFlags_IndentEnable); ImGui::SameLine(); HelpMarker("Default for column 0");
+                ImGui::CheckboxFlags("_IndentDisable", &column_flags[column], ImGuiTableColumnFlags_IndentDisable); ImGui::SameLine(); HelpMarker("Default for column >0");
                 ImGui::PopID();
             }
             PopStyleCompact();
@@ -3964,20 +3965,20 @@ static void ShowDemoWindowTables()
         PushStyleCompact();
         ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 22);
         ImGui::Combo("Contents", &contents_type, "Short Text\0Long Text\0Button\0Fill Button\0InputText\0");
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerH);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterH);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX);
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
-        if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyStretchX))
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", &flags, ImGuiTableFlags_BordersInnerH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", &flags, ImGuiTableFlags_BordersOuterH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags, ImGuiTableFlags_BordersInnerV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags, ImGuiTableFlags_BordersOuterV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", &flags, ImGuiTableFlags_ScrollX);
+        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", &flags, ImGuiTableFlags_ScrollY);
+        if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", &flags, ImGuiTableFlags_SizingPolicyStretchX))
             flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyStretchX);  // Can't specify both sizing polices so we clear the other
         ImGui::SameLine(); HelpMarker("Default if _ScrollX if disabled. Makes columns use _WidthStretch policy by default.");
-        if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyFixedX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyFixedX))
+        if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyFixedX", &flags, ImGuiTableFlags_SizingPolicyFixedX))
             flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyFixedX);    // Can't specify both sizing polices so we clear the other
         ImGui::SameLine(); HelpMarker("Default if _ScrollX if enabled. Makes columns use _WidthFixed by default, or _WidthAlwaysAutoResize if _Resizable is not set.");
-        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
-        ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", (unsigned int*)&flags, ImGuiTableFlags_NoClip);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
+        ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", &flags, ImGuiTableFlags_NoClip);
         PopStyleCompact();
 
         if (ImGui::BeginTable("##3ways", 3, flags, ImVec2(0, 100)))
@@ -4016,11 +4017,11 @@ static void ShowDemoWindowTables()
         static bool no_widget_frame = false;
 
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", (unsigned int*)&flags, ImGuiTableFlags_BordersOuter);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
-        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
-        ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
-        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuter", &flags, ImGuiTableFlags_BordersOuter);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", &flags, ImGuiTableFlags_BordersH);
+        ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", &flags, ImGuiTableFlags_BordersV);
+        ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", &flags, ImGuiTableFlags_RowBg);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
         ImGui::Checkbox("no_widget_frame", &no_widget_frame);
         PopStyleCompact();
 
@@ -4079,8 +4080,8 @@ static void ShowDemoWindowTables()
         static int cell_bg_type = 1;
 
         PushStyleCompact();
-        ImGui::CheckboxFlags("ImGuiTableFlags_Borders", (unsigned int*)&flags, ImGuiTableFlags_Borders);
-        ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
+        ImGui::CheckboxFlags("ImGuiTableFlags_Borders", &flags, ImGuiTableFlags_Borders);
+        ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", &flags, ImGuiTableFlags_RowBg);
         ImGui::SameLine(); HelpMarker("ImGuiTableFlags_RowBg automatically sets RowBg0 to alternative colors pulled from the Style.");
         ImGui::Combo("row bg type", (int*)&row_bg_type, "None\0Red\0Gradient\0");
         ImGui::Combo("row bg target", (int*)&row_bg_target, "RowBg0\0RowBg1\0"); ImGui::SameLine(); HelpMarker("Target RowBg0 to override the alternating odd/even colors,\nTarget RowBg1 to blend with them.");
@@ -4467,57 +4468,57 @@ static void ShowDemoWindowTables()
 
             if (ImGui::TreeNodeEx("Features:", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", (unsigned int*)&flags, ImGuiTableFlags_Resizable);
-                ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", (unsigned int*)&flags, ImGuiTableFlags_Reorderable);
-                ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", (unsigned int*)&flags, ImGuiTableFlags_Hideable);
-                ImGui::CheckboxFlags("ImGuiTableFlags_Sortable", (unsigned int*)&flags, ImGuiTableFlags_Sortable);
-                ImGui::CheckboxFlags("ImGuiTableFlags_MultiSortable", (unsigned int*)&flags, ImGuiTableFlags_MultiSortable);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoSavedSettings", (unsigned int*)&flags, ImGuiTableFlags_NoSavedSettings);
-                ImGui::CheckboxFlags("ImGuiTableFlags_ContextMenuInBody", (unsigned int*)&flags, ImGuiTableFlags_ContextMenuInBody);
+                ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
+                ImGui::CheckboxFlags("ImGuiTableFlags_Reorderable", &flags, ImGuiTableFlags_Reorderable);
+                ImGui::CheckboxFlags("ImGuiTableFlags_Hideable", &flags, ImGuiTableFlags_Hideable);
+                ImGui::CheckboxFlags("ImGuiTableFlags_Sortable", &flags, ImGuiTableFlags_Sortable);
+                ImGui::CheckboxFlags("ImGuiTableFlags_MultiSortable", &flags, ImGuiTableFlags_MultiSortable);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoSavedSettings", &flags, ImGuiTableFlags_NoSavedSettings);
+                ImGui::CheckboxFlags("ImGuiTableFlags_ContextMenuInBody", &flags, ImGuiTableFlags_ContextMenuInBody);
                 ImGui::TreePop();
             }
 
             if (ImGui::TreeNodeEx("Decoration:", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", (unsigned int*)&flags, ImGuiTableFlags_RowBg);
-                ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", (unsigned int*)&flags, ImGuiTableFlags_BordersV);
-                ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterV);
-                ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerV);
-                ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", (unsigned int*)&flags, ImGuiTableFlags_BordersH);
-                ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", (unsigned int*)&flags, ImGuiTableFlags_BordersOuterH);
-                ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", (unsigned int*)&flags, ImGuiTableFlags_BordersInnerH);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", (unsigned int*)&flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", (unsigned int*)&flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
+                ImGui::CheckboxFlags("ImGuiTableFlags_RowBg", &flags, ImGuiTableFlags_RowBg);
+                ImGui::CheckboxFlags("ImGuiTableFlags_BordersV", &flags, ImGuiTableFlags_BordersV);
+                ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterV", &flags, ImGuiTableFlags_BordersOuterV);
+                ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags, ImGuiTableFlags_BordersInnerV);
+                ImGui::CheckboxFlags("ImGuiTableFlags_BordersH", &flags, ImGuiTableFlags_BordersH);
+                ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", &flags, ImGuiTableFlags_BordersOuterH);
+                ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", &flags, ImGuiTableFlags_BordersInnerH);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBody", &flags, ImGuiTableFlags_NoBordersInBody); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body (borders will always appears in Headers");
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoBordersInBodyUntilResize", &flags, ImGuiTableFlags_NoBordersInBodyUntilResize); ImGui::SameLine(); HelpMarker("Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers)");
                 ImGui::TreePop();
             }
 
             if (ImGui::TreeNodeEx("Sizing, Padding:", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", (unsigned int*)&flags, ImGuiTableFlags_PadOuterX);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", (unsigned int*)&flags, ImGuiTableFlags_NoPadOuterX);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", (unsigned int*)&flags, ImGuiTableFlags_NoPadInnerX);
-                if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyStretchX))
+                ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags, ImGuiTableFlags_PadOuterX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", &flags, ImGuiTableFlags_NoPadOuterX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", &flags, ImGuiTableFlags_NoPadInnerX);
+                if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", &flags, ImGuiTableFlags_SizingPolicyStretchX))
                     flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyStretchX);  // Can't specify both sizing polices so we clear the other
                 ImGui::SameLine(); HelpMarker("[Default if ScrollX is off]\nFit all columns within available width (or specified inner_width). Fixed and Stretch columns allowed.");
-                if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyFixedX", (unsigned int*)&flags, ImGuiTableFlags_SizingPolicyFixedX))
+                if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyFixedX", &flags, ImGuiTableFlags_SizingPolicyFixedX))
                     flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyFixedX);    // Can't specify both sizing polices so we clear the other
                 ImGui::SameLine(); HelpMarker("[Default if ScrollX is on]\nEnlarge as needed: enable scrollbar if ScrollX is enabled, otherwise extend parent window's contents rectangle. Only Fixed columns allowed. Stretched columns will calculate their width assuming no scrolling.");
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoHeadersWidth", (unsigned int*)&flags, ImGuiTableFlags_NoHeadersWidth);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoHostExtendY", (unsigned int*)&flags, ImGuiTableFlags_NoHostExtendY);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", (unsigned int*)&flags, ImGuiTableFlags_NoKeepColumnsVisible);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoHeadersWidth", &flags, ImGuiTableFlags_NoHeadersWidth);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoHostExtendY", &flags, ImGuiTableFlags_NoHostExtendY);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", &flags, ImGuiTableFlags_NoKeepColumnsVisible);
                 ImGui::SameLine(); HelpMarker("Only available if ScrollX is disabled.");
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", (unsigned int*)&flags, ImGuiTableFlags_NoClip);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", &flags, ImGuiTableFlags_NoClip);
                 ImGui::SameLine(); HelpMarker("Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with ScrollFreeze options.");
                 ImGui::TreePop();
             }
 
             if (ImGui::TreeNodeEx("Scrolling:", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", (unsigned int*)&flags, ImGuiTableFlags_ScrollX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", &flags, ImGuiTableFlags_ScrollX);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
                 ImGui::DragInt("freeze_cols", &freeze_cols, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);
-                ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", (unsigned int*)&flags, ImGuiTableFlags_ScrollY);
+                ImGui::CheckboxFlags("ImGuiTableFlags_ScrollY", &flags, ImGuiTableFlags_ScrollY);
                 ImGui::SameLine();
                 ImGui::SetNextItemWidth(ImGui::GetFrameHeight());
                 ImGui::DragInt("freeze_rows", &freeze_rows, 0.2f, 0, 9, NULL, ImGuiSliderFlags_NoInput);

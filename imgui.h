@@ -668,6 +668,8 @@ namespace ImGui
     //      you may prefer using TableNextColumn() instead of TableNextRow() + TableSetColumnIndex().
     //      TableNextColumn() will automatically wrap-around into the next row if needed.
     //    - IMPORTANT: Comparatively to the old Columns() API, we need to call TableNextColumn() for the first column!
+    //    - Both TableSetColumnIndex() and TableNextColumn() return false when the column is not visible, so you can
+    //      skip submitting the contents of a cell but only if you know the contents is not going to alter row height.
     //    - Summary of possible call flow:
     //      ----------------------------------------------------------------------------------------------------------
     //       TableNextRow() -> TableSetColumnIndex(0) -> Text("Hello 0") -> TableSetColumnIndex(1) -> Text("Hello 1")  // OK
@@ -680,8 +682,8 @@ namespace ImGui
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
     IMGUI_API void          TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f); // append into the first cell of a new row.
-    IMGUI_API bool          TableNextColumn();                          // append into the next column (or first column of next row if currently in last column). Return true if column is visible.
-    IMGUI_API bool          TableSetColumnIndex(int column_n);          // append into the specified column. Return true if column is visible.
+    IMGUI_API bool          TableNextColumn();                          // append into the next column (or first column of next row if currently in last column). Return false when column is not visible.
+    IMGUI_API bool          TableSetColumnIndex(int column_n);          // append into the specified column. Return false when column is not visible.
     IMGUI_API int           TableGetColumnIndex();                      // return current column index.
     // Tables: Headers & Columns declaration
     // - Use TableSetupColumn() to specify label, resizing policy, default width/weight, id, various other flags etc.
