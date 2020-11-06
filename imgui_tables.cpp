@@ -759,8 +759,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // Redistribute remainder width due to rounding (remainder width is < 1.0f * number of Stretch column).
     // Using right-to-left distribution (more likely to match resizing cursor), could be adjusted depending
     // on where the mouse cursor is and/or relative weights.
-    // FIXME: Make it optional? User might prefer to preserve pixel perfect same size?
-    if (width_remaining_for_stretched_columns >= 1.0f)
+    if (width_remaining_for_stretched_columns >= 1.0f && !(table->Flags & ImGuiTableFlags_PreciseStretchWidths))
         for (int order_n = table->ColumnsCount - 1; sum_weights_stretched > 0.0f && width_remaining_for_stretched_columns >= 1.0f && order_n >= 0; order_n--)
         {
             if (!(table->VisibleMaskByDisplayOrder & ((ImU64)1 << order_n)))
@@ -1887,7 +1886,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->DC.NavLayerCurrent = (ImGuiNavLayer)column->NavLayerCurrent;
 
     window->WorkRect.Min.y = window->DC.CursorPos.y;
-    window->WorkRect.Min.x = column->WorkMinX; // == column->MinX + table->CellPaddingX + table->CellSpacingX1;
+    window->WorkRect.Min.x = column->WorkMinX;
     window->WorkRect.Max.x = column->MaxX - table->CellPaddingX - table->CellSpacingX2;
 
     // To allow ImGuiListClipper to function we propagate our row height

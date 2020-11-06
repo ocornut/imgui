@@ -3961,10 +3961,13 @@ static void ShowDemoWindowTables()
         enum ContentsType { CT_ShortText, CT_LongText, CT_Button, CT_FillButton, CT_InputText };
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
         static int contents_type = CT_Button;
+        static int column_count = 3;
 
         PushStyleCompact();
         ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 22);
         ImGui::Combo("Contents", &contents_type, "Short Text\0Long Text\0Button\0Fill Button\0InputText\0");
+        ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 22);
+        ImGui::DragInt("Columns", &column_count, 0.1f, 1, 64, "%d", ImGuiSliderFlags_AlwaysClamp);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerH", &flags, ImGuiTableFlags_BordersInnerH);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersOuterH", &flags, ImGuiTableFlags_BordersOuterH);
         ImGui::CheckboxFlags("ImGuiTableFlags_BordersInnerV", &flags, ImGuiTableFlags_BordersInnerV);
@@ -3977,16 +3980,18 @@ static void ShowDemoWindowTables()
         if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyFixedX", &flags, ImGuiTableFlags_SizingPolicyFixedX))
             flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyFixedX);    // Can't specify both sizing polices so we clear the other
         ImGui::SameLine(); HelpMarker("Default if _ScrollX if enabled. Makes columns use _WidthFixed by default, or _WidthAlwaysAutoResize if _Resizable is not set.");
+        ImGui::CheckboxFlags("ImGuiTableFlags_PreciseStretchWidths", &flags, ImGuiTableFlags_PreciseStretchWidths);
+        ImGui::SameLine(); HelpMarker("Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.");
         ImGui::CheckboxFlags("ImGuiTableFlags_Resizable", &flags, ImGuiTableFlags_Resizable);
         ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", &flags, ImGuiTableFlags_NoClip);
         PopStyleCompact();
 
-        if (ImGui::BeginTable("##3ways", 3, flags, ImVec2(0, 100)))
+        if (ImGui::BeginTable("##nways", column_count, flags, ImVec2(0, 100)))
         {
             for (int row = 0; row < 10; row++)
             {
                 ImGui::TableNextRow();
-                for (int column = 0; column < 3; column++)
+                for (int column = 0; column < column_count; column++)
                 {
                     ImGui::TableSetColumnIndex(column);
                     char label[32];
@@ -4492,11 +4497,8 @@ static void ShowDemoWindowTables()
                 ImGui::TreePop();
             }
 
-            if (ImGui::TreeNodeEx("Sizing, Padding:", ImGuiTreeNodeFlags_DefaultOpen))
+            if (ImGui::TreeNodeEx("Sizing:", ImGuiTreeNodeFlags_DefaultOpen))
             {
-                ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags, ImGuiTableFlags_PadOuterX);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", &flags, ImGuiTableFlags_NoPadOuterX);
-                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", &flags, ImGuiTableFlags_NoPadInnerX);
                 if (ImGui::CheckboxFlags("ImGuiTableFlags_SizingPolicyStretchX", &flags, ImGuiTableFlags_SizingPolicyStretchX))
                     flags &= ~(ImGuiTableFlags_SizingPolicyMaskX_ ^ ImGuiTableFlags_SizingPolicyStretchX);  // Can't specify both sizing polices so we clear the other
                 ImGui::SameLine(); HelpMarker("[Default if ScrollX is off]\nFit all columns within available width (or specified inner_width). Fixed and Stretch columns allowed.");
@@ -4507,8 +4509,18 @@ static void ShowDemoWindowTables()
                 ImGui::CheckboxFlags("ImGuiTableFlags_NoHostExtendY", &flags, ImGuiTableFlags_NoHostExtendY);
                 ImGui::CheckboxFlags("ImGuiTableFlags_NoKeepColumnsVisible", &flags, ImGuiTableFlags_NoKeepColumnsVisible);
                 ImGui::SameLine(); HelpMarker("Only available if ScrollX is disabled.");
+                ImGui::CheckboxFlags("ImGuiTableFlags_PreciseStretchWidths", &flags, ImGuiTableFlags_PreciseStretchWidths);
+                ImGui::SameLine(); HelpMarker("Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.");
                 ImGui::CheckboxFlags("ImGuiTableFlags_NoClip", &flags, ImGuiTableFlags_NoClip);
                 ImGui::SameLine(); HelpMarker("Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with ScrollFreeze options.");
+                ImGui::TreePop();
+            }
+
+            if (ImGui::TreeNodeEx("Sizing:", ImGuiTreeNodeFlags_DefaultOpen))
+            {
+                ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags, ImGuiTableFlags_PadOuterX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadOuterX", &flags, ImGuiTableFlags_NoPadOuterX);
+                ImGui::CheckboxFlags("ImGuiTableFlags_NoPadInnerX", &flags, ImGuiTableFlags_NoPadInnerX);
                 ImGui::TreePop();
             }
 
