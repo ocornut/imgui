@@ -232,6 +232,23 @@ struct ImVec4
 };
 
 //-----------------------------------------------------------------------------
+// Generic context hooks
+//-----------------------------------------------------------------------------
+typedef void (*ImGuiContextHookCallback)(ImGuiContext* ctx, struct ImGuiContextHook* hook);
+enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookType_NewFramePost, ImGuiContextHookType_EndFramePre, ImGuiContextHookType_EndFramePost, ImGuiContextHookType_RenderPre, ImGuiContextHookType_RenderPost, ImGuiContextHookType_Shutdown };
+
+struct ImGuiContextHook
+{
+    ImGuiContextHookType        Type;
+    ImGuiID                     Handle;
+    ImGuiID                     Owner;
+    ImGuiContextHookCallback    Callback;
+    void*                       UserData;
+
+    ImGuiContextHook()          { memset(this, 0, sizeof(*this)); }
+};
+
+//-----------------------------------------------------------------------------
 // ImGui: Dear ImGui end-user API
 // (This is a namespace. You can add extra ImGui:: functions in your own separate file. Please don't modify imgui source files!)
 //-----------------------------------------------------------------------------
@@ -786,6 +803,9 @@ namespace ImGui
     IMGUI_API void*         MemAlloc(size_t size);
     IMGUI_API void          MemFree(void* ptr);
 
+    // Generic context hooks
+    IMGUI_API ImGuiID       AddContextHook(const ImGuiContextHook* hook);
+    IMGUI_API void          RemContextHook(ImGuiID hook_to_remove);
 } // namespace ImGui
 
 //-----------------------------------------------------------------------------

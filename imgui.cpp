@@ -3268,6 +3268,16 @@ const char* ImGui::GetVersion()
     return IMGUI_VERSION;
 }
 
+ImGuiID ImGui::AddContextHook(const ImGuiContextHook* hook)
+{
+    return AddContextHook(GImGui, hook);
+}
+
+void ImGui::RemContextHook(ImGuiID hook_to_remove)
+{
+    RemContextHook(GImGui, hook_to_remove);
+}
+
 // Internal state access - if you want to share Dear ImGui state between modules (e.g. DLL) or allocate it yourself
 // Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
 ImGuiContext* ImGui::GetCurrentContext()
@@ -3311,12 +3321,22 @@ void ImGui::DestroyContext(ImGuiContext* ctx)
 }
 
 // No specific ordering/dependency support, will see as needed
-void ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
+ImGuiID ImGui::AddContextHook(ImGuiContext* ctx, const ImGuiContextHook* hook)
 {
     ImGuiContext& g = *ctx;
     IM_ASSERT(hook->Callback != NULL);
     g.Hooks.push_back(*hook);
+    g.Hooks.back().Handle = ++g.HookHandleNext;
+    return g.HookHandleNext;
 }
+
+// Removed at the end of the frame, preventing changes to ImGuiContext::Hooks vector while possibly iterating it
+void ImGui::RemContextHook(ImGuiContext* ctx, ImGuiID hook_to_remove)
+{
+    ImGuiContext& g = *ctx;
+    g.HooksPendingRemoval.push_back(hook_to_remove);
+}
+
 
 // Call context hooks (used by e.g. test engine)
 // We assume a small number of hooks so all stored in same array
@@ -3751,9 +3771,20 @@ ImGuiKeyModFlags ImGui::GetMergedKeyModFlags()
 void ImGui::NewFrame()
 {
     IM_ASSERT(GImGui != NULL && "No current context. Did you call ImGui::CreateContext() and ImGui::SetCurrentContext() ?");
-    ImGuiContext& g = *GImGui;
 
-    CallContextHooks(&g, ImGuiContextHookType_NewFramePre);
+    // Remove pending delete hooks before frame start.
+    // This deferred removal avoid issues of removal while iterating the hook vector
+    while (!GImGui->HooksPendingRemoval.empty())
+    {
+        ImGuiID hookToRemove = GImGui->HooksPendingRemoval.back();
+        GImGui->HooksPendingRemoval.pop_back();
+        for (int n = 0; n < GImGui->Hooks.Size; n++)
+            if (GImGui->Hooks[n].Handle == hookToRemove)
+                GImGui->Hooks.erase(&GImGui->Hooks[n]);
+    }
+
+    CallContextHooks(GImGui, ImGuiContextHookType_NewFramePre);
+    ImGuiContext& g = *GImGui;
 
     // Check and assert for various common IO and Configuration mistakes
     ErrorCheckNewFrameSanityChecks();
@@ -4204,16 +4235,16 @@ void ImGui::PopClipRect()
 
 // This is normally called by Render(). You may want to call it directly if you want to avoid calling Render() but the gain will be very minimal.
 void ImGui::EndFrame()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.Initialized);
+{    
+    IM_ASSERT(GImGui->Initialized);
 
     // Don't process EndFrame() multiple times.
-    if (g.FrameCountEnded == g.FrameCount)
+    if (GImGui->FrameCountEnded == GImGui->FrameCount)
         return;
-    IM_ASSERT(g.WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
+    IM_ASSERT(GImGui->WithinFrameScope && "Forgot to call ImGui::NewFrame()?");
 
-    CallContextHooks(&g, ImGuiContextHookType_EndFramePre);
+    CallContextHooks(GImGui, ImGuiContextHookType_EndFramePre);
+    ImGuiContext& g = *GImGui;
 
     ErrorCheckEndFrameSanityChecks();
 
@@ -4286,17 +4317,17 @@ void ImGui::EndFrame()
 }
 
 void ImGui::Render()
-{
-    ImGuiContext& g = *GImGui;
-    IM_ASSERT(g.Initialized);
+{    
+    IM_ASSERT(GImGui->Initialized);
 
-    if (g.FrameCountEnded != g.FrameCount)
+    if (GImGui->FrameCountEnded != GImGui->FrameCount)
         EndFrame();
-    g.FrameCountRendered = g.FrameCount;
-    g.IO.MetricsRenderWindows = 0;
-    g.DrawDataBuilder.Clear();
+    GImGui->FrameCountRendered = GImGui->FrameCount;
+    GImGui->IO.MetricsRenderWindows = 0;
+    GImGui->DrawDataBuilder.Clear();
 
-    CallContextHooks(&g, ImGuiContextHookType_RenderPre);
+    CallContextHooks(GImGui, ImGuiContextHookType_RenderPre);
+    ImGuiContext& g = *GImGui;
 
     // Add background ImDrawList
     if (!g.BackgroundDrawList.VtxBuffer.empty())

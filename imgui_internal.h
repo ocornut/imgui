@@ -94,7 +94,7 @@ struct ImGuiColorMod;               // Stacked color modifier, backup of modifie
 struct ImGuiColumnData;             // Storage data for a single column
 struct ImGuiColumns;                // Storage data for a columns set
 struct ImGuiContext;                // Main Dear ImGui context
-struct ImGuiContextHook;            // Hook for extensions like ImGuiTestEngine
+
 struct ImGuiDataTypeInfo;           // Type information associated to a ImGuiDataType enum
 struct ImGuiGroupData;              // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiInputTextState;         // Internal state of the currently focused/edited text input box
@@ -1110,22 +1110,7 @@ struct ImGuiMetricsConfig
     }
 };
 
-//-----------------------------------------------------------------------------
-// [SECTION] Generic context hooks
-//-----------------------------------------------------------------------------
 
-typedef void (*ImGuiContextHookCallback)(ImGuiContext* ctx, ImGuiContextHook* hook);
-enum ImGuiContextHookType { ImGuiContextHookType_NewFramePre, ImGuiContextHookType_NewFramePost, ImGuiContextHookType_EndFramePre, ImGuiContextHookType_EndFramePost, ImGuiContextHookType_RenderPre, ImGuiContextHookType_RenderPost, ImGuiContextHookType_Shutdown };
-
-struct ImGuiContextHook
-{
-    ImGuiContextHookType        Type;
-    ImGuiID                     Owner;
-    ImGuiContextHookCallback    Callback;
-    void*                       UserData;
-
-    ImGuiContextHook()          { memset(this, 0, sizeof(*this)); }
-};
 
 //-----------------------------------------------------------------------------
 // [SECTION] ImGuiContext (main imgui context)
@@ -1330,6 +1315,8 @@ struct ImGuiContext
     ImVector<ImGuiSettingsHandler>      SettingsHandlers;       // List of .ini settings handlers
     ImChunkStream<ImGuiWindowSettings>  SettingsWindows;        // ImGuiWindow .ini settings entries
     ImVector<ImGuiContextHook>          Hooks;                  // Hooks for extensions (e.g. test engine)
+    ImVector<ImGuiID>                   HooksPendingRemoval;    // Hooks waiting to be removed
+    ImGuiID                             HookHandleNext;         // Next available hook handle
 
     // Capture/Logging
     bool                    LogEnabled;                         // Currently capturing
@@ -1854,7 +1841,8 @@ namespace ImGui
     IMGUI_API void          UpdateMouseMovingWindowEndFrame();
 
     // Generic context hooks
-    IMGUI_API void          AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
+    IMGUI_API ImGuiID       AddContextHook(ImGuiContext* context, const ImGuiContextHook* hook);
+    IMGUI_API void          RemContextHook(ImGuiContext* context, ImGuiID hook_to_remove);
     IMGUI_API void          CallContextHooks(ImGuiContext* context, ImGuiContextHookType type);
 
     // Settings
