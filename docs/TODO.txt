@@ -167,7 +167,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - dock: dock out from a collapsing header? would work nicely but need emitting window to keep submitting the code.
 
  - tabs: "there is currently a problem because TabItem() will try to submit their own tooltip after 0.50 second, and this will have the effect of making your tooltip flicker once." -> tooltip priority work
- - tabs: close button tends to overlap unsaved-document star 
+ - tabs: close button tends to overlap unsaved-document star
  - tabs: consider showing the star at the same spot as the close button, like VS Code does.
  - tabs: make EndTabBar fail if users doesn't respect BeginTabBar return value, for consistency/future-proofing.
  - tabs: persistent order/focus in BeginTabBar() api (#261, #351)
@@ -271,6 +271,7 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - filters: fuzzy matches (may use code at blog.forrestthewoods.com/4cffeed33fdb)
 
  - drag and drop: fix/support/options for overlapping drag sources.
+ - drag and drop: focus drag target window on hold (even without open)
  - drag and drop: releasing a drop shows the "..." tooltip for one frame - since e13e598 (#1725)
  - drag and drop: drag source on a group object (would need e.g. an invisible button covering group in EndGroup) https://twitter.com/paniq/status/1121446364909535233
  - drag and drop: have some way to know when a drag begin from BeginDragDropSource() pov. (see 2018/01/11 post in #143)
