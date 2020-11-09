@@ -69,7 +69,7 @@
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
-    // Setup Renderer backends
+    // Setup Renderer backend
     ImGui_ImplMetal_Init(_device);
 
     // Load Fonts

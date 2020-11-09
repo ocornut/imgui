@@ -41,10 +41,6 @@
 
 -(void)updateAndDrawDemoView
 {
-    ImGuiIO &io = ImGui::GetIO();
-    io.DisplaySize.x = self.bounds.size.width;
-    io.DisplaySize.y = self.bounds.size.height;
-
 #if TARGET_OS_OSX
     CGFloat framebufferScale = self.window.screen.backingScaleFactor ?: NSScreen.mainScreen.backingScaleFactor;
 #else
@@ -116,6 +112,7 @@
     [[self openGLContext] flushBuffer];
 
     // Update and Render additional Platform Windows
+    ImGuiIO &io = ImGui::GetIO();
     if (io.ConfigFlags & ImGuiConfigFlags_ViewportsEnable)
     {
         ImGui::UpdatePlatformWindows();
