@@ -1,3 +1,6 @@
+// Dear ImGui: standalone example application for OSX + Metal.
+// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
+// Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #import <Foundation/Foundation.h>
 
@@ -31,13 +34,15 @@
 
 @implementation ViewController
 
-- (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil {
+- (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil 
+{
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
     
     _device = MTLCreateSystemDefaultDevice();
     _commandQueue = [_device newCommandQueue];
 
-    if (!self.device) {
+    if (!self.device) 
+    {
         NSLog(@"Metal is not supported");
         abort();
     }
@@ -64,10 +69,7 @@
         style.Colors[ImGuiCol_WindowBg].w = 1.0f;
     }
 
-    // Setup Platform/Renderer backends
-#if TARGET_OS_OSX
-    ImGui_ImplOSX_Init(self.view);
-#endif
+    // Setup Renderer backends
     ImGui_ImplMetal_Init(_device);
 
     // Load Fonts
@@ -88,11 +90,13 @@
     return self;
 }
 
-- (MTKView *)mtkView {
+- (MTKView *)mtkView 
+{
     return (MTKView *)self.view;
 }
 
-- (void)loadView {
+- (void)loadView 
+{
     self.view = [[MTKView alloc] initWithFrame:CGRectMake(0, 0, 1200, 720)];
 }
 
@@ -113,58 +117,71 @@
 
 #if TARGET_OS_OSX
 
-- (void)viewWillAppear {
+- (void)viewWillAppear
+{
     [super viewWillAppear];
     self.view.window.delegate = self;
 }
 
-- (void)windowWillClose:(NSNotification *)notification {
+- (void)windowWillClose:(NSNotification *)notification
+{
     ImGui_ImplMetal_Shutdown();
     ImGui_ImplOSX_Shutdown();
     ImGui::DestroyContext();
 }
 
-- (void)mouseMoved:(NSEvent *)event {
+- (void)mouseMoved:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)mouseDown:(NSEvent *)event {
+- (void)mouseDown:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)rightMouseDown:(NSEvent *)event {
+- (void)rightMouseDown:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)otherMouseDown:(NSEvent *)event {
+- (void)otherMouseDown:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)mouseUp:(NSEvent *)event {
+- (void)mouseUp:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)rightMouseUp:(NSEvent *)event {
+- (void)rightMouseUp:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)otherMouseUp:(NSEvent *)event {
+- (void)otherMouseUp:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)mouseDragged:(NSEvent *)event {
+- (void)mouseDragged:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)rightMouseDragged:(NSEvent *)event {
+- (void)rightMouseDragged:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)otherMouseDragged:(NSEvent *)event {
+- (void)otherMouseDragged:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
-- (void)scrollWheel:(NSEvent *)event {
+- (void)scrollWheel:(NSEvent *)event
+{
     ImGui_ImplOSX_HandleEvent(event, self.view);
 }
 
@@ -175,15 +192,18 @@
 // multitouch correctly at all. This causes the "cursor" to behave very erratically
 // when there are multiple active touches. But for demo purposes, single-touch
 // interaction actually works surprisingly well.
-- (void)updateIOWithTouchEvent:(UIEvent *)event {
+- (void)updateIOWithTouchEvent:(UIEvent *)event
+{
     UITouch *anyTouch = event.allTouches.anyObject;
     CGPoint touchLocation = [anyTouch locationInView:self.view];
     ImGuiIO &io = ImGui::GetIO();
     io.MousePos = ImVec2(touchLocation.x, touchLocation.y);
 
     BOOL hasActiveTouch = NO;
-    for (UITouch *touch in event.allTouches) {
-        if (touch.phase != UITouchPhaseEnded && touch.phase != UITouchPhaseCancelled) {
+    for (UITouch *touch in event.allTouches)
+    {
+        if (touch.phase != UITouchPhaseEnded && touch.phase != UITouchPhaseCancelled)
+        {
             hasActiveTouch = YES;
             break;
         }
@@ -191,19 +211,23 @@
     io.MouseDown[0] = hasActiveTouch;
 }
 
-- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+- (void)touchesBegan:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
     [self updateIOWithTouchEvent:event];
 }
 
-- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+- (void)touchesMoved:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
     [self updateIOWithTouchEvent:event];
 }
 
-- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+- (void)touchesCancelled:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
     [self updateIOWithTouchEvent:event];
 }
 
-- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event {
+- (void)touchesEnded:(NSSet<UITouch *> *)touches withEvent:(UIEvent *)event
+{
     [self updateIOWithTouchEvent:event];
 }
 
@@ -213,7 +237,7 @@
 
 - (void)drawInMTKView:(MTKView*)view
 {
-    ImGuiIO &io = ImGui::GetIO();
+    ImGuiIO& io = ImGui::GetIO();
     io.DisplaySize.x = view.bounds.size.width;
     io.DisplaySize.y = view.bounds.size.height;
 
@@ -289,9 +313,9 @@
 
         // Rendering
         ImGui::Render();
-        ImDrawData* drawData = ImGui::GetDrawData();
-        drawData->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
-        ImGui_ImplMetal_RenderDrawData(drawData, commandBuffer, renderEncoder);
+        ImDrawData* draw_data = ImGui::GetDrawData();
+        draw_data->FramebufferScale = ImVec2(framebufferScale, framebufferScale);
+        ImGui_ImplMetal_RenderDrawData(draw_data, commandBuffer, renderEncoder);
 
         [renderEncoder popDebugGroup];
         [renderEncoder endEncoding];
@@ -325,8 +349,10 @@
 
 @implementation AppDelegate
 
-- (instancetype)init {
-    if (self = [super init]) {
+- (instancetype)init
+{
+    if (self = [super init])
+    {
         NSViewController *rootViewController = [[ViewController alloc] initWithNibName:nil bundle:nil];
         self.window = [[NSWindow alloc] initWithContentRect:NSZeroRect
                                                   styleMask:NSWindowStyleMaskTitled | NSWindowStyleMaskClosable | NSWindowStyleMaskResizable | NSWindowStyleMaskMiniaturizable
@@ -340,7 +366,8 @@
     return self;
 }
 
-- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender
+{
     return YES;
 }
 
@@ -372,14 +399,17 @@
 
 #if TARGET_OS_OSX
 
-int main(int argc, const char * argv[]) {
+int main(int argc, const char * argv[])
+{
     return NSApplicationMain(argc, argv);
 }
 
 #else
 
-int main(int argc, char * argv[]) {
-    @autoreleasepool {
+int main(int argc, char * argv[])
+{
+    @autoreleasepool
+    {
         return UIApplicationMain(argc, argv, nil, NSStringFromClass([AppDelegate class]));
     }
 }
