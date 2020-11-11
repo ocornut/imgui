@@ -1957,7 +1957,7 @@ struct ImGuiTableCellData
 struct ImGuiTable
 {
     ImGuiID                     ID;
-    ImGuiTableFlags             Flags;                      
+    ImGuiTableFlags             Flags;
     void*                       RawData;                    // Single allocation to hold Columns[], DisplayOrderToIndex[] and RowCellData[]
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImS8>                DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
@@ -2271,12 +2271,12 @@ namespace ImGui
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
     IMGUI_API void          TableUpdateBorders(ImGuiTable* table);
     IMGUI_API void          TableSetColumnWidth(int column_n, float width);
-    IMGUI_API void          TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column, float width);
+    IMGUI_API void          TableSetColumnVisible(int column_n, bool visible);
     IMGUI_API void          TableDrawBorders(ImGuiTable* table);
     IMGUI_API void          TableDrawContextMenu(ImGuiTable* table);
     IMGUI_API void          TableOpenContextMenu(int column_n = -1);
     IMGUI_API void          TableReorderDrawChannelsForMerge(ImGuiTable* table);
-    IMGUI_API void          TableSetColumnSortDirection(ImGuiTable* table, int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
+    IMGUI_API void          TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsBuild(ImGuiTable* table);
     IMGUI_API void          TableBeginRow(ImGuiTable* table);

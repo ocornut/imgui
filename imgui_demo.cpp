@@ -4456,9 +4456,9 @@ static void ShowDemoWindowTables()
             | ImGuiTableFlags_SizingPolicyFixedX
             ;
 
-        enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_FillButton, CT_Selectable };
+        enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_FillButton, CT_Selectable, CT_SelectableSpanRow };
         static int contents_type = CT_Button;
-        const char* contents_type_names[] = { "Text", "Button", "SmallButton", "FillButton", "Selectable" };
+        const char* contents_type_names[] = { "Text", "Button", "SmallButton", "FillButton", "Selectable", "Selectable (span row)" };
         static int freeze_cols = 1;
         static int freeze_rows = 1;
         static int items_count = IM_ARRAYSIZE(template_items_names);
@@ -4662,9 +4662,10 @@ static void ShowDemoWindowTables()
                         ImGui::SmallButton(label);
                     else if (contents_type == CT_FillButton)
                         ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f));
-                    else if (contents_type == CT_Selectable)
+                    else if (contents_type == CT_Selectable || contents_type == CT_SelectableSpanRow)
                     {
-                        if (ImGui::Selectable(label, item_is_selected, ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap, ImVec2(0, row_min_height)))
+                        ImGuiSelectableFlags selectable_flags = (contents_type == CT_SelectableSpanRow) ? ImGuiSelectableFlags_SpanAllColumns | ImGuiSelectableFlags_AllowItemOverlap : ImGuiSelectableFlags_None;
+                        if (ImGui::Selectable(label, item_is_selected, selectable_flags, ImVec2(0, row_min_height)))
                         {
                             if (ImGui::GetIO().KeyCtrl)
                             {

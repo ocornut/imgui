@@ -69,7 +69,7 @@
 //    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
-// - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or Table*Header(): lock all widths, columns positions, clipping rectangles
+// - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or TableHeadersRow(): lock all widths, columns positions, clipping rectangles
 //    | TableUpdateDrawChannels()               - setup ImDrawList channels
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | TableDrawContextMenu()                  - draw right-click context menu
@@ -78,8 +78,11 @@
 //    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
 //    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
 // - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
-// - TableNextRow() / TableNextColumn()         user begin into the first row, also automatically called by TableHeadersRow()
-//    | TableEndCell()                          - close existing cell if not the first time
+// - TableNextRow()                             user begin into a new row (also automatically called by TableHeadersRow())
+//    | TableEndRow()                           - finish existing row
+//    | TableBeginRow()                         - add a new row
+// - TableSetColumnIndex() / TableNextColumn()  user begin into a cell
+//    | TableEndCell()                          - close existing cell
 //    | TableBeginCell()                        - enter into current cell
 // - [...]                                      user emit contents
 //-----------------------------------------------------------------------------
@@ -430,7 +433,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
     if (table->InstanceCurrent == 0)
     {
         if (table->ResizedColumn != -1 && table->ResizedColumnNextWidth != FLT_MAX)
-            TableSetColumnWidth(table, &table->Columns[table->ResizedColumn], table->ResizedColumnNextWidth);
+            TableSetColumnWidth(table->ResizedColumn, table->ResizedColumnNextWidth);
         table->LastResizedColumn = table->ResizedColumn;
         table->ResizedColumnNextWidth = FLT_MAX;
         table->ResizedColumn = -1;
@@ -1215,21 +1218,16 @@ static void TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
     }
 }
 
-// Public wrapper
 // 'width' = inner column width, without padding
 void ImGui::TableSetColumnWidth(int column_n, float width)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL);
-    IM_ASSERT(table->IsLayoutLocked == false);
+    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
     IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
-    TableSetColumnWidth(table, &table->Columns[column_n], width);
-}
+    ImGuiTableColumn* column_0 = &table->Columns[column_n];
+    float column_0_width = width;
 
-// [Internal]
-void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, float column_0_width)
-{
     // Constraints
     const float min_width = TableGetMinColumnWidth();
     float max_width_0 = FLT_MAX;
@@ -1303,6 +1301,16 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
     }
 }
 
+// Public wrapper
+void ImGui::TableSetColumnVisible(int column_n, bool visible)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    table->Columns[column_n].IsVisibleNextFrame = visible;
+}
+
 // Allocate draw channels. Called by TableUpdateLayout()
 // - We allocate them following storage order instead of display order so reordering columns won't needlessly
 //   increase overall dormant memory cost.
@@ -1314,10 +1322,11 @@ void ImGui::TableSetColumnWidth(ImGuiTable* table, ImGuiTableColumn* column_0, f
 // - We allocate 1 or 2 background draw channels. This is because we know PushTableBackground() is only used for
 //   horizontal spanning. If we allowed vertical spanning we'd need one background draw channel per merge group (1-4).
 // Draw channel allocation (before merging):
-// - NoClip                       --> 1+1 channels: background + foreground (same clip rect == 1 draw call)
-// - Clip                         --> 1+N channels
-// - FreezeRows                   --> 1+N*2 (unless scrolling value is zero)
-// - FreezeRows || FreezeColunns  --> 2+N*2 (unless scrolling value is zero)
+// - NoClip                       --> 1+D+1 channels: background + foreground (same clip rect == 1 draw call)
+// - Clip                         --> 1+D+N channels
+// - FreezeRows                   --> 1+D+N*2 (unless scrolling value is zero)
+// - FreezeRows || FreezeColunns  --> 2+D+N*2 (unless scrolling value is zero)
+// Where D is 1 if any column is clipped or hidden (dummy channel) otherwise 0.
 void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
 {
     const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
@@ -1466,12 +1475,13 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
     // 2. Rewrite channel list in our preferred order
     if (merge_group_mask != 0)
     {
-        // Use shared temporary storage so the allocation gets amortized
-        g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - 1);
+        // We skip background channel 0 from the shuffling since it won't move (see channels allocation in TableUpdateDrawChannels()).
+        const int LEADING_DRAW_CHANNELS = 1;
+        g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
         ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
-        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> remaining_mask; // We need 130-bit of storage
+        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> remaining_mask;                       // We need 131-bit of storage
         remaining_mask.ClearBits();
-        remaining_mask.SetBitRange(1, splitter->_Count - 1);    // Background channel 0 == table->BgDrawChannlFrozen, not part of the merge (see channel allocation in TableUpdateDrawChannels)
+        remaining_mask.SetBitRange(LEADING_DRAW_CHANNELS, splitter->_Count - 1);
         remaining_mask.ClearBit(table->BgDrawChannelUnfrozen);
         int remaining_count = splitter->_Count - ((table->BgDrawChannelUnfrozen == 0) ? 1 : 2);
         //ImRect host_rect = (table->InnerWindow == table->OuterWindow) ? table->InnerClipRect : table->HostClipRect;
@@ -1536,7 +1546,7 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
             remaining_count--;
         }
         IM_ASSERT(dst_tmp == g.DrawChannelsTempMergeBuffer.Data + g.DrawChannelsTempMergeBuffer.Size);
-        memcpy(splitter->_Channels.Data + 1, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - 1) * sizeof(ImDrawChannel));
+        memcpy(splitter->_Channels.Data + LEADING_DRAW_CHANNELS, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - LEADING_DRAW_CHANNELS) * sizeof(ImDrawChannel));
     }
 }
 
@@ -1726,10 +1736,9 @@ void    ImGui::TableEndRow(ImGuiTable* table)
         // Decide of top border color
         ImU32 border_col = 0;
         const float border_size = TABLE_BORDER_SIZE;
-        if (table->CurrentRow != 0 || table->InnerWindow == table->OuterWindow)
+        if (table->CurrentRow > 0 || table->InnerWindow == table->OuterWindow)
             if (table->Flags & ImGuiTableFlags_BordersInnerH)
-                if (table->CurrentRow > 0)
-                    border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
+                border_col = (table->LastRowFlags & ImGuiTableRowFlags_Headers) ? table->BorderColorStrong : table->BorderColorLight;
 
         const bool draw_cell_bg_color = table->RowCellDataCurrent >= 0;
         const bool draw_strong_bottom_border = unfreeze_rows_actual;
@@ -1791,7 +1800,6 @@ void    ImGui::TableEndRow(ImGuiTable* table)
     {
         IM_ASSERT(table->IsUnfrozen == false);
         table->IsUnfrozen = true;
-        table->DrawSplitter.SetCurrentChannel(window->DrawList, table->BgDrawChannelUnfrozen);
 
         // BgClipRect starts as table->InnerClipRect, reduce it now and make BgClipRectForDrawCmd == BgClipRect
         float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
@@ -2322,7 +2330,7 @@ void    ImGui::TableHeader(const char* label)
                 sort_direction = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending;
             else
                 sort_direction = (column->SortDirection == ImGuiSortDirection_Ascending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending;
-            TableSetColumnSortDirection(table, column_n, sort_direction, g.IO.KeyShift);
+            TableSetColumnSortDirection(column_n, sort_direction, g.IO.KeyShift);
         }
     }
 
@@ -2347,8 +2355,11 @@ void    ImGui::TableHeader(const char* label)
 
 // Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
 // the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
-void ImGui::TableSetColumnSortDirection(ImGuiTable* table, int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
+void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
 {
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+
     if (!(table->Flags & ImGuiTableFlags_MultiSortable))
         append_to_sort_specs = false;
 
