@@ -59,6 +59,7 @@ Other Changes:
 - Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
 - Tab Bar: Fixed using more than 128 tabs in a tab bar (scrolling policy recommended).
 - Tab Bar: Do not display a tooltip if the name already fits over a given tab. (#3521)
+- Tab Bar: Fixed minor/unlikely bug skipping over a button when scrolling left with arrows.
 - Drag and Drop: Fix losing drop source ActiveID (and often source tooltip) when opening a TreeNode()
   or CollapsingHeader() while dragging. (#1738)
 - Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
