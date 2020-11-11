@@ -71,6 +71,9 @@ Other Changes:
 - Misc: Replaced UTF-8 decoder by branchless one by Christopher Wellons (30~40% faster). [@rokups]
   Super minor fix handling incomplete UTF-8 contents: if input does not contain enough bytes, decoder
   returns IM_UNICODE_CODEPOINT_INVALID and consume remaining bytes (vs old decoded consumed only 1 byte).
+- Misc: Made EndFrame() assertion for key modifiers being unchanged during the frame (added in 1.76) more
+  lenient, allowing full mid-frame releases. This is to accommodate the use of mid-frame modal native
+  windows calls, which leads backends such as GLFW to send key clearing events on focus loss. (#3575)
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
