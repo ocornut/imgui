@@ -430,7 +430,7 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window setTitle:@"Untitled"];
     [window setAcceptsMouseMovedEvents:YES];
     [window setOpaque:NO];
-    [window orderFront:NSApp];
+    [window orderFront:g_Window];
     [window setLevel:NSFloatingWindowLevel];
 
     ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
@@ -478,6 +478,21 @@ static void ImGui_ImplOSX_ShowWindow(ImGuiViewport* viewport)
 
 static void ImGui_ImplOSX_UpdateWindow(ImGuiViewport* viewport)
 {
+    ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
+    IM_ASSERT(data->Window != 0);
+
+    if (ImGui::GetMainViewport() != viewport)
+    {
+        [data->Window orderFront:g_Window];
+        if ([NSApp isActive])
+        {
+            [data->Window setLevel:NSFloatingWindowLevel];
+        }
+        else
+        {
+            [data->Window setLevel:NSNormalWindowLevel];
+        }
+    }
 }
 
 static ImVec2 ImGui_ImplOSX_GetWindowPos(ImGuiViewport* viewport)
