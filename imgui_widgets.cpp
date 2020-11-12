@@ -7489,7 +7489,7 @@ void    ImGui::EndTabItem()
     IM_ASSERT(tab_bar->LastTabItemIdx >= 0);
     ImGuiTabItem* tab = &tab_bar->Tabs[tab_bar->LastTabItemIdx];
     if (!(tab->Flags & ImGuiTabItemFlags_NoPushId))
-        window->IDStack.pop_back();
+        PopID();
 }
 
 bool    ImGui::TabItemButton(const char* label, ImGuiTabItemFlags flags)
