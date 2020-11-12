@@ -453,15 +453,15 @@ struct IMGUI_API ImRect
 };
 
 // Helper: ImBitArray
-inline bool          ImBitArrayTestBit(const ImU32* arr, int n)         { ImU32 mask = (ImU32)1 << (n & 31); return (arr[n >> 5] & mask) != 0; }
-inline void          ImBitArrayClearBit(ImU32* arr, int n)              { ImU32 mask = (ImU32)1 << (n & 31); arr[n >> 5] &= ~mask; }
-inline void          ImBitArraySetBit(ImU32* arr, int n)                { ImU32 mask = (ImU32)1 << (n & 31); arr[n >> 5] |= mask; }
-inline void          ImBitArraySetBitRange(ImU32* arr, int n, int n2)
+inline bool     ImBitArrayTestBit(const ImU32* arr, int n)      { ImU32 mask = (ImU32)1 << (n & 31); return (arr[n >> 5] & mask) != 0; }
+inline void     ImBitArrayClearBit(ImU32* arr, int n)           { ImU32 mask = (ImU32)1 << (n & 31); arr[n >> 5] &= ~mask; }
+inline void     ImBitArraySetBit(ImU32* arr, int n)             { ImU32 mask = (ImU32)1 << (n & 31); arr[n >> 5] |= mask; }
+inline void     ImBitArraySetBitRange(ImU32* arr, int n, int n2)
 {
     while (n <= n2)
     {
         int a_mod = (n & 31);
-        int b_mod = ((n2 >= n + 31) ? 31 : (n2 & 31)) + 1;
+        int b_mod = (n2 > (n | 31) ? 31 : (n2 & 31)) + 1;
         ImU32 mask = (ImU32)(((ImU64)1 << b_mod) - 1) & ~(ImU32)(((ImU64)1 << a_mod) - 1);
         arr[n >> 5] |= mask;
         n = (n + 32) & ~31;
