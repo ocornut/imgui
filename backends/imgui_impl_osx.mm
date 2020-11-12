@@ -431,7 +431,6 @@ static void ImGui_ImplOSX_CreateWindow(ImGuiViewport* viewport)
     [window setAcceptsMouseMovedEvents:YES];
     [window setOpaque:NO];
     [window orderFront:NSApp];
-    [window setLevel:NSFloatingWindowLevel];
 
     ImGui_ImplOSX_View* view = [[ImGui_ImplOSX_View alloc] initWithFrame:rect];
 #if MAC_OS_X_VERSION_MAX_ALLOWED >= 1070
@@ -485,24 +484,12 @@ static void ImGui_ImplOSX_UpdateWindow(ImGuiViewport* viewport)
     {
         if ([g_Window isMiniaturized])
         {
-            [data->Window orderOut:NSApp];
+            [data->Window setIsVisible:NO];
         }
         else
         {
-            [data->Window orderFront:NSApp];
+            [data->Window setIsVisible:YES];
         }
-        if ([NSApp isActive])
-        {
-            [data->Window setLevel:NSFloatingWindowLevel];
-        }
-        else
-        {
-            [data->Window setLevel:NSNormalWindowLevel];
-        }
-    }
-    else
-    {
-        [data->Window orderBack:NSApp];
     }
 }
 
@@ -568,17 +555,7 @@ static bool ImGui_ImplOSX_GetWindowFocus(ImGuiViewport* viewport)
     ImGuiViewportDataOSX* data = (ImGuiViewportDataOSX*)viewport->PlatformUserData;
     IM_ASSERT(data->Window != 0);
 
-    NSArray<NSWindow*>* orderedWindows = [NSApp orderedWindows];
-    for (NSUInteger i = 0; i < [orderedWindows count]; ++i)
-    {
-        NSWindow* window = [orderedWindows objectAtIndex:i];
-        if (window == g_Window)
-            return false;
-        if (window == data->Window)
-            return true;
-    }
-
-    return false;
+    return [NSApp orderedWindows].firstObject == data->Window;
 }
 
 static bool ImGui_ImplOSX_GetWindowMinimized(ImGuiViewport* viewport)
