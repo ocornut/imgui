@@ -1368,6 +1368,7 @@ struct ImGuiContext
         FrameCount = 0;
         FrameCountEnded = FrameCountRendered = -1;
         WithinFrameScope = WithinFrameScopeWithImplicitWindow = WithinEndChild = false;
+        GcCompactAll = false;
         TestEngineHookItems = false;
         TestEngineHookIdInfo = 0;
         TestEngine = NULL;
