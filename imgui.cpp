@@ -872,7 +872,6 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 // Error Checking
 static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
-static void             ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool begin);
 
 // Misc
 static void             UpdateSettings();
@@ -2352,7 +2351,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
     ImGuiColorMod backup;
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
-    g.ColorModifiers.push_back(backup);
+    g.ColorStack.push_back(backup);
     g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
 }
 
@@ -2362,7 +2361,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
     ImGuiColorMod backup;
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
-    g.ColorModifiers.push_back(backup);
+    g.ColorStack.push_back(backup);
     g.Style.Colors[idx] = col;
 }
 
@@ -2371,9 +2370,9 @@ void ImGui::PopStyleColor(int count)
     ImGuiContext& g = *GImGui;
     while (count > 0)
     {
-        ImGuiColorMod& backup = g.ColorModifiers.back();
+        ImGuiColorMod& backup = g.ColorStack.back();
         g.Style.Colors[backup.Col] = backup.BackupValue;
-        g.ColorModifiers.pop_back();
+        g.ColorStack.pop_back();
         count--;
     }
 }
@@ -2427,7 +2426,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
     {
         ImGuiContext& g = *GImGui;
         float* pvar = (float*)var_info->GetVarPtr(&g.Style);
-        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
     }
@@ -2441,7 +2440,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
     {
         ImGuiContext& g = *GImGui;
         ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
-        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
     }
@@ -2454,12 +2453,12 @@ void ImGui::PopStyleVar(int count)
     while (count > 0)
     {
         // We avoid a generic memcpy(data, &backup.Backup.., GDataTypeSize[info->Type] * info->Count), the overhead in Debug is not worth it.
-        ImGuiStyleMod& backup = g.StyleModifiers.back();
+        ImGuiStyleMod& backup = g.StyleVarStack.back();
         const ImGuiStyleVarInfo* info = GetStyleVarInfo(backup.VarIdx);
         void* data = info->GetVarPtr(&g.Style);
         if (info->Type == ImGuiDataType_Float && info->Count == 1)      { ((float*)data)[0] = backup.BackupFloat[0]; }
         else if (info->Type == ImGuiDataType_Float && info->Count == 2) { ((float*)data)[0] = backup.BackupFloat[0]; ((float*)data)[1] = backup.BackupFloat[1]; }
-        g.StyleModifiers.pop_back();
+        g.StyleVarStack.pop_back();
         count--;
     }
 }
@@ -3996,8 +3995,8 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.HoveredWindow = g.HoveredRootWindow = g.HoveredWindowUnderMovingWindow = NULL;
     g.ActiveIdWindow = g.ActiveIdPreviousFrameWindow = NULL;
     g.MovingWindow = NULL;
-    g.ColorModifiers.clear();
-    g.StyleModifiers.clear();
+    g.ColorStack.clear();
+    g.StyleVarStack.clear();
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.BeginPopupStack.clear();
@@ -5515,8 +5514,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Add to stack
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
     g.CurrentWindowStack.push_back(window);
+    g.CurrentWindow = window;
+    window->DC.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindow = NULL;
-    ErrorCheckBeginEndCompareStacksSize(window, true);
+
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
@@ -6112,7 +6113,7 @@ void ImGui::End()
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    ErrorCheckBeginEndCompareStacksSize(window, false);
+    window->DC.StackSizesOnBegin.CompareWithCurrentState();
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
 
@@ -6903,26 +6904,38 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
     IM_ASSERT_USER_ERROR(g.GroupStack.Size == 0, "Missing EndGroup call!");
 }
 
-// Save and compare stack sizes on Begin()/End() to detect usage errors
-// Begin() calls this with write=true
-// End() calls this with write=false
-static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool begin)
+// Save current stack sizes for later compare
+void ImGuiStackSizes::SetToCurrentState()
 {
     ImGuiContext& g = *GImGui;
-    short* p = &window->DC.StackSizesBackup[0];
+    ImGuiWindow* window = g.CurrentWindow;
+    SizeOfIDStack = (short)window->IDStack.Size;
+    SizeOfColorStack = (short)g.ColorStack.Size;
+    SizeOfStyleVarStack = (short)g.StyleVarStack.Size;
+    SizeOfFontStack = (short)g.FontStack.Size;
+    SizeOfFocusScopeStack = (short)g.FocusScopeStack.Size;
+    SizeOfGroupStack = (short)g.GroupStack.Size;
+    SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
+}
+
+// Compare to detect usage errors
+void ImGuiStackSizes::CompareWithCurrentState()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
 
     // Window stacks
     // NOT checking: DC.ItemWidth, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
-    { IM_ASSERT(window->IDStack.Size == 1 && "PushID/PopID or TreeNode/TreePop Mismatch!"); } // Too few or too many PopID()/TreePop();
+    IM_ASSERT(SizeOfIDStack         == window->IDStack.Size     && "PushID/PopID or TreeNode/TreePop Mismatch!");
 
     // Global stacks
     // For color, style and font stacks there is an incentive to use Push/Begin/Pop/.../End patterns, so we relax our checks a little to allow them.
-    { int n = g.GroupStack.Size;          if (begin) *p = (short)n; else IM_ASSERT(*p == n && "BeginGroup/EndGroup Mismatch!");                p++; }    // Too few or too many EndGroup()
-    { int n = g.BeginPopupStack.Size;     if (begin) *p = (short)n; else IM_ASSERT(*p == n && "BeginMenu/EndMenu or BeginPopup/EndPopup Mismatch!"); p++; }// Too few or too many EndMenu()/EndPopup()
-    { int n = g.ColorModifiers.Size;      if (begin) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleColor/PopStyleColor Mismatch!");       p++; }    // Too few or too many PopStyleColor()
-    { int n = g.StyleModifiers.Size;      if (begin) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleVar/PopStyleVar Mismatch!");           p++; }    // Too few or too many PopStyleVar()
-    { int n = g.FontStack.Size;           if (begin) *p = (short)n; else IM_ASSERT(*p >= n && "PushFont/PopFont Mismatch!");                   p++; }    // Too few or too many PopFont()
-    IM_ASSERT(p == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
+    IM_ASSERT(SizeOfGroupStack      == g.GroupStack.Size        && "BeginGroup/EndGroup Mismatch!");
+    IM_ASSERT(SizeOfBeginPopupStack == g.BeginPopupStack.Size   && "BeginPopup/EndPopup or BeginMenu/EndMenu Mismatch!");
+    IM_ASSERT(SizeOfColorStack      >= g.ColorStack.Size        && "PushStyleColor/PopStyleColor Mismatch!");
+    IM_ASSERT(SizeOfStyleVarStack   >= g.StyleVarStack.Size     && "PushStyleVar/PopStyleVar Mismatch!");
+    IM_ASSERT(SizeOfFontStack       >= g.FontStack.Size         && "PushFont/PopFont Mismatch!");
+    IM_ASSERT(SizeOfFocusScopeStack == g.FocusScopeStack.Size   && "PushFocusScope/PopFocusScope Mismatch!");
 }
 
 

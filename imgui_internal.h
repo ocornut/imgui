@@ -23,6 +23,7 @@ Index of this file:
 // [SECTION] Docking support
 // [SECTION] Viewport support
 // [SECTION] Settings support
+// [SECTION] Metrics, Debug
 // [SECTION] Generic context hooks
 // [SECTION] ImGuiContext (main imgui context)
 // [SECTION] ImGuiWindowTempData, ImGuiWindow
@@ -106,6 +107,7 @@ struct ImGuiNextWindowData;         // Storage for SetNextWindow** functions
 struct ImGuiNextItemData;           // Storage for SetNextItem** functions
 struct ImGuiPopupData;              // Storage for current popup stack
 struct ImGuiSettingsHandler;        // Storage for one type registered in the .ini file
+struct ImGuiStackSizes;             // Storage of stack sizes for debugging/asserting
 struct ImGuiStyleMod;               // Stacked style modifier, backup of modified data so we can restore it
 struct ImGuiTabBar;                 // Storage for a tab bar
 struct ImGuiTabItem;                // Storage for a tab item (within a tab bar)
@@ -1089,6 +1091,10 @@ struct ImGuiSettingsHandler
     ImGuiSettingsHandler() { memset(this, 0, sizeof(*this)); }
 };
 
+//-----------------------------------------------------------------------------
+// [SECTION] Metrics, Debug
+//-----------------------------------------------------------------------------
+
 struct ImGuiMetricsConfig
 {
     bool        ShowWindowsRects;
@@ -1109,6 +1115,21 @@ struct ImGuiMetricsConfig
         ShowWindowsRectsType = -1;
         ShowTablesRectsType = -1;
     }
+};
+
+struct IMGUI_API ImGuiStackSizes
+{
+    short   SizeOfIDStack;
+    short   SizeOfColorStack;
+    short   SizeOfStyleVarStack;
+    short   SizeOfFontStack;
+    short   SizeOfFocusScopeStack;
+    short   SizeOfGroupStack;
+    short   SizeOfBeginPopupStack;
+
+    ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
+    IMGUI_API void SetToCurrentState();
+    IMGUI_API void CompareWithCurrentState();
 };
 
 //-----------------------------------------------------------------------------
@@ -1205,12 +1226,12 @@ struct ImGuiContext
     ImGuiNextItemData       NextItemData;                       // Storage for SetNextItem** functions
 
     // Shared stacks
-    ImVector<ImGuiColorMod> ColorModifiers;                     // Stack for PushStyleColor()/PopStyleColor()
-    ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
-    ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
-    ImVector<ImGuiID>       FocusScopeStack;                    // Stack for PushFocusScope()/PopFocusScope()
-    ImVector<ImGuiItemFlags>ItemFlagsStack;                     // Stack for PushItemFlag()/PopItemFlag()
-    ImVector<ImGuiGroupData>GroupStack;                         // Stack for BeginGroup()/EndGroup()
+    ImVector<ImGuiColorMod> ColorStack;                         // Stack for PushStyleColor()/PopStyleColor() - inherited by Begin()
+    ImVector<ImGuiStyleMod> StyleVarStack;                      // Stack for PushStyleVar()/PopStyleVar() - inherited by Begin()
+    ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont() - inherited by Begin()
+    ImVector<ImGuiID>       FocusScopeStack;                    // Stack for PushFocusScope()/PopFocusScope() - not inherited by Begin(), unless child window
+    ImVector<ImGuiItemFlags>ItemFlagsStack;                     // Stack for PushItemFlag()/PopItemFlag() - inherited by Begin()
+    ImVector<ImGuiGroupData>GroupStack;                         // Stack for BeginGroup()/EndGroup() - not inherited by Begin()
     ImVector<ImGuiPopupData>OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupData>BeginPopupStack;                    // Which level of BeginPopup() we are in (reset every frame)
 
@@ -1561,7 +1582,7 @@ struct IMGUI_API ImGuiWindowTempData
     float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
-    short                   StackSizesBackup[5];    // Store size of various stacks for asserting
+    ImGuiStackSizes         StackSizesOnBegin;      // Store size of various stacks for asserting
 };
 
 // Storage for one window
