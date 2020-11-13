@@ -872,7 +872,7 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 // Error Checking
 static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
-static void             ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool write);
+static void             ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool begin);
 
 // Misc
 static void             UpdateSettings();
@@ -2892,6 +2892,13 @@ static void SetCurrentWindow(ImGuiWindow* window)
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
+void ImGui::GcCompactTransientMiscBuffers()
+{
+    ImGuiContext& g = *GImGui;
+    g.ItemFlagsStack.clear();
+    g.GroupStack.clear();
+}
+
 // Free up/compact internal window buffers, we can use this when a window becomes unused.
 // This is currently unused by the library, but you may call this yourself for easy GC.
 // Not freed:
@@ -2906,10 +2913,8 @@ void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
     window->IDStack.clear();
     window->DrawList->_ClearFreeMemory();
     window->DC.ChildWindows.clear();
-    window->DC.ItemFlagsStack.clear();
     window->DC.ItemWidthStack.clear();
     window->DC.TextWrapPosStack.clear();
-    window->DC.GroupStack.clear();
 }
 
 void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
@@ -3858,6 +3863,8 @@ void ImGui::NewFrame()
         if (!window->WasActive && !window->MemoryCompacted && window->LastTimeActive < memory_compact_start_time)
             GcCompactTransientWindowBuffers(window);
     }
+    if (g.GcCompactAll)
+        GcCompactTransientMiscBuffers();
     g.GcCompactAll = false;
 
     // Closing the focused window restore focus to the first active root window in descending z-order
@@ -3868,6 +3875,9 @@ void ImGui::NewFrame()
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
     g.BeginPopupStack.resize(0);
+    g.ItemFlagsStack.resize(0);
+    g.ItemFlagsStack.push_back(ImGuiItemFlags_Default_);
+    g.GroupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow, false);
 
     // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
@@ -5978,13 +5988,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
-        window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.GroupStack.resize(0);
-        window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
-        if (parent_window)
-            window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -6029,7 +6034,9 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetCurrentWindow(window);
     }
 
-    window->DC.NavFocusScopeIdCurrent = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->DC.NavFocusScopeIdCurrent : 0; // -V595
+    // Pull/inherit current state
+    window->DC.ItemFlags = g.ItemFlagsStack.back(); // Inherit from shared stack
+    window->DC.NavFocusScopeIdCurrent = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->DC.NavFocusScopeIdCurrent : 0; // Inherit from parent only // -V595
 
     PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
 
@@ -6257,19 +6264,25 @@ void  ImGui::PopFont()
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiItemFlags item_flags = window->DC.ItemFlags;
+    IM_ASSERT(item_flags == g.ItemFlagsStack.back());
     if (enabled)
-        window->DC.ItemFlags |= option;
+        item_flags |= option;
     else
-        window->DC.ItemFlags &= ~option;
-    window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+        item_flags &= ~option;
+    window->DC.ItemFlags = item_flags;
+    g.ItemFlagsStack.push_back(item_flags);
 }
 
 void ImGui::PopItemFlag()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ItemFlagsStack.pop_back();
-    window->DC.ItemFlags = window->DC.ItemFlagsStack.empty() ? ImGuiItemFlags_Default_ : window->DC.ItemFlagsStack.back();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(g.ItemFlagsStack.Size > 1); // Too many calls to PopItemFlag() - we always leave a 0 at the bottom of the stack.
+    g.ItemFlagsStack.pop_back();
+    window->DC.ItemFlags = g.ItemFlagsStack.back();
 }
 
 // FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
@@ -6886,27 +6899,29 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
             IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you call End/EndChild too much?");
         }
     }
+
+    IM_ASSERT_USER_ERROR(g.GroupStack.Size == 0, "Missing EndGroup call!");
 }
 
 // Save and compare stack sizes on Begin()/End() to detect usage errors
 // Begin() calls this with write=true
 // End() calls this with write=false
-static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool write)
+static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool begin)
 {
     ImGuiContext& g = *GImGui;
     short* p = &window->DC.StackSizesBackup[0];
 
     // Window stacks
-    // NOT checking: DC.ItemWidth, DC.AllowKeyboardFocus, DC.ButtonRepeat, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
-    { int n = window->IDStack.Size;       if (write) *p = (short)n; else IM_ASSERT(*p == n && "PushID/PopID or TreeNode/TreePop Mismatch!");   p++; }    // Too few or too many PopID()/TreePop()
-    { int n = window->DC.GroupStack.Size; if (write) *p = (short)n; else IM_ASSERT(*p == n && "BeginGroup/EndGroup Mismatch!");                p++; }    // Too few or too many EndGroup()
+    // NOT checking: DC.ItemWidth, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
+    { IM_ASSERT(window->IDStack.Size == 1 && "PushID/PopID or TreeNode/TreePop Mismatch!"); } // Too few or too many PopID()/TreePop();
 
     // Global stacks
     // For color, style and font stacks there is an incentive to use Push/Begin/Pop/.../End patterns, so we relax our checks a little to allow them.
-    { int n = g.BeginPopupStack.Size;     if (write) *p = (short)n; else IM_ASSERT(*p == n && "BeginMenu/EndMenu or BeginPopup/EndPopup Mismatch!"); p++; }// Too few or too many EndMenu()/EndPopup()
-    { int n = g.ColorModifiers.Size;      if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleColor/PopStyleColor Mismatch!");       p++; }    // Too few or too many PopStyleColor()
-    { int n = g.StyleModifiers.Size;      if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleVar/PopStyleVar Mismatch!");           p++; }    // Too few or too many PopStyleVar()
-    { int n = g.FontStack.Size;           if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushFont/PopFont Mismatch!");                   p++; }    // Too few or too many PopFont()
+    { int n = g.GroupStack.Size;          if (begin) *p = (short)n; else IM_ASSERT(*p == n && "BeginGroup/EndGroup Mismatch!");                p++; }    // Too few or too many EndGroup()
+    { int n = g.BeginPopupStack.Size;     if (begin) *p = (short)n; else IM_ASSERT(*p == n && "BeginMenu/EndMenu or BeginPopup/EndPopup Mismatch!"); p++; }// Too few or too many EndMenu()/EndPopup()
+    { int n = g.ColorModifiers.Size;      if (begin) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleColor/PopStyleColor Mismatch!");       p++; }    // Too few or too many PopStyleColor()
+    { int n = g.StyleModifiers.Size;      if (begin) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleVar/PopStyleVar Mismatch!");           p++; }    // Too few or too many PopStyleVar()
+    { int n = g.FontStack.Size;           if (begin) *p = (short)n; else IM_ASSERT(*p >= n && "PushFont/PopFont Mismatch!");                   p++; }    // Too few or too many PopFont()
     IM_ASSERT(p == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
 }
 
@@ -7310,8 +7325,9 @@ void ImGui::BeginGroup()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    window->DC.GroupStack.resize(window->DC.GroupStack.Size + 1);
-    ImGuiGroupData& group_data = window->DC.GroupStack.back();
+    g.GroupStack.resize(g.GroupStack.Size + 1);
+    ImGuiGroupData& group_data = g.GroupStack.back();
+    group_data.WindowID = window->ID;
     group_data.BackupCursorPos = window->DC.CursorPos;
     group_data.BackupCursorMaxPos = window->DC.CursorMaxPos;
     group_data.BackupIndent = window->DC.Indent;
@@ -7334,9 +7350,10 @@ void ImGui::EndGroup()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(window->DC.GroupStack.Size > 0); // Mismatched BeginGroup()/EndGroup() calls
+    IM_ASSERT(g.GroupStack.Size > 0); // Mismatched BeginGroup()/EndGroup() calls
 
-    ImGuiGroupData& group_data = window->DC.GroupStack.back();
+    ImGuiGroupData& group_data = g.GroupStack.back();
+    IM_ASSERT(group_data.WindowID == window->ID); // EndGroup() in wrong window?
 
     ImRect group_bb(group_data.BackupCursorPos, ImMax(window->DC.CursorMaxPos, group_data.BackupCursorPos));
 
@@ -7351,7 +7368,7 @@ void ImGui::EndGroup()
 
     if (!group_data.EmitItem)
     {
-        window->DC.GroupStack.pop_back();
+        g.GroupStack.pop_back();
         return;
     }
 
@@ -7380,7 +7397,7 @@ void ImGui::EndGroup()
     if (group_contains_prev_active_id && g.ActiveId != g.ActiveIdPreviousFrame)
         window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Deactivated;
 
-    window->DC.GroupStack.pop_back();
+    g.GroupStack.pop_back();
     //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
 }
 

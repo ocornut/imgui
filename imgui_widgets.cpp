@@ -1346,7 +1346,9 @@ void ImGui::SeparatorEx(ImGuiSeparatorFlags flags)
         // Horizontal Separator
         float x1 = window->Pos.x;
         float x2 = window->Pos.x + window->Size.x;
-        if (!window->DC.GroupStack.empty())
+
+        // FIXME-WORKRECT: old hack (#205) until we decide of consistent behavior with WorkRect/Indent and Separator
+        if (g.GroupStack.Size > 0 && g.GroupStack.back().WindowID == window->ID)
             x1 += window->DC.Indent.x;
 
         ImGuiColumns* columns = (flags & ImGuiSeparatorFlags_SpanAllColumns) ? window->DC.CurrentColumns : NULL;
@@ -6500,7 +6502,7 @@ void ImGui::EndMenuBar()
     PopClipRect();
     PopID();
     window->DC.MenuBarOffset.x = window->DC.CursorPos.x - window->MenuBarRect().Min.x; // Save horizontal position so next append can reuse it. This is kinda equivalent to a per-layer CursorPos.
-    window->DC.GroupStack.back().EmitItem = false;
+    g.GroupStack.back().EmitItem = false;
     EndGroup(); // Restore position on layer 0
     window->DC.LayoutType = ImGuiLayoutType_Vertical;
     window->DC.NavLayerCurrent = ImGuiNavLayer_Main;

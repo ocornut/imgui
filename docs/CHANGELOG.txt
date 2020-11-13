@@ -68,6 +68,9 @@ Other Changes:
 - InputText: Fixed updating cursor/selection position when a callback altered the buffer in a way
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
 - Metrics: Fixed mishandling of ImDrawCmd::VtxOffset in wireframe mesh renderer.
+- Misc: Made the ItemFlags stack shared, so effectively the ButtonRepeat/AllowKeyboardFocus states
+  (and others exposed in internals such as PushItemFlag) are inherited by stacked Begin/End pairs, 
+  vs previously a non-child stacked Begin() would reset those flags back to zero for the stacked window.
 - Misc: Replaced UTF-8 decoder with one based on branchless one by Christopher Wellons. [@rokups]
   Super minor fix handling incomplete UTF-8 contents: if input does not contain enough bytes, decoder
   returns IM_UNICODE_CODEPOINT_INVALID and consume remaining bytes (vs old decoded consumed only 1 byte).

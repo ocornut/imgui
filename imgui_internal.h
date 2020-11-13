@@ -826,6 +826,7 @@ struct ImGuiStyleMod
 // Stacked storage data for BeginGroup()/EndGroup()
 struct ImGuiGroupData
 {
+    ImGuiID     WindowID;
     ImVec2      BackupCursorPos;
     ImVec2      BackupCursorMaxPos;
     ImVec1      BackupIndent;
@@ -1208,6 +1209,8 @@ struct ImGuiContext
     ImVector<ImGuiStyleMod> StyleModifiers;                     // Stack for PushStyleVar()/PopStyleVar()
     ImVector<ImFont*>       FontStack;                          // Stack for PushFont()/PopFont()
     ImVector<ImGuiID>       FocusScopeStack;                    // Stack for PushFocusScope()/PopFocusScope()
+    ImVector<ImGuiItemFlags>ItemFlagsStack;                     // Stack for PushItemFlag()/PopItemFlag()
+    ImVector<ImGuiGroupData>GroupStack;                         // Stack for BeginGroup()/EndGroup()
     ImVector<ImGuiPopupData>OpenPopupStack;                     // Which popups are open (persistent)
     ImVector<ImGuiPopupData>BeginPopupStack;                    // Which level of BeginPopup() we are in (reset every frame)
 
@@ -1553,14 +1556,12 @@ struct IMGUI_API ImGuiWindowTempData
 
     // Local parameters stacks
     // We store the current settings outside of the vectors to increase memory locality (reduce cache misses). The vectors are rarely modified. Also it allows us to not heap allocate for short-lived windows which are not using those settings.
-    ImGuiItemFlags          ItemFlags;              // == ItemFlagsStack.back() [empty == ImGuiItemFlags_Default]
+    ImGuiItemFlags          ItemFlags;              // == g.ItemFlagsStack.back()
     float                   ItemWidth;              // == ItemWidthStack.back(). 0.0: default, >0.0: width in pixels, <0.0: align xx pixels to the right of window
     float                   TextWrapPos;            // == TextWrapPosStack.back() [empty == -1.0f]
-    ImVector<ImGuiItemFlags>ItemFlagsStack;
     ImVector<float>         ItemWidthStack;
     ImVector<float>         TextWrapPosStack;
-    ImVector<ImGuiGroupData>GroupStack;
-    short                   StackSizesBackup[6];    // Store size of various stacks for asserting
+    short                   StackSizesBackup[5];    // Store size of various stacks for asserting
 };
 
 // Storage for one window
@@ -1849,6 +1850,7 @@ namespace ImGui
     inline ImGuiItemStatusFlags GetItemStatusFlags() { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.LastItemStatusFlags; }
     inline ImGuiID          GetActiveID()   { ImGuiContext& g = *GImGui; return g.ActiveId; }
     inline ImGuiID          GetFocusID()    { ImGuiContext& g = *GImGui; return g.NavId; }
+    inline ImGuiItemFlags   GetItemsFlags() { ImGuiContext& g = *GImGui; return g.CurrentWindow->DC.ItemFlags; }
     IMGUI_API void          SetActiveID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          SetFocusID(ImGuiID id, ImGuiWindow* window);
     IMGUI_API void          ClearActiveID();
@@ -2045,6 +2047,7 @@ namespace ImGui
     IMGUI_API void          ShadeVertsLinearUV(ImDrawList* draw_list, int vert_start_idx, int vert_end_idx, const ImVec2& a, const ImVec2& b, const ImVec2& uv_a, const ImVec2& uv_b, bool clamp);
 
     // Garbage collection
+    IMGUI_API void          GcCompactTransientMiscBuffers();
     IMGUI_API void          GcCompactTransientWindowBuffers(ImGuiWindow* window);
     IMGUI_API void          GcAwakeTransientWindowBuffers(ImGuiWindow* window);
 
