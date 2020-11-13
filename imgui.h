@@ -88,7 +88,7 @@ Index of this file:
 #if !defined(IMGUI_USE_STB_SPRINTF) && defined(__clang__)
 #define IM_FMTARGS(FMT)             __attribute__((format(printf, FMT, FMT+1)))     // Apply printf-style warnings to our formatting functions.
 #define IM_FMTLIST(FMT)             __attribute__((format(printf, FMT, 0)))
-#elif !defined(IMGUI_USE_STB_SPRINTF) && defined(__GNUC__)
+#elif !defined(IMGUI_USE_STB_SPRINTF) && defined(__GNUC__) && defined(__MINGW32__)
 #define IM_FMTARGS(FMT)             __attribute__((format(gnu_printf, FMT, FMT+1))) // Apply printf-style warnings to our formatting functions.
 #define IM_FMTLIST(FMT)             __attribute__((format(gnu_printf, FMT, 0)))
 #else
@@ -260,7 +260,7 @@ namespace ImGui
     // Demo, Debug, Information
     IMGUI_API void          ShowDemoWindow(bool* p_open = NULL);        // create Demo window (previously called ShowTestWindow). demonstrate most ImGui features. call this to learn about the library! try to make it always available in your application!
     IMGUI_API void          ShowAboutWindow(bool* p_open = NULL);       // create About window. display Dear ImGui version, credits and build/system information.
-    IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // create Debug/Metrics window. display Dear ImGui internals: draw commands (with individual draw calls and vertices), window list, basic internal state, etc.
+    IMGUI_API void          ShowMetricsWindow(bool* p_open = NULL);     // create Metrics/Debugger window. display Dear ImGui internals: windows, draw commands, various internal state, etc.
     IMGUI_API void          ShowStyleEditor(ImGuiStyle* ref = NULL);    // add style editor block (not a window). you can pass in a reference ImGuiStyle structure to compare to, revert to and save to (else it uses the default style)
     IMGUI_API bool          ShowStyleSelector(const char* label);       // add style selector block (not a window), essentially a combo listing the default styles.
     IMGUI_API void          ShowFontSelector(const char* label);        // add font selector block (not a window), essentially a combo listing the loaded fonts.

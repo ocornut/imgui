@@ -340,7 +340,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         }
         if (ImGui::BeginMenu("Tools"))
         {
-            ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
+            ImGui::MenuItem("Metrics/Debugger", NULL, &show_app_metrics);
             ImGui::MenuItem("Style Editor", NULL, &show_app_style_editor);
             ImGui::MenuItem("About Dear ImGui", NULL, &show_app_about);
             ImGui::EndMenu();
@@ -357,7 +357,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::BulletText("Sections below are demonstrating many aspects of the library.");
         ImGui::BulletText("The \"Examples\" menu above leads to more demo contents.");
         ImGui::BulletText("The \"Tools\" menu above gives access to: About Box, Style Editor,\n"
-                          "and Metrics (general purpose Dear ImGui debugging tool).");
+                          "and Metrics/Debugger (general purpose Dear ImGui debugging tool).");
         ImGui::Separator();
 
         ImGui::Text("PROGRAMMER GUIDE:");

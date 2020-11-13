@@ -4058,7 +4058,7 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
 static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
     // Remove trailing command if unused.
-    // Technically we could return directly instead of popping, but this make things looks neat in Metrics window as well.
+    // Technically we could return directly instead of popping, but this make things looks neat in Metrics/Debugger window as well.
     draw_list->_PopUnusedDrawCmd();
     if (draw_list->CmdBuffer.Size == 0)
         return;
@@ -4073,7 +4073,7 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
     // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
     // If this assert triggers because you are drawing lots of stuff manually:
     // - First, make sure you are coarse clipping yourself and not trying to draw many things outside visible bounds.
-    //   Be mindful that the ImDrawList API doesn't filter vertices. Use the Metrics window to inspect draw list contents.
+    //   Be mindful that the ImDrawList API doesn't filter vertices. Use the Metrics/Debugger window to inspect draw list contents.
     // - If you want large meshes with more than 64K vertices, you can either:
     //   (A) Handle the ImDrawCmd::VtxOffset value in your renderer backend, and set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset'.
     //       Most example backends already support this from 1.71. Pre-1.71 backends won't.
@@ -10342,7 +10342,7 @@ static void MetricsHelpMarker(const char* desc)
 
 void ImGui::ShowMetricsWindow(bool* p_open)
 {
-    if (!Begin("Dear ImGui Metrics", p_open))
+    if (!Begin("Dear ImGui Metrics/Debugger", p_open))
     {
         End();
         return;
@@ -10370,7 +10370,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     if (cfg->ShowWindowsRectsType < 0)
         cfg->ShowWindowsRectsType = WRT_WorkRect;
     if (cfg->ShowTablesRectsType < 0)
-        cfg->ShowWindowsRectsType = TRT_WorkRect;
+        cfg->ShowTablesRectsType = TRT_WorkRect;
 
     struct Funcs
     {
@@ -10398,7 +10398,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
 
         Checkbox("Show windows begin order", &cfg->ShowWindowsBeginOrder);
-        ImGui::Checkbox("Show windows rectangles", &cfg->ShowWindowsRects);
+        Checkbox("Show windows rectangles", &cfg->ShowWindowsRects);
         SameLine();
         SetNextItemWidth(GetFontSize() * 12);
         cfg->ShowWindowsRects |= Combo("##show_windows_rect_type", &cfg->ShowWindowsRectsType, wrt_rects_names, WRT_Count, WRT_Count);
@@ -10595,7 +10595,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 #endif // #ifdef IMGUI_HAS_DOCK
 
-    ImGui::End();
+    End();
 }
 
 // [DEBUG] Display contents of Columns
