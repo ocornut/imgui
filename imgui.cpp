@@ -3268,16 +3268,6 @@ const char* ImGui::GetVersion()
     return IMGUI_VERSION;
 }
 
-ImGuiID ImGui::AddContextHook(const ImGuiContextHook* hook)
-{
-    return AddContextHook(GImGui, hook);
-}
-
-void ImGui::RemContextHook(ImGuiID hook_to_remove)
-{
-    RemContextHook(GImGui, hook_to_remove);
-}
-
 // Internal state access - if you want to share Dear ImGui state between modules (e.g. DLL) or allocate it yourself
 // Note that we still point to some static data and members (such as GFontAtlas), so the state instance you end up using will point to the static data within its module
 ImGuiContext* ImGui::GetCurrentContext()
