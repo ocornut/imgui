@@ -155,6 +155,7 @@ ImGuiTable::ImGuiTable()
     ContextPopupColumn = -1;
     ReorderColumn = -1;
     ResizedColumn = -1;
+    AutoFitSingleStretchColumn = -1;
     HoveredColumnBody = HoveredColumnBorder = -1;
 }
 
@@ -216,10 +217,13 @@ static void TableBeginInitMemory(ImGuiTable* table, int columns_count)
     span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
     span_allocator.GetSpan(2, &table->RowCellData);
 
+    memset(table->RowCellData.Data, 0, table->RowCellData.size_in_bytes());
     for (int n = 0; n < columns_count; n++)
     {
-        table->Columns[n] = ImGuiTableColumn();
-        table->Columns[n].DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
+        ImGuiTableColumn* column = &table->Columns[n];
+        *column = ImGuiTableColumn();
+        column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
+        column->AutoFitQueue = column->CannotSkipItemsQueue = (1 << 3) - 1; // Fit for three frames
     }
 }
 
@@ -440,6 +444,15 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
         table->LastResizedColumn = table->ResizedColumn;
         table->ResizedColumnNextWidth = FLT_MAX;
         table->ResizedColumn = -1;
+
+        // Process auto-fit for single stretch column, which is a special case
+        // FIXME-TABLE: Would be nice to redistribute available stretch space accordingly to other weights, instead of giving it all to siblings.
+        if (table->AutoFitSingleStretchColumn != -1)
+        {
+            table->Columns[table->AutoFitSingleStretchColumn].AutoFitQueue = 0x00;
+            TableSetColumnWidth(table->AutoFitSingleStretchColumn, table->Columns[table->AutoFitSingleStretchColumn].WidthAuto);
+            table->AutoFitSingleStretchColumn = -1;
+        }
     }
 
     // Handle reordering request
@@ -486,7 +499,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
         table->IsSettingsDirty = true;
     }
 
-    // Setup and lock Visible state and order
+    // Lock Visible state and Order
     table->ColumnsVisibleCount = 0;
     table->IsDefaultDisplayOrder = true;
     ImGuiTableColumn* last_visible_column = NULL;
@@ -522,7 +535,7 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
                 last_visible_column->NextVisibleColumn = (ImS8)column_n;
                 column->PrevVisibleColumn = (ImS8)table->Columns.index_from_ptr(last_visible_column);
             }
-            column->IndexWithinVisibleSet = (ImS8)table->ColumnsVisibleCount;
+            column->IndexWithinVisibleSet = table->ColumnsVisibleCount;
             table->ColumnsVisibleCount++;
             table->VisibleMaskByIndex |= index_mask;
             table->VisibleMaskByDisplayOrder |= display_order_mask;
@@ -658,6 +671,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthAlwaysAutoResize | ImGuiTableColumnFlags_WidthFixed))
         {
+            // Process auto-fit for non-stretched columns
             // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
             if ((column->AutoFitQueue != 0x00) || ((column->Flags & ImGuiTableColumnFlags_WidthAlwaysAutoResize) && !column->IsClipped))
                 column->WidthRequest = width_auto;
@@ -676,15 +690,16 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         else
         {
             IM_ASSERT(column->Flags & ImGuiTableColumnFlags_WidthStretch);
-            const int init_size = (column->StretchWeight < 0.0f);
-            if (init_size)
-                column->StretchWeight = 1.0f;
+            const float default_weight = (column->InitStretchWeightOrWidth > 0.0f) ? column->InitStretchWeightOrWidth : 1.0f;
+            if (column->AutoFitQueue != 0x00)
+                column->StretchWeight = default_weight;
             sum_weights_stretched += column->StretchWeight;
             if (table->LeftMostStretchedColumnDisplayOrder == -1)
                 table->LeftMostStretchedColumnDisplayOrder = (ImS8)column->DisplayOrder;
         }
         sum_width_fixed_requests += table->CellPaddingX * 2.0f;
     }
+    table->ColumnsVisibleFixedCount = (ImS8)count_fixed;
 
     // Layout
     const float width_spacings = (table->OuterPaddingX * 2.0f) + (table->CellSpacingX1 + table->CellSpacingX2) * (table->ColumnsVisibleCount - 1);
@@ -963,10 +978,9 @@ void    ImGui::TableUpdateBorders(ImGuiTable* table)
 
         bool hovered = false, held = false;
         bool pressed = ButtonBehavior(hit_rect, column_id, &hovered, &held, ImGuiButtonFlags_FlattenChildren | ImGuiButtonFlags_AllowItemOverlap | ImGuiButtonFlags_PressedOnClick | ImGuiButtonFlags_PressedOnDoubleClick);
-        if (pressed && IsMouseDoubleClicked(0) && !(column->Flags & ImGuiTableColumnFlags_WidthStretch))
+        if (pressed && IsMouseDoubleClicked(0))
         {
-            // FIXME-TABLE: Double-clicking on column edge could auto-fit Stretch column?
-            TableSetColumnAutofit(table, column_n);
+            TableSetColumnWidthAutoSingle(table, column_n);
             ClearActiveID();
             held = hovered = false;
         }
@@ -1313,21 +1327,28 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
     }
     else if (column_0->Flags & ImGuiTableColumnFlags_WidthStretch)
     {
-        // [Resize Rule 2]
-        if (column_1 && (column_1->Flags & ImGuiTableColumnFlags_WidthFixed))
+        // We can also use previous column if there's no next one
+        if (column_1 == NULL)
+            column_1 = (column_0->PrevVisibleColumn != -1) ? &table->Columns[column_0->PrevVisibleColumn] : NULL;
+        if (column_1 == NULL)
+            return;
+
+        if (column_1->Flags & ImGuiTableColumnFlags_WidthFixed)
         {
+            // [Resize Rule 2]
             float off = (column_0->WidthGiven - column_0_width);
             float column_1_width = column_1->WidthGiven + off;
             column_1->WidthRequest = ImMax(min_width, column_1_width);
-            return;
         }
-
-        // (old_a + old_b == new_a + new_b) --> (new_a == old_a + old_b - new_b)
-        float column_1_width = ImMax(column_1->WidthRequest - (column_0_width - column_0->WidthRequest), min_width);
-        column_0_width = column_0->WidthRequest + column_1->WidthRequest - column_1_width;
-        column_1->WidthRequest = column_1_width;
-        column_0->WidthRequest = column_0_width;
-        TableUpdateColumnsWeightFromWidth(table);
+        else
+        {
+            // (old_a + old_b == new_a + new_b) --> (new_a == old_a + old_b - new_b)
+            float column_1_width = ImMax(column_1->WidthRequest - (column_0_width - column_0->WidthRequest), min_width);
+            column_0_width = column_0->WidthRequest + column_1->WidthRequest - column_1_width;
+            column_1->WidthRequest = column_1_width;
+            column_0->WidthRequest = column_0_width;
+            TableUpdateColumnsWeightFromWidth(table);
+        }
     }
 }
 
@@ -1613,25 +1634,19 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
 
     // Initialize defaults
     if (flags & ImGuiTableColumnFlags_WidthStretch)
-    {
         IM_ASSERT(init_width_or_weight != 0.0f && "Need to provide a valid weight!");
-        if (init_width_or_weight < 0.0f)
-            init_width_or_weight = 1.0f;
-    }
     column->InitStretchWeightOrWidth = init_width_or_weight;
     if (table->IsInitializing && column->WidthRequest < 0.0f && column->StretchWeight < 0.0f)
     {
         // Init width or weight
         if ((flags & ImGuiTableColumnFlags_WidthFixed) && init_width_or_weight > 0.0f)
-        {
-            // Disable auto-fit if a default fixed width has been specified
             column->WidthRequest = init_width_or_weight;
-            column->AutoFitQueue = 0x00;
-        }
         if (flags & ImGuiTableColumnFlags_WidthStretch)
-            column->StretchWeight = init_width_or_weight;
-        else
-            column->StretchWeight = 1.0f;
+            column->StretchWeight = (init_width_or_weight > 0.0f) ? init_width_or_weight : 1.0f;
+
+        // Disable auto-fit if an explicit fixed width has been specified
+        if (init_width_or_weight > 0.0f)
+            column->AutoFitQueue = 0x00;
     }
     if (table->IsInitializing)
     {
@@ -2041,13 +2056,30 @@ ImGuiID ImGui::TableGetColumnResizeID(const ImGuiTable* table, int column_n, int
     return id;
 }
 
-void    ImGui::TableSetColumnAutofit(ImGuiTable* table, int column_n)
+// Disable clipping then auto-fit, will take 2 frames
+// (we don't take a shortcut for unclipped columns to reduce inconsistencies when e.g. resizing multiple columns)
+void    ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
 {
-    // Disable clipping then auto-fit, will take 2 frames
-    // (we don't take a shortcut for unclipped columns to reduce inconsistencies when e.g. resizing multiple columns)
+    // Single auto width uses auto-fit
     ImGuiTableColumn* column = &table->Columns[column_n];
+    if (!column->IsVisible)
+        return;
     column->CannotSkipItemsQueue = (1 << 0);
     column->AutoFitQueue = (1 << 1);
+    if (column->Flags & ImGuiTableColumnFlags_WidthStretch)
+        table->AutoFitSingleStretchColumn = (ImS8)column_n;
+}
+
+void    ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
+{
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (!column->IsVisible)
+            continue;
+        column->CannotSkipItemsQueue = (1 << 0);
+        column->AutoFitQueue = (1 << 1);
+    }
 }
 
 void    ImGui::PushTableBackground()
@@ -2092,20 +2124,20 @@ void    ImGui::TableDrawContextMenu(ImGuiTable* table)
     {
         if (column != NULL)
         {
-            const bool can_resize = !(column->Flags & (ImGuiTableColumnFlags_NoResize | ImGuiTableColumnFlags_WidthStretch)) && column->IsVisible;
+            const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsVisible;
             if (MenuItem("Size column to fit", NULL, false, can_resize))
-                TableSetColumnAutofit(table, column_n);
+                TableSetColumnWidthAutoSingle(table, column_n);
         }
 
-        if (MenuItem("Size all columns to fit", NULL))
-        {
-            for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
-            {
-                ImGuiTableColumn* other_column = &table->Columns[other_column_n];
-                if (other_column->IsVisible)
-                    TableSetColumnAutofit(table, other_column_n);
-            }
-        }
+        const char* size_all_desc;
+        if (table->ColumnsVisibleFixedCount == table->ColumnsVisibleCount)
+            size_all_desc = "Size all columns to fit";          // All fixed
+        else if (table->ColumnsVisibleFixedCount == 0)
+            size_all_desc = "Size all columns to default";      // All stretch
+        else
+            size_all_desc = "Size all columns to fit/default";  // Mixed
+        if (MenuItem(size_all_desc, NULL))
+            TableSetColumnWidthAutoAll(table);
         want_separator = true;
     }
 

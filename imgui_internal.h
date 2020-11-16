@@ -519,6 +519,7 @@ struct ImSpan
     inline void         set(T* data, int size)      { Data = data; DataEnd = data + size; }
     inline void         set(T* data, T* data_end)   { Data = data; DataEnd = data_end; }
     inline int          size() const                { return (int)(ptrdiff_t)(DataEnd - Data); }
+    inline int          size_in_bytes() const       { return (int)(ptrdiff_t)(DataEnd - Data) * (int)sizeof(T); }
     inline T&           operator[](int i)           { T* p = Data + i; IM_ASSERT(p >= Data && p < DataEnd); return *p; }
     inline const T&     operator[](int i) const     { const T* p = Data + i; IM_ASSERT(p >= Data && p < DataEnd); return *p; }
 
@@ -1941,7 +1942,6 @@ struct ImGuiTableColumn
         PrevVisibleColumn = NextVisibleColumn = -1;
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
-        AutoFitQueue = CannotSkipItemsQueue = (1 << 3) - 1; // Skip for three frames
         DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = (ImU8)-1;
     }
 };
@@ -1969,7 +1969,6 @@ struct ImGuiTable
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
     int                         ColumnsCount;               // Number of columns declared in BeginTable()
-    int                         ColumnsVisibleCount;        // Number of non-hidden columns (<= ColumnsCount)
     int                         CurrentRow;
     int                         CurrentColumn;
     ImS16                       InstanceCurrent;            // Count of BeginTable() calls with same ID in the same frame (generally 0). This is a little bit similar to BeginCount for a window, but multiple table with same ID look are multiple tables, they are just synched.
@@ -2018,9 +2017,12 @@ struct ImGuiTable
     ImVector<ImGuiTableSortSpecsColumn> SortSpecsData;      // FIXME-OPT: Fixed-size array / small-vector pattern, optimize for single sort spec
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImS8                        SortSpecsCount;
+    ImS8                        ColumnsVisibleCount;        // Number of non-hidden columns (<= ColumnsCount)
+    ImS8                        ColumnsVisibleFixedCount;   // Number of non-hidden columns (<= ColumnsCount)
     ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
     ImS8                        HoveredColumnBody;          // Index of column whose visible region is being hovered. Important: == ColumnsCount when hovering empty region after the right-most column!
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
+    ImS8                        AutoFitSingleStretchColumn; // Index of single stretch column requesting auto-fit.
     ImS8                        ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
     ImS8                        LastResizedColumn;          // Index of column being resized from previous frame.
     ImS8                        HeldHeaderColumn;           // Index of column header being held.
@@ -2287,7 +2289,8 @@ namespace ImGui
     IMGUI_API ImRect        TableGetCellBgRect(const ImGuiTable* table, int column_n);
     IMGUI_API const char*   TableGetColumnName(const ImGuiTable* table, int column_n);
     IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
-    IMGUI_API void          TableSetColumnAutofit(ImGuiTable* table, int column_n);
+    IMGUI_API void          TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n);
+    IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
     IMGUI_API void          PushTableBackground();
     IMGUI_API void          PopTableBackground();
     IMGUI_API void          TableRemove(ImGuiTable* table);
