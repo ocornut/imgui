@@ -96,7 +96,7 @@
 static const int TABLE_DRAW_CHANNEL_BG0 = 0;
 static const int TABLE_DRAW_CHANNEL_BG1_FROZEN = 1;
 static const int TABLE_DRAW_CHANNEL_UNCLIPPED = 2;                  // When using ImGuiTableFlags_NoClip
-static const float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded.
+static const float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded because of clipping assumptions with outer borders rendering.
 static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
 static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
 
@@ -616,7 +616,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // (can't make auto padding larger than what WorkRect knows about so right-alignment matches)
     const ImRect work_rect = table->WorkRect;
     const float min_column_width = TableGetMinColumnWidth();
-    const float min_column_distance = min_column_width + table->CellPaddingX * 2.0f;
+    const float min_column_distance = min_column_width + table->CellPaddingX * 2.0f + table->CellSpacingX1 + table->CellSpacingX2;
 
     int count_fixed = 0;
     float sum_weights_stretched = 0.0f;     // Sum of all weights for weighted columns.
@@ -668,7 +668,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             // This is merely making the side-effect less extreme, but doesn't properly fixes it.
             // FIXME: Move this to ->WidthGiven to avoid temporary lossyless?
             if (column->AutoFitQueue > 0x01 && table->IsInitializing)
-                column->WidthRequest = ImMax(column->WidthRequest, min_column_width * 4.0f);
+                column->WidthRequest = ImMax(column->WidthRequest, min_column_width * 4.0f); // FIXME-TABLE: Another constant/scale?
 
             count_fixed += 1;
             sum_width_fixed_requests += column->WidthRequest;
@@ -763,6 +763,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     offset_x += table->OuterPaddingX;
     offset_x -= table->CellSpacingX1;
     ImRect host_clip_rect = table->InnerClipRect;
+    //host_clip_rect.Max.x += table->CellPaddingX + table->CellSpacingX2;
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
@@ -786,31 +787,46 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             continue;
         }
 
-        float max_x = FLT_MAX;
+        // Maximum width
+        float max_width = FLT_MAX;
         if (table->Flags & ImGuiTableFlags_ScrollX)
         {
             // Frozen columns can't reach beyond visible width else scrolling will naturally break.
             if (order_n < table->FreezeColumnsRequest)
-                max_x = table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - order_n) * min_column_distance - table->OuterPaddingX;
+            {
+                max_width = (table->InnerClipRect.Max.x - (table->FreezeColumnsRequest - order_n) * min_column_distance) - offset_x;
+                max_width = max_width - table->OuterPaddingX - table->CellPaddingX - table->CellSpacingX2;
+            }
         }
         else if ((table->Flags & ImGuiTableFlags_NoKeepColumnsVisible) == 0)
         {
             // If horizontal scrolling if disabled, we apply a final lossless shrinking of columns in order to make
             // sure they are all visible. Because of this we also know that all of the columns will always fit in
             // table->WorkRect and therefore in table->InnerRect (because ScrollX is off)
-            max_x = table->WorkRect.Max.x - (table->ColumnsVisibleCount - (column->IndexWithinVisibleSet + 1)) * min_column_distance - table->OuterPaddingX;
+            // FIXME-TABLE: This is solved incorrectly but also quite a difficult problem to fix as we also want ClipRect width to match.
+            // See "table_width_distrib" and "table_width_keep_visible" tests
+            max_width = table->WorkRect.Max.x - (table->ColumnsVisibleCount - column->IndexWithinVisibleSet - 1) * min_column_distance - offset_x;
+            //max_width -= table->CellSpacingX1;
+            max_width -= table->CellSpacingX2;
+            max_width -= table->CellPaddingX * 2.0f;
+            max_width -= table->OuterPaddingX;
         }
-        if (offset_x + column->WidthGiven + table->CellPaddingX * 2.0f + table->CellSpacingX1 > max_x)
-            column->WidthGiven = ImMax(max_x - offset_x - table->CellPaddingX * 2.0f - table->CellSpacingX1, min_column_width);
+        column->WidthGiven = ImMin(column->WidthGiven, max_width);
+
+        // Minimum width
+        column->WidthGiven = ImMax(column->WidthGiven, ImMin(column->WidthRequest, min_column_width));
 
         // Lock all our positions
+        // - ClipRect.Min.x: Because merging draw commands doesn't compare min boundaries, we make ClipRect.Min.x match left bounds to be consistent regardless of merging.
+        // - ClipRect.Max.x: using WorkMaxX instead of MaxX (aka including padding) is detrimental to visibility in very-small column.
+        // - FIXME-TABLE: We want equal width columns to have equal (ClipRect.Max.x - WorkMinX) width, which means ClipRect.max.x cannot stray off host_clip_rect.Max.x else right-most column may appear shorter.
         column->MinX = offset_x;
         column->MaxX = offset_x + column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
         column->WorkMinX = column->MinX + table->CellPaddingX + table->CellSpacingX1;
         column->WorkMaxX = column->MaxX - table->CellPaddingX - table->CellSpacingX2; // Expected max
         column->ClipRect.Min.x = column->MinX;
         column->ClipRect.Min.y = work_rect.Min.y;
-        column->ClipRect.Max.x = column->MaxX;
+        column->ClipRect.Max.x = column->MaxX; // column->WorkMaxX;
         column->ClipRect.Max.y = FLT_MAX;
         column->ClipRect.ClipWithFull(host_clip_rect);
 
@@ -845,7 +861,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         }
 
         if (visible_n < table->FreezeColumnsCount)
-            host_clip_rect.Min.x = ImMax(host_clip_rect.Min.x, column->MaxX + 2.0f);
+            host_clip_rect.Min.x = ImMax(host_clip_rect.Min.x, column->MaxX + TABLE_BORDER_SIZE);
 
         offset_x += column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
         visible_n++;
@@ -1031,7 +1047,7 @@ void    ImGui::EndTable()
 #if 0
     // Strip out dummy channel draw calls
     // We have no way to prevent user submitting direct ImDrawList calls into a hidden column (but ImGui:: calls will be clipped out)
-    // FIXME-TABLE: The problem with this approach is we are effectively making it harder for users watching metrics to spot wasted vertices.
+    // (The problem with this approach is we are effectively making it harder for users watching metrics to spot wasted vertices)
     if (table->DummyDrawChannel != (ImU8)-1)
     {
         ImDrawChannel* dummy_channel = &table->DrawSplitter._Channels[table->DummyDrawChannel];
@@ -1169,6 +1185,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     }
 
     // Draw outer border
+    // FIXME-TABLE: could use AddRect or explicit VLine/HLine helper?
     if (table->Flags & ImGuiTableFlags_BordersOuter)
     {
         // Display outer border offset by 1 which is a simple way to display it without adding an extra draw call
@@ -1186,7 +1203,6 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
         }
         else if (table->Flags & ImGuiTableFlags_BordersOuterV)
         {
-            // FIXME-TABLE: could use AddRect or explicit VLine/HLine helper?
             outer_drawlist->AddLine(outer_border.Min, ImVec2(outer_border.Min.x, outer_border.Max.y), outer_col, border_size);
             outer_drawlist->AddLine(ImVec2(outer_border.Max.x, outer_border.Min.y), outer_border.Max, outer_col, border_size);
         }
@@ -1199,7 +1215,6 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
     if ((table->Flags & ImGuiTableFlags_BordersInnerH) && table->RowPosY2 < table->OuterRect.Max.y)
     {
         // Draw bottom-most row border
-        // FIXME-TABLE: could use AddRect or explicit VLine/HLine helper?
         const float border_y = table->RowPosY2;
         if (border_y >= table->BgClipRect.Min.y && border_y < table->BgClipRect.Max.y)
             inner_drawlist->AddLine(ImVec2(table->BorderX1, border_y), ImVec2(table->BorderX2, border_y), table->BorderColorLight, border_size);
@@ -1790,7 +1805,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
                 ImRect cell_bg_rect = TableGetCellBgRect(table, cell_data->Column);
                 cell_bg_rect.ClipWith(table->BgClipRect);
                 cell_bg_rect.Min.x = ImMax(cell_bg_rect.Min.x, column->ClipRect.Min.x);     // So that first column after frozen one gets clipped
-                cell_bg_rect.Max.x = ImMin(cell_bg_rect.Max.x, column->ClipRect.Max.x);
+                cell_bg_rect.Max.x = ImMin(cell_bg_rect.Max.x, column->MaxX);
                 window->DrawList->AddRectFilled(cell_bg_rect.Min, cell_bg_rect.Max, cell_data->BgColor);
             }
         }
@@ -1911,7 +1926,6 @@ void    ImGui::TableEndCell(ImGuiTable* table)
 }
 
 // Append into the next column/cell
-// FIXME-TABLE: Wrapping to next row could be optional?
 bool    ImGui::TableNextColumn()
 {
     ImGuiContext& g = *GImGui;
@@ -2365,7 +2379,7 @@ void    ImGui::TableHeader(const char* label)
 
     // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering for merging.
     float max_pos_x = label_pos.x + label_size.x + w_sort_text + w_arrow;
-    column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, cell_r.Max.x);
+    column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, column->WorkMaxX);
     column->ContentMaxXHeadersIdeal = ImMax(column->ContentMaxXHeadersIdeal, max_pos_x);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
