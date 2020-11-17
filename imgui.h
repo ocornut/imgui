@@ -1232,6 +1232,8 @@ enum ImGuiStyleVar_
     ImGuiStyleVar_ScrollbarRounding,   // float     ScrollbarRounding
     ImGuiStyleVar_GrabMinSize,         // float     GrabMinSize
     ImGuiStyleVar_GrabRounding,        // float     GrabRounding
+    ImGuiStyleVar_SliderThickness,     // float     SliderThickness
+    ImGuiStyleVar_SliderContrast,      // float     SliderContrast
     ImGuiStyleVar_TabRounding,         // float     TabRounding
     ImGuiStyleVar_ButtonTextAlign,     // ImVec2    ButtonTextAlign
     ImGuiStyleVar_SelectableTextAlign, // ImVec2    SelectableTextAlign
@@ -1471,6 +1473,8 @@ struct ImGuiStyle
     float       ScrollbarRounding;          // Radius of grab corners for scrollbar.
     float       GrabMinSize;                // Minimum width/height of a grab box for slider/scrollbar.
     float       GrabRounding;               // Radius of grabs corners rounding. Set to 0.0f to have rectangular slider grabs.
+    float       SliderThickness;            // Thickness of sliders. Can be set between 0.0f (rectangle witdh is null) and 1.0f (full rectangle is drawn), 
+    float       SliderContrast;             // Contrast between the left and right sides of the slider track. 
     float       LogSliderDeadzone;          // The size in pixels of the dead-zone around zero on logarithmic sliders that cross zero.
     float       TabRounding;                // Radius of upper corners of a tab. Set to 0.0f to have rectangular tabs.
     float       TabBorderSize;              // Thickness of border around tabs.
