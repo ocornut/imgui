@@ -3421,18 +3421,24 @@ bool ImGui::SliderScalar(const char* label, ImGuiDataType data_type, void* p_dat
     }
 
     // Draw frame
-    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f + g.Style.SliderContrast);
+    const ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f - g.Style.SliderContrast);
     RenderNavCursor(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, false, style.FrameRounding);
-    if (color_marker != 0 && style.ColorMarkerSize > 0.0f)
-        RenderColorComponentMarker(frame_bb, GetColorU32(color_marker), style.FrameRounding);
-    RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
     const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
+
+    // Render track
+    //RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, false, style.FrameRounding);
+    float mid_x = IM_ROUND(grab_bb.Min.x + (grab_bb.Max.x - grab_bb.Min.x) * 0.50f);
+    window->DrawList->AddRectFilled(frame_bb.Min, ImVec2(mid_x, frame_bb.Max.y), frame_col, style.FrameRounding, ImDrawFlags_RoundLeft);
+    window->DrawList->AddRectFilled(ImVec2(mid_x, frame_bb.Min.y), frame_bb.Max, frame_col_after, style.FrameRounding, ImDrawFlags_RoundRight);
+    if (color_marker != 0 && style.ColorMarkerSize > 0.0f)
+        RenderColorComponentMarker(frame_bb, GetColorU32(color_marker), style.FrameRounding);
+    RenderFrameBorder(frame_bb.Min, frame_bb.Max, g.Style.FrameRounding);
 
     // Render grab
     if (grab_bb.Max.x > grab_bb.Min.x)
@@ -3582,15 +3588,21 @@ bool ImGui::VSliderScalar(const char* label, const ImVec2& size, ImGuiDataType d
     }
 
     // Draw frame
-    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg);
+    const ImU32 frame_col = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f + g.Style.SliderContrast);
+    const ImU32 frame_col_after = GetColorU32(g.ActiveId == id ? ImGuiCol_FrameBgActive : hovered ? ImGuiCol_FrameBgHovered : ImGuiCol_FrameBg, 1.0f - g.Style.SliderContrast);
     RenderNavCursor(frame_bb, id);
-    RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
 
     // Slider behavior
     ImRect grab_bb;
     const bool value_changed = SliderBehavior(frame_bb, id, data_type, p_data, p_min, p_max, format, flags | ImGuiSliderFlags_Vertical, &grab_bb);
     if (value_changed)
         MarkItemEdited(id);
+
+    // Render track
+    //RenderFrame(frame_bb.Min, frame_bb.Max, frame_col, true, g.Style.FrameRounding);
+    float mid_y = IM_ROUND(grab_bb.Max.y - (grab_bb.Max.y - grab_bb.Min.y) * 0.50f);
+    window->DrawList->AddRectFilled(ImVec2(frame_bb.Min.x, mid_y), frame_bb.Max, frame_col, style.FrameRounding, ImDrawFlags_RoundBottom);
+    window->DrawList->AddRectFilled(frame_bb.Min, ImVec2(frame_bb.Max.x, mid_y), frame_col_after, style.FrameRounding, ImDrawFlags_RoundTop);
 
     // Render grab
     if (grab_bb.Max.y > grab_bb.Min.y)
