@@ -1127,8 +1127,8 @@ struct IMGUI_API ImGuiStackSizes
     short   SizeOfBeginPopupStack;
 
     ImGuiStackSizes() { memset(this, 0, sizeof(*this)); }
-    IMGUI_API void SetToCurrentState();
-    IMGUI_API void CompareWithCurrentState();
+    void SetToCurrentState();
+    void CompareWithCurrentState();
 };
 
 //-----------------------------------------------------------------------------
