@@ -104,8 +104,8 @@ static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/tim
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
 {
     // Adjust flags: set default sizing policy
-    if ((flags & (ImGuiTableFlags_SizingPolicyStretchX | ImGuiTableFlags_SizingPolicyFixedX)) == 0)
-        flags |= (flags & ImGuiTableFlags_ScrollX) ? ImGuiTableFlags_SizingPolicyFixedX : ImGuiTableFlags_SizingPolicyStretchX;
+    if ((flags & (ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ColumnsWidthFixed)) == 0)
+        flags |= (flags & ImGuiTableFlags_ScrollX) ? ImGuiTableFlags_ColumnsWidthFixed : ImGuiTableFlags_ColumnsWidthStretch;
 
     // Adjust flags: MultiSortable automatically enable Sortable
     if (flags & ImGuiTableFlags_MultiSortable)
@@ -572,7 +572,7 @@ static ImGuiTableColumnFlags TableFixColumnFlags(ImGuiTable* table, ImGuiTableCo
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
     {
         // FIXME-TABLE: Inconsistent to promote columns to WidthAutoResize
-        if (table->Flags & ImGuiTableFlags_SizingPolicyFixedX)
+        if (table->Flags & ImGuiTableFlags_ColumnsWidthFixed)
             flags |= ((table->Flags & ImGuiTableFlags_Resizable) && !(flags & ImGuiTableColumnFlags_NoResize)) ? ImGuiTableColumnFlags_WidthFixed : ImGuiTableColumnFlags_WidthAutoResize;
         else
             flags |= ImGuiTableColumnFlags_WidthStretch;
@@ -580,8 +580,6 @@ static ImGuiTableColumnFlags TableFixColumnFlags(ImGuiTable* table, ImGuiTableCo
     IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_WidthMask_)); // Check that only 1 of each set is used.
     if (flags & ImGuiTableColumnFlags_WidthAutoResize)
         flags |= ImGuiTableColumnFlags_NoResize;
-    //if ((flags & ImGuiTableColumnFlags_WidthStretch) && (table->Flags & ImGuiTableFlags_SizingPolicyFixedX))
-    //    flags = (flags & ~ImGuiTableColumnFlags_WidthMask_) | ImGuiTableColumnFlags_WidthFixed;
 
     // Sorting
     if ((flags & ImGuiTableColumnFlags_NoSortAscending) && (flags & ImGuiTableColumnFlags_NoSortDescending))
@@ -1653,7 +1651,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     // (vs TableFixColumnFlags would default to WidthAutoResize)
     // (we write to FlagsIn which is a little misleading, another solution would be to pass init_width_or_weight to TableFixColumnFlags)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
-        if ((table->Flags & ImGuiTableFlags_SizingPolicyFixedX) && (init_width_or_weight > 0.0f))
+        if ((table->Flags & ImGuiTableFlags_ColumnsWidthFixed) && (init_width_or_weight > 0.0f))
             flags |= ImGuiTableColumnFlags_WidthFixed;
 
     column->UserID = user_id;

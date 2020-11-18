@@ -1037,12 +1037,12 @@ enum ImGuiTabItemFlags_
 //   Read comments/demos carefully + experiment with live demos to get acquainted with them.
 // - The default sizing policy for columns depends on whether the ScrollX flag is set on the table:
 //   When ScrollX is off:
-//    - Table defaults to ImGuiTableFlags_SizingPolicyStretchX -> all Columns defaults to ImGuiTableColumnFlags_WidthStretch.
+//    - Table defaults to ImGuiTableFlags_ColumnsWidthStretch -> all Columns defaults to ImGuiTableColumnFlags_WidthStretch.
 //    - Columns sizing policy allowed: Stretch (default) or Fixed/Auto.
 //    - Stretch Columns will share the width available in table.
 //    - Fixed Columns will generally obtain their requested width unless the Table cannot fit them all.
 //   When ScrollX is on:
-//    - Table defaults to ImGuiTableFlags_SizingPolicyFixedX -> all Columns defaults to ImGuiTableColumnFlags_WidthFixed.
+//    - Table defaults to ImGuiTableFlags_ColumnsWidthFixed -> all Columns defaults to ImGuiTableColumnFlags_WidthFixed.
 //    - Columns sizing policy allowed: Fixed/Auto mostly! 
 //    - Fixed Columns can be enlarged as needed. Table will show an horizontal scrollbar if needed.
 //    - Using Stretch columns OFTEN DOES NOT MAKE SENSE if ScrollX is on, UNLESS you have specified a value for 'inner_width' in BeginTable().
@@ -1074,8 +1074,8 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_NoBordersInBody                 = 1 << 12,  // Disable vertical borders in columns Body (borders will always appears in Headers).
     ImGuiTableFlags_NoBordersInBodyUntilResize      = 1 << 13,  // Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers).
     // Sizing
-    ImGuiTableFlags_SizingPolicyStretchX            = 1 << 14,  // Default if ScrollX is off. Columns will default to use _WidthStretch policy. Read description above for more details.
-    ImGuiTableFlags_SizingPolicyFixedX              = 1 << 15,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAutoResize policy (if Resizable is off). Read description above for more details.
+    ImGuiTableFlags_ColumnsWidthStretch             = 1 << 14,  // Default if ScrollX is off. Columns will default to use _WidthStretch. Read description above for more details.
+    ImGuiTableFlags_ColumnsWidthFixed               = 1 << 15,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAutoResize policy (if Resizable is off). Read description above for more details.
     ImGuiTableFlags_SameWidths                      = 1 << 16,  // Make all columns the same widths which is useful with Fixed columns policy (but granted by default with Stretch policy + no resize). Implicitly enable ImGuiTableFlags_NoKeepColumnsVisible and disable ImGuiTableFlags_Resizable.
     ImGuiTableFlags_NoHeadersWidth                  = 1 << 17,  // Disable headers' contribution to automatic width calculation.
     ImGuiTableFlags_NoHostExtendY                   = 1 << 18,  // Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
@@ -1098,9 +1098,9 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_None                      = 0,
     ImGuiTableColumnFlags_DefaultHide               = 1 << 0,   // Default as a hidden column.
     ImGuiTableColumnFlags_DefaultSort               = 1 << 1,   // Default as a sorting column.
-    ImGuiTableColumnFlags_WidthStretch              = 1 << 2,   // Column will stretch. Preferable with horizontal scrolling disabled (default if table sizing policy is SizingPolicyStretchX).
-    ImGuiTableColumnFlags_WidthFixed                = 1 << 3,   // Column will not stretch. Preferable with horizontal scrolling enabled (default if table sizing policy is SizingPolicyFixedX and table is resizable).
-    ImGuiTableColumnFlags_WidthAutoResize           = 1 << 4,   // Column will not stretch and keep resizing based on submitted contents (default if table sizing policy is SizingPolicyFixedX and table is not resizable).
+    ImGuiTableColumnFlags_WidthStretch              = 1 << 2,   // Column will stretch. Preferable with horizontal scrolling disabled (default if table sizing policy is _ColumnsWidthStretch).
+    ImGuiTableColumnFlags_WidthFixed                = 1 << 3,   // Column will not stretch. Preferable with horizontal scrolling enabled (default if table sizing policy is _ColumnsWidthFixed and table is resizable).
+    ImGuiTableColumnFlags_WidthAutoResize           = 1 << 4,   // Column will not stretch and keep resizing based on submitted contents (default if table sizing policy is _ColumnsWidthFixed and table is not resizable).
     ImGuiTableColumnFlags_NoResize                  = 1 << 5,   // Disable manual resizing.
     ImGuiTableColumnFlags_NoReorder                 = 1 << 6,   // Disable manual reordering this column, this will also prevent other columns from crossing over this column.
     ImGuiTableColumnFlags_NoHide                    = 1 << 7,   // Disable ability to hide this column.
