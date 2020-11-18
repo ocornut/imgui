@@ -104,16 +104,16 @@ static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/tim
 inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_window)
 {
     // Adjust flags: set default sizing policy
-    if ((flags & ImGuiTableFlags_SizingPolicyMaskX_) == 0)
+    if ((flags & (ImGuiTableFlags_SizingPolicyStretchX | ImGuiTableFlags_SizingPolicyFixedX)) == 0)
         flags |= (flags & ImGuiTableFlags_ScrollX) ? ImGuiTableFlags_SizingPolicyFixedX : ImGuiTableFlags_SizingPolicyStretchX;
 
     // Adjust flags: MultiSortable automatically enable Sortable
     if (flags & ImGuiTableFlags_MultiSortable)
         flags |= ImGuiTableFlags_Sortable;
 
-    // Adjust flags: disable saved settings if there's nothing to save
-    if ((flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable)) == 0)
-        flags |= ImGuiTableFlags_NoSavedSettings;
+    // Adjust flags: disable Resizable when using SameWidths (done above enforcing BordersInnerV)
+    if (flags & ImGuiTableFlags_SameWidths)
+        flags = (flags & ~ImGuiTableFlags_Resizable) | ImGuiTableFlags_NoKeepColumnsVisible;
 
     // Adjust flags: enforce borders when resizable
     if (flags & ImGuiTableFlags_Resizable)
@@ -126,6 +126,10 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_w
     // Adjust flags: NoBordersInBodyUntilResize takes priority over NoBordersInBody
     if (flags & ImGuiTableFlags_NoBordersInBodyUntilResize)
         flags &= ~ImGuiTableFlags_NoBordersInBody;
+
+    // Adjust flags: disable saved settings if there's nothing to save
+    if ((flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Sortable)) == 0)
+        flags |= ImGuiTableFlags_NoSavedSettings;
 
     // Inherit _NoSavedSettings from top-level window (child windows always have _NoSavedSettings set)
 #ifdef IMGUI_HAS_DOCK
@@ -634,12 +638,12 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     int count_fixed = 0;
     float sum_weights_stretched = 0.0f;     // Sum of all weights for weighted columns.
     float sum_width_fixed_requests = 0.0f;  // Sum of all width for fixed and auto-resize columns, excluding width contributed by Stretch columns.
+    float max_width_auto = 0.0f;
     table->LeftMostStretchedColumnDisplayOrder = -1;
-    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
-        if (!(table->VisibleMaskByDisplayOrder & ((ImU64)1 << order_n)))
+        if (!(table->VisibleMaskByIndex & ((ImU64)1 << column_n)))
             continue;
-        const int column_n = table->DisplayOrderToIndex[order_n];
         ImGuiTableColumn* column = &table->Columns[column_n];
 
         // Adjust flags: default width mode + weighted columns are not allowed when auto extending
@@ -694,21 +698,43 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             if (column->AutoFitQueue != 0x00)
                 column->StretchWeight = default_weight;
             sum_weights_stretched += column->StretchWeight;
-            if (table->LeftMostStretchedColumnDisplayOrder == -1)
+            if (table->LeftMostStretchedColumnDisplayOrder == -1 || table->LeftMostStretchedColumnDisplayOrder > column->DisplayOrder)
                 table->LeftMostStretchedColumnDisplayOrder = (ImS8)column->DisplayOrder;
         }
+        max_width_auto = ImMax(max_width_auto, width_auto);
         sum_width_fixed_requests += table->CellPaddingX * 2.0f;
     }
     table->ColumnsVisibleFixedCount = (ImS8)count_fixed;
 
+    // Apply "same widths"
+    // - When all columns are fixed or columns are of mixed type: use the maximum auto width
+    // - When all columns are stretch: use same weight
+    const bool mixed_same_widths = (table->Flags & ImGuiTableFlags_SameWidths) && count_fixed > 0;
+    if (table->Flags & ImGuiTableFlags_SameWidths)
+    {
+        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+            if (table->VisibleMaskByIndex & ((ImU64)1 << column_n))
+            {
+                ImGuiTableColumn* column = &table->Columns[column_n];
+                if (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAutoResize))
+                {
+                    sum_width_fixed_requests += max_width_auto - column->WidthRequest; // Update old sum
+                    column->WidthRequest = max_width_auto;
+                }
+                else
+                {
+                    sum_weights_stretched += 1.0f - column->StretchWeight; // Update old sum
+                    column->StretchWeight = 1.0f;
+                    if (count_fixed > 0)
+                        column->WidthRequest = max_width_auto;
+                }
+            }
+    }
+
     // Layout
     const float width_spacings = (table->OuterPaddingX * 2.0f) + (table->CellSpacingX1 + table->CellSpacingX2) * (table->ColumnsVisibleCount - 1);
-    float width_avail;
-    if ((table->Flags & ImGuiTableFlags_ScrollX) && table->InnerWidth == 0.0f)
-        width_avail = table->InnerClipRect.GetWidth() - width_spacings;
-    else
-        width_avail = work_rect.GetWidth() - width_spacings;
-    const float width_avail_for_stretched_columns = width_avail - sum_width_fixed_requests;
+    const float width_avail = ((table->Flags & ImGuiTableFlags_ScrollX) && table->InnerWidth == 0.0f) ? table->InnerClipRect.GetWidth() : work_rect.GetWidth();
+    const float width_avail_for_stretched_columns = mixed_same_widths ? 0.0f : width_avail - width_spacings - sum_width_fixed_requests;
     float width_remaining_for_stretched_columns = width_avail_for_stretched_columns;
 
     // Apply final width based on requested widths
@@ -726,9 +752,12 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column->Flags & ImGuiTableColumnFlags_WidthStretch)
         {
             // StretchWeight gets converted into WidthRequest
-            float weight_ratio = column->StretchWeight / sum_weights_stretched;
-            column->WidthRequest = IM_FLOOR(ImMax(width_avail_for_stretched_columns * weight_ratio, min_column_width) + 0.01f);
-            width_remaining_for_stretched_columns -= column->WidthRequest;
+            if (!mixed_same_widths) 
+            {
+                float weight_ratio = column->StretchWeight / sum_weights_stretched;
+                column->WidthRequest = IM_FLOOR(ImMax(width_avail_for_stretched_columns * weight_ratio, min_column_width) + 0.01f);
+                width_remaining_for_stretched_columns -= column->WidthRequest;
+            }
 
             // [Resize Rule 2] Resizing from right-side of a stretch column preceding a fixed column
             // needs to forward resizing to left-side of fixed column. We also need to copy the NoResize flag..
@@ -755,7 +784,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
     // Redistribute remainder width due to rounding (remainder width is < 1.0f * number of Stretch column).
     // Using right-to-left distribution (more likely to match resizing cursor), could be adjusted depending
     // on where the mouse cursor is and/or relative weights.
-    if (width_remaining_for_stretched_columns >= 1.0f && !(table->Flags & ImGuiTableFlags_PreciseStretchWidths))
+    if (width_remaining_for_stretched_columns >= 1.0f && !(table->Flags & ImGuiTableFlags_PreciseWidths))
         for (int order_n = table->ColumnsCount - 1; sum_weights_stretched > 0.0f && width_remaining_for_stretched_columns >= 1.0f && order_n >= 0; order_n--)
         {
             if (!(table->VisibleMaskByDisplayOrder & ((ImU64)1 << order_n)))
@@ -1477,7 +1506,7 @@ void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
 
             // Find out the width of this merge group and check if it will fit in our column
             // (note that we assume that rendering didn't stray on the left direction. we should need a CursorMinPos to detect it)
-            if (!(column->Flags & ImGuiTableColumnFlags_NoClipX))
+            if (!(column->Flags & ImGuiTableColumnFlags_NoClip))
             {
                 float content_max_x;
                 if (!has_freeze_v)
