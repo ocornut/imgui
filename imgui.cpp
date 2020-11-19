@@ -4385,6 +4385,8 @@ static void ImGui::EndFrameDrawDimmedBackgrounds()
                 continue;
             if (g.NavWindowingTargetAnim && viewport == g.NavWindowingTargetAnim->Viewport)
                 continue;
+            if (viewport->Window && modal_window && IsWindowAbove(viewport->Window, modal_window))
+                continue;
             ImDrawList* draw_list = GetForegroundDrawList(viewport);
             const ImU32 dim_bg_col = GetColorU32(dim_bg_for_modal ? ImGuiCol_ModalWindowDimBg : ImGuiCol_NavWindowingDimBg, g.DimBgRatio);
             draw_list->AddRectFilled(viewport->Pos, viewport->Pos + viewport->Size, dim_bg_col);
@@ -6218,15 +6220,19 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             const ImGuiViewportFlags viewport_flags_to_clear = ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoRendererClear;
             ImGuiViewportFlags viewport_flags = window->Viewport->Flags & ~viewport_flags_to_clear;
             const bool is_modal = (flags & ImGuiWindowFlags_Modal) != 0;
-            const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0 && !is_modal;
+            const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
             if (flags & ImGuiWindowFlags_Tooltip)
                 viewport_flags |= ImGuiViewportFlags_TopMost;
-            //if (flags & ImGuiWindowFlags_Modal)
-            //    viewport_flags |= ImGuiViewportFlags_TopMost; // Not correct because other popups can be stack above a modal?
             if ((g.IO.ConfigViewportsNoTaskBarIcon || is_short_lived_floating_window) && !is_modal)
                 viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
             if (g.IO.ConfigViewportsNoDecoration || is_short_lived_floating_window)
                 viewport_flags |= ImGuiViewportFlags_NoDecoration;
+
+            // Not correct to set modal as topmost because:
+            // - Because other popups can be stacked above a modal (e.g. combo box in a modal)
+            // - ImGuiViewportFlags_TopMost is currently handled different in backends: in Win32 it is "appear top most" whereas in GLFW and SDL it is "stay topmost"
+            //if (flags & ImGuiWindowFlags_Modal)
+            //    viewport_flags |= ImGuiViewportFlags_TopMost;
 
             // For popups and menus that may be protruding out of their parent viewport, we enable _NoFocusOnClick so that clicking on them
             // won't steal the OS focus away from their parent window (which may be reflected in OS the title bar decoration).
