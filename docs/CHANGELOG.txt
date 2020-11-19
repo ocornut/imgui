@@ -46,11 +46,15 @@ Breaking Changes:
 
 Other Changes:
 
-- DragScalar: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
-  with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
 - Window: Shrink close button hit-testing region when it covers an abnormally high portion of the window visible
   area (e.g. when window is collapsed + moved in a corner) to facilitate moving the window away. (#3825)
 - Window, Nav: Fixed crash when calling SetWindowFocus(NULL) as the time a new window appears. (#3865) [@nem0]
+- DragScalar: Fixed crash when using DragScalar() directly (not via common wrapper like DragFloat() etc.)
+  with ImGuiSliderFlags_AlwaysClamp + only one of either p_min or p_max set. (#3824) [@harry75369]
+- Drags, Sliders: Fixed a bug where editing value would use wrong number if there were digits right after 
+  format specifier (e.g. using "%f123" as a format string). [@rokups]
+- Drags, Sliders: Fixed a bug where using custom formatting flags (',$,_) supported by stb_sprintf.h 
+  would cause incorrect value to be displayed. (#3604) [@rokups]
 - Tables: Fixed unaligned accesses when using TableSetBgColor(ImGuiTableBgTarget_CellBg). (#3872)
 - IsItemHovered(): fixed return value false positive when used after EndChild(), EndGroup() or widgets using
   either of them, when the hovered location is located within a child window, e.g. InputTextMultiline().
