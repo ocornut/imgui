@@ -6227,10 +6227,13 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Update common viewport flags
             const ImGuiViewportFlags viewport_flags_to_clear = ImGuiViewportFlags_TopMost | ImGuiViewportFlags_NoTaskBarIcon | ImGuiViewportFlags_NoDecoration | ImGuiViewportFlags_NoRendererClear;
             ImGuiViewportFlags viewport_flags = window->Viewport->Flags & ~viewport_flags_to_clear;
-            const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0;
+            const bool is_modal = (flags & ImGuiWindowFlags_Modal) != 0;
+            const bool is_short_lived_floating_window = (flags & (ImGuiWindowFlags_ChildMenu | ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_Popup)) != 0 && !is_modal;
             if (flags & ImGuiWindowFlags_Tooltip)
                 viewport_flags |= ImGuiViewportFlags_TopMost;
-            if (g.IO.ConfigViewportsNoTaskBarIcon || is_short_lived_floating_window)
+            //if (flags & ImGuiWindowFlags_Modal)
+            //    viewport_flags |= ImGuiViewportFlags_TopMost; // Not correct because other popups can be stack above a modal?
+            if ((g.IO.ConfigViewportsNoTaskBarIcon || is_short_lived_floating_window) && !is_modal)
                 viewport_flags |= ImGuiViewportFlags_NoTaskBarIcon;
             if (g.IO.ConfigViewportsNoDecoration || is_short_lived_floating_window)
                 viewport_flags |= ImGuiViewportFlags_NoDecoration;
@@ -6239,7 +6242,7 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // won't steal the OS focus away from their parent window (which may be reflected in OS the title bar decoration).
             // Setting _NoFocusOnClick would technically prevent us from bringing back to front in case they are being covered by an OS window from a different app,
             // but it shouldn't be much of a problem considering those are already popups that are closed when clicking elsewhere.
-            if (is_short_lived_floating_window && (flags & ImGuiWindowFlags_Modal) == 0)
+            if (is_short_lived_floating_window && !is_modal)
                 viewport_flags |= ImGuiViewportFlags_NoFocusOnAppearing | ImGuiViewportFlags_NoFocusOnClick;
 
             // We can overwrite viewport flags using ImGuiWindowClass (advanced users)
@@ -11426,10 +11429,11 @@ static void ImGui::UpdateSelectWindowViewport(ImGuiWindow* window)
             UpdateTryMergeWindowIntoHostViewports(window);
     }
 
-    // Fallback to default viewport
+    // Fallback: merge in default viewport if z-order matches, otherwise create a new viewport
     if (window->Viewport == NULL)
-        window->Viewport = main_viewport;
-
+        if (!UpdateTryMergeWindowIntoHostViewport(window, main_viewport))
+            window->Viewport = AddUpdateViewport(window, window->ID, window->Pos, window->Size, ImGuiViewportFlags_None);
+    
     // Mark window as allowed to protrude outside of its viewport and into the current monitor
     if (!lock_viewport)
     {
