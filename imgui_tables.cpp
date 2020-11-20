@@ -1122,7 +1122,7 @@ void    ImGui::EndTable()
     }
 
     // Apply resizing/dragging at the end of the frame
-    if (table->ResizedColumn != -1)
+    if (table->ResizedColumn != -1 && table->InstanceCurrent == table->InstanceInteracted)
     {
         ImGuiTableColumn* column = &table->Columns[table->ResizedColumn];
         const float new_x2 = (g.IO.MousePos.x - g.ActiveIdClickOffset.x + TABLE_RESIZE_SEPARATOR_HALF_THICKNESS);
