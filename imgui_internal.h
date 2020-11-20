@@ -1893,7 +1893,7 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableUpdateDrawChannels()
 
-// [Internal] sizeof() ~ 100
+// [Internal] sizeof() ~ 104
 // We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
 struct ImGuiTableColumn
 {
@@ -1910,6 +1910,7 @@ struct ImGuiTableColumn
     float                   WidthGiven;                     // Final/actual width visible == (MaxX - MinX), locked in TableUpdateLayout(). May be > WidthRequest to honor minimum width, may be < WidthRequest to honor shrinking columns down in tight space.
     float                   WorkMinX;                       // Start position for the frame, currently ~(MinX + CellPaddingX)
     float                   WorkMaxX;
+    float                   ItemWidth;
     float                   ContentMaxXFrozen;              // Contents maximum position for frozen rows (apart from headers), from which we can infer content width.
     float                   ContentMaxXUnfrozen;
     float                   ContentMaxXHeadersUsed;         // Contents maximum position for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
@@ -2009,7 +2010,9 @@ struct ImGuiTable
     ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
     ImRect                      HostBackupClipRect;         // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
     ImVec2                      HostBackupCursorMaxPos;     // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
-    ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->ColumnsOffset at the end of BeginTable()
+    ImVec1                      HostBackupColumnsOffset;    // Backup of OuterWindow->DC.ColumnsOffset at the end of BeginTable()
+    float                       HostBackupItemWidth;        // Backup of OuterWindow->DC.ItemWidth at the end of BeginTable()
+    int                         HostBackupItemWidthStackSize;// Backup of OuterWindow->DC.ItemWidthStack.Size at the end of BeginTable()
     ImGuiWindow*                OuterWindow;                // Parent window for the table
     ImGuiWindow*                InnerWindow;                // Window holding the table data (== OuterWindow or a child window)
     ImGuiTextBuffer             ColumnsNames;               // Contiguous buffer holding columns names

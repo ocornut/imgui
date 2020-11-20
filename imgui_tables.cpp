@@ -82,8 +82,8 @@
 //    | TableEndRow()                           - finish existing row
 //    | TableBeginRow()                         - add a new row
 // - TableSetColumnIndex() / TableNextColumn()  user begin into a cell
-//    | TableEndCell()                          - close existing cell
-//    | TableBeginCell()                        - enter into current cell
+//    | TableEndCell()                          - close existing column/cell
+//    | TableBeginCell()                        - enter into current column/cell
 // - [...]                                      user emit contents
 //-----------------------------------------------------------------------------
 // - EndTable()                                 user ends the table
@@ -320,6 +320,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostBackupParentWorkRect = inner_window->ParentWorkRect;
     table->HostBackupColumnsOffset = outer_window->DC.ColumnsOffset;
     table->HostBackupCursorMaxPos = inner_window->DC.CursorMaxPos;
+    table->HostBackupItemWidth = outer_window->DC.ItemWidth;
+    table->HostBackupItemWidthStackSize = outer_window->DC.ItemWidthStack.Size;
     inner_window->ParentWorkRect = table->WorkRect;
 
     // Padding and Spacing
@@ -826,6 +828,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
             column->ClipRect.Max.y = FLT_MAX;
             column->ClipRect.ClipWithFull(host_clip_rect);
             column->IsClipped = column->IsSkipItems = true;
+            column->ItemWidth = 1.0f;
             continue;
         }
 
@@ -866,6 +869,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         column->MaxX = offset_x + column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
         column->WorkMinX = column->MinX + table->CellPaddingX + table->CellSpacingX1;
         column->WorkMaxX = column->MaxX - table->CellPaddingX - table->CellSpacingX2; // Expected max
+        column->ItemWidth = ImFloor(column->WidthGiven * 0.65f);
         column->ClipRect.Min.x = column->MinX;
         column->ClipRect.Min.y = work_rect.Min.y;
         column->ClipRect.Max.x = column->MaxX; // column->WorkMaxX;
@@ -1128,11 +1132,14 @@ void    ImGui::EndTable()
 
     // Layout in outer window
     IM_ASSERT_USER_ERROR(inner_window->IDStack.back() == table->ID + table->InstanceCurrent, "Mismatching PushID/PopID!");
+    IM_ASSERT_USER_ERROR(outer_window->DC.ItemWidthStack.Size >= table->HostBackupItemWidthStackSize, "Too many PopItemWidth!");
     PopID();
     inner_window->WorkRect = table->HostBackupWorkRect;
     inner_window->ParentWorkRect = table->HostBackupParentWorkRect;
     inner_window->SkipItems = table->HostSkipItems;
     outer_window->DC.CursorPos = table->OuterRect.Min;
+    outer_window->DC.ItemWidth = table->HostBackupItemWidth;
+    outer_window->DC.ItemWidthStack.Size = table->HostBackupItemWidthStackSize;
     outer_window->DC.ColumnsOffset = table->HostBackupColumnsOffset;
     if (inner_window != outer_window)
     {
@@ -1927,6 +1934,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->WorkRect.Min.y = window->DC.CursorPos.y;
     window->WorkRect.Min.x = column->WorkMinX;
     window->WorkRect.Max.x = column->WorkMaxX;
+    window->DC.ItemWidth = column->ItemWidth;
 
     // To allow ImGuiListClipper to function we propagate our row height
     if (!column->IsVisible)
@@ -1961,6 +1969,7 @@ void    ImGui::TableEndCell(ImGuiTable* table)
         p_max_pos_x = table->IsUnfrozen ? &column->ContentMaxXUnfrozen : &column->ContentMaxXFrozen;
     *p_max_pos_x = ImMax(*p_max_pos_x, window->DC.CursorMaxPos.x);
     table->RowPosY2 = ImMax(table->RowPosY2, window->DC.CursorMaxPos.y + table->CellPaddingY);
+    column->ItemWidth = window->DC.ItemWidth;
 
     // Propagate text baseline for the entire row
     // FIXME-TABLE: Here we propagate text baseline from the last line of the cell.. instead of the first one.

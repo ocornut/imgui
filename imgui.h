@@ -1092,7 +1092,6 @@ enum ImGuiTableFlags_
 };
 
 // Flags for ImGui::TableSetupColumn()
-// FIXME-TABLE: Rename to ImGuiColumns_*, stick old columns api flags in there under an obsolete api block
 enum ImGuiTableColumnFlags_
 {
     ImGuiTableColumnFlags_None                      = 0,

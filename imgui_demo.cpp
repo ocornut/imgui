@@ -4021,47 +4021,87 @@ static void ShowDemoWindowTables()
         ImVec2 outer_size(0, TEXT_BASE_HEIGHT * 7);
         if (ImGui::BeginTable("##nways", column_count, flags, outer_size))
         {
-            for (int row = 0; row < 10; row++)
+            for (int cell = 0; cell < 10 * column_count; cell++)
             {
-                ImGui::TableNextRow();
-                for (int column = 0; column < column_count; column++)
+                ImGui::TableNextColumn();
+                int column = ImGui::TableGetColumnIndex();
+                int row = ImGui::TableGetRowIndex();
+
+                ImGui::PushID(cell);
+                char label[32];
+                static char text_buf[32] = "";
+                sprintf(label, "Hello %d,%d", column, row);
+                switch (contents_type)
                 {
-                    ImGui::TableSetColumnIndex(column);
-                    char label[32];
-                    static char text_buf[32] = "";
-                    sprintf(label, "Hello %d,%d", column, row);
-                    switch (contents_type)
-                    {
-                    case CT_ShortText:  ImGui::TextUnformatted(label); break;
-                    case CT_LongText:   ImGui::Text("Some longer text %d,%d\nOver two lines..", column, row); break;
-                    case CT_Button:     ImGui::Button(label); break;
-                    case CT_FillButton: ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f)); break;
-                    case CT_InputText:  ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText("##", text_buf, IM_ARRAYSIZE(text_buf)); break;
-                    }
+                case CT_ShortText:  ImGui::TextUnformatted(label); break;
+                case CT_LongText:   ImGui::Text("Some longer text %d,%d\nOver two lines..", column, row); break;
+                case CT_Button:     ImGui::Button(label); break;
+                case CT_FillButton: ImGui::Button(label, ImVec2(-FLT_MIN, 0.0f)); break;
+                case CT_InputText:  ImGui::SetNextItemWidth(-FLT_MIN); ImGui::InputText("##", text_buf, IM_ARRAYSIZE(text_buf)); break;
                 }
+                ImGui::PopID();
             }
             ImGui::EndTable();
         }
 
+        ImGui::TextUnformatted("Item Widths");
+        ImGui::SameLine();
+        HelpMarker("Showcase using PushItemWidth() and how it is preserved on a per-column basis");
+        if (ImGui::BeginTable("##table2", 3, ImGuiTableFlags_Borders))
+        {
+            ImGui::TableSetupColumn("small");
+            ImGui::TableSetupColumn("half");
+            ImGui::TableSetupColumn("right-align");
+            ImGui::TableHeadersRow();
+
+            for (int row = 0; row < 3; row++)
+            {
+                ImGui::TableNextRow();
+                if (row == 0)
+                {
+                    // Setup ItemWidth once (instead of setting up every time, which is also possible but less efficient)
+                    ImGui::TableSetColumnIndex(0);
+                    ImGui::PushItemWidth(TEXT_BASE_WIDTH * 3.0f); // Small
+                    ImGui::TableSetColumnIndex(1);
+                    ImGui::PushItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
+                    ImGui::TableSetColumnIndex(2);
+                    ImGui::PushItemWidth(-FLT_MIN); // Right-aligned
+                }
+
+                // Draw our contents
+                static float dummy_f = 0.0f;
+                ImGui::PushID(row);
+                ImGui::TableSetColumnIndex(0);
+                ImGui::SliderFloat("float0", &dummy_f, 0.0f, 1.0f);
+                ImGui::TableSetColumnIndex(1);
+                ImGui::SliderFloat("float1", &dummy_f, 0.0f, 1.0f);
+                ImGui::TableSetColumnIndex(2);
+                ImGui::SliderFloat("float2", &dummy_f, 0.0f, 1.0f);
+                ImGui::PopID();
+            }
+            ImGui::EndTable();
+        }
+
+        ImGui::TextUnformatted("Stretch + ScrollX");
+        ImGui::SameLine();
         HelpMarker(
             "Showcase using Stretch columns + ScrollX together: "
             "this is rather unusual and only makes sense when specifying an 'inner_width' for the table!\n"
             "Without an explicit value, inner_width is == outer_size.x and therefore using Stretch columns + ScrollX together doesn't make sense.");
-        static ImGuiTableFlags flags2 = ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
+        static ImGuiTableFlags flags3 = ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
         static float inner_width = 1000.0f;
         PushStyleCompact();
-        ImGui::PushID("flags2");
-        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", &flags2, ImGuiTableFlags_ScrollX);
-        if (ImGui::CheckboxFlags("ImGuiTableFlags_ColumnsWidthStretch", &flags2, ImGuiTableFlags_ColumnsWidthStretch))
-            flags2 &= ~ImGuiTableFlags_ColumnsWidthFixed;      // Can't specify both sizing polices so we clear the other
-        if (ImGui::CheckboxFlags("ImGuiTableFlags_ColumnsWidthFixed", &flags2, ImGuiTableFlags_ColumnsWidthFixed))
-            flags2 &= ~ImGuiTableFlags_ColumnsWidthStretch;    // Can't specify both sizing polices so we clear the other
+        ImGui::PushID("flags3");
+        ImGui::CheckboxFlags("ImGuiTableFlags_ScrollX", &flags3, ImGuiTableFlags_ScrollX);
+        if (ImGui::CheckboxFlags("ImGuiTableFlags_ColumnsWidthStretch", &flags3, ImGuiTableFlags_ColumnsWidthStretch))
+            flags3 &= ~ImGuiTableFlags_ColumnsWidthFixed;      // Can't specify both sizing polices so we clear the other
+        if (ImGui::CheckboxFlags("ImGuiTableFlags_ColumnsWidthFixed", &flags3, ImGuiTableFlags_ColumnsWidthFixed))
+            flags3 &= ~ImGuiTableFlags_ColumnsWidthStretch;    // Can't specify both sizing polices so we clear the other
         ImGui::SetNextItemWidth(TEXT_BASE_WIDTH * 10.0f);
         ImGui::DragFloat("inner_width", &inner_width, 1.0f, 0.0f, FLT_MAX, "%.1f");
         ImGui::PopID();
         PopStyleCompact();
-
-        if (ImGui::BeginTable("##table2", 7, flags2 | ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ContextMenuInBody, outer_size, inner_width))
+        if (ImGui::BeginTable("##table3", 7, flags3 | ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ContextMenuInBody, outer_size, inner_width))
         {
             for (int cell = 0; cell < 20 * 7; cell++)
             {
