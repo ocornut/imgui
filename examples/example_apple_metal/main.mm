@@ -34,19 +34,19 @@
 
 @implementation ViewController
 
-- (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil 
+- (instancetype)initWithNibName:(nullable NSString *)nibNameOrNil bundle:(nullable NSBundle *)nibBundleOrNil
 {
     self = [super initWithNibName:nibNameOrNil bundle:nibBundleOrNil];
-    
+
     _device = MTLCreateSystemDefaultDevice();
     _commandQueue = [_device newCommandQueue];
 
-    if (!self.device) 
+    if (!self.device)
     {
         NSLog(@"Metal is not supported");
         abort();
     }
-    
+
     // Setup Dear ImGui context
     // FIXME: This example doesn't have proper cleanup...
     IMGUI_CHECKVERSION();
@@ -86,16 +86,16 @@
     //io.Fonts->AddFontFromFileTTF("../../misc/fonts/ProggyTiny.ttf", 10.0f);
     //ImFont* font = io.Fonts->AddFontFromFileTTF("c:\\Windows\\Fonts\\ArialUni.ttf", 18.0f, NULL, io.Fonts->GetGlyphRangesJapanese());
     //IM_ASSERT(font != NULL);
-    
+
     return self;
 }
 
-- (MTKView *)mtkView 
+- (MTKView *)mtkView
 {
     return (MTKView *)self.view;
 }
 
-- (void)loadView 
+- (void)loadView
 {
     self.view = [[MTKView alloc] initWithFrame:CGRectMake(0, 0, 1200, 720)];
 }
@@ -106,7 +106,7 @@
 
     self.mtkView.device = self.device;
     self.mtkView.delegate = self;
-    
+
 #if TARGET_OS_OSX
     ImGui_ImplOSX_AddTrackingArea(self);
     ImGui_ImplOSX_Init(self.view);
