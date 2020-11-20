@@ -85,6 +85,7 @@ Other Changes:
 - Misc: Made EndFrame() assertion for key modifiers being unchanged during the frame (added in 1.76) more
   lenient, allowing full mid-frame releases. This is to accommodate the use of mid-frame modal native
   windows calls, which leads backends such as GLFW to send key clearing events on focus loss. (#3575)
+- Demo: Clarify usage of right-aligned items in Demo>Layout>Widgets Width.
 - Backends: OpenGL3: Use glGetString(GL_VERSION) query instead of glGetIntegerv(GL_MAJOR_VERSION, ...)
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
