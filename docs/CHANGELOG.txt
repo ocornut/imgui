@@ -75,6 +75,9 @@ Other Changes:
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
 - Metrics: Fixed mishandling of ImDrawCmd::VtxOffset in wireframe mesh renderer.
 - Metrics: Rebranded as "Dear ImGui Metrics/Debugger" to clarify its purpose.
+- Fonts: Updated GetGlyphRangesJapanese() to include a larger 2999 ideograms selection of Joyo/Jinmeiyo
+  kanjis, from the previous 1946 ideograms selection. This will consume a some more memory but be generally
+  much more fitting for Japanese display, until we switch to a more dynamic atlas. (#3627) [@vaiorabbit]
 - Misc: Made the ItemFlags stack shared, so effectively the ButtonRepeat/AllowKeyboardFocus states
   (and others exposed in internals such as PushItemFlag) are inherited by stacked Begin/End pairs,
   vs previously a non-child stacked Begin() would reset those flags back to zero for the stacked window.
