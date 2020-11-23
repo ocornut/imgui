@@ -1115,7 +1115,7 @@ enum ImGuiTableColumnFlags_
     // [Internal] Combinations and masks
     ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAutoResize,
     ImGuiTableColumnFlags_IndentMask_               = ImGuiTableColumnFlags_IndentEnable | ImGuiTableColumnFlags_IndentDisable,
-    ImGuiTableColumnFlags_NoDirectResize_           = 1 << 20   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
+    ImGuiTableColumnFlags_NoDirectResize_           = 1 << 30   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
 };
 
 // Flags for ImGui::TableNextRow()
@@ -1912,9 +1912,8 @@ struct ImGuiTableSortSpecs
     const ImGuiTableSortSpecsColumn* Specs;     // Pointer to sort spec array.
     int                         SpecsCount;     // Sort spec count. Most often 1 unless e.g. ImGuiTableFlags_MultiSortable is enabled.
     bool                        SpecsDirty;     // Set to true when specs have changed since last time! Use this to sort again, then clear the flag.
-    ImU64                       ColumnsMask;    // Set to the mask of column indexes included in the Specs array. e.g. (1 << N) when column N is sorted.
 
-    ImGuiTableSortSpecs()       { Specs = NULL; SpecsCount = 0; SpecsDirty = false; ColumnsMask = 0x00; }
+    ImGuiTableSortSpecs()       { Specs = NULL; SpecsCount = 0; SpecsDirty = false; }
 };
 
 //-----------------------------------------------------------------------------

@@ -2270,21 +2270,25 @@ namespace ImGui
     IMGUI_API float         GetColumnOffsetFromNorm(const ImGuiOldColumns* columns, float offset_norm);
     IMGUI_API float         GetColumnNormFromOffset(const ImGuiOldColumns* columns, float offset);
 
-    // Tables
+    // Tables: Candidates for public api
+    IMGUI_API void          TableOpenContextMenu(int column_n = -1);
+    IMGUI_API void          TableSetColumnWidth(int column_n, float width);
+    IMGUI_API bool          TableGetColumnIsHidden(int column_n);
+    IMGUI_API void          TableSetColumnIsHidden(int column_n, bool hidden);
+    IMGUI_API void          TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
+    IMGUI_API void          TablePushBackgroundChannel();
+    IMGUI_API void          TablePopBackgroundChannel();
+
+    // Tables: Internals
     IMGUI_API ImGuiTable*   TableFindByID(ImGuiID id);
     IMGUI_API bool          BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          TableBeginUpdateColumns(ImGuiTable* table);
     IMGUI_API void          TableUpdateDrawChannels(ImGuiTable* table);
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
     IMGUI_API void          TableUpdateBorders(ImGuiTable* table);
-    IMGUI_API void          TableSetColumnWidth(int column_n, float width);
-    IMGUI_API bool          TableGetColumnIsHidden(int column_n);
-    IMGUI_API void          TableSetColumnIsHidden(int column_n, bool hidden);
     IMGUI_API void          TableDrawBorders(ImGuiTable* table);
     IMGUI_API void          TableDrawContextMenu(ImGuiTable* table);
-    IMGUI_API void          TableOpenContextMenu(int column_n = -1);
     IMGUI_API void          TableReorderDrawChannelsForMerge(ImGuiTable* table);
-    IMGUI_API void          TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsBuild(ImGuiTable* table);
     IMGUI_API void          TableBeginRow(ImGuiTable* table);
@@ -2296,8 +2300,6 @@ namespace ImGui
     IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API void          TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
-    IMGUI_API void          PushTableBackground();
-    IMGUI_API void          PopTableBackground();
     IMGUI_API void          TableRemove(ImGuiTable* table);
     IMGUI_API void          TableGcCompactTransientBuffers(ImGuiTable* table);
     IMGUI_API void          TableGcCompactSettings();
