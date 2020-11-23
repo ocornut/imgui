@@ -1917,15 +1917,15 @@ struct ImGuiTableColumn
     float                   ContentMaxXHeadersUsed;         // Contents maximum position for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
     float                   ContentMaxXHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
-    bool                    IsVisible;                      // Is the column not marked Hidden by the user? (even if off view, e.g. clipped by scrolling).
-    bool                    IsVisibleNextFrame;
+    bool                    IsEnabled;                      // Is the column not marked Hidden by the user? (even if off view, e.g. clipped by scrolling).
+    bool                    IsEnabledNextFrame;
     bool                    IsClipped;                      // Is not actually in view (e.g. not overlapping the host window clipping rectangle).
     bool                    IsSkipItems;                    // Do we want item submissions to this column to be ignored early on.
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
     ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
-    ImS8                    IndexWithinVisibleSet;          // Index within visible set (<= IndexToDisplayOrder)
-    ImS8                    PrevVisibleColumn;              // Index of prev visible column within Columns[], -1 if first visible column
-    ImS8                    NextVisibleColumn;              // Index of next visible column within Columns[], -1 if last visible column
+    ImS8                    IndexWithinEnabledSet;          // Index within enabled/visible set (<= IndexToDisplayOrder)
+    ImS8                    PrevEnabledColumn;              // Index of prev enabled/visible column within Columns[], -1 if first enabled/visible column
+    ImS8                    NextEnabledColumn;              // Index of next enabled/visible column within Columns[], -1 if last enabled/visible column
     ImS8                    SortOrder;                      // Index of this column within sort specs, -1 if not sorting on this column, 0 for single-sort, may be >0 on multi-sort
     ImS8                    SortDirection;                  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending
     ImU8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
@@ -1939,9 +1939,9 @@ struct ImGuiTableColumn
         memset(this, 0, sizeof(*this));
         StretchWeight = WidthRequest = -1.0f;
         NameOffset = -1;
-        IsVisible = IsVisibleNextFrame = true;
-        DisplayOrder = IndexWithinVisibleSet = -1;
-        PrevVisibleColumn = NextVisibleColumn = -1;
+        IsEnabled = IsEnabledNextFrame = true;
+        DisplayOrder = IndexWithinEnabledSet = -1;
+        PrevEnabledColumn = NextEnabledColumn = -1;
         SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
         DrawChannelCurrent = DrawChannelFrozen = DrawChannelUnfrozen = (ImU8)-1;
@@ -1964,9 +1964,9 @@ struct ImGuiTable
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImS8>                DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
-    ImU64                       VisibleMaskByIndex;         // Column Index -> IsVisible map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
-    ImU64                       VisibleMaskByDisplayOrder;  // Column DisplayOrder -> IsVisible map
-    ImU64                       VisibleUnclippedMaskByIndex;// Visible and not Clipped, aka "actually visible" "not hidden by some scrolling"
+    ImU64                       EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
+    ImU64                       EnabledMaskByDisplayOrder;  // Column DisplayOrder -> IsEnabled map
+    ImU64                       EnabledUnclippedMaskByIndex;// Enabled and not Clipped, aka "actually visible" "not hidden by some scrolling"
     ImGuiTableFlags             SettingsLoadedFlags;        // Which data were loaded from the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
@@ -2021,8 +2021,8 @@ struct ImGuiTable
     ImVector<ImGuiTableSortSpecsColumn> SortSpecsData;      // FIXME-OPT: Fixed-size array / small-vector pattern, optimize for single sort spec
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
     ImS8                        SortSpecsCount;
-    ImS8                        ColumnsVisibleCount;        // Number of non-hidden columns (<= ColumnsCount)
-    ImS8                        ColumnsVisibleFixedCount;   // Number of non-hidden columns (<= ColumnsCount)
+    ImS8                        ColumnsEnabledCount;        // Number of enabled columns (<= ColumnsCount)
+    ImS8                        ColumnsEnabledFixedCount;   // Number of enabled columns (<= ColumnsCount)
     ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
     ImS8                        HoveredColumnBody;          // Index of column whose visible region is being hovered. Important: == ColumnsCount when hovering empty region after the right-most column!
     ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
@@ -2032,7 +2032,7 @@ struct ImGuiTable
     ImS8                        HeldHeaderColumn;           // Index of column header being held.
     ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
     ImS8                        ReorderColumnDir;           // -1 or +1
-    ImS8                        RightMostVisibleColumn;     // Index of right-most non-hidden column.
+    ImS8                        RightMostEnabledColumn;     // Index of right-most non-hidden column.
     ImS8                        LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
     ImS8                        ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
     ImS8                        FreezeRowsRequest;          // Requested frozen rows count
@@ -2070,7 +2070,7 @@ struct ImGuiTableColumnSettings
     ImS8    DisplayOrder;
     ImS8    SortOrder;
     ImU8    SortDirection : 2;
-    ImU8    IsVisible : 1;
+    ImU8    IsEnabled : 1; // "Visible" in ini file
     ImU8    IsStretch : 1;
 
     ImGuiTableColumnSettings()
@@ -2080,7 +2080,7 @@ struct ImGuiTableColumnSettings
         Index = -1;
         DisplayOrder = SortOrder = -1;
         SortDirection = ImGuiSortDirection_None;
-        IsVisible = 1;
+        IsEnabled = 1;
         IsStretch = 0;
     }
 };
@@ -2273,8 +2273,8 @@ namespace ImGui
     // Tables: Candidates for public api
     IMGUI_API void          TableOpenContextMenu(int column_n = -1);
     IMGUI_API void          TableSetColumnWidth(int column_n, float width);
-    IMGUI_API bool          TableGetColumnIsHidden(int column_n);
-    IMGUI_API void          TableSetColumnIsHidden(int column_n, bool hidden);
+    IMGUI_API bool          TableGetColumnIsEnabled(int column_n = -1);  // Return false when column is disabled (hidden) by user (e.g. via context menu, or _DefaultHide flag)
+    IMGUI_API void          TableSetColumnIsEnabled(int column_n, bool enabled);
     IMGUI_API void          TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
     IMGUI_API void          TablePushBackgroundChannel();
     IMGUI_API void          TablePopBackgroundChannel();
