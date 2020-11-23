@@ -1894,7 +1894,8 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableUpdateDrawChannels()
 
 // [Internal] sizeof() ~ 104
-// We use the terminology "Visible" to refer to a column that is not Hidden by user or settings. However it may still be out of view and clipped (see IsClipped).
+// We use the terminology "Visible" to refer to a columns that are not Hidden by user or settings. However it may still be out of view and clipped (and IsClipped would be set).
+// This is in contrast with some user-facing api such as IsItemVisible() / IsRectVisible() which use "Visible" to mean "not clipped".
 struct ImGuiTableColumn
 {
     ImRect                  ClipRect;                       // Clipping rectangle for the column
@@ -2277,7 +2278,8 @@ namespace ImGui
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);
     IMGUI_API void          TableUpdateBorders(ImGuiTable* table);
     IMGUI_API void          TableSetColumnWidth(int column_n, float width);
-    IMGUI_API void          TableSetColumnVisible(int column_n, bool visible);
+    IMGUI_API bool          TableGetColumnIsHidden(int column_n);
+    IMGUI_API void          TableSetColumnIsHidden(int column_n, bool hidden);
     IMGUI_API void          TableDrawBorders(ImGuiTable* table);
     IMGUI_API void          TableDrawContextMenu(ImGuiTable* table);
     IMGUI_API void          TableOpenContextMenu(int column_n = -1);

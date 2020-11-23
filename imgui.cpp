@@ -2207,7 +2207,9 @@ static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height)
         if (table->IsInsideRow)
             ImGui::TableEndRow(table);
         table->RowPosY2 = window->DC.CursorPos.y;
-        table->RowBgColorCounter += (int)((off_y / line_height) + 0.5f);
+        const int row_increase = (int)((off_y / line_height) + 0.5f);
+        //table->CurrentRow += row_increase; // Can't do without fixing TableEndRow()
+        table->RowBgColorCounter += row_increase;
     }
 }
 

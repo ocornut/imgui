@@ -200,7 +200,7 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
     return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
 }
 
-// For reference, the total _allocation count_ for a table is:
+// For reference, the average total _allocation count_ for a table is:
 // + 0 (for ImGuiTable instance, we are pooling allocations in g.Tables)
 // + 1 (for table->RawData allocated below)
 // + 1 (for table->ColumnsNames, if names are used)
@@ -878,7 +878,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
         column->IsClipped = (column->ClipRect.Max.x <= column->ClipRect.Min.x) && (column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0;
         if (column->IsClipped)
-            table->VisibleUnclippedMaskByIndex &= ~((ImU64)1 << column_n);  // Columns with the _WidthAutoResize sizing policy will never be updated then.
+            table->VisibleUnclippedMaskByIndex &= ~((ImU64)1 << column_n); // Columns with the _WidthAutoResize sizing policy will never be updated then.
 
         column->IsSkipItems = !column->IsVisible || table->HostSkipItems;
 
@@ -1384,16 +1384,6 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
             TableUpdateColumnsWeightFromWidth(table);
         }
     }
-}
-
-// Public wrapper
-void ImGui::TableSetColumnVisible(int column_n, bool visible)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
-    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
-    table->Columns[column_n].IsVisibleNextFrame = visible;
 }
 
 // Allocate draw channels. Called by TableUpdateLayout()
@@ -2038,8 +2028,8 @@ const char*   ImGui::TableGetColumnName(int column_n)
     return TableGetColumnName(table, column_n);
 }
 
-// We expose "Visible and Unclipped" to the user, vs our internal "Visible" state which is !Hidden
-bool    ImGui::TableGetColumnIsVisible(int column_n)
+// FIXME-TABLE: Also expose "Visible and Unclipped" to the user, vs our internal "Visible" state which is !Hidden
+bool    ImGui::TableGetColumnIsHidden(int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -2047,7 +2037,18 @@ bool    ImGui::TableGetColumnIsVisible(int column_n)
         return false;
     if (column_n < 0)
         column_n = table->CurrentColumn;
-    return (table->VisibleUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
+    return (table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0;
+}
+
+void ImGui::TableSetColumnIsHidden(int column_n, bool hidden)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    table->Columns[column_n].IsVisibleNextFrame = !hidden;
 }
 
 int     ImGui::TableGetColumnIndex()
@@ -2059,6 +2060,7 @@ int     ImGui::TableGetColumnIndex()
     return table->CurrentColumn;
 }
 
+// Note: for row coloring we use ->RowBgColorCounter which is the same value without counting header rows
 int     ImGui::TableGetRowIndex()
 {
     ImGuiContext& g = *GImGui;
@@ -2275,7 +2277,7 @@ void    ImGui::TableHeadersRow()
     const float row_y1 = GetCursorScreenPos().y;
     const int columns_count = TableGetColumnCount();
     for (int column_n = 0; column_n < columns_count; column_n++)
-        if (TableGetColumnIsVisible(column_n))
+        if (!TableGetColumnIsHidden(column_n))
             row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
     row_height += style.CellPadding.y * 2.0f;
 
@@ -3051,19 +3053,17 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         const char* name = TableGetColumnName(table, n);
         ImFormatString(buf, IM_ARRAYSIZE(buf),
             "Column %d order %d name '%s': offset %+.2f to %+.2f\n"
-            "Visible: %d, Clipped: %d, DrawChannels: %d,%d\n"
+            "Visible: %d, Clipped: %d, SkipItems: %d, DrawChannels: %d,%d\n"
             "WidthGiven: %.1f, Request/Auto: %.1f/%.1f, StretchWeight: %.3f\n"
             "MinX: %.1f, MaxX: %.1f (%+.1f), ClipRect: %.1f to %.1f (+%.1f)\n"
             "ContentWidth: %.1f,%.1f, HeadersUsed/Ideal %.1f/%.1f\n"
-            "SortOrder: %d, SortDir: %s\n"
-            "UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
+            "Sort: %d%s, UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
             n, column->DisplayOrder, name, column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
-            column->IsVisible, column->IsClipped, column->DrawChannelFrozen, column->DrawChannelUnfrozen,
+            column->IsVisible, column->IsClipped, column->IsSkipItems, column->DrawChannelFrozen, column->DrawChannelUnfrozen,
             column->WidthGiven, column->WidthRequest, column->WidthAuto, column->StretchWeight,
             column->MinX, column->MaxX, column->MaxX - column->MinX, column->ClipRect.Min.x, column->ClipRect.Max.x, column->ClipRect.Max.x - column->ClipRect.Min.x,
             column->ContentMaxXFrozen - column->WorkMinX, column->ContentMaxXUnfrozen - column->WorkMinX, column->ContentMaxXHeadersUsed - column->WorkMinX, column->ContentMaxXHeadersIdeal - column->WorkMinX,
-            column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? "Ascending" : (column->SortDirection == ImGuiSortDirection_Descending) ? "Descending" : "None",
-            column->UserID, column->Flags,
+            column->SortOrder, (column->SortDirection == ImGuiSortDirection_Ascending) ? " (Asc)" : (column->SortDirection == ImGuiSortDirection_Descending) ? " (Des)" : "", column->UserID, column->Flags,
             (column->Flags & ImGuiTableColumnFlags_WidthStretch) ? "WidthStretch " : "",
             (column->Flags & ImGuiTableColumnFlags_WidthFixed) ? "WidthFixed " : "",
             (column->Flags & ImGuiTableColumnFlags_WidthAutoResize) ? "WidthAutoResize " : "",
