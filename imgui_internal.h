@@ -324,6 +324,7 @@ static inline bool      ImIsPowerOfTwo(ImU64 v)         { return v != 0 && (v & 
 static inline int       ImUpperPowerOfTwo(int v)        { v--; v |= v >> 1; v |= v >> 2; v |= v >> 4; v |= v >> 8; v |= v >> 16; v++; return v; }
 
 // Helpers: String
+IMGUI_API int           ImStrcmp(ImStrv str1, ImStrv str2);
 IMGUI_API int           ImStricmp(const char* str1, const char* str2);
 IMGUI_API int           ImStrnicmp(const char* str1, const char* str2, size_t count);
 IMGUI_API void          ImStrncpy(char* dst, ImStrv src, size_t count);
@@ -341,11 +342,10 @@ IMGUI_API const char*   ImStrstr(ImStrv haystack, ImStrv needle);
 IMGUI_API void          ImStrTrimBlanks(char* str);
 IMGUI_API const char*   ImStrSkipBlank(const char* str);
 IM_MSVC_RUNTIME_CHECKS_OFF
+static inline int       ImStrcmp(const char* str1, const char* str2) { return strcmp(str1, str2); }
 static inline char      ImToUpper(char c)               { return (c >= 'a' && c <= 'z') ? c &= ~32 : c; }
 static inline bool      ImCharIsBlankA(char c)          { return c == ' ' || c == '\t'; }
 static inline bool      ImCharIsBlankW(unsigned int c)  { return c == ' ' || c == '\t' || c == 0x3000; }
-static inline size_t    ImStrlen(const char* str)       { return strlen(str); }
-static inline size_t    ImStrlen(const ImWchar* str)    { const ImWchar* e = str; while (*e) ++e; return (size_t)(e - str); }
 IM_MSVC_RUNTIME_CHECKS_RESTORE
 
 // Helpers: Formatting
