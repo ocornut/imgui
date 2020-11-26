@@ -1542,7 +1542,6 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
     if ((col & IM_COL32_A_MASK) == 0)
         return;
 
-    IM_IMSTR_ENSURE_HAS_END(text);
     if (text.Empty())
         return;
 
@@ -3292,7 +3291,6 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStrv text, float wrap_w
 
     // Cut words that cannot possibly fit within one line.
     // e.g.: "The tropical fish" with ~5 characters worth of width --> "The tr" "opical" "fish"
-    IM_IMSTR_ENSURE_HAS_END(text);
 
     float line_width = 0.0f;
     float word_width = 0.0f;
@@ -3378,8 +3376,6 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStrv text, float wrap_w
 
 ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImStrv text, const char** remaining) const
 {
-    IM_IMSTR_ENSURE_HAS_END(text);
-
     const float line_height = size;
     const float scale = size / FontSize;
 
@@ -3485,8 +3481,6 @@ void ImFont::RenderChar(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col
 
 void ImFont::RenderText(ImDrawList* draw_list, float size, ImVec2 pos, ImU32 col, const ImVec4& clip_rect, ImStrv text, float wrap_width, bool cpu_fine_clip) const
 {
-    IM_IMSTR_ENSURE_HAS_END(text); // ImGui:: functions generally already provides a valid text_end, so this is merely to handle direct calls.
-
     // Align to be pixel perfect
     pos.x = IM_FLOOR(pos.x);
     pos.y = IM_FLOOR(pos.y);

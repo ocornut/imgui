@@ -250,8 +250,7 @@ struct ImVec4
 #endif
 };
 
-#define IM_IMSTR_LENGTH(s)          (s.Begin ? (s.End ? (size_t)(s.End - s.Begin) : strlen(s.Begin)) : 0)
-#define IM_IMSTR_ENSURE_HAS_END(s)  if (s.End == NULL) s.End = s.Begin + strlen(s.Begin)
+#define IM_IMSTR_LENGTH(s)          (size_t)(s.End - s.Begin)
 
 // String view class.
 #define IMGUI_HAS_IMSTR 1
@@ -259,11 +258,11 @@ struct ImStrv
 {
     const char* Begin;
     const char* End;
-    ImStrv() { Begin = End = NULL; }
-    ImStrv(const char* b) { Begin = b; End = NULL; }
-    ImStrv(const char* b, const char* e) { Begin = b; End = e; }
-    ImStrv(const char* b, size_t size) { Begin = b; End = b + size; }
-    bool Empty() const { return Begin == NULL || Begin == End || Begin[0] == 0; }
+    ImStrv()                            { Begin = End = NULL; }
+    ImStrv(const char* b)               { Begin = b; End = b ? b + strlen(b) : NULL; }
+    ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b + strlen(b); }
+    ImStrv(const char* b, size_t size)  { Begin = b; End = b + size; }
+    bool Empty() const                  { return Begin == End || Begin[0] == 0; } // FIXME: Ambiguous
     // void EnsureHasEnd() { if (End == NULL) End = Begin + Length(); }
     // size_t Length() const
     // {
@@ -282,10 +281,10 @@ struct ImStrv
             return memcmp(Begin, other.Begin, len) == 0;
         return false;
     }
-    operator bool() const { return Begin != NULL; }
-    char operator[](int index) const { return Begin[index]; }
+    inline operator bool() const { return Begin != NULL; }
+    inline char operator[](int index) const { return Begin[index]; }
 #ifdef IM_IMSTR_CLASS_EXTRA
-    IM_IMSTR_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your math types and ImStrv.
+    IM_IMSTR_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your string types and ImStrv.
 #endif
 };
 
