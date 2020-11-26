@@ -269,8 +269,6 @@ struct ImVec4
 #endif
 };
 
-#define IM_IMSTR_LENGTH(s)          (size_t)(s.End - s.Begin)
-
 // String view class.
 #define IMGUI_HAS_IMSTR
 struct ImStrv
@@ -281,27 +279,9 @@ struct ImStrv
     ImStrv(const char* b)               { Begin = b; End = b ? b + strlen(b) : NULL; }
     ImStrv(const char* b, const char* e){ Begin = b; End = e ? e : b + strlen(b); }
     ImStrv(const char* b, size_t size)  { Begin = b; End = b + size; }
-    bool Empty() const                  { return Begin == End || Begin[0] == 0; } // FIXME: Ambiguous
-    // void EnsureHasEnd() { if (End == NULL) End = Begin + Length(); }
-    // size_t Length() const
-    // {
-    //     if (Begin == NULL)
-    //         return 0;
-    //     if (End == NULL)
-    //         return strlen(Begin);
-    //     return (size_t)(End - Begin);
-    // }
-    bool operator==(ImStrv other) const
-    {
-        if (Begin == other.Begin && End == other.End)
-            return true;
-        size_t len = IM_IMSTR_LENGTH((*this));
-        if (len == IM_IMSTR_LENGTH(other))
-            return memcmp(Begin, other.Begin, len) == 0;
-        return false;
-    }
-    inline operator bool() const { return Begin != NULL; }
-    inline char operator[](int index) const { return Begin[index]; }
+    inline size_t length() const        { return (size_t)(End - Begin); }
+    inline bool empty() const           { return Begin == End; }    // == "" or == NULL
+    inline operator bool() const        { return Begin != NULL; }   // != NULL
 #ifdef IM_IMSTR_CLASS_EXTRA
     IM_IMSTR_CLASS_EXTRA     // Define additional constructors and implicit cast operators in imconfig.h to convert back and forth between your string types and ImStrv.
 #endif
@@ -2227,7 +2207,7 @@ struct ImGuiTextFilter
     void                Clear()          { InputBuf[0] = 0; Build(); }
     bool                IsActive() const { return !Filters.empty(); }
 
-    // [Internal]
+    // [Internal] FIXME-IMSTR: replace this with ImStrv, remove split as an internal function
     struct ImGuiTextRange
     {
         const char*     b;
