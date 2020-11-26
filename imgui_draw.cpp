@@ -1541,8 +1541,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-
-    if (text.Empty())
+    if (text.empty())
         return;
 
     // Pull default font/size from the shared ImDrawListSharedData instance
@@ -2072,11 +2071,13 @@ static const char*  GetDefaultCompressedFontDataTTFBase85();
 static unsigned int Decode85Byte(char c)                                    { return c >= '\\' ? c-36 : c-35; }
 static void         Decode85(ImStrv src, unsigned char* dst)
 {
-    while (!src.Empty())
+    const char* p = src.Begin;
+    const char* p_end = src.End;
+    while (p < p_end)
     {
-        unsigned int tmp = Decode85Byte(src[0]) + 85 * (Decode85Byte(src[1]) + 85 * (Decode85Byte(src[2]) + 85 * (Decode85Byte(src[3]) + 85 * Decode85Byte(src[4]))));
+        unsigned int tmp = Decode85Byte(p[0]) + 85 * (Decode85Byte(p[1]) + 85 * (Decode85Byte(p[2]) + 85 * (Decode85Byte(p[3]) + 85 * Decode85Byte(p[4]))));
         dst[0] = ((tmp >> 0) & 0xFF); dst[1] = ((tmp >> 8) & 0xFF); dst[2] = ((tmp >> 16) & 0xFF); dst[3] = ((tmp >> 24) & 0xFF);   // We can't assume little-endianness.
-        src.Begin += 5;
+        p += 5;
         dst += 4;
     }
 }
@@ -2118,9 +2119,9 @@ ImFont* ImFontAtlas::AddFontFromFileTTF(ImStrv filename, float size_pixels, cons
     {
         // Store a short copy of filename into into the font name for convenience
         const char* p;
-        for (p = filename.Begin + IM_IMSTR_LENGTH(filename); p > filename.Begin && p[-1] != '/' && p[-1] != '\\'; p--) {}
+        for (p = filename.End; p > filename.Begin && p[-1] != '/' && p[-1] != '\\'; p--) {}
         filename.Begin = p;
-        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%.*s, %.0fpx", (int)IM_IMSTR_LENGTH(filename), filename.Begin, size_pixels);
+        ImFormatString(font_cfg.Name, IM_ARRAYSIZE(font_cfg.Name), "%.*s, %.0fpx", (int)filename.length(), filename.Begin, size_pixels);
     }
     return AddFontFromMemoryTTF(data, (int)data_size, size_pixels, &font_cfg, glyph_ranges);
 }
@@ -2153,7 +2154,7 @@ ImFont* ImFontAtlas::AddFontFromMemoryCompressedTTF(const void* compressed_ttf_d
 
 ImFont* ImFontAtlas::AddFontFromMemoryCompressedBase85TTF(ImStrv compressed_ttf_data_base85, float size_pixels, const ImFontConfig* font_cfg, const ImWchar* glyph_ranges)
 {
-    int compressed_ttf_size = (((int)IM_IMSTR_LENGTH(compressed_ttf_data_base85) + 4) / 5) * 4;
+    int compressed_ttf_size = (((int)compressed_ttf_data_base85.length() + 4) / 5) * 4;
     void* compressed_ttf = IM_ALLOC((size_t)compressed_ttf_size);
     Decode85(compressed_ttf_data_base85, (unsigned char*)compressed_ttf);
     ImFont* font = AddFontFromMemoryCompressedTTF(compressed_ttf, compressed_ttf_size, size_pixels, font_cfg, glyph_ranges);
@@ -3037,7 +3038,7 @@ const ImWchar*  ImFontAtlas::GetGlyphRangesVietnamese()
 
 void ImFontGlyphRangesBuilder::AddText(ImStrv text)
 {
-    while (!text.Empty())
+    while (!text.empty())
     {
         unsigned int c = 0;
         int c_len = ImTextCharFromUtf8(&c, text.Begin, text.End);

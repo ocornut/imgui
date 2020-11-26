@@ -1290,6 +1290,15 @@ ImVec2 ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c,
 // [SECTION] MISC HELPERS/UTILITIES (String, Format, Hash functions)
 //-----------------------------------------------------------------------------
 
+int ImStrcmp(ImStrv str1, ImStrv str2)
+{
+    size_t str1_len = str1.length();
+    size_t str2_len = str2.length();
+    if (str1_len != str2_len)
+        return (int)str1_len - (int)str2_len;
+    return memcmp(str1.Begin, str2.Begin, str1_len);
+}
+
 // Consider using _stricmp/_strnicmp under Windows or strcasecmp/strncasecmp. We don't actually use either ImStricmp/ImStrnicmp in the codebase any more.
 int ImStricmp(const char* str1, const char* str2)
 {
@@ -1318,7 +1327,7 @@ void ImStrncpy(char* dst, ImStrv src, size_t count)
 {
     // Even though src does not necessarily include \0 terminator it is ok to include it. ImStrncpy above does not
     // actually include that in a copy operation and inserts zero terminator manually.
-    ImStrncpy(dst, src.Begin, ImMin(count, IM_IMSTR_LENGTH(src) + 1));
+    ImStrncpy(dst, src.Begin, ImMin(count, src.length() + 1));
 }
 
 char* ImStrdup(const char* str)
@@ -1330,7 +1339,7 @@ char* ImStrdup(const char* str)
 
 char* ImStrdup(ImStrv str)
 {
-    size_t len = IM_IMSTR_LENGTH(str);
+    size_t len = str.length();
     void* buf = IM_ALLOC(len + 1);
     *((char*)buf + len) = 0;                // str may not contain \0, it must be inserted manually.
     if (len > 0)
@@ -1341,7 +1350,7 @@ char* ImStrdup(ImStrv str)
 char* ImStrdupcpy(char* dst, size_t* p_dst_size, ImStrv src)
 {
     size_t dst_buf_size = p_dst_size ? *p_dst_size : strlen(dst) + 1;
-    size_t src_size = IM_IMSTR_LENGTH(src) + 1;
+    size_t src_size = src.length() + 1;
     if (dst_buf_size < src_size)
     {
         IM_FREE(dst);
@@ -1410,6 +1419,7 @@ const char* ImStristr(const char* haystack, const char* haystack_end, const char
     return NULL;
 }
 
+// FIXME-IMSTR: probably unneeded.
 const char* ImStrstr(ImStrv haystack, ImStrv needle)
 {
     const char un0 = (char)*needle.Begin;
@@ -1554,7 +1564,7 @@ ImGuiID ImHashStr(ImStrv str, ImU32 seed)
     const ImU32* crc32_lut = GCrc32LookupTable;
     if (str.End != NULL)
     {
-        size_t data_size = IM_IMSTR_LENGTH(str);
+        size_t data_size = str.length();
         while (data_size-- != 0)
         {
             unsigned char c = *data++;
@@ -1587,20 +1597,21 @@ ImFileHandle ImFileOpen(ImStrv filename, ImStrv mode)
 #if defined(_WIN32) && !defined(IMGUI_DISABLE_WIN32_FUNCTIONS) && !defined(__CYGWIN__) && !defined(__GNUC__)
     // We need a fopen() wrapper because MSVC/Windows fopen doesn't handle UTF-8 filenames.
     // Previously we used ImTextCountCharsFromUtf8/ImTextStrFromUtf8 here but we now need to support ImWchar16 and ImWchar32!
-    const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)IM_IMSTR_LENGTH(filename) + 1, NULL, 0);
-    const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)IM_IMSTR_LENGTH(mode) + 1, NULL, 0);
+    const int filename_wsize = ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length(), NULL, 0);
+    const int mode_wsize = ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length(), NULL, 0);
     ImVector<ImWchar> buf;
-    buf.resize(filename_wsize + mode_wsize);
-    ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)IM_IMSTR_LENGTH(filename) + 1, (wchar_t*)&buf[0], filename_wsize);
-    ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)IM_IMSTR_LENGTH(mode) + 1, (wchar_t*)&buf[filename_wsize], mode_wsize);
-    return ::_wfopen((const wchar_t*)&buf[0], (const wchar_t*)&buf[filename_wsize]);
+    buf.resize(filename_wsize + 1 + mode_wsize + 1);
+    ::MultiByteToWideChar(CP_UTF8, 0, filename.Begin, (int)filename.length(), (wchar_t*)&buf[0], filename_wsize);
+    ::MultiByteToWideChar(CP_UTF8, 0, mode.Begin, (int)mode.length(), (wchar_t*)&buf[filename_wsize + 1], mode_wsize);
+    buf[filename_wsize] = buf[filename_wsize + 1 + mode_wsize] = 0;
+    return ::_wfopen((const wchar_t*)&buf[0], (const wchar_t*)&buf[filename_wsize + 1]);
 #else
     // ImStrv is not guaranteed to be zero-terminated.
     ImStrv filename_0 = ImStrdup(filename);
     ImStrv mode_0 = ImStrdup(mode);
     ImFileHandle handle = fopen(filename_0.Begin, mode_0.Begin);
-    IM_FREE(const_cast<char*>(filename_0.Begin));
-    IM_FREE(const_cast<char*>(mode_0.Begin));
+    IM_FREE((char*)(void*)filename_0.Begin);
+    IM_FREE((char*)(void*)mode_0.Begin);
     return handle;
 #endif
 }
@@ -2134,7 +2145,7 @@ bool ImGuiTextFilter::PassFilter(ImStrv text) const
     if (Filters.empty())
         return true;
 
-    if (text.Empty()) // FIXME-IMSTR
+    if (!text)
         text.Begin = text.End = "";
 
     for (int i = 0; i != Filters.Size; i++)
@@ -2181,7 +2192,7 @@ char ImGuiTextBuffer::EmptyString[1] = { 0 };
 
 void ImGuiTextBuffer::append(ImStrv str)
 {
-    int len = (int)IM_IMSTR_LENGTH(str);
+    int len = (int)str.length();
 
     // Add zero-terminator the first time
     const int write_off = (Buf.Size != 0) ? Buf.Size : 1;
@@ -2933,7 +2944,7 @@ ImGuiWindow::ImGuiWindow(ImGuiContext* context, ImStrv name) : DrawListInst(NULL
 {
     memset(this, 0, sizeof(*this));
     Name = ImStrdup(name);
-    NameBufLen = (int)IM_IMSTR_LENGTH(name) + 1;
+    NameBufLen = (int)name.length() + 1;
     ID = ImHashStr(name);
     IDStack.push_back(ID);
     MoveId = GetID("#MOVE");
@@ -3383,7 +3394,7 @@ void ImGui::SetClipboardText(ImStrv text)
     ImGuiContext& g = *GImGui;
     if (g.IO.SetClipboardTextFn)
     {
-        int len = (int)IM_IMSTR_LENGTH(text);
+        int len = (int)text.length();
         char* text_p = (char*)IM_ALLOC(len + 1);
         if (len > 0)
             memcpy(text_p, text.Begin, len);
@@ -5016,7 +5027,7 @@ bool ImGui::BeginChildEx(ImStrv name, ImGuiID id, const ImVec2& size_arg, bool b
 
     // Build up name. If you need to append to a same child from multiple location in the ID stack, use BeginChild(ImGuiID id) with a stable value.
     if (name)
-        ImFormatString(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), "%s/%.*s_%08X", parent_window->Name, (int)IM_IMSTR_LENGTH(name), name.Begin, id);
+        ImFormatString(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), "%s/%.*s_%08X", parent_window->Name, (int)name.length(), name.Begin, id);
     else
         ImFormatString(g.TempBuffer, IM_ARRAYSIZE(g.TempBuffer), "%s/%08X", parent_window->Name, id);
 
@@ -5748,7 +5759,7 @@ bool ImGui::Begin(ImStrv name, bool* p_open, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    IM_ASSERT(!name.Empty());                       // Window name required
+    IM_ASSERT(name.Begin != NULL);                  // Window name required
     IM_ASSERT(g.WithinFrameScope);                  // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
@@ -5894,7 +5905,7 @@ bool ImGui::Begin(ImStrv name, bool* p_open, ImGuiWindowFlags flags)
         bool window_title_visible_elsewhere = false;
         if (g.NavWindowingListWindow != NULL && (window->Flags & ImGuiWindowFlags_NoNavFocus) == 0)   // Window titles visible when using CTRL+TAB
             window_title_visible_elsewhere = true;
-        if (window_title_visible_elsewhere && !window_just_created && name != ImStrv(window->Name))
+        if (window_title_visible_elsewhere && !window_just_created && ImStrcmp(name, window->Name) != 0)
         {
             size_t buf_len = (size_t)window->NameBufLen;
             window->Name = ImStrdupcpy(window->Name, &buf_len, name);
@@ -7144,7 +7155,7 @@ bool ImGui::IsRectVisible(const ImVec2& rect_min, const ImVec2& rect_max)
 bool ImGui::DebugCheckVersionAndDataLayout(ImStrv version, size_t sz_io, size_t sz_style, size_t sz_vec2, size_t sz_vec4, size_t sz_vert, size_t sz_idx)
 {
     bool error = false;
-    if (version  != ImStrv(IMGUI_VERSION))  { error = true; IM_ASSERT(version  == ImStrv(IMGUI_VERSION) && "Mismatched version string!");  }
+    if (ImStrcmp(version, IMGUI_VERSION) != 0) { error = true; IM_ASSERT(0 && "Mismatched version string!");  }
     if (sz_io    != sizeof(ImGuiIO))       { error = true; IM_ASSERT(sz_io    == sizeof(ImGuiIO)      && "Mismatched struct layout!"); }
     if (sz_style != sizeof(ImGuiStyle))    { error = true; IM_ASSERT(sz_style == sizeof(ImGuiStyle)   && "Mismatched struct layout!"); }
     if (sz_vec2  != sizeof(ImVec2))        { error = true; IM_ASSERT(sz_vec2  == sizeof(ImVec2)       && "Mismatched struct layout!"); }
@@ -9897,8 +9908,8 @@ bool ImGui::SetDragDropPayload(ImStrv type, const void* data, size_t data_size, 
     if (cond == 0)
         cond = ImGuiCond_Always;
 
-    IM_ASSERT(!type.Empty() && "Payload type can not be empty");
-    IM_ASSERT(IM_IMSTR_LENGTH(type) < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 32 characters long");
+    IM_ASSERT(type.Begin != NULL && "Payload type can not be empty");
+    IM_ASSERT(type.End - type.Begin < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 32 characters long");
     IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
     IM_ASSERT(payload.SourceId != 0);                               // Not called between BeginDragDropSource() and EndDragDropSource()
@@ -10202,9 +10213,9 @@ void ImGui::LogToFile(int auto_open_depth, ImStrv filename)
     // FIXME: We could probably open the file in text mode "at", however note that clipboard/buffer logging will still
     // be subject to outputting OS-incompatible carriage return if within strings the user doesn't use IM_NEWLINE.
     // By opening the file in binary mode "ab" we have consistent output everywhere.
-    if (filename.Empty())
+    if (!filename)
         filename = g.IO.LogFilename;
-    if (filename.Empty())
+    if (filename.empty())
         return;
     ImFileHandle f = ImFileOpen(filename, "ab");
     if (!f)
@@ -10361,7 +10372,7 @@ void ImGui::MarkIniSettingsDirty(ImGuiWindow* window)
 ImGuiWindowSettings* ImGui::CreateNewWindowSettings(ImStrv name)
 {
     ImGuiContext& g = *GImGui;
-    const size_t name_len = IM_IMSTR_LENGTH(name);
+    const size_t name_len = name.length();
     if (!name_len)
     {
         IM_ASSERT(false && "Name must not be empty.");
@@ -10442,7 +10453,7 @@ void ImGui::LoadIniSettingsFromMemory(ImStrv ini_data, size_t ini_size)
     // For user convenience, we allow passing a non zero-terminated string (hence the ini_size parameter).
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
     if (ini_size == 0)
-        ini_size = IM_IMSTR_LENGTH(ini_data);
+        ini_size = ini_data.length();
     g.SettingsIniData.Buf.resize((int)ini_size + 1);
     char* const buf = g.SettingsIniData.Buf.Data;
     char* const buf_end = buf + ini_size;
