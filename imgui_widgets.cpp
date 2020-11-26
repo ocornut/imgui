@@ -154,8 +154,6 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
         return;
     ImGuiContext& g = *GImGui;
 
-    IM_IMSTR_ENSURE_HAS_END(text);
-
     const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = (wrap_pos_x >= 0.0f);
@@ -4410,7 +4408,6 @@ bool ImGui::InputTextEx(ImStrv label, ImStrv hint, char* buf, int buf_size, cons
             if (ImStrv clipboard = GetClipboardText())
             {
                 // Filter pasted buffer
-                IM_IMSTR_ENSURE_HAS_END(clipboard);
                 const int clipboard_len = (int)IM_IMSTR_LENGTH(clipboard);
                 ImWchar* clipboard_filtered = (ImWchar*)IM_ALLOC((clipboard_len + 1) * sizeof(ImWchar));
                 int clipboard_filtered_len = 0;
@@ -4629,7 +4626,6 @@ bool ImGui::InputTextEx(ImStrv label, ImStrv hint, char* buf, int buf_size, cons
     const char* buf_display_end = NULL; // We have specialized paths below for setting the length
     if (is_displaying_hint)
     {
-        IM_IMSTR_ENSURE_HAS_END(hint);
         buf_display = hint.Begin;
         buf_display_end = hint.End;
     }
