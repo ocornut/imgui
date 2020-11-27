@@ -6524,7 +6524,7 @@ struct ExampleAppConsole
                     if (match_len > 0)
                     {
                         data->DeleteChars((int)(word_start - data->Buf), (int)(word_end - word_start));
-                        data->InsertChars(data->CursorPos, ImStrv(candidates[0], (size_t)match_len));
+                        data->InsertChars(data->CursorPos, ImStrv(candidates[0], candidates[0] + match_len));
                     }
 
                     // List matches
