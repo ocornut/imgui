@@ -155,10 +155,13 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
         return;
     ImGuiContext& g = *GImGui;
 
+    const char* text_begin = text.Begin;
+    const char* text_end = text.End;
+
     const ImVec2 text_pos(window->DC.CursorPos.x, window->DC.CursorPos.y + window->DC.CurrLineTextBaseOffset);
     const float wrap_pos_x = window->DC.TextWrapPos;
     const bool wrap_enabled = (wrap_pos_x >= 0.0f);
-    if (text.End - text.Begin <= 2000 || wrap_enabled)
+    if (text_end - text_begin <= 2000 || wrap_enabled)
     {
         // Common case
         const float wrap_width = wrap_enabled ? CalcWrapWidthForPos(window->DC.CursorPos, wrap_pos_x) : 0.0f;
@@ -179,7 +182,7 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
         // - From this point we will only compute the width of lines that are visible. Optimization only available when word-wrapping is disabled.
         // - We also don't vertically center the text within the line full height, which is unlikely to matter because we are likely the biggest and only item on the line.
         // - We use memchr(), pay attention that well optimized versions of those str/mem functions are much faster than a casually written loop.
-        const char* line = text.Begin;
+        const char* line = text_begin;
         const float line_height = GetTextLineHeight();
         ImVec2 text_size(0, 0);
 
@@ -191,11 +194,11 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
             if (lines_skippable > 0)
             {
                 int lines_skipped = 0;
-                while (line < text.End && lines_skipped < lines_skippable)
+                while (line < text_end && lines_skipped < lines_skippable)
                 {
-                    const char* line_end = (const char*)memchr(line, '\n', text.End - line);
+                    const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                     if (!line_end)
-                        line_end = text.End;
+                        line_end = text_end;
                     if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
                         text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
                     line = line_end + 1;
@@ -206,17 +209,17 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
         }
 
         // Lines to render
-        if (line < text.End)
+        if (line < text_end)
         {
             ImRect line_rect(pos, pos + ImVec2(FLT_MAX, line_height));
-            while (line < text.End)
+            while (line < text_end)
             {
                 if (IsClippedEx(line_rect, 0))
                     break;
 
-                const char* line_end = (const char*)memchr(line, '\n', text.End - line);
+                const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                 if (!line_end)
-                    line_end = text.End;
+                    line_end = text_end;
                 text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
                 RenderText(pos, ImStrv(line, line_end), false);
                 line = line_end + 1;
@@ -227,11 +230,11 @@ void ImGui::TextEx(ImStrv text, ImGuiTextFlags flags)
 
             // Count remaining lines
             int lines_skipped = 0;
-            while (line < text.End)
+            while (line < text_end)
             {
-                const char* line_end = (const char*)memchr(line, '\n', text.End - line);
+                const char* line_end = (const char*)memchr(line, '\n', text_end - line);
                 if (!line_end)
-                    line_end = text.End;
+                    line_end = text_end;
                 if ((flags & ImGuiTextFlags_NoWidthForLargeClippedText) == 0)
                     text_size.x = ImMax(text_size.x, CalcTextSize(line, line_end).x);
                 line = line_end + 1;
@@ -1619,7 +1622,7 @@ bool ImGui::BeginCombo(ImStrv label, ImStrv preview_value, ImGuiComboFlags flags
     if (flags & ImGuiComboFlags_CustomPreview)
     {
         g.ComboPreviewData.PreviewRect = ImRect(bb.Min.x, bb.Min.y, value_x2, bb.Max.y);
-        IM_ASSERT(preview_value.empty());
+        IM_ASSERT(!preview_value);
     }
 
     // Render preview and label
@@ -2315,6 +2318,7 @@ bool ImGui::DragScalar(ImStrv label, ImGuiDataType data_type, void* p_data, floa
     if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
         return false;
 
+    // FIXME-IMSTR
     char format_0[64];  // format may not end with \0
     const char* format = format_0;
     IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_0));
@@ -2410,11 +2414,11 @@ bool ImGui::DragScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, int
     }
     PopID();
 
-    const char* label_end = FindRenderedTextEnd(label);
-    if (label.Begin != label_end)
+    label.End = FindRenderedTextEnd(label);
+    if (label.Begin != label.End)
     {
         SameLine(0, g.Style.ItemInnerSpacing.x);
-        TextEx(ImStrv(label.Begin, label_end));
+        TextEx(label);
     }
 
     EndGroup();
@@ -2467,7 +2471,8 @@ bool ImGui::DragFloatRange2(ImStrv label, float* v_current_min, float* v_current
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    TextEx(ImStrv(label.Begin, FindRenderedTextEnd(label)));
+    label.End = FindRenderedTextEnd(label);
+    TextEx(label);
     EndGroup();
     PopID();
 
@@ -2521,7 +2526,8 @@ bool ImGui::DragIntRange2(ImStrv label, int* v_current_min, int* v_current_max, 
     PopItemWidth();
     SameLine(0, g.Style.ItemInnerSpacing.x);
 
-    TextEx(ImStrv(label.Begin, FindRenderedTextEnd(label)));
+    label.End = FindRenderedTextEnd(label);
+    TextEx(label);
     EndGroup();
     PopID();
 
@@ -2938,6 +2944,7 @@ bool ImGui::SliderScalar(ImStrv label, ImGuiDataType data_type, void* p_data, co
     if (!ItemAdd(total_bb, id, &frame_bb, temp_input_allowed ? ImGuiItemFlags_Inputable : 0))
         return false;
 
+    // FIXME-IMSTR
     char format_0[64];  // format may not end with \0
     const char* format = format_0;
     IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_0));
@@ -3031,11 +3038,11 @@ bool ImGui::SliderScalarN(ImStrv label, ImGuiDataType data_type, void* v, int co
     }
     PopID();
 
-    const char* label_end = FindRenderedTextEnd(label);
-    if (label.Begin != label_end)
+    label.End = FindRenderedTextEnd(label);
+    if (label.Begin != label.End)
     {
         SameLine(0, g.Style.ItemInnerSpacing.x);
-        TextEx(ImStrv(label.Begin, label_end));
+        TextEx(label);
     }
 
     EndGroup();
@@ -3110,6 +3117,7 @@ bool ImGui::VSliderScalar(ImStrv label, const ImVec2& size, ImGuiDataType data_t
     if (!ItemAdd(frame_bb, id))
         return false;
 
+    // FIXME-IMSTR
     char format_0[64];  // format may not end with \0
     const char* format = format_0;
     IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_0));
@@ -3422,6 +3430,7 @@ bool ImGui::InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, con
     ImGuiContext& g = *GImGui;
     ImGuiStyle& style = g.Style;
 
+    // FIXME-IMSTR
     char format_0[64];  // format may not end with \0
     const char* format = format_0;
     IM_ASSERT(format_p.End - format_p.Begin < IM_ARRAYSIZE(format_0));
@@ -3470,11 +3479,11 @@ bool ImGui::InputScalar(ImStrv label, ImGuiDataType data_type, void* p_data, con
         if (flags & ImGuiInputTextFlags_ReadOnly)
             EndDisabled();
 
-        const char* label_end = FindRenderedTextEnd(label);
-        if (label.Begin != label_end)
+        label.End = FindRenderedTextEnd(label);
+        if (label.Begin != label.End)
         {
             SameLine(0, style.ItemInnerSpacing.x);
-            TextEx(ImStrv(label.Begin, label_end));
+            TextEx(label);
         }
         style.FramePadding = backup_frame_padding;
 
@@ -3516,11 +3525,11 @@ bool ImGui::InputScalarN(ImStrv label, ImGuiDataType data_type, void* p_data, in
     }
     PopID();
 
-    const char* label_end = FindRenderedTextEnd(label);
-    if (label.Begin != label_end)
+    label.End = FindRenderedTextEnd(label);
+    if (label.Begin != label.End)
     {
         SameLine(0.0f, g.Style.ItemInnerSpacing.x);
-        TextEx(ImStrv(label.Begin, label_end));
+        TextEx(label);
     }
 
     EndGroup();
@@ -4889,11 +4898,11 @@ bool ImGui::ColorEdit4(ImStrv label, float col[4], ImGuiColorEditFlags flags)
     const float w_full = CalcItemWidth();
     const float w_button = (flags & ImGuiColorEditFlags_NoSmallPreview) ? 0.0f : (square_sz + style.ItemInnerSpacing.x);
     const float w_inputs = w_full - w_button;
-    const char* label_display_end = FindRenderedTextEnd(label);
     g.NextItemData.ClearFlags();
 
     BeginGroup();
     PushID(label);
+    label.End = FindRenderedTextEnd(label);
 
     // If we're not showing any slider there's no point in doing any HSV conversions
     const ImGuiColorEditFlags flags_untouched = flags;
@@ -5033,9 +5042,9 @@ bool ImGui::ColorEdit4(ImStrv label, float col[4], ImGuiColorEditFlags flags)
         if (BeginPopup("picker"))
         {
             picker_active_window = g.CurrentWindow;
-            if (label.Begin != label_display_end)
+            if (label.Begin != label.End)
             {
-                TextEx(ImStrv(label.Begin, label_display_end));
+                TextEx(label);
                 Spacing();
             }
             ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags_DataTypeMask_ | ImGuiColorEditFlags_PickerMask_ | ImGuiColorEditFlags_InputMask_ | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar;
@@ -5046,10 +5055,10 @@ bool ImGui::ColorEdit4(ImStrv label, float col[4], ImGuiColorEditFlags flags)
         }
     }
 
-    if (label.Begin != label_display_end && !(flags & ImGuiColorEditFlags_NoLabel))
+    if (label.Begin != label.End && !(flags & ImGuiColorEditFlags_NoLabel))
     {
         SameLine(0.0f, style.ItemInnerSpacing.x);
-        TextEx(ImStrv(label.Begin, label_display_end));
+        TextEx(label);
     }
 
     // Convert back
@@ -5609,10 +5618,10 @@ void ImGui::ColorTooltip(ImStrv text, const float* col, ImGuiColorEditFlags flag
     ImGuiContext& g = *GImGui;
 
     BeginTooltipEx(ImGuiTooltipFlags_OverridePreviousTooltip, ImGuiWindowFlags_None);
-    const char* text_end = text ? FindRenderedTextEnd(text) : text.Begin;
-    if (text_end > text.Begin)
+    text.End = FindRenderedTextEnd(text);
+    if (text.Begin != text.End)
     {
-        TextEx(ImStrv(text.Begin, text_end));
+        TextEx(text);
         Separator();
     }
 
@@ -5883,9 +5892,7 @@ bool ImGui::TreeNodeBehavior(ImGuiID id, ImGuiTreeNodeFlags flags, ImStrv label)
     const ImGuiStyle& style = g.Style;
     const bool display_frame = (flags & ImGuiTreeNodeFlags_Framed) != 0;
     const ImVec2 padding = (display_frame || (flags & ImGuiTreeNodeFlags_FramePadding)) ? style.FramePadding : ImVec2(style.FramePadding.x, ImMin(window->DC.CurrLineTextBaseOffset, style.FramePadding.y));
-
-    if (!label.End)
-        label.End = FindRenderedTextEnd(label);
+    label.End = FindRenderedTextEnd(label);
     const ImVec2 label_size = CalcTextSize(label, false);
 
     // We vertically grow up to current line height up the typical widget height.
@@ -7989,6 +7996,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, ImStrv label, bool* p_open, ImGui
         flags |= ImGuiTabItemFlags_NoCloseButton;
 
     // Calculate tab contents size
+    label.End = FindRenderedTextEnd(label);
     ImVec2 size = TabItemCalcSize(label, p_open != NULL);
 
     // Acquire tab data
@@ -8017,7 +8025,8 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, ImStrv label, bool* p_open, ImGui
     // Append name with zero-terminator
     tab->NameOffset = (ImS32)tab_bar->TabsNames.size();
     tab_bar->TabsNames.append(label);
-    tab_bar->TabsNames.append(ImStrv("\0", 1));
+    char zero_c = 0;
+    tab_bar->TabsNames.append(ImStrv(&zero_c, &zero_c + 1));
 
     // Update selected tab
     if (tab_appearing && (tab_bar->Flags & ImGuiTabBarFlags_AutoSelectNewTabs) && tab_bar->NextSelectedTabId == 0)
@@ -8226,7 +8235,7 @@ void ImGui::TabItemBackground(ImDrawList* draw_list, const ImRect& bb, ImGuiTabI
 void ImGui::TabItemLabelAndCloseButton(ImDrawList* draw_list, const ImRect& bb, ImGuiTabItemFlags flags, ImVec2 frame_padding, ImStrv label, ImGuiID tab_id, ImGuiID close_button_id, bool is_contents_visible, bool* out_just_closed, bool* out_text_clipped)
 {
     ImGuiContext& g = *GImGui;
-    ImVec2 label_size = CalcTextSize(label, true);
+    ImVec2 label_size = CalcTextSize(label);
 
     if (out_just_closed)
         *out_just_closed = false;

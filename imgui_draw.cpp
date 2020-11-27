@@ -1578,7 +1578,7 @@ void ImDrawList::AddText(const ImFont* font, float font_size, const ImVec2& pos,
 {
     if ((col & IM_COL32_A_MASK) == 0)
         return;
-    if (text.empty())
+    if (text.Begin == text.End)
         return;
 
     // Pull default font/size from the shared ImDrawListSharedData instance
@@ -3352,19 +3352,22 @@ const char* ImFont::CalcWordWrapPositionA(float scale, ImStrv text, float wrap_w
     float blank_width = 0.0f;
     wrap_width /= scale; // We work with unscaled widths to avoid scaling every characters
 
-    const char* word_end = text.Begin;
+    const char* text_begin = text.Begin;
+    const char* text_end = text.End;
+
+    const char* word_end = text_begin;
     const char* prev_word_end = NULL;
     bool inside_word = true;
 
-    const char* s = text.Begin;
-    while (s < text.End)
+    const char* s = text_begin;
+    while (s < text_end)
     {
         unsigned int c = (unsigned int)*s;
         const char* next_s;
         if (c < 0x80)
             next_s = s + 1;
         else
-            next_s = s + ImTextCharFromUtf8(&c, s, text.End);
+            next_s = s + ImTextCharFromUtf8(&c, s, text_end);
         if (c == 0)
             break;
 
@@ -3437,18 +3440,21 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImSt
     ImVec2 text_size = ImVec2(0, 0);
     float line_width = 0.0f;
 
+    const char* text_begin = text.Begin;
+    const char* text_end = text.End;
+
     const bool word_wrap_enabled = (wrap_width > 0.0f);
     const char* word_wrap_eol = NULL;
 
-    const char* s = text.Begin;
-    while (s < text.End)
+    const char* s = text_begin;
+    while (s < text_end)
     {
         if (word_wrap_enabled)
         {
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
             {
-                word_wrap_eol = CalcWordWrapPositionA(scale, ImStrv(s, text.End), wrap_width - line_width);
+                word_wrap_eol = CalcWordWrapPositionA(scale, ImStrv(s, text_end), wrap_width - line_width);
                 if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
                     word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
             }
@@ -3462,7 +3468,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImSt
                 word_wrap_eol = NULL;
 
                 // Wrapping skips upcoming blanks
-                while (s < text.End)
+                while (s < text_end)
                 {
                     const char c = *s;
                     if (ImCharIsBlankA(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
@@ -3480,7 +3486,7 @@ ImVec2 ImFont::CalcTextSizeA(float size, float max_width, float wrap_width, ImSt
         }
         else
         {
-            s += ImTextCharFromUtf8(&c, s, text.End);
+            s += ImTextCharFromUtf8(&c, s, text_end);
             if (c == 0) // Malformed UTF-8?
                 break;
         }
@@ -3552,34 +3558,35 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2 & pos, I
 
     // Fast-forward to first visible line
     const char* s = text.Begin;
+    const char* text_end = text.End;
     if (y + line_height < clip_rect.y && !word_wrap_enabled)
-        while (y + line_height < clip_rect.y && s < text.End)
+        while (y + line_height < clip_rect.y && s < text_end)
         {
-            s = (const char*)memchr(s, '\n', text.End - s);
-            s = s ? s + 1 : text.End;
+            s = (const char*)memchr(s, '\n', text_end - s);
+            s = s ? s + 1 : text_end;
             y += line_height;
         }
 
     // For large text, scan for the last visible line in order to avoid over-reserving in the call to PrimReserve()
     // Note that very large horizontal line will still be affected by the issue (e.g. a one megabyte string buffer without a newline will likely crash atm)
-    if (text.End - s > 10000 && !word_wrap_enabled)
+    if (text_end - s > 10000 && !word_wrap_enabled)
     {
         const char* s_end = s;
         float y_end = y;
-        while (y_end < clip_rect.w && s_end < text.End)
+        while (y_end < clip_rect.w && s_end < text_end)
         {
-            s_end = (const char*)memchr(s_end, '\n', text.End - s_end);
-            s_end = s_end ? s_end + 1 : text.End;
+            s_end = (const char*)memchr(s_end, '\n', text_end - s_end);
+            s_end = s_end ? s_end + 1 : text_end;
             y_end += line_height;
         }
-        text.End = s_end;
+        text_end = s_end;
     }
-    if (s == text.End)
+    if (s == text_end)
         return;
 
     // Reserve vertices for remaining worse case (over-reserving is useful and easily amortized)
-    const int vtx_count_max = (int)(text.End - s) * 4;
-    const int idx_count_max = (int)(text.End - s) * 6;
+    const int vtx_count_max = (int)(text_end - s) * 4;
+    const int idx_count_max = (int)(text_end - s) * 6;
     const int idx_expected_size = draw_list->IdxBuffer.Size + idx_count_max;
     draw_list->PrimReserve(idx_count_max, vtx_count_max);
 
@@ -3596,7 +3603,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2 & pos, I
             // Calculate how far we can render. Requires two passes on the string data but keeps the code simple and not intrusive for what's essentially an uncommon feature.
             if (!word_wrap_eol)
             {
-                word_wrap_eol = CalcWordWrapPositionA(scale, ImStrv(s, text.End), wrap_width - (x - start_x));
+                word_wrap_eol = CalcWordWrapPositionA(scale, ImStrv(s, text_end), wrap_width - (x - start_x));
                 if (word_wrap_eol == s) // Wrap_width is too small to fit anything. Force displaying 1 character to minimize the height discontinuity.
                     word_wrap_eol++;    // +1 may not be a character start point in UTF-8 but it's ok because we use s >= word_wrap_eol below
             }
@@ -3608,7 +3615,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2 & pos, I
                 word_wrap_eol = NULL;
 
                 // Wrapping skips upcoming blanks
-                while (s < text.End)
+                while (s < text_end)
                 {
                     const char c = *s;
                     if (ImCharIsBlankA(c)) { s++; } else if (c == '\n') { s++; break; } else { break; }
@@ -3625,7 +3632,7 @@ void ImFont::RenderText(ImDrawList* draw_list, float size, const ImVec2 & pos, I
         }
         else
         {
-            s += ImTextCharFromUtf8(&c, s, text.End);
+            s += ImTextCharFromUtf8(&c, s, text_end);
             if (c == 0) // Malformed UTF-8?
                 break;
         }

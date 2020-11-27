@@ -2333,41 +2333,39 @@ bool ImGuiTextFilter::Draw(ImStrv label, float width)
     return value_changed;
 }
 
-void ImGuiTextFilter::ImGuiTextRange::split(char separator, ImVector<ImGuiTextRange>* out) const
+static void ImStrplit(ImStrv in, char separator, ImVector<ImStrv>* out)
 {
     out->resize(0);
-    const char* wb = b;
+    const char* wb = in.Begin;
     const char* we = wb;
-    while (we < e)
+    while (we < in.End)
     {
         if (*we == separator)
         {
-            out->push_back(ImGuiTextRange(wb, we));
+            out->push_back(ImStrv(wb, we));
             wb = we + 1;
         }
         we++;
     }
     if (wb != we)
-        out->push_back(ImGuiTextRange(wb, we));
+        out->push_back(ImStrv(wb, we));
 }
 
 void ImGuiTextFilter::Build()
 {
-    Filters.resize(0);
-    ImGuiTextRange input_range(InputBuf, InputBuf + strlen(InputBuf));
-    input_range.split(',', &Filters);
+    ImStrplit(ImStrv(InputBuf, InputBuf + strlen(InputBuf)), ',', &Filters);
 
     CountGrep = 0;
     for (int i = 0; i != Filters.Size; i++)
     {
-        ImGuiTextRange& f = Filters[i];
-        while (f.b < f.e && ImCharIsBlankA(f.b[0]))
-            f.b++;
-        while (f.e > f.b && ImCharIsBlankA(f.e[-1]))
-            f.e--;
+        ImStrv& f = Filters[i];
+        while (f.Begin < f.End && ImCharIsBlankA(f.Begin[0]))
+            f.Begin++;
+        while (f.End > f.Begin && ImCharIsBlankA(f.End[-1]))
+            f.End--;
         if (f.empty())
             continue;
-        if (Filters[i].b[0] != '-')
+        if (Filters[i].Begin[0] != '-')
             CountGrep += 1;
     }
 }
@@ -2378,23 +2376,23 @@ bool ImGuiTextFilter::PassFilter(ImStrv text) const
         return true;
 
     if (!text)
-        text.Begin = text.End = "";
+        text = "";
 
     for (int i = 0; i != Filters.Size; i++)
     {
-        const ImGuiTextRange& f = Filters[i];
+        const ImStrv& f = Filters[i];
         if (f.empty())
             continue;
-        if (f.b[0] == '-')
+        if (f.Begin[0] == '-')
         {
             // Subtract
-            if (ImStristr(text.Begin, text.End, f.b + 1, f.e) != NULL)
+            if (ImStristr(text.Begin, text.End, f.Begin + 1, f.End) != NULL)
                 return false;
         }
         else
         {
             // Grep
-            if (ImStristr(text.Begin, text.End, f.b, f.e) != NULL)
+            if (ImStristr(text.Begin, text.End, f.Begin, f.End) != NULL)
                 return true;
         }
     }
@@ -2425,6 +2423,8 @@ char ImGuiTextBuffer::EmptyString[1] = { 0 };
 void ImGuiTextBuffer::append(ImStrv str)
 {
     int len = (int)str.length();
+    if (len == 0)
+        return;
 
     // Add zero-terminator the first time
     const int write_off = (Buf.Size != 0) ? Buf.Size : 1;
@@ -2436,8 +2436,7 @@ void ImGuiTextBuffer::append(ImStrv str)
     }
 
     Buf.resize(needed_sz);
-    if (len > 0)
-        memcpy(&Buf[write_off - 1], str.Begin, (size_t)len);
+    memcpy(&Buf[write_off - 1], str.Begin, (size_t)len);
     Buf[write_off - 1 + len] = 0;
 }
 
@@ -3029,10 +3028,7 @@ const char* ImGui::GetStyleColorName(ImGuiCol idx)
 const char* ImGui::FindRenderedTextEnd(ImStrv text)
 {
     const char* text_display_end = text.Begin;
-    if (!text.End)
-        text.End = (const char*)-1;
-
-    while (text_display_end < text.End && *text_display_end != '\0' && (text_display_end[0] != '#' || text_display_end[1] != '#'))
+    while (text_display_end < text.End && (text_display_end[0] != '#' || text_display_end[1] != '#'))
         text_display_end++;
     return text_display_end;
 }
@@ -3045,17 +3041,14 @@ void ImGui::RenderText(ImVec2 pos, ImStrv text, bool hide_text_after_hash)
     ImGuiWindow* window = g.CurrentWindow;
 
     // Hide anything after a '##' string
-    const char* text_display_end;
     if (hide_text_after_hash)
-        text_display_end = FindRenderedTextEnd(text);
-    else
-        text_display_end = text.End;
+        text.End = FindRenderedTextEnd(text);
 
-    if (text.Begin != text_display_end)
+    if (text.Begin != text.End)
     {
-        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), ImStrv(text.Begin, text_display_end));
+        window->DrawList->AddText(g.Font, g.FontSize, pos, GetColorU32(ImGuiCol_Text), text);
         if (g.LogEnabled)
-            LogRenderedText(&pos, ImStrv(text.Begin, text_display_end));
+            LogRenderedText(&pos, text);
     }
 }
 
@@ -3105,16 +3098,16 @@ void ImGui::RenderTextClippedEx(ImDrawList* draw_list, const ImVec2& pos_min, co
 void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImStrv text, const ImVec2* text_size_if_known, const ImVec2& align, const ImRect* clip_rect)
 {
     // Hide anything after a '##' string
-    const char* text_display_end = FindRenderedTextEnd(text);
-    const int text_len = (int)(text_display_end - text.Begin);
-    if (text_len == 0)
+    // FIXME-IMSTR: This is not new but should be moved out of there.
+    text.End = FindRenderedTextEnd(text);
+    if (text.Begin == text.End)
         return;
 
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    RenderTextClippedEx(window->DrawList, pos_min, pos_max, ImStrv(text.Begin, text_display_end), text_size_if_known, align, clip_rect);
+    RenderTextClippedEx(window->DrawList, pos_min, pos_max, text, text_size_if_known, align, clip_rect);
     if (g.LogEnabled)
-        LogRenderedText(&pos_min, ImStrv(text.Begin, text_display_end));
+        LogRenderedText(&pos_min, text);
 }
 
 // Another overly complex function until we reorganize everything into a nice all-in-one helper.
@@ -3123,8 +3116,6 @@ void ImGui::RenderTextClipped(const ImVec2& pos_min, const ImVec2& pos_max, ImSt
 void ImGui::RenderTextEllipsis(ImDrawList* draw_list, const ImVec2& pos_min, const ImVec2& pos_max, float clip_max_x, float ellipsis_max_x, ImStrv text, const ImVec2* text_size_if_known)
 {
     ImGuiContext& g = *GImGui;
-    if (text.End == NULL)
-        text.End = FindRenderedTextEnd(text);
     const ImVec2 text_size = text_size_if_known ? *text_size_if_known : CalcTextSize(text, false, 0.0f);
 
     //draw_list->AddLine(ImVec2(pos_max.x, pos_min.y - 4), ImVec2(pos_max.x, pos_max.y + 4), IM_COL32(0, 0, 255, 255));
@@ -6014,7 +6005,7 @@ bool ImGui::Begin(ImStrv name, bool* p_open, ImGuiWindowFlags flags)
 {
     ImGuiContext& g = *GImGui;
     const ImGuiStyle& style = g.Style;
-    IM_ASSERT(name.Begin != NULL);                  // Window name required
+    IM_ASSERT(name.Begin != name.End);              // Window name required
     IM_ASSERT(g.WithinFrameScope);                  // Forgot to call ImGui::NewFrame()
     IM_ASSERT(g.FrameCountEnded != g.FrameCount);   // Called ImGui::Render() or ImGui::EndFrame() and haven't called ImGui::NewFrame() again yet
 
@@ -11165,7 +11156,7 @@ bool ImGui::SetDragDropPayload(ImStrv type, const void* data, size_t data_size, 
     if (cond == 0)
         cond = ImGuiCond_Always;
 
-    IM_ASSERT(type.Begin != NULL && "Payload type can not be empty");
+    IM_ASSERT(type.End - type.Begin > 0 && "Payload type can not be empty");
     IM_ASSERT(type.End - type.Begin < IM_ARRAYSIZE(payload.DataType) && "Payload type can be at most 32 characters long");
     IM_ASSERT((data != NULL && data_size > 0) || (data == NULL && data_size == 0));
     IM_ASSERT(cond == ImGuiCond_Always || cond == ImGuiCond_Once);
@@ -11707,12 +11698,12 @@ void ImGui::LoadIniSettingsFromDisk(ImStrv ini_filename)
     char* file_data = (char*)ImFileLoadToMemory(ini_filename, "rb", &file_data_size);
     if (!file_data)
         return;
-    LoadIniSettingsFromMemory(file_data, (size_t)file_data_size);
+    LoadIniSettingsFromMemory(ImStrv(file_data, file_data + file_data_size));
     IM_FREE(file_data);
 }
 
 // Zero-tolerance, no error reporting, cheap .ini parsing
-void ImGui::LoadIniSettingsFromMemory(ImStrv ini_data, size_t ini_size)
+void ImGui::LoadIniSettingsFromMemory(ImStrv ini_data)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(g.Initialized);
@@ -11721,8 +11712,7 @@ void ImGui::LoadIniSettingsFromMemory(ImStrv ini_data, size_t ini_size)
 
     // For user convenience, we allow passing a non zero-terminated string (hence the ini_size parameter).
     // For our convenience and to make the code simpler, we'll also write zero-terminators within the buffer. So let's create a writable copy..
-    if (ini_size == 0)
-        ini_size = ini_data.length();
+    const int ini_size = (int)ini_data.length();
     g.SettingsIniData.Buf.resize((int)ini_size + 1);
     char* const buf = g.SettingsIniData.Buf.Data;
     char* const buf_end = buf + ini_size;
