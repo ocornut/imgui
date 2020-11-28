@@ -188,14 +188,14 @@ Unique ID are used internally to track active widgets and occasionally associate
 Unique ID are implicitly built from the hash of multiple elements that identify the "path" to the UI element.
 
 - Unique ID are often derived from a string label and at minimum scoped within their host window:
-```c
+```cpp
 Begin("MyWindow");
 Button("OK");          // Label = "OK",     ID = hash of ("MyWindow", "OK")
 Button("Cancel");      // Label = "Cancel", ID = hash of ("MyWindow", "Cancel")
 End();
 ```
 - Other elements such as tree nodes, etc. also pushes to the ID stack:
-```c
+```cpp
 Begin("MyWindow");
 if (TreeNode("MyTreeNode"))
 {
@@ -205,7 +205,7 @@ if (TreeNode("MyTreeNode"))
 End();
 ```
 - Two items labeled "OK" in different windows or different tree locations won't collide:
-```
+```cpp
 Begin("MyFirstWindow");
 Button("OK");          // Label = "OK",     ID = hash of ("MyFirstWindow", "OK")
 End();
@@ -217,7 +217,7 @@ End();
 We used "..." above to signify whatever was already pushed to the ID stack previously:
 
 - If you have a same ID twice in the same location, you'll have a conflict:
-```c
+```cpp
 Button("OK");
 Button("OK");          // ID collision! Interacting with either button will trigger the first one.
 ```
@@ -228,7 +228,7 @@ When passing a label you can optionally specify extra ID information within stri
 Use "##" to pass a complement to the ID that won't be visible to the end-user.
 This helps solving the simple collision cases when you know e.g. at compilation time which items
 are going to be created:
-```c
+```cpp
 Begin("MyWindow");
 Button("Play");        // Label = "Play",   ID = hash of ("MyWindow", "Play")
 Button("Play##foo1");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo1")  // Different from above
@@ -236,15 +236,15 @@ Button("Play##foo2");  // Label = "Play",   ID = hash of ("MyWindow", "Play##foo
 End();
 ```
 - If you want to completely hide the label, but still need an ID:
-```c
+```cpp
 Checkbox("##On", &b);  // Label = "",       ID = hash of (..., "##On")   // No visible label, just a checkbox!
 ```
 - Occasionally/rarely you might want change a label while preserving a constant ID. This allows
 you to animate labels. For example you may want to include varying information in a window title bar,
 but windows are uniquely identified by their ID. Use "###" to pass a label that isn't part of ID:
-```c
+```cpp
 Button("Hello###ID");  // Label = "Hello",  ID = hash of (..., "###ID")
-Button("World###ID");  // Label = "World",  ID = hash of (..., "###ID")  // Same as above, even if the label looks different
+Button("World###ID");  // Label = "World",  ID = hash of (..., "###ID")  // Same ID, different label
 
 sprintf(buf, "My game (%f FPS)###MyGame", fps);
 Begin(buf);            // Variable title,   ID = hash of "MyGame"
@@ -256,7 +256,7 @@ creating many UI elements programmatically.
 You can push a pointer, a string or an integer value into the ID stack.
 Remember that ID are formed from the concatenation of _everything_ pushed into the ID stack.
 At each level of the stack we store the seed used for items at this level of the ID stack.
-```c
+```cpp
 Begin("Window");
 for (int i = 0; i < 100; i++)
 {
@@ -281,7 +281,7 @@ for (int i = 0; i < 100; i++)
 End();
 ```
 - You can stack multiple prefixes into the ID stack:
-```c
+```cpp
 Button("Click");       // Label = "Click",  ID = hash of (..., "Click")
 PushID("node");
   Button("Click");     // Label = "Click",  ID = hash of (..., "node", "Click")
@@ -291,7 +291,7 @@ PushID("node");
 PopID();
 ```
 - Tree nodes implicitly creates a scope for you by calling PushID().
-```c
+```cpp
 Button("Click");       // Label = "Click",  ID = hash of (..., "Click")
 if (TreeNode("node"))  // <-- this function call will do a PushID() for you (unless instructed not to, with a special flag)
 {
@@ -328,22 +328,22 @@ Long explanation:
 ImTextureID is nothing more that a void*, aka 4/8 bytes worth of data: just enough to store 1 pointer or 1 integer of your choice.
 Dear ImGui doesn't know or understand what you are storing in ImTextureID, it merely pass ImTextureID values until they reach your rendering function.
 - In the [examples/](https://github.com/ocornut/imgui/tree/master/examples) backends, for each graphics API we decided on a type that is likely to be a good representation for specifying an image from the end-user perspective. This is what the _examples_ rendering functions are using:
-```
+```cpp
 OpenGL:
 - ImTextureID = GLuint
 - See ImGui_ImplOpenGL3_RenderDrawData() function in imgui_impl_opengl3.cpp
 ```
-```
+```cpp
 DirectX9:
 - ImTextureID = LPDIRECT3DTEXTURE9
 - See ImGui_ImplDX9_RenderDrawData() function in imgui_impl_dx9.cpp
 ```
-```
+```cpp
 DirectX11:
 - ImTextureID = ID3D11ShaderResourceView*
 - See ImGui_ImplDX11_RenderDrawData() function in imgui_impl_dx11.cpp
 ```
-```
+```cpp
 DirectX12:
 - ImTextureID = D3D12_GPU_DESCRIPTOR_HANDLE
 - See ImGui_ImplDX12_RenderDrawData() function in imgui_impl_dx12.cpp
@@ -429,8 +429,7 @@ provide similar or better string helpers.
 ### Q: How can I display custom shapes? (using low-level ImDrawList API)
 
 - You can use the low-level `ImDrawList` api to render shapes within a window.
-
-```
+```cpp
 ImGui::Begin("My shapes");
 
 ImDrawList* draw_list = ImGui::GetWindowDrawList();
@@ -466,9 +465,9 @@ ImGui::End();
 
 ### Q: How should I handle DPI in my application?
 
-The short answer is: obtain the desired DPI scale, load a suitable font resized with that scale (always round down font size to nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
+The short answer is: obtain the desired DPI scale, load your fonts resized with that scale (always round down fonts size to nearest integer), and scale your Style structure accordingly using `style.ScaleAllSizes()`.
 
-Your application may want to detect DPI change and reload the font and reset style being frames.
+Your application may want to detect DPI change and reload the fonts and reset style between frames.
 
 Your ui code  should avoid using hardcoded constants for size and positioning. Prefer to express values as multiple of reference values such as `ImGui::GetFontSize()` or `ImGui::GetFrameHeight()`. So e.g. instead of seeing a hardcoded height of 500 for a given item/window, you may want to use `30*ImGui::GetFontSize()` instead.
 
@@ -507,7 +506,7 @@ backslash \ within a string literal, you need to write it double backslash "\\":
 
 ```cpp
 io.Fonts->AddFontFromFileTTF("MyFolder\MyFont.ttf", size);  // WRONG (you are escaping the M here!)
-io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT
+io.Fonts->AddFontFromFileTTF("MyFolder\\MyFont.ttf", size;  // CORRECT (Windows only)
 io.Fonts->AddFontFromFileTTF("MyFolder/MyFont.ttf", size);  // ALSO CORRECT
 ```
 
@@ -644,7 +643,7 @@ There is an auto-generated [c-api for Dear ImGui (cimgui)](https://github.com/ci
 # Q&A: Community
 
 ### Q: How can I help?
-- Businesses: please reach out to `contact AT dearimgui.org` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding we can hire more people working on this project.
+- Businesses: please reach out to `contact AT dearimgui.com` if you work in a place using Dear ImGui! We can discuss ways for your company to fund development via invoiced technical support, maintenance or sponsoring contacts. This is among the most useful thing you can do for Dear ImGui. With increased funding we can hire more people working on this project.
 - Individuals: you can support continued maintenance and development via PayPal donations. See [README](https://github.com/ocornut/imgui/blob/master/docs/README.md).
 - If you are experienced with Dear ImGui and C++, look at the [GitHub Issues](https://github.com/ocornut/imgui/issues), look at the [Wiki](https://github.com/ocornut/imgui/wiki), read [docs/TODO.txt](https://github.com/ocornut/imgui/blob/master/docs/TODO.txt) and see how you want to help and can help!
 - Disclose your usage of Dear ImGui via a dev blog post, a tweet, a screenshot, a mention somewhere etc.

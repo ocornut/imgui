@@ -308,8 +308,8 @@ void ImGui::ShowDemoWindow(bool* p_open)
 
     // Most "big" widgets share a common width settings by default. See 'Demo->Layout->Widgets Width' for details.
 
-    // e.g. Use 2/3 of the space for widgets and 1/3 for labels (default)
-    //ImGui::PushItemWidth(ImGui::GetWindowWidth() * 0.65f);
+    // e.g. Use 2/3 of the space for widgets and 1/3 for labels (right align)
+    //ImGui::PushItemWidth(-ImGui::GetWindowWidth() * 0.35f);
 
     // e.g. Leave a fixed amount of width for labels (by passing a negative value), the rest goes to widgets.
     ImGui::PushItemWidth(ImGui::GetFontSize() * -12);
@@ -340,7 +340,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         }
         if (ImGui::BeginMenu("Tools"))
         {
-            ImGui::MenuItem("Metrics", NULL, &show_app_metrics);
+            ImGui::MenuItem("Metrics/Debugger", NULL, &show_app_metrics);
             ImGui::MenuItem("Style Editor", NULL, &show_app_style_editor);
             ImGui::MenuItem("About Dear ImGui", NULL, &show_app_about);
             ImGui::EndMenu();
@@ -357,7 +357,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
         ImGui::BulletText("Sections below are demonstrating many aspects of the library.");
         ImGui::BulletText("The \"Examples\" menu above leads to more demo contents.");
         ImGui::BulletText("The \"Tools\" menu above gives access to: About Box, Style Editor,\n"
-                          "and Metrics (general purpose Dear ImGui debugging tool).");
+                          "and Metrics/Debugger (general purpose Dear ImGui debugging tool).");
         ImGui::Separator();
 
         ImGui::Text("PROGRAMMER GUIDE:");
@@ -380,8 +380,9 @@ void ImGui::ShowDemoWindow(bool* p_open)
         if (ImGui::TreeNode("Configuration##2"))
         {
             ImGui::CheckboxFlags("io.ConfigFlags: NavEnableKeyboard",    &io.ConfigFlags, ImGuiConfigFlags_NavEnableKeyboard);
+            ImGui::SameLine(); HelpMarker("Enable keyboard controls.");
             ImGui::CheckboxFlags("io.ConfigFlags: NavEnableGamepad",     &io.ConfigFlags, ImGuiConfigFlags_NavEnableGamepad);
-            ImGui::SameLine(); HelpMarker("Required backend to feed in gamepad inputs in io.NavInputs[] and set io.BackendFlags |= ImGuiBackendFlags_HasGamepad.\n\nRead instructions in imgui.cpp for details.");
+            ImGui::SameLine(); HelpMarker("Enable gamepad controls. Require backend to set io.BackendFlags |= ImGuiBackendFlags_HasGamepad.\n\nRead instructions in imgui.cpp for details.");
             ImGui::CheckboxFlags("io.ConfigFlags: NavEnableSetMousePos", &io.ConfigFlags, ImGuiConfigFlags_NavEnableSetMousePos);
             ImGui::SameLine(); HelpMarker("Instruct navigation to move the mouse cursor. See comment for ImGuiConfigFlags_NavEnableSetMousePos.");
             ImGui::CheckboxFlags("io.ConfigFlags: NoMouse",              &io.ConfigFlags, ImGuiConfigFlags_NoMouse);
@@ -475,6 +476,7 @@ void ImGui::ShowDemoWindow(bool* p_open)
     ShowDemoWindowMisc();
 
     // End of ShowDemoWindow()
+    ImGui::PopItemWidth();
     ImGui::End();
 }
 
@@ -2169,34 +2171,69 @@ static void ShowDemoWindowLayout()
         // e.g. Using '20.0f * GetFontSize()' as width instead of '200.0f', etc.
 
         static float f = 0.0f;
+        static bool show_indented_items = true;
+        ImGui::Checkbox("Show indented items", &show_indented_items);
+
         ImGui::Text("SetNextItemWidth/PushItemWidth(100)");
         ImGui::SameLine(); HelpMarker("Fixed width.");
-        ImGui::SetNextItemWidth(100);
-        ImGui::DragFloat("float##1", &f);
-
-        ImGui::Text("SetNextItemWidth/PushItemWidth(GetWindowWidth() * 0.5f)");
-        ImGui::SameLine(); HelpMarker("Half of window width.");
-        ImGui::SetNextItemWidth(ImGui::GetWindowWidth() * 0.5f);
-        ImGui::DragFloat("float##2", &f);
-
-        ImGui::Text("SetNextItemWidth/PushItemWidth(GetContentRegionAvail().x * 0.5f)");
-        ImGui::SameLine(); HelpMarker("Half of available width.\n(~ right-cursor_pos)\n(works within a column set)");
-        ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
-        ImGui::DragFloat("float##3", &f);
+        ImGui::PushItemWidth(100);
+        ImGui::DragFloat("float##1b", &f);
+        if (show_indented_items)
+        {
+            ImGui::Indent();
+            ImGui::DragFloat("float (indented)##1b", &f);
+            ImGui::Unindent();
+        }
+        ImGui::PopItemWidth();
 
         ImGui::Text("SetNextItemWidth/PushItemWidth(-100)");
         ImGui::SameLine(); HelpMarker("Align to right edge minus 100");
-        ImGui::SetNextItemWidth(-100);
-        ImGui::DragFloat("float##4", &f);
+        ImGui::PushItemWidth(-100);
+        ImGui::DragFloat("float##2a", &f);
+        if (show_indented_items)
+        {
+            ImGui::Indent();
+            ImGui::DragFloat("float (indented)##2b", &f);
+            ImGui::Unindent();
+        }
+        ImGui::PopItemWidth();
+
+        ImGui::Text("SetNextItemWidth/PushItemWidth(GetContentRegionAvail().x * 0.5f)");
+        ImGui::SameLine(); HelpMarker("Half of available width.\n(~ right-cursor_pos)\n(works within a column set)");
+        ImGui::PushItemWidth(ImGui::GetContentRegionAvail().x * 0.5f);
+        ImGui::DragFloat("float##3a", &f);
+        if (show_indented_items)
+        {
+            ImGui::Indent();
+            ImGui::DragFloat("float (indented)##3b", &f);
+            ImGui::Unindent();
+        }
+        ImGui::PopItemWidth();
+
+        ImGui::Text("SetNextItemWidth/PushItemWidth(-GetContentRegionAvail().x * 0.5f)");
+        ImGui::SameLine(); HelpMarker("Align to right edge minus half");
+        ImGui::PushItemWidth(-ImGui::GetContentRegionAvail().x * 0.5f);
+        ImGui::DragFloat("float##4a", &f);
+        if (show_indented_items)
+        {
+            ImGui::Indent();
+            ImGui::DragFloat("float (indented)##4b", &f);
+            ImGui::Unindent();
+        }
+        ImGui::PopItemWidth();
 
         // Demonstrate using PushItemWidth to surround three items.
         // Calling SetNextItemWidth() before each of them would have the same effect.
-        ImGui::Text("SetNextItemWidth/PushItemWidth(-1)");
+        ImGui::Text("SetNextItemWidth/PushItemWidth(-FLT_MIN)");
         ImGui::SameLine(); HelpMarker("Align to right edge");
-        ImGui::PushItemWidth(-1);
+        ImGui::PushItemWidth(-FLT_MIN);
         ImGui::DragFloat("##float5a", &f);
-        ImGui::DragFloat("##float5b", &f);
-        ImGui::DragFloat("##float5c", &f);
+        if (show_indented_items)
+        {
+            ImGui::Indent();
+            ImGui::DragFloat("float (indented)##5b", &f);
+            ImGui::Unindent();
+        }
         ImGui::PopItemWidth();
 
         ImGui::TreePop();
@@ -3568,7 +3605,7 @@ static void ShowDemoWindowMisc()
                 char label[32];
                 sprintf(label, "Mouse cursor %d: %s", i, mouse_cursors_names[i]);
                 ImGui::Bullet(); ImGui::Selectable(label, false);
-                if (ImGui::IsItemHovered() || ImGui::IsItemFocused())
+                if (ImGui::IsItemHovered())
                     ImGui::SetMouseCursor(i);
             }
             ImGui::TreePop();

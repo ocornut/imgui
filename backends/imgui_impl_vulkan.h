@@ -35,6 +35,7 @@ struct ImGui_ImplVulkan_InitInfo
     VkQueue             Queue;
     VkPipelineCache     PipelineCache;
     VkDescriptorPool    DescriptorPool;
+    uint32_t            Subpass;
     uint32_t            MinImageCount;          // >= 2
     uint32_t            ImageCount;             // >= MinImageCount
     VkSampleCountFlagBits        MSAASamples;   // >= VK_SAMPLE_COUNT_1_BIT

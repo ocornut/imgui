@@ -371,6 +371,7 @@ CODE
  When you are not sure about a old symbol or function name, try using the Search/Find function of your IDE to look for comments or references in all imgui files.
  You can read releases logs https://github.com/ocornut/imgui/releases for more details.
 
+ - 2020/11/18 (1.80) - renamed undocumented/internals ImGuiColumnsFlags_* to ImGuiOldColumnFlags_* in prevision of incoming Tables API.
  - 2020/11/03 (1.80) - renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature will apply to other data structures
  - 2020/10/14 (1.80) - backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/.
  - 2020/10/12 (1.80) - removed redirecting functions/enums that were marked obsolete in 1.60 (April 2018):
@@ -872,7 +873,6 @@ static int              FindWindowFocusIndex(ImGuiWindow* window);
 // Error Checking
 static void             ErrorCheckNewFrameSanityChecks();
 static void             ErrorCheckEndFrameSanityChecks();
-static void             ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool write);
 
 // Misc
 static void             UpdateSettings();
@@ -2188,7 +2188,7 @@ static void SetCursorPosYAndSetupForPrevLine(float pos_y, float line_height)
     window->DC.CursorMaxPos.y = ImMax(window->DC.CursorMaxPos.y, pos_y);
     window->DC.CursorPosPrevLine.y = window->DC.CursorPos.y - line_height;  // Setting those fields so that SetScrollHereY() can properly function after the end of our clipper usage.
     window->DC.PrevLineSize.y = (line_height - g.Style.ItemSpacing.y);      // If we end up needing more accurate data (to e.g. use SameLine) we may as well make the clipper have a fourth step to let user process and display the last item in their list.
-    if (ImGuiColumns* columns = window->DC.CurrentColumns)
+    if (ImGuiOldColumns* columns = window->DC.CurrentColumns)
         columns->LineMinY = window->DC.CursorPos.y;                         // Setting this so that cell Y position are set properly
 }
 
@@ -2352,7 +2352,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, ImU32 col)
     ImGuiColorMod backup;
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
-    g.ColorModifiers.push_back(backup);
+    g.ColorStack.push_back(backup);
     g.Style.Colors[idx] = ColorConvertU32ToFloat4(col);
 }
 
@@ -2362,7 +2362,7 @@ void ImGui::PushStyleColor(ImGuiCol idx, const ImVec4& col)
     ImGuiColorMod backup;
     backup.Col = idx;
     backup.BackupValue = g.Style.Colors[idx];
-    g.ColorModifiers.push_back(backup);
+    g.ColorStack.push_back(backup);
     g.Style.Colors[idx] = col;
 }
 
@@ -2371,9 +2371,9 @@ void ImGui::PopStyleColor(int count)
     ImGuiContext& g = *GImGui;
     while (count > 0)
     {
-        ImGuiColorMod& backup = g.ColorModifiers.back();
+        ImGuiColorMod& backup = g.ColorStack.back();
         g.Style.Colors[backup.Col] = backup.BackupValue;
-        g.ColorModifiers.pop_back();
+        g.ColorStack.pop_back();
         count--;
     }
 }
@@ -2427,7 +2427,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, float val)
     {
         ImGuiContext& g = *GImGui;
         float* pvar = (float*)var_info->GetVarPtr(&g.Style);
-        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
     }
@@ -2441,7 +2441,7 @@ void ImGui::PushStyleVar(ImGuiStyleVar idx, const ImVec2& val)
     {
         ImGuiContext& g = *GImGui;
         ImVec2* pvar = (ImVec2*)var_info->GetVarPtr(&g.Style);
-        g.StyleModifiers.push_back(ImGuiStyleMod(idx, *pvar));
+        g.StyleVarStack.push_back(ImGuiStyleMod(idx, *pvar));
         *pvar = val;
         return;
     }
@@ -2454,12 +2454,12 @@ void ImGui::PopStyleVar(int count)
     while (count > 0)
     {
         // We avoid a generic memcpy(data, &backup.Backup.., GDataTypeSize[info->Type] * info->Count), the overhead in Debug is not worth it.
-        ImGuiStyleMod& backup = g.StyleModifiers.back();
+        ImGuiStyleMod& backup = g.StyleVarStack.back();
         const ImGuiStyleVarInfo* info = GetStyleVarInfo(backup.VarIdx);
         void* data = info->GetVarPtr(&g.Style);
         if (info->Type == ImGuiDataType_Float && info->Count == 1)      { ((float*)data)[0] = backup.BackupFloat[0]; }
         else if (info->Type == ImGuiDataType_Float && info->Count == 2) { ((float*)data)[0] = backup.BackupFloat[0]; ((float*)data)[1] = backup.BackupFloat[1]; }
-        g.StyleModifiers.pop_back();
+        g.StyleVarStack.pop_back();
         count--;
     }
 }
@@ -2774,70 +2774,27 @@ void ImGui::RenderNavHighlight(const ImRect& bb, ImGuiID id, ImGuiNavHighlightFl
 //-----------------------------------------------------------------------------
 
 // ImGuiWindow is mostly a dumb struct. It merely has a constructor and a few helper methods
-ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name)
-    : DrawListInst(&context->DrawListSharedData)
+ImGuiWindow::ImGuiWindow(ImGuiContext* context, const char* name) : DrawListInst(NULL)
 {
+    memset(this, 0, sizeof(*this));
     Name = ImStrdup(name);
+    NameBufLen = (int)strlen(name) + 1;
     ID = ImHashStr(name);
     IDStack.push_back(ID);
-    Flags = ImGuiWindowFlags_None;
-    Pos = ImVec2(0.0f, 0.0f);
-    Size = SizeFull = ImVec2(0.0f, 0.0f);
-    ContentSize = ContentSizeExplicit = ImVec2(0.0f, 0.0f);
-    WindowPadding = ImVec2(0.0f, 0.0f);
-    WindowRounding = 0.0f;
-    WindowBorderSize = 0.0f;
-    NameBufLen = (int)strlen(name) + 1;
     MoveId = GetID("#MOVE");
-    ChildId = 0;
-    Scroll = ImVec2(0.0f, 0.0f);
     ScrollTarget = ImVec2(FLT_MAX, FLT_MAX);
     ScrollTargetCenterRatio = ImVec2(0.5f, 0.5f);
-    ScrollbarSizes = ImVec2(0.0f, 0.0f);
-    ScrollbarX = ScrollbarY = false;
-    Active = WasActive = false;
-    WriteAccessed = false;
-    Collapsed = false;
-    WantCollapseToggle = false;
-    SkipItems = false;
-    Appearing = false;
-    Hidden = false;
-    IsFallbackWindow = false;
-    HasCloseButton = false;
-    ResizeBorderHeld = -1;
-    BeginCount = 0;
-    BeginOrderWithinParent = -1;
-    BeginOrderWithinContext = -1;
-    PopupId = 0;
     AutoFitFramesX = AutoFitFramesY = -1;
-    AutoFitChildAxises = 0x00;
-    AutoFitOnlyGrows = false;
     AutoPosLastDirection = ImGuiDir_None;
-    HiddenFramesCanSkipItems = HiddenFramesCannotSkipItems = 0;
     SetWindowPosAllowFlags = SetWindowSizeAllowFlags = SetWindowCollapsedAllowFlags = ImGuiCond_Always | ImGuiCond_Once | ImGuiCond_FirstUseEver | ImGuiCond_Appearing;
     SetWindowPosVal = SetWindowPosPivot = ImVec2(FLT_MAX, FLT_MAX);
-
-    InnerRect = ImRect(0.0f, 0.0f, 0.0f, 0.0f); // Clear so the InnerRect.GetSize() code in Begin() doesn't lead to overflow even if the result isn't used.
-
     LastFrameActive = -1;
     LastTimeActive = -1.0f;
-    ItemWidthDefault = 0.0f;
     FontWindowScale = 1.0f;
     SettingsOffset = -1;
-
     DrawList = &DrawListInst;
+    DrawList->_Data = &context->DrawListSharedData;
     DrawList->_OwnerName = Name;
-    ParentWindow = NULL;
-    RootWindow = NULL;
-    RootWindowForTitleBarHighlight = NULL;
-    RootWindowForNav = NULL;
-
-    NavLastIds[0] = NavLastIds[1] = 0;
-    NavRectRel[0] = NavRectRel[1] = ImRect();
-    NavLastChildNavWindow = NULL;
-
-    MemoryCompacted = false;
-    MemoryDrawListIdxCapacity = MemoryDrawListVtxCapacity = 0;
 }
 
 ImGuiWindow::~ImGuiWindow()
@@ -2845,7 +2802,7 @@ ImGuiWindow::~ImGuiWindow()
     IM_ASSERT(DrawList == &DrawListInst);
     IM_DELETE(Name);
     for (int i = 0; i != ColumnsStorage.Size; i++)
-        ColumnsStorage[i].~ImGuiColumns();
+        ColumnsStorage[i].~ImGuiOldColumns();
 }
 
 ImGuiID ImGuiWindow::GetID(const char* str, const char* str_end)
@@ -2935,11 +2892,16 @@ static void SetCurrentWindow(ImGuiWindow* window)
         g.FontSize = g.DrawListSharedData.FontSize = window->CalcFontSize();
 }
 
+void ImGui::GcCompactTransientMiscBuffers()
+{
+    ImGuiContext& g = *GImGui;
+    g.ItemFlagsStack.clear();
+    g.GroupStack.clear();
+}
+
 // Free up/compact internal window buffers, we can use this when a window becomes unused.
-// This is currently unused by the library, but you may call this yourself for easy GC.
 // Not freed:
-// - ImGuiWindow, ImGuiWindowSettings, Name
-// - StateStorage, ColumnsStorage (may hold useful data)
+// - ImGuiWindow, ImGuiWindowSettings, Name, StateStorage, ColumnsStorage (may hold useful data)
 // This should have no noticeable visual effect. When the window reappear however, expect new allocation/buffer growth/copy cost.
 void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
 {
@@ -2949,10 +2911,8 @@ void ImGui::GcCompactTransientWindowBuffers(ImGuiWindow* window)
     window->IDStack.clear();
     window->DrawList->_ClearFreeMemory();
     window->DC.ChildWindows.clear();
-    window->DC.ItemFlagsStack.clear();
     window->DC.ItemWidthStack.clear();
     window->DC.TextWrapPosStack.clear();
-    window->DC.GroupStack.clear();
 }
 
 void ImGui::GcAwakeTransientWindowBuffers(ImGuiWindow* window)
@@ -3460,7 +3420,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
 
         if (root_window != NULL && !is_closed_popup)
         {
-            StartMouseMovingWindow(g.HoveredWindow);
+            StartMouseMovingWindow(g.HoveredWindow); //-V595
 
             // Cancel moving if clicked outside of title bar
             if (g.IO.ConfigWindowsMoveFromTitleBarOnly && !(root_window->Flags & ImGuiWindowFlags_NoTitleBar))
@@ -3486,17 +3446,7 @@ void ImGui::UpdateMouseMovingWindowEndFrame()
         // Find the top-most window between HoveredWindow and the top-most Modal Window.
         // This is where we can trim the popup stack.
         ImGuiWindow* modal = GetTopMostPopupModal();
-        bool hovered_window_above_modal = false;
-        if (modal == NULL)
-            hovered_window_above_modal = true;
-        for (int i = g.Windows.Size - 1; i >= 0 && hovered_window_above_modal == false; i--)
-        {
-            ImGuiWindow* window = g.Windows[i];
-            if (window == modal)
-                break;
-            if (window == g.HoveredWindow)
-                hovered_window_above_modal = true;
-        }
+        bool hovered_window_above_modal = g.HoveredWindow && IsWindowAbove(g.HoveredWindow, modal);
         ClosePopupsOverWindow(hovered_window_above_modal ? g.HoveredWindow : modal, true);
     }
 }
@@ -3909,7 +3859,7 @@ void ImGui::NewFrame()
 
     // Mark all windows as not visible and compact unused memory.
     IM_ASSERT(g.WindowsFocusOrder.Size == g.Windows.Size);
-    const float memory_compact_start_time = (g.IO.ConfigMemoryCompactTimer >= 0.0f) ? (float)g.Time - g.IO.ConfigMemoryCompactTimer : FLT_MAX;
+    const float memory_compact_start_time = (g.GcCompactAll || g.IO.ConfigMemoryCompactTimer < 0.0f) ? FLT_MAX : (float)g.Time - g.IO.ConfigMemoryCompactTimer;
     for (int i = 0; i != g.Windows.Size; i++)
     {
         ImGuiWindow* window = g.Windows[i];
@@ -3922,6 +3872,9 @@ void ImGui::NewFrame()
         if (!window->WasActive && !window->MemoryCompacted && window->LastTimeActive < memory_compact_start_time)
             GcCompactTransientWindowBuffers(window);
     }
+    if (g.GcCompactAll)
+        GcCompactTransientMiscBuffers();
+    g.GcCompactAll = false;
 
     // Closing the focused window restore focus to the first active root window in descending z-order
     if (g.NavWindow && !g.NavWindow->WasActive)
@@ -3931,6 +3884,9 @@ void ImGui::NewFrame()
     // But in order to allow the user to call NewFrame() multiple times without calling Render(), we are doing an explicit clear.
     g.CurrentWindowStack.resize(0);
     g.BeginPopupStack.resize(0);
+    g.ItemFlagsStack.resize(0);
+    g.ItemFlagsStack.push_back(ImGuiItemFlags_Default_);
+    g.GroupStack.resize(0);
     ClosePopupsOverWindow(g.NavWindow, false);
 
     // [DEBUG] Item picker tool - start with DebugStartItemPicker() - useful to visually select an item and break into its call-stack.
@@ -4049,8 +4005,8 @@ void ImGui::Shutdown(ImGuiContext* context)
     g.HoveredWindow = g.HoveredRootWindow = g.HoveredWindowUnderMovingWindow = NULL;
     g.ActiveIdWindow = g.ActiveIdPreviousFrameWindow = NULL;
     g.MovingWindow = NULL;
-    g.ColorModifiers.clear();
-    g.StyleModifiers.clear();
+    g.ColorStack.clear();
+    g.StyleVarStack.clear();
     g.FontStack.clear();
     g.OpenPopupStack.clear();
     g.BeginPopupStack.clear();
@@ -4114,7 +4070,7 @@ static void AddWindowToSortBuffer(ImVector<ImGuiWindow*>* out_sorted_windows, Im
 static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* draw_list)
 {
     // Remove trailing command if unused.
-    // Technically we could return directly instead of popping, but this make things looks neat in Metrics window as well.
+    // Technically we could return directly instead of popping, but this make things looks neat in Metrics/Debugger window as well.
     draw_list->_PopUnusedDrawCmd();
     if (draw_list->CmdBuffer.Size == 0)
         return;
@@ -4129,7 +4085,7 @@ static void AddDrawListToDrawData(ImVector<ImDrawList*>* out_list, ImDrawList* d
     // Check that draw_list doesn't use more vertices than indexable (default ImDrawIdx = unsigned short = 2 bytes = 64K vertices per ImDrawList = per window)
     // If this assert triggers because you are drawing lots of stuff manually:
     // - First, make sure you are coarse clipping yourself and not trying to draw many things outside visible bounds.
-    //   Be mindful that the ImDrawList API doesn't filter vertices. Use the Metrics window to inspect draw list contents.
+    //   Be mindful that the ImDrawList API doesn't filter vertices. Use the Metrics/Debugger window to inspect draw list contents.
     // - If you want large meshes with more than 64K vertices, you can either:
     //   (A) Handle the ImDrawCmd::VtxOffset value in your renderer backend, and set 'io.BackendFlags |= ImGuiBackendFlags_RendererHasVtxOffset'.
     //       Most example backends already support this from 1.71. Pre-1.71 backends won't.
@@ -4696,12 +4652,13 @@ bool ImGui::IsItemDeactivatedAfterEdit()
     return IsItemDeactivated() && (g.ActiveIdPreviousFrameHasBeenEditedBefore || (g.ActiveId == 0 && g.ActiveIdHasBeenEditedBefore));
 }
 
+// == GetItemID() == GetFocusID()
 bool ImGui::IsItemFocused()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    if (g.NavId == 0 || g.NavDisableHighlight || g.NavId != window->DC.LastItemId)
+    if (g.NavId != window->DC.LastItemId || g.NavId == 0)
         return false;
     return true;
 }
@@ -5568,8 +5525,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
     // Add to stack
     // We intentionally set g.CurrentWindow to NULL to prevent usage until when the viewport is set, then will call SetCurrentWindow()
     g.CurrentWindowStack.push_back(window);
+    g.CurrentWindow = window;
+    window->DC.StackSizesOnBegin.SetToCurrentState();
     g.CurrentWindow = NULL;
-    ErrorCheckBeginEndCompareStacksSize(window, true);
+
     if (flags & ImGuiWindowFlags_Popup)
     {
         ImGuiPopupData& popup_ref = g.OpenPopupStack[g.BeginPopupStack.Size];
@@ -6025,7 +5984,6 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         window->DC.NavLayerCurrent = ImGuiNavLayer_Main;
         window->DC.NavLayerActiveMask = window->DC.NavLayerActiveMaskNext;
         window->DC.NavLayerActiveMaskNext = 0x00;
-        window->DC.NavFocusScopeIdCurrent = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->DC.NavFocusScopeIdCurrent : 0; // -V595
         window->DC.NavHideHighlightOneFrame = false;
         window->DC.NavHasScroll = (window->ScrollMax.y > 0.0f);
 
@@ -6042,13 +6000,8 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
 
         window->DC.ItemWidth = window->ItemWidthDefault;
         window->DC.TextWrapPos = -1.0f; // disabled
-        window->DC.ItemFlagsStack.resize(0);
         window->DC.ItemWidthStack.resize(0);
         window->DC.TextWrapPosStack.resize(0);
-        window->DC.GroupStack.resize(0);
-        window->DC.ItemFlags = parent_window ? parent_window->DC.ItemFlags : ImGuiItemFlags_Default_;
-        if (parent_window)
-            window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
 
         if (window->AutoFitFramesX > 0)
             window->AutoFitFramesX--;
@@ -6093,12 +6046,14 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
         SetCurrentWindow(window);
     }
 
+    // Pull/inherit current state
+    window->DC.ItemFlags = g.ItemFlagsStack.back(); // Inherit from shared stack
+    window->DC.NavFocusScopeIdCurrent = (flags & ImGuiWindowFlags_ChildWindow) ? parent_window->DC.NavFocusScopeIdCurrent : 0; // Inherit from parent only // -V595
+
     PushClipRect(window->InnerClipRect.Min, window->InnerClipRect.Max, true);
 
     // Clear 'accessed' flag last thing (After PushClipRect which will set the flag. We want the flag to stay false when the default "Debug" window is unused)
-    if (first_begin_of_the_frame)
-        window->WriteAccessed = false;
-
+    window->WriteAccessed = false;
     window->BeginCount++;
     g.NextWindowData.ClearFlags();
 
@@ -6169,7 +6124,7 @@ void ImGui::End()
     g.CurrentWindowStack.pop_back();
     if (window->Flags & ImGuiWindowFlags_Popup)
         g.BeginPopupStack.pop_back();
-    ErrorCheckBeginEndCompareStacksSize(window, false);
+    window->DC.StackSizesOnBegin.CompareWithCurrentState();
     SetCurrentWindow(g.CurrentWindowStack.empty() ? NULL : g.CurrentWindowStack.back());
 }
 
@@ -6321,19 +6276,25 @@ void  ImGui::PopFont()
 
 void ImGui::PushItemFlag(ImGuiItemFlags option, bool enabled)
 {
-    ImGuiWindow* window = GetCurrentWindow();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    ImGuiItemFlags item_flags = window->DC.ItemFlags;
+    IM_ASSERT(item_flags == g.ItemFlagsStack.back());
     if (enabled)
-        window->DC.ItemFlags |= option;
+        item_flags |= option;
     else
-        window->DC.ItemFlags &= ~option;
-    window->DC.ItemFlagsStack.push_back(window->DC.ItemFlags);
+        item_flags &= ~option;
+    window->DC.ItemFlags = item_flags;
+    g.ItemFlagsStack.push_back(item_flags);
 }
 
 void ImGui::PopItemFlag()
 {
-    ImGuiWindow* window = GetCurrentWindow();
-    window->DC.ItemFlagsStack.pop_back();
-    window->DC.ItemFlags = window->DC.ItemFlagsStack.empty() ? ImGuiItemFlags_Default_ : window->DC.ItemFlagsStack.back();
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    IM_ASSERT(g.ItemFlagsStack.Size > 1); // Too many calls to PopItemFlag() - we always leave a 0 at the bottom of the stack.
+    g.ItemFlagsStack.pop_back();
+    window->DC.ItemFlags = g.ItemFlagsStack.back();
 }
 
 // FIXME: Look into renaming this once we have settled the new Focus/Activation/TabStop system.
@@ -6380,6 +6341,20 @@ bool ImGui::IsWindowChildOf(ImGuiWindow* window, ImGuiWindow* potential_parent)
         if (window == potential_parent)
             return true;
         window = window->ParentWindow;
+    }
+    return false;
+}
+
+bool ImGui::IsWindowAbove(ImGuiWindow* potential_above, ImGuiWindow* potential_below)
+{
+    ImGuiContext& g = *GImGui;
+    for (int i = g.Windows.Size - 1; i >= 0; i--)
+    {
+        ImGuiWindow* candidate_window = g.Windows[i];
+        if (candidate_window == potential_above)
+            return true;
+        if (candidate_window == potential_below)
+            return false;
     }
     return false;
 }
@@ -6714,12 +6689,11 @@ void ImGui::ActivateItem(ImGuiID id)
     g.NavNextActivateId = id;
 }
 
-// Note: this is storing in same stack as IDStack, so Push/Pop mismatch will be reported there.
 void ImGui::PushFocusScope(ImGuiID id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    window->IDStack.push_back(window->DC.NavFocusScopeIdCurrent);
+    g.FocusScopeStack.push_back(window->DC.NavFocusScopeIdCurrent);
     window->DC.NavFocusScopeIdCurrent = id;
 }
 
@@ -6727,8 +6701,9 @@ void ImGui::PopFocusScope()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    window->DC.NavFocusScopeIdCurrent = window->IDStack.back();
-    window->IDStack.pop_back();
+    IM_ASSERT(g.FocusScopeStack.Size > 0); // Too many PopFocusScope() ?
+    window->DC.NavFocusScopeIdCurrent = g.FocusScopeStack.back();
+    g.FocusScopeStack.pop_back();
 }
 
 void ImGui::SetKeyboardFocusHere(int offset)
@@ -6827,6 +6802,7 @@ ImGuiID ImGui::GetIDWithSeed(const char* str, const char* str_end, ImGuiID seed)
 void ImGui::PopID()
 {
     ImGuiWindow* window = GImGui->CurrentWindow;
+    IM_ASSERT(window->IDStack.Size > 1); // Too many PopID(), or could be popping in a wrong/different window?
     window->IDStack.pop_back();
 }
 
@@ -6891,8 +6867,8 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     // (IF YOU GET A WARNING OR COMPILE ERROR HERE: it means you assert macro is incorrectly defined!
     //  If your macro uses multiple statements, it NEEDS to be surrounded by a 'do { ... } while (0)' block.
     //  This is a common C/C++ idiom to allow multiple statements macros to be used in control flow blocks.)
-    // #define IM_ASSERT(EXPR)   SomeCode(EXPR); SomeMoreCode();                    // Wrong!
-    // #define IM_ASSERT(EXPR)   do { SomeCode(EXPR); SomeMoreCode(); } while (0)   // Correct!
+    // #define IM_ASSERT(EXPR)   if (SomeCode(EXPR)) SomeMoreCode();                    // Wrong!
+    // #define IM_ASSERT(EXPR)   do { if (SomeCode(EXPR)) SomeMoreCode(); } while (0)   // Correct!
     if (true) IM_ASSERT(1); else IM_ASSERT(0);
 
     // Check user data
@@ -6901,21 +6877,21 @@ static void ImGui::ErrorCheckNewFrameSanityChecks()
     IM_ASSERT((g.IO.DeltaTime > 0.0f || g.FrameCount == 0)              && "Need a positive DeltaTime!");
     IM_ASSERT((g.FrameCount == 0 || g.FrameCountEnded == g.FrameCount)  && "Forgot to call Render() or EndFrame() at the end of the previous frame?");
     IM_ASSERT(g.IO.DisplaySize.x >= 0.0f && g.IO.DisplaySize.y >= 0.0f  && "Invalid DisplaySize value!");
-    IM_ASSERT(g.IO.Fonts->Fonts.Size > 0                                && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
-    IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded()                          && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8() ?");
+    IM_ASSERT(g.IO.Fonts->Fonts.Size > 0                                && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()?");
+    IM_ASSERT(g.IO.Fonts->Fonts[0]->IsLoaded()                          && "Font Atlas not built. Did you call io.Fonts->GetTexDataAsRGBA32() / GetTexDataAsAlpha8()?");
     IM_ASSERT(g.Style.CurveTessellationTol > 0.0f                       && "Invalid style setting!");
     IM_ASSERT(g.Style.CircleSegmentMaxError > 0.0f                      && "Invalid style setting!");
-    IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting. Alpha cannot be negative (allows us to avoid a few clamps in color computations)!");
+    IM_ASSERT(g.Style.Alpha >= 0.0f && g.Style.Alpha <= 1.0f            && "Invalid style setting!"); // Allows us to avoid a few clamps in color computations
     IM_ASSERT(g.Style.WindowMinSize.x >= 1.0f && g.Style.WindowMinSize.y >= 1.0f && "Invalid style setting.");
     IM_ASSERT(g.Style.WindowMenuButtonPosition == ImGuiDir_None || g.Style.WindowMenuButtonPosition == ImGuiDir_Left || g.Style.WindowMenuButtonPosition == ImGuiDir_Right);
     for (int n = 0; n < ImGuiKey_COUNT; n++)
         IM_ASSERT(g.IO.KeyMap[n] >= -1 && g.IO.KeyMap[n] < IM_ARRAYSIZE(g.IO.KeysDown) && "io.KeyMap[] contains an out of bound value (need to be 0..512, or -1 for unmapped key)");
 
-    // Perform simple check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only recently added in 1.60 WIP)
+    // Check: required key mapping (we intentionally do NOT check all keys to not pressure user into setting up everything, but Space is required and was only added in 1.60 WIP)
     if (g.IO.ConfigFlags & ImGuiConfigFlags_NavEnableKeyboard)
         IM_ASSERT(g.IO.KeyMap[ImGuiKey_Space] != -1 && "ImGuiKey_Space is not mapped, required for keyboard navigation.");
 
-    // Perform simple check: the beta io.ConfigWindowsResizeFromEdges option requires backend to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
+    // Check: the io.ConfigWindowsResizeFromEdges option requires backend to honor mouse cursor changes and set the ImGuiBackendFlags_HasMouseCursors flag accordingly.
     if (g.IO.ConfigWindowsResizeFromEdges && !(g.IO.BackendFlags & ImGuiBackendFlags_HasMouseCursors))
         g.IO.ConfigWindowsResizeFromEdges = false;
 }
@@ -6926,9 +6902,16 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
 
     // Verify that io.KeyXXX fields haven't been tampered with. Key mods should not be modified between NewFrame() and EndFrame()
     // One possible reason leading to this assert is that your backends update inputs _AFTER_ NewFrame().
-    const ImGuiKeyModFlags expected_key_mod_flags = GetMergedKeyModFlags();
-    IM_ASSERT(g.IO.KeyMods == expected_key_mod_flags && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
-    IM_UNUSED(expected_key_mod_flags);
+    // It is known that when some modal native windows called mid-frame takes focus away, some backends such as GLFW will
+    // send key release events mid-frame. This would normally trigger this assertion and lead to sheared inputs.
+    // We silently accommodate for this case by ignoring/ the case where all io.KeyXXX modifiers were released (aka key_mod_flags == 0),
+    // while still correctly asserting on mid-frame key press events.
+    const ImGuiKeyModFlags key_mod_flags = GetMergedKeyModFlags();
+    IM_ASSERT((key_mod_flags == 0 || g.IO.KeyMods == key_mod_flags) && "Mismatching io.KeyCtrl/io.KeyShift/io.KeyAlt/io.KeySuper vs io.KeyMods");
+    IM_UNUSED(key_mod_flags);
+
+    // Recover from errors
+    //ErrorCheckEndFrameRecover();
 
     // Report when there is a mismatch of Begin/BeginChild vs End/EndChild calls. Important: Remember that the Begin/BeginChild API requires you
     // to always call End/EndChild even if Begin/BeginChild returns false! (this is unfortunately inconsistent with most other Begin* API).
@@ -6945,28 +6928,114 @@ static void ImGui::ErrorCheckEndFrameSanityChecks()
             IM_ASSERT_USER_ERROR(g.CurrentWindowStack.Size == 1, "Mismatched Begin/BeginChild vs End/EndChild calls: did you call End/EndChild too much?");
         }
     }
+
+    IM_ASSERT_USER_ERROR(g.GroupStack.Size == 0, "Missing EndGroup call!");
 }
 
-// Save and compare stack sizes on Begin()/End() to detect usage errors
-// Begin() calls this with write=true
-// End() calls this with write=false
-static void ImGui::ErrorCheckBeginEndCompareStacksSize(ImGuiWindow* window, bool write)
+// Experimental recovery from incorrect usage of BeginXXX/EndXXX/PushXXX/PopXXX calls.
+// Must be called during or before EndFrame().
+// This is generally flawed as we are not necessarily End/Popping things in the right order.
+// FIXME: Can't recover from inside BeginTabItem/EndTabItem yet.
+// FIXME: Can't recover from interleaved BeginTabBar/Begin
+void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, void* user_data)
+{
+    // PVS-Studio V1044 is "Loop break conditions do not depend on the number of iterations"
+    ImGuiContext& g = *GImGui;
+    while (g.CurrentWindowStack.Size > 0)
+    {
+#ifdef IMGUI_HAS_TABLE
+        while (g.CurrentTable && (g.CurrentTable->OuterWindow == g.CurrentWindow || g.CurrentTable->InnerWindow == g.CurrentWindow))
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing EndTable() in '%s'", g.CurrentTable->OuterWindow->Name);
+            EndTable();
+        }
+#endif
+        ImGuiWindow* window = g.CurrentWindow;
+        while (g.CurrentTabBar != NULL) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'", window->Name);
+            EndTabBar();
+        }
+        while (g.CurrentWindow->DC.TreeDepth > 0) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'", window->Name);
+            TreePop();
+        }
+        while (g.GroupStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfGroupStack) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing EndGroup() in '%s'", window->Name);
+            EndGroup();
+        }
+        while (g.CurrentWindow->IDStack.Size > 1) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'", window->Name);
+            PopID();
+        }
+        while (g.ColorStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfColorStack) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
+            PopStyleColor();
+        }
+        while (g.StyleVarStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfStyleVarStack) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'", window->Name);
+            PopStyleVar();
+        }
+        while (g.FocusScopeStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfFocusScopeStack) //-V1044
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'", window->Name);
+            PopFocusScope();
+        }
+        if (g.CurrentWindowStack.Size == 1)
+        {
+            IM_ASSERT(g.CurrentWindow->IsFallbackWindow);
+            break;
+        }
+        if (g.CurrentWindow->Flags & ImGuiWindowFlags_ChildWindow)
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing EndChild() for '%s'", window->Name);
+            EndChild();
+        }
+        else
+        {
+            if (log_callback) log_callback(user_data, "Recovered from missing End() for '%s'", window->Name);
+            End();
+        }
+    }
+}
+
+// Save current stack sizes for later compare
+void ImGuiStackSizes::SetToCurrentState()
 {
     ImGuiContext& g = *GImGui;
-    short* p = &window->DC.StackSizesBackup[0];
+    ImGuiWindow* window = g.CurrentWindow;
+    SizeOfIDStack = (short)window->IDStack.Size;
+    SizeOfColorStack = (short)g.ColorStack.Size;
+    SizeOfStyleVarStack = (short)g.StyleVarStack.Size;
+    SizeOfFontStack = (short)g.FontStack.Size;
+    SizeOfFocusScopeStack = (short)g.FocusScopeStack.Size;
+    SizeOfGroupStack = (short)g.GroupStack.Size;
+    SizeOfBeginPopupStack = (short)g.BeginPopupStack.Size;
+}
+
+// Compare to detect usage errors
+void ImGuiStackSizes::CompareWithCurrentState()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
 
     // Window stacks
-    // NOT checking: DC.ItemWidth, DC.AllowKeyboardFocus, DC.ButtonRepeat, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
-    { int n = window->IDStack.Size;       if (write) *p = (short)n; else IM_ASSERT(*p == n && "PushID/PopID or TreeNode/TreePop Mismatch!");   p++; }    // Too few or too many PopID()/TreePop()
-    { int n = window->DC.GroupStack.Size; if (write) *p = (short)n; else IM_ASSERT(*p == n && "BeginGroup/EndGroup Mismatch!");                p++; }    // Too few or too many EndGroup()
+    // NOT checking: DC.ItemWidth, DC.TextWrapPos (per window) to allow user to conveniently push once and not pop (they are cleared on Begin)
+    IM_ASSERT(SizeOfIDStack         == window->IDStack.Size     && "PushID/PopID or TreeNode/TreePop Mismatch!");
 
     // Global stacks
     // For color, style and font stacks there is an incentive to use Push/Begin/Pop/.../End patterns, so we relax our checks a little to allow them.
-    { int n = g.BeginPopupStack.Size;     if (write) *p = (short)n; else IM_ASSERT(*p == n && "BeginMenu/EndMenu or BeginPopup/EndPopup Mismatch!"); p++; }// Too few or too many EndMenu()/EndPopup()
-    { int n = g.ColorModifiers.Size;      if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleColor/PopStyleColor Mismatch!");       p++; }    // Too few or too many PopStyleColor()
-    { int n = g.StyleModifiers.Size;      if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushStyleVar/PopStyleVar Mismatch!");           p++; }    // Too few or too many PopStyleVar()
-    { int n = g.FontStack.Size;           if (write) *p = (short)n; else IM_ASSERT(*p >= n && "PushFont/PopFont Mismatch!");                   p++; }    // Too few or too many PopFont()
-    IM_ASSERT(p == window->DC.StackSizesBackup + IM_ARRAYSIZE(window->DC.StackSizesBackup));
+    IM_ASSERT(SizeOfGroupStack      == g.GroupStack.Size        && "BeginGroup/EndGroup Mismatch!");
+    IM_ASSERT(SizeOfBeginPopupStack == g.BeginPopupStack.Size   && "BeginPopup/EndPopup or BeginMenu/EndMenu Mismatch!");
+    IM_ASSERT(SizeOfColorStack      >= g.ColorStack.Size        && "PushStyleColor/PopStyleColor Mismatch!");
+    IM_ASSERT(SizeOfStyleVarStack   >= g.StyleVarStack.Size     && "PushStyleVar/PopStyleVar Mismatch!");
+    IM_ASSERT(SizeOfFontStack       >= g.FontStack.Size         && "PushFont/PopFont Mismatch!");
+    IM_ASSERT(SizeOfFocusScopeStack == g.FocusScopeStack.Size   && "PushFocusScope/PopFocusScope Mismatch!");
 }
 
 
@@ -7369,8 +7438,9 @@ void ImGui::BeginGroup()
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
 
-    window->DC.GroupStack.resize(window->DC.GroupStack.Size + 1);
-    ImGuiGroupData& group_data = window->DC.GroupStack.back();
+    g.GroupStack.resize(g.GroupStack.Size + 1);
+    ImGuiGroupData& group_data = g.GroupStack.back();
+    group_data.WindowID = window->ID;
     group_data.BackupCursorPos = window->DC.CursorPos;
     group_data.BackupCursorMaxPos = window->DC.CursorMaxPos;
     group_data.BackupIndent = window->DC.Indent;
@@ -7393,9 +7463,10 @@ void ImGui::EndGroup()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
-    IM_ASSERT(window->DC.GroupStack.Size > 0); // Mismatched BeginGroup()/EndGroup() calls
+    IM_ASSERT(g.GroupStack.Size > 0); // Mismatched BeginGroup()/EndGroup() calls
 
-    ImGuiGroupData& group_data = window->DC.GroupStack.back();
+    ImGuiGroupData& group_data = g.GroupStack.back();
+    IM_ASSERT(group_data.WindowID == window->ID); // EndGroup() in wrong window?
 
     ImRect group_bb(group_data.BackupCursorPos, ImMax(window->DC.CursorMaxPos, group_data.BackupCursorPos));
 
@@ -7410,7 +7481,7 @@ void ImGui::EndGroup()
 
     if (!group_data.EmitItem)
     {
-        window->DC.GroupStack.pop_back();
+        g.GroupStack.pop_back();
         return;
     }
 
@@ -7439,7 +7510,7 @@ void ImGui::EndGroup()
     if (group_contains_prev_active_id && g.ActiveId != g.ActiveIdPreviousFrame)
         window->DC.LastItemStatusFlags |= ImGuiItemStatusFlags_Deactivated;
 
-    window->DC.GroupStack.pop_back();
+    g.GroupStack.pop_back();
     //window->DrawList->AddRect(group_bb.Min, group_bb.Max, IM_COL32(255,0,255,255));   // [Debug]
 }
 
@@ -10372,7 +10443,7 @@ static void MetricsHelpMarker(const char* desc)
 
 void ImGui::ShowMetricsWindow(bool* p_open)
 {
-    if (!Begin("Dear ImGui Metrics", p_open))
+    if (!Begin("Dear ImGui Metrics/Debugger", p_open))
     {
         End();
         return;
@@ -10383,12 +10454,14 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     ImGuiMetricsConfig* cfg = &g.DebugMetricsConfig;
 
     // Basic info
-    ImGui::Text("Dear ImGui %s", ImGui::GetVersion());
-    ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
-    ImGui::Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
-    ImGui::Text("%d active windows (%d visible)", io.MetricsActiveWindows, io.MetricsRenderWindows);
-    ImGui::Text("%d active allocations", io.MetricsActiveAllocations);
-    ImGui::Separator();
+    Text("Dear ImGui %s", ImGui::GetVersion());
+    Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / io.Framerate, io.Framerate);
+    Text("%d vertices, %d indices (%d triangles)", io.MetricsRenderVertices, io.MetricsRenderIndices, io.MetricsRenderIndices / 3);
+    Text("%d active windows (%d visible)", io.MetricsActiveWindows, io.MetricsRenderWindows);
+    Text("%d active allocations", io.MetricsActiveAllocations);
+    //SameLine(); if (SmallButton("GC")) { g.GcCompactAll = true; }
+
+    Separator();
 
     // Debugging enums
     enum { WRT_OuterRect, WRT_OuterRectClipped, WRT_InnerRect, WRT_InnerClipRect, WRT_WorkRect, WRT_Content, WRT_ContentRegionRect, WRT_Count }; // Windows Rect Type
@@ -10398,7 +10471,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     if (cfg->ShowWindowsRectsType < 0)
         cfg->ShowWindowsRectsType = WRT_WorkRect;
     if (cfg->ShowTablesRectsType < 0)
-        cfg->ShowWindowsRectsType = TRT_WorkRect;
+        cfg->ShowTablesRectsType = TRT_WorkRect;
 
     struct Funcs
     {
@@ -10426,7 +10499,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         MetricsHelpMarker("Will call the IM_DEBUG_BREAK() macro to break in debugger.\nWarning: If you don't have a debugger attached, this will probably crash.");
 
         Checkbox("Show windows begin order", &cfg->ShowWindowsBeginOrder);
-        ImGui::Checkbox("Show windows rectangles", &cfg->ShowWindowsRects);
+        Checkbox("Show windows rectangles", &cfg->ShowWindowsRects);
         SameLine();
         SetNextItemWidth(GetFontSize() * 12);
         cfg->ShowWindowsRects |= Combo("##show_windows_rect_type", &cfg->ShowWindowsRectsType, wrt_rects_names, WRT_Count, WRT_Count);
@@ -10623,11 +10696,11 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     }
 #endif // #ifdef IMGUI_HAS_DOCK
 
-    ImGui::End();
+    End();
 }
 
 // [DEBUG] Display contents of Columns
-void ImGui::DebugNodeColumns(ImGuiColumns* columns)
+void ImGui::DebugNodeColumns(ImGuiOldColumns* columns)
 {
     if (!TreeNode((void*)(uintptr_t)columns->ID, "Columns Id: 0x%08X, Count: %d, Flags: 0x%04X", columns->ID, columns->Count, columns->Flags))
         return;
@@ -10885,7 +10958,7 @@ void ImGui::DebugNodeWindowsList(ImVector<ImGuiWindow*>* windows, const char* la
 #else
 
 void ImGui::ShowMetricsWindow(bool*) {}
-void ImGui::DebugNodeColumns(ImGuiColumns*) {}
+void ImGui::DebugNodeColumns(ImGuiOldColumns*) {}
 void ImGui::DebugNodeDrawList(ImGuiWindow*, const ImDrawList*, const char*) {}
 void ImGui::DebugNodeDrawCmdShowMeshAndBoundingBox(ImGuiWindow*, const ImDrawList*, const ImDrawCmd*, bool, bool) {}
 void ImGui::DebugNodeStorage(ImGuiStorage*, const char*) {}
