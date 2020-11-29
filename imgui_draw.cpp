@@ -140,8 +140,11 @@ namespace IMGUI_STB_NAMESPACE
 #define STBTT_sqrt(x)       ImSqrt(x)
 #define STBTT_pow(x,y)      ImPow(x,y)
 #define STBTT_fabs(x)       ImFabs(x)
+#define STBTT_cos(x)        ImCos(x)
+#define STBTT_acos(x)       ImAcos(x)
 #define STBTT_ifloor(x)     ((int)ImFloorStd(x))
 #define STBTT_iceil(x)      ((int)ImCeil(x))
+// #define STBTT_strlen(x)     // TODO
 #define STBTT_STATIC
 #define STB_TRUETYPE_IMPLEMENTATION
 #else
