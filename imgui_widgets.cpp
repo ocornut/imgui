@@ -1590,13 +1590,17 @@ bool ImGui::BeginCombo(const char* label, const char* preview_value, ImGuiComboF
     char name[16];
     ImFormatString(name, IM_ARRAYSIZE(name), "##Combo_%02d", g.BeginPopupStack.Size); // Recycle windows based on depth
 
-    // Peak into expected window size so we can position it
+    // Position the window given a custom constraint (peak into expected window size so we can position it)
+    // This might be easier to express with an hypothetical SetNextWindowPosConstraints() function.
     if (ImGuiWindow* popup_window = FindWindowByName(name))
         if (popup_window->WasActive)
         {
+            // Always override 'AutoPosLastDirection' to not leave a chance for a past value to affect us.
             ImVec2 size_expected = CalcWindowExpectedSize(popup_window);
             if (flags & ImGuiComboFlags_PopupAlignLeft)
-                popup_window->AutoPosLastDirection = ImGuiDir_Left;
+                popup_window->AutoPosLastDirection = ImGuiDir_Left; // "Below, Toward Left"
+            else
+                popup_window->AutoPosLastDirection = ImGuiDir_Down; // "Below, Toward Right (default)"
             ImRect r_outer = GetWindowAllowedExtentRect(popup_window);
             ImVec2 pos = FindBestWindowPosForPopupEx(frame_bb.GetBL(), size_expected, &popup_window->AutoPosLastDirection, r_outer, frame_bb, ImGuiPopupPositionPolicy_ComboBox);
             SetNextWindowPos(pos);
