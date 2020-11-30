@@ -86,6 +86,15 @@
         operator MyVec4() const { return MyVec4(x,y,z,w); }
 */
 
+//---- Define constructor to convert your string type to ImStrv (which is a non-owning begin/end pair)
+// This will be inlined as part of ImStrv class declaration.
+// This has two benefits: you won't need to use .c_str(), if length is already computed it is faster.
+//#include <string>
+//#include <string_view>
+//#define IM_STR_CLASS_EXTRA    ImStrv(const std::string& s)      { Begin = s.c_str(); End = Begin + s.length(); }
+//#define IM_STR_CLASS_EXTRA    ImStrv(const std::string_view& s) { Begin = s.data(); End = Begin + s.length(); }
+//#define IM_STR_CLASS_EXTRA    ImStrv(const MyString& s)         { Begin = s.Data; End = s.end(); }
+
 //---- Use 32-bit vertex indices (default is 16-bit) is one way to allow large meshes with more than 64K vertices.
 // Your renderer backend will need to support it (most example renderer backends support both 16/32-bit indices).
 // Another way to allow large meshes while keeping 16-bit indices is to handle ImDrawCmd::VtxOffset in your renderer.
