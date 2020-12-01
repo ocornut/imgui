@@ -1896,8 +1896,8 @@ struct ImGuiPayload
 struct ImGuiTableSortSpecsColumn
 {
     ImGuiID                     ColumnUserID;       // User id of the column (if specified by a TableSetupColumn() call)
-    ImU8                        ColumnIndex;        // Index of the column
-    ImU8                        SortOrder;          // Index within parent ImGuiTableSortSpecs (always stored in order starting from 0, tables sorted on a single criteria will always have a 0 here)
+    ImS16                       ColumnIndex;        // Index of the column
+    ImS16                       SortOrder;          // Index within parent ImGuiTableSortSpecs (always stored in order starting from 0, tables sorted on a single criteria will always have a 0 here)
     ImGuiSortDirection          SortDirection : 8;  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending (you can use this or SortSign, whichever is more convenient for your sort function)
 
     ImGuiTableSortSpecsColumn() { ColumnUserID = 0; ColumnIndex = 0; SortOrder = 0; SortDirection = ImGuiSortDirection_Ascending; }

@@ -1893,6 +1893,10 @@ struct ImGuiTabBar
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
 #define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableSetupDrawChannels()
 
+// Our current column maximum is 64 but we may raise that in the future.
+typedef ImS8 ImGuiTableColumnIdx;
+typedef ImU8 ImGuiTableDrawChannelIdx;
+
 // [Internal] sizeof() ~ 104
 // We use the terminology "Visible" to refer to a columns that are not Hidden by user or settings. However it may still be out of view and clipped (and IsClipped would be set).
 // This is in contrast with some user-facing api such as IsItemVisible() / IsRectVisible() which use "Visible" to mean "not clipped".
@@ -1917,22 +1921,22 @@ struct ImGuiTableColumn
     float                   ContentMaxXHeadersUsed;         // Contents maximum position for headers rows (regardless of freezing). TableHeader() automatically softclip itself + report ideal desired size, to avoid creating extraneous draw calls
     float                   ContentMaxXHeadersIdeal;
     ImS16                   NameOffset;                     // Offset into parent ColumnsNames[]
+    ImGuiTableColumnIdx     DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
+    ImGuiTableColumnIdx     IndexWithinEnabledSet;          // Index within enabled/visible set (<= IndexToDisplayOrder)
+    ImGuiTableColumnIdx     PrevEnabledColumn;              // Index of prev enabled/visible column within Columns[], -1 if first enabled/visible column
+    ImGuiTableColumnIdx     NextEnabledColumn;              // Index of next enabled/visible column within Columns[], -1 if last enabled/visible column
+    ImGuiTableColumnIdx     SortOrder;                      // Index of this column within sort specs, -1 if not sorting on this column, 0 for single-sort, may be >0 on multi-sort
+    ImGuiTableDrawChannelIdx DrawChannelCurrent;            // Index within DrawSplitter.Channels[]
+    ImGuiTableDrawChannelIdx DrawChannelFrozen;
+    ImGuiTableDrawChannelIdx DrawChannelUnfrozen;
     bool                    IsEnabled;                      // Is the column not marked Hidden by the user? (even if off view, e.g. clipped by scrolling).
     bool                    IsEnabledNextFrame;
     bool                    IsClipped;                      // Is not actually in view (e.g. not overlapping the host window clipping rectangle).
     bool                    IsSkipItems;                    // Do we want item submissions to this column to be ignored early on.
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
-    ImS8                    DisplayOrder;                   // Index within Table's IndexToDisplayOrder[] (column may be reordered by users)
-    ImS8                    IndexWithinEnabledSet;          // Index within enabled/visible set (<= IndexToDisplayOrder)
-    ImS8                    PrevEnabledColumn;              // Index of prev enabled/visible column within Columns[], -1 if first enabled/visible column
-    ImS8                    NextEnabledColumn;              // Index of next enabled/visible column within Columns[], -1 if last enabled/visible column
-    ImS8                    SortOrder;                      // Index of this column within sort specs, -1 if not sorting on this column, 0 for single-sort, may be >0 on multi-sort
     ImS8                    SortDirection;                  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending
     ImU8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
     ImU8                    CannotSkipItemsQueue;           // Queue of 8 values for the next 8 frames to disable Clipped/SkipItem
-    ImU8                    DrawChannelCurrent;             // Index within DrawSplitter.Channels[]
-    ImU8                    DrawChannelFrozen;
-    ImU8                    DrawChannelUnfrozen;
 
     ImGuiTableColumn()
     {
@@ -1952,8 +1956,8 @@ struct ImGuiTableColumn
 // sizeof() ~ 6
 struct ImGuiTableCellData
 {
-    ImU32   BgColor;        // Actual color
-    ImS8    Column;         // Column number
+    ImU32                       BgColor;    // Actual color
+    ImGuiTableColumnIdx         Column;     // Column number
 };
 
 struct ImGuiTable
@@ -1962,7 +1966,7 @@ struct ImGuiTable
     ImGuiTableFlags             Flags;
     void*                       RawData;                    // Single allocation to hold Columns[], DisplayOrderToIndex[] and RowCellData[]
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
-    ImSpan<ImS8>                DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
+    ImSpan<ImGuiTableColumnIdx> DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
     ImU64                       EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImU64                       EnabledMaskByDisplayOrder;  // Column DisplayOrder -> IsEnabled map
@@ -2020,29 +2024,29 @@ struct ImGuiTable
     ImDrawListSplitter          DrawSplitter;               // We carry our own ImDrawList splitter to allow recursion (FIXME: could be stored outside, worst case we need 1 splitter per recursing table)
     ImVector<ImGuiTableSortSpecsColumn> SortSpecsData;      // FIXME-OPT: Fixed-size array / small-vector pattern, optimize for single sort spec
     ImGuiTableSortSpecs         SortSpecs;                  // Public facing sorts specs, this is what we return in TableGetSortSpecs()
-    ImS8                        SortSpecsCount;
-    ImS8                        ColumnsEnabledCount;        // Number of enabled columns (<= ColumnsCount)
-    ImS8                        ColumnsEnabledFixedCount;   // Number of enabled columns (<= ColumnsCount)
-    ImS8                        DeclColumnsCount;           // Count calls to TableSetupColumn()
-    ImS8                        HoveredColumnBody;          // Index of column whose visible region is being hovered. Important: == ColumnsCount when hovering empty region after the right-most column!
-    ImS8                        HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
-    ImS8                        AutoFitSingleStretchColumn; // Index of single stretch column requesting auto-fit.
-    ImS8                        ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
-    ImS8                        LastResizedColumn;          // Index of column being resized from previous frame.
-    ImS8                        HeldHeaderColumn;           // Index of column header being held.
-    ImS8                        ReorderColumn;              // Index of column being reordered. (not cleared)
-    ImS8                        ReorderColumnDir;           // -1 or +1
-    ImS8                        RightMostEnabledColumn;     // Index of right-most non-hidden column.
-    ImS8                        LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
-    ImS8                        ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
-    ImS8                        FreezeRowsRequest;          // Requested frozen rows count
-    ImS8                        FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
-    ImS8                        FreezeColumnsRequest;       // Requested frozen columns count
-    ImS8                        FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
-    ImS8                        RowCellDataCurrent;         // Index of current RowCellData[] entry in current row
-    ImU8                        DummyDrawChannel;           // Redirect non-visible columns here.
-    ImU8                        Bg1DrawChannelCurrent;      // For Selectable() and other widgets drawing accross columns after the freezing line. Index within DrawSplitter.Channels[]
-    ImU8                        Bg1DrawChannelUnfrozen;
+    ImGuiTableColumnIdx         SortSpecsCount;
+    ImGuiTableColumnIdx         ColumnsEnabledCount;        // Number of enabled columns (<= ColumnsCount)
+    ImGuiTableColumnIdx         ColumnsEnabledFixedCount;   // Number of enabled columns (<= ColumnsCount)
+    ImGuiTableColumnIdx         DeclColumnsCount;           // Count calls to TableSetupColumn()
+    ImGuiTableColumnIdx         HoveredColumnBody;          // Index of column whose visible region is being hovered. Important: == ColumnsCount when hovering empty region after the right-most column!
+    ImGuiTableColumnIdx         HoveredColumnBorder;        // Index of column whose right-border is being hovered (for resizing).
+    ImGuiTableColumnIdx         AutoFitSingleStretchColumn; // Index of single stretch column requesting auto-fit.
+    ImGuiTableColumnIdx         ResizedColumn;              // Index of column being resized. Reset when InstanceCurrent==0.
+    ImGuiTableColumnIdx         LastResizedColumn;          // Index of column being resized from previous frame.
+    ImGuiTableColumnIdx         HeldHeaderColumn;           // Index of column header being held.
+    ImGuiTableColumnIdx         ReorderColumn;              // Index of column being reordered. (not cleared)
+    ImGuiTableColumnIdx         ReorderColumnDir;           // -1 or +1
+    ImGuiTableColumnIdx         RightMostEnabledColumn;     // Index of right-most non-hidden column.
+    ImGuiTableColumnIdx         LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
+    ImGuiTableColumnIdx         ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
+    ImGuiTableColumnIdx         FreezeRowsRequest;          // Requested frozen rows count
+    ImGuiTableColumnIdx         FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
+    ImGuiTableColumnIdx         FreezeColumnsRequest;       // Requested frozen columns count
+    ImGuiTableColumnIdx         FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
+    ImGuiTableColumnIdx         RowCellDataCurrent;         // Index of current RowCellData[] entry in current row
+    ImGuiTableDrawChannelIdx    DummyDrawChannel;           // Redirect non-visible columns here.
+    ImGuiTableDrawChannelIdx    Bg1DrawChannelCurrent;      // For Selectable() and other widgets drawing accross columns after the freezing line. Index within DrawSplitter.Channels[]
+    ImGuiTableDrawChannelIdx    Bg1DrawChannelUnfrozen;
     bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
     bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
     bool                        IsInitializing;
@@ -2064,14 +2068,14 @@ struct ImGuiTable
 // sizeof() ~ 12
 struct ImGuiTableColumnSettings
 {
-    float   WidthOrWeight;
-    ImGuiID UserID;
-    ImS8    Index;
-    ImS8    DisplayOrder;
-    ImS8    SortOrder;
-    ImU8    SortDirection : 2;
-    ImU8    IsEnabled : 1; // "Visible" in ini file
-    ImU8    IsStretch : 1;
+    float                   WidthOrWeight;
+    ImGuiID                 UserID;
+    ImGuiTableColumnIdx     Index;
+    ImGuiTableColumnIdx     DisplayOrder;
+    ImGuiTableColumnIdx     SortOrder;
+    ImU8                    SortDirection : 2;
+    ImU8                    IsEnabled : 1; // "Visible" in ini file
+    ImU8                    IsStretch : 1;
 
     ImGuiTableColumnSettings()
     {
@@ -2091,8 +2095,8 @@ struct ImGuiTableSettings
     ImGuiID                     ID;                     // Set to 0 to invalidate/delete the setting
     ImGuiTableFlags             SaveFlags;              // Indicate data we want to save using the Resizable/Reorderable/Sortable/Hideable flags (could be using its own flags..)
     float                       RefScale;               // Reference scale to be able to rescale columns on font/dpi changes.
-    ImS8                        ColumnsCount;
-    ImS8                        ColumnsCountMax;        // Maximum number of columns this settings instance can store, we can recycle a settings instance with lower number of columns but not higher
+    ImGuiTableColumnIdx         ColumnsCount;
+    ImGuiTableColumnIdx         ColumnsCountMax;        // Maximum number of columns this settings instance can store, we can recycle a settings instance with lower number of columns but not higher
     bool                        WantApply;              // Set when loaded from .ini data (to enable merging/loading .ini data into an already running context)
 
     ImGuiTableSettings()        { memset(this, 0, sizeof(*this)); }
