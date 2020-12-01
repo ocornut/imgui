@@ -2172,112 +2172,6 @@ void    ImGui::TablePopBackgroundChannel()
     table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
 }
 
-// Output context menu into current window (generally a popup)
-// FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
-void    ImGui::TableDrawContextMenu(ImGuiTable* table)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiWindow* window = g.CurrentWindow;
-    if (window->SkipItems)
-        return;
-
-    bool want_separator = false;
-    const int column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
-    ImGuiTableColumn* column = (column_n != -1) ? &table->Columns[column_n] : NULL;
-
-    // Sizing
-    if (table->Flags & ImGuiTableFlags_Resizable)
-    {
-        if (column != NULL)
-        {
-            const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsEnabled;
-            if (MenuItem("Size column to fit", NULL, false, can_resize))
-                TableSetColumnWidthAutoSingle(table, column_n);
-        }
-
-        const char* size_all_desc;
-        if (table->ColumnsEnabledFixedCount == table->ColumnsEnabledCount)
-            size_all_desc = "Size all columns to fit";          // All fixed
-        else if (table->ColumnsEnabledFixedCount == 0)
-            size_all_desc = "Size all columns to default";      // All stretch
-        else
-            size_all_desc = "Size all columns to fit/default";  // Mixed
-        if (MenuItem(size_all_desc, NULL))
-            TableSetColumnWidthAutoAll(table);
-        want_separator = true;
-    }
-
-    // Ordering
-    if (table->Flags & ImGuiTableFlags_Reorderable)
-    {
-        if (MenuItem("Reset order", NULL, false, !table->IsDefaultDisplayOrder))
-            table->IsResetDisplayOrderRequest = true;
-        want_separator = true;
-    }
-
-    // Sorting
-    // (modify TableOpenContextMenu() to add _Sortable flag if enabling this)
-#if 0
-    if ((table->Flags & ImGuiTableFlags_Sortable) && column != NULL && (column->Flags & ImGuiTableColumnFlags_NoSort) == 0)
-    {
-        if (want_separator)
-            Separator();
-        want_separator = true;
-
-        bool append_to_sort_specs = g.IO.KeyShift;
-        if (MenuItem("Sort in Ascending Order", NULL, column->SortOrder != -1 && column->SortDirection == ImGuiSortDirection_Ascending, (column->Flags & ImGuiTableColumnFlags_NoSortAscending) == 0))
-            TableSetColumnSortDirection(table, column_n, ImGuiSortDirection_Ascending, append_to_sort_specs);
-        if (MenuItem("Sort in Descending Order", NULL, column->SortOrder != -1 && column->SortDirection == ImGuiSortDirection_Descending, (column->Flags & ImGuiTableColumnFlags_NoSortDescending) == 0))
-            TableSetColumnSortDirection(table, column_n, ImGuiSortDirection_Descending, append_to_sort_specs);
-    }
-#endif
-
-    // Hiding / Visibility
-    if (table->Flags & ImGuiTableFlags_Hideable)
-    {
-        if (want_separator)
-            Separator();
-        want_separator = true;
-
-        PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
-        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
-        {
-            ImGuiTableColumn* other_column = &table->Columns[other_column_n];
-            const char* name = TableGetColumnName(table, other_column_n);
-            if (name == NULL || name[0] == 0)
-                name = "<Unknown>";
-
-            // Make sure we can't hide the last active column
-            bool menu_item_active = (other_column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
-            if (other_column->IsEnabled && table->ColumnsEnabledCount <= 1)
-                menu_item_active = false;
-            if (MenuItem(name, NULL, other_column->IsEnabled, menu_item_active))
-                other_column->IsEnabledNextFrame = !other_column->IsEnabled;
-        }
-        PopItemFlag();
-    }
-}
-
-// Use -1 to open menu not specific to a given column.
-void    ImGui::TableOpenContextMenu(int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (column_n == -1 && table->CurrentColumn != -1)   // When called within a column automatically use this one (for consistency)
-        column_n = table->CurrentColumn;
-    if (column_n == table->ColumnsCount)                // To facilitate using with TableGetHoveredColumn()
-        column_n = -1;
-    IM_ASSERT(column_n >= -1 && column_n < table->ColumnsCount);
-    if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
-    {
-        table->IsContextPopupOpen = true;
-        table->ContextPopupColumn = (ImS8)column_n;
-        table->InstanceInteracted = table->InstanceCurrent;
-        const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
-        OpenPopupEx(context_menu_id, ImGuiPopupFlags_None);
-    }
-}
-
 // This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
 // The intent is that advanced users willing to create customized headers would not need to use this helper
 // and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
@@ -2691,6 +2585,119 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
     table->SortSpecs.SpecsCount = table->SortSpecsData.Size;
     table->SortSpecs.SpecsDirty = true; // Mark as dirty for user
     table->IsSortSpecsDirty = false; // Mark as not dirty for us
+}
+
+//-------------------------------------------------------------------------
+// [SECTION] Tables: Context Menu
+//-------------------------------------------------------------------------
+// - TableOpenContextMenu() [Internal]
+// - TableDrawContextMenu() [Internal]
+//-------------------------------------------------------------------------
+
+// Use -1 to open menu not specific to a given column.
+void    ImGui::TableOpenContextMenu(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (column_n == -1 && table->CurrentColumn != -1)   // When called within a column automatically use this one (for consistency)
+        column_n = table->CurrentColumn;
+    if (column_n == table->ColumnsCount)                // To facilitate using with TableGetHoveredColumn()
+        column_n = -1;
+    IM_ASSERT(column_n >= -1 && column_n < table->ColumnsCount);
+    if (table->Flags & (ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable))
+    {
+        table->IsContextPopupOpen = true;
+        table->ContextPopupColumn = (ImS8)column_n;
+        table->InstanceInteracted = table->InstanceCurrent;
+        const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
+        OpenPopupEx(context_menu_id, ImGuiPopupFlags_None);
+    }
+}
+
+// Output context menu into current window (generally a popup)
+// FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
+void    ImGui::TableDrawContextMenu(ImGuiTable* table)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiWindow* window = g.CurrentWindow;
+    if (window->SkipItems)
+        return;
+
+    bool want_separator = false;
+    const int column_n = (table->ContextPopupColumn >= 0 && table->ContextPopupColumn < table->ColumnsCount) ? table->ContextPopupColumn : -1;
+    ImGuiTableColumn* column = (column_n != -1) ? &table->Columns[column_n] : NULL;
+
+    // Sizing
+    if (table->Flags & ImGuiTableFlags_Resizable)
+    {
+        if (column != NULL)
+        {
+            const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsEnabled;
+            if (MenuItem("Size column to fit", NULL, false, can_resize))
+                TableSetColumnWidthAutoSingle(table, column_n);
+        }
+
+        const char* size_all_desc;
+        if (table->ColumnsEnabledFixedCount == table->ColumnsEnabledCount)
+            size_all_desc = "Size all columns to fit";          // All fixed
+        else if (table->ColumnsEnabledFixedCount == 0)
+            size_all_desc = "Size all columns to default";      // All stretch
+        else
+            size_all_desc = "Size all columns to fit/default";  // Mixed
+        if (MenuItem(size_all_desc, NULL))
+            TableSetColumnWidthAutoAll(table);
+        want_separator = true;
+    }
+
+    // Ordering
+    if (table->Flags & ImGuiTableFlags_Reorderable)
+    {
+        if (MenuItem("Reset order", NULL, false, !table->IsDefaultDisplayOrder))
+            table->IsResetDisplayOrderRequest = true;
+        want_separator = true;
+    }
+
+    // Sorting
+    // (modify TableOpenContextMenu() to add _Sortable flag if enabling this)
+#if 0
+    if ((table->Flags & ImGuiTableFlags_Sortable) && column != NULL && (column->Flags & ImGuiTableColumnFlags_NoSort) == 0)
+    {
+        if (want_separator)
+            Separator();
+        want_separator = true;
+
+        bool append_to_sort_specs = g.IO.KeyShift;
+        if (MenuItem("Sort in Ascending Order", NULL, column->SortOrder != -1 && column->SortDirection == ImGuiSortDirection_Ascending, (column->Flags & ImGuiTableColumnFlags_NoSortAscending) == 0))
+            TableSetColumnSortDirection(table, column_n, ImGuiSortDirection_Ascending, append_to_sort_specs);
+        if (MenuItem("Sort in Descending Order", NULL, column->SortOrder != -1 && column->SortDirection == ImGuiSortDirection_Descending, (column->Flags & ImGuiTableColumnFlags_NoSortDescending) == 0))
+            TableSetColumnSortDirection(table, column_n, ImGuiSortDirection_Descending, append_to_sort_specs);
+    }
+#endif
+
+    // Hiding / Visibility
+    if (table->Flags & ImGuiTableFlags_Hideable)
+    {
+        if (want_separator)
+            Separator();
+        want_separator = true;
+
+        PushItemFlag(ImGuiItemFlags_SelectableDontClosePopup, true);
+        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
+        {
+            ImGuiTableColumn* other_column = &table->Columns[other_column_n];
+            const char* name = TableGetColumnName(table, other_column_n);
+            if (name == NULL || name[0] == 0)
+                name = "<Unknown>";
+
+            // Make sure we can't hide the last active column
+            bool menu_item_active = (other_column->Flags & ImGuiTableColumnFlags_NoHide) ? false : true;
+            if (other_column->IsEnabled && table->ColumnsEnabledCount <= 1)
+                menu_item_active = false;
+            if (MenuItem(name, NULL, other_column->IsEnabled, menu_item_active))
+                other_column->IsEnabledNextFrame = !other_column->IsEnabled;
+        }
+        PopItemFlag();
+    }
 }
 
 //-------------------------------------------------------------------------
