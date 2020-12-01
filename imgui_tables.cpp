@@ -64,7 +64,7 @@
 // Typical call flow: (root level is public API):
 // - BeginTable()                               user begin into a table
 //    | BeginChild()                            - (if ScrollX/ScrollY is set)
-//    | TableBeginUpdateColumns()               - apply resize/order requests, lock columns active state, order
+//    | TableBeginApplyRequests()               - apply queued resizing/reordering/hiding requests
 //    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
 //    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
 // - TableSetupColumn()                         user submit columns details (optional)
@@ -273,7 +273,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
-    table->ColumnsNames.Buf.resize(0);
     table->IsInitializing = false;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
@@ -431,13 +430,26 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Because we cannot safely assert in EndTable() when no rows have been created, this seems like our best option.
     inner_window->SkipItems = true;
 
-    // Update/lock which columns will be Visible for the frame
-    TableBeginUpdateColumns(table);
+    // Clear names
+    // FIXME-TABLES: probably could be done differently...
+    if (table->ColumnsNames.Buf.Size > 0)
+    {
+        table->ColumnsNames.Buf.resize(0);
+        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        {
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            column->NameOffset = -1;
+        }
+    }
+
+    // Apply queued resizing/reordering/hiding requests
+    TableBeginApplyRequests(table);
 
     return true;
 }
 
-void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
+// Apply queued resizing/reordering/hiding requests
+void ImGui::TableBeginApplyRequests(ImGuiTable* table)
 {
     // Handle resizing request
     // (We process this at the first TableBegin of the frame)
@@ -504,67 +516,6 @@ void ImGui::TableBeginUpdateColumns(ImGuiTable* table)
         table->IsResetDisplayOrderRequest = false;
         table->IsSettingsDirty = true;
     }
-
-    // Lock Visible state and Order
-    table->ColumnsEnabledCount = 0;
-    table->IsDefaultDisplayOrder = true;
-    ImGuiTableColumn* last_visible_column = NULL;
-    bool want_column_auto_fit = false;
-    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
-    {
-        const int column_n = table->DisplayOrderToIndex[order_n];
-        if (column_n != order_n)
-            table->IsDefaultDisplayOrder = false;
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        column->NameOffset = -1;
-        if (!(table->Flags & ImGuiTableFlags_Hideable) || (column->Flags & ImGuiTableColumnFlags_NoHide))
-            column->IsEnabledNextFrame = true;
-        if (column->IsEnabled != column->IsEnabledNextFrame)
-        {
-            column->IsEnabled = column->IsEnabledNextFrame;
-            table->IsSettingsDirty = true;
-            if (!column->IsEnabled && column->SortOrder != -1)
-                table->IsSortSpecsDirty = true;
-        }
-        if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_MultiSortable))
-            table->IsSortSpecsDirty = true;
-        if (column->AutoFitQueue != 0x00)
-            want_column_auto_fit = true;
-
-        ImU64 index_mask = (ImU64)1 << column_n;
-        ImU64 display_order_mask = (ImU64)1 << column->DisplayOrder;
-        if (column->IsEnabled)
-        {
-            column->PrevEnabledColumn = column->NextEnabledColumn = -1;
-            if (last_visible_column)
-            {
-                last_visible_column->NextEnabledColumn = (ImS8)column_n;
-                column->PrevEnabledColumn = (ImS8)table->Columns.index_from_ptr(last_visible_column);
-            }
-            column->IndexWithinEnabledSet = table->ColumnsEnabledCount;
-            table->ColumnsEnabledCount++;
-            table->EnabledMaskByIndex |= index_mask;
-            table->EnabledMaskByDisplayOrder |= display_order_mask;
-            last_visible_column = column;
-        }
-        else
-        {
-            column->IndexWithinEnabledSet = -1;
-            table->EnabledMaskByIndex &= ~index_mask;
-            table->EnabledMaskByDisplayOrder &= ~display_order_mask;
-        }
-        IM_ASSERT(column->IndexWithinEnabledSet <= column->DisplayOrder);
-    }
-    table->EnabledUnclippedMaskByIndex = table->EnabledMaskByIndex; // Columns will be masked out by TableUpdateLayout() when Clipped
-    table->RightMostEnabledColumn = (ImS8)(last_visible_column ? table->Columns.index_from_ptr(last_visible_column) : -1);
-
-    // Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
-    // the column fitting to wait until the first visible frame of the child container (may or not be a good thing).
-    if (want_column_auto_fit && table->OuterWindow != table->InnerWindow)
-        table->InnerWindow->SkipItems = false;
-
-    if (want_column_auto_fit)
-        table->IsSettingsDirty = true;
 }
 
 // Adjust flags: default width mode + stretch columns are not allowed when auto extending
@@ -628,6 +579,65 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 
     table->HoveredColumnBody = -1;
     table->HoveredColumnBorder = -1;
+
+    // Lock Enabled state and Order
+    ImGuiTableColumn* last_visible_column = NULL;
+    bool want_column_auto_fit = false;
+    table->IsDefaultDisplayOrder = true;
+    table->ColumnsEnabledCount = 0;
+    for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
+    {
+        const int column_n = table->DisplayOrderToIndex[order_n];
+        if (column_n != order_n)
+            table->IsDefaultDisplayOrder = false;
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (!(table->Flags & ImGuiTableFlags_Hideable) || (column->Flags & ImGuiTableColumnFlags_NoHide))
+            column->IsEnabledNextFrame = true;
+        if (column->IsEnabled != column->IsEnabledNextFrame)
+        {
+            column->IsEnabled = column->IsEnabledNextFrame;
+            table->IsSettingsDirty = true;
+            if (!column->IsEnabled && column->SortOrder != -1)
+                table->IsSortSpecsDirty = true;
+        }
+        if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_MultiSortable))
+            table->IsSortSpecsDirty = true;
+        if (column->AutoFitQueue != 0x00)
+            want_column_auto_fit = true;
+
+        ImU64 index_mask = (ImU64)1 << column_n;
+        ImU64 display_order_mask = (ImU64)1 << column->DisplayOrder;
+        if (column->IsEnabled)
+        {
+            column->PrevEnabledColumn = column->NextEnabledColumn = -1;
+            if (last_visible_column)
+            {
+                last_visible_column->NextEnabledColumn = (ImS8)column_n;
+                column->PrevEnabledColumn = (ImS8)table->Columns.index_from_ptr(last_visible_column);
+            }
+            column->IndexWithinEnabledSet = table->ColumnsEnabledCount;
+            table->ColumnsEnabledCount++;
+            table->EnabledMaskByIndex |= index_mask;
+            table->EnabledMaskByDisplayOrder |= display_order_mask;
+            last_visible_column = column;
+        }
+        else
+        {
+            column->IndexWithinEnabledSet = -1;
+            table->EnabledMaskByIndex &= ~index_mask;
+            table->EnabledMaskByDisplayOrder &= ~display_order_mask;
+        }
+        IM_ASSERT(column->IndexWithinEnabledSet <= column->DisplayOrder);
+    }
+    table->EnabledUnclippedMaskByIndex = table->EnabledMaskByIndex; // Columns will be masked out below when Clipped
+    table->RightMostEnabledColumn = (ImS8)(last_visible_column ? table->Columns.index_from_ptr(last_visible_column) : -1);
+
+    // Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible to avoid
+    // the column fitting to wait until the first visible frame of the child container (may or not be a good thing).
+    if (want_column_auto_fit && table->OuterWindow != table->InnerWindow)
+        table->InnerWindow->SkipItems = false;
+    if (want_column_auto_fit)
+        table->IsSettingsDirty = true;
 
     // Compute offset, clip rect for the frame
     // (can't make auto padding larger than what WorkRect knows about so right-alignment matches)
@@ -1715,7 +1725,7 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
 
-    if (table->CurrentRow == -1)
+    if (!table->IsLayoutLocked)
         TableUpdateLayout(table);
     if (table->IsInsideRow)
         TableEndRow(table);
@@ -2508,6 +2518,10 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
 
     if (!(table->Flags & ImGuiTableFlags_Sortable))
         return NULL;
+
+    // Require layout (in case TableHeadersRow() hasn't been called) as it may alter IsSortSpecsDirty in some paths.
+    if (!table->IsLayoutLocked)
+        TableUpdateLayout(table);
 
     if (table->IsSortSpecsDirty)
         TableSortSpecsBuild(table);
