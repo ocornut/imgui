@@ -2,13 +2,18 @@
 // (tables and columns code)
 
 /*
- *
- * Index of this file:
- *
- * // [SECTION] Widgets: BeginTable, EndTable, etc.
- * // [SECTION] Widgets: Columns, BeginColumns, EndColumns, etc.
- *
- */
+
+Index of this file:
+
+// [SECTION] Tables: BeginTable, EndTable, etc.
+// [SECTION] Tables: Headers
+// [SECTION] Tables: Context Menu
+// [SECTION] Tables: Settings (.ini data)
+// [SECTION] Tables: Garbage Collection
+// [SECTION] Tables: Debugging
+// [SECTION] Columns, BeginColumns, EndColumns, etc.
+
+*/
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -22,11 +27,16 @@
 #endif
 #include "imgui_internal.h"
 
+// System includes
 #if defined(_MSC_VER) && _MSC_VER <= 1500 // MSVC 2008 or earlier
 #include <stddef.h>     // intptr_t
 #else
 #include <stdint.h>     // intptr_t
 #endif
+
+//-------------------------------------------------------------------------
+// Warnings
+//-------------------------------------------------------------------------
 
 // Visual Studio warnings
 #ifdef _MSC_VER
@@ -45,6 +55,7 @@
 #pragma clang diagnostic ignored "-Wunknown-pragmas"                // warning: unknown warning group 'xxx'
 #pragma clang diagnostic ignored "-Wold-style-cast"                 // warning: use of old-style cast                            // yes, they are more terse.
 #pragma clang diagnostic ignored "-Wfloat-equal"                    // warning: comparing floating point with == or != is unsafe // storing and comparing against same constants (typically 0.0f) is ok.
+#pragma clang diagnostic ignored "-Wformat-nonliteral"              // warning: format string is not a string literal            // passing non-literal to vsnformat(). yes, user passing incorrect format strings can crash the code.
 #pragma clang diagnostic ignored "-Wsign-conversion"                // warning: implicit conversion changes signedness
 #pragma clang diagnostic ignored "-Wzero-as-null-pointer-constant"  // warning: zero as null pointer constant                    // some standard header variations use #define NULL 0
 #pragma clang diagnostic ignored "-Wdouble-promotion"               // warning: implicit conversion from 'float' to 'double' when passing argument to function  // using printf() is a misery with this as C++ va_arg ellipsis changes float to double.
@@ -52,14 +63,13 @@
 #pragma clang diagnostic ignored "-Wdeprecated-enum-enum-conversion"// warning: bitwise operation between different enumeration types ('XXXFlags_' and 'XXXFlagsPrivate_') is deprecated
 #pragma clang diagnostic ignored "-Wimplicit-int-float-conversion"  // warning: implicit conversion from 'xxx' to 'float' may lose precision
 #elif defined(__GNUC__)
-#pragma GCC diagnostic ignored "-Wpragmas"                  // warning: unknown option after '#pragma GCC diagnostic' kind
-#pragma GCC diagnostic ignored "-Wclass-memaccess"          // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
+#pragma GCC diagnostic ignored "-Wpragmas"                          // warning: unknown option after '#pragma GCC diagnostic' kind
+#pragma GCC diagnostic ignored "-Wformat-nonliteral"                // warning: format not a string literal, format string not checked
+#pragma GCC diagnostic ignored "-Wclass-memaccess"                  // [__GNUC__ >= 8] warning: 'memset/memcpy' clearing/writing an object of type 'xxxx' with no trivial copy-assignment; use assignment or value-initialization instead
 #endif
 
 //-----------------------------------------------------------------------------
-// [SECTION] Widgets: BeginTable, EndTable, etc.
-//-----------------------------------------------------------------------------
-
+// [SECTION] Tables: BeginTable, EndTable, etc.
 //-----------------------------------------------------------------------------
 // Typical call flow: (root level is public API):
 // - BeginTable()                               user begin into a table
@@ -1744,7 +1754,7 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
     table->InnerWindow->SkipItems = true;
 }
 
-// [Internal]
+// [Internal] Called by TableNextRow()!
 void    ImGui::TableBeginRow(ImGuiTable* table)
 {
     ImGuiWindow* window = table->InnerWindow;
@@ -1777,7 +1787,7 @@ void    ImGui::TableBeginRow(ImGuiTable* table)
     }
 }
 
-// [Internal]
+// [Internal] Called by TableNextRow()!
 void    ImGui::TableEndRow(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
@@ -2684,7 +2694,22 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 }
 
 //-------------------------------------------------------------------------
-// TABLE - .ini settings
+// [SECTION] Tables: Settings (.ini data)
+//-------------------------------------------------------------------------
+// - TableSettingsInit() [Internal]
+// - TableSettingsCalcChunkSize() [Internal]
+// - TableSettingsCreate() [Internal]
+// - TableSettingsFindByID() [Internal]
+// - TableSettingsClearByID() [Internal]
+// - TableGetBoundSettings() [Internal]
+// - TableSaveSettings() [Internal]
+// - TableLoadSettings() [Internal]
+// - TableSettingsHandler_ClearAll() [Internal]
+// - TableSettingsHandler_ApplyAll() [Internal]
+// - TableSettingsHandler_ReadOpen() [Internal]
+// - TableSettingsHandler_ReadLine() [Internal]
+// - TableSettingsHandler_WriteAll() [Internal]
+// - TableSettingsInstallHandler() [Internal]
 //-------------------------------------------------------------------------
 // [Init] 1: TableSettingsHandler_ReadXXXX()   Load and parse .ini file into TableSettings.
 // [Main] 2: TableLoadSettings()               When table is created, bind Table to TableSettings, serialize TableSettings data into Table.
@@ -2693,7 +2718,7 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 //-------------------------------------------------------------------------
 
 // Clear and initialize empty settings instance
-static void InitTableSettings(ImGuiTableSettings* settings, ImGuiID id, int columns_count, int columns_count_max)
+static void TableSettingsInit(ImGuiTableSettings* settings, ImGuiID id, int columns_count, int columns_count_max)
 {
     IM_PLACEMENT_NEW(settings) ImGuiTableSettings();
     ImGuiTableColumnSettings* settings_column = settings->GetColumnSettings();
@@ -2714,7 +2739,7 @@ ImGuiTableSettings* ImGui::TableSettingsCreate(ImGuiID id, int columns_count)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTableSettings* settings = g.SettingsTables.alloc_chunk(TableSettingsCalcChunkSize(columns_count));
-    InitTableSettings(settings, id, columns_count, columns_count);
+    TableSettingsInit(settings, id, columns_count, columns_count);
     return settings;
 }
 
@@ -2893,7 +2918,7 @@ static void* TableSettingsHandler_ReadOpen(ImGuiContext*, ImGuiSettingsHandler*,
     {
         if (settings->ColumnsCountMax >= columns_count)
         {
-            InitTableSettings(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
+            TableSettingsInit(settings, id, columns_count, settings->ColumnsCountMax); // Recycle
             return settings;
         }
         settings->ID = 0; // Invalidate storage, we won't fit because of a count change
@@ -2980,7 +3005,11 @@ void    ImGui::TableSettingsInstallHandler(ImGuiContext* context)
 }
 
 //-------------------------------------------------------------------------
-// TABLE - Garbage Collection
+// [SECTION] Tables: Garbage Collection
+//-------------------------------------------------------------------------
+// - TableRemove() [Internal]
+// - TableGcCompactTransientBuffers() [Internal]
+// - TableGcCompactSettings() [Internal]
 //-------------------------------------------------------------------------
 
 // Remove Table (currently only used by TestEngine)
@@ -3030,8 +3059,9 @@ void ImGui::TableGcCompactSettings()
     g.SettingsTables.swap(new_chunk_stream);
 }
 
+
 //-------------------------------------------------------------------------
-// TABLE - Debugging
+// [SECTION] Tables: Debugging
 //-------------------------------------------------------------------------
 // - DebugNodeTable() [Internal]
 //-------------------------------------------------------------------------
@@ -3112,13 +3142,9 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
 
 #endif // #ifndef IMGUI_DISABLE_METRICS_WINDOW
 
-//-------------------------------------------------------------------------
-
-
-
 
 //-------------------------------------------------------------------------
-// [SECTION] Widgets: Columns, BeginColumns, EndColumns, etc.
+// [SECTION] Columns, BeginColumns, EndColumns, etc.
 // (This is a legacy API, prefer using BeginTable/EndTable!)
 //-------------------------------------------------------------------------
 // - SetWindowClipRectBeforeSetChannel() [Internal]
