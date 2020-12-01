@@ -2291,6 +2291,7 @@ namespace ImGui
     IMGUI_API void          TableReorderDrawChannelsForMerge(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsSanitize(ImGuiTable* table);
     IMGUI_API void          TableSortSpecsBuild(ImGuiTable* table);
+    IMGUI_API void          TableFixColumnSortDirection(ImGuiTableColumn* column);
     IMGUI_API void          TableBeginRow(ImGuiTable* table);
     IMGUI_API void          TableEndRow(ImGuiTable* table);
     IMGUI_API void          TableBeginCell(ImGuiTable* table, int column_n);
