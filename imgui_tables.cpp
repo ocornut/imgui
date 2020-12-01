@@ -6,6 +6,7 @@
 Index of this file:
 
 // [SECTION] Tables: BeginTable, EndTable, etc.
+// [SECTION] Tables: Drawing
 // [SECTION] Tables: Sorting
 // [SECTION] Tables: Headers
 // [SECTION] Tables: Context Menu
@@ -81,7 +82,7 @@ Index of this file:
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
 // - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or TableHeadersRow(): lock all widths, columns positions, clipping rectangles
-//    | TableUpdateDrawChannels()               - setup ImDrawList channels
+//    | TableSetupDrawChannels()                - setup ImDrawList channels
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | TableDrawContextMenu()                  - draw right-click context menu
 //-----------------------------------------------------------------------------
@@ -99,7 +100,7 @@ Index of this file:
 //-----------------------------------------------------------------------------
 // - EndTable()                                 user ends the table
 //    | TableDrawBorders()                      - draw outer borders, inner vertical borders
-//    | TableReorderDrawChannelsForMerge()      - merge draw channels if clipping isn't required
+//    | TableMergeDrawChannels()                - merge draw channels if clipping isn't required
 //    | EndChild()                              - (if ScrollX/ScrollY is set)
 //-----------------------------------------------------------------------------
 
@@ -938,7 +939,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
         table->Flags &= ~ImGuiTableFlags_Resizable;
 
     // Allocate draw channels
-    TableUpdateDrawChannels(table);
+    TableSetupDrawChannels(table);
 
     // Borders
     if (table->Flags & ImGuiTableFlags_Resizable)
@@ -1111,7 +1112,7 @@ void    ImGui::EndTable()
 
     // Flatten channels and merge draw calls
     if ((table->Flags & ImGuiTableFlags_NoClip) == 0)
-        TableReorderDrawChannelsForMerge(table);
+        TableMergeDrawChannels(table);
     table->DrawSplitter.Merge(inner_window->DrawList);
 
     if (!(table->Flags & ImGuiTableFlags_ScrollX) && inner_window != outer_window)
@@ -1391,247 +1392,6 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
             column_0->WidthRequest = column_0_width;
             TableUpdateColumnsWeightFromWidth(table);
         }
-    }
-}
-
-// Allocate draw channels. Called by TableUpdateLayout()
-// - We allocate them following storage order instead of display order so reordering columns won't needlessly
-//   increase overall dormant memory cost.
-// - We isolate headers draw commands in their own channels instead of just altering clip rects.
-//   This is in order to facilitate merging of draw commands.
-// - After crossing FreezeRowsCount, all columns see their current draw channel changed to a second set of channels.
-// - We only use the dummy draw channel so we can push a null clipping rectangle into it without affecting other
-//   channels, while simplifying per-row/per-cell overhead. It will be empty and discarded when merged.
-// - We allocate 1 or 2 background draw channels. This is because we know PushTableBackground() is only used for
-//   horizontal spanning. If we allowed vertical spanning we'd need one background draw channel per merge group (1-4).
-// Draw channel allocation (before merging):
-// - NoClip                       --> 2+D+1 channels: bg0 + bg1 + foreground (same clip rect == 1 draw call) (FIXME-TABLE: could merge bg1 and foreground?)
-// - Clip                         --> 2+D+N channels
-// - FreezeRows                   --> 2+D+N*2 (unless scrolling value is zero)
-// - FreezeRows || FreezeColunns  --> 3+D+N*2 (unless scrolling value is zero)
-// Where D is 1 if any column is clipped or hidden (dummy channel) otherwise 0.
-void ImGui::TableUpdateDrawChannels(ImGuiTable* table)
-{
-    const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
-    const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClip) ? 1 : table->ColumnsEnabledCount;
-    const int channels_for_bg = 1 + 1 * freeze_row_multiplier;
-    const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || table->EnabledUnclippedMaskByIndex != table->EnabledMaskByIndex) ? +1 : 0;
-    const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
-    table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
-    table->DummyDrawChannel = (ImU8)((channels_for_dummy > 0) ? channels_total - 1 : -1);
-    table->Bg1DrawChannelCurrent = TABLE_DRAW_CHANNEL_BG1_FROZEN;
-    table->Bg1DrawChannelUnfrozen = (ImU8)((table->FreezeRowsCount > 0) ? 2 + channels_for_row : TABLE_DRAW_CHANNEL_BG1_FROZEN);
-
-    int draw_channel_current = 2;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (!column->IsClipped)
-        {
-            column->DrawChannelFrozen = (ImU8)(draw_channel_current);
-            column->DrawChannelUnfrozen = (ImU8)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
-            if (!(table->Flags & ImGuiTableFlags_NoClip))
-                draw_channel_current++;
-        }
-        else
-        {
-            column->DrawChannelFrozen = column->DrawChannelUnfrozen = table->DummyDrawChannel;
-        }
-        column->DrawChannelCurrent = column->DrawChannelFrozen;
-    }
-}
-
-// This function reorder draw channels based on matching clip rectangle, to facilitate merging them. Called by EndTable().
-//
-// Columns where the contents didn't stray off their local clip rectangle can be merged. To achieve
-// this we merge their clip rect and make them contiguous in the channel list, so they can be merged
-// by the call to DrawSplitter.Merge() following to the call to this function.
-//
-// We reorder draw commands by arranging them into a maximum of 4 distinct groups:
-//
-//   1 group:               2 groups:              2 groups:              4 groups:
-//   [ 0. ] no freeze       [ 0. ] row freeze      [ 01 ] col freeze      [ 01 ] row+col freeze
-//   [ .. ]  or no scroll   [ 2. ]  and v-scroll   [ .. ]  and h-scroll   [ 23 ]  and v+h-scroll
-//
-// Each column itself can use 1 channel (row freeze disabled) or 2 channels (row freeze enabled).
-// When the contents of a column didn't stray off its limit, we move its channels into the corresponding group
-// based on its position (within frozen rows/columns groups or not).
-// At the end of the operation our 1-4 groups will each have a ImDrawCmd using the same ClipRect.
-//
-// This function assume that each column are pointing to a distinct draw channel,
-// otherwise merge_group->ChannelsCount will not match set bit count of merge_group->ChannelsMask.
-//
-// Column channels will not be merged into one of the 1-4 groups in the following cases:
-// - The contents stray off its clipping rectangle (we only compare the MaxX value, not the MinX value).
-//   Direct ImDrawList calls won't be taken into account by default, if you use them make sure the ImGui:: bounds
-//   matches, by e.g. calling SetCursorScreenPos().
-// - The channel uses more than one draw command itself. We drop all our attempt at merging stuff here..
-//   we could do better but it's going to be rare and probably not worth the hassle.
-// Columns for which the draw channel(s) haven't been merged with other will use their own ImDrawCmd.
-//
-// This function is particularly tricky to understand.. take a breath.
-void    ImGui::TableReorderDrawChannelsForMerge(ImGuiTable* table)
-{
-    ImGuiContext& g = *GImGui;
-    ImDrawListSplitter* splitter = &table->DrawSplitter;
-    const bool has_freeze_v = (table->FreezeRowsCount > 0);
-    const bool has_freeze_h = (table->FreezeColumnsCount > 0);
-
-    // Track which groups we are going to attempt to merge, and which channels goes into each group.
-    struct MergeGroup
-    {
-        ImRect  ClipRect;
-        int     ChannelsCount;
-        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> ChannelsMask;
-    };
-    int merge_group_mask = 0x00;
-    MergeGroup merge_groups[4];
-    memset(merge_groups, 0, sizeof(merge_groups));
-
-    // 1. Scan channels and take note of those which can be merged
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        if (!(table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)))
-            continue;
-        ImGuiTableColumn* column = &table->Columns[column_n];
-
-        const int merge_group_sub_count = has_freeze_v ? 2 : 1;
-        for (int merge_group_sub_n = 0; merge_group_sub_n < merge_group_sub_count; merge_group_sub_n++)
-        {
-            const int channel_no = (merge_group_sub_n == 0) ? column->DrawChannelFrozen : column->DrawChannelUnfrozen;
-
-            // Don't attempt to merge if there are multiple draw calls within the column
-            ImDrawChannel* src_channel = &splitter->_Channels[channel_no];
-            if (src_channel->_CmdBuffer.Size > 0 && src_channel->_CmdBuffer.back().ElemCount == 0)
-                src_channel->_CmdBuffer.pop_back();
-            if (src_channel->_CmdBuffer.Size != 1)
-                continue;
-
-            // Find out the width of this merge group and check if it will fit in our column
-            // (note that we assume that rendering didn't stray on the left direction. we should need a CursorMinPos to detect it)
-            if (!(column->Flags & ImGuiTableColumnFlags_NoClip))
-            {
-                float content_max_x;
-                if (!has_freeze_v)
-                    content_max_x = ImMax(column->ContentMaxXUnfrozen, column->ContentMaxXHeadersUsed); // No row freeze
-                else if (merge_group_sub_n == 0)
-                    content_max_x = ImMax(column->ContentMaxXFrozen, column->ContentMaxXHeadersUsed);   // Row freeze: use width before freeze
-                else
-                    content_max_x = column->ContentMaxXUnfrozen;                                        // Row freeze: use width after freeze
-                if (content_max_x > column->ClipRect.Max.x)
-                    continue;
-            }
-
-            const int merge_group_n = (has_freeze_h && column_n < table->FreezeColumnsCount ? 0 : 1) + (has_freeze_v && merge_group_sub_n == 0 ? 0 : 2);
-            IM_ASSERT(channel_no < IMGUI_TABLE_MAX_DRAW_CHANNELS);
-            MergeGroup* merge_group = &merge_groups[merge_group_n];
-            if (merge_group->ChannelsCount == 0)
-                merge_group->ClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
-            merge_group->ChannelsMask.SetBit(channel_no);
-            merge_group->ChannelsCount++;
-            merge_group->ClipRect.Add(src_channel->_CmdBuffer[0].ClipRect);
-            merge_group_mask |= (1 << merge_group_n);
-        }
-
-        // Invalidate current draw channel
-        // (we don't clear DrawChannelFrozen/DrawChannelUnfrozen solely to facilitate debugging/later inspection of data)
-        column->DrawChannelCurrent = (ImU8)-1;
-    }
-
-    // [DEBUG] Display merge groups
-#if 0
-    if (g.IO.KeyShift)
-        for (int merge_group_n = 0; merge_group_n < IM_ARRAYSIZE(merge_groups); merge_group_n++)
-        {
-            MergeGroup* merge_group = &merge_groups[merge_group_n];
-            if (merge_group->ChannelsCount == 0)
-                continue;
-            char buf[32];
-            ImFormatString(buf, 32, "MG%d:%d", merge_group_n, merge_group->ChannelsCount);
-            ImVec2 text_pos = merge_group->ClipRect.Min + ImVec2(4, 4);
-            ImVec2 text_size = CalcTextSize(buf, NULL);
-            GetForegroundDrawList()->AddRectFilled(text_pos, text_pos + text_size, IM_COL32(0, 0, 0, 255));
-            GetForegroundDrawList()->AddText(text_pos, IM_COL32(255, 255, 0, 255), buf, NULL);
-            GetForegroundDrawList()->AddRect(merge_group->ClipRect.Min, merge_group->ClipRect.Max, IM_COL32(255, 255, 0, 255));
-        }
-#endif
-
-    // 2. Rewrite channel list in our preferred order
-    if (merge_group_mask != 0)
-    {
-        // We skip channel 0 (Bg0) and 1 (Bg1 frozen) from the shuffling since they won't move - see channels allocation in TableUpdateDrawChannels().
-        const int LEADING_DRAW_CHANNELS = 2;
-        g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
-        ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
-        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> remaining_mask;                       // We need 132-bit of storage
-        remaining_mask.ClearBits();
-        remaining_mask.SetBitRange(LEADING_DRAW_CHANNELS, splitter->_Count - 1);
-        remaining_mask.ClearBit(table->Bg1DrawChannelUnfrozen);
-        IM_ASSERT(has_freeze_v == false || table->Bg1DrawChannelUnfrozen != TABLE_DRAW_CHANNEL_BG1_FROZEN);
-        int remaining_count = splitter->_Count - (has_freeze_v ? LEADING_DRAW_CHANNELS + 1 : LEADING_DRAW_CHANNELS);
-        //ImRect host_rect = (table->InnerWindow == table->OuterWindow) ? table->InnerClipRect : table->HostClipRect;
-        ImRect host_rect = table->HostClipRect;
-        for (int merge_group_n = 0; merge_group_n < IM_ARRAYSIZE(merge_groups); merge_group_n++)
-        {
-            if (int merge_channels_count = merge_groups[merge_group_n].ChannelsCount)
-            {
-                MergeGroup* merge_group = &merge_groups[merge_group_n];
-                ImRect merge_clip_rect = merge_group->ClipRect;
-
-                // Extend outer-most clip limits to match those of host, so draw calls can be merged even if
-                // outer-most columns have some outer padding offsetting them from their parent ClipRect.
-                // The principal cases this is dealing with are:
-                // - On a same-window table (not scrolling = single group), all fitting columns ClipRect -> will extend and match host ClipRect -> will merge
-                // - Columns can use padding and have left-most ClipRect.Min.x and right-most ClipRect.Max.x != from host ClipRect -> will extend and match host ClipRect -> will merge
-                // FIXME-TABLE FIXME-WORKRECT: We are wasting a merge opportunity on tables without scrolling if column doesn't fit
-                // within host clip rect, solely because of the half-padding difference between window->WorkRect and window->InnerClipRect.
-                if ((merge_group_n & 1) == 0 || !has_freeze_h)
-                    merge_clip_rect.Min.x = ImMin(merge_clip_rect.Min.x, host_rect.Min.x);
-                if ((merge_group_n & 2) == 0 || !has_freeze_v)
-                    merge_clip_rect.Min.y = ImMin(merge_clip_rect.Min.y, host_rect.Min.y);
-                if ((merge_group_n & 1) != 0)
-                    merge_clip_rect.Max.x = ImMax(merge_clip_rect.Max.x, host_rect.Max.x);
-                if ((merge_group_n & 2) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
-                    merge_clip_rect.Max.y = ImMax(merge_clip_rect.Max.y, host_rect.Max.y);
-#if 0
-                GetOverlayDrawList()->AddRect(merge_group->ClipRect.Min, merge_group->ClipRect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 1.0f);
-                GetOverlayDrawList()->AddLine(merge_group->ClipRect.Min, merge_clip_rect.Min, IM_COL32(255, 100, 0, 200));
-                GetOverlayDrawList()->AddLine(merge_group->ClipRect.Max, merge_clip_rect.Max, IM_COL32(255, 100, 0, 200));
-#endif
-                remaining_count -= merge_group->ChannelsCount;
-                for (int n = 0; n < IM_ARRAYSIZE(remaining_mask.Storage); n++)
-                    remaining_mask.Storage[n] &= ~merge_group->ChannelsMask.Storage[n];
-                for (int n = 0; n < splitter->_Count && merge_channels_count != 0; n++)
-                {
-                    // Copy + overwrite new clip rect
-                    if (!merge_group->ChannelsMask.TestBit(n))
-                        continue;
-                    merge_group->ChannelsMask.ClearBit(n);
-                    merge_channels_count--;
-
-                    ImDrawChannel* channel = &splitter->_Channels[n];
-                    IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
-                    channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
-                    memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
-                }
-            }
-
-            // Make sure Bg1DrawChannelUnfrozen appears in the middle of our groups (whereas Bg0 and Bg1 frozen are fixed to 0 and 1)
-            if (merge_group_n == 1 && has_freeze_v)
-                memcpy(dst_tmp++, &splitter->_Channels[table->Bg1DrawChannelUnfrozen], sizeof(ImDrawChannel));
-        }
-
-        // Append unmergeable channels that we didn't reorder at the end of the list
-        for (int n = 0; n < splitter->_Count && remaining_count != 0; n++)
-        {
-            if (!remaining_mask.TestBit(n))
-                continue;
-            ImDrawChannel* channel = &splitter->_Channels[n];
-            memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
-            remaining_count--;
-        }
-        IM_ASSERT(dst_tmp == g.DrawChannelsTempMergeBuffer.Data + g.DrawChannelsTempMergeBuffer.Size);
-        memcpy(splitter->_Channels.Data + LEADING_DRAW_CHANNELS, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - LEADING_DRAW_CHANNELS) * sizeof(ImDrawChannel));
     }
 }
 
@@ -2209,6 +1969,256 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int colum
     }
     default:
         IM_ASSERT(0);
+    }
+}
+
+//-------------------------------------------------------------------------
+// [SECTION] Tables: Drawing
+//-------------------------------------------------------------------------
+// - TablePushBackgroundChannel() [Internal]
+// - TablePopBackgroundChannel() [Internal]
+// - TableSetupDrawChannels() [Internal]
+// - TableReorderDrawChannelsForMerge() [Internal]
+//-------------------------------------------------------------------------
+
+// Allocate draw channels. Called by TableUpdateLayout()
+// - We allocate them following storage order instead of display order so reordering columns won't needlessly
+//   increase overall dormant memory cost.
+// - We isolate headers draw commands in their own channels instead of just altering clip rects.
+//   This is in order to facilitate merging of draw commands.
+// - After crossing FreezeRowsCount, all columns see their current draw channel changed to a second set of channels.
+// - We only use the dummy draw channel so we can push a null clipping rectangle into it without affecting other
+//   channels, while simplifying per-row/per-cell overhead. It will be empty and discarded when merged.
+// - We allocate 1 or 2 background draw channels. This is because we know PushTableBackground() is only used for
+//   horizontal spanning. If we allowed vertical spanning we'd need one background draw channel per merge group (1-4).
+// Draw channel allocation (before merging):
+// - NoClip                       --> 2+D+1 channels: bg0 + bg1 + foreground (same clip rect == 1 draw call) (FIXME-TABLE: could merge bg1 and foreground?)
+// - Clip                         --> 2+D+N channels
+// - FreezeRows                   --> 2+D+N*2 (unless scrolling value is zero)
+// - FreezeRows || FreezeColunns  --> 3+D+N*2 (unless scrolling value is zero)
+// Where D is 1 if any column is clipped or hidden (dummy channel) otherwise 0.
+void ImGui::TableSetupDrawChannels(ImGuiTable* table)
+{
+    const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
+    const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClip) ? 1 : table->ColumnsEnabledCount;
+    const int channels_for_bg = 1 + 1 * freeze_row_multiplier;
+    const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || table->EnabledUnclippedMaskByIndex != table->EnabledMaskByIndex) ? +1 : 0;
+    const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
+    table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
+    table->DummyDrawChannel = (ImU8)((channels_for_dummy > 0) ? channels_total - 1 : -1);
+    table->Bg1DrawChannelCurrent = TABLE_DRAW_CHANNEL_BG1_FROZEN;
+    table->Bg1DrawChannelUnfrozen = (ImU8)((table->FreezeRowsCount > 0) ? 2 + channels_for_row : TABLE_DRAW_CHANNEL_BG1_FROZEN);
+
+    int draw_channel_current = 2;
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (!column->IsClipped)
+        {
+            column->DrawChannelFrozen = (ImU8)(draw_channel_current);
+            column->DrawChannelUnfrozen = (ImU8)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
+            if (!(table->Flags & ImGuiTableFlags_NoClip))
+                draw_channel_current++;
+        }
+        else
+        {
+            column->DrawChannelFrozen = column->DrawChannelUnfrozen = table->DummyDrawChannel;
+        }
+        column->DrawChannelCurrent = column->DrawChannelFrozen;
+    }
+}
+
+// This function reorder draw channels based on matching clip rectangle, to facilitate merging them. Called by EndTable().
+// For simplicity we call it TableMergeDrawChannels() but in fact it only reorder channels + overwrite ClipRect,
+// actual merging is done by table->DrawSplitter.Merge() which is called right after TableMergeDrawChannels().
+//
+// Columns where the contents didn't stray off their local clip rectangle can be merged. To achieve
+// this we merge their clip rect and make them contiguous in the channel list, so they can be merged
+// by the call to DrawSplitter.Merge() following to the call to this function.
+// We reorder draw commands by arranging them into a maximum of 4 distinct groups:
+//
+//   1 group:               2 groups:              2 groups:              4 groups:
+//   [ 0. ] no freeze       [ 0. ] row freeze      [ 01 ] col freeze      [ 01 ] row+col freeze
+//   [ .. ]  or no scroll   [ 2. ]  and v-scroll   [ .. ]  and h-scroll   [ 23 ]  and v+h-scroll
+//
+// Each column itself can use 1 channel (row freeze disabled) or 2 channels (row freeze enabled).
+// When the contents of a column didn't stray off its limit, we move its channels into the corresponding group
+// based on its position (within frozen rows/columns groups or not).
+// At the end of the operation our 1-4 groups will each have a ImDrawCmd using the same ClipRect.
+// This function assume that each column are pointing to a distinct draw channel,
+// otherwise merge_group->ChannelsCount will not match set bit count of merge_group->ChannelsMask.
+//
+// Column channels will not be merged into one of the 1-4 groups in the following cases:
+// - The contents stray off its clipping rectangle (we only compare the MaxX value, not the MinX value).
+//   Direct ImDrawList calls won't be taken into account by default, if you use them make sure the ImGui:: bounds
+//   matches, by e.g. calling SetCursorScreenPos().
+// - The channel uses more than one draw command itself. We drop all our attempt at merging stuff here..
+//   we could do better but it's going to be rare and probably not worth the hassle.
+// Columns for which the draw channel(s) haven't been merged with other will use their own ImDrawCmd.
+//
+// This function is particularly tricky to understand.. take a breath.
+void    ImGui::TableMergeDrawChannels(ImGuiTable* table)
+{
+    ImGuiContext& g = *GImGui;
+    ImDrawListSplitter* splitter = &table->DrawSplitter;
+    const bool has_freeze_v = (table->FreezeRowsCount > 0);
+    const bool has_freeze_h = (table->FreezeColumnsCount > 0);
+
+    // Track which groups we are going to attempt to merge, and which channels goes into each group.
+    struct MergeGroup
+    {
+        ImRect  ClipRect;
+        int     ChannelsCount;
+        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> ChannelsMask;
+    };
+    int merge_group_mask = 0x00;
+    MergeGroup merge_groups[4];
+    memset(merge_groups, 0, sizeof(merge_groups));
+
+    // 1. Scan channels and take note of those which can be merged
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        if (!(table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)))
+            continue;
+        ImGuiTableColumn* column = &table->Columns[column_n];
+
+        const int merge_group_sub_count = has_freeze_v ? 2 : 1;
+        for (int merge_group_sub_n = 0; merge_group_sub_n < merge_group_sub_count; merge_group_sub_n++)
+        {
+            const int channel_no = (merge_group_sub_n == 0) ? column->DrawChannelFrozen : column->DrawChannelUnfrozen;
+
+            // Don't attempt to merge if there are multiple draw calls within the column
+            ImDrawChannel* src_channel = &splitter->_Channels[channel_no];
+            if (src_channel->_CmdBuffer.Size > 0 && src_channel->_CmdBuffer.back().ElemCount == 0)
+                src_channel->_CmdBuffer.pop_back();
+            if (src_channel->_CmdBuffer.Size != 1)
+                continue;
+
+            // Find out the width of this merge group and check if it will fit in our column
+            // (note that we assume that rendering didn't stray on the left direction. we should need a CursorMinPos to detect it)
+            if (!(column->Flags & ImGuiTableColumnFlags_NoClip))
+            {
+                float content_max_x;
+                if (!has_freeze_v)
+                    content_max_x = ImMax(column->ContentMaxXUnfrozen, column->ContentMaxXHeadersUsed); // No row freeze
+                else if (merge_group_sub_n == 0)
+                    content_max_x = ImMax(column->ContentMaxXFrozen, column->ContentMaxXHeadersUsed);   // Row freeze: use width before freeze
+                else
+                    content_max_x = column->ContentMaxXUnfrozen;                                        // Row freeze: use width after freeze
+                if (content_max_x > column->ClipRect.Max.x)
+                    continue;
+            }
+
+            const int merge_group_n = (has_freeze_h && column_n < table->FreezeColumnsCount ? 0 : 1) + (has_freeze_v && merge_group_sub_n == 0 ? 0 : 2);
+            IM_ASSERT(channel_no < IMGUI_TABLE_MAX_DRAW_CHANNELS);
+            MergeGroup* merge_group = &merge_groups[merge_group_n];
+            if (merge_group->ChannelsCount == 0)
+                merge_group->ClipRect = ImRect(+FLT_MAX, +FLT_MAX, -FLT_MAX, -FLT_MAX);
+            merge_group->ChannelsMask.SetBit(channel_no);
+            merge_group->ChannelsCount++;
+            merge_group->ClipRect.Add(src_channel->_CmdBuffer[0].ClipRect);
+            merge_group_mask |= (1 << merge_group_n);
+        }
+
+        // Invalidate current draw channel
+        // (we don't clear DrawChannelFrozen/DrawChannelUnfrozen solely to facilitate debugging/later inspection of data)
+        column->DrawChannelCurrent = (ImU8)-1;
+    }
+
+    // [DEBUG] Display merge groups
+#if 0
+    if (g.IO.KeyShift)
+        for (int merge_group_n = 0; merge_group_n < IM_ARRAYSIZE(merge_groups); merge_group_n++)
+        {
+            MergeGroup* merge_group = &merge_groups[merge_group_n];
+            if (merge_group->ChannelsCount == 0)
+                continue;
+            char buf[32];
+            ImFormatString(buf, 32, "MG%d:%d", merge_group_n, merge_group->ChannelsCount);
+            ImVec2 text_pos = merge_group->ClipRect.Min + ImVec2(4, 4);
+            ImVec2 text_size = CalcTextSize(buf, NULL);
+            GetForegroundDrawList()->AddRectFilled(text_pos, text_pos + text_size, IM_COL32(0, 0, 0, 255));
+            GetForegroundDrawList()->AddText(text_pos, IM_COL32(255, 255, 0, 255), buf, NULL);
+            GetForegroundDrawList()->AddRect(merge_group->ClipRect.Min, merge_group->ClipRect.Max, IM_COL32(255, 255, 0, 255));
+        }
+#endif
+
+    // 2. Rewrite channel list in our preferred order
+    if (merge_group_mask != 0)
+    {
+        // We skip channel 0 (Bg0) and 1 (Bg1 frozen) from the shuffling since they won't move - see channels allocation in TableUpdateDrawChannels().
+        const int LEADING_DRAW_CHANNELS = 2;
+        g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
+        ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
+        ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> remaining_mask;                       // We need 132-bit of storage
+        remaining_mask.ClearBits();
+        remaining_mask.SetBitRange(LEADING_DRAW_CHANNELS, splitter->_Count - 1);
+        remaining_mask.ClearBit(table->Bg1DrawChannelUnfrozen);
+        IM_ASSERT(has_freeze_v == false || table->Bg1DrawChannelUnfrozen != TABLE_DRAW_CHANNEL_BG1_FROZEN);
+        int remaining_count = splitter->_Count - (has_freeze_v ? LEADING_DRAW_CHANNELS + 1 : LEADING_DRAW_CHANNELS);
+        //ImRect host_rect = (table->InnerWindow == table->OuterWindow) ? table->InnerClipRect : table->HostClipRect;
+        ImRect host_rect = table->HostClipRect;
+        for (int merge_group_n = 0; merge_group_n < IM_ARRAYSIZE(merge_groups); merge_group_n++)
+        {
+            if (int merge_channels_count = merge_groups[merge_group_n].ChannelsCount)
+            {
+                MergeGroup* merge_group = &merge_groups[merge_group_n];
+                ImRect merge_clip_rect = merge_group->ClipRect;
+
+                // Extend outer-most clip limits to match those of host, so draw calls can be merged even if
+                // outer-most columns have some outer padding offsetting them from their parent ClipRect.
+                // The principal cases this is dealing with are:
+                // - On a same-window table (not scrolling = single group), all fitting columns ClipRect -> will extend and match host ClipRect -> will merge
+                // - Columns can use padding and have left-most ClipRect.Min.x and right-most ClipRect.Max.x != from host ClipRect -> will extend and match host ClipRect -> will merge
+                // FIXME-TABLE FIXME-WORKRECT: We are wasting a merge opportunity on tables without scrolling if column doesn't fit
+                // within host clip rect, solely because of the half-padding difference between window->WorkRect and window->InnerClipRect.
+                if ((merge_group_n & 1) == 0 || !has_freeze_h)
+                    merge_clip_rect.Min.x = ImMin(merge_clip_rect.Min.x, host_rect.Min.x);
+                if ((merge_group_n & 2) == 0 || !has_freeze_v)
+                    merge_clip_rect.Min.y = ImMin(merge_clip_rect.Min.y, host_rect.Min.y);
+                if ((merge_group_n & 1) != 0)
+                    merge_clip_rect.Max.x = ImMax(merge_clip_rect.Max.x, host_rect.Max.x);
+                if ((merge_group_n & 2) != 0 && (table->Flags & ImGuiTableFlags_NoHostExtendY) == 0)
+                    merge_clip_rect.Max.y = ImMax(merge_clip_rect.Max.y, host_rect.Max.y);
+#if 0
+                GetOverlayDrawList()->AddRect(merge_group->ClipRect.Min, merge_group->ClipRect.Max, IM_COL32(255, 0, 0, 200), 0.0f, ~0, 1.0f);
+                GetOverlayDrawList()->AddLine(merge_group->ClipRect.Min, merge_clip_rect.Min, IM_COL32(255, 100, 0, 200));
+                GetOverlayDrawList()->AddLine(merge_group->ClipRect.Max, merge_clip_rect.Max, IM_COL32(255, 100, 0, 200));
+#endif
+                remaining_count -= merge_group->ChannelsCount;
+                for (int n = 0; n < IM_ARRAYSIZE(remaining_mask.Storage); n++)
+                    remaining_mask.Storage[n] &= ~merge_group->ChannelsMask.Storage[n];
+                for (int n = 0; n < splitter->_Count && merge_channels_count != 0; n++)
+                {
+                    // Copy + overwrite new clip rect
+                    if (!merge_group->ChannelsMask.TestBit(n))
+                        continue;
+                    merge_group->ChannelsMask.ClearBit(n);
+                    merge_channels_count--;
+
+                    ImDrawChannel* channel = &splitter->_Channels[n];
+                    IM_ASSERT(channel->_CmdBuffer.Size == 1 && merge_clip_rect.Contains(ImRect(channel->_CmdBuffer[0].ClipRect)));
+                    channel->_CmdBuffer[0].ClipRect = merge_clip_rect.ToVec4();
+                    memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
+                }
+            }
+
+            // Make sure Bg1DrawChannelUnfrozen appears in the middle of our groups (whereas Bg0 and Bg1 frozen are fixed to 0 and 1)
+            if (merge_group_n == 1 && has_freeze_v)
+                memcpy(dst_tmp++, &splitter->_Channels[table->Bg1DrawChannelUnfrozen], sizeof(ImDrawChannel));
+        }
+
+        // Append unmergeable channels that we didn't reorder at the end of the list
+        for (int n = 0; n < splitter->_Count && remaining_count != 0; n++)
+        {
+            if (!remaining_mask.TestBit(n))
+                continue;
+            ImDrawChannel* channel = &splitter->_Channels[n];
+            memcpy(dst_tmp++, channel, sizeof(ImDrawChannel));
+            remaining_count--;
+        }
+        IM_ASSERT(dst_tmp == g.DrawChannelsTempMergeBuffer.Data + g.DrawChannelsTempMergeBuffer.Size);
+        memcpy(splitter->_Channels.Data + LEADING_DRAW_CHANNELS, g.DrawChannelsTempMergeBuffer.Data, (splitter->_Count - LEADING_DRAW_CHANNELS) * sizeof(ImDrawChannel));
     }
 }
 
