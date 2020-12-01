@@ -1892,7 +1892,7 @@ struct ImGuiPayload
     bool IsDelivery() const                 { return Delivery; }
 };
 
-// Sorting specification for one column of a table (sizeof == 8 bytes)
+// Sorting specification for one column of a table (sizeof == 12 bytes)
 struct ImGuiTableSortSpecsColumn
 {
     ImGuiID                     ColumnUserID;       // User id of the column (if specified by a TableSetupColumn() call)

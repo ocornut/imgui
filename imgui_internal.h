@@ -1891,7 +1891,7 @@ struct ImGuiTabBar
 
 #define IM_COL32_DISABLE                IM_COL32(0,0,0,1)   // Special sentinel code which cannot be used as a regular color.
 #define IMGUI_TABLE_MAX_COLUMNS         64                  // sizeof(ImU64) * 8. This is solely because we frequently encode columns set in a ImU64.
-#define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableUpdateDrawChannels()
+#define IMGUI_TABLE_MAX_DRAW_CHANNELS   (4 + 64 * 2)        // See TableSetupDrawChannels()
 
 // [Internal] sizeof() ~ 104
 // We use the terminology "Visible" to refer to a columns that are not Hidden by user or settings. However it may still be out of view and clipped (and IsClipped would be set).
@@ -2282,6 +2282,7 @@ namespace ImGui
     // Tables: Internals
     IMGUI_API ImGuiTable*   TableFindByID(ImGuiID id);
     IMGUI_API bool          BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
+    IMGUI_API void          TableBeginInitMemory(ImGuiTable* table, int columns_count);
     IMGUI_API void          TableBeginApplyRequests(ImGuiTable* table);
     IMGUI_API void          TableSetupDrawChannels(ImGuiTable* table);
     IMGUI_API void          TableUpdateLayout(ImGuiTable* table);

@@ -5,7 +5,7 @@
 
 Index of this file:
 
-// [SECTION] Tables: BeginTable, EndTable, etc.
+// [SECTION] Tables: Main code
 // [SECTION] Tables: Drawing
 // [SECTION] Tables: Sorting
 // [SECTION] Tables: Headers
@@ -16,6 +16,39 @@ Index of this file:
 // [SECTION] Columns, BeginColumns, EndColumns, etc.
 
 */
+
+//-----------------------------------------------------------------------------
+// Typical tables call flow: (root level is generally public API):
+//-----------------------------------------------------------------------------
+// - BeginTable()                               user begin into a table
+//    | BeginChild()                            - (if ScrollX/ScrollY is set)
+//    | TableBeginApplyRequests()               - apply queued resizing/reordering/hiding requests
+//    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
+//    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
+// - TableSetupColumn()                         user submit columns details (optional)
+// - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
+// - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or TableHeadersRow(): lock all widths, columns positions, clipping rectangles
+//    | TableSetupDrawChannels()                - setup ImDrawList channels
+//    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
+//    | TableDrawContextMenu()                  - draw right-click context menu
+//-----------------------------------------------------------------------------
+// - TableHeadersRow() or TableHeader()         user submit a headers row (optional)
+//    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
+//    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
+// - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
+// - TableNextRow()                             user begin into a new row (also automatically called by TableHeadersRow())
+//    | TableEndRow()                           - finish existing row
+//    | TableBeginRow()                         - add a new row
+// - TableSetColumnIndex() / TableNextColumn()  user begin into a cell
+//    | TableEndCell()                          - close existing column/cell
+//    | TableBeginCell()                        - enter into current column/cell
+// - [...]                                      user emit contents
+//-----------------------------------------------------------------------------
+// - EndTable()                                 user ends the table
+//    | TableDrawBorders()                      - draw outer borders, inner vertical borders
+//    | TableMergeDrawChannels()                - merge draw channels if clipping isn't required
+//    | EndChild()                              - (if ScrollX/ScrollY is set)
+//-----------------------------------------------------------------------------
 
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
@@ -71,37 +104,7 @@ Index of this file:
 #endif
 
 //-----------------------------------------------------------------------------
-// [SECTION] Tables: BeginTable, EndTable, etc.
-//-----------------------------------------------------------------------------
-// Typical call flow: (root level is public API):
-// - BeginTable()                               user begin into a table
-//    | BeginChild()                            - (if ScrollX/ScrollY is set)
-//    | TableBeginApplyRequests()               - apply queued resizing/reordering/hiding requests
-//    | - TableSetColumnWidth()                 - apply resizing width (for mouse resize, often requested by previous frame)
-//    |    - TableUpdateColumnsWeightFromWidth()- recompute columns weights (of stretch columns) from their respective width
-// - TableSetupColumn()                         user submit columns details (optional)
-// - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
-// - TableUpdateLayout() [Internal]             automatically called by the FIRST call to TableNextRow() or TableHeadersRow(): lock all widths, columns positions, clipping rectangles
-//    | TableSetupDrawChannels()                - setup ImDrawList channels
-//    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
-//    | TableDrawContextMenu()                  - draw right-click context menu
-//-----------------------------------------------------------------------------
-// - TableHeadersRow() or TableHeader()         user submit a headers row (optional)
-//    | TableSortSpecsClickColumn()             - when left-clicked: alter sort order and sort direction
-//    | TableOpenContextMenu()                  - when right-clicked: trigger opening of the default context menu
-// - TableGetSortSpecs()                        user queries updated sort specs (optional, generally after submitting headers)
-// - TableNextRow()                             user begin into a new row (also automatically called by TableHeadersRow())
-//    | TableEndRow()                           - finish existing row
-//    | TableBeginRow()                         - add a new row
-// - TableSetColumnIndex() / TableNextColumn()  user begin into a cell
-//    | TableEndCell()                          - close existing column/cell
-//    | TableBeginCell()                        - enter into current column/cell
-// - [...]                                      user emit contents
-//-----------------------------------------------------------------------------
-// - EndTable()                                 user ends the table
-//    | TableDrawBorders()                      - draw outer borders, inner vertical borders
-//    | TableMergeDrawChannels()                - merge draw channels if clipping isn't required
-//    | EndChild()                              - (if ScrollX/ScrollY is set)
+// [SECTION] Tables: Main code
 //-----------------------------------------------------------------------------
 
 // Configuration
@@ -155,12 +158,6 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_w
     return flags;
 }
 
-ImGuiTable* ImGui::TableFindByID(ImGuiID id)
-{
-    ImGuiContext& g = *GImGui;
-    return g.Tables.GetByKey(id);
-}
-
 ImGuiTable::ImGuiTable()
 {
     memset(this, 0, sizeof(*this));
@@ -178,6 +175,12 @@ ImGuiTable::ImGuiTable()
 ImGuiTable::~ImGuiTable()
 {
     IM_FREE(RawData);
+}
+
+ImGuiTable* ImGui::TableFindByID(ImGuiID id)
+{
+    ImGuiContext& g = *GImGui;
+    return g.Tables.GetByKey(id);
 }
 
 // (Read carefully because this is subtle but it does make sense!)
@@ -210,37 +213,6 @@ bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags
 {
     ImGuiID id = GetID(str_id);
     return BeginTableEx(str_id, id, columns_count, flags, outer_size, inner_width);
-}
-
-// For reference, the average total _allocation count_ for a table is:
-// + 0 (for ImGuiTable instance, we are pooling allocations in g.Tables)
-// + 1 (for table->RawData allocated below)
-// + 1 (for table->ColumnsNames, if names are used)
-// + 1 (for table->Splitter._Channels)
-// + 2 * active_channels_count (for ImDrawCmd and ImDrawIdx buffers inside channels)
-// Where active_channels_count is variable but often == columns_count or columns_count + 1, see TableUpdateDrawChannels() for details.
-// Unused channels don't perform their +2 allocations.
-static void TableBeginInitMemory(ImGuiTable* table, int columns_count)
-{
-    // Allocate single buffer for our arrays
-    ImSpanAllocator<3> span_allocator;
-    span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
-    span_allocator.ReserveBytes(1, columns_count * sizeof(ImS8));
-    span_allocator.ReserveBytes(2, columns_count * sizeof(ImGuiTableCellData));
-    table->RawData = IM_ALLOC(span_allocator.GetArenaSizeInBytes());
-    span_allocator.SetArenaBasePtr(table->RawData);
-    span_allocator.GetSpan(0, &table->Columns);
-    span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
-    span_allocator.GetSpan(2, &table->RowCellData);
-
-    memset(table->RowCellData.Data, 0, table->RowCellData.size_in_bytes());
-    for (int n = 0; n < columns_count; n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[n];
-        *column = ImGuiTableColumn();
-        column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
-        column->AutoFitQueue = column->CannotSkipItemsQueue = (1 << 3) - 1; // Fit for three frames
-    }
 }
 
 bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
@@ -460,6 +432,37 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     return true;
 }
 
+// For reference, the average total _allocation count_ for a table is:
+// + 0 (for ImGuiTable instance, we are pooling allocations in g.Tables)
+// + 1 (for table->RawData allocated below)
+// + 1 (for table->ColumnsNames, if names are used)
+// + 1 (for table->Splitter._Channels)
+// + 2 * active_channels_count (for ImDrawCmd and ImDrawIdx buffers inside channels)
+// Where active_channels_count is variable but often == columns_count or columns_count + 1, see TableSetupDrawChannels() for details.
+// Unused channels don't perform their +2 allocations.
+void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
+{
+    // Allocate single buffer for our arrays
+    ImSpanAllocator<3> span_allocator;
+    span_allocator.ReserveBytes(0, columns_count * sizeof(ImGuiTableColumn));
+    span_allocator.ReserveBytes(1, columns_count * sizeof(ImS8));
+    span_allocator.ReserveBytes(2, columns_count * sizeof(ImGuiTableCellData));
+    table->RawData = IM_ALLOC(span_allocator.GetArenaSizeInBytes());
+    span_allocator.SetArenaBasePtr(table->RawData);
+    span_allocator.GetSpan(0, &table->Columns);
+    span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
+    span_allocator.GetSpan(2, &table->RowCellData);
+
+    memset(table->RowCellData.Data, 0, table->RowCellData.size_in_bytes());
+    for (int n = 0; n < columns_count; n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[n];
+        *column = ImGuiTableColumn();
+        column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImS8)n;
+        column->AutoFitQueue = column->CannotSkipItemsQueue = (1 << 3) - 1; // Fit for three frames
+    }
+}
+
 // Apply queued resizing/reordering/hiding requests
 void ImGui::TableBeginApplyRequests(ImGuiTable* table)
 {
@@ -571,7 +574,7 @@ static float TableGetMinColumnWidth()
 // FIXME-TABLE: Our width (and therefore our WorkRect) will be minimal in the first frame for WidthAutoResize
 // columns, increase feedback side-effect with widgets relying on WorkRect.Max.x. Maybe provide a default distribution
 // for WidthAutoResize columns?
-void    ImGui::TableUpdateLayout(ImGuiTable* table)
+void ImGui::TableUpdateLayout(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(table->IsLayoutLocked == false);
@@ -982,7 +985,7 @@ void    ImGui::TableUpdateLayout(ImGuiTable* table)
 // - Set table->HoveredColumnBorder with a short delay/timer to reduce feedback noise
 // - Submit ahead of table contents and header, use ImGuiButtonFlags_AllowItemOverlap to prioritize widgets
 //   overlapping the same area.
-void    ImGui::TableUpdateBorders(ImGuiTable* table)
+void ImGui::TableUpdateBorders(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     IM_ASSERT(table->Flags & ImGuiTableFlags_Resizable);
@@ -1307,7 +1310,7 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
 // - with ImGuiTableColumnFlags_WidthStretch,  weight <  0 --> init weight == 1.0f
 // - with ImGuiTableColumnFlags_WidthStretch,  weight >= 0 --> init weight == custom
 // Widths are specified _without_ CellPadding. So if you specify a width of 100.0f the column will be 100.0f+Padding*2.0f and you can fit a 100.0-wide item in it.
-void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
+void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, float init_width_or_weight, ImGuiID user_id)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1367,6 +1370,7 @@ void    ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, 
     }
 }
 
+// [Public]
 void ImGui::TableSetupScrollFreeze(int columns, int rows)
 {
     ImGuiContext& g = *GImGui;
@@ -1383,8 +1387,8 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     table->IsUnfrozen = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
 }
 
-// Starts into the first cell of a new row
-void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
+// [Public] Starts into the first cell of a new row
+void ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1409,7 +1413,7 @@ void    ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 }
 
 // [Internal] Called by TableNextRow()!
-void    ImGui::TableBeginRow(ImGuiTable* table)
+void ImGui::TableBeginRow(ImGuiTable* table)
 {
     ImGuiWindow* window = table->InnerWindow;
     IM_ASSERT(!table->IsInsideRow);
@@ -1442,7 +1446,7 @@ void    ImGui::TableBeginRow(ImGuiTable* table)
 }
 
 // [Internal] Called by TableNextRow()!
-void    ImGui::TableEndRow(ImGuiTable* table)
+void ImGui::TableEndRow(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -1576,7 +1580,7 @@ void    ImGui::TableEndRow(ImGuiTable* table)
 // [Internal] Called by TableNextColumn()!
 // This is called very frequently, so we need to be mindful of unnecessary overhead.
 // FIXME-TABLE FIXME-OPT: Could probably shortcut some things for non-active or clipped columns.
-void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
+void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
 {
     ImGuiTableColumn* column = &table->Columns[column_n];
     ImGuiWindow* window = table->InnerWindow;
@@ -1620,7 +1624,7 @@ void    ImGui::TableBeginCell(ImGuiTable* table, int column_n)
 }
 
 // [Internal] Called by TableNextRow()/TableNextColumn()!
-void    ImGui::TableEndCell(ImGuiTable* table)
+void ImGui::TableEndCell(ImGuiTable* table)
 {
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
     ImGuiWindow* window = table->InnerWindow;
@@ -1640,8 +1644,8 @@ void    ImGui::TableEndCell(ImGuiTable* table)
     table->RowTextBaseline = ImMax(table->RowTextBaseline, window->DC.PrevLineTextBaseOffset);
 }
 
-// Append into the next column/cell
-bool    ImGui::TableNextColumn()
+// [Public] Append into the next column/cell
+bool ImGui::TableNextColumn()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1665,7 +1669,8 @@ bool    ImGui::TableNextColumn()
     return (table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
-bool    ImGui::TableSetColumnIndex(int column_n)
+// [Public] Append into a specific column
+bool ImGui::TableSetColumnIndex(int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1691,7 +1696,7 @@ int ImGui::TableGetColumnCount()
     return table ? table->ColumnsCount : 0;
 }
 
-const char*   ImGui::TableGetColumnName(int column_n)
+const char* ImGui::TableGetColumnName(int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1702,7 +1707,7 @@ const char*   ImGui::TableGetColumnName(int column_n)
     return TableGetColumnName(table, column_n);
 }
 
-bool    ImGui::TableGetColumnIsEnabled(int column_n)
+bool ImGui::TableGetColumnIsEnabled(int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1724,7 +1729,7 @@ void ImGui::TableSetColumnIsEnabled(int column_n, bool hidden)
     table->Columns[column_n].IsEnabledNextFrame = !hidden;
 }
 
-int     ImGui::TableGetColumnIndex()
+int ImGui::TableGetColumnIndex()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1734,7 +1739,7 @@ int     ImGui::TableGetColumnIndex()
 }
 
 // Note: for row coloring we use ->RowBgColorCounter which is the same value without counting header rows
-int     ImGui::TableGetRowIndex()
+int ImGui::TableGetRowIndex()
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -1748,7 +1753,7 @@ int     ImGui::TableGetRowIndex()
 //   The only case where this is correct is if we provided a min_row_height to TableNextRow() and don't go below it.
 // - Important: if ImGuiTableFlags_PadOuterX is set but ImGuiTableFlags_PadInnerX is not set, the outer-most left and right
 //   columns report a small offset so their CellBgRect can extend up to the outer border.
-ImRect  ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
+ImRect ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
 {
     const ImGuiTableColumn* column = &table->Columns[column_n];
     float x1 = column->MinX;
@@ -1778,7 +1783,7 @@ ImGuiID ImGui::TableGetColumnResizeID(const ImGuiTable* table, int column_n, int
 
 // Disable clipping then auto-fit, will take 2 frames
 // (we don't take a shortcut for unclipped columns to reduce inconsistencies when e.g. resizing multiple columns)
-void    ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
+void ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
 {
     // Single auto width uses auto-fit
     ImGuiTableColumn* column = &table->Columns[column_n];
@@ -1790,7 +1795,7 @@ void    ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
         table->AutoFitSingleStretchColumn = (ImS8)column_n;
 }
 
-void    ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
+void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
 {
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
@@ -1860,11 +1865,11 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int colum
 // - TablePushBackgroundChannel() [Internal]
 // - TablePopBackgroundChannel() [Internal]
 // - TableSetupDrawChannels() [Internal]
-// - TableReorderDrawChannelsForMerge() [Internal]
+// - TableMergeDrawChannels() [Internal]
 // - TableDrawBorders() [Internal]
 //-------------------------------------------------------------------------
 
-void    ImGui::TablePushBackgroundChannel()
+void ImGui::TablePushBackgroundChannel()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -1876,7 +1881,7 @@ void    ImGui::TablePushBackgroundChannel()
     table->DrawSplitter.SetCurrentChannel(window->DrawList, table->Bg1DrawChannelCurrent);
 }
 
-void    ImGui::TablePopBackgroundChannel()
+void ImGui::TablePopBackgroundChannel()
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -1964,7 +1969,7 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
 // Columns for which the draw channel(s) haven't been merged with other will use their own ImDrawCmd.
 //
 // This function is particularly tricky to understand.. take a breath.
-void    ImGui::TableMergeDrawChannels(ImGuiTable* table)
+void ImGui::TableMergeDrawChannels(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     ImDrawListSplitter* splitter = &table->DrawSplitter;
@@ -2053,7 +2058,7 @@ void    ImGui::TableMergeDrawChannels(ImGuiTable* table)
     // 2. Rewrite channel list in our preferred order
     if (merge_group_mask != 0)
     {
-        // We skip channel 0 (Bg0) and 1 (Bg1 frozen) from the shuffling since they won't move - see channels allocation in TableUpdateDrawChannels().
+        // We skip channel 0 (Bg0) and 1 (Bg1 frozen) from the shuffling since they won't move - see channels allocation in TableSetupDrawChannels().
         const int LEADING_DRAW_CHANNELS = 2;
         g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
         ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
@@ -2415,7 +2420,7 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 // The intent is that advanced users willing to create customized headers would not need to use this helper
 // and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
 // See 'Demo->Tables->Custom headers' for a demonstration of implementing a custom version of this.
-void    ImGui::TableHeadersRow()
+void ImGui::TableHeadersRow()
 {
     ImGuiStyle& style = ImGui::GetStyle();
 
@@ -2480,7 +2485,7 @@ void    ImGui::TableHeadersRow()
 // We cpu-clip text here so that all columns headers can be merged into a same draw call.
 // Note that because of how we cpu-clip and display sorting indicators, you _cannot_ use SameLine() after a TableHeader()
 // FIXME-TABLE: Style confusion between CellPadding.y and FramePadding.y
-void    ImGui::TableHeader(const char* label)
+void ImGui::TableHeader(const char* label)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -2626,7 +2631,7 @@ void    ImGui::TableHeader(const char* label)
 //-------------------------------------------------------------------------
 
 // Use -1 to open menu not specific to a given column.
-void    ImGui::TableOpenContextMenu(int column_n)
+void ImGui::TableOpenContextMenu(int column_n)
 {
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
@@ -2647,7 +2652,7 @@ void    ImGui::TableOpenContextMenu(int column_n)
 
 // Output context menu into current window (generally a popup)
 // FIXME-TABLE: Ideally this should be writable by the user. Full programmatic access to that data?
-void    ImGui::TableDrawContextMenu(ImGuiTable* table)
+void ImGui::TableDrawContextMenu(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
     ImGuiWindow* window = g.CurrentWindow;
@@ -3028,7 +3033,7 @@ static void TableSettingsHandler_WriteAll(ImGuiContext* ctx, ImGuiSettingsHandle
     }
 }
 
-void    ImGui::TableSettingsInstallHandler(ImGuiContext* context)
+void ImGui::TableSettingsInstallHandler(ImGuiContext* context)
 {
     ImGuiContext& g = *context;
     ImGuiSettingsHandler ini_handler;
@@ -3051,7 +3056,7 @@ void    ImGui::TableSettingsInstallHandler(ImGuiContext* context)
 //-------------------------------------------------------------------------
 
 // Remove Table (currently only used by TestEngine)
-void    ImGui::TableRemove(ImGuiTable* table)
+void ImGui::TableRemove(ImGuiTable* table)
 {
     //IMGUI_DEBUG_LOG("TableRemove() id=0x%08X\n", table->ID);
     ImGuiContext& g = *GImGui;
@@ -3063,7 +3068,7 @@ void    ImGui::TableRemove(ImGuiTable* table)
 }
 
 // Free up/compact internal Table buffers for when it gets unused
-void    ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
+void ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
 {
     //IMGUI_DEBUG_LOG("TableGcCompactTransientBuffers() id=0x%08X\n", table->ID);
     ImGuiContext& g = *GImGui;
@@ -3619,7 +3624,6 @@ void ImGui::Columns(int columns_count, const char* id, bool border)
     if (columns_count != 1)
         BeginColumns(id, columns_count, flags);
 }
-
 
 //-------------------------------------------------------------------------
 
