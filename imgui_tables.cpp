@@ -2172,6 +2172,232 @@ void    ImGui::TablePopBackgroundChannel()
     table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
 }
 
+// Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
+// the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
+void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+
+    if (!(table->Flags & ImGuiTableFlags_MultiSortable))
+        append_to_sort_specs = false;
+
+    ImS8 sort_order_max = 0;
+    if (append_to_sort_specs)
+        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
+            sort_order_max = ImMax(sort_order_max, table->Columns[other_column_n].SortOrder);
+
+    ImGuiTableColumn* column = &table->Columns[column_n];
+    column->SortDirection = (ImS8)sort_direction;
+    if (column->SortOrder == -1 || !append_to_sort_specs)
+        column->SortOrder = append_to_sort_specs ? sort_order_max + 1 : 0;
+
+    for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
+    {
+        ImGuiTableColumn* other_column = &table->Columns[other_column_n];
+        if (other_column != column && !append_to_sort_specs)
+            other_column->SortOrder = -1;
+        TableFixColumnSortDirection(other_column);
+    }
+    table->IsSettingsDirty = true;
+    table->IsSortSpecsDirty = true;
+}
+
+// Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set)
+// You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since
+// last call, or the first time.
+// Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
+ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL);
+
+    if (!(table->Flags & ImGuiTableFlags_Sortable))
+        return NULL;
+
+    // Require layout (in case TableHeadersRow() hasn't been called) as it may alter IsSortSpecsDirty in some paths.
+    if (!table->IsLayoutLocked)
+        TableUpdateLayout(table);
+
+    if (table->IsSortSpecsDirty)
+        TableSortSpecsBuild(table);
+
+    return table->SortSpecs.SpecsCount ? &table->SortSpecs : NULL;
+}
+
+bool ImGui::TableGetColumnIsSorted(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return false;
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    ImGuiTableColumn* column = &table->Columns[column_n];
+    return (column->SortOrder != -1);
+}
+
+// Return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
+int ImGui::TableGetHoveredColumn()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return -1;
+    return (int)table->HoveredColumnBody;
+}
+
+void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(bg_target != ImGuiTableBgTarget_None);
+
+    if (color == IM_COL32_DISABLE)
+        color = 0;
+
+    // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
+    switch (bg_target)
+    {
+    case ImGuiTableBgTarget_CellBg:
+    {
+        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+            return;
+        if (column_n == -1)
+            column_n = table->CurrentColumn;
+        if ((table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)) == 0)
+            return;
+        if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
+            table->RowCellDataCurrent++;
+        ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCurrent];
+        cell_data->BgColor = color;
+        cell_data->Column = (ImS8)column_n;
+        break;
+    }
+    case ImGuiTableBgTarget_RowBg0:
+    case ImGuiTableBgTarget_RowBg1:
+    {
+        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+            return;
+        IM_ASSERT(column_n == -1);
+        int bg_idx = (bg_target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
+        table->RowBgColor[bg_idx] = color;
+        break;
+    }
+    default:
+        IM_ASSERT(0);
+    }
+}
+
+//-------------------------------------------------------------------------
+// [SECTION] Tables: Sorting
+//-------------------------------------------------------------------------
+// - TableGetSortSpecs()
+// - TableGetColumnIsSorted()
+// - TableFixColumnSortDirection() [Internal]
+// - TableSetColumnSortDirection() [Internal]
+// - TableSortSpecsSanitize() [Internal]
+// - TableSortSpecsBuild() [Internal]
+//-------------------------------------------------------------------------
+
+void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
+{
+    IM_ASSERT(table->Flags & ImGuiTableFlags_Sortable);
+
+    // Clear SortOrder from hidden column and verify that there's no gap or duplicate.
+    int sort_order_count = 0;
+    ImU64 sort_order_mask = 0x00;
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (column->SortOrder != -1 && !column->IsEnabled)
+            column->SortOrder = -1;
+        if (column->SortOrder == -1)
+            continue;
+        sort_order_count++;
+        sort_order_mask |= ((ImU64)1 << column->SortOrder);
+        IM_ASSERT(sort_order_count < (int)sizeof(sort_order_mask) * 8);
+    }
+
+    const bool need_fix_linearize = ((ImU64)1 << sort_order_count) != (sort_order_mask + 1);
+    const bool need_fix_single_sort_order = (sort_order_count > 1) && !(table->Flags & ImGuiTableFlags_MultiSortable);
+    if (need_fix_linearize || need_fix_single_sort_order)
+    {
+        ImU64 fixed_mask = 0x00;
+        for (int sort_n = 0; sort_n < sort_order_count; sort_n++)
+        {
+            // Fix: Rewrite sort order fields if needed so they have no gap or duplicate.
+            // (e.g. SortOrder 0 disappeared, SortOrder 1..2 exists --> rewrite then as SortOrder 0..1)
+            int column_with_smallest_sort_order = -1;
+            for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+                if ((fixed_mask & ((ImU64)1 << (ImU64)column_n)) == 0 && table->Columns[column_n].SortOrder != -1)
+                    if (column_with_smallest_sort_order == -1 || table->Columns[column_n].SortOrder < table->Columns[column_with_smallest_sort_order].SortOrder)
+                        column_with_smallest_sort_order = column_n;
+            IM_ASSERT(column_with_smallest_sort_order != -1);
+            fixed_mask |= ((ImU64)1 << column_with_smallest_sort_order);
+            table->Columns[column_with_smallest_sort_order].SortOrder = (ImS8)sort_n;
+
+            // Fix: Make sure only one column has a SortOrder if ImGuiTableFlags_MultiSortable is not set.
+            if (need_fix_single_sort_order)
+            {
+                sort_order_count = 1;
+                for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+                    if (column_n != column_with_smallest_sort_order)
+                        table->Columns[column_n].SortOrder = -1;
+                break;
+            }
+        }
+    }
+
+    // Fallback default sort order (if no column had the ImGuiTableColumnFlags_DefaultSort flag)
+    if (sort_order_count == 0)
+        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+        {
+            ImGuiTableColumn* column = &table->Columns[column_n];
+            if (column->IsEnabled && !(column->Flags & ImGuiTableColumnFlags_NoSort))
+            {
+                sort_order_count = 1;
+                column->SortOrder = 0;
+                TableFixColumnSortDirection(column);
+                break;
+            }
+        }
+
+    table->SortSpecsCount = (ImS8)sort_order_count;
+}
+
+void ImGui::TableSortSpecsBuild(ImGuiTable* table)
+{
+    IM_ASSERT(table->IsSortSpecsDirty);
+    TableSortSpecsSanitize(table);
+
+    // Write output
+    table->SortSpecsData.resize(table->SortSpecsCount);
+    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+    {
+        ImGuiTableColumn* column = &table->Columns[column_n];
+        if (column->SortOrder == -1)
+            continue;
+        ImGuiTableSortSpecsColumn* sort_spec = &table->SortSpecsData[column->SortOrder];
+        sort_spec->ColumnUserID = column->UserID;
+        sort_spec->ColumnIndex = (ImU8)column_n;
+        sort_spec->SortOrder = (ImU8)column->SortOrder;
+        sort_spec->SortDirection = column->SortDirection;
+    }
+    table->SortSpecs.Specs = table->SortSpecsData.Data;
+    table->SortSpecs.SpecsCount = table->SortSpecsData.Size;
+    table->SortSpecs.SpecsDirty = true; // Mark as dirty for user
+    table->IsSortSpecsDirty = false; // Mark as not dirty for us
+}
+
+//-------------------------------------------------------------------------
+// [SECTION] Tables: Headers
+//-------------------------------------------------------------------------
+// - TableHeadersRow()
+// - TableHeader()
+//-------------------------------------------------------------------------
+
 // This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
 // The intent is that advanced users willing to create customized headers would not need to use this helper
 // and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
@@ -2377,214 +2603,6 @@ void    ImGui::TableHeader(const char* label)
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())
         TableOpenContextMenu(column_n);
-}
-
-// Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
-// the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
-void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-
-    if (!(table->Flags & ImGuiTableFlags_MultiSortable))
-        append_to_sort_specs = false;
-
-    ImS8 sort_order_max = 0;
-    if (append_to_sort_specs)
-        for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
-            sort_order_max = ImMax(sort_order_max, table->Columns[other_column_n].SortOrder);
-
-    ImGuiTableColumn* column = &table->Columns[column_n];
-    column->SortDirection = (ImS8)sort_direction;
-    if (column->SortOrder == -1 || !append_to_sort_specs)
-        column->SortOrder = append_to_sort_specs ? sort_order_max + 1 : 0;
-
-    for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
-    {
-        ImGuiTableColumn* other_column = &table->Columns[other_column_n];
-        if (other_column != column && !append_to_sort_specs)
-            other_column->SortOrder = -1;
-        TableFixColumnSortDirection(other_column);
-    }
-    table->IsSettingsDirty = true;
-    table->IsSortSpecsDirty = true;
-}
-
-// Return NULL if no sort specs (most often when ImGuiTableFlags_Sortable is not set)
-// You can sort your data again when 'SpecsChanged == true'. It will be true with sorting specs have changed since
-// last call, or the first time.
-// Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable()!
-ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL);
-
-    if (!(table->Flags & ImGuiTableFlags_Sortable))
-        return NULL;
-
-    // Require layout (in case TableHeadersRow() hasn't been called) as it may alter IsSortSpecsDirty in some paths.
-    if (!table->IsLayoutLocked)
-        TableUpdateLayout(table);
-
-    if (table->IsSortSpecsDirty)
-        TableSortSpecsBuild(table);
-
-    return table->SortSpecs.SpecsCount ? &table->SortSpecs : NULL;
-}
-
-bool ImGui::TableGetColumnIsSorted(int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return false;
-    if (column_n < 0)
-        column_n = table->CurrentColumn;
-    ImGuiTableColumn* column = &table->Columns[column_n];
-    return (column->SortOrder != -1);
-}
-
-// Return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
-int ImGui::TableGetHoveredColumn()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return -1;
-    return (int)table->HoveredColumnBody;
-}
-
-void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(bg_target != ImGuiTableBgTarget_None);
-
-    if (color == IM_COL32_DISABLE)
-        color = 0;
-
-    // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
-    switch (bg_target)
-    {
-    case ImGuiTableBgTarget_CellBg:
-    {
-        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
-            return;
-        if (column_n == -1)
-            column_n = table->CurrentColumn;
-        if ((table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)) == 0)
-            return;
-        if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
-            table->RowCellDataCurrent++;
-        ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCurrent];
-        cell_data->BgColor = color;
-        cell_data->Column = (ImS8)column_n;
-        break;
-    }
-    case ImGuiTableBgTarget_RowBg0:
-    case ImGuiTableBgTarget_RowBg1:
-    {
-        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
-            return;
-        IM_ASSERT(column_n == -1);
-        int bg_idx = (bg_target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
-        table->RowBgColor[bg_idx] = color;
-        break;
-    }
-    default:
-        IM_ASSERT(0);
-    }
-}
-
-void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
-{
-    IM_ASSERT(table->Flags & ImGuiTableFlags_Sortable);
-
-    // Clear SortOrder from hidden column and verify that there's no gap or duplicate.
-    int sort_order_count = 0;
-    ImU64 sort_order_mask = 0x00;
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (column->SortOrder != -1 && !column->IsEnabled)
-            column->SortOrder = -1;
-        if (column->SortOrder == -1)
-            continue;
-        sort_order_count++;
-        sort_order_mask |= ((ImU64)1 << column->SortOrder);
-        IM_ASSERT(sort_order_count < (int)sizeof(sort_order_mask) * 8);
-    }
-
-    const bool need_fix_linearize = ((ImU64)1 << sort_order_count) != (sort_order_mask + 1);
-    const bool need_fix_single_sort_order = (sort_order_count > 1) && !(table->Flags & ImGuiTableFlags_MultiSortable);
-    if (need_fix_linearize || need_fix_single_sort_order)
-    {
-        ImU64 fixed_mask = 0x00;
-        for (int sort_n = 0; sort_n < sort_order_count; sort_n++)
-        {
-            // Fix: Rewrite sort order fields if needed so they have no gap or duplicate.
-            // (e.g. SortOrder 0 disappeared, SortOrder 1..2 exists --> rewrite then as SortOrder 0..1)
-            int column_with_smallest_sort_order = -1;
-            for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-                if ((fixed_mask & ((ImU64)1 << (ImU64)column_n)) == 0 && table->Columns[column_n].SortOrder != -1)
-                    if (column_with_smallest_sort_order == -1 || table->Columns[column_n].SortOrder < table->Columns[column_with_smallest_sort_order].SortOrder)
-                        column_with_smallest_sort_order = column_n;
-            IM_ASSERT(column_with_smallest_sort_order != -1);
-            fixed_mask |= ((ImU64)1 << column_with_smallest_sort_order);
-            table->Columns[column_with_smallest_sort_order].SortOrder = (ImS8)sort_n;
-
-            // Fix: Make sure only one column has a SortOrder if ImGuiTableFlags_MultiSortable is not set.
-            if (need_fix_single_sort_order)
-            {
-                sort_order_count = 1;
-                for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-                    if (column_n != column_with_smallest_sort_order)
-                        table->Columns[column_n].SortOrder = -1;
-                break;
-            }
-        }
-    }
-
-    // Fallback default sort order (if no column had the ImGuiTableColumnFlags_DefaultSort flag)
-    if (sort_order_count == 0)
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        {
-            ImGuiTableColumn* column = &table->Columns[column_n];
-            if (column->IsEnabled && !(column->Flags & ImGuiTableColumnFlags_NoSort))
-            {
-                sort_order_count = 1;
-                column->SortOrder = 0;
-                TableFixColumnSortDirection(column);
-                break;
-            }
-        }
-
-    table->SortSpecsCount = (ImS8)sort_order_count;
-}
-
-void ImGui::TableSortSpecsBuild(ImGuiTable* table)
-{
-    IM_ASSERT(table->IsSortSpecsDirty);
-    TableSortSpecsSanitize(table);
-
-    // Write output
-    table->SortSpecsData.resize(table->SortSpecsCount);
-    for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[column_n];
-        if (column->SortOrder == -1)
-            continue;
-        ImGuiTableSortSpecsColumn* sort_spec = &table->SortSpecsData[column->SortOrder];
-        sort_spec->ColumnUserID = column->UserID;
-        sort_spec->ColumnIndex = (ImU8)column_n;
-        sort_spec->SortOrder = (ImU8)column->SortOrder;
-        sort_spec->SortDirection = column->SortDirection;
-    }
-    table->SortSpecs.Specs = table->SortSpecsData.Data;
-    table->SortSpecs.SpecsCount = table->SortSpecsData.Size;
-    table->SortSpecs.SpecsDirty = true; // Mark as dirty for user
-    table->IsSortSpecsDirty = false; // Mark as not dirty for us
 }
 
 //-------------------------------------------------------------------------
