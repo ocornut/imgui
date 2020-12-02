@@ -54,6 +54,7 @@ Breaking Changes:
   incoming Tables API. Keep redirection enums (will obsolete). (#125, #513, #913, #1204, #1444, #2142, #2707)
 - Renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature will apply
   to other data structures. (#2636)
+- Backends: WebGPU: Added backend for WebGPU support in imgui_impl_wgpu [@bfierz]
 
 
 Other Changes:
