@@ -1715,7 +1715,7 @@ bool ImGui::TableGetColumnIsEnabled(int column_n)
         return false;
     if (column_n < 0)
         column_n = table->CurrentColumn;
-    return (table->EnabledMaskByIndex & ((ImU64)1 << column_n)) == 0;
+    return (table->EnabledMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
 void ImGui::TableSetColumnIsEnabled(int column_n, bool hidden)
@@ -2134,7 +2134,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     }
 }
 
-// FIXME-TABLE: This is a mess, need to redesign how we render borders.
+// FIXME-TABLE: This is a mess, need to redesign how we render borders (as some are also done in TableEndRow)
 void ImGui::TableDrawBorders(ImGuiTable* table)
 {
     ImGuiWindow* inner_window = table->InnerWindow;
@@ -2391,20 +2391,23 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
     TableSortSpecsSanitize(table);
 
     // Write output
-    table->SortSpecsData.resize(table->SortSpecsCount);
+    const bool single_sort_specs = (table->SortSpecsCount <= 1);
+    table->SortSpecsMulti.resize(single_sort_specs ? 0 : table->SortSpecsCount);
+    ImGuiTableSortSpecsColumn* sort_specs = single_sort_specs ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
         if (column->SortOrder == -1)
             continue;
-        ImGuiTableSortSpecsColumn* sort_spec = &table->SortSpecsData[column->SortOrder];
+        IM_ASSERT(column->SortOrder < table->SortSpecsCount);
+        ImGuiTableSortSpecsColumn* sort_spec = &sort_specs[column->SortOrder];
         sort_spec->ColumnUserID = column->UserID;
         sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
         sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
         sort_spec->SortDirection = column->SortDirection;
     }
-    table->SortSpecs.Specs = table->SortSpecsData.Data;
-    table->SortSpecs.SpecsCount = table->SortSpecsData.Size;
+    table->SortSpecs.Specs = sort_specs;
+    table->SortSpecs.SpecsCount = table->SortSpecsCount;
     table->SortSpecs.SpecsDirty = true; // Mark as dirty for user
     table->IsSortSpecsDirty = false; // Mark as not dirty for us
 }
@@ -2412,57 +2415,50 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
 //-------------------------------------------------------------------------
 // [SECTION] Tables: Headers
 //-------------------------------------------------------------------------
+// - TableGetHeaderRowHeight() [Internal]
 // - TableHeadersRow()
 // - TableHeader()
 //-------------------------------------------------------------------------
 
-// This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
+float ImGui::TableGetHeaderRowHeight()
+{
+    // Caring for a minor edge case:
+    // Calculate row height, for the unlikely case that some labels may be taller than others.
+    // If we didn't do that, uneven header height would highlight but smaller one before the tallest wouldn't catch input for all height.
+    // In your custom header row you may omit this all together and just call TableNextRow() without a height...
+    float row_height = GetTextLineHeight();
+    int columns_count = TableGetColumnCount();
+    for (int column_n = 0; column_n < columns_count; column_n++)
+        if (TableGetColumnIsEnabled(column_n))
+            row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
+    row_height += GetStyle().CellPadding.y * 2.0f;
+    return row_height;
+}
+
+// [Public] This is a helper to output TableHeader() calls based on the column names declared in TableSetupColumn().
 // The intent is that advanced users willing to create customized headers would not need to use this helper
 // and can create their own! For example: TableHeader() may be preceeded by Checkbox() or other custom widgets.
 // See 'Demo->Tables->Custom headers' for a demonstration of implementing a custom version of this.
+// This code is constructed to not make much use of internal functions, as it is intended to be a template to copy.
+// FIXME-TABLE: TableOpenContextMenu() and TableGetHeaderRowHeight() are not public.
 void ImGui::TableHeadersRow()
 {
-    ImGuiStyle& style = ImGui::GetStyle();
-
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
     IM_ASSERT(table != NULL && "Need to call TableHeadersRow() after BeginTable()!");
 
-    // Calculate row height (for the unlikely case that labels may be are multi-line)
-    // If we didn't do that, uneven header height would work but their highlight won't cover the full row height.
-    float row_height = GetTextLineHeight();
-    const float row_y1 = GetCursorScreenPos().y;
-    const int columns_count = TableGetColumnCount();
-    for (int column_n = 0; column_n < columns_count; column_n++)
-        if (TableGetColumnIsEnabled(column_n))
-            row_height = ImMax(row_height, CalcTextSize(TableGetColumnName(column_n)).y);
-    row_height += style.CellPadding.y * 2.0f;
-
     // Open row
+    const float row_y1 = GetCursorScreenPos().y;
+    const float row_height = TableGetHeaderRowHeight();
     TableNextRow(ImGuiTableRowFlags_Headers, row_height);
     if (table->HostSkipItems) // Merely an optimization, you may skip in your own code.
         return;
 
-    // This for loop is constructed to not make use of internal functions,
-    // as this is intended to be a base template to copy and build from.
+    const int columns_count = TableGetColumnCount();
     for (int column_n = 0; column_n < columns_count; column_n++)
     {
         if (!TableSetColumnIndex(column_n))
             continue;
-
-        // [DEBUG] Test custom user elements
-#if 0
-        if (column_n < 2)
-        {
-            static bool b[2] = {};
-            PushID(column_n);
-            PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0, 0));
-            Checkbox("##", &b[column_n]);
-            PopStyleVar();
-            PopID();
-            SameLine(0.0f, style.ItemInnerSpacing.x);
-        }
-#endif
 
         // Push an id to allow unnamed labels (generally accidental, but let's behave nicely with them)
         // - in your own code you may omit the PushID/PopID all-together, provided you know they won't collide
@@ -2474,7 +2470,6 @@ void ImGui::TableHeadersRow()
     }
 
     // Allow opening popup from the right-most section after the last column.
-    // FIXME-TABLE: TableOpenContextMenu() is not public yet.
     ImVec2 mouse_pos = ImGui::GetMousePos();
     if (IsMouseReleased(1) && TableGetHoveredColumn() == columns_count)
         if (mouse_pos.y >= row_y1 && mouse_pos.y < row_y1 + row_height)
@@ -2565,9 +2560,8 @@ void ImGui::TableHeader(const char* label)
         w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);// table->CellPadding.x);
         if (column->SortOrder != -1)
         {
-            w_sort_text = 0.0f;
-
             char sort_order_suf[8];
+            w_sort_text = 0.0f;
             if (column->SortOrder > 0)
             {
                 ImFormatString(sort_order_suf, IM_ARRAYSIZE(sort_order_suf), "%d", column->SortOrder + 1);
@@ -2675,11 +2669,11 @@ void ImGui::TableDrawContextMenu(ImGuiTable* table)
 
         const char* size_all_desc;
         if (table->ColumnsEnabledFixedCount == table->ColumnsEnabledCount)
-            size_all_desc = "Size all columns to fit";          // All fixed
+            size_all_desc = "Size all columns to fit###SizeAll";        // All fixed
         else if (table->ColumnsEnabledFixedCount == 0)
-            size_all_desc = "Size all columns to default";      // All stretch
+            size_all_desc = "Size all columns to default###SizeAll";    // All stretch
         else
-            size_all_desc = "Size all columns to fit/default";  // Mixed
+            size_all_desc = "Size all columns to fit/default###SizeAll";// Mixed
         if (MenuItem(size_all_desc, NULL))
             TableSetColumnWidthAutoAll(table);
         want_separator = true;
@@ -3074,7 +3068,7 @@ void ImGui::TableGcCompactTransientBuffers(ImGuiTable* table)
     ImGuiContext& g = *GImGui;
     IM_ASSERT(table->MemoryCompacted == false);
     table->DrawSplitter.ClearFreeMemory();
-    table->SortSpecsData.clear();
+    table->SortSpecsMulti.clear();
     table->SortSpecs.Specs = NULL;
     table->IsSortSpecsDirty = true;
     table->ColumnsNames.clear();
