@@ -7,15 +7,15 @@
 # (On Windows, you may need to execute emsdk_env.bat or encmdprompt.bat ahead)
 #
 # Running `make` will produce three files:
-#  - example_emscripten.html
-#  - example_emscripten.js
-#  - example_emscripten.wasm
+#  - example_emscripten_opengl3.html
+#  - example_emscripten_opengl3.js
+#  - example_emscripten_opengl3.wasm
 #
 # All three are needed to run the demo.
 
 CC = emcc
 CXX = em++
-EXE = example_emscripten.html
+EXE = example_emscripten_opengl3.html
 IMGUI_DIR = ../..
 SOURCES = main.cpp
 SOURCES += $(IMGUI_DIR)/imgui.cpp $(IMGUI_DIR)/imgui_demo.cpp $(IMGUI_DIR)/imgui_draw.cpp $(IMGUI_DIR)/imgui_widgets.cpp

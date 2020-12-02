@@ -49,7 +49,7 @@ jobs:
         shell: cmd
         run: |
           cd examples\example_null
-          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat" 
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
           .\build_win32.bat /W4
 
       - name: Build example_null (single file build)
@@ -72,7 +72,7 @@ jobs:
       - name: Build example_null (as DLL)
         shell: cmd
         run: |
-          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat" 
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
           echo #ifdef _EXPORT                                  >  example_single_file.cpp
           echo #  define IMGUI_API __declspec(dllexport)       >> example_single_file.cpp
           echo #else                                           >> example_single_file.cpp
@@ -393,12 +393,12 @@ jobs:
         emsdk-master/emsdk install latest
         emsdk-master/emsdk activate latest
 
-    - name: Build example_emscripten
+    - name: Build example_emscripten_opengl3
       run: |
         pushd emsdk-master
         source ./emsdk_env.sh
         popd
-        make -C examples/example_emscripten
+        make -C examples/example_emscripten_opengl3
 
   Discord-CI:
     runs-on: ubuntu-18.04

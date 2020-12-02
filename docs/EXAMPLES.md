@@ -2,7 +2,7 @@ _(You may browse this at https://github.com/ocornut/imgui/blob/master/docs/EXAMP
 
 ## Dear ImGui: Examples
 
-**The [examples/](https://github.com/ocornut/imgui/blob/master/examples) folder example applications (standalone, ready-to-build) for variety of 
+**The [examples/](https://github.com/ocornut/imgui/blob/master/examples) folder example applications (standalone, ready-to-build) for variety of
 platforms and graphics APIs.** They all use standard backends from the [backends/](https://github.com/ocornut/imgui/blob/master/backends) folder.
 
 You can find Windows binaries for some of those example applications at:
@@ -13,7 +13,7 @@ You can find Windows binaries for some of those example applications at:
 
 Integration in a typical existing application, should take <20 lines when using standard backends.
 
-    At initialization:               
+    At initialization:
       call ImGui::CreateContext()
       call ImGui_ImplXXXX_Init() for each backend.
 
@@ -35,11 +35,11 @@ Example (using [backends/imgui_impl_win32.cpp](https://github.com/ocornut/imgui/
     ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO();
     io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard; // Enable some options
-  
+
     // Initialize Platform + Renderer backends (here: using imgui_impl_win32.cpp + imgui_impl_dx11.cpp)
     ImGui_ImplWin32_Init(my_hwnd);
     ImGui_ImplDX11_Init(my_d3d_device, my_d3d_device_context);
-  
+
     // Application main loop
     while (true)
     {
@@ -47,10 +47,10 @@ Example (using [backends/imgui_impl_win32.cpp](https://github.com/ocornut/imgui/
         ImGui_ImplDX11_NewFrame();
         ImGui_ImplWin32_NewFrame();
         ImGui::NewFrame();
-    
+
         // Any application code here
         ImGui::Text("Hello, world!");
-    
+
         // End of frame: render Dear ImGui
         ImGui::Render();
         ImGui_ImplDX11_RenderDrawData(ImGui::GetDrawData());
@@ -68,7 +68,7 @@ Please read 'PROGRAMMER GUIDE' in imgui.cpp for notes on how to setup Dear ImGui
 Please read the comments and instruction at the top of each file.
 Please read FAQ at http://www.dearimgui.org/faq
 
-If you are using of the backend provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h) 
+If you are using of the backend provided here, you can add the backends/imgui_impl_xxxx(.cpp,.h)
 files to your project and use as-in. Each imgui_impl_xxxx.cpp file comes with its own individual
 Changelog, so if you want to update them later it will be easier to catch up with what changed.
 
@@ -82,8 +82,8 @@ Allegro 5 example. <BR>
 [example_apple_metal/](https://github.com/ocornut/imgui/blob/master/examples/example_metal/) <BR>
 OSX & iOS + Metal example. <BR>
 = main.m + imgui_impl_osx.mm + imgui_impl_metal.mm <BR>
-It is based on the "cross-platform" game template provided with Xcode as of Xcode 9. 
-(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends. 
+It is based on the "cross-platform" game template provided with Xcode as of Xcode 9.
+(NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
 You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
 [example_apple_opengl2/](https://github.com/ocornut/imgui/blob/master/examples/example_apple_opengl2/) <BR>
@@ -92,7 +92,7 @@ OSX + OpenGL2 example. <BR>
 (NB: imgui_impl_osx.mm is currently not as feature complete as other platforms backends.
  You may prefer to use the GLFW Or SDL backends, which will also support Windows and Linux.)
 
-[example_emscripten/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten/) <BR>
+[example_emscripten_opengl3/](https://github.com/ocornut/imgui/blob/master/examples/example_emscripten_opengl3/) <BR>
 Emcripten + SDL2 + OpenGL3+/ES2/ES3 example. <BR>
 = main.cpp + imgui_impl_sdl.cpp + imgui_impl_opengl3.cpp <BR>
 Note that other examples based on SDL or GLFW + OpenGL could easily be modified to work with Emscripten.
@@ -220,7 +220,7 @@ to the right spot at the time of EndFrame()/Render(). At 60 FPS your experience 
 
 However, consider that OS mouse cursors are typically drawn through a very specific hardware accelerated
 path and will feel smoother than the majority of contents rendered via regular graphics API (including,
-but not limited to Dear ImGui windows). Because UI rendering and interaction happens on the same plane 
+but not limited to Dear ImGui windows). Because UI rendering and interaction happens on the same plane
 as the mouse, that disconnect may be jarring to particularly sensitive users.
 You may experiment with enabling the io.MouseDrawCursor flag to request Dear ImGui to draw a mouse cursor
 using the regular graphics API, to help you visualize the difference between a "hardware" cursor and a
