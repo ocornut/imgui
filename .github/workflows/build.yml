@@ -400,6 +400,13 @@ jobs:
         popd
         make -C examples/example_emscripten_opengl3
 
+    - name: Build example_emscripten_wgpu
+      run: |
+        pushd emsdk-master
+        source ./emsdk_env.sh
+        popd
+        make -C examples/example_emscripten_wgpu
+
   Discord-CI:
     runs-on: ubuntu-18.04
     if: always()
