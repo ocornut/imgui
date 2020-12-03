@@ -6044,9 +6044,10 @@ bool ImGui::Begin(const char* name, bool* p_open, ImGuiWindowFlags flags)
             // Child window can be out of sight and have "negative" clip windows.
             // Mark them as collapsed so commands are skipped earlier (we can't manually collapse them because they have no title bar).
             IM_ASSERT((flags & ImGuiWindowFlags_NoTitleBar) != 0);
-            if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0)
-                if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
-                    window->HiddenFramesCanSkipItems = 1;
+            if (!(flags & ImGuiWindowFlags_AlwaysAutoResize) && window->AutoFitFramesX <= 0 && window->AutoFitFramesY <= 0) // FIXME: Doesn't make sense for ChildWindow??
+                if (!g.LogEnabled)
+                    if (window->OuterRectClipped.Min.x >= window->OuterRectClipped.Max.x || window->OuterRectClipped.Min.y >= window->OuterRectClipped.Max.y)
+                        window->HiddenFramesCanSkipItems = 1;
 
             // Hide along with parent or if parent is collapsed
             if (parent_window && (parent_window->Collapsed || parent_window->HiddenFramesCanSkipItems > 0))
@@ -6930,37 +6931,38 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
         }
 #endif
         ImGuiWindow* window = g.CurrentWindow;
+        IM_ASSERT(window != NULL);
         while (g.CurrentTabBar != NULL) //-V1044
         {
             if (log_callback) log_callback(user_data, "Recovered from missing EndTabBar() in '%s'", window->Name);
             EndTabBar();
         }
-        while (g.CurrentWindow->DC.TreeDepth > 0) //-V1044
+        while (window->DC.TreeDepth > 0)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing TreePop() in '%s'", window->Name);
             TreePop();
         }
-        while (g.GroupStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfGroupStack) //-V1044
+        while (g.GroupStack.Size > window->DC.StackSizesOnBegin.SizeOfGroupStack)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing EndGroup() in '%s'", window->Name);
             EndGroup();
         }
-        while (g.CurrentWindow->IDStack.Size > 1) //-V1044
+        while (window->IDStack.Size > 1)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing PopID() in '%s'", window->Name);
             PopID();
         }
-        while (g.ColorStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfColorStack) //-V1044
+        while (g.ColorStack.Size > window->DC.StackSizesOnBegin.SizeOfColorStack)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing PopStyleColor() in '%s' for ImGuiCol_%s", window->Name, GetStyleColorName(g.ColorStack.back().Col));
             PopStyleColor();
         }
-        while (g.StyleVarStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfStyleVarStack) //-V1044
+        while (g.StyleVarStack.Size > window->DC.StackSizesOnBegin.SizeOfStyleVarStack)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing PopStyleVar() in '%s'", window->Name);
             PopStyleVar();
         }
-        while (g.FocusScopeStack.Size > g.CurrentWindow->DC.StackSizesOnBegin.SizeOfFocusScopeStack) //-V1044
+        while (g.FocusScopeStack.Size > window->DC.StackSizesOnBegin.SizeOfFocusScopeStack)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing PopFocusScope() in '%s'", window->Name);
             PopFocusScope();
@@ -6970,7 +6972,8 @@ void    ImGui::ErrorCheckEndFrameRecover(ImGuiErrorLogCallback log_callback, voi
             IM_ASSERT(g.CurrentWindow->IsFallbackWindow);
             break;
         }
-        if (g.CurrentWindow->Flags & ImGuiWindowFlags_ChildWindow)
+        IM_ASSERT(window == g.CurrentWindow);
+        if (window->Flags & ImGuiWindowFlags_ChildWindow)
         {
             if (log_callback) log_callback(user_data, "Recovered from missing EndChild() for '%s'", window->Name);
             EndChild();
