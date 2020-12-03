@@ -49,7 +49,8 @@ jobs:
         shell: cmd
         run: |
           cd examples\example_null
-          "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64 && .\build_win32.bat /W4
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
+          .\build_win32.bat /W4
 
       - name: Build example_null (single file build)
         shell: bash
@@ -71,14 +72,14 @@ jobs:
       - name: Build example_null (as DLL)
         shell: cmd
         run: |
-          "%VS_PATH%\VC\Auxiliary\Build\vcvarsall.bat" x64
-          echo '#ifdef _EXPORT'                                  >  example_single_file.cpp
-          echo '#  define IMGUI_API __declspec(dllexport)'       >> example_single_file.cpp
-          echo '#else'                                           >> example_single_file.cpp
-          echo '#  define IMGUI_API __declspec(dllimport)'       >> example_single_file.cpp
-          echo '#endif'                                          >> example_single_file.cpp
-          echo '#define IMGUI_IMPLEMENTATION'                    >> example_single_file.cpp
-          echo '#include "misc/single_file/imgui_single_file.h"' >> example_single_file.cpp
+          call "%VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
+          echo #ifdef _EXPORT                                  >  example_single_file.cpp
+          echo #  define IMGUI_API __declspec(dllexport)       >> example_single_file.cpp
+          echo #else                                           >> example_single_file.cpp
+          echo #  define IMGUI_API __declspec(dllimport)       >> example_single_file.cpp
+          echo #endif                                          >> example_single_file.cpp
+          echo #define IMGUI_IMPLEMENTATION                    >> example_single_file.cpp
+          echo #include "misc/single_file/imgui_single_file.h" >> example_single_file.cpp
           cl.exe /D_USRDLL /D_WINDLL /D_EXPORT /I. example_single_file.cpp /LD /FeImGui.dll /link
           cl.exe /I. ImGui.lib /Feexample_null.exe examples/example_null/main.cpp
 
@@ -392,12 +393,12 @@ jobs:
         emsdk-master/emsdk install latest
         emsdk-master/emsdk activate latest
 
-    - name: Build example_emscripten
+    - name: Build example_emscripten_opengl3
       run: |
         pushd emsdk-master
         source ./emsdk_env.sh
         popd
-        make -C examples/example_emscripten
+        make -C examples/example_emscripten_opengl3
 
   Discord-CI:
     runs-on: ubuntu-18.04

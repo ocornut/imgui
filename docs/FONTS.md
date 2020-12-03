@@ -75,7 +75,7 @@ ImFont* font1 = io.Fonts->AddFontFromFileTTF("font.ttf", size_pixels);
 ImFont* font2 = io.Fonts->AddFontFromFileTTF("anotherfont.otf", size_pixels);
 
 // Select font at runtime
-ImGui::Text("Hello");	// use the default font (which is the first loaded font)
+ImGui::Text("Hello"); // use the default font (which is the first loaded font)
 ImGui::PushFont(font2);
 ImGui::Text("Hello with another font");
 ImGui::PopFont();
@@ -311,39 +311,31 @@ In some situations, you may also use `/` path separator under Windows.
 
 Some fonts files are available in the `misc/fonts/` folder:
 
-```
-Roboto-Medium.ttf
-  Apache License 2.0
-  by Christian Robetson
-  https://fonts.google.com/specimen/Roboto
+**Roboto-Medium.ttf**, by Christian Robetson
+<br>Apache License 2.0
+<br>https://fonts.google.com/specimen/Roboto
 
-Cousine-Regular.ttf
-  by Steve Matteson
-  Digitized data copyright (c) 2010 Google Corporation.
-  Licensed under the SIL Open Font License, Version 1.1
-  https://fonts.google.com/specimen/Cousine
+**Cousine-Regular.ttf**, by Steve Matteson
+<br>Digitized data copyright (c) 2010 Google Corporation. 
+<br>Licensed under the SIL Open Font License, Version 1.1
+<br>https://fonts.google.com/specimen/Cousine
 
-DroidSans.ttf
-  Copyright (c) Steve Matteson
-  Apache License, version 2.0
-  https://www.fontsquirrel.com/fonts/droid-sans
+**DroidSans.ttf**, by Steve Matteson
+<br>Apache License 2.0
+<br>https://www.fontsquirrel.com/fonts/droid-sans
 
-ProggyClean.ttf
-  Copyright (c) 2004, 2005 Tristan Grimmer
-  MIT License
-  recommended loading setting: Size = 13.0, GlyphOffset.y = +1
-  http://www.proggyfonts.net/
+**ProggyClean.ttf**, by Tristan Grimmer
+<br>MIT License
+<br>(recommended loading setting: Size = 13.0, GlyphOffset.y = +1)
+<br>http://www.proggyfonts.net/
 
-ProggyTiny.ttf
-  Copyright (c) 2004, 2005 Tristan Grimmer
-  MIT License
-  recommended loading setting: Size = 10.0, GlyphOffset.y = +1
-  http://www.proggyfonts.net/
+**ProggyTiny.ttf**, by Tristan Grimmer
+<br>MIT License
+<br>(recommended loading setting: Size = 10.0, GlyphOffset.y = +1)
+<br>http://www.proggyfonts.net/
 
-Karla-Regular.ttf
-  Copyright (c) 2012, Jonathan Pinhorn
-  SIL OPEN FONT LICENSE Version 1.1
-```
+**Karla-Regular.ttf**, by Jonathan Pinhorn
+<br>SIL OPEN FONT LICENSE Version 1.1
 
 ##### [Return to Index](#index)
 
