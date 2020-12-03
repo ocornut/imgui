@@ -663,19 +663,20 @@ namespace ImGui
     // - 3. Optionally call TableSetupScrollFreeze() to request scroll freezing of columns/rows
     // - 4. Optionally call TableHeadersRow() to submit a header row (names will be pulled from data submitted to TableSetupColumns)
     // - 5. Populate contents
-    //    - In most situations you can use TableNextRow() + TableSetColumnIndex(xx) to start appending into a column.
+    //    - In most situations you can use TableNextRow() + TableSetColumnIndex(N) to start appending into a column.
     //    - If you are using tables as a sort of grid, where every columns is holding the same type of contents,
     //      you may prefer using TableNextColumn() instead of TableNextRow() + TableSetColumnIndex().
     //      TableNextColumn() will automatically wrap-around into the next row if needed.
     //    - IMPORTANT: Comparatively to the old Columns() API, we need to call TableNextColumn() for the first column!
     //    - Both TableSetColumnIndex() and TableNextColumn() return false when the column is not visible, so you can
-    //      skip submitting the contents of a cell but only if you know the contents is not going to alter row height.
+    //      skip submitting the contents of a cell BUT ONLY if you know the contents is not going to alter row height.
+    //      In many situations, you may skip submitting contents for every columns but one (e.g. the first one).
     //    - Summary of possible call flow:
     //      ----------------------------------------------------------------------------------------------------------
     //       TableNextRow() -> TableSetColumnIndex(0) -> Text("Hello 0") -> TableSetColumnIndex(1) -> Text("Hello 1")  // OK
-    //       TableNextRow() -> TableNextColumn()         Text("Hello 0") -> TableNextColumn()      -> Text("Hello 1")  // OK
-    //                         TableNextColumn()         Text("Hello 0") -> TableNextColumn()      -> Text("Hello 1")  // OK: TableNextColumn() automatically gets to next row!
-    //       TableNextRow()                              Text("Hello 0")                                               // Not OK! Missing TableSetColumnIndex() or TableNextColumn()! Text will not appear!
+    //       TableNextRow() -> TableNextColumn()      -> Text("Hello 0") -> TableNextColumn()      -> Text("Hello 1")  // OK
+    //                         TableNextColumn()      -> Text("Hello 0") -> TableNextColumn()      -> Text("Hello 1")  // OK: TableNextColumn() automatically gets to next row!
+    //       TableNextRow()                           -> Text("Hello 0")                                               // Not OK! Missing TableSetColumnIndex() or TableNextColumn()! Text will not appear!
     //      ----------------------------------------------------------------------------------------------------------
     // - 5. Call EndTable()
     #define IMGUI_HAS_TABLE 1
@@ -1109,8 +1110,8 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_NoHeaderWidth             = 1 << 12,  // Header width don't contribute to automatic column width.
     ImGuiTableColumnFlags_PreferSortAscending       = 1 << 13,  // Make the initial sort direction Ascending when first sorting on this column (default).
     ImGuiTableColumnFlags_PreferSortDescending      = 1 << 14,  // Make the initial sort direction Descending when first sorting on this column.
-    ImGuiTableColumnFlags_IndentEnable              = 1 << 15,  // Use current Indent value when entering cell (default for 1st column).
-    ImGuiTableColumnFlags_IndentDisable             = 1 << 16,  // Ignore current Indent value when entering cell (default for columns after the 1st one). Indentation changes _within_ the cell will still be honored.
+    ImGuiTableColumnFlags_IndentEnable              = 1 << 15,  // Use current Indent value when entering cell (default for column 0).
+    ImGuiTableColumnFlags_IndentDisable             = 1 << 16,  // Ignore current Indent value when entering cell (default for columns > 0). Indentation changes _within_ the cell will still be honored.
 
     // [Internal] Combinations and masks
     ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAutoResize,

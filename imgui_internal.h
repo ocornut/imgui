@@ -1898,7 +1898,8 @@ typedef ImS8 ImGuiTableColumnIdx;
 typedef ImU8 ImGuiTableDrawChannelIdx;
 
 // [Internal] sizeof() ~ 104
-// We use the terminology "Visible" to refer to a columns that are not Hidden by user or settings. However it may still be out of view and clipped (and IsClipped would be set).
+// We use the terminology "Enabled" to refer to a column that is not Hidden by user/api.
+// We use the terminology "Clipped" to refer to a column that is out of sight because of scrolling/clipping. 
 // This is in contrast with some user-facing api such as IsItemVisible() / IsRectVisible() which use "Visible" to mean "not clipped".
 struct ImGuiTableColumn
 {
@@ -1932,7 +1933,7 @@ struct ImGuiTableColumn
     bool                    IsEnabled;                      // Is the column not marked Hidden by the user? (even if off view, e.g. clipped by scrolling).
     bool                    IsEnabledNextFrame;
     bool                    IsClipped;                      // Is not actually in view (e.g. not overlapping the host window clipping rectangle).
-    bool                    IsSkipItems;                    // Do we want item submissions to this column to be ignored early on.
+    bool                    IsSkipItems;                    // Do we want item submissions to this column to be completely ignored (no layout will happen).
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
     ImS8                    SortDirection;                  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending
     ImU8                    AutoFitQueue;                   // Queue of 8 values for the next 8 frames to request auto-fit
@@ -1969,9 +1970,9 @@ struct ImGuiTable
     ImSpan<ImGuiTableColumn>    Columns;                    // Point within RawData[]
     ImSpan<ImGuiTableColumnIdx> DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
-    ImU64                       EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImU64                       EnabledMaskByDisplayOrder;  // Column DisplayOrder -> IsEnabled map
     ImU64                       EnabledUnclippedMaskByIndex;// Enabled and not Clipped, aka "actually visible" "not hidden by some scrolling"
+    ImU64                       EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
     ImGuiTableFlags             SettingsLoadedFlags;        // Which data were loaded from the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
