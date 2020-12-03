@@ -50,6 +50,63 @@ Index of this file:
 //    | EndChild()                              - (if ScrollX/ScrollY is set)
 //-----------------------------------------------------------------------------
 
+//-----------------------------------------------------------------------------
+// TABLE SIZING
+//-----------------------------------------------------------------------------
+// (Read carefully because this is subtle but it does make sense!)
+// About 'outer_size', its meaning needs to differ slightly depending of if we are using ScrollX/ScrollY flags:
+//   X:
+//   - outer_size.x < 0.0f  ->  right align from window/work-rect maximum x edge.
+//   - outer_size.x = 0.0f  ->  auto enlarge, use all available space.
+//   - outer_size.x > 0.0f  ->  fixed width
+//   Y with ScrollX/ScrollY: using a child window for scrolling:
+//   - outer_size.y < 0.0f  ->  bottom align
+//   - outer_size.y = 0.0f  ->  bottom align, consistent with BeginChild(). not recommended unless table is last item in parent window.
+//   - outer_size.y > 0.0f  ->  fixed child height. recommended when using Scrolling on any axis.
+//   Y without scrolling, we output table directly in parent window:
+//   - outer_size.y < 0.0f  ->  bottom align (will auto extend, unless NoHostExtendV is set)
+//   - outer_size.y = 0.0f  ->  zero minimum height (will auto extend, unless NoHostExtendV is set)
+//   - outer_size.y > 0.0f  ->  minimum height (will auto extend, unless NoHostExtendV is set)
+// About 'inner_width':
+//   With ScrollX:
+//   - inner_width  < 0.0f  ->  *illegal* fit in known width (right align from outer_size.x) <-- weird
+//   - inner_width  = 0.0f  ->  fit in outer_width: Fixed size columns will take space they need (if avail, otherwise shrink down), Stretch columns becomes Fixed columns.
+//   - inner_width  > 0.0f  ->  override scrolling width, generally to be larger than outer_size.x. Fixed column take space they need (if avail, otherwise shrink down), Stretch columns share remaining space!
+//   Without ScrollX:
+//   - inner_width          ->  *ignored*
+// Details:
+// - If you want to use Stretch columns with ScrollX, you generally need to specify 'inner_width' otherwise the concept
+//   of "available space" doesn't make sense.
+// - Even if not really useful, we allow 'inner_width < outer_size.x' for consistency and to facilitate understanding
+//   of what the value does.
+//-----------------------------------------------------------------------------
+
+//-----------------------------------------------------------------------------
+// TABLES CULLING
+//-----------------------------------------------------------------------------
+// About clipping/culling of Rows in Tables:
+// - For large numbers of rows, it is recommended you use ImGuiListClipper to only submit visible rows.
+//   ImGuiListClipper is reliant on the fact that rows are of equal height.
+//   See 'Demo->Tables->Vertical Scrolling' or 'Demo->Tables->Advanced' for a demo of using the clipper.
+//-----------------------------------------------------------------------------
+// About clipping/culling of Columns in Tables:
+// - Case A: column is not hidden by user, and at least partially in sight (most common case).
+// - Case B: column is clipped / out of sight (because of scrolling or parent ClipRect): TableNextColumn() return false as a hint but we still allow layout output.
+// - Case C: column is hidden explicitly by the user (e.g. via the context menu, or _DefaultHide column flag, etc.).
+//
+//                        [A]         [B]          [C]         
+//  TableNextColumn():    true        false        false       -> [userland] when TableNextColumn() / TableSetColumnIndex() return false, user can skip submitting items but only if the column doesn't contribute to row height.
+//          SkipItems:    false       false        true        -> [internal] when SkipItems is true, most widgets will early out if submitted, resulting is no layout output.
+//           ClipRect:    normal      zero-width   zero-width  -> [internal] when ClipRect is zero, ItemAdd() will return false and most widgets will early out mid-way.
+//  ImDrawList output:    normal      dummy        dummy       -> [internal] when using the dummy channel, ImDrawList submissions (if any) will be wasted (because cliprect is zero-width anyway).
+//
+// - We need distinguish those cases because non-hidden columns that are clipped outside of scrolling bounds should still contribute their height to the row.
+//   However, in the majority of cases, the contribution to row height is the same for all columns, or the tallest cells are known by the programmer.
+//-----------------------------------------------------------------------------
+// About clipping/culling of whole Tables:
+// - Scrolling tables with a known outer size can be clipped earlier as BeginTable() will return false.
+//-----------------------------------------------------------------------------
+
 #if defined(_MSC_VER) && !defined(_CRT_SECURE_NO_WARNINGS)
 #define _CRT_SECURE_NO_WARNINGS
 #endif
@@ -183,32 +240,6 @@ ImGuiTable* ImGui::TableFindByID(ImGuiID id)
     return g.Tables.GetByKey(id);
 }
 
-// (Read carefully because this is subtle but it does make sense!)
-// About 'outer_size', its meaning needs to differ slightly depending of if we are using ScrollX/ScrollY flags:
-//   X:
-//   - outer_size.x < 0.0f  ->  right align from window/work-rect maximum x edge.
-//   - outer_size.x = 0.0f  ->  auto enlarge, use all available space.
-//   - outer_size.x > 0.0f  ->  fixed width
-//   Y with ScrollX/ScrollY: using a child window for scrolling:
-//   - outer_size.y < 0.0f  ->  bottom align
-//   - outer_size.y = 0.0f  ->  bottom align, consistent with BeginChild(). not recommended unless table is last item in parent window.
-//   - outer_size.y > 0.0f  ->  fixed child height. recommended when using Scrolling on any axis.
-//   Y without scrolling, we output table directly in parent window:
-//   - outer_size.y < 0.0f  ->  bottom align (will auto extend, unless NoHostExtendV is set)
-//   - outer_size.y = 0.0f  ->  zero minimum height (will auto extend, unless NoHostExtendV is set)
-//   - outer_size.y > 0.0f  ->  minimum height (will auto extend, unless NoHostExtendV is set)
-// About 'inner_width':
-//   With ScrollX:
-//   - inner_width  < 0.0f  ->  *illegal* fit in known width (right align from outer_size.x) <-- weird
-//   - inner_width  = 0.0f  ->  fit in outer_width: Fixed size columns will take space they need (if avail, otherwise shrink down), Stretch columns becomes Fixed columns.
-//   - inner_width  > 0.0f  ->  override scrolling width, generally to be larger than outer_size.x. Fixed column take space they need (if avail, otherwise shrink down), Stretch columns share remaining space!
-//   Without ScrollX:
-//   - inner_width          ->  *ignored*
-// Details:
-// - If you want to use Stretch columns with ScrollX, you generally need to specify 'inner_width' otherwise the concept
-//   of "available space" doesn't make sense.
-// - Even if not really useful, we allow 'inner_width < outer_size.x' for consistency and to facilitate understanding
-//   of what the value does.
 bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
     ImGuiID id = GetID(str_id);
@@ -627,7 +658,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
         IM_ASSERT(column->IndexWithinEnabledSet <= column->DisplayOrder);
     }
-    table->EnabledUnclippedMaskByIndex = table->EnabledMaskByIndex; // Columns will be masked out below when Clipped
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)last_visible_column_idx;
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible
@@ -685,7 +715,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         {
             // Process auto-fit for non-stretched columns
             // Latch initial size for fixed columns and update it constantly for auto-resizing column (unless clipped!)
-            if ((column->AutoFitQueue != 0x00) || ((column->Flags & ImGuiTableColumnFlags_WidthAutoResize) && !column->IsClipped))
+            if ((column->AutoFitQueue != 0x00) || ((column->Flags & ImGuiTableColumnFlags_WidthAutoResize) && column->IsVisibleX))
                 column->WidthRequest = width_auto;
 
             // FIXME-TABLE: Increase minimum size during init frame to avoid biasing auto-fitting widgets
@@ -809,6 +839,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     float offset_x = ((table->FreezeColumnsCount > 0) ? table->OuterRect.Min.x : work_rect.Min.x) + table->OuterPaddingX - table->CellSpacingX1;
     ImRect host_clip_rect = table->InnerClipRect;
     //host_clip_rect.Max.x += table->CellPaddingX + table->CellSpacingX2;
+    table->VisibleMaskByIndex = 0x00;
+    table->RequestOutputMaskByIndex = 0x00;
     for (int order_n = 0; order_n < table->ColumnsCount; order_n++)
     {
         const int column_n = table->DisplayOrderToIndex[order_n];
@@ -828,7 +860,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             column->ClipRect.Min.y = work_rect.Min.y;
             column->ClipRect.Max.y = FLT_MAX;
             column->ClipRect.ClipWithFull(host_clip_rect);
-            column->IsClipped = column->IsSkipItems = true;
+            column->IsVisibleX = column->IsVisibleY = column->IsRequestOutput = false;
+            column->IsSkipItems = true;
             column->ItemWidth = 1.0f;
             continue;
         }
@@ -877,11 +910,31 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->ClipRect.Max.y = FLT_MAX;
         column->ClipRect.ClipWithFull(host_clip_rect);
 
-        column->IsClipped = (column->ClipRect.Max.x <= column->ClipRect.Min.x) && (column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0;
-        if (column->IsClipped)
-            table->EnabledUnclippedMaskByIndex &= ~((ImU64)1 << column_n); // Columns with the _WidthAutoResize sizing policy will never be updated then.
+        // Mark column as Clipped (not in sight)
+        // Note that scrolling tables (where inner_window != outer_window) handle Y clipped earlier in BeginTable() so IsVisibleY really only applies to non-scrolling tables.
+        // FIXME-TABLE: Because InnerClipRect.Max.y is conservatively ==outer_window->ClipRect.Max.y, we never can mark columns _Above_ the scroll line as not IsVisibleY.
+        // Taking advantage of LastOuterHeight would yield good results there...
+        // FIXME-TABLE: IsVisible == false is disabled because it effectively means not submitting will reduces contents width which is fed to outer_window->DC.CursorMaxPos.x,
+        // and this may be used (e.g. typically by outer_window using AlwaysAutoResize or outer_window's horizontal scrollbar, but could be something else).
+        // Possible solution to preserve last known content width for clipped column. Test 'table_reported_size' fails when enabling Y clipping and window is resized small.
+        column->IsVisibleX = (column->ClipRect.Max.x > column->ClipRect.Min.x);
+        column->IsVisibleY = true; // (column->ClipRect.Max.y > column->ClipRect.Min.y);
+        const bool is_visible = column->IsVisibleX; //&& column->IsVisibleY;
+        if (is_visible)
+            table->VisibleMaskByIndex |= ((ImU64)1 << column_n);
 
+        // Mark column as requesting output from user. Note that fixed + non-resizable sets are auto-fitting at all times and therefore always request output.
+        column->IsRequestOutput = is_visible || column->AutoFitQueue != 0 || column->CannotSkipItemsQueue != 0;
+        if (column->IsRequestOutput)
+            table->RequestOutputMaskByIndex |= ((ImU64)1 << column_n);
+
+        // Mark column as SkipItems (ignoring all items/layout)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
+        //if (!is_visible && (column->Flags & ImGuiTableColumnFlags_AutoCull))
+        //    if ((column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0)
+        //        column->IsSkipItems = true;
+        if (column->IsSkipItems)
+            IM_ASSERT(!is_visible);
 
         // Detect hovered column
         if (is_hovering_table && g.IO.MousePos.x >= column->ClipRect.Min.x && g.IO.MousePos.x < column->ClipRect.Max.x)
@@ -1649,9 +1702,10 @@ bool ImGui::TableNextColumn()
         TableBeginCell(table, 0);
     }
 
-    // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
+    // Return whether the column is visible. User may choose to skip submitting items based on this return value,
+    // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
     int column_n = table->CurrentColumn;
-    return (table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
+    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
 // [Public] Append into a specific column
@@ -1670,8 +1724,9 @@ bool ImGui::TableSetColumnIndex(int column_n)
         TableBeginCell(table, column_n);
     }
 
-    // FIXME-TABLE: it is likely to alter layout if user skips a columns contents based on clipping.
-    return (table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)) != 0;
+    // Return whether the column is visible. User may choose to skip submitting items based on this return value,
+    // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
+    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
 }
 
 int ImGui::TableGetColumnCount()
@@ -1820,7 +1875,7 @@ void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int colum
             return;
         if (column_n == -1)
             column_n = table->CurrentColumn;
-        if ((table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)) == 0)
+        if ((table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0)
             return;
         if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
             table->RowCellDataCurrent++;
@@ -1899,7 +1954,7 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     const int freeze_row_multiplier = (table->FreezeRowsCount > 0) ? 2 : 1;
     const int channels_for_row = (table->Flags & ImGuiTableFlags_NoClip) ? 1 : table->ColumnsEnabledCount;
     const int channels_for_bg = 1 + 1 * freeze_row_multiplier;
-    const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || table->EnabledUnclippedMaskByIndex != table->EnabledMaskByIndex) ? +1 : 0;
+    const int channels_for_dummy = (table->ColumnsEnabledCount < table->ColumnsCount || table->VisibleMaskByIndex != table->EnabledMaskByIndex) ? +1 : 0;
     const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
     table->DummyDrawChannel = (ImGuiTableDrawChannelIdx)((channels_for_dummy > 0) ? channels_total - 1 : -1);
@@ -1910,7 +1965,7 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
-        if (!column->IsClipped)
+        if (column->IsVisibleX && column->IsVisibleY)
         {
             column->DrawChannelFrozen = (ImGuiTableDrawChannelIdx)(draw_channel_current);
             column->DrawChannelUnfrozen = (ImGuiTableDrawChannelIdx)(draw_channel_current + (table->FreezeRowsCount > 0 ? channels_for_row + 1 : 0));
@@ -1975,7 +2030,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     // 1. Scan channels and take note of those which can be merged
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
-        if (!(table->EnabledUnclippedMaskByIndex & ((ImU64)1 << column_n)))
+        if ((table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0)
             continue;
         ImGuiTableColumn* column = &table->Columns[column_n];
 
@@ -3116,13 +3171,13 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         const char* name = TableGetColumnName(table, n);
         ImFormatString(buf, IM_ARRAYSIZE(buf),
             "Column %d order %d name '%s': offset %+.2f to %+.2f\n"
-            "Visible: %d, Clipped: %d, SkipItems: %d, DrawChannels: %d,%d\n"
+            "Enabled: %d, VisibleX/Y: %d/%d, RequestOutput: %d, SkipItems: %d, DrawChannels: %d,%d\n"
             "WidthGiven: %.1f, Request/Auto: %.1f/%.1f, StretchWeight: %.3f\n"
             "MinX: %.1f, MaxX: %.1f (%+.1f), ClipRect: %.1f to %.1f (+%.1f)\n"
             "ContentWidth: %.1f,%.1f, HeadersUsed/Ideal %.1f/%.1f\n"
             "Sort: %d%s, UserID: 0x%08X, Flags: 0x%04X: %s%s%s%s..",
             n, column->DisplayOrder, name, column->MinX - table->WorkRect.Min.x, column->MaxX - table->WorkRect.Min.x,
-            column->IsEnabled, column->IsClipped, column->IsSkipItems, column->DrawChannelFrozen, column->DrawChannelUnfrozen,
+            column->IsEnabled, column->IsVisibleX, column->IsVisibleY, column->IsRequestOutput, column->IsSkipItems, column->DrawChannelFrozen, column->DrawChannelUnfrozen,
             column->WidthGiven, column->WidthRequest, column->WidthAuto, column->StretchWeight,
             column->MinX, column->MaxX, column->MaxX - column->MinX, column->ClipRect.Min.x, column->ClipRect.Max.x, column->ClipRect.Max.x - column->ClipRect.Min.x,
             column->ContentMaxXFrozen - column->WorkMinX, column->ContentMaxXUnfrozen - column->WorkMinX, column->ContentMaxXHeadersUsed - column->WorkMinX, column->ContentMaxXHeadersIdeal - column->WorkMinX,

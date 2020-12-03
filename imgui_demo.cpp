@@ -3518,9 +3518,7 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextRow();
                 for (int column = 0; column < 3; column++)
                 {
-                    if (!ImGui::TableSetColumnIndex(column))
-                        continue;
-
+                    ImGui::TableSetColumnIndex(column);
                     char buf[32];
                     sprintf(buf, "Hello %d,%d", column, row);
                     if (contents_type == CT_Text)
@@ -3861,20 +3859,22 @@ static void ShowDemoWindowTables()
         {
             ImGui::TableSetupScrollFreeze(freeze_cols, freeze_rows);
             ImGui::TableSetupColumn("Line #", ImGuiTableColumnFlags_NoHide); // Make the first column not hideable to match our use of TableSetupScrollFreeze()
-            ImGui::TableSetupColumn("One", ImGuiTableColumnFlags_None);
-            ImGui::TableSetupColumn("Two", ImGuiTableColumnFlags_None);
-            ImGui::TableSetupColumn("Three", ImGuiTableColumnFlags_None);
-            ImGui::TableSetupColumn("Four", ImGuiTableColumnFlags_None);
-            ImGui::TableSetupColumn("Five", ImGuiTableColumnFlags_None);
-            ImGui::TableSetupColumn("Six", ImGuiTableColumnFlags_None);
+            ImGui::TableSetupColumn("One");
+            ImGui::TableSetupColumn("Two");
+            ImGui::TableSetupColumn("Three");
+            ImGui::TableSetupColumn("Four");
+            ImGui::TableSetupColumn("Five");
+            ImGui::TableSetupColumn("Six");
             ImGui::TableHeadersRow();
             for (int row = 0; row < 20; row++)
             {
                 ImGui::TableNextRow();
                 for (int column = 0; column < 7; column++)
                 {
-                    // Both TableNextColumn() and TableSetColumnIndex() return false when a column is not visible, which can be used for clipping.
-                    if (!ImGui::TableSetColumnIndex(column))
+                    // Both TableNextColumn() and TableSetColumnIndex() return false when a column is not visible.
+                    // Because here we know that A) all our columns are contributing the same to row height and B) column 0 is always visible,
+                    // we only always submit this one column.
+                    if (!ImGui::TableSetColumnIndex(column) && column > 0)
                         continue;
                     if (column == 0)
                         ImGui::Text("Line %d", row);
@@ -4809,8 +4809,8 @@ static void ShowDemoWindowTables()
                         }
                     }
 
-                    ImGui::TableNextColumn();
-                    ImGui::TextUnformatted(item->Name);
+                    if (ImGui::TableNextColumn())
+                        ImGui::TextUnformatted(item->Name);
 
                     // Here we demonstrate marking our data set as needing to be sorted again if we modified a quantity,
                     // and we are currently sorting on the column showing the Quantity.
@@ -4825,8 +4825,8 @@ static void ShowDemoWindowTables()
                         if (sorts_specs_using_quantity && ImGui::IsItemDeactivated()) { items_need_sort = true; }
                     }
 
-                    ImGui::TableNextColumn();
-                    ImGui::Text("%d", item->Quantity);
+                    if (ImGui::TableNextColumn())
+                        ImGui::Text("%d", item->Quantity);
 
                     ImGui::TableNextColumn();
                     if (show_wrapped_text)
@@ -4834,8 +4834,8 @@ static void ShowDemoWindowTables()
                     else
                         ImGui::Text("Lorem ipsum dolor sit amet");
 
-                    ImGui::TableNextColumn();
-                    ImGui::Text("1234");
+                    if (ImGui::TableNextColumn())
+                        ImGui::Text("1234");
 
                     ImGui::PopID();
                 }

@@ -1932,7 +1932,9 @@ struct ImGuiTableColumn
     ImGuiTableDrawChannelIdx DrawChannelUnfrozen;
     bool                    IsEnabled;                      // Is the column not marked Hidden by the user? (even if off view, e.g. clipped by scrolling).
     bool                    IsEnabledNextFrame;
-    bool                    IsClipped;                      // Is not actually in view (e.g. not overlapping the host window clipping rectangle).
+    bool                    IsVisibleX;                     // Is actually in view (e.g. overlapping the host window clipping rectangle, not scrolled).
+    bool                    IsVisibleY;
+    bool                    IsRequestOutput;                // Return value for TableSetColumnIndex() / TableNextColumn(): whether we request user to output contents or not.
     bool                    IsSkipItems;                    // Do we want item submissions to this column to be completely ignored (no layout will happen).
     ImS8                    NavLayerCurrent;                // ImGuiNavLayer in 1 byte
     ImS8                    SortDirection;                  // ImGuiSortDirection_Ascending or ImGuiSortDirection_Descending
@@ -1971,8 +1973,9 @@ struct ImGuiTable
     ImSpan<ImGuiTableColumnIdx> DisplayOrderToIndex;        // Point within RawData[]. Store display order of columns (when not reordered, the values are 0...Count-1)
     ImSpan<ImGuiTableCellData>  RowCellData;                // Point within RawData[]. Store cells background requests for current row.
     ImU64                       EnabledMaskByDisplayOrder;  // Column DisplayOrder -> IsEnabled map
-    ImU64                       EnabledUnclippedMaskByIndex;// Enabled and not Clipped, aka "actually visible" "not hidden by some scrolling"
     ImU64                       EnabledMaskByIndex;         // Column Index -> IsEnabled map (== not hidden by user/api) in a format adequate for iterating column without touching cold data
+    ImU64                       VisibleMaskByIndex;         // Column Index -> IsVisibleX|IsVisibleY map (== not hidden by user/api && not hidden by scrolling/cliprect)
+    ImU64                       RequestOutputMaskByIndex;   // Column Index -> IsVisible || AutoFit (== expect user to submit items)
     ImGuiTableFlags             SettingsLoadedFlags;        // Which data were loaded from the .ini file (e.g. when order is not altered we won't save order)
     int                         SettingsOffset;             // Offset in g.SettingsTables
     int                         LastFrameActive;
@@ -2280,7 +2283,7 @@ namespace ImGui
     // Tables: Candidates for public api
     IMGUI_API void          TableOpenContextMenu(int column_n = -1);
     IMGUI_API void          TableSetColumnWidth(int column_n, float width);
-    IMGUI_API bool          TableGetColumnIsEnabled(int column_n = -1);  // Return false when column is disabled (hidden) by user (e.g. via context menu, or _DefaultHide flag)
+    IMGUI_API bool          TableGetColumnIsEnabled(int column_n = -1);  // Return false when column is disabled (hidden by user/api, e.g. via context menu, or _DefaultHide flag)
     IMGUI_API void          TableSetColumnIsEnabled(int column_n, bool enabled);
     IMGUI_API void          TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_direction, bool append_to_sort_specs);
     IMGUI_API float         TableGetHeaderRowHeight();

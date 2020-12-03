@@ -669,7 +669,7 @@ namespace ImGui
     //      TableNextColumn() will automatically wrap-around into the next row if needed.
     //    - IMPORTANT: Comparatively to the old Columns() API, we need to call TableNextColumn() for the first column!
     //    - Both TableSetColumnIndex() and TableNextColumn() return false when the column is not visible, so you can
-    //      skip submitting the contents of a cell BUT ONLY if you know the contents is not going to alter row height.
+    //      skip submitting the contents of a cell BUT ONLY if you know it is not going to contribute to row height.
     //      In many situations, you may skip submitting contents for every columns but one (e.g. the first one).
     //    - Summary of possible call flow:
     //      ----------------------------------------------------------------------------------------------------------
@@ -1055,7 +1055,7 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_None                            = 0,
     ImGuiTableFlags_Resizable                       = 1 << 0,   // Allow resizing columns.
     ImGuiTableFlags_Reorderable                     = 1 << 1,   // Allow reordering columns in header row (need calling TableSetupColumn() + TableHeadersRow() to display headers)
-    ImGuiTableFlags_Hideable                        = 1 << 2,   // Allow hiding columns in context menu.
+    ImGuiTableFlags_Hideable                        = 1 << 2,   // Allow hiding/disabling columns in context menu.
     ImGuiTableFlags_Sortable                        = 1 << 3,   // Allow sorting on one column (sort_specs_count will always be == 1). Call TableGetSortSpecs() to obtain sort specs.
     ImGuiTableFlags_MultiSortable                   = 1 << 4,   // Allow sorting on multiple columns by holding Shift (sort_specs_count may be > 1). Call TableGetSortSpecs() to obtain sort specs.
     ImGuiTableFlags_NoSavedSettings                 = 1 << 5,   // Disable persisting columns order, width and sort settings in the .ini file.
@@ -1095,14 +1095,14 @@ enum ImGuiTableFlags_
 enum ImGuiTableColumnFlags_
 {
     ImGuiTableColumnFlags_None                      = 0,
-    ImGuiTableColumnFlags_DefaultHide               = 1 << 0,   // Default as a hidden column.
+    ImGuiTableColumnFlags_DefaultHide               = 1 << 0,   // Default as a hidden/disabled column.
     ImGuiTableColumnFlags_DefaultSort               = 1 << 1,   // Default as a sorting column.
     ImGuiTableColumnFlags_WidthStretch              = 1 << 2,   // Column will stretch. Preferable with horizontal scrolling disabled (default if table sizing policy is _ColumnsWidthStretch).
     ImGuiTableColumnFlags_WidthFixed                = 1 << 3,   // Column will not stretch. Preferable with horizontal scrolling enabled (default if table sizing policy is _ColumnsWidthFixed and table is resizable).
     ImGuiTableColumnFlags_WidthAutoResize           = 1 << 4,   // Column will not stretch and keep resizing based on submitted contents (default if table sizing policy is _ColumnsWidthFixed and table is not resizable).
     ImGuiTableColumnFlags_NoResize                  = 1 << 5,   // Disable manual resizing.
     ImGuiTableColumnFlags_NoReorder                 = 1 << 6,   // Disable manual reordering this column, this will also prevent other columns from crossing over this column.
-    ImGuiTableColumnFlags_NoHide                    = 1 << 7,   // Disable ability to hide this column.
+    ImGuiTableColumnFlags_NoHide                    = 1 << 7,   // Disable ability to hide/disable this column.
     ImGuiTableColumnFlags_NoClip                    = 1 << 8,   // Disable clipping for this column (all NoClip columns will render in a same draw command).
     ImGuiTableColumnFlags_NoSort                    = 1 << 9,   // Disable ability to sort on this field (even if ImGuiTableFlags_Sortable is set on the table).
     ImGuiTableColumnFlags_NoSortAscending           = 1 << 10,  // Disable ability to sort in the ascending direction.
