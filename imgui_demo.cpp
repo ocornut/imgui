@@ -3344,9 +3344,12 @@ static void EditTableColumnsFlags(ImGuiTableColumnFlags* p_flags)
 {
     ImGui::CheckboxFlags("_DefaultHide", p_flags, ImGuiTableColumnFlags_DefaultHide);
     ImGui::CheckboxFlags("_DefaultSort", p_flags, ImGuiTableColumnFlags_DefaultSort);
-    ImGui::CheckboxFlags("_WidthStretch", p_flags, ImGuiTableColumnFlags_WidthStretch);
-    ImGui::CheckboxFlags("_WidthFixed", p_flags, ImGuiTableColumnFlags_WidthFixed);
-    ImGui::CheckboxFlags("_WidthAutoResize", p_flags, ImGuiTableColumnFlags_WidthAutoResize);
+    if (ImGui::CheckboxFlags("_WidthStretch", p_flags, ImGuiTableColumnFlags_WidthStretch))
+        *p_flags &= ~(ImGuiTableColumnFlags_WidthMask_ ^ ImGuiTableColumnFlags_WidthStretch);
+    if (ImGui::CheckboxFlags("_WidthFixed", p_flags, ImGuiTableColumnFlags_WidthFixed))
+        *p_flags &= ~(ImGuiTableColumnFlags_WidthMask_ ^ ImGuiTableColumnFlags_WidthFixed);
+    if (ImGui::CheckboxFlags("_WidthAutoResize", p_flags, ImGuiTableColumnFlags_WidthAutoResize))
+        *p_flags &= ~(ImGuiTableColumnFlags_WidthMask_ ^ ImGuiTableColumnFlags_WidthAutoResize);
     ImGui::CheckboxFlags("_NoResize", p_flags, ImGuiTableColumnFlags_NoResize);
     ImGui::CheckboxFlags("_NoReorder", p_flags, ImGuiTableColumnFlags_NoReorder);
     ImGui::CheckboxFlags("_NoHide", p_flags, ImGuiTableColumnFlags_NoHide);
@@ -3354,11 +3357,19 @@ static void EditTableColumnsFlags(ImGuiTableColumnFlags* p_flags)
     ImGui::CheckboxFlags("_NoSort", p_flags, ImGuiTableColumnFlags_NoSort);
     ImGui::CheckboxFlags("_NoSortAscending", p_flags, ImGuiTableColumnFlags_NoSortAscending);
     ImGui::CheckboxFlags("_NoSortDescending", p_flags, ImGuiTableColumnFlags_NoSortDescending);
-    ImGui::CheckboxFlags("_NoSHeaderWidth", p_flags, ImGuiTableColumnFlags_NoHeaderWidth);
+    ImGui::CheckboxFlags("_NoHeaderWidth", p_flags, ImGuiTableColumnFlags_NoHeaderWidth);
     ImGui::CheckboxFlags("_PreferSortAscending", p_flags, ImGuiTableColumnFlags_PreferSortAscending);
     ImGui::CheckboxFlags("_PreferSortDescending", p_flags, ImGuiTableColumnFlags_PreferSortDescending);
     ImGui::CheckboxFlags("_IndentEnable", p_flags, ImGuiTableColumnFlags_IndentEnable); ImGui::SameLine(); HelpMarker("Default for column 0");
     ImGui::CheckboxFlags("_IndentDisable", p_flags, ImGuiTableColumnFlags_IndentDisable); ImGui::SameLine(); HelpMarker("Default for column >0");
+}
+
+static void ShowTableColumnsStatusFlags(ImGuiTableColumnFlags flags)
+{
+    ImGui::CheckboxFlags("_IsEnabled", &flags, ImGuiTableColumnFlags_IsEnabled);
+    ImGui::CheckboxFlags("_IsVisible", &flags, ImGuiTableColumnFlags_IsVisible);
+    ImGui::CheckboxFlags("_IsSorted", &flags, ImGuiTableColumnFlags_IsSorted);
+    ImGui::CheckboxFlags("_IsHovered", &flags, ImGuiTableColumnFlags_IsHovered);
 }
 
 static void ShowDemoWindowTables()
@@ -3871,9 +3882,12 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextRow();
                 for (int column = 0; column < 7; column++)
                 {
-                    // Both TableNextColumn() and TableSetColumnIndex() return false when a column is not visible.
-                    // Because here we know that A) all our columns are contributing the same to row height and B) column 0 is always visible,
-                    // we only always submit this one column.
+                    // Both TableNextColumn() and TableSetColumnIndex() return true when a column is visible or performing width measurement.
+                    // Because here we know that:
+                    // - A) all our columns are contributing the same to row height
+                    // - B) column 0 is always visible,
+                    // We only always submit this one column and can skip others.
+                    // More advanced per-column clipping behaviors may benefit from polling the status flags via TableGetColumnFlags().
                     if (!ImGui::TableSetColumnIndex(column) && column > 0)
                         continue;
                     if (column == 0)
@@ -3895,6 +3909,7 @@ static void ShowDemoWindowTables()
         const int column_count = 3;
         const char* column_names[column_count] = { "One", "Two", "Three" };
         static ImGuiTableColumnFlags column_flags[column_count] = { ImGuiTableColumnFlags_DefaultSort, ImGuiTableColumnFlags_None, ImGuiTableColumnFlags_DefaultHide };
+        static ImGuiTableColumnFlags column_flags_out[column_count] = { 0, 0, 0 }; // Output from TableGetColumnFlags()
 
         if (ImGui::BeginTable("##flags", column_count, ImGuiTableFlags_None))
         {
@@ -3904,8 +3919,13 @@ static void ShowDemoWindowTables()
                 ImGui::TableNextColumn();
                 ImGui::PushID(column);
                 ImGui::AlignTextToFramePadding(); // FIXME-TABLE: Workaround for wrong text baseline propagation
-                ImGui::Text("Flags for '%s'", column_names[column]);
+                ImGui::Text("'%s'", column_names[column]);
+                ImGui::Spacing();
+                ImGui::Text("Input flags:");
                 EditTableColumnsFlags(&column_flags[column]);
+                ImGui::Spacing();
+                ImGui::Text("Output flags:");
+                ShowTableColumnsStatusFlags(column_flags_out[column]);
                 ImGui::PopID();
             }
             PopStyleCompact();
@@ -3913,12 +3933,20 @@ static void ShowDemoWindowTables()
         }
 
         // Create the real table we care about for the example!
-        const ImGuiTableFlags flags = ImGuiTableFlags_ColumnsWidthFixed | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
-        if (ImGui::BeginTable("##table", column_count, flags))
+        // We use a scrolling table to be able to showcase the difference between the _IsEnabled and _IsVisible flags above, otherwise in
+        // a non-scrolling table columns are always visible (unless using ImGuiTableFlags_NoKeepColumnsVisible + resizing the parent window down)
+        const ImGuiTableFlags flags
+            = ImGuiTableFlags_ColumnsWidthFixed | ImGuiTableFlags_ScrollX | ImGuiTableFlags_ScrollY
+            | ImGuiTableFlags_RowBg | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV
+            | ImGuiTableFlags_Resizable | ImGuiTableFlags_Reorderable | ImGuiTableFlags_Hideable | ImGuiTableFlags_Sortable;
+        ImVec2 size = ImVec2(0, TEXT_BASE_HEIGHT * 9);
+        if (ImGui::BeginTable("##table", column_count, flags, size))
         {
             for (int column = 0; column < column_count; column++)
                 ImGui::TableSetupColumn(column_names[column], column_flags[column]);
             ImGui::TableHeadersRow();
+            for (int column = 0; column < column_count; column++)
+                column_flags_out[column] = ImGui::TableGetColumnFlags(column);
             float indent_step = (float)((int)TEXT_BASE_WIDTH / 2);
             for (int row = 0; row < 8; row++)
             {
@@ -4747,7 +4775,7 @@ static void ShowDemoWindowTables()
 
             // Take note of whether we are currently sorting based on the Quantity field,
             // we will use this to trigger sorting when we know the data of this column has been modified.
-            const bool sorts_specs_using_quantity = ImGui::TableGetColumnIsSorted(3);
+            const bool sorts_specs_using_quantity = (ImGui::TableGetColumnFlags(3) & ImGuiTableColumnFlags_IsSorted) != 0;
 
             // Show headers
             if (show_headers)

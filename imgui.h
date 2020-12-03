@@ -668,8 +668,9 @@ namespace ImGui
     //      you may prefer using TableNextColumn() instead of TableNextRow() + TableSetColumnIndex().
     //      TableNextColumn() will automatically wrap-around into the next row if needed.
     //    - IMPORTANT: Comparatively to the old Columns() API, we need to call TableNextColumn() for the first column!
-    //    - Both TableSetColumnIndex() and TableNextColumn() return false when the column is not visible, so you can
-    //      skip submitting the contents of a cell BUT ONLY if you know it is not going to contribute to row height.
+    //    - Both TableSetColumnIndex() and TableNextColumn() return true when the column is visible or performing
+    //      width measurements. Otherwise, you may skip submitting the contents of a cell/column, BUT ONLY if you know
+    //      it is not going to contribute to row height.
     //      In many situations, you may skip submitting contents for every columns but one (e.g. the first one).
     //    - Summary of possible call flow:
     //      ----------------------------------------------------------------------------------------------------------
@@ -704,12 +705,12 @@ namespace ImGui
     //   When 'SpecsDirty == true' you should sort your data. It will be true when sorting specs have changed since last call, or the first time.
     //   Make sure to set 'SpecsDirty = false' after sorting, else you may wastefully sort your data every frame!
     //   Lifetime: don't hold on this pointer over multiple frames or past any subsequent call to BeginTable().
-    IMGUI_API int           TableGetColumnCount();                      // return number of columns (value passed to BeginTable)
-    IMGUI_API const char*   TableGetColumnName(int column_n = -1);      // return "" if column didn't have a name declared by TableSetupColumn(). Pass -1 to use current column.
-    IMGUI_API bool          TableGetColumnIsSorted(int column_n = -1);  // return true if column is included in the sort specs. Rarely used, can be useful to tell if a data change should trigger resort. Equivalent to test ImGuiTableSortSpecs's ->ColumnsMask & (1 << column_n). Pass -1 to use current column.
-    IMGUI_API int           TableGetHoveredColumn();                    // return hovered column. return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
-    IMGUI_API ImGuiTableSortSpecs* TableGetSortSpecs();                 // get latest sort specs for the table (NULL if not sorting).
-    IMGUI_API void          TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n = -1);  // change the color of a cell, row, or column. See ImGuiTableBgTarget_ flags for details.
+    IMGUI_API int                   TableGetColumnCount();                      // return number of columns (value passed to BeginTable)
+    IMGUI_API const char*           TableGetColumnName(int column_n = -1);      // return "" if column didn't have a name declared by TableSetupColumn(). Pass -1 to use current column.
+    IMGUI_API ImGuiTableColumnFlags TableGetColumnFlags(int column_n = -1);     // return column flags so you can query their Enabled/Visible/Sorted/Hovered status flags.
+    IMGUI_API int                   TableGetHoveredColumn();                    // return hovered column. return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
+    IMGUI_API ImGuiTableSortSpecs*  TableGetSortSpecs();                        // get latest sort specs for the table (NULL if not sorting).
+    IMGUI_API void                  TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n = -1);  // change the color of a cell, row, or column. See ImGuiTableBgTarget_ flags for details.
 
     // Legacy Columns API (2020: prefer using Tables!)
     // - You can also use SameLine(pos_x) to mimic simplified columns.
@@ -1094,6 +1095,7 @@ enum ImGuiTableFlags_
 // Flags for ImGui::TableSetupColumn()
 enum ImGuiTableColumnFlags_
 {
+    // Input configuration flags
     ImGuiTableColumnFlags_None                      = 0,
     ImGuiTableColumnFlags_DefaultHide               = 1 << 0,   // Default as a hidden/disabled column.
     ImGuiTableColumnFlags_DefaultSort               = 1 << 1,   // Default as a sorting column.
@@ -1113,9 +1115,16 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_IndentEnable              = 1 << 15,  // Use current Indent value when entering cell (default for column 0).
     ImGuiTableColumnFlags_IndentDisable             = 1 << 16,  // Ignore current Indent value when entering cell (default for columns > 0). Indentation changes _within_ the cell will still be honored.
 
+    // Output status flags, read-only via TableGetColumnFlags()
+    ImGuiTableColumnFlags_IsEnabled                 = 1 << 20,  // Status: is enabled == not hidden by user/api (referred to as "Hide" in _DefaultHide and _NoHide) flags.
+    ImGuiTableColumnFlags_IsVisible                 = 1 << 21,  // Status: is visible == is enabled AND not clipped by scrolling.
+    ImGuiTableColumnFlags_IsSorted                  = 1 << 22,  // Status: is currently part of the sort specs
+    ImGuiTableColumnFlags_IsHovered                 = 1 << 23,  // Status: is hovered by mouse
+
     // [Internal] Combinations and masks
     ImGuiTableColumnFlags_WidthMask_                = ImGuiTableColumnFlags_WidthStretch | ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAutoResize,
     ImGuiTableColumnFlags_IndentMask_               = ImGuiTableColumnFlags_IndentEnable | ImGuiTableColumnFlags_IndentDisable,
+    ImGuiTableColumnFlags_StatusMask_               = ImGuiTableColumnFlags_IsEnabled | ImGuiTableColumnFlags_IsVisible | ImGuiTableColumnFlags_IsSorted | ImGuiTableColumnFlags_IsHovered,
     ImGuiTableColumnFlags_NoDirectResize_           = 1 << 30   // [Internal] Disable user resizing this column directly (it may however we resized indirectly from its left edge)
 };
 
