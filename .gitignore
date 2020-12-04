@@ -1,3 +1,9 @@
+## Premake built
+bin/
+bin-int
+ImGui.vcxproj
+ImGui.vcxproj.filters
+
 ## OSX artifacts
 .DS_Store
 
