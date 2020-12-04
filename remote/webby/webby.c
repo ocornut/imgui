@@ -15,16 +15,14 @@
 #include "webby_nn_aarch64_socket_bridge.h"
 #endif
 
-#if defined(ORBIS)
-#include "webby_orbis.h"
-#endif
-
 #if defined(__PS3__)
 #include "webby_ps3.h"
 #elif defined(__XBOX__)
 #include "webby_xbox.h"
 #elif defined(_WIN32)
 #include "webby_win32.h"
+#elif defined(ORBIS)
+#include "webby_orbis.h"
 #else
 #include "webby_unix.h"
 #endif
