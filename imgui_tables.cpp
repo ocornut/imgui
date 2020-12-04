@@ -240,6 +240,7 @@ ImGuiTable* ImGui::TableFindByID(ImGuiID id)
     return g.Tables.GetByKey(id);
 }
 
+// Read about "TABLE SIZING" at the top of this file.
 bool    ImGui::BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags, const ImVec2& outer_size, float inner_width)
 {
     ImGuiID id = GetID(str_id);
@@ -331,10 +332,13 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostBackupWorkRect = inner_window->WorkRect;
     table->HostBackupParentWorkRect = inner_window->ParentWorkRect;
     table->HostBackupColumnsOffset = outer_window->DC.ColumnsOffset;
+    table->HostBackupPrevLineSize = inner_window->DC.PrevLineSize;
+    table->HostBackupCurrLineSize = inner_window->DC.CurrLineSize;
     table->HostBackupCursorMaxPos = inner_window->DC.CursorMaxPos;
     table->HostBackupItemWidth = outer_window->DC.ItemWidth;
     table->HostBackupItemWidthStackSize = outer_window->DC.ItemWidthStack.Size;
     inner_window->ParentWorkRect = table->WorkRect;
+    inner_window->DC.PrevLineSize = inner_window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
 
     // Padding and Spacing
     // - None               ........Content..... Pad .....Content........
@@ -1137,6 +1141,8 @@ void    ImGui::EndTable()
             TableOpenContextMenu((int)table->HoveredColumnBody);
 
     // Finalize table height
+    inner_window->DC.PrevLineSize = table->HostBackupPrevLineSize;
+    inner_window->DC.CurrLineSize = table->HostBackupCurrLineSize;
     inner_window->DC.CursorMaxPos = table->HostBackupCursorMaxPos;
     if (inner_window != outer_window)
     {
