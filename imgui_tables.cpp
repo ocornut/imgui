@@ -271,7 +271,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
     // Acquire storage for the table
     ImGuiTable* table = g.Tables.GetOrAddByKey(id);
-    const bool table_is_new = (table->ID == 0);
     const int instance_no = (table->LastFrameActive != g.FrameCount) ? 0 : table->InstanceCurrent + 1;
     const ImGuiID instance_id = id + instance_no;
     const ImGuiTableFlags table_last_flags = table->Flags;
@@ -288,7 +287,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->LastFrameActive = g.FrameCount;
     table->OuterWindow = table->InnerWindow = outer_window;
     table->ColumnsCount = columns_count;
-    table->IsInitializing = false;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
     table->OuterRect = outer_rect;
@@ -415,10 +413,25 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     if (table->RawData == NULL)
     {
         TableBeginInitMemory(table, columns_count);
-        if (table_is_new)
-            table->IsInitializing = true;
-        table->IsSortSpecsDirty = table->IsSettingsRequestLoad = true;
+        table->IsInitializing = table->IsSettingsRequestLoad = true;
+    }
+    if (table->IsResetAllRequest)
+        TableResetSettings(table);
+    if (table->IsInitializing)
+    {
+        // Initialize for new settings
         table->SettingsOffset = -1;
+        table->IsSortSpecsDirty = true;
+        for (int n = 0; n < columns_count; n++)
+        {
+            ImGuiTableColumn* column = &table->Columns[n];
+            float width_auto = column->WidthAuto;
+            *column = ImGuiTableColumn();
+            column->WidthAuto = width_auto;
+            column->IsPreserveWidthAuto = true; // Preserve WidthAuto when reinitializing a live table: not technically necessary but remove a visible flicker
+            column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImGuiTableColumnIdx)n;
+            column->IsEnabled = column->IsEnabledNextFrame = true;
+        }
     }
 
     // Load settings
@@ -479,19 +492,11 @@ void ImGui::TableBeginInitMemory(ImGuiTable* table, int columns_count)
     span_allocator.ReserveBytes(1, columns_count * sizeof(ImGuiTableColumnIdx));
     span_allocator.ReserveBytes(2, columns_count * sizeof(ImGuiTableCellData));
     table->RawData = IM_ALLOC(span_allocator.GetArenaSizeInBytes());
+    memset(table->RawData, 0, span_allocator.GetArenaSizeInBytes());
     span_allocator.SetArenaBasePtr(table->RawData);
     span_allocator.GetSpan(0, &table->Columns);
     span_allocator.GetSpan(1, &table->DisplayOrderToIndex);
     span_allocator.GetSpan(2, &table->RowCellData);
-
-    memset(table->RowCellData.Data, 0, table->RowCellData.size_in_bytes());
-    for (int n = 0; n < columns_count; n++)
-    {
-        ImGuiTableColumn* column = &table->Columns[n];
-        *column = ImGuiTableColumn();
-        column->DisplayOrder = table->DisplayOrderToIndex[n] = (ImGuiTableColumnIdx)n;
-        column->AutoFitQueue = column->CannotSkipItemsQueue = (1 << 3) - 1; // Fit for three frames
-    }
 }
 
 // Apply queued resizing/reordering/hiding requests
@@ -513,7 +518,6 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
         // FIXME-TABLE: Would be nice to redistribute available stretch space accordingly to other weights, instead of giving it all to siblings.
         if (table->AutoFitSingleStretchColumn != -1)
         {
-            table->Columns[table->AutoFitSingleStretchColumn].AutoFitQueue = 0x00;
             TableSetColumnWidth(table->AutoFitSingleStretchColumn, table->Columns[table->AutoFitSingleStretchColumn].WidthAuto);
             table->AutoFitSingleStretchColumn = -1;
         }
@@ -635,6 +639,15 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
         if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_MultiSortable))
             table->IsSortSpecsDirty = true;
+
+        bool start_auto_fit = false;
+        if (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAutoResize))
+            start_auto_fit = column->WidthRequest < 0.0f;
+        else
+            start_auto_fit = column->StretchWeight < 0.0f;
+        if (start_auto_fit)
+            column->AutoFitQueue = column->CannotSkipItemsQueue = (1 << 3) - 1; // Fit for three frames
+
         if (column->AutoFitQueue != 0x00)
             want_column_auto_fit = true;
 
@@ -698,6 +711,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Calculate ideal/auto column width (that's the width required for all contents to be visible without clipping)
         // Combine width from regular rows + width from headers unless requested not to.
+        if (!column->IsPreserveWidthAuto)
         {
             const float content_width_body = (float)ImMax(column->ContentMaxXFrozen, column->ContentMaxXUnfrozen) - column->WorkMinX;
             const float content_width_headers = (float)column->ContentMaxXHeadersIdeal - column->WorkMinX;
@@ -708,11 +722,12 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
             // Non-resizable columns also submit their requested width
             if ((column->Flags & ImGuiTableColumnFlags_WidthFixed) && column->InitStretchWeightOrWidth > 0.0f)
-                if (!(table->Flags & ImGuiTableFlags_Resizable) || !(column->Flags & ImGuiTableColumnFlags_NoResize))
+                if (!(table->Flags & ImGuiTableFlags_Resizable) || (column->Flags & ImGuiTableColumnFlags_NoResize))
                     width_auto = ImMax(width_auto, column->InitStretchWeightOrWidth);
 
             column->WidthAuto = width_auto;
         }
+        column->IsPreserveWidthAuto = false;
 
         if (column->Flags & (ImGuiTableColumnFlags_WidthFixed | ImGuiTableColumnFlags_WidthAutoResize))
         {
@@ -734,9 +749,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         else
         {
             IM_ASSERT(column->Flags & ImGuiTableColumnFlags_WidthStretch);
-            const float default_weight = (column->InitStretchWeightOrWidth > 0.0f) ? column->InitStretchWeightOrWidth : 1.0f;
-            if (column->AutoFitQueue != 0x00)
-                column->StretchWeight = default_weight;
+            if (column->StretchWeight < 0.0f)
+                column->StretchWeight = 1.0f;
             sum_weights_stretched += column->StretchWeight;
             if (table->LeftMostStretchedColumnDisplayOrder == -1 || table->LeftMostStretchedColumnDisplayOrder > column->DisplayOrder)
                 table->LeftMostStretchedColumnDisplayOrder = column->DisplayOrder;
@@ -1232,6 +1246,7 @@ void    ImGui::EndTable()
     // Save settings
     if (table->IsSettingsDirty)
         TableSaveSettings(table);
+    table->IsInitializing = false;
 
     // Clear or restore current table, if any
     IM_ASSERT(g.CurrentWindow == outer_window && g.CurrentTable == table);
@@ -2731,6 +2746,10 @@ void ImGui::TableDrawContextMenu(ImGuiTable* table)
         want_separator = true;
     }
 
+    // Reset all (should work but seems unnecessary/noisy to expose?)
+    //if (MenuItem("Reset all"))
+    //    table->IsResetAllRequest = true;
+
     // Sorting
     // (modify TableOpenContextMenu() to add _Sortable flag if enabling this)
 #if 0
@@ -2777,12 +2796,14 @@ void ImGui::TableDrawContextMenu(ImGuiTable* table)
 //-------------------------------------------------------------------------
 // [SECTION] Tables: Settings (.ini data)
 //-------------------------------------------------------------------------
+// FIXME: The binding/finding/creating flow are too confusing.
+//-------------------------------------------------------------------------
 // - TableSettingsInit() [Internal]
 // - TableSettingsCalcChunkSize() [Internal]
 // - TableSettingsCreate() [Internal]
 // - TableSettingsFindByID() [Internal]
-// - TableSettingsClearByID() [Internal]
 // - TableGetBoundSettings() [Internal]
+// - TableResetSettings()
 // - TableSaveSettings() [Internal]
 // - TableLoadSettings() [Internal]
 // - TableSettingsHandler_ClearAll() [Internal]
@@ -2835,12 +2856,6 @@ ImGuiTableSettings* ImGui::TableSettingsFindByID(ImGuiID id)
     return NULL;
 }
 
-void ImGui::TableSettingsClearByID(ImGuiID id)
-{
-    if (ImGuiTableSettings* settings = TableSettingsFindByID(id))
-        settings->ID = 0;
-}
-
 // Get settings for a given table, NULL if none
 ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiTable* table)
 {
@@ -2854,6 +2869,15 @@ ImGuiTableSettings* ImGui::TableGetBoundSettings(ImGuiTable* table)
         settings->ID = 0; // Invalidate storage, we won't fit because of a count change
     }
     return NULL;
+}
+
+// Restore initial state of table (with or without saved settings)
+void ImGui::TableResetSettings(ImGuiTable* table)
+{
+    table->IsInitializing = table->IsSettingsDirty = true;
+    table->IsResetAllRequest = false;
+    table->IsSettingsRequestLoad = false;                   // Don't reload from ini
+    table->SettingsLoadedFlags = ImGuiTableFlags_None;      // Mark as nothing loaded so our initialized data becomes authoritative
 }
 
 void ImGui::TableSaveSettings(ImGuiTable* table)
@@ -3163,6 +3187,7 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
         GetForegroundDrawList()->AddRect(table->OuterRect.Min, table->OuterRect.Max, IM_COL32(255, 255, 0, 255));
     if (!open)
         return;
+    bool clear_settings = SmallButton("Clear settings");
     BulletText("OuterRect: Pos: (%.1f,%.1f) Size: (%.1f,%.1f)", table->OuterRect.Min.x, table->OuterRect.Min.y, table->OuterRect.GetWidth(), table->OuterRect.GetHeight());
     BulletText("ColumnsWidth: %.1f, AutoFitWidth: %.1f, InnerWidth: %.1f%s", table->ColumnsTotalWidth, table->ColumnsAutoFitWidth, table->InnerWidth, table->InnerWidth == 0.0f ? " (auto)" : "");
     BulletText("CellPaddingX: %.1f, CellSpacingX: %.1f/%.1f, OuterPaddingX: %.1f", table->CellPaddingX, table->CellSpacingX1, table->CellSpacingX2, table->OuterPaddingX);
@@ -3200,6 +3225,8 @@ void ImGui::DebugNodeTable(ImGuiTable* table)
     }
     if (ImGuiTableSettings* settings = TableGetBoundSettings(table))
         DebugNodeTableSettings(settings);
+    if (clear_settings)
+        table->IsResetAllRequest = true;
     TreePop();
 }
 
@@ -3221,7 +3248,12 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings* settings)
     TreePop();
 }
 
-#endif // #ifndef IMGUI_DISABLE_METRICS_WINDOW
+#else // #ifndef IMGUI_DISABLE_METRICS_WINDOW
+
+void ImGui::DebugNodeTable(ImGuiTable*) {}
+void ImGui::DebugNodeTableSettings(ImGuiTableSettings*) {}
+
+#endif
 
 
 //-------------------------------------------------------------------------
