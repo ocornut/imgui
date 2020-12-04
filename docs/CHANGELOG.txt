@@ -94,6 +94,7 @@ Other Changes:
   when the later returns zero (e.g. Desktop GL 2.x). (#3530) [@xndcn]
 - Backends: OpenGL3: Backup and restore GL_PRIMITIVE_RESTART state. (#3544) [@Xipiryon]
 - Backends: Vulkan: Added support for specifying which subpass to reference during VkPipeline creation. (@3579) [@bdero]
+- Backends: Win32: Fix setting of io.DisplaySize to invalid/uninitialized data after hwnd has been closed.
 - Backends: OSX: Fix keypad-enter key not working on MacOS. (#3554) [@rokups, @lfnoise]
 - Examples: Apple+Metal: Consolidated/simplified to get closer to other examples. (#3543) [@warrenm]
 - Examples: Apple+Metal: Forward events down so OS key combination like Cmd+Q can work. (#3554) [@rokups]
