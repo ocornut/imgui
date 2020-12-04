@@ -37,6 +37,7 @@ HOW TO UPDATE?
 
 Breaking Changes:
 
+- Added imgui_tables.cpp file! Manually constructed project files will need the new file added!
 - Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
 - Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2017):
   - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your backend
@@ -58,6 +59,18 @@ Breaking Changes:
 
 Other Changes:
 
+- Tables: added new Tables Beta API as a replacement for old Columns. (#2957, #125)
+  Check out 'Demo->Tables' for many demos + API comments in imgui.h for details.
+  - Added 16 functions: BeginTable(), EndTable(), 
+                        TableNextRow(), TableNextColumn(), TableSetColumnIndex(), TableGetColumnIndex(), TableGetRowIndex(), 
+                        TableSetupColumn(), TableSetupScrollFreeze(),
+                        TableHeadersRow(), TableHeader(), TableSetBgColor(), TableGetSortSpecs(),
+                        TableGetColumnCount(), TableGetColumnName(), TableGetColumnFlags().
+  - Added 2 structures: ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs.
+  - Added 2 enums:      ImGuiSortDirection, ImGuiTableBgTarget.
+  - Added 3 flags sets: ImGuiTableFlags (27 flags), ImGuiTableColumnFlags (24 flags), ImGuiTableRowFlags (1 flags).
+  - Added 5 colors:     ImGuiCol_TableHeaderBg, ImGuiCol_TableBorderStrong, ImGuiCol_TableBorderLight, ImGuiCol_TableRowBg, ImGuiCol_TableRowBgAlt.
+  - Added 1 style var:  ImGuiStyleVar_CellPadding.
 - Tab Bar: Made it possible to append to an existing tab bar by calling BeginTabBar()/EndTabBar() again.
 - Tab Bar: Fixed using more than 128 tabs in a tab bar (scrolling policy recommended).
 - Tab Bar: Do not display a tooltip if the name already fits over a given tab. (#3521)
