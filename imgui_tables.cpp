@@ -1779,6 +1779,7 @@ const char* ImGui::TableGetColumnName(int column_n)
     return TableGetColumnName(table, column_n);
 }
 
+// We allow querying for an extra column in order to poll the IsHovered state of the right-most section
 ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
 {
     ImGuiContext& g = *GImGui;
@@ -1787,6 +1788,8 @@ ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
         return ImGuiTableColumnFlags_None;
     if (column_n < 0)
         column_n = table->CurrentColumn;
+    if (column_n == table->ColumnsCount)
+        return (table->HoveredColumnBody == column_n) ? ImGuiTableColumnFlags_IsHovered : ImGuiTableColumnFlags_None;
     return table->Columns[column_n].Flags;
 }
 
@@ -2452,14 +2455,14 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
     // Write output
     const bool single_sort_specs = (table->SortSpecsCount <= 1);
     table->SortSpecsMulti.resize(single_sort_specs ? 0 : table->SortSpecsCount);
-    ImGuiTableSortSpecsColumn* sort_specs = single_sort_specs ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
+    ImGuiTableColumnSortSpecs* sort_specs = single_sort_specs ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
         if (column->SortOrder == -1)
             continue;
         IM_ASSERT(column->SortOrder < table->SortSpecsCount);
-        ImGuiTableSortSpecsColumn* sort_spec = &sort_specs[column->SortOrder];
+        ImGuiTableColumnSortSpecs* sort_spec = &sort_specs[column->SortOrder];
         sort_spec->ColumnUserID = column->UserID;
         sort_spec->ColumnIndex = (ImGuiTableColumnIdx)column_n;
         sort_spec->SortOrder = (ImGuiTableColumnIdx)column->SortOrder;
