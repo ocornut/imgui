@@ -40,8 +40,11 @@ struct RenderResources
     // Shader uniforms
     WGPUBuffer Uniforms;
 
-    // Resources bind-group to bind to pipeline
-    WGPUBindGroup BindGroup;
+    // Resources bind-group to bind the common resources to pipeline
+    WGPUBindGroup CommonBindGroup;
+
+    // Resources bind-group to bind the font/image resource to pipeline
+    WGPUBindGroup ImageBindGroup;
 };
 static RenderResources g_resources;
 
@@ -136,7 +139,7 @@ static uint32_t __glsl_shader_vert_spv[] =
 #version 450 core
 layout(location = 0) out vec4 fColor;
 layout(set=0, binding=1) uniform sampler s;
-layout(set=0, binding=2) uniform texture2D t;
+layout(set=1, binding=0) uniform texture2D t;
 layout(location = 0) in struct { vec4 Color; vec2 UV; } In;
 void main()
 {
@@ -153,8 +156,8 @@ static uint32_t __glsl_shader_frag_spv[] =
     0x00050006,0x0000000b,0x00000000,0x6f6c6f43,0x00000072,0x00040006,0x0000000b,0x00000001,
     0x00005655,0x00030005,0x0000000d,0x00006e49,0x00030005,0x00000015,0x00000074,0x00030005,
     0x00000019,0x00000073,0x00040047,0x00000009,0x0000001e,0x00000000,0x00040047,0x0000000d,
-    0x0000001e,0x00000000,0x00040047,0x00000015,0x00000022,0x00000000,0x00040047,0x00000015,
-    0x00000021,0x00000002,0x00040047,0x00000019,0x00000022,0x00000000,0x00040047,0x00000019,
+    0x0000001e,0x00000000,0x00040047,0x00000015,0x00000022,0x00000001,0x00040047,0x00000015,
+    0x00000021,0x00000000,0x00040047,0x00000019,0x00000022,0x00000000,0x00040047,0x00000019,
     0x00000021,0x00000001,0x00020013,0x00000002,0x00030021,0x00000003,0x00000002,0x00030016,
     0x00000006,0x00000020,0x00040017,0x00000007,0x00000006,0x00000004,0x00040020,0x00000008,
     0x00000003,0x00000007,0x0004003b,0x00000008,0x00000009,0x00000003,0x00040017,0x0000000a,
@@ -242,7 +245,8 @@ static void SafeRelease(RenderResources& res)
     SafeRelease(res.FontTextureView);
     SafeRelease(res.Sampler);
     SafeRelease(res.Uniforms);
-    SafeRelease(res.BindGroup);
+    SafeRelease(res.CommonBindGroup);
+    SafeRelease(res.ImageBindGroup);
 };
 
 static void SafeRelease(FrameResources& res)
@@ -297,7 +301,8 @@ static void ImGui_ImplWGPU_SetupRenderState(ImDrawData* draw_data, WGPURenderPas
     wgpuRenderPassEncoderSetVertexBuffer(ctx, 0, fr->VertexBuffer, offset, fr->VertexBufferSize * stride);
     wgpuRenderPassEncoderSetIndexBuffer(ctx, fr->IndexBuffer, sizeof(ImDrawIdx) == 2 ? WGPUIndexFormat_Uint16 : WGPUIndexFormat_Uint32, 0, fr->IndexBufferSize * sizeof(ImDrawIdx));
     wgpuRenderPassEncoderSetPipeline(ctx, g_pipelineState);
-    wgpuRenderPassEncoderSetBindGroup(ctx, 0, g_resources.BindGroup, 0, NULL);
+    wgpuRenderPassEncoderSetBindGroup(ctx, 0, g_resources.CommonBindGroup, 0, NULL);
+    wgpuRenderPassEncoderSetBindGroup(ctx, 1, g_resources.ImageBindGroup, 0, NULL);
 
     // Setup blend factor
     WGPUColor blend_color = { 0.f, 0.f, 0.f, 0.f };
@@ -535,24 +540,34 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     graphics_pipeline_desc.sampleMask = UINT_MAX;
 
 
-    WGPUBindGroupLayoutEntry bg_layout_entries[3] = {};
-    bg_layout_entries[0].binding = 0;
-    bg_layout_entries[0].visibility = WGPUShaderStage_Vertex;
-    bg_layout_entries[0].type = WGPUBindingType_UniformBuffer;
-    bg_layout_entries[1].binding = 1;
-    bg_layout_entries[1].visibility = WGPUShaderStage_Fragment;
-    bg_layout_entries[1].type = WGPUBindingType_Sampler;
-    bg_layout_entries[2].binding = 2;
-    bg_layout_entries[2].visibility = WGPUShaderStage_Fragment;
-    bg_layout_entries[2].type = WGPUBindingType_SampledTexture;
-    WGPUBindGroupLayoutDescriptor bg_layout_desc = {};
-    bg_layout_desc.entryCount = 3;
-    bg_layout_desc.entries = bg_layout_entries;
-    WGPUBindGroupLayout bg_layout = wgpuDeviceCreateBindGroupLayout(g_wgpuDevice, &bg_layout_desc);
+    WGPUBindGroupLayoutEntry common_bg_layout_entries[2] = {};
+    common_bg_layout_entries[0].binding = 0;
+    common_bg_layout_entries[0].visibility = WGPUShaderStage_Vertex;
+    common_bg_layout_entries[0].type = WGPUBindingType_UniformBuffer;
+    common_bg_layout_entries[1].binding = 1;
+    common_bg_layout_entries[1].visibility = WGPUShaderStage_Fragment;
+    common_bg_layout_entries[1].type = WGPUBindingType_Sampler;
+
+    WGPUBindGroupLayoutEntry image_bg_layout_entries[1] = {};
+    image_bg_layout_entries[0].binding = 0;
+    image_bg_layout_entries[0].visibility = WGPUShaderStage_Fragment;
+    image_bg_layout_entries[0].type = WGPUBindingType_SampledTexture;
+
+    WGPUBindGroupLayoutDescriptor common_bg_layout_desc = {};
+    common_bg_layout_desc.entryCount = 2;
+    common_bg_layout_desc.entries = common_bg_layout_entries;
+
+    WGPUBindGroupLayoutDescriptor image_bg_layout_desc = {};
+    image_bg_layout_desc.entryCount = 1;
+    image_bg_layout_desc.entries = image_bg_layout_entries;
+
+    WGPUBindGroupLayout bg_layouts[2];
+    bg_layouts[0] = wgpuDeviceCreateBindGroupLayout(g_wgpuDevice, &common_bg_layout_desc);
+    bg_layouts[1] = wgpuDeviceCreateBindGroupLayout(g_wgpuDevice, &image_bg_layout_desc);
 
     WGPUPipelineLayoutDescriptor layout_desc = {};
-    layout_desc.bindGroupLayoutCount = 1;
-    layout_desc.bindGroupLayouts = &bg_layout;
+    layout_desc.bindGroupLayoutCount = 2;
+    layout_desc.bindGroupLayouts = bg_layouts;
     graphics_pipeline_desc.layout = wgpuDeviceCreatePipelineLayout(g_wgpuDevice, &layout_desc);
 
     // Create the vertex shader
@@ -640,21 +655,30 @@ bool ImGui_ImplWGPU_CreateDeviceObjects()
     ImGui_ImplWGPU_CreateUniformBuffer();
 
     // Create resource bind group
-    WGPUBindGroupEntry bg_entries[] = {
+    WGPUBindGroupEntry common_bg_entries[] = {
         { 0, g_resources.Uniforms, 0, sizeof(Uniforms), 0, 0 },
         { 1, 0, 0, 0, g_resources.Sampler, 0 },
-        { 2, 0, 0, 0, 0, g_resources.FontTextureView },
+    };
+    WGPUBindGroupEntry image_bg_entries[] = {
+        { 0, 0, 0, 0, 0, g_resources.FontTextureView },
     };
 
-    WGPUBindGroupDescriptor descriptor = {};
-    descriptor.layout = bg_layout;
-    descriptor.entryCount = sizeof(bg_entries) / sizeof(WGPUBindGroupEntry);
-    descriptor.entries = bg_entries;
-    g_resources.BindGroup = wgpuDeviceCreateBindGroup(g_wgpuDevice, &descriptor);
+    WGPUBindGroupDescriptor common_bg_descriptor = {};
+    common_bg_descriptor.layout = bg_layouts[0];
+    common_bg_descriptor.entryCount = sizeof(common_bg_entries) / sizeof(WGPUBindGroupEntry);
+    common_bg_descriptor.entries = common_bg_entries;
+    g_resources.CommonBindGroup = wgpuDeviceCreateBindGroup(g_wgpuDevice, &common_bg_descriptor);
+
+    WGPUBindGroupDescriptor image_bg_descriptor = {};
+    image_bg_descriptor.layout = bg_layouts[1];
+    image_bg_descriptor.entryCount = sizeof(image_bg_entries) / sizeof(WGPUBindGroupEntry);
+    image_bg_descriptor.entries = image_bg_entries;
+    g_resources.ImageBindGroup = wgpuDeviceCreateBindGroup(g_wgpuDevice, &image_bg_descriptor);
 
     SafeRelease(vertex_shader_desc.module);
     SafeRelease(pixel_shader_desc.module);
-    SafeRelease(bg_layout);
+    SafeRelease(bg_layouts[0]);
+    SafeRelease(bg_layouts[1]);
 
     return true;
 }
@@ -693,7 +717,8 @@ bool ImGui_ImplWGPU_Init(WGPUDevice device, int num_frames_in_flight, WGPUTextur
     g_resources.FontTextureView = NULL;
     g_resources.Sampler = NULL;
     g_resources.Uniforms = NULL;
-    g_resources.BindGroup = NULL;
+    g_resources.CommonBindGroup = NULL;
+    g_resources.ImageBindGroup = NULL;
 
     // Create buffers with a default size (they will later be grown as needed)
     for (int i = 0; i < num_frames_in_flight; i++)
