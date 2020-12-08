@@ -27,13 +27,11 @@ Index of this file:
 // ImVector<>
 // ImGuiStyle
 // ImGuiIO
-// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload)
+// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiPayload, ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs)
 // Obsolete functions
 // Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
 // Draw List API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
-
-// FIXME-TABLE: Add ImGuiTableSortSpecs and ImGuiTableColumnSortSpecs in "Misc data structures" section above (we don't do it right now to facilitate merging various branches)
 
 */
 
@@ -64,6 +62,7 @@ Index of this file:
 #define IMGUI_VERSION               "1.80 WIP"
 #define IMGUI_VERSION_NUM           17906
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
+#define IMGUI_HAS_TABLE
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
 // IMGUI_API is used for core imgui functions, IMGUI_IMPL_API is used for the default backends files (imgui_impl_xxx.h)
@@ -680,7 +679,6 @@ namespace ImGui
     //       TableNextRow()                           -> Text("Hello 0")                                               // Not OK! Missing TableSetColumnIndex() or TableNextColumn()! Text will not appear!
     //      ----------------------------------------------------------------------------------------------------------
     // - 5. Call EndTable()
-    #define IMGUI_HAS_TABLE 1
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
     IMGUI_API void          TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f); // append into the first cell of a new row.
@@ -1108,7 +1106,7 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_NoSort                    = 1 << 9,   // Disable ability to sort on this field (even if ImGuiTableFlags_Sortable is set on the table).
     ImGuiTableColumnFlags_NoSortAscending           = 1 << 10,  // Disable ability to sort in the ascending direction.
     ImGuiTableColumnFlags_NoSortDescending          = 1 << 11,  // Disable ability to sort in the descending direction.
-    ImGuiTableColumnFlags_NoHeaderWidth             = 1 << 12,  // Header width don't contribute to automatic column width.
+    ImGuiTableColumnFlags_NoHeaderWidth             = 1 << 12,  // Disable header text width contribution to automatic column width.
     ImGuiTableColumnFlags_PreferSortAscending       = 1 << 13,  // Make the initial sort direction Ascending when first sorting on this column (default).
     ImGuiTableColumnFlags_PreferSortDescending      = 1 << 14,  // Make the initial sort direction Descending when first sorting on this column.
     ImGuiTableColumnFlags_IndentEnable              = 1 << 15,  // Use current Indent value when entering cell (default for column 0).
@@ -1146,11 +1144,9 @@ enum ImGuiTableRowFlags_
 enum ImGuiTableBgTarget_
 {
     ImGuiTableBgTarget_None                         = 0,
-    //ImGuiTableBgTarget_ColumnBg0                  = 1,        // FIXME-TABLE: Todo. Set column background color 0 (generally used for background
-    //ImGuiTableBgTarget_ColumnBg1                  = 2,        // FIXME-TABLE: Todo. Set column background color 1 (generally used for selection marking)
-    ImGuiTableBgTarget_RowBg0                       = 3,        // Set row background color 0 (generally used for background, automatically set when ImGuiTableFlags_RowBg is used)
-    ImGuiTableBgTarget_RowBg1                       = 4,        // Set row background color 1 (generally used for selection marking)
-    ImGuiTableBgTarget_CellBg                       = 5         // Set cell background color (top-most color)
+    ImGuiTableBgTarget_RowBg0                       = 1,        // Set row background color 0 (generally used for background, automatically set when ImGuiTableFlags_RowBg is used)
+    ImGuiTableBgTarget_RowBg1                       = 2,        // Set row background color 1 (generally used for selection marking)
+    ImGuiTableBgTarget_CellBg                       = 3         // Set cell background color (top-most color)
 };
 
 // Flags for ImGui::IsWindowFocused()

@@ -214,8 +214,6 @@ Button("OK");          // Label = "OK",     ID = hash of ("MyOtherWindow", "OK")
 End();
 ```
 
-We used "..." above to signify whatever was already pushed to the ID stack previously:
-
 - If you have a same ID twice in the same location, you'll have a conflict:
 ```cpp
 Button("OK");

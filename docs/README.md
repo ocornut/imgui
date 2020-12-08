@@ -132,7 +132,7 @@ Also see [Wiki](https://github.com/ocornut/imgui/wiki) for more links and ideas.
 ### Upcoming Changes
 
 Some of the goals for 2020 are:
-- Work on new Tables API (to replace Columns). (see [#2957](https://github.com/ocornut/imgui/issues/2957), in public [tables](https://github.com/ocornut/imgui/tree/tables) branch looking for feedback)
+- Work on Tables (see [#2957](https://github.com/ocornut/imgui/issues/2957), now merged in master.
 - Work on Docking (see [#2109](https://github.com/ocornut/imgui/issues/2109), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch)
 - Work on Multi-Viewport / Multiple OS windows. (see [#1542](https://github.com/ocornut/imgui/issues/1542), in public [docking](https://github.com/ocornut/imgui/tree/docking) branch looking for feedback)
 - Work on gamepad/keyboard controls. (see [#787](https://github.com/ocornut/imgui/issues/787))

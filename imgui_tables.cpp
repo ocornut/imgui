@@ -350,9 +350,8 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     const float inner_spacing_for_border = (flags & ImGuiTableFlags_BordersInnerV) ? TABLE_BORDER_SIZE : 0.0f;
     const float inner_spacing_explicit = (pad_inner_x && (flags & ImGuiTableFlags_BordersInnerV) == 0) ? g.Style.CellPadding.x : 0.0f;
     const float inner_padding_explicit = (pad_inner_x && (flags & ImGuiTableFlags_BordersInnerV) != 0) ? g.Style.CellPadding.x : 0.0f;
-    const float inner_spacing = inner_spacing_for_border + inner_spacing_explicit;
-    table->CellSpacingX1 = ImCeil(inner_spacing * 0.5f);
-    table->CellSpacingX2 = inner_spacing - table->CellSpacingX1;
+    table->CellSpacingX1 = inner_spacing_explicit + inner_spacing_for_border;
+    table->CellSpacingX2 = inner_spacing_explicit;
     table->CellPaddingX = inner_padding_explicit;
     table->CellPaddingY = g.Style.CellPadding.y;
 
@@ -463,7 +462,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     inner_window->SkipItems = true;
 
     // Clear names
-    // FIXME-TABLES: probably could be done differently...
+    // FIXME-TABLE: probably could be done differently...
     if (table->ColumnsNames.Buf.Size > 0)
     {
         table->ColumnsNames.Buf.resize(0);
@@ -925,7 +924,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Lock all our positions
         // - ClipRect.Min.x: Because merging draw commands doesn't compare min boundaries, we make ClipRect.Min.x match left bounds to be consistent regardless of merging.
-        // - ClipRect.Max.x: using WorkMaxX instead of MaxX (aka including padding) is detrimental to visibility in very-small column.
+        // - ClipRect.Max.x: using WorkMaxX instead of MaxX (aka including padding) makes things more consistent when resizing down, tho slightly detrimental to visibility in very-small column.
         // - FIXME-TABLE: We want equal width columns to have equal (ClipRect.Max.x - WorkMinX) width, which means ClipRect.max.x cannot stray off host_clip_rect.Max.x else right-most column may appear shorter.
         column->MinX = offset_x;
         column->MaxX = offset_x + column->WidthGiven + table->CellSpacingX1 + table->CellSpacingX2 + table->CellPaddingX * 2.0f;
@@ -934,7 +933,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         column->ItemWidth = ImFloor(column->WidthGiven * 0.65f);
         column->ClipRect.Min.x = column->MinX;
         column->ClipRect.Min.y = work_rect.Min.y;
-        column->ClipRect.Max.x = column->MaxX; // column->WorkMaxX;
+        column->ClipRect.Max.x = column->WorkMaxX; //column->MaxX;
         column->ClipRect.Max.y = FLT_MAX;
         column->ClipRect.ClipWithFull(host_clip_rect);
 
@@ -2593,6 +2592,12 @@ void ImGui::TableHeader(const char* label)
         TableSetBgColor(ImGuiTableBgTarget_CellBg, col, table->CurrentColumn);
         RenderNavHighlight(bb, id, ImGuiNavHighlightFlags_TypeThin | ImGuiNavHighlightFlags_NoRounding);
     }
+    else
+    {
+        // Submit single cell bg color in the case we didn't submit a full header row
+        if ((table->RowFlags & ImGuiTableRowFlags_Headers) == 0)
+            TableSetBgColor(ImGuiTableBgTarget_CellBg, GetColorU32(ImGuiCol_TableHeaderBg), table->CurrentColumn);
+    }
     if (held)
         table->HeldHeaderColumn = (ImGuiTableColumnIdx)column_n;
     window->DC.CursorPos.y -= g.Style.ItemSpacing.y * 0.5f;
@@ -3268,6 +3273,8 @@ void ImGui::DebugNodeTableSettings(ImGuiTableSettings*) {}
 //-------------------------------------------------------------------------
 // [SECTION] Columns, BeginColumns, EndColumns, etc.
 // (This is a legacy API, prefer using BeginTable/EndTable!)
+//-------------------------------------------------------------------------
+// FIXME: sizing is lossy when columns width is very small (default width may turn negative etc.)
 //-------------------------------------------------------------------------
 // - SetWindowClipRectBeforeSetChannel() [Internal]
 // - GetColumnIndex()

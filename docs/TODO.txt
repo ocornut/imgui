@@ -129,18 +129,6 @@ It's mostly a bunch of personal notes, probably incomplete. Feel free to query i
  - group: IsHovered() after EndGroup() covers whole aabb rather than the intersection of individual items. Is that desirable?
  - group: merge deactivation/activation within same group (fwd WasEdited flag). (#2550)
 
- - columns: sizing policy (e.g. for each column: fixed size, %, fill, distribute default size among fills) (#513, #125)
- - columns: add a conditional parameter to SetColumnOffset() (#513, #125)
- - columns: headers. re-orderable. (#513, #125)
- - columns: optional sorting modifiers (up/down), sort list so sorting can be done multi-criteria. notify user when sort order changed.
- - columns: option to alternate background colors on odd/even scanlines.
- - columns: allow columns to recurse.
- - columns: allow a same columns set to be interrupted by e.g. CollapsingHeader and resume with columns in sync when moving them.
- - columns: sizing is lossy when columns width is very small (default width may turn negative etc.)
- - columns: separator function or parameter that works within the column (currently Separator() bypass all columns) (#125)
- - columns: flag to add horizontal separator above/below)
- - columns/layout: setup minimum line height (equivalent of automatically calling AlignFirstTextHeightToWidgets)
-
 !- color: the color conversion helpers/types are a mess and needs sorting out.
  - color: (api breaking) ImGui::ColorConvertXXX functions should be loose ImColorConvertXX to match imgui_internals.h
 

@@ -1963,7 +1963,7 @@ struct ImGuiTableCellData
     ImGuiTableColumnIdx         Column;     // Column number
 };
 
-// FIXME-TABLES: transient data could be stored in a per-stacked table structure: DrawSplitter, SortSpecs, incoming RowData
+// FIXME-TABLE: transient data could be stored in a per-stacked table structure: DrawSplitter, SortSpecs, incoming RowData
 struct ImGuiTable
 {
     ImGuiID                     ID;

@@ -3590,7 +3590,7 @@ static void ShowDemoWindowTables()
         // If there is not enough available width to fit all columns, they will however be resized down.
         // FIXME-TABLE: Providing a stretch-on-init would make sense especially for tables which don't have saved settings
         HelpMarker(
-            "Using _Resizable + _ColumnsWidthFixedX flags.\n"
+            "Using _Resizable + _ColumnsWidthFixed flags.\n"
             "Fixed-width columns generally makes more sense if you want to use horizontal scrolling.\n\n"
             "Double-click a column border to auto-fit the column to its contents.");
         static ImGuiTableFlags flags = ImGuiTableFlags_Resizable | ImGuiTableFlags_ColumnsWidthFixed | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_BordersV | ImGuiTableFlags_ContextMenuInBody;
@@ -3723,7 +3723,8 @@ static void ShowDemoWindowTables()
             "e.g.:\n"
             "- BorderOuterV\n"
             "- any form of row selection\n"
-            "Because of this, activating BorderOuterV sets the default to PadOuterX. Using PadOuterX or NoPadOuterX you can override the default.\n");
+            "Because of this, activating BorderOuterV sets the default to PadOuterX. Using PadOuterX or NoPadOuterX you can override the default.\n\n"
+            "Actual padding values are using style.CellPadding.");
 
         PushStyleCompact();
         ImGui::CheckboxFlags("ImGuiTableFlags_PadOuterX", &flags, ImGuiTableFlags_PadOuterX);
@@ -4025,7 +4026,7 @@ static void ShowDemoWindowTables()
         HelpMarker("This section allows you to interact and see the effect of StretchX vs FixedX sizing policies depending on whether Scroll is enabled and the contents of your columns.");
         enum ContentsType { CT_ShortText, CT_LongText, CT_Button, CT_FillButton, CT_InputText };
         static ImGuiTableFlags flags = ImGuiTableFlags_ScrollY | ImGuiTableFlags_BordersOuter | ImGuiTableFlags_RowBg;
-        static int contents_type = CT_Button;
+        static int contents_type = CT_LongText;
         static int column_count = 3;
 
         PushStyleCompact();
