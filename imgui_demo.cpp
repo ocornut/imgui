@@ -1433,15 +1433,6 @@ static void ShowDemoWindowWidgets()
             if (winning_state)
                 ImGui::PushStyleVar(ImGuiStyleVar_SelectableTextAlign, ImVec2(0.5f + 0.5f * cosf(time * 2.0f), 0.5f + 0.5f * sinf(time * 3.0f)));
 
-            static float spacing = 0.0f;
-            ImGui::PushItemWidth(100);
-            ImGui::SliderFloat("SelectableSpacing", &spacing, 0, 20, "%.0f");
-            ImGui::SameLine(); HelpMarker("Selectable cancel out the regular spacing between items by extending itself by ItemSpacing/2 in each direction.\nThis has two purposes:\n- Avoid the gap between items so the mouse is always hitting something.\n- Avoid the gap between items so range-selected item looks connected.\nBy changing SelectableSpacing we can enforce spacing between selectables.");
-            ImGui::PopItemWidth();
-            ImGui::Spacing();
-            ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(8, 8));
-            ImGui::PushStyleVar(ImGuiStyleVar_SelectableSpacing, ImVec2(spacing, spacing));
-
             for (int y = 0; y < 4; y++)
                 for (int x = 0; x < 4; x++)
                 {
@@ -1460,10 +1451,8 @@ static void ShowDemoWindowWidgets()
                     ImGui::PopID();
                 }
 
-            ImGui::PopStyleVar(2);
             if (winning_state)
                 ImGui::PopStyleVar();
-
             ImGui::TreePop();
         }
         IMGUI_DEMO_MARKER("Widgets/Selectables/Alignment");
@@ -6863,7 +6852,6 @@ void ImGui::ShowStyleEditor(ImGuiStyle* ref)
             ImGui::SliderFloat2("FramePadding", (float*)&style.FramePadding, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("ItemSpacing", (float*)&style.ItemSpacing, 0.0f, 20.0f, "%.0f");
             ImGui::SliderFloat2("ItemInnerSpacing", (float*)&style.ItemInnerSpacing, 0.0f, 20.0f, "%.0f");
-            ImGui::SliderFloat2("SelectableSpacing", (float*)&style.SelectableSpacing, 0.0f, 20.0f, "%.0f"); ImGui::SameLine(); HelpMarker("SelectableSpacing must be < ItemSpacing.\nSelectables display their highlight after canceling out the effect of ItemSpacing, so they can be look tightly packed. This setting allows to enforce spacing between them.");
             ImGui::SliderFloat2("TouchExtraPadding", (float*)&style.TouchExtraPadding, 0.0f, 10.0f, "%.0f");
             ImGui::SliderFloat("IndentSpacing", &style.IndentSpacing, 0.0f, 30.0f, "%.0f");
             ImGui::SliderFloat("ScrollbarSize", &style.ScrollbarSize, 1.0f, 20.0f, "%.0f");
