@@ -6,6 +6,8 @@
 Index of this file:
 
 // [SECTION] Tables: Main code
+// [SECTION] Tables: Row changes
+// [SECTION] Tables: Columns changes
 // [SECTION] Tables: Columns width management
 // [SECTION] Tables: Drawing
 // [SECTION] Tables: Sorting
@@ -1369,6 +1371,153 @@ void ImGui::TableSetupScrollFreeze(int columns, int rows)
     table->IsUnfrozen = (table->FreezeRowsCount == 0); // Make sure this is set before TableUpdateLayout() so ImGuiListClipper can benefit from it.b
 }
 
+int ImGui::TableGetColumnCount()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    return table ? table->ColumnsCount : 0;
+}
+
+const char* ImGui::TableGetColumnName(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return NULL;
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    return TableGetColumnName(table, column_n);
+}
+
+// We allow querying for an extra column in order to poll the IsHovered state of the right-most section
+ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return ImGuiTableColumnFlags_None;
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    if (column_n == table->ColumnsCount)
+        return (table->HoveredColumnBody == column_n) ? ImGuiTableColumnFlags_IsHovered : ImGuiTableColumnFlags_None;
+    return table->Columns[column_n].Flags;
+}
+
+void ImGui::TableSetColumnIsEnabled(int column_n, bool hidden)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
+    if (column_n < 0)
+        column_n = table->CurrentColumn;
+    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
+    table->Columns[column_n].IsEnabledNextFrame = !hidden;
+}
+
+// Return the cell rectangle based on currently known height.
+// - Important: we generally don't know our row height until the end of the row, so Max.y will be incorrect in many situations.
+//   The only case where this is correct is if we provided a min_row_height to TableNextRow() and don't go below it.
+// - Important: if ImGuiTableFlags_PadOuterX is set but ImGuiTableFlags_PadInnerX is not set, the outer-most left and right
+//   columns report a small offset so their CellBgRect can extend up to the outer border.
+ImRect ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
+{
+    const ImGuiTableColumn* column = &table->Columns[column_n];
+    float x1 = column->MinX;
+    float x2 = column->MaxX;
+    if (column->PrevEnabledColumn == -1)
+        x1 -= table->CellSpacingX1;
+    if (column->NextEnabledColumn == -1)
+        x2 += table->CellSpacingX2;
+    return ImRect(x1, table->RowPosY1, x2, table->RowPosY2);
+}
+
+const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
+{
+    const ImGuiTableColumn* column = &table->Columns[column_n];
+    if (column->NameOffset == -1)
+        return "";
+    return &table->ColumnsNames.Buf[column->NameOffset];
+}
+
+// Return the resizing ID for the right-side of the given column.
+ImGuiID ImGui::TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no)
+{
+    IM_ASSERT(column_n < table->ColumnsCount);
+    ImGuiID id = table->ID + 1 + (instance_no * table->ColumnsCount) + column_n;
+    return id;
+}
+
+// Return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
+int ImGui::TableGetHoveredColumn()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return -1;
+    return (int)table->HoveredColumnBody;
+}
+
+void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    IM_ASSERT(bg_target != ImGuiTableBgTarget_None);
+
+    if (color == IM_COL32_DISABLE)
+        color = 0;
+
+    // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
+    switch (bg_target)
+    {
+    case ImGuiTableBgTarget_CellBg:
+    {
+        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+            return;
+        if (column_n == -1)
+            column_n = table->CurrentColumn;
+        if ((table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0)
+            return;
+        if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
+            table->RowCellDataCurrent++;
+        ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCurrent];
+        cell_data->BgColor = color;
+        cell_data->Column = (ImGuiTableColumnIdx)column_n;
+        break;
+    }
+    case ImGuiTableBgTarget_RowBg0:
+    case ImGuiTableBgTarget_RowBg1:
+    {
+        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
+            return;
+        IM_ASSERT(column_n == -1);
+        int bg_idx = (bg_target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
+        table->RowBgColor[bg_idx] = color;
+        break;
+    }
+    default:
+        IM_ASSERT(0);
+    }
+}
+
+//-------------------------------------------------------------------------
+// [SECTION] Tables: Row changes
+//-------------------------------------------------------------------------
+// - TableGetRowIndex()
+// - TableNextRow()
+// - TableBeginRow() [Internal]
+// - TableEndRow() [Internal]
+//-------------------------------------------------------------------------
+
+// [Public] Note: for row coloring we use ->RowBgColorCounter which is the same value without counting header rows
+int ImGui::TableGetRowIndex()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return 0;
+    return table->CurrentRow;
+}
+
 // [Public] Starts into the first cell of a new row
 void ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
 {
@@ -1394,7 +1543,7 @@ void ImGui::TableNextRow(ImGuiTableRowFlags row_flags, float row_min_height)
     table->InnerWindow->SkipItems = true;
 }
 
-// [Internal] Called by TableNextRow()!
+// [Internal] Called by TableNextRow()
 void ImGui::TableBeginRow(ImGuiTable* table)
 {
     ImGuiWindow* window = table->InnerWindow;
@@ -1427,7 +1576,7 @@ void ImGui::TableBeginRow(ImGuiTable* table)
     }
 }
 
-// [Internal] Called by TableNextRow()!
+// [Internal] Called by TableNextRow()
 void ImGui::TableEndRow(ImGuiTable* table)
 {
     ImGuiContext& g = *GImGui;
@@ -1559,7 +1708,74 @@ void ImGui::TableEndRow(ImGuiTable* table)
     table->IsInsideRow = false;
 }
 
-// [Internal] Called by TableNextColumn()!
+//-------------------------------------------------------------------------
+// [SECTION] Tables: Columns changes
+//-------------------------------------------------------------------------
+// - TableGetColumnIndex()
+// - TableSetColumnIndex()
+// - TableNextColumn()
+// - TableBeginCell() [Internal]
+// - TableEndCell() [Internal]
+//-------------------------------------------------------------------------
+
+int ImGui::TableGetColumnIndex()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return 0;
+    return table->CurrentColumn;
+}
+
+// [Public] Append into a specific column
+bool ImGui::TableSetColumnIndex(int column_n)
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return false;
+
+    if (table->CurrentColumn != column_n)
+    {
+        if (table->CurrentColumn != -1)
+            TableEndCell(table);
+        IM_ASSERT(column_n >= 0 && table->ColumnsCount);
+        TableBeginCell(table, column_n);
+    }
+
+    // Return whether the column is visible. User may choose to skip submitting items based on this return value,
+    // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
+    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
+}
+
+// [Public] Append into the next column, wrap and create a new row when already on last column
+bool ImGui::TableNextColumn()
+{
+    ImGuiContext& g = *GImGui;
+    ImGuiTable* table = g.CurrentTable;
+    if (!table)
+        return false;
+
+    if (table->IsInsideRow && table->CurrentColumn + 1 < table->ColumnsCount)
+    {
+        if (table->CurrentColumn != -1)
+            TableEndCell(table);
+        TableBeginCell(table, table->CurrentColumn + 1);
+    }
+    else
+    {
+        TableNextRow();
+        TableBeginCell(table, 0);
+    }
+
+    // Return whether the column is visible. User may choose to skip submitting items based on this return value,
+    // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
+    int column_n = table->CurrentColumn;
+    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
+}
+
+
+// [Internal] Called by TableSetColumnIndex()/TableNextColumn()
 // This is called very frequently, so we need to be mindful of unnecessary overhead.
 // FIXME-TABLE FIXME-OPT: Could probably shortcut some things for non-active or clipped columns.
 void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
@@ -1605,7 +1821,7 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     }
 }
 
-// [Internal] Called by TableNextRow()/TableNextColumn()!
+// [Internal] Called by TableNextRow()/TableSetColumnIndex()/TableNextColumn()
 void ImGui::TableEndCell(ImGuiTable* table)
 {
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
@@ -1624,200 +1840,6 @@ void ImGui::TableEndCell(ImGuiTable* table)
     // Propagate text baseline for the entire row
     // FIXME-TABLE: Here we propagate text baseline from the last line of the cell.. instead of the first one.
     table->RowTextBaseline = ImMax(table->RowTextBaseline, window->DC.PrevLineTextBaseOffset);
-}
-
-// [Public] Append into the next column/cell
-bool ImGui::TableNextColumn()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return false;
-
-    if (table->IsInsideRow && table->CurrentColumn + 1 < table->ColumnsCount)
-    {
-        if (table->CurrentColumn != -1)
-            TableEndCell(table);
-        TableBeginCell(table, table->CurrentColumn + 1);
-    }
-    else
-    {
-        TableNextRow();
-        TableBeginCell(table, 0);
-    }
-
-    // Return whether the column is visible. User may choose to skip submitting items based on this return value,
-    // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
-    int column_n = table->CurrentColumn;
-    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
-}
-
-// [Public] Append into a specific column
-bool ImGui::TableSetColumnIndex(int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return false;
-
-    if (table->CurrentColumn != column_n)
-    {
-        if (table->CurrentColumn != -1)
-            TableEndCell(table);
-        IM_ASSERT(column_n >= 0 && table->ColumnsCount);
-        TableBeginCell(table, column_n);
-    }
-
-    // Return whether the column is visible. User may choose to skip submitting items based on this return value,
-    // however they shouldn't skip submitting for columns that may have the tallest contribution to row height.
-    return (table->RequestOutputMaskByIndex & ((ImU64)1 << column_n)) != 0;
-}
-
-int ImGui::TableGetColumnCount()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    return table ? table->ColumnsCount : 0;
-}
-
-const char* ImGui::TableGetColumnName(int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return NULL;
-    if (column_n < 0)
-        column_n = table->CurrentColumn;
-    return TableGetColumnName(table, column_n);
-}
-
-// We allow querying for an extra column in order to poll the IsHovered state of the right-most section
-ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return ImGuiTableColumnFlags_None;
-    if (column_n < 0)
-        column_n = table->CurrentColumn;
-    if (column_n == table->ColumnsCount)
-        return (table->HoveredColumnBody == column_n) ? ImGuiTableColumnFlags_IsHovered : ImGuiTableColumnFlags_None;
-    return table->Columns[column_n].Flags;
-}
-
-void ImGui::TableSetColumnIsEnabled(int column_n, bool hidden)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
-    if (column_n < 0)
-        column_n = table->CurrentColumn;
-    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
-    table->Columns[column_n].IsEnabledNextFrame = !hidden;
-}
-
-int ImGui::TableGetColumnIndex()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return 0;
-    return table->CurrentColumn;
-}
-
-// Note: for row coloring we use ->RowBgColorCounter which is the same value without counting header rows
-int ImGui::TableGetRowIndex()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return 0;
-    return table->CurrentRow;
-}
-
-// Return the cell rectangle based on currently known height.
-// - Important: we generally don't know our row height until the end of the row, so Max.y will be incorrect in many situations.
-//   The only case where this is correct is if we provided a min_row_height to TableNextRow() and don't go below it.
-// - Important: if ImGuiTableFlags_PadOuterX is set but ImGuiTableFlags_PadInnerX is not set, the outer-most left and right
-//   columns report a small offset so their CellBgRect can extend up to the outer border.
-ImRect ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
-{
-    const ImGuiTableColumn* column = &table->Columns[column_n];
-    float x1 = column->MinX;
-    float x2 = column->MaxX;
-    if (column->PrevEnabledColumn == -1)
-        x1 -= table->CellSpacingX1;
-    if (column->NextEnabledColumn == -1)
-        x2 += table->CellSpacingX2;
-    return ImRect(x1, table->RowPosY1, x2, table->RowPosY2);
-}
-
-const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
-{
-    const ImGuiTableColumn* column = &table->Columns[column_n];
-    if (column->NameOffset == -1)
-        return "";
-    return &table->ColumnsNames.Buf[column->NameOffset];
-}
-
-// Return the resizing ID for the right-side of the given column.
-ImGuiID ImGui::TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no)
-{
-    IM_ASSERT(column_n < table->ColumnsCount);
-    ImGuiID id = table->ID + 1 + (instance_no * table->ColumnsCount) + column_n;
-    return id;
-}
-
-// Return -1 when table is not hovered. return columns_count if the unused space at the right of visible columns is hovered.
-int ImGui::TableGetHoveredColumn()
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    if (!table)
-        return -1;
-    return (int)table->HoveredColumnBody;
-}
-
-void ImGui::TableSetBgColor(ImGuiTableBgTarget bg_target, ImU32 color, int column_n)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(bg_target != ImGuiTableBgTarget_None);
-
-    if (color == IM_COL32_DISABLE)
-        color = 0;
-
-    // We cannot draw neither the cell or row background immediately as we don't know the row height at this point in time.
-    switch (bg_target)
-    {
-    case ImGuiTableBgTarget_CellBg:
-    {
-        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
-            return;
-        if (column_n == -1)
-            column_n = table->CurrentColumn;
-        if ((table->VisibleMaskByIndex & ((ImU64)1 << column_n)) == 0)
-            return;
-        if (table->RowCellDataCurrent < 0 || table->RowCellData[table->RowCellDataCurrent].Column != column_n)
-            table->RowCellDataCurrent++;
-        ImGuiTableCellData* cell_data = &table->RowCellData[table->RowCellDataCurrent];
-        cell_data->BgColor = color;
-        cell_data->Column = (ImGuiTableColumnIdx)column_n;
-        break;
-    }
-    case ImGuiTableBgTarget_RowBg0:
-    case ImGuiTableBgTarget_RowBg1:
-    {
-        if (table->RowPosY1 > table->InnerClipRect.Max.y) // Discard
-            return;
-        IM_ASSERT(column_n == -1);
-        int bg_idx = (bg_target == ImGuiTableBgTarget_RowBg1) ? 1 : 0;
-        table->RowBgColor[bg_idx] = color;
-        break;
-    }
-    default:
-        IM_ASSERT(0);
-    }
 }
 
 //-------------------------------------------------------------------------
