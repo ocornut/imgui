@@ -178,7 +178,7 @@ Index of this file:
 // Configuration
 static const int TABLE_DRAW_CHANNEL_BG0 = 0;
 static const int TABLE_DRAW_CHANNEL_BG1_FROZEN = 1;
-static const int TABLE_DRAW_CHANNEL_UNCLIPPED = 2;                  // When using ImGuiTableFlags_NoClip
+static const int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip
 static const float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded because of clipping assumptions with outer borders rendering.
 static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
 static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
@@ -224,25 +224,6 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_w
         flags |= ImGuiTableFlags_NoSavedSettings;
 
     return flags;
-}
-
-ImGuiTable::ImGuiTable()
-{
-    memset(this, 0, sizeof(*this));
-    SettingsOffset = -1;
-    InstanceInteracted = -1;
-    LastFrameActive = -1;
-    LastResizedColumn = -1;
-    ContextPopupColumn = -1;
-    ReorderColumn = -1;
-    ResizedColumn = -1;
-    AutoFitSingleStretchColumn = -1;
-    HoveredColumnBody = HoveredColumnBorder = -1;
-}
-
-ImGuiTable::~ImGuiTable()
-{
-    IM_FREE(RawData);
 }
 
 ImGuiTable* ImGui::TableFindByID(ImGuiID id)
@@ -433,9 +414,14 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
         TableResetSettings(table);
     if (table->IsInitializing)
     {
-        // Initialize for new settings
+        // Initialize
         table->SettingsOffset = -1;
         table->IsSortSpecsDirty = true;
+        table->InstanceInteracted = -1;
+        table->ContextPopupColumn = -1;
+        table->ReorderColumn = table->ResizedColumn = table->LastResizedColumn = -1;
+        table->AutoFitSingleStretchColumn = -1;
+        table->HoveredColumnBody = table->HoveredColumnBorder = -1;
         for (int n = 0; n < columns_count; n++)
         {
             ImGuiTableColumn* column = &table->Columns[n];
@@ -473,16 +459,9 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     inner_window->SkipItems = true;
 
     // Clear names
-    // FIXME-TABLE: probably could be done differently...
+    // At this point the ->NameOffset field of each column will be invalid until TableUpdateLayout() or the first call to TableSetupColumn()
     if (table->ColumnsNames.Buf.Size > 0)
-    {
         table->ColumnsNames.Buf.resize(0);
-        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
-        {
-            ImGuiTableColumn* column = &table->Columns[column_n];
-            column->NameOffset = -1;
-        }
-    }
 
     // Apply queued resizing/reordering/hiding requests
     TableBeginApplyRequests(table);
@@ -619,14 +598,6 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
     column->Flags = flags | (column->Flags & ImGuiTableColumnFlags_StatusMask_);
 }
 
-// Minimum column content width (without padding)
-static float TableGetMinColumnWidth()
-{
-    ImGuiContext& g = *GImGui;
-    //return g.Style.ColumnsMinSpacing; // FIXME-TABLE
-    return g.Style.FramePadding.x * 1.0f;
-}
-
 // Layout columns for the frame. This is in essence the followup to BeginTable().
 // Runs on the first call to TableNextRow(), to give a chance for TableSetupColumn() to be called first.
 // FIXME-TABLE: Our width (and therefore our WorkRect) will be minimal in the first frame for WidthAutoResize
@@ -659,6 +630,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column_n >= table->DeclColumnsCount)
         {
             TableSetupColumnFlags(table, column, ImGuiTableColumnFlags_None);
+            column->NameOffset = -1;
             column->UserID = 0;
             column->InitStretchWeightOrWidth = -1.0f;
         }
@@ -835,7 +807,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         if (column->Flags & ImGuiTableColumnFlags_WidthStretch)
         {
             // StretchWeight gets converted into WidthRequest
-            if (!mixed_same_widths) 
+            if (!mixed_same_widths)
             {
                 float weight_ratio = column->StretchWeight / sum_weights_stretched;
                 column->WidthRequest = IM_FLOOR(ImMax(width_avail_for_stretched_columns * weight_ratio, min_column_width) + 0.01f);
@@ -1074,7 +1046,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // Initial state
     ImGuiWindow* inner_window = table->InnerWindow;
     if (table->Flags & ImGuiTableFlags_NoClip)
-        table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, TABLE_DRAW_CHANNEL_UNCLIPPED);
+        table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, TABLE_DRAW_CHANNEL_NOCLIP);
     else
         inner_window->DrawList->PushClipRect(inner_window->ClipRect.Min, inner_window->ClipRect.Max, false);
 }
@@ -1346,7 +1318,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
     }
 
     // Store name (append with zero-terminator in contiguous buffer)
-    IM_ASSERT(column->NameOffset == -1);
+    column->NameOffset = -1;
     if (label != NULL && label[0] != 0)
     {
         column->NameOffset = (ImS16)table->ColumnsNames.size();
@@ -1389,6 +1361,15 @@ const char* ImGui::TableGetColumnName(int column_n)
     return TableGetColumnName(table, column_n);
 }
 
+const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
+{
+    IM_ASSERT(table->IsLayoutLocked == true || column_n <= table->DeclColumnsCount); // NameOffset is invalid otherwise
+    const ImGuiTableColumn* column = &table->Columns[column_n];
+    if (column->NameOffset == -1)
+        return "";
+    return &table->ColumnsNames.Buf[column->NameOffset];
+}
+
 // We allow querying for an extra column in order to poll the IsHovered state of the right-most section
 ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
 {
@@ -1401,17 +1382,6 @@ ImGuiTableColumnFlags ImGui::TableGetColumnFlags(int column_n)
     if (column_n == table->ColumnsCount)
         return (table->HoveredColumnBody == column_n) ? ImGuiTableColumnFlags_IsHovered : ImGuiTableColumnFlags_None;
     return table->Columns[column_n].Flags;
-}
-
-void ImGui::TableSetColumnIsEnabled(int column_n, bool hidden)
-{
-    ImGuiContext& g = *GImGui;
-    ImGuiTable* table = g.CurrentTable;
-    IM_ASSERT(table != NULL && table->IsLayoutLocked == false);
-    if (column_n < 0)
-        column_n = table->CurrentColumn;
-    IM_ASSERT(column_n >= 0 && column_n < table->ColumnsCount);
-    table->Columns[column_n].IsEnabledNextFrame = !hidden;
 }
 
 // Return the cell rectangle based on currently known height.
@@ -1429,14 +1399,6 @@ ImRect ImGui::TableGetCellBgRect(const ImGuiTable* table, int column_n)
     if (column->NextEnabledColumn == -1)
         x2 += table->CellSpacingX2;
     return ImRect(x1, table->RowPosY1, x2, table->RowPosY2);
-}
-
-const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
-{
-    const ImGuiTableColumn* column = &table->Columns[column_n];
-    if (column->NameOffset == -1)
-        return "";
-    return &table->ColumnsNames.Buf[column->NameOffset];
 }
 
 // Return the resizing ID for the right-side of the given column.
@@ -1810,8 +1772,8 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     if (table->Flags & ImGuiTableFlags_NoClip)
     {
         // FIXME: if we end up drawing all borders/bg in EndTable, could remove this and just assert that channel hasn't changed.
-        table->DrawSplitter.SetCurrentChannel(window->DrawList, TABLE_DRAW_CHANNEL_UNCLIPPED);
-        //IM_ASSERT(table->DrawSplitter._Current == TABLE_DRAW_CHANNEL_UNCLIPPED);
+        table->DrawSplitter.SetCurrentChannel(window->DrawList, TABLE_DRAW_CHANNEL_NOCLIP);
+        //IM_ASSERT(table->DrawSplitter._Current == TABLE_DRAW_CHANNEL_NOCLIP);
     }
     else
     {
@@ -1845,11 +1807,20 @@ void ImGui::TableEndCell(ImGuiTable* table)
 //-------------------------------------------------------------------------
 // [SECTION] Tables: Columns width management
 //-------------------------------------------------------------------------
+// - TableGetMinColumnWidth() [Internal]
 // - TableSetColumnWidth()
 // - TableSetColumnWidthAutoSingle() [Internal]
 // - TableSetColumnWidthAutoAll() [Internal]
 // - TableUpdateColumnsWeightFromWidth() [Internal]
 //-------------------------------------------------------------------------
+
+// Minimum column content width (without padding)
+float ImGui::TableGetMinColumnWidth()
+{
+    ImGuiContext& g = *GImGui;
+    //return g.Style.ColumnsMinSpacing; // FIXME-TABLE
+    return g.Style.FramePadding.x * 1.0f;
+}
 
 // 'width' = inner column width, without padding
 void ImGui::TableSetColumnWidth(int column_n, float width)
