@@ -27,14 +27,12 @@ Index of this file:
 // ImVector<>
 // ImGuiStyle
 // ImGuiIO
-// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiWindowClass, ImGuiPayload)
+// Misc data structures (ImGuiInputTextCallbackData, ImGuiSizeCallbackData, ImGuiWindowClass, ImGuiPayload, ImGuiTableSortSpecs, ImGuiTableColumnSortSpecs)
 // Obsolete functions
 // Helpers (ImGuiOnceUponAFrame, ImGuiTextFilter, ImGuiTextBuffer, ImGuiStorage, ImGuiListClipper, ImColor)
 // Draw List API (ImDrawCallback, ImDrawCmd, ImDrawIdx, ImDrawVert, ImDrawChannel, ImDrawListSplitter, ImDrawListFlags, ImDrawList, ImDrawData)
 // Font API (ImFontConfig, ImFontGlyph, ImFontGlyphRangesBuilder, ImFontAtlasFlags, ImFontAtlas, ImFont)
 // Platform interface for multi-viewport support (ImGuiPlatformIO, ImGuiPlatformMonitor, ImGuiViewportFlags, ImGuiViewport)
-
-// FIXME-TABLE: Add ImGuiTableSortSpecs and ImGuiTableColumnSortSpecs in "Misc data structures" section above (we don't do it right now to facilitate merging various branches)
 
 */
 
@@ -65,8 +63,9 @@ Index of this file:
 #define IMGUI_VERSION               "1.80 WIP"
 #define IMGUI_VERSION_NUM           17906
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
-#define IMGUI_HAS_VIEWPORT          1 // Viewport WIP branch
-#define IMGUI_HAS_DOCK              1 // Docking WIP branch
+#define IMGUI_HAS_TABLE
+#define IMGUI_HAS_VIEWPORT          // Viewport WIP branch
+#define IMGUI_HAS_DOCK              // Docking WIP branch
 
 // Define attributes of all API symbols declarations (e.g. for DLL under Windows)
 // IMGUI_API is used for core imgui functions, IMGUI_IMPL_API is used for the default backends files (imgui_impl_xxx.h)
@@ -692,7 +691,6 @@ namespace ImGui
     //       TableNextRow()                           -> Text("Hello 0")                                               // Not OK! Missing TableSetColumnIndex() or TableNextColumn()! Text will not appear!
     //      ----------------------------------------------------------------------------------------------------------
     // - 5. Call EndTable()
-    #define IMGUI_HAS_TABLE 1
     IMGUI_API bool          BeginTable(const char* str_id, int columns_count, ImGuiTableFlags flags = 0, const ImVec2& outer_size = ImVec2(0, 0), float inner_width = 0.0f);
     IMGUI_API void          EndTable();                                 // only call EndTable() if BeginTable() returns true!
     IMGUI_API void          TableNextRow(ImGuiTableRowFlags row_flags = 0, float min_row_height = 0.0f); // append into the first cell of a new row.
@@ -1101,38 +1099,40 @@ enum ImGuiTableFlags_
     ImGuiTableFlags_Reorderable                     = 1 << 1,   // Allow reordering columns in header row (need calling TableSetupColumn() + TableHeadersRow() to display headers)
     ImGuiTableFlags_Hideable                        = 1 << 2,   // Allow hiding/disabling columns in context menu.
     ImGuiTableFlags_Sortable                        = 1 << 3,   // Allow sorting on one column (sort_specs_count will always be == 1). Call TableGetSortSpecs() to obtain sort specs.
-    ImGuiTableFlags_MultiSortable                   = 1 << 4,   // Allow sorting on multiple columns by holding Shift (sort_specs_count may be > 1). Call TableGetSortSpecs() to obtain sort specs.
-    ImGuiTableFlags_NoSavedSettings                 = 1 << 5,   // Disable persisting columns order, width and sort settings in the .ini file.
-    ImGuiTableFlags_ContextMenuInBody               = 1 << 6,   // Right-click on columns body/contents will display table context menu. By default it is available in TableHeadersRow().
+    ImGuiTableFlags_NoSavedSettings                 = 1 << 4,   // Disable persisting columns order, width and sort settings in the .ini file.
+    ImGuiTableFlags_ContextMenuInBody               = 1 << 5,   // Right-click on columns body/contents will display table context menu. By default it is available in TableHeadersRow().
     // Decorations
-    ImGuiTableFlags_RowBg                           = 1 << 7,   // Set each RowBg color with ImGuiCol_TableRowBg or ImGuiCol_TableRowBgAlt (equivalent of calling TableSetBgColor with ImGuiTableBgFlags_RowBg0 on each row manually)
-    ImGuiTableFlags_BordersInnerH                   = 1 << 8,   // Draw horizontal borders between rows.
-    ImGuiTableFlags_BordersOuterH                   = 1 << 9,   // Draw horizontal borders at the top and bottom.
-    ImGuiTableFlags_BordersInnerV                   = 1 << 10,  // Draw vertical borders between columns.
-    ImGuiTableFlags_BordersOuterV                   = 1 << 11,  // Draw vertical borders on the left and right sides.
+    ImGuiTableFlags_RowBg                           = 1 << 6,   // Set each RowBg color with ImGuiCol_TableRowBg or ImGuiCol_TableRowBgAlt (equivalent of calling TableSetBgColor with ImGuiTableBgFlags_RowBg0 on each row manually)
+    ImGuiTableFlags_BordersInnerH                   = 1 << 7,   // Draw horizontal borders between rows.
+    ImGuiTableFlags_BordersOuterH                   = 1 << 8,   // Draw horizontal borders at the top and bottom.
+    ImGuiTableFlags_BordersInnerV                   = 1 << 9,   // Draw vertical borders between columns.
+    ImGuiTableFlags_BordersOuterV                   = 1 << 10,  // Draw vertical borders on the left and right sides.
     ImGuiTableFlags_BordersH                        = ImGuiTableFlags_BordersInnerH | ImGuiTableFlags_BordersOuterH, // Draw horizontal borders.
     ImGuiTableFlags_BordersV                        = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersOuterV, // Draw vertical borders.
     ImGuiTableFlags_BordersInner                    = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_BordersInnerH, // Draw inner borders.
     ImGuiTableFlags_BordersOuter                    = ImGuiTableFlags_BordersOuterV | ImGuiTableFlags_BordersOuterH, // Draw outer borders.
     ImGuiTableFlags_Borders                         = ImGuiTableFlags_BordersInner | ImGuiTableFlags_BordersOuter,   // Draw all borders.
-    ImGuiTableFlags_NoBordersInBody                 = 1 << 12,  // Disable vertical borders in columns Body (borders will always appears in Headers).
-    ImGuiTableFlags_NoBordersInBodyUntilResize      = 1 << 13,  // Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers).
+    ImGuiTableFlags_NoBordersInBody                 = 1 << 11,  // Disable vertical borders in columns Body (borders will always appears in Headers).
+    ImGuiTableFlags_NoBordersInBodyUntilResize      = 1 << 12,  // Disable vertical borders in columns Body until hovered for resize (borders will always appears in Headers).
     // Sizing
-    ImGuiTableFlags_ColumnsWidthStretch             = 1 << 14,  // Default if ScrollX is off. Columns will default to use _WidthStretch. Read description above for more details.
-    ImGuiTableFlags_ColumnsWidthFixed               = 1 << 15,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAutoResize policy (if Resizable is off). Read description above for more details.
-    ImGuiTableFlags_SameWidths                      = 1 << 16,  // Make all columns the same widths which is useful with Fixed columns policy (but granted by default with Stretch policy + no resize). Implicitly enable ImGuiTableFlags_NoKeepColumnsVisible and disable ImGuiTableFlags_Resizable.
-    ImGuiTableFlags_NoHeadersWidth                  = 1 << 17,  // Disable headers' contribution to automatic width calculation.
-    ImGuiTableFlags_NoHostExtendY                   = 1 << 18,  // Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
-    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 19,  // Disable keeping column always minimally visible when ScrollX is off and table gets too small.
-    ImGuiTableFlags_PreciseWidths                   = 1 << 20,  // Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.
-    ImGuiTableFlags_NoClip                          = 1 << 21,  // Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with TableSetupScrollFreeze().
+    ImGuiTableFlags_ColumnsWidthStretch             = 1 << 13,  // Default if ScrollX is off. Columns will default to use _WidthStretch. Read description above for more details.
+    ImGuiTableFlags_ColumnsWidthFixed               = 1 << 14,  // Default if ScrollX is on. Columns will default to use _WidthFixed or _WidthAutoResize policy (if Resizable is off). Read description above for more details.
+    ImGuiTableFlags_SameWidths                      = 1 << 15,  // Make all columns the same widths which is useful with Fixed columns policy (but granted by default with Stretch policy + no resize). Implicitly enable ImGuiTableFlags_NoKeepColumnsVisible and disable ImGuiTableFlags_Resizable.
+    ImGuiTableFlags_NoHeadersWidth                  = 1 << 16,  // Disable headers' contribution to automatic width calculation.
+    ImGuiTableFlags_NoHostExtendY                   = 1 << 17,  // Disable extending past the limit set by outer_size.y, only meaningful when neither of ScrollX|ScrollY are set (data below the limit will be clipped and not visible)
+    ImGuiTableFlags_NoKeepColumnsVisible            = 1 << 18,  // Disable keeping column always minimally visible when ScrollX is off and table gets too small.
+    ImGuiTableFlags_PreciseWidths                   = 1 << 19,  // Disable distributing remainder width to stretched columns (width allocation on a 100-wide table with 3 columns: Without this flag: 33,33,34. With this flag: 33,33,33). With larger number of columns, resizing will appear to be less smooth.
+    ImGuiTableFlags_NoClip                          = 1 << 20,  // Disable clipping rectangle for every individual columns (reduce draw command count, items will be able to overflow into other columns). Generally incompatible with TableSetupScrollFreeze().
     // Padding
-    ImGuiTableFlags_PadOuterX                       = 1 << 22,  // Default if BordersOuterV is on. Enable outer-most padding.
-    ImGuiTableFlags_NoPadOuterX                     = 1 << 23,  // Default if BordersOuterV is off. Disable outer-most padding.
-    ImGuiTableFlags_NoPadInnerX                     = 1 << 24,  // Disable inner padding between columns (double inner padding if BordersOuterV is on, single inner padding if BordersOuterV is off).
+    ImGuiTableFlags_PadOuterX                       = 1 << 21,  // Default if BordersOuterV is on. Enable outer-most padding.
+    ImGuiTableFlags_NoPadOuterX                     = 1 << 22,  // Default if BordersOuterV is off. Disable outer-most padding.
+    ImGuiTableFlags_NoPadInnerX                     = 1 << 23,  // Disable inner padding between columns (double inner padding if BordersOuterV is on, single inner padding if BordersOuterV is off).
     // Scrolling
-    ImGuiTableFlags_ScrollX                         = 1 << 25,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Changes default sizing policy. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
-    ImGuiTableFlags_ScrollY                         = 1 << 26   // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
+    ImGuiTableFlags_ScrollX                         = 1 << 24,  // Enable horizontal scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size. Changes default sizing policy. Because this create a child window, ScrollY is currently generally recommended when using ScrollX.
+    ImGuiTableFlags_ScrollY                         = 1 << 25,  // Enable vertical scrolling. Require 'outer_size' parameter of BeginTable() to specify the container size.
+    // Sorting
+    ImGuiTableFlags_SortMulti                       = 1 << 26,  // Hold shift when clicking headers to sort on multiple column. TableGetSortSpecs() may return specs where (SpecsCount > 1).
+    ImGuiTableFlags_SortTristate                    = 1 << 27   // Allow no sorting, disable default sorting. TableGetSortSpecs() may return specs where (SpecsCount == 0).
 };
 
 // Flags for ImGui::TableSetupColumn()
@@ -1152,7 +1152,7 @@ enum ImGuiTableColumnFlags_
     ImGuiTableColumnFlags_NoSort                    = 1 << 9,   // Disable ability to sort on this field (even if ImGuiTableFlags_Sortable is set on the table).
     ImGuiTableColumnFlags_NoSortAscending           = 1 << 10,  // Disable ability to sort in the ascending direction.
     ImGuiTableColumnFlags_NoSortDescending          = 1 << 11,  // Disable ability to sort in the descending direction.
-    ImGuiTableColumnFlags_NoHeaderWidth             = 1 << 12,  // Header width don't contribute to automatic column width.
+    ImGuiTableColumnFlags_NoHeaderWidth             = 1 << 12,  // Disable header text width contribution to automatic column width.
     ImGuiTableColumnFlags_PreferSortAscending       = 1 << 13,  // Make the initial sort direction Ascending when first sorting on this column (default).
     ImGuiTableColumnFlags_PreferSortDescending      = 1 << 14,  // Make the initial sort direction Descending when first sorting on this column.
     ImGuiTableColumnFlags_IndentEnable              = 1 << 15,  // Use current Indent value when entering cell (default for column 0).
@@ -1190,11 +1190,9 @@ enum ImGuiTableRowFlags_
 enum ImGuiTableBgTarget_
 {
     ImGuiTableBgTarget_None                         = 0,
-    //ImGuiTableBgTarget_ColumnBg0                  = 1,        // FIXME-TABLE: Todo. Set column background color 0 (generally used for background
-    //ImGuiTableBgTarget_ColumnBg1                  = 2,        // FIXME-TABLE: Todo. Set column background color 1 (generally used for selection marking)
-    ImGuiTableBgTarget_RowBg0                       = 3,        // Set row background color 0 (generally used for background, automatically set when ImGuiTableFlags_RowBg is used)
-    ImGuiTableBgTarget_RowBg1                       = 4,        // Set row background color 1 (generally used for selection marking)
-    ImGuiTableBgTarget_CellBg                       = 5         // Set cell background color (top-most color)
+    ImGuiTableBgTarget_RowBg0                       = 1,        // Set row background color 0 (generally used for background, automatically set when ImGuiTableFlags_RowBg is used)
+    ImGuiTableBgTarget_RowBg1                       = 2,        // Set row background color 1 (generally used for selection marking)
+    ImGuiTableBgTarget_CellBg                       = 3         // Set cell background color (top-most color)
 };
 
 // Flags for ImGui::IsWindowFocused()
@@ -2023,7 +2021,7 @@ struct ImGuiTableColumnSortSpecs
 struct ImGuiTableSortSpecs
 {
     const ImGuiTableColumnSortSpecs* Specs;     // Pointer to sort spec array.
-    int                         SpecsCount;     // Sort spec count. Most often 1 unless e.g. ImGuiTableFlags_MultiSortable is enabled.
+    int                         SpecsCount;     // Sort spec count. Most often 1. May be > 1 when ImGuiTableFlags_SortMulti is enabled. May be == 0 when ImGuiTableFlags_SortTristate is enabled.
     bool                        SpecsDirty;     // Set to true when specs have changed since last time! Use this to sort again, then clear the flag.
 
     ImGuiTableSortSpecs()       { memset(this, 0, sizeof(*this)); }
