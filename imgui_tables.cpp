@@ -190,10 +190,6 @@ inline ImGuiTableFlags TableFixFlags(ImGuiTableFlags flags, ImGuiWindow* outer_w
     if ((flags & (ImGuiTableFlags_ColumnsWidthStretch | ImGuiTableFlags_ColumnsWidthFixed)) == 0)
         flags |= (flags & ImGuiTableFlags_ScrollX) ? ImGuiTableFlags_ColumnsWidthFixed : ImGuiTableFlags_ColumnsWidthStretch;
 
-    // Adjust flags: MultiSortable automatically enable Sortable
-    if (flags & ImGuiTableFlags_MultiSortable)
-        flags |= ImGuiTableFlags_Sortable;
-
     // Adjust flags: disable Resizable when using SameWidths (done above enforcing BordersInnerV)
     if (flags & ImGuiTableFlags_SameWidths)
         flags = (flags & ~ImGuiTableFlags_Resizable) | ImGuiTableFlags_NoKeepColumnsVisible;
@@ -562,7 +558,6 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
 }
 
 // Adjust flags: default width mode + stretch columns are not allowed when auto extending
-// Set 'column->FlagsIn' and 'column->Flags'.
 static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, ImGuiTableColumnFlags flags_in)
 {
     ImGuiTableColumnFlags flags = flags_in;
@@ -594,8 +589,23 @@ static void TableSetupColumnFlags(ImGuiTable* table, ImGuiTableColumn* column, I
     //IM_ASSERT(ImIsPowerOfTwo(flags & ImGuiTableColumnFlags_AlignMask_)); // Check that only 1 of each set is used.
 
     // Preserve status flags
-    column->FlagsIn = flags_in;
     column->Flags = flags | (column->Flags & ImGuiTableColumnFlags_StatusMask_);
+
+    // Build an ordered list of available sort directions
+    column->SortDirectionsAvailCount = column->SortDirectionsAvailMask = column->SortDirectionsAvailList = 0;
+    if (table->Flags & ImGuiTableFlags_Sortable)
+    {
+        int count = 0, mask = 0, list = 0;
+        if ((flags & ImGuiTableColumnFlags_PreferSortAscending)  != 0 && (flags & ImGuiTableColumnFlags_NoSortAscending)  == 0) { mask |= 1 << ImGuiSortDirection_Ascending;  list |= ImGuiSortDirection_Ascending  << (count << 1); count++; }
+        if ((flags & ImGuiTableColumnFlags_PreferSortDescending) != 0 && (flags & ImGuiTableColumnFlags_NoSortDescending) == 0) { mask |= 1 << ImGuiSortDirection_Descending; list |= ImGuiSortDirection_Descending << (count << 1); count++; }
+        if ((flags & ImGuiTableColumnFlags_PreferSortAscending)  == 0 && (flags & ImGuiTableColumnFlags_NoSortAscending)  == 0) { mask |= 1 << ImGuiSortDirection_Ascending;  list |= ImGuiSortDirection_Ascending  << (count << 1); count++; }
+        if ((flags & ImGuiTableColumnFlags_PreferSortDescending) == 0 && (flags & ImGuiTableColumnFlags_NoSortDescending) == 0) { mask |= 1 << ImGuiSortDirection_Descending; list |= ImGuiSortDirection_Descending << (count << 1); count++; }
+        if ((table->Flags & ImGuiTableFlags_SortTristate) || count == 0) { mask |= 1 << ImGuiSortDirection_None; count++; }
+        column->SortDirectionsAvailList = (ImU8)list;
+        column->SortDirectionsAvailMask = (ImU8)mask;
+        column->SortDirectionsAvailCount = (ImU8)count;
+        ImGui::TableFixColumnSortDirection(table, column);
+    }
 }
 
 // Layout columns for the frame. This is in essence the followup to BeginTable().
@@ -644,7 +654,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             if (!column->IsEnabled && column->SortOrder != -1)
                 table->IsSortSpecsDirty = true;
         }
-        if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_MultiSortable))
+        if (column->SortOrder > 0 && !(table->Flags & ImGuiTableFlags_SortMulti))
             table->IsSortSpecsDirty = true;
 
         bool start_auto_fit = false;
@@ -662,6 +672,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         ImU64 display_order_mask = (ImU64)1 << column->DisplayOrder;
         if (column->IsEnabled)
         {
+            // Mark as enabled and link to previous/next enabled column
             column->PrevEnabledColumn = (ImGuiTableColumnIdx)last_visible_column_idx;
             column->NextEnabledColumn = -1;
             if (last_visible_column_idx != -1)
@@ -678,6 +689,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
         IM_ASSERT(column->IndexWithinEnabledSet <= column->DisplayOrder);
     }
+    if ((table->Flags & ImGuiTableFlags_Sortable) && table->SortSpecsCount == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
+        table->IsSortSpecsDirty = true;
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)last_visible_column_idx;
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible
@@ -706,11 +719,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // Count resizable columns
         if ((column->Flags & ImGuiTableColumnFlags_NoResize) == 0)
             count_resizable++;
-
-        // We have a unusual edge case where if the user doesn't call TableGetSortSpecs() but has sorting enabled
-        // or varying sorting flags, we still want the sorting arrows to honor those flags.
-        if (table->Flags & ImGuiTableFlags_Sortable)
-            TableFixColumnSortDirection(column);
 
         // Calculate ideal/auto column width (that's the width required for all contents to be visible without clipping)
         // Combine width from regular rows + width from headers unless requested not to.
@@ -942,7 +950,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // Note that scrolling tables (where inner_window != outer_window) handle Y clipped earlier in BeginTable() so IsVisibleY really only applies to non-scrolling tables.
         // FIXME-TABLE: Because InnerClipRect.Max.y is conservatively ==outer_window->ClipRect.Max.y, we never can mark columns _Above_ the scroll line as not IsVisibleY.
         // Taking advantage of LastOuterHeight would yield good results there...
-        // FIXME-TABLE: IsVisible == false is disabled because it effectively means not submitting will reduces contents width which is fed to outer_window->DC.CursorMaxPos.x,
+        // FIXME-TABLE: Y clipping is disabled because it effectively means not submitting will reduce contents width which is fed to outer_window->DC.CursorMaxPos.x,
         // and this may be used (e.g. typically by outer_window using AlwaysAutoResize or outer_window's horizontal scrollbar, but could be something else).
         // Possible solution to preserve last known content width for clipped column. Test 'table_reported_size' fails when enabling Y clipping and window is resized small.
         column->IsVisibleX = (column->ClipRect.Max.x > column->ClipRect.Min.x);
@@ -958,9 +966,6 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
 
         // Mark column as SkipItems (ignoring all items/layout)
         column->IsSkipItems = !column->IsEnabled || table->HostSkipItems;
-        //if (!is_visible && (column->Flags & ImGuiTableColumnFlags_AutoCull))
-        //    if ((column->AutoFitQueue & 1) == 0 && (column->CannotSkipItemsQueue & 1) == 0)
-        //        column->IsSkipItems = true;
         if (column->IsSkipItems)
             IM_ASSERT(!is_visible);
 
@@ -1177,7 +1182,8 @@ void    ImGui::EndTable()
 #if 0
     // Strip out dummy channel draw calls
     // We have no way to prevent user submitting direct ImDrawList calls into a hidden column (but ImGui:: calls will be clipped out)
-    // (The problem with this approach is we are effectively making it harder for users watching metrics to spot wasted vertices)
+    // Pros: remove draw calls which will have no effect. since they'll have zero-size cliprect they may be early out anyway.
+    // Cons: making it harder for users watching metrics/debugger to spot the wasted vertices.
     if (table->DummyDrawChannel != (ImGuiTableColumnIdx)-1)
     {
         ImDrawChannel* dummy_channel = &table->DrawSplitter._Channels[table->DummyDrawChannel];
@@ -1281,7 +1287,6 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
 
     // When passing a width automatically enforce WidthFixed policy
     // (vs TableFixColumnFlags would default to WidthAutoResize)
-    // (we write to FlagsIn which is a little misleading, another solution would be to pass init_width_or_weight to TableFixColumnFlags)
     if ((flags & ImGuiTableColumnFlags_WidthMask_) == 0)
         if ((table->Flags & ImGuiTableFlags_ColumnsWidthFixed) && (init_width_or_weight > 0.0f))
             flags |= ImGuiTableColumnFlags_WidthFixed;
@@ -1313,7 +1318,7 @@ void ImGui::TableSetupColumn(const char* label, ImGuiTableColumnFlags flags, flo
             column->IsEnabled = column->IsEnabledNextFrame = false;
         if (flags & ImGuiTableColumnFlags_DefaultSort && (table->SettingsLoadedFlags & ImGuiTableFlags_Sortable) == 0)
         {
-            column->SortOrder = 0; // Multiple columns using _DefaultSort will be reordered when building the sort specs.
+            column->SortOrder = 0; // Multiple columns using _DefaultSort will be reassigned unique SortOrder values when building the sort specs.
             column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImU8)(ImGuiSortDirection_Ascending);
         }
     }
@@ -2342,6 +2347,7 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
 //-------------------------------------------------------------------------
 // - TableGetSortSpecs()
 // - TableFixColumnSortDirection() [Internal]
+// - TableGetColumnNextSortDirection() [Internal]
 // - TableSetColumnSortDirection() [Internal]
 // - TableSortSpecsSanitize() [Internal]
 // - TableSortSpecsBuild() [Internal]
@@ -2367,22 +2373,39 @@ ImGuiTableSortSpecs* ImGui::TableGetSortSpecs()
     if (table->IsSortSpecsDirty)
         TableSortSpecsBuild(table);
 
-    return table->SortSpecs.SpecsCount ? &table->SortSpecs : NULL;
+    return &table->SortSpecs;
 }
 
-void ImGui::TableFixColumnSortDirection(ImGuiTableColumn* column)
+static inline ImGuiSortDirection TableGetColumnAvailSortDirection(ImGuiTableColumn* column, int n)
 {
-    // Initial sort state
-    if (column->SortDirection == ImGuiSortDirection_None)
-        column->SortDirection = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? (ImS8)ImGuiSortDirection_Descending : (ImS8)(ImGuiSortDirection_Ascending);
-
-    // Handle NoSortAscending/NoSortDescending
-    if (column->SortDirection == ImGuiSortDirection_Ascending && (column->Flags & ImGuiTableColumnFlags_NoSortAscending))
-        column->SortDirection = ImGuiSortDirection_Descending;
-    else if (column->SortDirection == ImGuiSortDirection_Descending && (column->Flags & ImGuiTableColumnFlags_NoSortDescending))
-        column->SortDirection = ImGuiSortDirection_Ascending;
+    IM_ASSERT(n < column->SortDirectionsAvailCount);
+    return (column->SortDirectionsAvailList >> (n << 1)) & 0x03;
 }
 
+// Fix sort direction if currently set on a value which is unavailable (e.g. activating NoSortAscending/NoSortDescending)
+void ImGui::TableFixColumnSortDirection(ImGuiTable* table, ImGuiTableColumn* column)
+{
+    if (column->SortOrder == -1 || (column->SortDirectionsAvailMask & (1 << column->SortDirection)) != 0)
+        return;
+    column->SortDirection = (ImU8)TableGetColumnAvailSortDirection(column, 0);
+    table->IsSortSpecsDirty = true;
+}
+
+// Calculate next sort direction that would be set after clicking the column
+// - If the PreferSortDescending flag is set, we will default to a Descending direction on the first click.
+// - Note that the PreferSortAscending flag is never checked, it is essentially the default and therefore a no-op.
+IM_STATIC_ASSERT(ImGuiSortDirection_None == 0 && ImGuiSortDirection_Ascending == 1 && ImGuiSortDirection_Descending == 2);
+ImGuiSortDirection ImGui::TableGetColumnNextSortDirection(ImGuiTableColumn* column)
+{
+    IM_ASSERT(column->SortDirectionsAvailCount > 0);
+    if (column->SortOrder == -1)
+        return TableGetColumnAvailSortDirection(column, 0);
+    for (int n = 0; n < 3; n++)
+        if (column->SortDirection == TableGetColumnAvailSortDirection(column, n))
+            return TableGetColumnAvailSortDirection(column, (n + 1) % column->SortDirectionsAvailCount);
+    IM_ASSERT(0);
+    return ImGuiSortDirection_None;
+}
 
 // Note that the NoSortAscending/NoSortDescending flags are processed in TableSortSpecsSanitize(), and they may change/revert
 // the value of SortDirection. We could technically also do it here but it would be unnecessary and duplicate code.
@@ -2391,8 +2414,10 @@ void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_di
     ImGuiContext& g = *GImGui;
     ImGuiTable* table = g.CurrentTable;
 
-    if (!(table->Flags & ImGuiTableFlags_MultiSortable))
+    if (!(table->Flags & ImGuiTableFlags_SortMulti))
         append_to_sort_specs = false;
+    if (!(table->Flags & ImGuiTableFlags_SortTristate))
+        IM_ASSERT(sort_direction != ImGuiSortDirection_None);
 
     ImGuiTableColumnIdx sort_order_max = 0;
     if (append_to_sort_specs)
@@ -2400,8 +2425,10 @@ void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_di
             sort_order_max = ImMax(sort_order_max, table->Columns[other_column_n].SortOrder);
 
     ImGuiTableColumn* column = &table->Columns[column_n];
-    column->SortDirection = (ImS8)sort_direction;
-    if (column->SortOrder == -1 || !append_to_sort_specs)
+    column->SortDirection = (ImU8)sort_direction;
+    if (column->SortDirection == ImGuiSortDirection_None)
+        column->SortOrder = -1;
+    else if (column->SortOrder == -1 || !append_to_sort_specs)
         column->SortOrder = append_to_sort_specs ? sort_order_max + 1 : 0;
 
     for (int other_column_n = 0; other_column_n < table->ColumnsCount; other_column_n++)
@@ -2409,7 +2436,7 @@ void ImGui::TableSetColumnSortDirection(int column_n, ImGuiSortDirection sort_di
         ImGuiTableColumn* other_column = &table->Columns[other_column_n];
         if (other_column != column && !append_to_sort_specs)
             other_column->SortOrder = -1;
-        TableFixColumnSortDirection(other_column);
+        TableFixColumnSortDirection(table, other_column);
     }
     table->IsSettingsDirty = true;
     table->IsSortSpecsDirty = true;
@@ -2435,7 +2462,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
     }
 
     const bool need_fix_linearize = ((ImU64)1 << sort_order_count) != (sort_order_mask + 1);
-    const bool need_fix_single_sort_order = (sort_order_count > 1) && !(table->Flags & ImGuiTableFlags_MultiSortable);
+    const bool need_fix_single_sort_order = (sort_order_count > 1) && !(table->Flags & ImGuiTableFlags_SortMulti);
     if (need_fix_linearize || need_fix_single_sort_order)
     {
         ImU64 fixed_mask = 0x00;
@@ -2465,7 +2492,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
     }
 
     // Fallback default sort order (if no column had the ImGuiTableColumnFlags_DefaultSort flag)
-    if (sort_order_count == 0)
+    if (sort_order_count == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         {
             ImGuiTableColumn* column = &table->Columns[column_n];
@@ -2473,7 +2500,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             {
                 sort_order_count = 1;
                 column->SortOrder = 0;
-                TableFixColumnSortDirection(column);
+                column->SortDirection = TableGetColumnAvailSortDirection(column, 0);
                 break;
             }
         }
@@ -2487,9 +2514,8 @@ void ImGui::TableSortSpecsBuild(ImGuiTable* table)
     TableSortSpecsSanitize(table);
 
     // Write output
-    const bool single_sort_specs = (table->SortSpecsCount <= 1);
-    table->SortSpecsMulti.resize(single_sort_specs ? 0 : table->SortSpecsCount);
-    ImGuiTableColumnSortSpecs* sort_specs = single_sort_specs ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
+    table->SortSpecsMulti.resize(table->SortSpecsCount <= 1 ? 0 : table->SortSpecsCount);
+    ImGuiTableColumnSortSpecs* sort_specs = (table->SortSpecsCount == 0) ? NULL : (table->SortSpecsCount == 1) ? &table->SortSpecsSingle : table->SortSpecsMulti.Data;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         ImGuiTableColumn* column = &table->Columns[column_n];
@@ -2688,14 +2714,7 @@ void ImGui::TableHeader(const char* label)
         // Handle clicking on column header to adjust Sort Order
         if (pressed && table->ReorderColumn != column_n)
         {
-            // Set new sort direction
-            // - If the PreferSortDescending flag is set, we will default to a Descending direction on the first click.
-            // - Note that the PreferSortAscending flag is never checked, it is essentially the default and therefore a no-op.
-            ImGuiSortDirection sort_direction;
-            if (column->SortOrder == -1)
-                sort_direction = (column->Flags & ImGuiTableColumnFlags_PreferSortDescending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending;
-            else
-                sort_direction = (column->SortDirection == ImGuiSortDirection_Ascending) ? ImGuiSortDirection_Descending : ImGuiSortDirection_Ascending;
+            ImGuiSortDirection sort_direction = TableGetColumnNextSortDirection(column);
             TableSetColumnSortDirection(column_n, sort_direction, g.IO.KeyShift);
         }
     }
