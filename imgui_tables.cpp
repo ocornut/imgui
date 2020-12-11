@@ -716,8 +716,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         // Combine width from regular rows + width from headers unless requested not to.
         if (!column->IsPreserveWidthAuto)
         {
-            const float content_width_body = (float)ImMax(column->ContentMaxXFrozen, column->ContentMaxXUnfrozen) - column->WorkMinX;
-            const float content_width_headers = (float)column->ContentMaxXHeadersIdeal - column->WorkMinX;
+            const float content_width_body = ImMax(column->ContentMaxXFrozen, column->ContentMaxXUnfrozen) - column->WorkMinX;
+            const float content_width_headers = column->ContentMaxXHeadersIdeal - column->WorkMinX;
             float width_auto = content_width_body;
             if (!(table->Flags & ImGuiTableFlags_NoHeadersWidth) && !(column->Flags & ImGuiTableColumnFlags_NoHeaderWidth))
                 width_auto = ImMax(width_auto, content_width_headers);
