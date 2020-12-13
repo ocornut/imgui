@@ -1369,7 +1369,8 @@ const char* ImGui::TableGetColumnName(int column_n)
 
 const char* ImGui::TableGetColumnName(const ImGuiTable* table, int column_n)
 {
-    IM_ASSERT(table->IsLayoutLocked == true || column_n <= table->DeclColumnsCount); // NameOffset is invalid otherwise
+    if (table->IsLayoutLocked == false && column_n >= table->DeclColumnsCount)
+        return ""; // NameOffset is invalid at this point
     const ImGuiTableColumn* column = &table->Columns[column_n];
     if (column->NameOffset == -1)
         return "";
@@ -1762,7 +1763,6 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
     window->DC.CursorMaxPos.x = window->DC.CursorPos.x;
     window->DC.ColumnsOffset.x = start_x - window->Pos.x - window->DC.Indent.x; // FIXME-WORKRECT
     window->DC.CurrLineTextBaseOffset = table->RowTextBaseline;
-    window->DC.LastItemId = 0;
     window->DC.NavLayerCurrent = (ImGuiNavLayer)column->NavLayerCurrent;
 
     window->WorkRect.Min.y = window->DC.CursorPos.y;
@@ -1775,6 +1775,12 @@ void ImGui::TableBeginCell(ImGuiTable* table, int column_n)
         window->DC.CursorPos.y = ImMax(window->DC.CursorPos.y, table->RowPosY2);
 
     window->SkipItems = column->IsSkipItems;
+    if (column->IsSkipItems)
+    {
+        window->DC.LastItemId = 0;
+        window->DC.LastItemStatusFlags = 0;
+    }
+
     if (table->Flags & ImGuiTableFlags_NoClip)
     {
         // FIXME: if we end up drawing all borders/bg in EndTable, could remove this and just assert that channel hasn't changed.
@@ -2638,8 +2644,10 @@ void ImGui::TableHeader(const char* label)
     //GetForegroundDrawList()->AddRect(cell_r.Min, cell_r.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
     //GetForegroundDrawList()->AddRect(bb.Min, bb.Max, IM_COL32(255, 0, 0, 255)); // [DEBUG]
 
+    // Using AllowItemOverlap mode because we cover the whole cell, and we want user to be able to submit subsequent items.
     bool hovered, held;
-    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_None);
+    bool pressed = ButtonBehavior(bb, id, &hovered, &held, ImGuiButtonFlags_AllowItemOverlap);
+    SetItemAllowOverlap();
     if (hovered || selected)
     {
         const ImU32 col = GetColorU32(held ? ImGuiCol_HeaderActive : hovered ? ImGuiCol_HeaderHovered : ImGuiCol_Header);
@@ -3025,6 +3033,7 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
 
     // Serialize ImGuiTableSettings/ImGuiTableColumnSettings into ImGuiTable/ImGuiTableColumn
     ImGuiTableColumnSettings* column_settings = settings->GetColumnSettings();
+    ImU64 display_order_mask = 0;
     for (int data_n = 0; data_n < settings->ColumnsCount; data_n++, column_settings++)
     {
         int column_n = column_settings->Index;
@@ -3044,12 +3053,19 @@ void ImGui::TableLoadSettings(ImGuiTable* table)
             column->DisplayOrder = column_settings->DisplayOrder;
         else
             column->DisplayOrder = (ImGuiTableColumnIdx)column_n;
+        display_order_mask |= (ImU64)1 << column->DisplayOrder;
         column->IsEnabled = column->IsEnabledNextFrame = column_settings->IsEnabled;
         column->SortOrder = column_settings->SortOrder;
         column->SortDirection = column_settings->SortDirection;
     }
 
-    // FIXME-TABLE: Need to validate .ini data
+    // Validate and fix invalid display order data
+    const ImU64 expected_display_order_mask = (settings->ColumnsCount == 64) ? ~0 : ((ImU64)1 << settings->ColumnsCount) - 1;
+    if (display_order_mask != expected_display_order_mask)
+        for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
+            table->Columns[column_n].DisplayOrder = (ImGuiTableColumnIdx)column_n;
+
+    // Rebuild index
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
         table->DisplayOrderToIndex[table->Columns[column_n].DisplayOrder] = (ImGuiTableColumnIdx)column_n;
 }
