@@ -441,25 +441,21 @@ IMGUI_IMPL_API LRESULT ImGui_ImplWin32_WndProcHandler(HWND hwnd, UINT msg, WPARA
         if (wParam < 256)
             io.KeysDown[wParam] = 0;
         return 0;
-#if HAS_WIN32_IME && !UNICODE
+#if HAS_WIN32_IME
+    case WM_IME_COMPOSITION:
+        if (lParam & GCS_RESULTSTR)
+        {
+            if (HIMC himc = ::ImmGetContext(hwnd))
+            {
+                wchar_t buffer;
+                ::ImmGetCompositionStringW(himc, GCS_RESULTSTR, &buffer, sizeof(buffer));
+                ::ImmReleaseContext(hwnd, himc);
+                io.AddInputCharacterUTF16(buffer);
+            }
+        }
+        return 0;
     case WM_IME_CHAR:
-    {
-        // Character is encoded as MBCS.
-        char* narrow = (char*)&wParam;
-
-        // The byte order is reversed, so swap it.
-        // This code only works on little endian system.
-        char tmp = narrow[0];
-        narrow[0] = narrow[1];
-        narrow[1] = tmp;
-
-        // Convert to UTF-16.
-        wchar_t widen;
-        MultiByteToWideChar(CP_ACP, 0, narrow, 2, &widen, 1);
-
-        io.AddInputCharacterUTF16(widen);
-        return 1; // Skip WM_CHAR
-    }
+        return 1; // IME is processed above, so return 1 so that the WM_CHAR message is not generated.
 #endif
     case WM_CHAR:
         // You can also use ToAscii()+GetKeyboardState() to retrieve characters.
