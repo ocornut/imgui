@@ -492,8 +492,7 @@ void ImGui::TableBeginApplyRequests(ImGuiTable* table)
 {
     // Handle resizing request
     // (We process this at the first TableBegin of the frame)
-    // FIXME-TABLE: Preserve contents width _while resizing down_ until releasing.
-    // FIXME-TABLE: Contains columns if our work area doesn't allow for scrolling.
+    // FIXME-TABLE: Contains columns if our work area doesn't allow for scrolling?
     if (table->InstanceCurrent == 0)
     {
         if (table->ResizedColumn != -1 && table->ResizedColumnNextWidth != FLT_MAX)
@@ -691,6 +690,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     if ((table->Flags & ImGuiTableFlags_Sortable) && table->SortSpecsCount == 0 && !(table->Flags & ImGuiTableFlags_SortTristate))
         table->IsSortSpecsDirty = true;
     table->RightMostEnabledColumn = (ImGuiTableColumnIdx)last_visible_column_idx;
+    IM_ASSERT(table->RightMostEnabledColumn >= 0);
 
     // [Part 2] Disable child window clipping while fitting columns. This is not strictly necessary but makes it possible
     // to avoid the column fitting to wait until the first visible frame of the child container (may or not be a good thing).
@@ -1014,9 +1014,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // because of using _WidthAutoResize/_WidthStretch). This will hide the resizing option from the context menu.
     if (is_hovering_table && table->HoveredColumnBody == -1)
     {
-        float unused_x1 = table->WorkRect.Min.x;
-        if (table->RightMostEnabledColumn != -1)
-            unused_x1 = ImMax(unused_x1, table->Columns[table->RightMostEnabledColumn].ClipRect.Max.x);
+        float unused_x1 = ImMax(table->WorkRect.Min.x, table->Columns[table->RightMostEnabledColumn].ClipRect.Max.x);
         if (g.IO.MousePos.x >= unused_x1)
             table->HoveredColumnBody = (ImGuiTableColumnIdx)table->ColumnsCount;
     }
@@ -1109,6 +1107,8 @@ void ImGui::TableUpdateBorders(ImGuiTable* table)
         }
         if (held)
         {
+            if (table->LastResizedColumn == -1)
+                table->ResizeLockMinContentsX2 = table->RightMostEnabledColumn != -1 ? table->Columns[table->RightMostEnabledColumn].MaxX : -FLT_MAX;
             table->ResizedColumn = (ImGuiTableColumnIdx)column_n;
             table->InstanceInteracted = table->InstanceCurrent;
         }
@@ -1182,6 +1182,8 @@ void    ImGui::EndTable()
     float max_pos_x = backup_inner_max_pos_x;
     if (table->RightMostEnabledColumn != -1)
         max_pos_x = ImMax(max_pos_x, table->Columns[table->RightMostEnabledColumn].MaxX);
+    if (table->ResizedColumn != -1)
+        max_pos_x = ImMax(max_pos_x, table->ResizeLockMinContentsX2);
 
 #if 0
     // Strip out dummy channel draw calls
@@ -1861,7 +1863,12 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
 
     ImGuiTableColumn* column_1 = (column_0->NextEnabledColumn != -1) ? &table->Columns[column_0->NextEnabledColumn] : NULL;
 
-    // In this surprisingly not simple because of how we support mixing Fixed and Stretch columns.
+    // In this surprisingly not simple because of how we support mixing Fixed and multiple Stretch columns.
+    // - All fixed: easy.
+    // - All stretch: easy.
+    // - One or more fixed + one stretch: easy.
+    // - One or more fixed + more than one stretch: A MESS
+
     // When forwarding resize from Wn| to Fn+1| we need to be considerate of the _NoResize flag on Fn+1.
     // FIXME-TABLE: Find a way to rewrite all of this so interactions feel more consistent for the user.
     // Scenarios:
@@ -2638,6 +2645,26 @@ void ImGui::TableHeader(const char* label)
     ImRect cell_r = TableGetCellBgRect(table, column_n);
     float label_height = ImMax(label_size.y, table->RowMinHeight - table->CellPaddingY * 2.0f);
 
+    // Calculate ideal size for sort order arrow
+    float w_arrow = 0.0f;
+    float w_sort_text = 0.0f;
+    char sort_order_suf[4] = "";
+    const float ARROW_SCALE = 0.65f;
+    if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
+    {
+        w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);// table->CellPadding.x);
+        if (column->SortOrder > 0)
+        {
+            ImFormatString(sort_order_suf, IM_ARRAYSIZE(sort_order_suf), "%d", column->SortOrder + 1);
+            w_sort_text = g.Style.ItemInnerSpacing.x + CalcTextSize(sort_order_suf).x;
+        }
+    }
+
+    // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering for merging.
+    float max_pos_x = label_pos.x + label_size.x + w_sort_text + w_arrow;
+    column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, column->WorkMaxX);
+    column->ContentMaxXHeadersIdeal = ImMax(column->ContentMaxXHeadersIdeal, max_pos_x);
+
     // Keep header highlighted when context menu is open.
     const bool selected = (table->IsContextPopupOpen && table->ContextPopupColumn == column_n && table->InstanceInteracted == table->InstanceCurrent);
     ImGuiID id = window->GetID(label);
@@ -2692,28 +2719,13 @@ void ImGui::TableHeader(const char* label)
     }
 
     // Sort order arrow
-    float w_arrow = 0.0f;
-    float w_sort_text = 0.0f;
-    float ellipsis_max = cell_r.Max.x;
+    const float ellipsis_max = cell_r.Max.x - w_arrow - w_sort_text;
     if ((table->Flags & ImGuiTableFlags_Sortable) && !(column->Flags & ImGuiTableColumnFlags_NoSort))
     {
-        const float ARROW_SCALE = 0.65f;
-        w_arrow = ImFloor(g.FontSize * ARROW_SCALE + g.Style.FramePadding.x);// table->CellPadding.x);
         if (column->SortOrder != -1)
         {
-            char sort_order_suf[8];
-            w_sort_text = 0.0f;
-            if (column->SortOrder > 0)
-            {
-                ImFormatString(sort_order_suf, IM_ARRAYSIZE(sort_order_suf), "%d", column->SortOrder + 1);
-                w_sort_text = g.Style.ItemInnerSpacing.x + CalcTextSize(sort_order_suf).x;
-            }
-
             float x = ImMax(cell_r.Min.x, cell_r.Max.x - w_arrow - w_sort_text);
-            ellipsis_max -= w_arrow + w_sort_text;
-
             float y = label_pos.y;
-            ImU32 col = GetColorU32(ImGuiCol_Text);
             if (column->SortOrder > 0)
             {
                 PushStyleColor(ImGuiCol_Text, GetColorU32(ImGuiCol_Text, 0.70f));
@@ -2721,7 +2733,7 @@ void ImGui::TableHeader(const char* label)
                 PopStyleColor();
                 x += w_sort_text;
             }
-            RenderArrow(window->DrawList, ImVec2(x, y), col, column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Up : ImGuiDir_Down, ARROW_SCALE);
+            RenderArrow(window->DrawList, ImVec2(x, y), GetColorU32(ImGuiCol_Text), column->SortDirection == ImGuiSortDirection_Ascending ? ImGuiDir_Up : ImGuiDir_Down, ARROW_SCALE);
         }
 
         // Handle clicking on column header to adjust Sort Order
@@ -2740,11 +2752,6 @@ void ImGui::TableHeader(const char* label)
     const bool text_clipped = label_size.x > (ellipsis_max - label_pos.x);
     if (text_clipped && hovered && g.HoveredIdNotActiveTimer > g.TooltipSlowDelay)
         SetTooltip("%.*s", (int)(label_end - label), label);
-
-    // We feed our unclipped width to the column without writing on CursorMaxPos, so that column is still considering for merging.
-    float max_pos_x = label_pos.x + label_size.x + w_sort_text + w_arrow;
-    column->ContentMaxXHeadersUsed = ImMax(column->ContentMaxXHeadersUsed, column->WorkMaxX);
-    column->ContentMaxXHeadersIdeal = ImMax(column->ContentMaxXHeadersIdeal, max_pos_x);
 
     // We don't use BeginPopupContextItem() because we want the popup to stay up even after the column is hidden
     if (IsMouseReleased(1) && IsItemHovered())

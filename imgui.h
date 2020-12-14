@@ -60,7 +60,7 @@ Index of this file:
 // Version
 // (Integer encoded as XYYZZ for use in #if preprocessor conditionals. Work in progress versions typically starts at XYY99 then bounce up to XYY00, XYY01 etc. when release tagging happens)
 #define IMGUI_VERSION               "1.80 WIP"
-#define IMGUI_VERSION_NUM           17906
+#define IMGUI_VERSION_NUM           17907
 #define IMGUI_CHECKVERSION()        ImGui::DebugCheckVersionAndDataLayout(IMGUI_VERSION, sizeof(ImGuiIO), sizeof(ImGuiStyle), sizeof(ImVec2), sizeof(ImVec4), sizeof(ImDrawVert), sizeof(ImDrawIdx))
 #define IMGUI_HAS_TABLE
 
@@ -1037,8 +1037,8 @@ enum ImGuiTabItemFlags_
 //   When ScrollX is off:
 //    - Table defaults to ImGuiTableFlags_ColumnsWidthStretch -> all Columns defaults to ImGuiTableColumnFlags_WidthStretch.
 //    - Columns sizing policy allowed: Stretch (default) or Fixed/Auto.
-//    - Stretch Columns will share the width available in table.
-//    - Fixed Columns will generally obtain their requested width unless the Table cannot fit them all.
+//    - Fixed Columns will generally obtain their requested width (unless the Table cannot fit them all).
+//    - Stretch Columns will share the remaining width.
 //   When ScrollX is on:
 //    - Table defaults to ImGuiTableFlags_ColumnsWidthFixed -> all Columns defaults to ImGuiTableColumnFlags_WidthFixed.
 //    - Columns sizing policy allowed: Fixed/Auto mostly! 

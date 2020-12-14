@@ -2012,6 +2012,7 @@ struct ImGuiTable
     float                       ColumnsTotalWidth;          // Sum of current column width
     float                       ColumnsAutoFitWidth;        // Sum of ideal column width in order nothing to be clipped, used for auto-fitting and content width submission in outer window
     float                       ResizedColumnNextWidth;
+    float                       ResizeLockMinContentsX2;    // Lock minimum contents width while resizing down in order to not create feedback loops. But we allow growing the table.
     float                       RefScale;                   // Reference scale to be able to rescale columns on font/dpi changes.
     ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
     ImRect                      WorkRect;
