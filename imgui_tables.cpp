@@ -369,7 +369,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->FreezeColumnsRequest = table->FreezeColumnsCount = 0;
     table->IsUnfrozen = true;
     table->DeclColumnsCount = 0;
-    table->RightMostEnabledColumn = -1;
 
     // Using opaque colors facilitate overlapping elements of the grid
     table->BorderColorStrong = GetColorU32(ImGuiCol_TableBorderStrong);
@@ -709,7 +708,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     float sum_weights_stretched = 0.0f;     // Sum of all weights for weighted columns.
     float sum_width_fixed_requests = 0.0f;  // Sum of all width for fixed and auto-resize columns, excluding width contributed by Stretch columns.
     float max_width_auto = 0.0f;            // Largest auto-width (used for SameWidths feature)
-    table->LeftMostStretchedColumnDisplayOrder = -1;
+    table->LeftMostStretchedColumn = table->RightMostStretchedColumn = -1;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
     {
         if (!(table->EnabledMaskByIndex & ((ImU64)1 << column_n)))
@@ -760,11 +759,16 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         else
         {
             IM_ASSERT(column->Flags & ImGuiTableColumnFlags_WidthStretch);
-            if (column->StretchWeight < 0.0f)
-                column->StretchWeight = 1.0f;
+
+            // Revert or initialize weight (when column->StretchWeight < 0.0f normally it means there has been no init value so it'll always default to 1.0f)
+            if (column->AutoFitQueue != 0x00 || column->StretchWeight < 0.0f) 
+                column->StretchWeight = (column->InitStretchWeightOrWidth > 0.0f) ? column->InitStretchWeightOrWidth : 1.0f;
+
             sum_weights_stretched += column->StretchWeight;
-            if (table->LeftMostStretchedColumnDisplayOrder == -1 || table->LeftMostStretchedColumnDisplayOrder > column->DisplayOrder)
-                table->LeftMostStretchedColumnDisplayOrder = column->DisplayOrder;
+            if (table->LeftMostStretchedColumn == -1 || table->Columns[table->LeftMostStretchedColumn].DisplayOrder > column->DisplayOrder)
+                table->LeftMostStretchedColumn = (ImGuiTableColumnIdx)column_n;
+            if (table->RightMostStretchedColumn == -1 || table->Columns[table->RightMostStretchedColumn].DisplayOrder < column->DisplayOrder)
+                table->RightMostStretchedColumn = (ImGuiTableColumnIdx)column_n;
         }
         max_width_auto = ImMax(max_width_auto, column->WidthAuto);
         sum_width_fixed_requests += table->CellPaddingX * 2.0f;
@@ -831,8 +835,8 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
         }
 
         // [Resize Rule 1] The right-most Visible column is not resizable if there is at least one Stretch column
-        // (see comments in TableResizeColumn())
-        if (column->NextEnabledColumn == -1 && table->LeftMostStretchedColumnDisplayOrder != -1)
+        // See additional comments in TableSetColumnWidth().
+        if (column->NextEnabledColumn == -1 && table->LeftMostStretchedColumn != -1)
             column->Flags |= ImGuiTableColumnFlags_NoDirectResize_;
 
         // Assign final width, record width in case we will need to shrink
@@ -1885,7 +1889,7 @@ void ImGui::TableSetColumnWidth(int column_n, float width)
         // [Resize Rule 3] If we are are followed by a fixed column and we have a Stretch column before, we need to ensure
         // that our left border won't move, which we can do by making sure column_a/column_b resizes cancels each others.
         if (column_1 && (column_1->Flags & ImGuiTableColumnFlags_WidthFixed))
-            if (table->LeftMostStretchedColumnDisplayOrder != -1 && table->LeftMostStretchedColumnDisplayOrder < column_0->DisplayOrder)
+            if (table->LeftMostStretchedColumn != -1 && table->Columns[table->LeftMostStretchedColumn].DisplayOrder < column_0->DisplayOrder)
             {
                 // (old_a + old_b == new_a + new_b) --> (new_a == old_a + old_b - new_b)
                 float column_1_width = ImMax(column_1->WidthRequest - (column_0_width - column_0->WidthRequest), min_width);
@@ -1933,9 +1937,10 @@ void ImGui::TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n)
     if (!column->IsEnabled)
         return;
     column->CannotSkipItemsQueue = (1 << 0);
-    column->AutoFitQueue = (1 << 1);
     if (column->Flags & ImGuiTableColumnFlags_WidthStretch)
         table->AutoFitSingleStretchColumn = (ImGuiTableColumnIdx)column_n;
+    else
+        column->AutoFitQueue = (1 << 1);
 }
 
 void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
@@ -1952,7 +1957,7 @@ void ImGui::TableSetColumnWidthAutoAll(ImGuiTable* table)
 
 void ImGui::TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
 {
-    IM_ASSERT(table->LeftMostStretchedColumnDisplayOrder != -1);
+    IM_ASSERT(table->LeftMostStretchedColumn != -1 && table->RightMostStretchedColumn != -1);
 
     // Measure existing quantity
     float visible_weight = 0.0f;
@@ -2506,7 +2511,7 @@ void ImGui::TableSortSpecsSanitize(ImGuiTable* table)
             {
                 sort_order_count = 1;
                 column->SortOrder = 0;
-                column->SortDirection = TableGetColumnAvailSortDirection(column, 0);
+                column->SortDirection = (ImU8)TableGetColumnAvailSortDirection(column, 0);
                 break;
             }
         }
@@ -2792,7 +2797,7 @@ void ImGui::TableDrawContextMenu(ImGuiTable* table)
         if (column != NULL)
         {
             const bool can_resize = !(column->Flags & ImGuiTableColumnFlags_NoResize) && column->IsEnabled;
-            if (MenuItem("Size column to fit", NULL, false, can_resize))
+            if (MenuItem("Size column to fit###SizeOne", NULL, false, can_resize))
                 TableSetColumnWidthAutoSingle(table, column_n);
         }
 

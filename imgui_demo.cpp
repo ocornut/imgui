@@ -4458,7 +4458,7 @@ static void ShowDemoWindowTables()
                 for (int column = 0; column < COLUMNS_COUNT; column++)
                 {
                     ImGui::TableSetColumnIndex(column);
-                    ImGui::Text("Cell %d,%d", 0, row);
+                    ImGui::Text("Cell %d,%d", column, row);
                 }
             }
             ImGui::EndTable();
