@@ -7664,7 +7664,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
     hovered |= (g.HoveredId == id);
 
     // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs to be hovered)
-    if (!held)
+    if (g.ActiveId != id)
         SetItemAllowOverlap();
 
     // Drag and drop: re-order tabs
