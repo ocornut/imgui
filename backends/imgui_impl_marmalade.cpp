@@ -19,7 +19,11 @@
 //  2018-02-06: Misc: Removed call to ImGui::Shutdown() which is not available from 1.60 WIP, user needs to call CreateContext/DestroyContext themselves.
 //  2018-02-06: Inputs: Added mapping for ImGuiKey_Space.
 
-#include "imgui.h"
+#ifndef IMGUI_STATIC_LIBRARY
+#include "imgui.h"      // IMGUI_IMPL_API
+#else
+#include <imgui.h>		// IMGUI_IMPL_API
+#endif
 #include "imgui_impl_marmalade.h"
 
 #include <s3eClipboard.h>

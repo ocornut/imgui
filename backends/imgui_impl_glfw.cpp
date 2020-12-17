@@ -37,7 +37,11 @@
 //  2017-08-25: Inputs: MousePos set to -FLT_MAX,-FLT_MAX when mouse is unavailable/missing (instead of -1,-1).
 //  2016-10-15: Misc: Added a void* user_data parameter to Clipboard function handlers.
 
-#include "imgui.h"
+#ifndef IMGUI_STATIC_LIBRARY
+#include "imgui.h"      // IMGUI_IMPL_API
+#else
+#include <imgui.h>		// IMGUI_IMPL_API
+#endif
 #include "imgui_impl_glfw.h"
 
 // GLFW

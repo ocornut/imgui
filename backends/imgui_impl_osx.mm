@@ -12,7 +12,11 @@
 // If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
-#include "imgui.h"
+#ifndef IMGUI_STATIC_LIBRARY
+#include "imgui.h"      // IMGUI_IMPL_API
+#else
+#include <imgui.h>		// IMGUI_IMPL_API
+#endif
 #include "imgui_impl_osx.h"
 #import <Cocoa/Cocoa.h>
 

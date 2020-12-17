@@ -24,6 +24,10 @@
 //#define IMGUI_API __declspec( dllexport )
 //#define IMGUI_API __declspec( dllimport )
 
+//---- Use system includes instead of local includes.
+// This is specifically for the implementation of ImGui rendering backends.
+//#define IMGUI_STATIC_LIBRARY
+
 //---- Don't define obsolete functions/enums/behaviors. Consider enabling from time to time after updating to avoid using soon-to-be obsolete function/names.
 //#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS
 

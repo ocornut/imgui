@@ -34,7 +34,11 @@
 
 #include <stdint.h>     // uint64_t
 #include <cstring>      // memcpy
-#include "imgui.h"
+#ifndef IMGUI_STATIC_LIBRARY
+#include "imgui.h"      // IMGUI_IMPL_API
+#else
+#include <imgui.h>		// IMGUI_IMPL_API
+#endif
 #include "imgui_impl_allegro5.h"
 
 // Allegro

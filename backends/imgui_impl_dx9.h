@@ -10,7 +10,11 @@
 // Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 #pragma once
+#ifndef IMGUI_STATIC_LIBRARY
 #include "imgui.h"      // IMGUI_IMPL_API
+#else
+#include <imgui.h>		// IMGUI_IMPL_API
+#endif      // IMGUI_IMPL_API
 
 struct IDirect3DDevice9;
 
