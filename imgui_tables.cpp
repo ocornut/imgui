@@ -38,7 +38,7 @@ Index of this file:
 // - TableSetupColumn()                         user submit columns details (optional)
 // - TableSetupScrollFreeze()                   user submit scroll freeze information (optional)
 //-----------------------------------------------------------------------------
-// - TableUpdateLayout() [Internal]             setup everything, lock all widths, columns positions, clipping rectangles. Automatically called by the FIRST call to TableNextRow() or TableHeadersRow().
+// - TableUpdateLayout() [Internal]             followup to BeginTable(): setup everything: widths, columns positions, clipping rectangles. Automatically called by the FIRST call to TableNextRow() or TableHeadersRow().
 //    | TableSetupDrawChannels()                - setup ImDrawList channels
 //    | TableUpdateBorders()                    - detect hovering columns for resize, ahead of contents submission
 //    | TableDrawContextMenu()                  - draw right-click context menu
@@ -280,6 +280,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->InnerWidth = inner_width;
     table->OuterRect = outer_rect;
     table->WorkRect = outer_rect;
+    table->IsOuterRectFitX = (outer_size.x >= -1.0f && outer_size.x <= 0.0f); // Bit ambiguous
 
     // When not using a child window, WorkRect.Max will grow as we append contents.
     if (use_child_window)
@@ -325,7 +326,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->HostBackupCursorMaxPos = inner_window->DC.CursorMaxPos;
     table->HostBackupItemWidth = outer_window->DC.ItemWidth;
     table->HostBackupItemWidthStackSize = outer_window->DC.ItemWidthStack.Size;
-    inner_window->ParentWorkRect = table->WorkRect;
     inner_window->DC.PrevLineSize = inner_window->DC.CurrLineSize = ImVec2(0.0f, 0.0f);
 
     // Padding and Spacing
@@ -356,13 +356,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->InnerClipRect.ClipWithFull(table->HostClipRect);
     table->InnerClipRect.Max.y = (flags & ImGuiTableFlags_NoHostExtendY) ? ImMin(table->InnerClipRect.Max.y, inner_window->WorkRect.Max.y) : inner_window->ClipRect.Max.y;
 
-    // Initial draw cmd starts with a BgClipRect that matches the one of its host, to facilitate merge draw commands by default.
-    // This is because all our cell highlight are manually clipped with BgClipRect
-    // Larger at first, if/after unfreezing will become same as tight
-    table->BgClipRect = table->InnerClipRect;
-    table->BgClipRectForDrawCmd = table->HostClipRect;
-    IM_ASSERT(table->BgClipRect.Min.y <= table->BgClipRect.Max.y);
-
     table->RowPosY1 = table->RowPosY2 = table->WorkRect.Min.y; // This is needed somehow
     table->RowTextBaseline = 0.0f; // This will be cleared again by TableBeginRow()
     table->FreezeRowsRequest = table->FreezeRowsCount = 0; // This will be setup by TableSetupScrollFreeze(), if any
@@ -373,8 +366,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     // Using opaque colors facilitate overlapping elements of the grid
     table->BorderColorStrong = GetColorU32(ImGuiCol_TableBorderStrong);
     table->BorderColorLight = GetColorU32(ImGuiCol_TableBorderLight);
-    table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
-    table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
 
     // Make table current
     const int table_idx = g.Tables.GetIndex(table);
@@ -1001,26 +992,39 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 8] Detect/store when we are hovering the unused space after the right-most column (so e.g. context menus can react on it)
     // Clear Resizable flag if none of our column are actually resizable (either via an explicit _NoResize flag, either
     // because of using _WidthAutoResize/_WidthStretch). This will hide the resizing option from the context menu.
+    const float unused_x1 = ImMax(table->WorkRect.Min.x, table->Columns[table->RightMostEnabledColumn].ClipRect.Max.x);
     if (is_hovering_table && table->HoveredColumnBody == -1)
     {
-        float unused_x1 = ImMax(table->WorkRect.Min.x, table->Columns[table->RightMostEnabledColumn].ClipRect.Max.x);
         if (g.IO.MousePos.x >= unused_x1)
             table->HoveredColumnBody = (ImGuiTableColumnIdx)table->ColumnsCount;
     }
     if (count_resizable == 0 && (table->Flags & ImGuiTableFlags_Resizable))
         table->Flags &= ~ImGuiTableFlags_Resizable;
 
-    // [Part 9] Allocate draw channels
+    // [Part 9] Lock actual OuterRect/WorkRect right-most position.
+    // This is done late to handle the case of fixed-columns tables not claiming more widths that they need.
+    // Because of this we are careful with uses of WorkRect and InnerClipRect before this point.
+    if ((table->Flags & ImGuiTableFlags_NoHostExtendX) && table->InnerWindow == table->OuterWindow && table->RightMostStretchedColumn == -1)
+    {
+        table->OuterRect.Max.x = table->WorkRect.Max.x = unused_x1;
+        table->InnerClipRect.Max.x = ImMin(table->InnerClipRect.Max.x, unused_x1);
+        table->IsOuterRectFitX = false;
+    }
+    table->InnerWindow->ParentWorkRect = table->WorkRect;
+    table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
+    table->BorderX2 = table->InnerClipRect.Max.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : +1.0f);
+
+    // [Part 10] Allocate draw channels and setup background cliprect
     TableSetupDrawChannels(table);
 
-    // [Part 10] Hit testing on borders
+    // [Part 11] Hit testing on borders
     if (table->Flags & ImGuiTableFlags_Resizable)
         TableUpdateBorders(table);
     table->LastFirstRowHeight = 0.0f;
     table->IsLayoutLocked = true;
     table->IsUsingHeaders = false;
 
-    // [Part 11] Context menu
+    // [Part 12] Context menu
     if (table->IsContextPopupOpen && table->InstanceCurrent == table->InstanceInteracted)
     {
         const ImGuiID context_menu_id = ImHashStr("##ContextMenu", 0, table->ID);
@@ -1227,14 +1231,14 @@ void    ImGui::EndTable()
     outer_window->DC.ItemWidth = table->HostBackupItemWidth;
     outer_window->DC.ItemWidthStack.Size = table->HostBackupItemWidthStackSize;
     outer_window->DC.ColumnsOffset = table->HostBackupColumnsOffset;
+    const float outer_width = table->IsOuterRectFitX ? table->ColumnsAutoFitWidth : table->WorkRect.GetWidth();
     if (inner_window != outer_window)
     {
         EndChild();
     }
     else
     {
-        ImVec2 item_size = table->OuterRect.GetSize();
-        item_size.x = table->ColumnsTotalWidth;
+        ImVec2 item_size(outer_width, table->OuterRect.GetHeight());
         ItemSize(item_size);
     }
 
@@ -1247,7 +1251,8 @@ void    ImGui::EndTable()
     }
     else
     {
-        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, table->WorkRect.Min.x + table->ColumnsAutoFitWidth); // For auto-fit
+        outer_window->DC.CursorMaxPos.x = ImMax(backup_outer_max_pos_x, table->WorkRect.Min.x + outer_width); // For auto-fit
+        outer_window->DC.CursorPosPrevLine.x = table->WorkRect.Max.x; // For consistent reaction to SameLine() // FIXME: Should be a feature of layout/ItemAdd
     }
 
     // Save settings
@@ -2068,6 +2073,13 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
         }
         column->DrawChannelCurrent = column->DrawChannelFrozen;
     }
+
+    // Initial draw cmd starts with a BgClipRect that matches the one of its host, to facilitate merge draw commands by default.
+    // All our cell highlight are manually clipped with BgClipRect. When unfreezing it will be made smaller to fit scrolling rect.
+    // (This technically isn't part of setting up draw channels, but is reasonably related to be done here)
+    table->BgClipRect = table->InnerClipRect;
+    table->BgClipRectForDrawCmd = table->HostClipRect;
+    IM_ASSERT(table->BgClipRect.Min.y <= table->BgClipRect.Max.y);
 }
 
 // This function reorder draw channels based on matching clip rectangle, to facilitate merging them. Called by EndTable().
