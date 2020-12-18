@@ -727,7 +727,7 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
             const float content_width_body = ImMax(column->ContentMaxXFrozen, column->ContentMaxXUnfrozen) - column->WorkMinX;
             const float content_width_headers = column->ContentMaxXHeadersIdeal - column->WorkMinX;
             float width_auto = content_width_body;
-            if (!(table->Flags & ImGuiTableFlags_NoHeadersWidth) && !(column->Flags & ImGuiTableColumnFlags_NoHeaderWidth))
+            if (!(column->Flags & ImGuiTableColumnFlags_NoHeaderWidth))
                 width_auto = ImMax(width_auto, content_width_headers);
             width_auto = ImMax(width_auto, min_column_width);
 
