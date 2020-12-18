@@ -65,26 +65,31 @@ Index of this file:
 // TABLE SIZING
 //-----------------------------------------------------------------------------
 // (Read carefully because this is subtle but it does make sense!)
-// About 'outer_size', its meaning needs to differ slightly depending of if we are using ScrollX/ScrollY flags:
-//   X:
-//   - outer_size.x < 0.0f  ->  right align from window/work-rect maximum x edge.
-//   - outer_size.x = 0.0f  ->  auto enlarge, use all available space.
-//   - outer_size.x > 0.0f  ->  fixed width
-//   Y with ScrollX/ScrollY: using a child window for scrolling:
-//   - outer_size.y < 0.0f  ->  bottom align
-//   - outer_size.y = 0.0f  ->  bottom align, consistent with BeginChild(). not recommended unless table is last item in parent window.
-//   - outer_size.y > 0.0f  ->  fixed child height. recommended when using Scrolling on any axis.
-//   Y without scrolling, we output table directly in parent window:
-//   - outer_size.y < 0.0f  ->  bottom align (will auto extend, unless NoHostExtendV is set)
-//   - outer_size.y = 0.0f  ->  zero minimum height (will auto extend, unless NoHostExtendV is set)
-//   - outer_size.y > 0.0f  ->  minimum height (will auto extend, unless NoHostExtendV is set)
+//-----------------------------------------------------------------------------
+// About 'outer_size':
+// Its meaning needs to differ slightly depending of if we are using ScrollX/ScrollY flags.
+// Default value is ImVec2(-FLT_MIN, 0.0f). When binding this in a scripting language please follow this default value.
+//   X
+//   - outer_size.x < 0.0f  ->  Right-align from window/work-rect right-most edge. With -FLT_MIN will right-align exactly on right-most edge. With -1.0f will right-align one pixel away from right-most edge.
+//   - outer_size.x = 0.0f  ->  Auto width. Generally use all available width. When NOT using scrolling and NOT using any Stretch column, use only necessary width, otherwise same as -FLT_MIN.
+//   - outer_size.x > 0.0f  ->  Fixed width.
+//   Y with ScrollX/ScrollY disabled: we output table directly in current window
+//   - outer_size.y < 0.0f  ->  Bottom-align (but will auto extend, unless NoHostExtendV is set)
+//   - outer_size.y = 0.0f  ->  No minimum height (but will auto extend, unless NoHostExtendV is set)
+//   - outer_size.y > 0.0f  ->  Set Minimum height (but will auto extend, unless NoHostExtendV is set)
+//   Y with ScrollX/ScrollY enabled: using a child window for scrolling
+//   - outer_size.y < 0.0f  ->  Bottom-align
+//   - outer_size.y = 0.0f  ->  Bottom-align, consistent with BeginChild(). Not recommended unless table is last item in parent window.
+//   - outer_size.y > 0.0f  ->  Set Exact height. Recommended when using Scrolling on any axis.
+//-----------------------------------------------------------------------------
 // About 'inner_width':
-//   With ScrollX:
+//   With ScrollX disabled:
+//   - inner_width          ->  *ignored*
+//   With ScrollX enable:
 //   - inner_width  < 0.0f  ->  *illegal* fit in known width (right align from outer_size.x) <-- weird
 //   - inner_width  = 0.0f  ->  fit in outer_width: Fixed size columns will take space they need (if avail, otherwise shrink down), Stretch columns becomes Fixed columns.
 //   - inner_width  > 0.0f  ->  override scrolling width, generally to be larger than outer_size.x. Fixed column take space they need (if avail, otherwise shrink down), Stretch columns share remaining space!
-//   Without ScrollX:
-//   - inner_width          ->  *ignored*
+//-----------------------------------------------------------------------------
 // Details:
 // - If you want to use Stretch columns with ScrollX, you generally need to specify 'inner_width' otherwise the concept
 //   of "available space" doesn't make sense.
@@ -278,7 +283,7 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->ColumnsCount = columns_count;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
-    table->IsOuterRectFitX = (outer_size.x >= -1.0f && outer_size.x <= 0.0f); // Bit ambiguous
+    table->IsOuterRectAutoFitX = (outer_size.x == 0.0f) && (use_child_window == false);
 
     // When not using a child window, WorkRect.Max will grow as we append contents.
     if (use_child_window)
@@ -1009,11 +1014,12 @@ void ImGui::TableUpdateLayout(ImGuiTable* table)
     // [Part 9] Lock actual OuterRect/WorkRect right-most position.
     // This is done late to handle the case of fixed-columns tables not claiming more widths that they need.
     // Because of this we are careful with uses of WorkRect and InnerClipRect before this point.
-    if ((table->Flags & ImGuiTableFlags_NoHostExtendX) && table->InnerWindow == table->OuterWindow && table->RightMostStretchedColumn == -1)
+    if (table->RightMostStretchedColumn != -1)
+        table->IsOuterRectAutoFitX = false;
+    if (table->IsOuterRectAutoFitX)
     {
         table->OuterRect.Max.x = table->WorkRect.Max.x = unused_x1;
         table->InnerClipRect.Max.x = ImMin(table->InnerClipRect.Max.x, unused_x1);
-        table->IsOuterRectFitX = false;
     }
     table->InnerWindow->ParentWorkRect = table->WorkRect;
     table->BorderX1 = table->InnerClipRect.Min.x;// +((table->Flags & ImGuiTableFlags_BordersOuter) ? 0.0f : -1.0f);
@@ -1237,7 +1243,7 @@ void    ImGui::EndTable()
     outer_window->DC.ItemWidth = table->HostBackupItemWidth;
     outer_window->DC.ItemWidthStack.Size = table->HostBackupItemWidthStackSize;
     outer_window->DC.ColumnsOffset = table->HostBackupColumnsOffset;
-    const float outer_width = table->IsOuterRectFitX ? table->ColumnsAutoFitWidth : table->WorkRect.GetWidth();
+    const float outer_width = table->IsOuterRectAutoFitX ? table->WorkRect.GetWidth() : table->ColumnsAutoFitWidth;
     if (inner_window != outer_window)
     {
         EndChild();
