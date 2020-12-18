@@ -4687,11 +4687,11 @@ static void ShowDemoWindowTables()
             | ImGuiTableFlags_ColumnsWidthFixed;
 
         enum ContentsType { CT_Text, CT_Button, CT_SmallButton, CT_FillButton, CT_Selectable, CT_SelectableSpanRow };
-        static int contents_type = CT_Button;
+        static int contents_type = CT_SelectableSpanRow;
         const char* contents_type_names[] = { "Text", "Button", "SmallButton", "FillButton", "Selectable", "Selectable (span row)" };
         static int freeze_cols = 1;
         static int freeze_rows = 1;
-        static int items_count = IM_ARRAYSIZE(template_items_names);
+        static int items_count = IM_ARRAYSIZE(template_items_names) * 2;
         static ImVec2 outer_size_value = ImVec2(0, TEXT_BASE_HEIGHT * 12);
         static float row_min_height = 0.0f; // Auto
         static float inner_width_with_scroll = 0.0f; // Auto-extend

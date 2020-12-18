@@ -177,8 +177,8 @@ Index of this file:
 
 // Configuration
 static const int TABLE_DRAW_CHANNEL_BG0 = 0;
-static const int TABLE_DRAW_CHANNEL_BG1_FROZEN = 1;
-static const int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip
+static const int TABLE_DRAW_CHANNEL_BG2_FROZEN = 1;
+static const int TABLE_DRAW_CHANNEL_NOCLIP = 2;                     // When using ImGuiTableFlags_NoClip (this becomes the last visible channel)
 static const float TABLE_BORDER_SIZE                     = 1.0f;    // FIXME-TABLE: Currently hard-coded because of clipping assumptions with outer borders rendering.
 static const float TABLE_RESIZE_SEPARATOR_HALF_THICKNESS = 4.0f;    // Extend outside inner borders.
 static const float TABLE_RESIZE_SEPARATOR_FEEDBACK_TIMER = 0.06f;   // Delay/timer before making the hover feedback (color+cursor) visible because tables/columns tends to be more cramped.
@@ -278,8 +278,6 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
     table->ColumnsCount = columns_count;
     table->IsLayoutLocked = false;
     table->InnerWidth = inner_width;
-    table->OuterRect = outer_rect;
-    table->WorkRect = outer_rect;
     table->IsOuterRectFitX = (outer_size.x >= -1.0f && outer_size.x <= 0.0f); // Bit ambiguous
 
     // When not using a child window, WorkRect.Max will grow as we append contents.
@@ -303,11 +301,18 @@ bool    ImGui::BeginTableEx(const char* name, ImGuiID id, int columns_count, ImG
 
         // Create scrolling region (without border and zero window padding)
         ImGuiWindowFlags child_flags = (flags & ImGuiTableFlags_ScrollX) ? ImGuiWindowFlags_HorizontalScrollbar : ImGuiWindowFlags_None;
-        BeginChildEx(name, instance_id, table->OuterRect.GetSize(), false, child_flags);
+        BeginChildEx(name, instance_id, outer_rect.GetSize(), false, child_flags);
         table->InnerWindow = g.CurrentWindow;
         table->WorkRect = table->InnerWindow->WorkRect;
         table->OuterRect = table->InnerWindow->Rect();
+        table->InnerRect = table->InnerWindow->InnerRect;
         IM_ASSERT(table->InnerWindow->WindowPadding.x == 0.0f && table->InnerWindow->WindowPadding.y == 0.0f && table->InnerWindow->WindowBorderSize == 0.0f);
+    }
+    else
+    {
+        // For non-scrolling tables, WorkRect == OuterRect == InnerRect.
+        // But at this point we do NOT have a correct value for .Max.y (unless a height has been explicitly passed in). It will only be updated in EndTable().
+        table->WorkRect = table->OuterRect = table->InnerRect = outer_rect;
     }
 
     // Push a standardized ID for both child-using and not-child-using tables
@@ -1148,12 +1153,13 @@ void    ImGui::EndTable()
     inner_window->DC.CursorMaxPos = table->HostBackupCursorMaxPos;
     if (inner_window != outer_window)
     {
-        table->OuterRect.Max.y = ImMax(table->OuterRect.Max.y, inner_window->Pos.y + inner_window->Size.y);
+        // Both OuterRect/InnerRect are valid from BeginTable
         inner_window->DC.CursorMaxPos.y = table->RowPosY2;
     }
     else if (!(flags & ImGuiTableFlags_NoHostExtendY))
     {
-        table->OuterRect.Max.y = ImMax(table->OuterRect.Max.y, inner_window->DC.CursorPos.y);
+        // Patch OuterRect/InnerRect height
+        table->OuterRect.Max.y = table->InnerRect.Max.y = ImMax(table->OuterRect.Max.y, inner_window->DC.CursorPos.y);
         inner_window->DC.CursorMaxPos.y = table->RowPosY2;
     }
     table->WorkRect.Max.y = ImMax(table->WorkRect.Max.y, table->OuterRect.Max.y);
@@ -1166,7 +1172,6 @@ void    ImGui::EndTable()
     // Draw borders
     if ((flags & ImGuiTableFlags_Borders) != 0)
         TableDrawBorders(table);
-    table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 0);
 
     // Store content width reference for each column (before attempting to merge draw calls)
     const float backup_outer_cursor_pos_x = outer_window->DC.CursorPos.x;
@@ -1192,6 +1197,7 @@ void    ImGui::EndTable()
 #endif
 
     // Flatten channels and merge draw calls
+    table->DrawSplitter.SetCurrentChannel(inner_window->DrawList, 0);
     if ((table->Flags & ImGuiTableFlags_NoClip) == 0)
         TableMergeDrawChannels(table);
     table->DrawSplitter.Merge(inner_window->DrawList);
@@ -1563,7 +1569,6 @@ void ImGui::TableEndRow(ImGuiTable* table)
     // Row background fill
     const float bg_y1 = table->RowPosY1;
     const float bg_y2 = table->RowPosY2;
-
     const bool unfreeze_rows_actual = (table->CurrentRow + 1 == table->FreezeRowsCount);
     const bool unfreeze_rows_request = (table->CurrentRow + 1 == table->FreezeRowsRequest);
     if (table->CurrentRow == 0)
@@ -1654,7 +1659,7 @@ void ImGui::TableEndRow(ImGuiTable* table)
         float y0 = ImMax(table->RowPosY2 + 1, window->InnerClipRect.Min.y);
         table->BgClipRect.Min.y = table->BgClipRectForDrawCmd.Min.y = ImMin(y0, window->InnerClipRect.Max.y);
         table->BgClipRect.Max.y = table->BgClipRectForDrawCmd.Max.y = window->InnerClipRect.Max.y;
-        table->Bg1DrawChannelCurrent = table->Bg1DrawChannelUnfrozen;
+        table->Bg2DrawChannelCurrent = table->Bg2DrawChannelUnfrozen;
         IM_ASSERT(table->BgClipRectForDrawCmd.Min.y <= table->BgClipRectForDrawCmd.Max.y);
 
         float row_height = table->RowPosY2 - table->RowPosY1;
@@ -2004,6 +2009,8 @@ void ImGui::TableUpdateColumnsWeightFromWidth(ImGuiTable* table)
 // - TableDrawBorders() [Internal]
 //-------------------------------------------------------------------------
 
+// Bg2 is used by Selectable (and possibly other widgets) to render to the background.
+// Unlike our Bg0/1 channel which we uses for RowBg/CellBg/Borders and where we guarantee all shapes to be CPU-clipped, the Bg2 channel being widgets-facing will rely on regular ClipRect.
 void ImGui::TablePushBackgroundChannel()
 {
     ImGuiContext& g = *GImGui;
@@ -2011,9 +2018,9 @@ void ImGui::TablePushBackgroundChannel()
     ImGuiTable* table = g.CurrentTable;
 
     // Optimization: avoid SetCurrentChannel() + PushClipRect()
-    table->HostBackupClipRect = window->ClipRect;
+    table->HostBackupInnerClipRect = window->ClipRect;
     SetWindowClipRectBeforeSetChannel(window, table->BgClipRectForDrawCmd);
-    table->DrawSplitter.SetCurrentChannel(window->DrawList, table->Bg1DrawChannelCurrent);
+    table->DrawSplitter.SetCurrentChannel(window->DrawList, table->Bg2DrawChannelCurrent);
 }
 
 void ImGui::TablePopBackgroundChannel()
@@ -2024,7 +2031,7 @@ void ImGui::TablePopBackgroundChannel()
     ImGuiTableColumn* column = &table->Columns[table->CurrentColumn];
 
     // Optimization: avoid PopClipRect() + SetCurrentChannel()
-    SetWindowClipRectBeforeSetChannel(window, table->HostBackupClipRect);
+    SetWindowClipRectBeforeSetChannel(window, table->HostBackupInnerClipRect);
     table->DrawSplitter.SetCurrentChannel(window->DrawList, column->DrawChannelCurrent);
 }
 
@@ -2036,10 +2043,10 @@ void ImGui::TablePopBackgroundChannel()
 // - After crossing FreezeRowsCount, all columns see their current draw channel changed to a second set of channels.
 // - We only use the dummy draw channel so we can push a null clipping rectangle into it without affecting other
 //   channels, while simplifying per-row/per-cell overhead. It will be empty and discarded when merged.
-// - We allocate 1 or 2 background draw channels. This is because we know PushTableBackground() is only used for
+// - We allocate 1 or 2 background draw channels. This is because we know TablePushBackgroundChannel() is only used for
 //   horizontal spanning. If we allowed vertical spanning we'd need one background draw channel per merge group (1-4).
 // Draw channel allocation (before merging):
-// - NoClip                       --> 2+D+1 channels: bg0 + bg1 + foreground (same clip rect == 1 draw call) (FIXME-TABLE: could merge bg1 and foreground?)
+// - NoClip                       --> 2+D+1 channels: bg0/1 + bg2 + foreground (same clip rect == 1 draw call) (FIXME-TABLE: could merge bg2 and foreground?)
 // - Clip                         --> 2+D+N channels
 // - FreezeRows                   --> 2+D+N*2 (unless scrolling value is zero)
 // - FreezeRows || FreezeColunns  --> 3+D+N*2 (unless scrolling value is zero)
@@ -2053,8 +2060,8 @@ void ImGui::TableSetupDrawChannels(ImGuiTable* table)
     const int channels_total = channels_for_bg + (channels_for_row * freeze_row_multiplier) + channels_for_dummy;
     table->DrawSplitter.Split(table->InnerWindow->DrawList, channels_total);
     table->DummyDrawChannel = (ImGuiTableDrawChannelIdx)((channels_for_dummy > 0) ? channels_total - 1 : -1);
-    table->Bg1DrawChannelCurrent = TABLE_DRAW_CHANNEL_BG1_FROZEN;
-    table->Bg1DrawChannelUnfrozen = (ImGuiTableDrawChannelIdx)((table->FreezeRowsCount > 0) ? 2 + channels_for_row : TABLE_DRAW_CHANNEL_BG1_FROZEN);
+    table->Bg2DrawChannelCurrent = TABLE_DRAW_CHANNEL_BG2_FROZEN;
+    table->Bg2DrawChannelUnfrozen = (ImGuiTableDrawChannelIdx)((table->FreezeRowsCount > 0) ? 2 + channels_for_row : TABLE_DRAW_CHANNEL_BG2_FROZEN);
 
     int draw_channel_current = 2;
     for (int column_n = 0; column_n < table->ColumnsCount; column_n++)
@@ -2117,6 +2124,7 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     ImDrawListSplitter* splitter = &table->DrawSplitter;
     const bool has_freeze_v = (table->FreezeRowsCount > 0);
     const bool has_freeze_h = (table->FreezeColumnsCount > 0);
+    IM_ASSERT(splitter->_Current == 0);
 
     // Track which groups we are going to attempt to merge, and which channels goes into each group.
     struct MergeGroup
@@ -2200,15 +2208,15 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
     // 2. Rewrite channel list in our preferred order
     if (merge_group_mask != 0)
     {
-        // We skip channel 0 (Bg0) and 1 (Bg1 frozen) from the shuffling since they won't move - see channels allocation in TableSetupDrawChannels().
+        // We skip channel 0 (Bg0/Bg1) and 1 (Bg2 frozen) from the shuffling since they won't move - see channels allocation in TableSetupDrawChannels().
         const int LEADING_DRAW_CHANNELS = 2;
         g.DrawChannelsTempMergeBuffer.resize(splitter->_Count - LEADING_DRAW_CHANNELS); // Use shared temporary storage so the allocation gets amortized
         ImDrawChannel* dst_tmp = g.DrawChannelsTempMergeBuffer.Data;
         ImBitArray<IMGUI_TABLE_MAX_DRAW_CHANNELS> remaining_mask;                       // We need 132-bit of storage
         remaining_mask.ClearBits();
         remaining_mask.SetBitRange(LEADING_DRAW_CHANNELS, splitter->_Count - 1);
-        remaining_mask.ClearBit(table->Bg1DrawChannelUnfrozen);
-        IM_ASSERT(has_freeze_v == false || table->Bg1DrawChannelUnfrozen != TABLE_DRAW_CHANNEL_BG1_FROZEN);
+        remaining_mask.ClearBit(table->Bg2DrawChannelUnfrozen);
+        IM_ASSERT(has_freeze_v == false || table->Bg2DrawChannelUnfrozen != TABLE_DRAW_CHANNEL_BG2_FROZEN);
         int remaining_count = splitter->_Count - (has_freeze_v ? LEADING_DRAW_CHANNELS + 1 : LEADING_DRAW_CHANNELS);
         //ImRect host_rect = (table->InnerWindow == table->OuterWindow) ? table->InnerClipRect : table->HostClipRect;
         ImRect host_rect = table->HostClipRect;
@@ -2257,9 +2265,9 @@ void ImGui::TableMergeDrawChannels(ImGuiTable* table)
                 }
             }
 
-            // Make sure Bg1DrawChannelUnfrozen appears in the middle of our groups (whereas Bg0 and Bg1 frozen are fixed to 0 and 1)
+            // Make sure Bg2DrawChannelUnfrozen appears in the middle of our groups (whereas Bg0/Bg1 and Bg2 frozen are fixed to 0 and 1)
             if (merge_group_n == 1 && has_freeze_v)
-                memcpy(dst_tmp++, &splitter->_Channels[table->Bg1DrawChannelUnfrozen], sizeof(ImDrawChannel));
+                memcpy(dst_tmp++, &splitter->_Channels[table->Bg2DrawChannelUnfrozen], sizeof(ImDrawChannel));
         }
 
         // Append unmergeable channels that we didn't reorder at the end of the list
@@ -2289,8 +2297,8 @@ void ImGui::TableDrawBorders(ImGuiTable* table)
 
     // Draw inner border and resizing feedback
     const float border_size = TABLE_BORDER_SIZE;
-    const float draw_y1 = table->OuterRect.Min.y;
-    const float draw_y2_body = table->OuterRect.Max.y;
+    const float draw_y1 = table->InnerRect.Min.y;
+    const float draw_y2_body = table->InnerRect.Max.y;
     const float draw_y2_head = table->IsUsingHeaders ? ((table->FreezeRowsCount >= 1 ? table->OuterRect.Min.y : table->WorkRect.Min.y) + table->LastFirstRowHeight) : draw_y1;
 
     if (table->Flags & ImGuiTableFlags_BordersInnerV)
