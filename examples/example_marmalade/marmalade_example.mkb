@@ -17,8 +17,8 @@ options
 
 includepaths
 {
-    ..
     ../..
+    ../../backends
 }
 
 subprojects
@@ -33,14 +33,15 @@ files
     ../../imgui.cpp
     ../../imgui_demo.cpp
     ../../imgui_draw.cpp
+    ../../imgui_tables.cpp
     ../../imgui_widgets.cpp
     ../../imconfig.h
     ../../imgui.h
     ../../imgui_internal.h
 
-    ["imgui","Marmalade binding"]
-    ../imgui_impl_marmalade.h
-    ../imgui_impl_marmalade.cpp
+    ["imgui","Marmalade backend"]
+    ../../backends/imgui_impl_marmalade.h
+    ../../backends/imgui_impl_marmalade.cpp
     main.cpp
 
 }

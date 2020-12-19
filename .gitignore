@@ -34,7 +34,7 @@ xcuserdata
 examples/*.o.tmp
 examples/*.out.js
 examples/*.out.wasm
-examples/example_emscripten/example_emscripten.*
+examples/example_emscripten_opengl3/example_emscripten_opengl3.*
 
 ## JetBrains IDE artifacts
 .idea

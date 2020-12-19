@@ -1,0 +1,73 @@
+name: static-analysis
+
+on:
+  push: {}
+  pull_request: {}
+
+jobs:
+  PVS-Studio:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v1
+        with:
+          fetch-depth: 1
+
+      - name: Install Dependencies
+        env:
+          # The Secret variable setup in GitHub must be in format: "name_or_email key", on a single line
+          PVS_STUDIO_LICENSE: ${{ secrets.PVS_STUDIO_LICENSE }}
+        run: |
+          if [[ "$PVS_STUDIO_LICENSE" != "" ]];
+          then
+            wget -q https://files.viva64.com/etc/pubkey.txt
+            sudo apt-key add pubkey.txt
+            sudo wget -O /etc/apt/sources.list.d/viva64.list https://files.viva64.com/etc/viva64.list
+            sudo apt-get update
+            sudo apt-get install -y pvs-studio
+            pvs-studio-analyzer credentials -o pvs-studio.lic $PVS_STUDIO_LICENSE
+          fi
+
+      - name: PVS-Studio static analysis
+        run: |
+          if [[ ! -f pvs-studio.lic ]];
+          then
+            echo "PVS Studio license is missing. No analysis will be performed."
+            echo "If you have a PVS Studio license please create a project secret named PVS_STUDIO_LICENSE with your license."
+            echo "You may use a free license. More information at https://www.viva64.com/en/b/0457/"
+            exit 0
+          fi
+          cd examples/example_null
+          pvs-studio-analyzer trace -- make WITH_EXTRA_WARNINGS=1
+          pvs-studio-analyzer analyze -e ../../imstb_rectpack.h -e ../../imstb_textedit.h -e ../../imstb_truetype.h -l ../../pvs-studio.lic -o pvs-studio.log
+          plog-converter -a 'GA:1,2;OP:1' -t errorfile -w pvs-studio.log
+
+  Discord-CI:
+    runs-on: ubuntu-18.04
+    needs: [PVS-Studio]
+    if: always()
+    steps:
+    - uses: dearimgui/github_discord_notifier@latest
+      with:
+        discord-webhook: ${{ secrets.DISCORD_CI_WEBHOOK }}
+        github-token: ${{ github.token }}
+        action-task: discord-jobs
+        discord-filter: "'{{ github.branch }}'.match(/master|docking|tables/g) != null && '{{ run.conclusion }}' != '{{ last_run.conclusion }}'"
+        discord-username: GitHub Actions
+        discord-job-new-failure-message: ''
+        discord-job-fixed-failure-message: ''
+        discord-job-new-failure-embed: |
+          {
+            "title": "`{{ job.name }}` job is failing on `{{ github.branch }}`!",
+            "description": "Commit [{{ github.context.payload.head_commit.title }}]({{ github.context.payload.head_commit.url }}) pushed to [{{ github.branch }}]({{ github.branch_url }}) broke static analysis [{{ job.name }}]({{ job.url }}) job.\nFailing steps: {{ failing_steps }}",
+            "url": "{{ job.url }}",
+            "color": "0xFF0000",
+            "timestamp": "{{ run.updated_at }}"
+          }
+        discord-job-fixed-failure-embed: |
+          {
+            "title": "`{{ github.branch }}` branch is no longer failing!",
+            "description": "Static analysis failures were fixed on [{{ github.branch }}]({{ github.branch_url }}) branch.",
+            "color": "0x00FF00",
+            "url": "{{ github.context.payload.head_commit.url }}",
+            "timestamp": "{{ run.completed_at }}"
+          }

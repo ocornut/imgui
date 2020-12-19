@@ -1,5 +1,6 @@
-// dear imgui: standalone example application for Marmalade
-// If you are new to dear imgui, see examples/README.txt and documentation at the top of imgui.cpp.
+// Dear ImGui: standalone example application for Marmalade
+// If you are new to Dear ImGui, read documentation from the docs/ folder + read the top of imgui.cpp.
+// Read online: https://github.com/ocornut/imgui/tree/master/docs
 
 // Copyright (C) 2015 by Giovanni Zito
 // This file is part of Dear ImGui
@@ -26,7 +27,7 @@ int main(int, char**)
     ImGui::StyleColorsDark();
     //ImGui::StyleColorsClassic();
 
-    // Setup Platform/Renderer bindings
+    // Setup Platform/Renderer backends
     ImGui_Marmalade_Init(true);
 
     // Load Fonts

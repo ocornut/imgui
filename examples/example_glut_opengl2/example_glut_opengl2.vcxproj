@@ -158,17 +158,18 @@
     <ClCompile Include="..\..\imgui.cpp" />
     <ClCompile Include="..\..\imgui_demo.cpp" />
     <ClCompile Include="..\..\imgui_draw.cpp" />
+    <ClCompile Include="..\..\imgui_tables.cpp" />
     <ClCompile Include="..\..\imgui_widgets.cpp" />
-    <ClCompile Include="..\imgui_impl_glut.cpp" />
-    <ClCompile Include="..\imgui_impl_opengl2.cpp" />
+    <ClCompile Include="..\..\backends\imgui_impl_glut.cpp" />
+    <ClCompile Include="..\..\backends\imgui_impl_opengl2.cpp" />
     <ClCompile Include="main.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\..\imconfig.h" />
     <ClInclude Include="..\..\imgui.h" />
     <ClInclude Include="..\..\imgui_internal.h" />
-    <ClInclude Include="..\imgui_impl_glut.h" />
-    <ClInclude Include="..\imgui_impl_opengl2.h" />
+    <ClInclude Include="..\..\backends\imgui_impl_glut.h" />
+    <ClInclude Include="..\..\backends\imgui_impl_opengl2.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="..\..\misc\natvis\imgui.natvis" />
