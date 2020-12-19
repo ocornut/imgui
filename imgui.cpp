@@ -2266,6 +2266,26 @@ bool ImGuiListClipper::Step()
     if (table && table->IsInsideRow)
         ImGui::TableEndRow(table);
 
+    // Step 1: the clipper infer height from first element
+    // When StepNo == 1 we always need to calculate ItemHeight, before any early-outs
+    if (StepNo == 1)
+    {
+        IM_ASSERT(ItemsHeight <= 0.0f);
+        if (table)
+        {
+            const float pos_y1 = table->RowPosY1;   // Using this instead of StartPosY to handle clipper straddling the frozen row
+            const float pos_y2 = table->RowPosY2;   // Using this instead of CursorPos.y to take account of tallest cell.
+            ItemsHeight = pos_y2 - pos_y1;
+            window->DC.CursorPos.y = pos_y2;
+        }
+        else
+        {
+            ItemsHeight = window->DC.CursorPos.y - StartPosY;
+        }
+        IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
+        StepNo = 2;
+    }
+
     // Reached end of list
     if (DisplayEnd >= ItemsCount || GetSkipItemForListClipping())
     {
@@ -2298,25 +2318,6 @@ bool ImGuiListClipper::Step()
 
         // Already has item height (given by user in Begin): skip to calculating step
         DisplayStart = DisplayEnd;
-        StepNo = 2;
-    }
-
-    // Step 1: the clipper infer height from first element
-    if (StepNo == 1)
-    {
-        IM_ASSERT(ItemsHeight <= 0.0f);
-        if (table)
-        {
-            const float pos_y1 = table->RowPosY1;   // Using this instead of StartPosY to handle clipper straddling the frozen row
-            const float pos_y2 = table->RowPosY2;   // Using this instead of CursorPos.y to take account of tallest cell.
-            ItemsHeight = pos_y2 - pos_y1;
-            window->DC.CursorPos.y = pos_y2;
-        }
-        else
-        {
-            ItemsHeight = window->DC.CursorPos.y - StartPosY;
-        }
-        IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
         StepNo = 2;
     }
 
