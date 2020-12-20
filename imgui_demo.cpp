@@ -6918,11 +6918,13 @@ static void ShowExampleAppCustomRendering(bool* p_open)
 
             // Draw a bunch of primitives
             ImGui::Text("All primitives");
-            static float sz = 36.0f;
+            static float sz = 33.0f;
             static float thickness = 3.0f;
             static int ngon_sides = 6;
             static bool circle_segments_override = false;
             static int circle_segments_override_v = 12;
+            static bool curve_segments_override = false;
+            static int curve_segments_override_v = 8;
             static ImVec4 colf = ImVec4(1.0f, 1.0f, 0.4f, 1.0f);
             ImGui::DragFloat("Size", &sz, 0.2f, 2.0f, 72.0f, "%.0f");
             ImGui::DragFloat("Thickness", &thickness, 0.05f, 1.0f, 8.0f, "%.02f");
@@ -6931,6 +6933,10 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
             if (ImGui::SliderInt("Circle segments", &circle_segments_override_v, 3, 40))
                 circle_segments_override = true;
+            ImGui::Checkbox("##curvessegmentoverride", &curve_segments_override);
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::SliderInt("Curves segments", &curve_segments_override_v, 3, 40))
+                curve_segments_override = true;
             ImGui::ColorEdit4("Color", &colf.x);
 
             const ImVec2 p = ImGui::GetCursorScreenPos();
@@ -6940,6 +6946,7 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             const ImDrawCornerFlags corners_all = ImDrawCornerFlags_All;
             const ImDrawCornerFlags corners_tl_br = ImDrawCornerFlags_TopLeft | ImDrawCornerFlags_BotRight;
             const int circle_segments = circle_segments_override ? circle_segments_override_v : 0;
+            const int curve_segments = curve_segments_override ? curve_segments_override_v : 0;
             float x = p.x + 4.0f;
             float y = p.y + 4.0f;
             for (int n = 0; n < 2; n++)
@@ -6956,7 +6963,8 @@ static void ShowExampleAppCustomRendering(bool* p_open)
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y), col, th);                                       x += sz + spacing;  // Horizontal line (note: drawing a filled rectangle will be faster!)
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x, y + sz), col, th);                                       x += spacing;       // Vertical line (note: drawing a filled rectangle will be faster!)
                 draw_list->AddLine(ImVec2(x, y), ImVec2(x + sz, y + sz), col, th);                                  x += sz + spacing;  // Diagonal line
-                draw_list->AddBezierCurve(ImVec2(x, y), ImVec2(x + sz*1.3f, y + sz*0.3f), ImVec2(x + sz - sz*1.3f, y + sz - sz*0.3f), ImVec2(x + sz, y + sz), col, th);
+                draw_list->AddQuadBezierCurve(ImVec2(x, y + sz * 0.6), ImVec2(x + sz * 0.5, y - sz * 0.4), ImVec2(x + sz, y + sz), col, th, curve_segments); x += sz + spacing;  // Quad Bezier (3 control points)                   
+                draw_list->AddBezierCurve(ImVec2(x, y), ImVec2(x + sz * 1.3f, y + sz * 0.3f), ImVec2(x + sz - sz * 1.3f, y + sz - sz * 0.3f), ImVec2(x + sz, y + sz), col, th, curve_segments);
                 x = p.x + 4;
                 y += sz + spacing;
             }
@@ -7069,6 +7077,147 @@ static void ShowExampleAppCustomRendering(bool* p_open)
             }
             for (int n = 0; n < points.Size; n += 2)
                 draw_list->AddLine(ImVec2(origin.x + points[n].x, origin.y + points[n].y), ImVec2(origin.x + points[n + 1].x, origin.y + points[n + 1].y), IM_COL32(255, 255, 0, 255), 2.0f);
+            draw_list->PopClipRect();
+
+            ImGui::EndTabItem();
+        }
+
+        if (ImGui::BeginTabItem("Curves"))
+        {
+            static ImVec2 bezier_points[4] = { ImVec2(0.12, 0.82), ImVec2(0.34, 0.21), ImVec2(0.90, 0.41), ImVec2(0.56, 0.82) }; // ratio of canvas size
+            static float control_point_radius = 0.02f; // ratio of canvas size
+            static ImVec2 scrolling(0.0f, 0.0f);
+            static bool opt_enable_grid = true;
+            static int curve_type = 0; // 0 quad, 1 cubic
+            static bool curve_segments_override = false;
+            static int curve_segments_override_v = 8;
+            static int selected_control_point = -1;
+            static bool hovered_control_point[4] = { false, false, false, false };
+
+            ImGui::Checkbox("Enable grid", &opt_enable_grid);
+
+            ImGui::RadioButton("Quad Bezier", &curve_type, 0);
+            ImGui::SameLine(); HelpMarker("a Quad bezier have 3 control points;");
+            ImGui::SameLine(); ImGui::RadioButton("Cubic Bezier", &curve_type, 1);
+            ImGui::SameLine(); HelpMarker("a Cubic bezier have 4 control points;");
+            ImGui::Checkbox("##curvessegmentoverride", &curve_segments_override);
+            ImGui::SameLine(0.0f, ImGui::GetStyle().ItemInnerSpacing.x);
+            if (ImGui::SliderInt("Curves segments", &curve_segments_override_v, 3, 40))
+                curve_segments_override = true;
+
+            ImGui::Text("Mouse Left : move control points,\nMouse Right: drag to scroll");
+
+            // Using InvisibleButton() as a convenience 1) it will advance the layout cursor and 2) allows us to use IsItemHovered()/IsItemActive()
+            ImVec2 canvas_p0 = ImGui::GetCursorScreenPos();      // ImDrawList API uses screen coordinates!
+            ImVec2 canvas_sz = ImGui::GetContentRegionAvail();   // Resize canvas to what's available
+            if (canvas_sz.x < 50.0f) canvas_sz.x = 50.0f;
+            if (canvas_sz.y < 50.0f) canvas_sz.y = 50.0f;
+            ImVec2 canvas_p1 = ImVec2(canvas_p0.x + canvas_sz.x, canvas_p0.y + canvas_sz.y);
+
+            // Draw border and background color
+            ImGuiIO& io = ImGui::GetIO();
+            ImDrawList* draw_list = ImGui::GetWindowDrawList();
+            draw_list->AddRectFilled(canvas_p0, canvas_p1, IM_COL32(50, 50, 50, 255));
+            draw_list->AddRect(canvas_p0, canvas_p1, IM_COL32(255, 255, 255, 255));
+
+            // This will catch our interactions
+            ImGui::InvisibleButton("canvas", canvas_sz, ImGuiButtonFlags_MouseButtonLeft | ImGuiButtonFlags_MouseButtonRight);
+            const bool is_hovered = ImGui::IsItemHovered(); // Hovered
+            const bool is_active = ImGui::IsItemActive();   // Held
+            const ImVec2 origin(canvas_p0.x + scrolling.x, canvas_p0.y + scrolling.y); // Lock scrolled origin
+            const ImVec2 mouse_pos_in_canvas(io.MousePos.x - origin.x, io.MousePos.y - origin.y);
+
+            // Pan (we use a zero mouse threshold when there's no context menu)
+            // You may decide to make that threshold dynamic based on whether the mouse is hovering something etc.
+            if (is_active && ImGui::IsMouseDragging(ImGuiMouseButton_Right, 0.0f))
+            {
+                scrolling.x += io.MouseDelta.x;
+                scrolling.y += io.MouseDelta.y;
+            }
+
+            // Draw grid + all lines in the canvas
+            draw_list->PushClipRect(canvas_p0, canvas_p1, true);
+            if (opt_enable_grid)
+            {
+                const float GRID_STEP = 64.0f;
+                for (float x = fmodf(scrolling.x, GRID_STEP); x < canvas_sz.x; x += GRID_STEP)
+                    draw_list->AddLine(ImVec2(canvas_p0.x + x, canvas_p0.y), ImVec2(canvas_p0.x + x, canvas_p1.y), IM_COL32(200, 200, 200, 40));
+                for (float y = fmodf(scrolling.y, GRID_STEP); y < canvas_sz.y; y += GRID_STEP)
+                    draw_list->AddLine(ImVec2(canvas_p0.x, canvas_p0.y + y), ImVec2(canvas_p1.x, canvas_p0.y + y), IM_COL32(200, 200, 200, 40));
+            }
+
+            const ImU32 curve_color = IM_COL32(255, 255, 0, 255);
+            const ImU32 point_color = IM_COL32(255, 0, 0, 255);
+            const ImU32 hovered_point_color = IM_COL32(0, 127, 127, 255);
+            const ImU32 selected_point_color = IM_COL32(0, 0, 255, 255);
+            const ImU32 edge_color = IM_COL32(255, 255, 255, 255);
+            const int curve_segments = curve_segments_override ? curve_segments_override_v : 0;
+            ImVec2 canvas_size = ImVec2(canvas_p1.x - canvas_p0.x, canvas_p1.y - canvas_p0.y);
+            const float cp_radius = control_point_radius * canvas_size.x;
+
+            ImVec2 cp[4];
+
+            for (int i = 0; i < 3 + curve_type; i++)
+            {
+                cp[i] = ImVec2(origin.x + bezier_points[i].x * canvas_size.x, origin.y + bezier_points[i].y * canvas_size.y);
+                hovered_control_point[i] = false;
+
+                if (ImGui::IsMouseHoveringRect(
+                    ImVec2(cp[i].x - cp_radius * 0.5f, cp[i].y - cp_radius * 0.5f),
+                    ImVec2(cp[i].x + cp_radius * 0.5f, cp[i].y + cp_radius * 0.5f)))
+                {
+                    hovered_control_point[i] = true;
+
+                    if (selected_control_point < 0 && ImGui::IsMouseDown(ImGuiMouseButton_Left))
+                    {
+                        selected_control_point = i;
+                    }
+                }
+
+                if (selected_control_point == i && ImGui::IsMouseDragging(ImGuiMouseButton_Left, 0.0f))
+                {
+                    bezier_points[i].x += io.MouseDelta.x / canvas_size.x;
+                    bezier_points[i].y += io.MouseDelta.y / canvas_size.y;
+                }
+            }
+
+            if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+            {
+                selected_control_point = -1;
+            }
+
+            if (curve_type) // >1 : cubic bezier
+            {
+                // curve
+                draw_list->AddBezierCurve(cp[0], cp[1], cp[2], cp[3], curve_color, 2.0f, curve_segments);
+
+                // control lines
+                draw_list->AddLine(cp[0], cp[1], edge_color, 1.5f);
+                draw_list->AddLine(cp[2], cp[3], edge_color, 1.5f);
+            }
+            else // ==0 : quad bezier
+            {
+                // curve
+                draw_list->AddQuadBezierCurve(cp[0], cp[1], cp[2], curve_color, 2.0f, curve_segments);
+
+                // polyline of 3 points
+                draw_list->AddLine(cp[0], cp[1], edge_color, 1.5f);
+                draw_list->AddLine(cp[1], cp[2], edge_color, 1.5f);
+            }
+
+            // control points
+            for (int i = 0; i < 3 + curve_type; i++)
+            {
+                if (selected_control_point == i)
+                    draw_list->AddCircleFilled(cp[i], cp_radius, selected_point_color);
+                else if (hovered_control_point[i])
+                    draw_list->AddCircleFilled(cp[i], cp_radius, hovered_point_color);
+                else
+                    draw_list->AddCircleFilled(cp[i], cp_radius, point_color);
+
+                draw_list->AddCircle(cp[i], cp_radius, edge_color, 0, 2.0f);
+            }
+
             draw_list->PopClipRect();
 
             ImGui::EndTabItem();
