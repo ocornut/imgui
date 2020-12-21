@@ -1358,17 +1358,6 @@ void ImDrawList::AddNgonFilled(const ImVec2& center, float radius, ImU32 col, in
     PathFillConvex(col);
 }
 
-// Quad Bezier takes 3 controls points
-void ImDrawList::AddQuadBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, int num_segments)
-{
-    if ((col & IM_COL32_A_MASK) == 0)
-        return;
-
-    PathLineTo(p1);
-    PathQuadBezierCurveTo(p2, p3, num_segments);
-    PathStroke(col, false, thickness);
-}
-
 // Cubic Bezier takes 4 controls points
 void ImDrawList::AddBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, ImU32 col, float thickness, int num_segments)
 {
@@ -1377,6 +1366,17 @@ void ImDrawList::AddBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2
 
     PathLineTo(p1);
     PathBezierCurveTo(p2, p3, p4, num_segments);
+    PathStroke(col, false, thickness);
+}
+
+// Quadratic Bezier takes 3 controls points
+void ImDrawList::AddQuadBezierCurve(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, ImU32 col, float thickness, int num_segments)
+{
+    if ((col & IM_COL32_A_MASK) == 0)
+        return;
+
+    PathLineTo(p1);
+    PathQuadBezierCurveTo(p2, p3, num_segments);
     PathStroke(col, false, thickness);
 }
 

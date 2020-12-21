@@ -89,6 +89,8 @@ Other Changes:
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
 - Metrics: Fixed mishandling of ImDrawCmd::VtxOffset in wireframe mesh renderer.
 - Metrics: Rebranded as "Dear ImGui Metrics/Debugger" to clarify its purpose.
+- ImDrawList: Added ImDrawList::AddQuadBezierCurve(), ImDrawList::PathQuadBezierCurveTo() quadratic bezier 
+  helpers. (#3127, #3664, #3665) [@aiekick]
 - Fonts: Updated GetGlyphRangesJapanese() to include a larger 2999 ideograms selection of Joyo/Jinmeiyo
   kanjis, from the previous 1946 ideograms selection. This will consume a some more memory but be generally
   much more fitting for Japanese display, until we switch to a more dynamic atlas. (#3627) [@vaiorabbit]
