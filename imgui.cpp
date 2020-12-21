@@ -2266,8 +2266,8 @@ bool ImGuiListClipper::Step()
     if (table && table->IsInsideRow)
         ImGui::TableEndRow(table);
 
-    // Reached end of list
-    if (DisplayEnd >= ItemsCount || GetSkipItemForListClipping())
+    // No items
+    if (ItemsCount == 0 || GetSkipItemForListClipping())
     {
         End();
         return false;
@@ -2318,6 +2318,13 @@ bool ImGuiListClipper::Step()
         }
         IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
         StepNo = 2;
+    }
+
+    // Reached end of list
+    if (DisplayEnd >= ItemsCount)
+    {
+        End();
+        return false;
     }
 
     // Step 2: calculate the actual range of elements to display, and position the cursor before the first element
