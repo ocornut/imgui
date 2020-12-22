@@ -1050,7 +1050,7 @@ enum ImGuiTabItemFlags_
 //    - Using Stretch columns OFTEN DOES NOT MAKE SENSE if ScrollX is on, UNLESS you have specified a value for 'inner_width' in BeginTable().
 // - Mixing up columns with different sizing policy is possible BUT can be tricky and has some side-effects and restrictions.
 //   (their visible order and the scrolling state have subtle but necessary effects on how they can be manually resized).
-//   The typical use of mixing sizing policies is to have ScrollX disabled, one or two Stretch Column and many Fixed Columns.
+//   The typical use of mixing sizing policies is to have ScrollX disabled, first Fixed columns and then one or two TRAILING Stretch columns.
 enum ImGuiTableFlags_
 {
     // Features
