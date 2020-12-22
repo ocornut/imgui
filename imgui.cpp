@@ -126,7 +126,7 @@ CODE
    - You can apply arithmetic operators +,*,/ on numerical values. Use +- to subtract (because - would set a negative value!)
    - Controls are automatically adjusted for OSX to match standard OSX text editing operations.
  - General Keyboard controls: enable with ImGuiConfigFlags_NavEnableKeyboard.
- - General Gamepad controls: enable with ImGuiConfigFlags_NavEnableGamepad. See suggested mappings in imgui.h ImGuiNavInput_ + download PNG/PSD at http://goo.gl/9LgVZW
+ - General Gamepad controls: enable with ImGuiConfigFlags_NavEnableGamepad. See suggested mappings in imgui.h ImGuiNavInput_ + download PNG/PSD at http://dearimgui.org/controls_sheets
 
 
  PROGRAMMER GUIDE
@@ -158,18 +158,20 @@ CODE
  HOW TO UPDATE TO A NEWER VERSION OF DEAR IMGUI
  ----------------------------------------------
  - Overwrite all the sources files except for imconfig.h (if you have made modification to your copy of imconfig.h)
- - Or maintain your own branch where you have imconfig.h modified.
+ - Or maintain your own branch where you have imconfig.h modified as a top-most commit which you can regularly rebase over master.
+ - You can also use '#define IMGUI_USER_CONFIG "my_config_file.h" to redirect configuration to your own file.
  - Read the "API BREAKING CHANGES" section (below). This is where we list occasional API breaking changes.
    If a function/type has been renamed / or marked obsolete, try to fix the name in your code before it is permanently removed
    from the public API. If you have a problem with a missing function/symbols, search for its name in the code, there will
    likely be a comment about it. Please report any issue to the GitHub page!
- - Try to keep your copy of dear imgui reasonably up to date.
+ - To find out usage of old API, you can add '#define IMGUI_DISABLE_OBSOLETE_FUNCTIONS' in your configuration file.
+ - Try to keep your copy of Dear ImGui reasonably up to date.
 
 
  GETTING STARTED WITH INTEGRATING DEAR IMGUI IN YOUR CODE/ENGINE
  ---------------------------------------------------------------
  - Run and study the examples and demo in imgui_demo.cpp to get acquainted with the library.
- - In the majority of cases you should be able to use unmodified backends files available in the examples/ folder.
+ - In the majority of cases you should be able to use unmodified backends files available in the backends/ folder.
  - Add the Dear ImGui source files + selected backend source files to your projects or using your preferred build system.
    It is recommended you build and statically link the .cpp files as part of your project and NOT as shared library (DLL).
  - You can later customize the imconfig.h file to tweak some compile-time behavior, such as integrating Dear ImGui types with your own maths types.
@@ -350,7 +352,7 @@ CODE
          0.0f= not held. 1.0f= fully held. Pass intermediate 0.0f..1.0f values for analog triggers/sticks.
     - We uses a simple >0.0f test for activation testing, and won't attempt to test for a dead-zone.
       Your code will probably need to transform your raw inputs (such as e.g. remapping your 0.2..0.9 raw input range to 0.0..1.0 imgui range, etc.).
-    - You can download PNG/PSD files depicting the gamepad controls for common controllers at: http://goo.gl/9LgVZW.
+    - You can download PNG/PSD files depicting the gamepad controls for common controllers at: http://dearimgui.org/controls_sheets
     - If you need to share inputs between your game and the imgui parts, the easiest approach is to go all-or-nothing, with a buttons combo
       to toggle the target. Please reach out if you think the game vs navigation input sharing could be improved.
  - Mouse:
@@ -382,6 +384,12 @@ CODE
  - 2020/XX/XX (1.XX) - Moved IME support functions from io.ImeSetInputScreenPosFn, io.ImeWindowHandle to the PlatformIO api.
 
 
+ - 2020/12/21 (1.80) - removed redirecting functions/enums that were marked obsolete in 1.63 (August 2018):
+                        - ImGui::IsItemDeactivatedAfterChange() -> use ImGui::IsItemDeactivatedAfterEdit().
+                        - ImGuiCol_ModalWindowDarkening       -> use ImGuiCol_ModalWindowDimBg
+                        - ImGuiInputTextCallback              -> use ImGuiTextEditCallback
+                        - ImGuiInputTextCallbackData          -> use ImGuiTextEditCallbackData
+ - 2020/12/21 (1.80) - renamed ImDrawList::AddBezierCurve() to AddBezierCubic(), and PathBezierCurveTo() to PathBezierCubicCurveTo(). Kept inline redirection function (will obsolete).
  - 2020/12/04 (1.80) - added imgui_tables.cpp file! Manually constructed project files will need the new file added!
  - 2020/11/18 (1.80) - renamed undocumented/internals ImGuiColumnsFlags_* to ImGuiOldColumnFlags_* in prevision of incoming Tables API.
  - 2020/11/03 (1.80) - renamed io.ConfigWindowsMemoryCompactTimer to io.ConfigMemoryCompactTimer as the feature will apply to other data structures
@@ -1157,7 +1165,7 @@ void ImGuiIO::ClearInputCharacters()
 // [SECTION] MISC HELPERS/UTILITIES (Geometry functions)
 //-----------------------------------------------------------------------------
 
-ImVec2 ImBezierClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments)
+ImVec2 ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments)
 {
     IM_ASSERT(num_segments > 0); // Use ImBezierClosestPointCasteljau()
     ImVec2 p_last = p1;
@@ -1166,7 +1174,7 @@ ImVec2 ImBezierClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3
     float t_step = 1.0f / (float)num_segments;
     for (int i_step = 1; i_step <= num_segments; i_step++)
     {
-        ImVec2 p_current = ImBezierCalc(p1, p2, p3, p4, t_step * i_step);
+        ImVec2 p_current = ImBezierCubicCalc(p1, p2, p3, p4, t_step * i_step);
         ImVec2 p_line = ImLineClosestPoint(p_last, p_current, p);
         float dist2 = ImLengthSqr(p - p_line);
         if (dist2 < p_closest_dist2)
@@ -1180,7 +1188,7 @@ ImVec2 ImBezierClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3
 }
 
 // Closely mimics PathBezierToCasteljau() in imgui_draw.cpp
-static void BezierClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
+static void ImBezierCubicClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, ImVec2& p_last, float& p_closest_dist2, float x1, float y1, float x2, float y2, float x3, float y3, float x4, float y4, float tess_tol, int level)
 {
     float dx = x4 - x1;
     float dy = y4 - y1;
@@ -1208,20 +1216,20 @@ static void BezierClosestPointCasteljauStep(const ImVec2& p, ImVec2& p_closest, 
         float x123 = (x12 + x23)*0.5f,    y123 = (y12 + y23)*0.5f;
         float x234 = (x23 + x34)*0.5f,    y234 = (y23 + y34)*0.5f;
         float x1234 = (x123 + x234)*0.5f, y1234 = (y123 + y234)*0.5f;
-        BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1, y1, x12, y12, x123, y123, x1234, y1234, tess_tol, level + 1);
-        BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1234, y1234, x234, y234, x34, y34, x4, y4, tess_tol, level + 1);
+        ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1, y1, x12, y12, x123, y123, x1234, y1234, tess_tol, level + 1);
+        ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, x1234, y1234, x234, y234, x34, y34, x4, y4, tess_tol, level + 1);
     }
 }
 
 // tess_tol is generally the same value you would find in ImGui::GetStyle().CurveTessellationTol
 // Because those ImXXX functions are lower-level than ImGui:: we cannot access this value automatically.
-ImVec2 ImBezierClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol)
+ImVec2 ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol)
 {
     IM_ASSERT(tess_tol > 0.0f);
     ImVec2 p_last = p1;
     ImVec2 p_closest;
     float p_closest_dist2 = FLT_MAX;
-    BezierClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, tess_tol, 0);
+    ImBezierCubicClosestPointCasteljauStep(p, p_closest, p_last, p_closest_dist2, p1.x, p1.y, p2.x, p2.y, p3.x, p3.y, p4.x, p4.y, tess_tol, 0);
     return p_closest;
 }
 
@@ -2303,8 +2311,8 @@ bool ImGuiListClipper::Step()
     if (table && table->IsInsideRow)
         ImGui::TableEndRow(table);
 
-    // Reached end of list
-    if (DisplayEnd >= ItemsCount || GetSkipItemForListClipping())
+    // No items
+    if (ItemsCount == 0 || GetSkipItemForListClipping())
     {
         End();
         return false;
@@ -2355,6 +2363,13 @@ bool ImGuiListClipper::Step()
         }
         IM_ASSERT(ItemsHeight > 0.0f && "Unable to calculate item height! First item hasn't moved the cursor vertically!");
         StepNo = 2;
+    }
+
+    // Reached end of list
+    if (DisplayEnd >= ItemsCount)
+    {
+        End();
+        return false;
     }
 
     // Step 2: calculate the actual range of elements to display, and position the cursor before the first element
@@ -5062,6 +5077,7 @@ bool ImGui::IsItemEdited()
 }
 
 // Allow last item to be overlapped by a subsequent item. Both may be activated during the same frame before the later one takes priority.
+// FIXME: Although this is exposed, its interaction and ideal idiom with using ImGuiButtonFlags_AllowItemOverlap flag are extremely confusing, need rework.
 void ImGui::SetItemAllowOverlap()
 {
     ImGuiContext& g = *GImGui;
@@ -15704,8 +15720,8 @@ void ImGui::ShowMetricsWindow(bool* p_open)
     // Debugging enums
     enum { WRT_OuterRect, WRT_OuterRectClipped, WRT_InnerRect, WRT_InnerClipRect, WRT_WorkRect, WRT_Content, WRT_ContentRegionRect, WRT_Count }; // Windows Rect Type
     const char* wrt_rects_names[WRT_Count] = { "OuterRect", "OuterRectClipped", "InnerRect", "InnerClipRect", "WorkRect", "Content", "ContentRegionRect" };
-    enum { TRT_OuterRect, TRT_WorkRect, TRT_HostClipRect, TRT_InnerClipRect, TRT_BackgroundClipRect, TRT_ColumnsRect, TRT_ColumnsClipRect, TRT_ColumnsContentHeadersUsed, TRT_ColumnsContentHeadersIdeal, TRT_ColumnsContentFrozen, TRT_ColumnsContentUnfrozen, TRT_Count }; // Tables Rect Type
-    const char* trt_rects_names[TRT_Count] = { "OuterRect", "WorkRect", "HostClipRect", "InnerClipRect", "BackgroundClipRect", "ColumnsRect", "ColumnsClipRect", "ColumnsContentHeadersUsed", "ColumnsContentHeadersIdeal", "ColumnsContentFrozen", "ColumnsContentUnfrozen" };
+    enum { TRT_OuterRect, TRT_InnerRect, TRT_WorkRect, TRT_HostClipRect, TRT_InnerClipRect, TRT_BackgroundClipRect, TRT_ColumnsRect, TRT_ColumnsClipRect, TRT_ColumnsContentHeadersUsed, TRT_ColumnsContentHeadersIdeal, TRT_ColumnsContentFrozen, TRT_ColumnsContentUnfrozen, TRT_Count }; // Tables Rect Type
+    const char* trt_rects_names[TRT_Count] = { "OuterRect", "InnerRect", "WorkRect", "HostClipRect", "InnerClipRect", "BackgroundClipRect", "ColumnsRect", "ColumnsClipRect", "ColumnsContentHeadersUsed", "ColumnsContentHeadersIdeal", "ColumnsContentFrozen", "ColumnsContentUnfrozen" };
     if (cfg->ShowWindowsRectsType < 0)
         cfg->ShowWindowsRectsType = WRT_WorkRect;
     if (cfg->ShowTablesRectsType < 0)
@@ -15716,6 +15732,7 @@ void ImGui::ShowMetricsWindow(bool* p_open)
         static ImRect GetTableRect(ImGuiTable* table, int rect_type, int n)
         {
             if (rect_type == TRT_OuterRect)                     { return table->OuterRect; }
+            else if (rect_type == TRT_InnerRect)                { return table->InnerRect; }
             else if (rect_type == TRT_WorkRect)                 { return table->WorkRect; }
             else if (rect_type == TRT_HostClipRect)             { return table->HostClipRect; }
             else if (rect_type == TRT_InnerClipRect)            { return table->InnerClipRect; }

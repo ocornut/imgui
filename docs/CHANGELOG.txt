@@ -108,7 +108,9 @@ Breaking Changes:
 
 - Added imgui_tables.cpp file! Manually constructed project files will need the new file added!
 - Backends: moved all backends files (imgui_impl_XXXX.cpp, imgui_impl_XXXX.h) from examples/ to backends/. (#3513)
-- Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2017):
+- Renamed ImDrawList::AddBezierCurve() to ImDrawList::AddBezierCubic(). Kept inline redirection function (will obsolete). 
+- Renamed ImDrawList::PathBezierCurveTo() to ImDrawList::PathBezierCubicCurveTo(). Kept inline redirection function (will obsolete). 
+- Removed redirecting functions/enums names that were marked obsolete in 1.60 (April 2018):
   - io.RenderDrawListsFn pointer                -> use ImGui::GetDrawData() value and call the render function of your backend
   - ImGui::IsAnyWindowFocused()                 -> use ImGui::IsWindowFocused(ImGuiFocusedFlags_AnyWindow)
   - ImGui::IsAnyWindowHovered()                 -> use ImGui::IsWindowHovered(ImGuiHoveredFlags_AnyWindow)
@@ -117,6 +119,11 @@ Breaking Changes:
 - Removed redirecting functions/enums names that were marked obsolete in 1.61 (May 2018):
   - InputFloat (... int decimal_precision ...)  -> use InputFloat (... const char* format ...) with format = "%.Xf" where X was value for decimal_precision.
   - same for InputFloat2()/InputFloat3()/InputFloat4() variants taking a `int decimal_precision` parameter.
+- Removed redirecting functions/enums names that were marked obsolete in 1.63 (August 2018):
+  - ImGui::IsItemDeactivatedAfterChange()       -> use ImGui::IsItemDeactivatedAfterEdit().
+  - ImGuiCol_ModalWindowDarkening               -> use ImGuiCol_ModalWindowDimBg
+  - ImGuiInputTextCallback                      -> use ImGuiTextEditCallback
+  - ImGuiInputTextCallbackData                  -> use ImGuiTextEditCallbackData
 - If you were still using the old names, while you are cleaning up, considering enabling
   IMGUI_DISABLE_OBSOLETE_FUNCTIONS in imconfig.h even temporarily to have a pass at finding
   and removing up old API calls, if any remaining.
@@ -148,6 +155,7 @@ Other Changes:
 - Drag and Drop: Fix drag and drop to tie same-size drop targets by choosen the later one. Fixes dragging
   into a full-window-sized dockspace inside a zero-padded window. (#3519, #2717) [@Black-Cat]
 - Checkbox: Added CheckboxFlags() helper with int* type.
+- Clipper: Fixed incorrect end-list positioning when using ImGuiListClipper with 1 item (bug in 1.79). (#3663) [@nyorain]
 - InputText: Fixed updating cursor/selection position when a callback altered the buffer in a way
   where the byte count is unchanged but the decoded character count changes. (#3587) [@gqw]
 - InputText: Fixed swiching from single to multi-line while preserving same ID.
@@ -156,6 +164,8 @@ Other Changes:
   feedback and control of keyboard/gamepad navigation highlight and mouse hover disable flag. (#787, #2048)
 - Metrics: Fixed mishandling of ImDrawCmd::VtxOffset in wireframe mesh renderer.
 - Metrics: Rebranded as "Dear ImGui Metrics/Debugger" to clarify its purpose.
+- ImDrawList: Added ImDrawList::AddQuadBezierCurve(), ImDrawList::PathQuadBezierCurveTo() quadratic bezier 
+  helpers. (#3127, #3664, #3665) [@aiekick]
 - Fonts: Updated GetGlyphRangesJapanese() to include a larger 2999 ideograms selection of Joyo/Jinmeiyo
   kanjis, from the previous 1946 ideograms selection. This will consume a some more memory but be generally
   much more fitting for Japanese display, until we switch to a more dynamic atlas. (#3627) [@vaiorabbit]
@@ -189,6 +199,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.79 (Released 2020-10-08)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.79
 
 Breaking Changes:
 
@@ -281,6 +293,8 @@ Other Changes:
 -----------------------------------------------------------------------
  VERSION 1.78 (Released 2020-08-18)
 -----------------------------------------------------------------------
+
+Decorated log: https://github.com/ocornut/imgui/releases/tag/v1.78
 
 Breaking Changes:
 

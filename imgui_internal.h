@@ -408,9 +408,10 @@ static inline float  ImLinearSweep(float current, float target, float speed)    
 static inline ImVec2 ImMul(const ImVec2& lhs, const ImVec2& rhs)                { return ImVec2(lhs.x * rhs.x, lhs.y * rhs.y); }
 
 // Helpers: Geometry
-IMGUI_API ImVec2     ImBezierCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, float t);                                         // Cubic Bezier
-IMGUI_API ImVec2     ImBezierClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments);       // For curves with explicit number of segments
-IMGUI_API ImVec2     ImBezierClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol);// For auto-tessellated curves you can use tess_tol = style.CurveTessellationTol
+IMGUI_API ImVec2     ImBezierCubicCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, float t);
+IMGUI_API ImVec2     ImBezierCubicClosestPoint(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, int num_segments);       // For curves with explicit number of segments
+IMGUI_API ImVec2     ImBezierCubicClosestPointCasteljau(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, const ImVec2& p4, const ImVec2& p, float tess_tol);// For auto-tessellated curves you can use tess_tol = style.CurveTessellationTol
+IMGUI_API ImVec2     ImBezierQuadraticCalc(const ImVec2& p1, const ImVec2& p2, const ImVec2& p3, float t);
 IMGUI_API ImVec2     ImLineClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& p);
 IMGUI_API bool       ImTriangleContainsPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p);
 IMGUI_API ImVec2     ImTriangleClosestPoint(const ImVec2& a, const ImVec2& b, const ImVec2& c, const ImVec2& p);
@@ -2222,16 +2223,19 @@ struct ImGuiTable
     float                       ColumnsTotalWidth;          // Sum of current column width
     float                       ColumnsAutoFitWidth;        // Sum of ideal column width in order nothing to be clipped, used for auto-fitting and content width submission in outer window
     float                       ResizedColumnNextWidth;
+    float                       ResizeLockMinContentsX2;    // Lock minimum contents width while resizing down in order to not create feedback loops. But we allow growing the table.
     float                       RefScale;                   // Reference scale to be able to rescale columns on font/dpi changes.
-    ImRect                      OuterRect;                  // Note: OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
+    ImRect                      OuterRect;                  // Note: for non-scrolling table, OuterRect.Max.y is often FLT_MAX until EndTable(), unless a height has been specified in BeginTable().
+    ImRect                      InnerRect;                  // InnerRect but without decoration. As with OuterRect, for non-scrolling tables, InnerRect.Max.y is 
     ImRect                      WorkRect;
     ImRect                      InnerClipRect;
     ImRect                      BgClipRect;                 // We use this to cpu-clip cell background color fill
-    ImRect                      BgClipRectForDrawCmd;
+    ImRect                      Bg0ClipRectForDrawCmd;      // Actual ImDrawCmd clip rect for BG0/1 channel. This tends to be == OuterWindow->ClipRect at BeginTable() because output in BG0/BG1 is cpu-clipped
+    ImRect                      Bg2ClipRectForDrawCmd;      // Actual ImDrawCmd clip rect for BG2 channel. This tends to be a correct, tight-fit, because output to BG2 are done by widgets relying on regular ClipRect.
     ImRect                      HostClipRect;               // This is used to check if we can eventually merge our columns draw calls into the current draw call of the current window.
     ImRect                      HostBackupWorkRect;         // Backup of InnerWindow->WorkRect at the end of BeginTable()
     ImRect                      HostBackupParentWorkRect;   // Backup of InnerWindow->ParentWorkRect at the end of BeginTable()
-    ImRect                      HostBackupClipRect;         // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
+    ImRect                      HostBackupInnerClipRect;    // Backup of InnerWindow->ClipRect during PushTableBackground()/PopTableBackground()
     ImVec2                      HostBackupPrevLineSize;     // Backup of InnerWindow->DC.PrevLineSize at the end of BeginTable()
     ImVec2                      HostBackupCurrLineSize;     // Backup of InnerWindow->DC.CurrLineSize at the end of BeginTable()
     ImVec2                      HostBackupCursorMaxPos;     // Backup of InnerWindow->DC.CursorMaxPos at the end of BeginTable()
@@ -2257,8 +2261,9 @@ struct ImGuiTable
     ImGuiTableColumnIdx         HeldHeaderColumn;           // Index of column header being held.
     ImGuiTableColumnIdx         ReorderColumn;              // Index of column being reordered. (not cleared)
     ImGuiTableColumnIdx         ReorderColumnDir;           // -1 or +1
+    ImGuiTableColumnIdx         LeftMostStretchedColumn;    // Index of left-most stretched column.
+    ImGuiTableColumnIdx         RightMostStretchedColumn;   // Index of right-most stretched column.
     ImGuiTableColumnIdx         RightMostEnabledColumn;     // Index of right-most non-hidden column.
-    ImGuiTableColumnIdx         LeftMostStretchedColumnDisplayOrder; // Display order of left-most stretched column.
     ImGuiTableColumnIdx         ContextPopupColumn;         // Column right-clicked on, of -1 if opening context menu from a neutral/empty spot
     ImGuiTableColumnIdx         FreezeRowsRequest;          // Requested frozen rows count
     ImGuiTableColumnIdx         FreezeRowsCount;            // Actual frozen row count (== FreezeRowsRequest, or == 0 when no scrolling offset)
@@ -2266,8 +2271,8 @@ struct ImGuiTable
     ImGuiTableColumnIdx         FreezeColumnsCount;         // Actual frozen columns count (== FreezeColumnsRequest, or == 0 when no scrolling offset)
     ImGuiTableColumnIdx         RowCellDataCurrent;         // Index of current RowCellData[] entry in current row
     ImGuiTableDrawChannelIdx    DummyDrawChannel;           // Redirect non-visible columns here.
-    ImGuiTableDrawChannelIdx    Bg1DrawChannelCurrent;      // For Selectable() and other widgets drawing accross columns after the freezing line. Index within DrawSplitter.Channels[]
-    ImGuiTableDrawChannelIdx    Bg1DrawChannelUnfrozen;
+    ImGuiTableDrawChannelIdx    Bg2DrawChannelCurrent;      // For Selectable() and other widgets drawing accross columns after the freezing line. Index within DrawSplitter.Channels[]
+    ImGuiTableDrawChannelIdx    Bg2DrawChannelUnfrozen;
     bool                        IsLayoutLocked;             // Set by TableUpdateLayout() which is called when beginning the first row.
     bool                        IsInsideRow;                // Set when inside TableBeginRow()/TableEndRow().
     bool                        IsInitializing;
@@ -2280,6 +2285,7 @@ struct ImGuiTable
     bool                        IsResetAllRequest;
     bool                        IsResetDisplayOrderRequest;
     bool                        IsUnfrozen;                 // Set when we got past the frozen row.
+    bool                        IsOuterRectAutoFitX;        // Set when outer_size.x == 0.0f in BeginTable(), scrolling is disabled, and there are stretch columns.
     bool                        MemoryCompacted;
     bool                        HostSkipItems;              // Backup of InnerWindow->SkipItem at the end of BeginTable(), because we will overwrite InnerWindow->SkipItem on a per-column basis
 
@@ -2583,6 +2589,7 @@ namespace ImGui
     IMGUI_API const char*   TableGetColumnName(const ImGuiTable* table, int column_n);
     IMGUI_API ImGuiID       TableGetColumnResizeID(const ImGuiTable* table, int column_n, int instance_no = 0);
     IMGUI_API float         TableGetMinColumnWidth();
+    IMGUI_API float         TableGetMaxColumnWidth(const ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoSingle(ImGuiTable* table, int column_n);
     IMGUI_API void          TableSetColumnWidthAutoAll(ImGuiTable* table);
     IMGUI_API void          TableRemove(ImGuiTable* table);

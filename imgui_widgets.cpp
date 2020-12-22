@@ -7756,7 +7756,7 @@ bool    ImGui::TabItemEx(ImGuiTabBar* tab_bar, const char* label, bool* p_open, 
         g.ActiveIdWindow = docked_window;
 
     // Allow the close button to overlap unless we are dragging (in which case we don't want any overlapping tabs to be hovered)
-    if (!held)
+    if (g.ActiveId != id)
         SetItemAllowOverlap();
 
     // Drag and drop a single floating window node moves it
